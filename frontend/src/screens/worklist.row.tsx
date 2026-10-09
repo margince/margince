@@ -18,6 +18,7 @@ import {
   useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
+import { completeFailureKey } from "./taskwritefollowup";
 import {
   BriefAct,
   type BriefAnswer,
@@ -51,6 +52,7 @@ import {
 } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
 import { replyTarget, WaitingReply } from "./worklist.reply";
+import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import {
   aboutRecord,
   REASONS_BEFORE_THE_FOLD,
@@ -108,8 +110,12 @@ export function WorklistRow({
   context,
   acts,
   framed = false,
+  pick,
 }: Readonly<{
   item: WorklistItem;
+  /** The row's selection checkbox, drawn beside its rank where the list
+   *  offers a bulk verb over the row. */
+  pick?: ReactNode;
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
@@ -155,7 +161,10 @@ export function WorklistRow({
   // A task's deadline is the record's day; everything else on this row is a
   // moment the reader is racing on their own clock.
   const recordZone = useRecordZone();
-  const href = rowHref(item);
+  // Inside the drawer a row's record links carry the way back to it.
+  const drawer = useDrawerDials();
+  const target = rowHref(item);
+  const href = target && withWorklistReturn(target, drawer);
   const viewer = useMe(false).data?.user;
   const title = itemTitle(readerTask(item, viewer, t), t, locale);
   const facts =
@@ -201,7 +210,7 @@ export function WorklistRow({
   // its rows and this line is the only place those facts are said there.
   const about = framed
     ? undefined
-    : aboutRecord(item, emailOpener !== undefined);
+    : aboutRecord(item, emailOpener !== undefined, drawer);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   // Whether the day put a state on this row — overdue, or a meeting with
@@ -260,14 +269,16 @@ export function WorklistRow({
             that claim — so a digit per row spends a column saying again what
             the page says once. `position` is refused in compact rather than
             ignored: see RowDensity. */}
-        {position !== undefined && (
-          <Rank
-            position={position}
-            title={title}
-            selected={selected}
-            onSelect={onSelect}
-          />
-        )}
+        <RowLead pick={pick}>
+          {position !== undefined && (
+            <Rank
+              position={position}
+              title={title}
+              selected={selected}
+              onSelect={onSelect}
+            />
+          )}
+        </RowLead>
         {/* WHAT KIND of work, in its own column at a width that has one, so a
             reader running down the queue reads the kinds as a list without
             reading a title first — and in the warning tone on the rows the day
@@ -632,6 +643,7 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
             onSuccess: () =>
               toast.show(t("worklist.verb.dismissed"), {
                 action: {
+                  kind: "undo",
                   label: t("worklist.verb.dismissUndo"),
                   // The toast dismisses itself the moment the action is
                   // pressed, so a failed undo leaves the contact set aside
@@ -661,6 +673,23 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
     >
       {t("worklist.verb.dismiss")}
     </Button>
+  );
+}
+
+// The rank, with the row's selection checkbox before it where the list offers
+// one; without a checkbox a row lays out exactly as before.
+function RowLead({
+  pick,
+  children,
+}: Readonly<{ pick?: ReactNode; children: ReactNode }>) {
+  if (!pick) {
+    return <>{children}</>;
+  }
+  return (
+    <span className="worklist-row-lead">
+      {pick}
+      {children}
+    </span>
   );
 }
 
@@ -826,44 +855,44 @@ function TaskComplete({
       variant="primary"
       pending={update.isPending}
       onClick={() =>
-        update.mutate(
-          { id, version, body: { is_done: true } },
-          {
-            // Undoable from the confirmation, the way every disposition
-            // beside it is. Done REMOVES the row, so a misclick otherwise
-            // costs the reader the only address they had for the task —
-            // they must remember what it was to find it again.
-            onSuccess: (completedAt) =>
-              toast.show(t("worklist.verb.completed"), {
-                action: {
-                  label: t("worklist.verb.completeUndo"),
-                  // The toast dismisses itself the moment the action is
-                  // pressed, so a failed undo leaves the task done with the
-                  // only way back already off the screen.
-                  // The failure is reported from the mutationFn's own catch
-                  // rather than from a per-call onError, and that is the
-                  // whole reason this reads the way it does: the completion
-                  // REMOVES the row, so by the time the reader presses Undo
-                  // the component is unmounted and React Query has dropped
-                  // the observer that per-call callbacks hang off. A refused
-                  // undo then showed nothing at all — the reader pressed the
-                  // one control that could undo their misclick, it failed,
-                  // and the screen said nothing.
-                  onAct: () => {
-                    undo(id, completedAt).catch(() =>
-                      toast.show(t("worklist.verb.completeUndoFailed"), {
-                        tone: "danger",
-                      }),
-                    );
-                  },
+        // The answer is spoken from this promise, not from per-call callbacks:
+        // the refetch that follows the write removes the row, and with it the
+        // observer they hang off.
+        update.mutateAsync({ id, version, body: { is_done: true } }).then(
+          // Undoable from the confirmation, the way every disposition
+          // beside it is. Done REMOVES the row, so a misclick otherwise
+          // costs the reader the only address they had for the task —
+          // they must remember what it was to find it again.
+          (completedAt) =>
+            toast.show(t("worklist.verb.completed"), {
+              action: {
+                kind: "undo",
+                label: t("worklist.verb.completeUndo"),
+                // The toast dismisses itself the moment the action is
+                // pressed, so a failed undo leaves the task done with the
+                // only way back already off the screen.
+                // The failure is reported from the mutationFn's own catch
+                // rather than from a per-call onError, and that is the
+                // whole reason this reads the way it does: the completion
+                // REMOVES the row, so by the time the reader presses Undo
+                // the component is unmounted and React Query has dropped
+                // the observer that per-call callbacks hang off. A refused
+                // undo then showed nothing at all — the reader pressed the
+                // one control that could undo their misclick, it failed,
+                // and the screen said nothing.
+                onAct: () => {
+                  undo(id, completedAt).catch(() =>
+                    toast.show(t("worklist.verb.completeUndoFailed"), {
+                      tone: "danger",
+                    }),
+                  );
                 },
-              }),
-            // A rejected PATCH otherwise leaves the button idle with nothing
-            // on screen to say so — the same rendering a click that did
-            // nothing would leave, and the reader has no reason to try again.
-            onError: () =>
-              toast.show(t("worklist.verb.completeFailed"), { tone: "danger" }),
-          },
+              },
+            }),
+          // A rejected PATCH otherwise leaves the button idle with nothing
+          // on screen to say so, and the reader has no reason to try again.
+          (error) =>
+            toast.show(t(completeFailureKey(error)), { tone: "danger" }),
         )
       }
     >

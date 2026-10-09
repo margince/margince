@@ -45,7 +45,7 @@ func TestMergingCompaniesReAnchorsTheProjectWithItsDeals(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := e.Contacts.MergeCompany(e.Admin(), sourceID, companyIDOf(target)); err != nil {
+	if _, err := e.Contacts.MergeCompany(e.Admin(), sourceID, companyIDOf(target), nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -74,7 +74,7 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 	seedProject(e.Admin(), t, e, "ERP replacement", source, nil)
 	kept := seedProject(e.Admin(), t, e, "Validation", target, nil)
 
-	_, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target))
+	_, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target), nil)
 	var both *contacts.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("merging two project-carrying companies produced %v, want a refusal", err)
@@ -92,7 +92,7 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 	if _, err := e.Projects.ArchiveProject(e.Admin(), kept.ID, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
+	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target), nil); err != nil {
 		t.Errorf("archiving one side did not unblock the merge: %v", err)
 	}
 }
@@ -127,7 +127,7 @@ func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) 
 		RowScope: principal.RowScopeOwn,
 	})
 
-	_, err := e.Contacts.MergeCompany(outsider, companyIDOf(source), companyIDOf(target))
+	_, err := e.Contacts.MergeCompany(outsider, companyIDOf(source), companyIDOf(target), nil)
 	var both *contacts.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("the merge produced %v, want a refusal — another team's work still blocks it", err)
@@ -165,7 +165,7 @@ func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
 		RowScope: principal.RowScopeOwn,
 	})
 
-	_, err := e.Contacts.MergeCompany(owner, companyIDOf(source), companyIDOf(target))
+	_, err := e.Contacts.MergeCompany(owner, companyIDOf(source), companyIDOf(target), nil)
 	var both *contacts.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("the merge produced %v, want a refusal", err)
@@ -204,7 +204,7 @@ func TestTheMergeRefusalWithholdsProjectNamesFromACallerWithoutTheGrant(t *testi
 		RowScope: principal.RowScopeOwn,
 	})
 
-	_, err := e.Contacts.MergeCompany(ungranted, companyIDOf(source), companyIDOf(target))
+	_, err := e.Contacts.MergeCompany(ungranted, companyIDOf(source), companyIDOf(target), nil)
 	var both *contacts.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("the merge produced %v, want a refusal — work the caller cannot see still blocks it", err)
@@ -254,7 +254,7 @@ func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
 	}
 
 	// The merge refuses on exactly that pair, which is the agreement.
-	_, err = e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target))
+	_, err = e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target), nil)
 	var both *contacts.BothCompaniesCarryProjectsError
 	if !errors.As(err, &both) {
 		t.Fatalf("the merge produced %v, want the refusal the card is predicting", err)
@@ -275,7 +275,7 @@ func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
 		t.Errorf("the target still reads as carrying live work after its only project " +
 			"was archived — an archived project is a grouping already ended")
 	}
-	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
+	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target), nil); err != nil {
 		t.Errorf("the merge the card would now offer was refused: %v", err)
 	}
 }

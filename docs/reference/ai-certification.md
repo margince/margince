@@ -2,10 +2,9 @@
 
 <!-- Generated from the invocation-site census, the scenario corpus and the committed records; do not edit by hand. -->
 
-This page tells you which AI features you can rely on under each preset — the
-ready-made choice of AI models you pick when you set Margince up. Every grade
-here was measured by running the product's real prompts against the model, not
-promised by anyone.
+Which AI features you can rely on under each preset: the ready-made choice of
+AI models you pick when you set Margince up. Every grade here was measured by
+running the product's real prompts against the model.
 
 <details>
 <summary>How this page is made</summary>
@@ -29,7 +28,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 ## Which model family should I use?
 
-**"I want to run Margince on Gemini — can I trust it?"** This is the answer for each
+*"I want to run Margince on Gemini. Can I trust it?"* This is the answer for each
 family of AI models, across everything Margince does with AI. To start from a ready-made
 setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
 
@@ -41,7 +40,7 @@ setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
 | Qwen | `Qwen3-14B-4bit` | 🔴 Not yet | Ready for 9 of the 45 features we tested; 8 more work if someone looks over the result; 28 not reliable yet. |
 | GPT | `gpt-oss-120b` | 🔴 Not yet | Ready for 15 of the 44 features we tested; 17 more work if someone looks over the result; 12 not reliable yet. |
 
-**Yes** means ready for every feature we tested. **Mostly** means at least 80 in every 100 tested features are ready or work with a check. **Not yet** means fewer. **Not enough tested yet** means we tested it on under half of the features, so we do not say. A family is judged on its best model for each feature, and only on the models a preset uses, each on the features that preset sends to it.
+A family rated **Yes** is ready for every feature we tested. One rated **Mostly** has at least 80 in every 100 tested features ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** when we tested it on under half of the features. A family is judged on its best model for each feature, and only on the models a preset uses, each on the features that preset sends to it.
 
 ## Can I use this preset?
 
@@ -72,9 +71,9 @@ are waiting to be re-checked; each is marked below.
 
 The small line under a grade names the model that answers the feature and its tier,
 then the model a failed call falls back to and that model's own grade on the feature.
-The router falls back only when a call fails — an error, a timeout, an answer broken
-off midway — and never because an answer was wrong, so a fallback does not rescue a
-feature graded below.
+The router falls back only when a call fails: an error, a timeout, an answer broken
+off midway. It never falls back because an answer was wrong, so a fallback does not
+rescue a feature graded below. *no separate fallback* means both tiers bind the same model.
 
 *re-check pending* after a grade means the product has changed since it was
 measured. The grade is the last one we have, and it is shown until the next test replaces it.
@@ -86,36 +85,36 @@ Your data goes to: global cloud. 16 of 30 features ready (2 re-checks pending). 
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 20 of 21 tries · re-check pending |
-| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (9 of 9) |
-| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
-| Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
-| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (27 of 27); answer quality below the bar in one test case |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right in 20 of 21 tries · re-check pending |
+| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9) |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Right every time (12 of 12) |
+| Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (12 of 12) |
+| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (27 of 27); answer quality below the bar in one test case |
 | Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ❌ Not reliable yet</sub> | Right in 15 of 18 tries; one test case wrong too often |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
-| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
+| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Right every time (12 of 12) |
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right in 68 of 75 tries; one test case wrong too often; answer quality below the bar in 4 test cases |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (18 of 18) |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18) |
 | Message classification <sub>`capture_classify`</sub> | ⚠️ Usable with care<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ⚠️ Usable with care</sub> | Right in 21 of 27 tries; answer quality below the bar in one test case |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (9 of 9) |
-| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Not measured yet |
-| Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (15 of 15) |
-| Onboarding read <sub>`cold_start`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (33 of 33) |
-| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
-| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 41 of 48 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
-| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (51 of 51); answer quality below the bar in one test case · re-check pending |
-| Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (21 of 21) |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Right every time (9 of 9) |
+| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15) |
+| Onboarding read <sub>`cold_start`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (33 of 33) |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (12 of 12) |
+| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right in 41 of 48 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (51 of 51); answer quality below the bar in one test case · re-check pending |
+| Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (21 of 21) |
 | Signature enrichment <sub>`enrich`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ✅ Ready</sub> | Right in 9 of 18 tries; one test case wrong too often |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (27 of 27) |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (27 of 27) |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right every time (42 of 42) |
 | Unanswered-message triage <sub>`owed_verdict`</sub> | ⚠️ Usable with care<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ✅ Ready</sub> | Right in 16 of 18 tries |
-| Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 33 of 36 tries; answer quality below the bar in one test case |
+| Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right in 33 of 36 tries; answer quality below the bar in one test case |
 | Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · premium</sub> | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (15 of 15) |
-| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases |
-| What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15) |
+| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases |
+| What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (12 of 12) |
 
 <details>
 <summary>Which models this preset uses</summary>
@@ -176,13 +175,13 @@ Your data goes to: global cloud. 23 of 30 features ready (2 re-checks pending). 
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right in 9 of 12 tries |
 | Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (21 of 21) |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (18 of 18) |
+| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium</sub> | Right every time (18 of 18) |
 | Document extraction <sub>`document_extract`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium</sub> | Right every time (12 of 12) |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small</sub> | Right every time (57 of 57) |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (18 of 18) |
-| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (21 of 21) |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (21 of 21) |
 | Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (9 of 9) |
 | Natural-language search <sub>`nl_search`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (33 of 33) |
 | Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (15 of 15) |
@@ -191,10 +190,10 @@ Your data goes to: global cloud. 23 of 30 features ready (2 re-checks pending). 
 | Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right in 69 of 72 tries; answer quality below the bar in one test case |
 | Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ⚠️ Usable with care · re-check pending</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (21 of 21) |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (27 of 27) |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small</sub> | Right every time (42 of 42) |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (12 of 12) |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ⚠️ Usable with care</sub> | Right every time (15 of 15); answer quality below the bar in 2 test cases |
 | Website deep read <sub>`site_extract`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium</sub> | Right every time (15 of 15) |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready</sub> | Right every time (9 of 9) |
@@ -261,13 +260,13 @@ Your data goes to: EU-hosted cloud. 23 of 30 features ready (2 re-checks pending
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right in 9 of 12 tries |
 | Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (21 of 21) |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (18 of 18) |
+| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium</sub> | Right every time (18 of 18) |
 | Document extraction <sub>`document_extract`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium</sub> | Right every time (12 of 12) |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small</sub> | Right every time (57 of 57) |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (18 of 18) |
-| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (21 of 21) |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (21 of 21) |
 | Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (9 of 9) |
 | Natural-language search <sub>`nl_search`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (33 of 33) |
 | Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (15 of 15) |
@@ -276,10 +275,10 @@ Your data goes to: EU-hosted cloud. 23 of 30 features ready (2 re-checks pending
 | Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right in 69 of 72 tries; answer quality below the bar in one test case |
 | Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ⚠️ Usable with care · re-check pending, measured on `gemini`</sub> | Right every time (45 of 45); answer quality below the bar in 2 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (21 of 21) |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (27 of 27) |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small</sub> | Right every time (42 of 42) |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (12 of 12) |
 | Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ⚠️ Usable with care, measured on `gemini`</sub> | Right every time (15 of 15); answer quality below the bar in 2 test cases |
 | Website deep read <sub>`site_extract`</sub> | ✅ Ready<br><sub>gemini-3.5-flash · premium</sub> | Right every time (15 of 15) |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.5-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (9 of 9) |
@@ -341,36 +340,36 @@ Your data goes to: your own servers. 8 of 30 features ready (5 re-checks pending
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
-| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (9 of 9) |
-| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemma4:12b · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
-| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 10 of 18 tries |
-| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (15 of 15); answer quality below the bar in one test case |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right in 23 of 24 tries · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
+| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9) |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemma4:12b · premium · no separate fallback</sub> | Right every time (12 of 12) |
+| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 10 of 18 tries |
+| Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15); answer quality below the bar in one test case |
+| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Right in 23 of 24 tries · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · premium</sub> | Right in 24 of 30 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
-| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemma4:12b · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
+| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gemma4:12b · premium · no separate fallback</sub> | Right every time (12 of 12) |
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · local_small</sub> | Right in 53 of 72 tries; 3 test cases wrong too often; answer quality below the bar in 3 test cases |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 15 of 18 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (18 of 18) |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right in 5 of 6 tries |
-| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Not measured yet |
-| Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (15 of 15) |
-| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 33 of 36 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Reading what an account needs <sub>`account_scan`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 15 of 18 tries; answer quality below the bar in one test case |
-| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 41 of 66 tries; 3 test cases wrong too often; answer quality below the bar in 6 test cases · re-check pending |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 98 of 108 tries; one test case wrong too often; answer quality below the bar in 3 test cases · re-check pending |
-| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 22 of 27 tries; one test case wrong too often |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 26 of 36 tries; 2 test cases wrong too often |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 15 of 18 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Right every time (18 of 18) |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · premium · no separate fallback</sub> | Right in 5 of 6 tries |
+| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15) |
+| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 33 of 36 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Reading what an account needs <sub>`account_scan`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 15 of 18 tries; answer quality below the bar in one test case |
+| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 41 of 66 tries; 3 test cases wrong too often; answer quality below the bar in 6 test cases · re-check pending |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 98 of 108 tries; one test case wrong too often; answer quality below the bar in 3 test cases · re-check pending |
+| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 22 of 27 tries; one test case wrong too often |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Right every time (12 of 12) |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 26 of 36 tries; 2 test cases wrong too often |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · local_small</sub> | Right in 36 of 42 tries; 2 test cases wrong too often |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often |
-| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 17 of 24 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often |
+| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 17 of 24 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
 | Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · premium</sub> | Right in 27 of 45 tries; 2 test cases wrong too often; answer quality below the bar in one test case |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 12 of 18 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Website triage <sub>`site_triage`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 20 of 21 tries; answer quality below the bar in one test case |
-| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 35 of 36 tries; answer quality below the bar in 4 test cases |
-| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 18 of 27 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 12 of 18 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website triage <sub>`site_triage`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 20 of 21 tries; answer quality below the bar in one test case |
+| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 35 of 36 tries; answer quality below the bar in 4 test cases |
+| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 18 of 27 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
 
 <details>
 <summary>Which models this preset uses</summary>
@@ -431,13 +430,13 @@ Your data goes to: global cloud. 15 of 30 features ready (2 re-checks pending). 
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, ✅ Ready</sub> | Right every time (12 of 12) |
 | Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (12 of 12); answer quality below the bar in 2 test cases |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
-| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (18 of 18) |
+| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right every time (18 of 18) |
 | Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium</sub> | Right every time (15 of 15) |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>mistral-medium-3-5 · premium</sub> | Not measured yet |
 | Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, ✅ Ready</sub> | Right every time (12 of 12) |
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · local_small</sub> | Right in 49 of 63 tries; 4 test cases wrong too often; answer quality below the bar in 3 test cases |
 | Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 37 of 39 tries |
-| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (15 of 15) |
+| Message classification <sub>`capture_classify`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right every time (15 of 15) |
 | Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, ✅ Ready</sub> | Right every time (9 of 9) |
 | Natural-language search <sub>`nl_search`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (33 of 33) |
 | Offer drafting <sub>`offer_draft`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 44 of 45 tries; answer quality below the bar in 2 test cases |
@@ -446,10 +445,10 @@ Your data goes to: global cloud. 15 of 30 features ready (2 re-checks pending). 
 | Record summary <sub>`summarize`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care</sub> | Right in 52 of 69 tries; one test case wrong too often; answer quality below the bar in 7 test cases |
 | Reply drafting <sub>`draft_reply`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet · re-check pending</sub> | Right in 79 of 84 tries; one test case wrong too often; answer quality below the bar in 3 test cases · re-check pending |
 | Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 20 of 27 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 65 of 81 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · local_small</sub> | Right in 48 of 54 tries |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right in 23 of 24 tries |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right in 23 of 24 tries |
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right in 20 of 24 tries; answer quality below the bar in 2 test cases |
 | Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>mistral-medium-3-5 · premium</sub> | Right in 24 of 30 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ❌ Not reliable yet</sub> | Right every time (9 of 9) |
@@ -596,36 +595,36 @@ Your data goes to: your own servers. 8 of 30 features ready (10 re-checks pendin
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
-| Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 13 of 24 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
-| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
-| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 0 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
-| Deal status card <sub>`deal_health`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (9 of 9); answer quality below the bar in one test case |
-| Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
+| Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 13 of 24 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Right every time (12 of 12) |
+| Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 0 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
+| Deal status card <sub>`deal_health`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9); answer quality below the bar in one test case |
+| Did our reply settle it <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Document corpus question <sub>`corpus_ask`</sub> | ⚠️ Usable with care<br><sub>Qwen3-14B-4bit · premium</sub> | Right in 28 of 33 tries; one test case wrong too often; answer quality below the bar in one test case |
 | Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · premium</sub> | Not measured yet |
-| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (9 of 9) · re-check pending |
+| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Right every time (9 of 9) · re-check pending |
 | First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small</sub> | Right in 95 of 123 tries; 4 test cases wrong too often; answer quality below the bar in 4 test cases |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (9 of 9) · re-check pending |
-| Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (9 of 9) |
-| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Not measured yet |
-| Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 15 of 18 tries; one test case wrong too often; answer quality below the bar in 2 test cases · re-check pending |
-| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 63 of 72 tries; one test case wrong too often; answer quality below the bar in 2 test cases · re-check pending |
-| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
-| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 31 of 57 tries; 4 test cases wrong too often; answer quality below the bar in 7 test cases · re-check pending |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 60 of 63 tries; one test case wrong too often; answer quality below the bar in 8 test cases · re-check pending |
-| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right every time (12 of 12) |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 20 of 30 tries; 3 test cases wrong too often |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9) · re-check pending |
+| Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Right in 12 of 15 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Right every time (9 of 9) |
+| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Offer drafting <sub>`offer_draft`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 15 of 18 tries; one test case wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Onboarding read <sub>`cold_start`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 63 of 72 tries; one test case wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (12 of 12) |
+| Record summary <sub>`summarize`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 31 of 57 tries; 4 test cases wrong too often; answer quality below the bar in 7 test cases · re-check pending |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 60 of 63 tries; one test case wrong too often; answer quality below the bar in 8 test cases · re-check pending |
+| Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in one test case · re-check pending |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Right every time (12 of 12) |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 20 of 30 tries; 3 test cases wrong too often |
 | Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small</sub> | Right in 36 of 42 tries; 2 test cases wrong too often |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small → cheap_cloud is the same model, so no separate fallback</sub> | Right in 7 of 15 tries; 2 test cases wrong too often |
-| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 15 of 18 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Right in 7 of 15 tries; 2 test cases wrong too often |
+| Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 15 of 18 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
 | Website deep read <sub>`site_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · premium</sub> | Right in 34 of 45 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case |
-| Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (18 of 18) |
-| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right every time (30 of 30); answer quality below the bar in 4 test cases |
-| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud → premium is the same model, so no separate fallback</sub> | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 3 test cases · re-check pending |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 6 of 9 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (18 of 18) |
+| Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (30 of 30); answer quality below the bar in 4 test cases |
+| What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 3 test cases · re-check pending |
 
 <details>
 <summary>Which models this preset uses</summary>
@@ -679,7 +678,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 1. **Real test cases.** Every feature has a set of test cases: a realistic
    situation (an email, an account, a web page) and the answer we expect. The
-   model receives exactly the prompt the product sends in real use.
+   model receives the same prompt the product sends in real use.
 2. **Several tries.** Each test case is run 3 times at first (`RUNS=` can change
    that for one run), because a model can answer the same question differently
    each time. A test case whose result sits close to a line gets 3 more tries at a
@@ -707,9 +706,9 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 A feature does not have to be perfect to be ready: a stray miss or a low score
 among many tries is allowed, because the grade weighs all of them together. A
-test case that is clearly broken is not — one that fails nearly every try, or
-scores below its acceptable bar on every try — and it holds the whole feature
-back however well the others do.
+test case that is clearly broken (one that fails nearly every try, or scores
+below its acceptable bar on every try) holds the whole feature back however
+well the others do.
 
 ### Thresholds
 
@@ -723,9 +722,9 @@ back however well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40 — 114 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
-| Quality bar 80 / 60 / 50 — 15 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
-| Quality bar 75 / 55 / 45 — 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
+| Quality bar 70 / 50 / 40: 114 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 80 / 60 / 50: 15 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
+| Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
 All of these live in [`backend/internal/compose/aicert/thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.
 
@@ -754,8 +753,8 @@ TLower/TUpper      = mean ∓ t(0.90, m−1)·max(sd, 5)/√m over m values; the
 
 Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`), so
 the pooled judge criterion averages every run's distance from its own case's bar.
-Every run is graded once, again when that score is within 10 of any of its case's bands,
-and a third time when the two differ by more than 5, at most 3 opinions; it scores at the
+Every run is graded once, and again when that score is within 10 of any of its case's bands.
+It is graded a third time when the two differ by more than 5, at most 3 opinions. It scores at the
 median of the opinions that parsed (the mean of two).
 A case runs 3 times, then 3 more at a time up to 9 while it is borderline: its pass
 count k of n satisfies (2k − n)² ≤ n, or its median score is within one standard
@@ -781,9 +780,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Gemini
 
-🟡 Mostly — Ready for 39 of the 47 features we tested; 7 more work if someone looks over the result; 1 not reliable yet.
+🟡 Mostly: Ready for 39 of the 47 features we tested; 7 more work if someone looks over the result; 1 not reliable yet.
 
-7 of these results were measured on an older version of the product and are re-check pending.
+8 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -814,7 +813,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ⚠️ Usable with care · re-check pending | 6 of 6 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ⚠️ Usable with care · re-check pending | 3 of 3 tries |
 | [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 12 of 12 tries |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ✅ Ready | 9 of 9 tries |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 12 of 12 tries |
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | ✅ Ready | 12 of 12 tries |
@@ -847,9 +846,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Mistral
 
-🟡 Mostly — Ready for 27 of the 46 features we tested; 10 more work if someone looks over the result; 9 not reliable yet.
+🟡 Mostly: Ready for 27 of the 46 features we tested; 10 more work if someone looks over the result; 9 not reliable yet.
 
-7 of these results were measured on an older version of the product and are re-check pending.
+8 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -881,7 +880,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ❌ Not reliable yet · re-check pending | 9 of 9 tries |
 | [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | ✅ Ready · re-check pending | 15 of 15 tries |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 12 of 15 tries |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 12 of 15 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready · re-check pending | 36 of 36 tries |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 12 of 12 tries |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready | 15 of 15 tries |
@@ -914,9 +913,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Gemma
 
-🟡 Mostly — Ready for 28 of the 45 features we tested; 14 more work if someone looks over the result; 3 not reliable yet.
+🟡 Mostly: Ready for 28 of the 45 features we tested; 14 more work if someone looks over the result; 3 not reliable yet.
 
-8 of these results were measured on an older version of the product and are re-check pending.
+9 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -947,7 +946,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/contact`](#draft_replycontact) | `ollama · gemma4:12b · sovereign` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care · re-check pending | 3 of 3 tries |
 | [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care · re-check pending | 24 of 24 tries |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 12 of 12 tries |
@@ -979,9 +978,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Qwen
 
-🔴 Not yet — Ready for 9 of the 45 features we tested; 8 more work if someone looks over the result; 28 not reliable yet.
+🔴 Not yet: Ready for 9 of the 45 features we tested; 8 more work if someone looks over the result; 28 not reliable yet.
 
-17 of these results were measured on an older version of the product and are re-check pending.
+18 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -1010,7 +1009,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/contact`](#draft_replycontact) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ⚠️ Usable with care · re-check pending | 9 of 9 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet · re-check pending | 3 of 3 tries |
 | [`draft_reply/intro`](#draft_replyintro) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ⚠️ Usable with care · re-check pending | 15 of 15 tries |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet | 12 of 15 tries |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet · re-check pending | 12 of 15 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet · re-check pending | 18 of 18 tries |
 | [`enrich/signature`](#enrichsignature) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ✅ Ready | 12 of 12 tries |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | ❌ Not reliable yet | 0 of 12 tries |
@@ -1042,9 +1041,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### GPT
 
-🔴 Not yet — Ready for 15 of the 44 features we tested; 17 more work if someone looks over the result; 12 not reliable yet.
+🔴 Not yet: Ready for 15 of the 44 features we tested; 17 more work if someone looks over the result; 12 not reliable yet.
 
-7 of these results were measured on an older version of the product and are re-check pending.
+8 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -1072,7 +1071,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care · re-check pending | 6 of 6 tries |
 | [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet · re-check pending | 9 of 9 tries |
 | [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready · re-check pending | 12 of 12 tries |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 16 of 21 tries |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care · re-check pending | 16 of 21 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care · re-check pending | 30 of 30 tries |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 12 of 12 tries |
@@ -1112,9 +1111,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 47 |
-| … best state `current` | 40 |
+| … best state `current` | 39 |
 | … best state `partial` | 0 |
-| … best state `stale` | 7 |
+| … best state `stale` | 8 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 175 |
 | Committed records | 251 |
@@ -1122,12 +1121,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 #### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 31 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 83 `stale_cause` entries are these 31 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
+Counted per record (one task and binding pair) over the 31 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 93 `stale_cause` entries are these 31 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 1 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 31 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| the case | 1 | The test case changed. Re-certify: the old result measured a different case. |
+| **the prompt this build sends** | 31 | The product changed. The band describes the new prompt, so a drop is the cost of that change and not the model. |
 | how a run is graded | 20 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
@@ -1146,21 +1145,21 @@ site `current` on one model and `stale` on three is counted once, as
 | Task | One job the product does with a model, such as `draft_reply` or `cold_start`. |
 | Site | One spot inside a task where the product asks a model something. A task can have several: `cold_start` asks four separate questions, so it has four sites. Everything on this page is counted per site, because that is what a test case names. |
 | Scenario | One test case: what the model is given, and what a good answer looks like. |
-| Binding | The exact setup a model was tested on: who supplies it, which model, and where it runs. A result counts for that setup only — the same model reached another way has to be tested again. |
+| Binding | The exact setup a model was tested on: who supplies it, which model, and where it runs. A result counts for that setup only: the same model reached another way has to be tested again. |
 | Record | The saved result of one paid test run: one binding, one task. |
 | Band | The grade a record gives its setup. `certified`: good enough to ship. `supported_degraded`: it works, but worse. `not_supported`: do not ship it. |
 
 #### The four states
 
 A state says whether a saved result still describes the product as it is
-today. It says nothing about how well the model did — that is the band.
+today. It says nothing about how well the model did; that is the band.
 
 | State | What it claims |
 |---|---|
 | `current` | Still true. Nothing it tested has changed, and there is no test case it missed. |
 | `partial` | Still true about what it tested, but test cases have been added since that it never saw. The `Scenarios` column says how many of each. |
-| `stale` | Out of date. Something it tested has changed since — a test case, or the wording the product now sends. The grade no longer describes what ships, and the run has to be paid for again. |
-| `absent` | Never tested, on any setup. Not a failure — an honest gap. Its columns are dashes because nothing has measured it. |
+| `stale` | Out of date. Something it tested has changed since: a test case, or the wording the product now sends. The grade no longer describes what ships, and the run has to be paid for again. |
+| `absent` | Never tested on any setup. Its columns are dashes because nothing has measured it. |
 
 #### The numbers
 
@@ -1169,10 +1168,10 @@ today. It says nothing about how well the model did — that is the band.
 | Quality | Who scores how good a test case's answers are: `judge`, a second model, or `checked mechanically`, where the case's own check sees everything a judge would and no judge is asked. |
 | Runs, Passed | How many times the model was asked, and how often it did what the test case wanted. |
 | Reliability | Passed divided by Runs. 1.00 is every attempt. |
-| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back — not a pass/fail split. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |
+| `accepted`, `wrong_answer`, `invalid`, `abstained` | What kind of answer came back. This is a different split from pass/fail. Some test cases want the model to decline, and an answer it gave instead is a failure even though it counts as `accepted`. |
 | Scenarios | How many of the site's test cases the saved result still covers, out of how many the site has today. |
 | Record p50, p95 | How long answers took: the middle one, and a slow one (only 1 in 20 was slower). Both belong to the whole test run, not to the single site whose table they appear in, so a run covering several sites shows the same pair on each. |
-| Slowest p95 | The worst p95 of any run in that row — never an average of them. Averaging these numbers would invent a figure nothing actually measured. |
+| Slowest p95 | The worst p95 of any run in that row. It is never an average, because an average of these numbers is a figure nothing measured. |
 | `-` | Not measured. No runs is not a reliability of zero, and no timing is not a fast one. Older results carry one stamp for the whole task instead of one per test case, so their `Scenarios` cell is a dash too. |
 
 </details>
@@ -1205,7 +1204,7 @@ Which model to run each site on, and what that choice rests on.
 | [`draft_reply/contact`](#draft_replycontact) | - | - | - | `stale` | 1 | 10 |
 | [`draft_reply/first`](#draft_replyfirst) | - | - | - | `stale` | 1 | 10 |
 | [`draft_reply/intro`](#draft_replyintro) | - | - | - | `stale` | 2 | 10 |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 3 | 10 |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | - | - | - | `stale` | 3 | 10 |
 | [`draft_reply/reply`](#draft_replyreply) | - | - | - | `stale` | 4 | 10 |
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 8 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 2 | 9 |
@@ -1240,8 +1239,8 @@ best band, then the best reliability, then the fastest.
 
 Read the band beside it before running anything on it. `certified` is a safe
 pick. `supported_degraded` works, but worse. `not_supported` means the best
-model anyone has measured on that site still is not good enough to ship — it
-names work to do, not a model to choose. A dash means every result for that
+model anyone has measured on that site still is not good enough to ship, so it
+names work to do. A dash means every result for that
 site is out of date or missing, and the State column says which.
 
 </details>
@@ -1252,26 +1251,26 @@ site is out of date or missing, and the State column says which.
 ### Certification by provider and model
 
 One row per binding, folded over every site it measured. Sites is how many
-shipped sites this binding has been run against, not how many exist; the
-state columns split those sites by whether the measurement still describes
-what this build sends, and the band columns split the same sites by the
-verdict each reached. Each record's own p50 and p95 are in the site tables.
+shipped sites this binding has been run against. The state columns split
+those sites by whether the measurement still describes what this build sends,
+and the band columns split the same sites by the verdict each reached. Each
+record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 45 | 38 | 0 | 7 | 663 | 655 | 0.99 | 24754ms | 27 | 16 | 2 |
-| `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 1 | 0 | 5 | 48 | 48 | 1.00 | 12492ms | 2 | 4 | 0 |
-| `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 41 | 34 | 0 | 7 | 468 | 468 | 1.00 | 16000ms | 31 | 9 | 1 |
-| `ollama` | `gemma4:12b` | `sovereign` | 45 | 34 | 0 | 11 | 795 | 647 | 0.81 | 123468ms | 12 | 15 | 18 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 45 | 37 | 0 | 8 | 663 | 655 | 0.99 | 24754ms | 27 | 16 | 2 |
+| `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 48 | 48 | 1.00 | 12492ms | 2 | 4 | 0 |
+| `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 41 | 33 | 0 | 8 | 468 | 468 | 1.00 | 16000ms | 31 | 9 | 1 |
+| `ollama` | `gemma4:12b` | `sovereign` | 45 | 33 | 0 | 12 | 795 | 647 | 0.81 | 123468ms | 12 | 15 | 18 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 6 | 0 | 0 | 198 | 171 | 0.86 | 63054ms | 1 | 2 | 3 |
-| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 43 | 36 | 0 | 7 | 546 | 517 | 0.95 | 139188ms | 22 | 16 | 5 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 42 | 35 | 0 | 7 | 627 | 505 | 0.81 | 83052ms | 11 | 9 | 22 |
+| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 43 | 35 | 0 | 8 | 546 | 517 | 0.95 | 139188ms | 22 | 16 | 5 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 42 | 34 | 0 | 8 | 627 | 505 | 0.81 | 83052ms | 11 | 9 | 22 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 171 | 148 | 0.87 | 6454ms | 4 | 0 | 2 |
-| `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 40 | 33 | 0 | 7 | 618 | 585 | 0.95 | 13541ms | 22 | 11 | 7 |
-| `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 40 | 33 | 0 | 7 | 561 | 531 | 0.95 | 17751ms | 19 | 13 | 8 |
+| `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 40 | 32 | 0 | 8 | 618 | 585 | 0.95 | 13541ms | 22 | 11 | 7 |
+| `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 40 | 32 | 0 | 8 | 561 | 531 | 0.95 | 17751ms | 19 | 13 | 8 |
 | `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 5 | 4 | 0 | 1 | 93 | 77 | 0.83 | 4105ms | 3 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 44 | 37 | 0 | 7 | 846 | 762 | 0.90 | 6569ms | 15 | 17 | 12 |
-| `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 45 | 28 | 0 | 17 | 750 | 591 | 0.79 | 195164ms | 9 | 8 | 28 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 44 | 36 | 0 | 8 | 846 | 762 | 0.90 | 6569ms | 15 | 17 | 12 |
+| `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 45 | 27 | 0 | 18 | 750 | 591 | 0.79 | 195164ms | 9 | 8 | 28 |
 
 </details>
 
@@ -1288,7 +1287,7 @@ record never saw does not make it stale; that is `partial`.
 
 *Predates per-scenario stamps* means the record carries one stamp for the
 whole task and nothing finer, so it can only say that something it measured
-moved — never which case. Re-certifying it costs the whole task; a record
+moved, and never which case. Re-certifying it costs the whole task; a record
 with per-scenario stamps names the cases, and costs only those.
 
 Re-certify with `make e2e-ai TASK=<task> MODEL=<provider:model>` (paid: real
@@ -1356,6 +1355,16 @@ model, real network).
 | `draft_reply/intro` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
 | `draft_reply/intro` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
 | `draft_reply/intro` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): intro_request_asks_a_colleague_without_overclaiming, intro_request_claims_no_more_warmth_than_the_record_holds |
+| `draft_reply/intro_note` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `ollama · gemma4:12b · sovereign` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
+| `draft_reply/intro_note` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | the prompt this build sends and how a run is graded changed under scenario intro_note_claims_no_more_warmth_than_the_record_holds since the record scored it |
 | `draft_reply/reply` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `gemini · gemini-3.1-pro-preview · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
 | `draft_reply/reply` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask |
@@ -1415,7 +1424,7 @@ did. What the columns mean is in [How to read this page](#how-to-read-this-page)
 Certified without the company context production prepends (`identity`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>account_scan/company_scan</code> — 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>account_scan/company_scan</code>: 2 scenario(s), 9 record(s), best state current</summary>
 
 ##### `account_scan/company_scan`
 
@@ -1449,7 +1458,7 @@ Records (9):
 Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>agent_loop/morning_brief</code> — 3 scenario(s), 9 record(s), best state stale</summary>
+<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 9 record(s), best state stale</summary>
 
 ##### `agent_loop/morning_brief`
 
@@ -1480,7 +1489,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>agent_loop/overnight_at_risk_sweep</code> — 3 scenario(s), 9 record(s), best state stale</summary>
+<summary><code>agent_loop/overnight_at_risk_sweep</code>: 3 scenario(s), 9 record(s), best state stale</summary>
 
 ##### `agent_loop/overnight_at_risk_sweep`
 
@@ -1513,7 +1522,7 @@ Records (9):
 #### `brief_ranking`
 
 <details>
-<summary><code>brief_ranking/rank</code> — 1 scenario(s), 10 record(s), best state current</summary>
+<summary><code>brief_ranking/rank</code>: 1 scenario(s), 10 record(s), best state current</summary>
 
 ##### `brief_ranking/rank`
 
@@ -1545,7 +1554,7 @@ Records (10):
 #### `capture_classify`
 
 <details>
-<summary><code>capture_classify/classify</code> — 5 scenario(s), 8 record(s), best state current</summary>
+<summary><code>capture_classify/classify</code>: 5 scenario(s), 8 record(s), best state current</summary>
 
 ##### `capture_classify/classify`
 
@@ -1579,7 +1588,7 @@ Records (8):
 #### `capture_confidentiality_verdict`
 
 <details>
-<summary><code>capture_confidentiality_verdict/thread</code> — 14 scenario(s), 6 record(s), best state current</summary>
+<summary><code>capture_confidentiality_verdict/thread</code>: 14 scenario(s), 6 record(s), best state current</summary>
 
 ##### `capture_confidentiality_verdict/thread`
 
@@ -1620,7 +1629,7 @@ Records (6):
 #### `capture_counterparty_verdict`
 
 <details>
-<summary><code>capture_counterparty_verdict/verdict</code> — 19 scenario(s), 6 record(s), best state current</summary>
+<summary><code>capture_counterparty_verdict/verdict</code>: 19 scenario(s), 6 record(s), best state current</summary>
 
 ##### `capture_counterparty_verdict/verdict`
 
@@ -1666,7 +1675,7 @@ Records (6):
 #### `cert_judge`
 
 <details>
-<summary><code>cert_judge/judge</code> — 2 scenario(s), 10 record(s), best state current</summary>
+<summary><code>cert_judge/judge</code>: 2 scenario(s), 10 record(s), best state current</summary>
 
 ##### `cert_judge/judge`
 
@@ -1699,7 +1708,7 @@ Records (10):
 #### `cold_start`
 
 <details>
-<summary><code>cold_start/acts</code> — 5 scenario(s), 9 record(s), best state current</summary>
+<summary><code>cold_start/acts</code>: 5 scenario(s), 9 record(s), best state current</summary>
 
 ##### `cold_start/acts`
 
@@ -1732,7 +1741,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>cold_start/company_message</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>cold_start/company_message</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `cold_start/company_message`
 
@@ -1761,7 +1770,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>cold_start/field_extract</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>cold_start/field_extract</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `cold_start/field_extract`
 
@@ -1790,7 +1799,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>cold_start/sitereadmessage</code> — 4 scenario(s), 9 record(s), best state current</summary>
+<summary><code>cold_start/sitereadmessage</code>: 4 scenario(s), 9 record(s), best state current</summary>
 
 ##### `cold_start/sitereadmessage`
 
@@ -1824,7 +1833,7 @@ Records (9):
 #### `corpus_ask`
 
 <details>
-<summary><code>corpus_ask/corpus_ask</code> — 5 scenario(s), 8 record(s), best state current</summary>
+<summary><code>corpus_ask/corpus_ask</code>: 5 scenario(s), 8 record(s), best state current</summary>
 
 ##### `corpus_ask/corpus_ask`
 
@@ -1858,7 +1867,7 @@ Records (8):
 #### `deal_health`
 
 <details>
-<summary><code>deal_health/deal_status</code> — 3 scenario(s), 9 record(s), best state current</summary>
+<summary><code>deal_health/deal_status</code>: 3 scenario(s), 9 record(s), best state current</summary>
 
 ##### `deal_health/deal_status`
 
@@ -1891,7 +1900,7 @@ Records (9):
 #### `document_extract`
 
 <details>
-<summary><code>document_extract/fields</code> — 4 scenario(s), 1 record(s), best state current</summary>
+<summary><code>document_extract/fields</code>: 4 scenario(s), 1 record(s), best state current</summary>
 
 ##### `document_extract/fields`
 
@@ -1919,7 +1928,7 @@ Records (1):
 Certified without the company context production prepends (`positioning`, `sales`, `proof`, `market`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>draft_reply/account</code> — 1 scenario(s), 10 record(s), best state stale</summary>
+<summary><code>draft_reply/account</code>: 1 scenario(s), 10 record(s), best state stale</summary>
 
 ##### `draft_reply/account`
 
@@ -1949,7 +1958,7 @@ Records (10):
 </details>
 
 <details>
-<summary><code>draft_reply/contact</code> — 1 scenario(s), 10 record(s), best state stale</summary>
+<summary><code>draft_reply/contact</code>: 1 scenario(s), 10 record(s), best state stale</summary>
 
 ##### `draft_reply/contact`
 
@@ -1979,7 +1988,7 @@ Records (10):
 </details>
 
 <details>
-<summary><code>draft_reply/first</code> — 1 scenario(s), 10 record(s), best state stale</summary>
+<summary><code>draft_reply/first</code>: 1 scenario(s), 10 record(s), best state stale</summary>
 
 ##### `draft_reply/first`
 
@@ -2009,7 +2018,7 @@ Records (10):
 </details>
 
 <details>
-<summary><code>draft_reply/intro</code> — 2 scenario(s), 10 record(s), best state stale</summary>
+<summary><code>draft_reply/intro</code>: 2 scenario(s), 10 record(s), best state stale</summary>
 
 ##### `draft_reply/intro`
 
@@ -2040,7 +2049,7 @@ Records (10):
 </details>
 
 <details>
-<summary><code>draft_reply/intro_note</code> — 3 scenario(s), 10 record(s), best state current</summary>
+<summary><code>draft_reply/intro_note</code>: 3 scenario(s), 10 record(s), best state stale</summary>
 
 ##### `draft_reply/intro_note`
 
@@ -2058,21 +2067,21 @@ Records (10):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 12 | 12 | 1.00 | 1475ms | 17913ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 8567ms | 12492ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 4297ms | 9960ms | 9 | 0 | 0 | 0 |
-| `ollama · gemma4:12b · sovereign` | `current` | 3/3 | `not_supported` | 27 | 18 | 0.67 | 9069ms | 40255ms | 18 | 9 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 5063ms | 11893ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 15 | 12 | 0.80 | 6174ms | 47915ms | 12 | 3 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `not_supported` | 27 | 18 | 0.67 | 1371ms | 6114ms | 18 | 9 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `not_supported` | 18 | 12 | 0.67 | 1763ms | 7234ms | 12 | 6 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 16 | 0.76 | 1275ms | 2847ms | 16 | 0 | 5 | 0 |
-| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 15 | 12 | 0.80 | 46299ms | 189882ms | 12 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 2/3 | `certified` | 12 | 12 | 1.00 | 1475ms | 17913ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-pro-preview · cloud_frontier` | `stale` | 2/3 | `certified` | 9 | 9 | 1.00 | 8567ms | 12492ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 2/3 | `certified` | 9 | 9 | 1.00 | 4297ms | 9960ms | 9 | 0 | 0 | 0 |
+| `ollama · gemma4:12b · sovereign` | `stale` | 2/3 | `not_supported` | 27 | 18 | 0.67 | 9069ms | 40255ms | 18 | 9 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 2/3 | `certified` | 9 | 9 | 1.00 | 5063ms | 11893ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 2/3 | `not_supported` | 15 | 12 | 0.80 | 6174ms | 47915ms | 12 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 2/3 | `not_supported` | 27 | 18 | 0.67 | 1371ms | 6114ms | 18 | 9 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 2/3 | `not_supported` | 18 | 12 | 0.67 | 1763ms | 7234ms | 12 | 6 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 2/3 | `supported_degraded` | 21 | 16 | 0.76 | 1275ms | 2847ms | 16 | 0 | 5 | 0 |
+| `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 2/3 | `not_supported` | 15 | 12 | 0.80 | 46299ms | 189882ms | 12 | 3 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>draft_reply/reply</code> — 4 scenario(s), 10 record(s), best state stale</summary>
+<summary><code>draft_reply/reply</code>: 4 scenario(s), 10 record(s), best state stale</summary>
 
 ##### `draft_reply/reply`
 
@@ -2107,7 +2116,7 @@ Records (10):
 #### `enrich`
 
 <details>
-<summary><code>enrich/signature</code> — 2 scenario(s), 8 record(s), best state current</summary>
+<summary><code>enrich/signature</code>: 2 scenario(s), 8 record(s), best state current</summary>
 
 ##### `enrich/signature`
 
@@ -2138,7 +2147,7 @@ Records (8):
 #### `growth_fit`
 
 <details>
-<summary><code>growth_fit/growth_fit</code> — 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>growth_fit/growth_fit</code>: 2 scenario(s), 9 record(s), best state current</summary>
 
 ##### `growth_fit/growth_fit`
 
@@ -2172,7 +2181,7 @@ Records (9):
 Certified without the company context production prepends (`offer`, `market`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>nl_search/filter_propose</code> — 11 scenario(s), 6 record(s), best state current</summary>
+<summary><code>nl_search/filter_propose</code>: 11 scenario(s), 6 record(s), best state current</summary>
 
 ##### `nl_search/filter_propose`
 
@@ -2212,7 +2221,7 @@ Records (6):
 Certified without the company context production prepends (`offer`, `positioning`, `proof`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>offer_draft/draft</code> — 5 scenario(s), 9 record(s), best state current</summary>
+<summary><code>offer_draft/draft</code>: 5 scenario(s), 9 record(s), best state current</summary>
 
 ##### `offer_draft/draft`
 
@@ -2247,7 +2256,7 @@ Records (9):
 #### `owed_verdict`
 
 <details>
-<summary><code>owed_verdict/owed</code> — 4 scenario(s), 8 record(s), best state current</summary>
+<summary><code>owed_verdict/owed</code>: 4 scenario(s), 8 record(s), best state current</summary>
 
 ##### `owed_verdict/owed`
 
@@ -2280,7 +2289,7 @@ Records (8):
 #### `propose_roles`
 
 <details>
-<summary><code>propose_roles/committee</code> — 3 scenario(s), 9 record(s), best state current</summary>
+<summary><code>propose_roles/committee</code>: 3 scenario(s), 9 record(s), best state current</summary>
 
 ##### `propose_roles/committee`
 
@@ -2313,7 +2322,7 @@ Records (9):
 #### `rate_extract`
 
 <details>
-<summary><code>rate_extract/fx</code> — 2 scenario(s), 10 record(s), best state current</summary>
+<summary><code>rate_extract/fx</code>: 2 scenario(s), 10 record(s), best state current</summary>
 
 ##### `rate_extract/fx`
 
@@ -2346,7 +2355,7 @@ Records (10):
 #### `request_settlement`
 
 <details>
-<summary><code>request_settlement/request_settle</code> — 6 scenario(s), 8 record(s), best state current</summary>
+<summary><code>request_settlement/request_settle</code>: 6 scenario(s), 8 record(s), best state current</summary>
 
 ##### `request_settlement/request_settle`
 
@@ -2381,7 +2390,7 @@ Records (8):
 #### `signal_extract`
 
 <details>
-<summary><code>signal_extract/thread_events</code> — 7 scenario(s), 9 record(s), best state current</summary>
+<summary><code>signal_extract/thread_events</code>: 7 scenario(s), 9 record(s), best state current</summary>
 
 ##### `signal_extract/thread_events`
 
@@ -2418,7 +2427,7 @@ Records (9):
 #### `site_extract`
 
 <details>
-<summary><code>site_extract/profile</code> — 5 scenario(s), 7 record(s), best state current</summary>
+<summary><code>site_extract/profile</code>: 5 scenario(s), 7 record(s), best state current</summary>
 
 ##### `site_extract/profile`
 
@@ -2451,7 +2460,7 @@ Records (7):
 #### `site_fact_extract`
 
 <details>
-<summary><code>site_fact_extract/page_facts</code> — 3 scenario(s), 9 record(s), best state current</summary>
+<summary><code>site_fact_extract/page_facts</code>: 3 scenario(s), 9 record(s), best state current</summary>
 
 ##### `site_fact_extract/page_facts`
 
@@ -2484,7 +2493,7 @@ Records (9):
 #### `site_triage`
 
 <details>
-<summary><code>site_triage/triage</code> — 5 scenario(s), 9 record(s), best state current</summary>
+<summary><code>site_triage/triage</code>: 5 scenario(s), 9 record(s), best state current</summary>
 
 ##### `site_triage/triage`
 
@@ -2519,7 +2528,7 @@ Records (9):
 #### `stage_evidence_extract`
 
 <details>
-<summary><code>stage_evidence_extract/criteria</code> — 9 scenario(s), 9 record(s), best state current</summary>
+<summary><code>stage_evidence_extract/criteria</code>: 9 scenario(s), 9 record(s), best state current</summary>
 
 ##### `stage_evidence_extract/criteria`
 
@@ -2560,7 +2569,7 @@ Records (9):
 Certified without the company context production prepends (`identity`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>summarize/company_ask</code> — 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/company_ask</code>: 2 scenario(s), 9 record(s), best state current</summary>
 
 ##### `summarize/company_ask`
 
@@ -2590,7 +2599,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>summarize/company_brief</code> — 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/company_brief</code>: 2 scenario(s), 9 record(s), best state current</summary>
 
 ##### `summarize/company_brief`
 
@@ -2620,7 +2629,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>summarize/company_dossier</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/company_dossier</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `summarize/company_dossier`
 
@@ -2649,7 +2658,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>summarize/contact_brief</code> — 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/contact_brief</code>: 2 scenario(s), 9 record(s), best state current</summary>
 
 ##### `summarize/contact_brief`
 
@@ -2679,7 +2688,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>summarize/meeting_brief</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/meeting_brief</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `summarize/meeting_brief`
 
@@ -2708,7 +2717,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>summarize/meeting_plan</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/meeting_plan</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `summarize/meeting_plan`
 
@@ -2739,7 +2748,7 @@ Records (9):
 #### `transcript_propose`
 
 <details>
-<summary><code>transcript_propose/next_steps</code> — 6 scenario(s), 9 record(s), best state current</summary>
+<summary><code>transcript_propose/next_steps</code>: 6 scenario(s), 9 record(s), best state current</summary>
 
 ##### `transcript_propose/next_steps`
 
@@ -2775,7 +2784,7 @@ Records (9):
 #### `voice_build`
 
 <details>
-<summary><code>voice_build/demo_draft</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>voice_build/demo_draft</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `voice_build/demo_draft`
 
@@ -2804,7 +2813,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>voice_build/derive</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>voice_build/derive</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `voice_build/derive`
 
@@ -2833,7 +2842,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>voice_build/eval_draft</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>voice_build/eval_draft</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `voice_build/eval_draft`
 
@@ -2862,7 +2871,7 @@ Records (9):
 </details>
 
 <details>
-<summary><code>voice_build/eval_scores</code> — 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>voice_build/eval_scores</code>: 1 scenario(s), 9 record(s), best state current</summary>
 
 ##### `voice_build/eval_scores`
 
@@ -2893,7 +2902,7 @@ Records (9):
 #### `weekly_learnings`
 
 <details>
-<summary><code>weekly_learnings/learn</code> — 3 scenario(s), 9 record(s), best state current</summary>
+<summary><code>weekly_learnings/learn</code>: 3 scenario(s), 9 record(s), best state current</summary>
 
 ##### `weekly_learnings/learn`
 
@@ -2926,7 +2935,7 @@ Records (9):
 #### `weekly_review`
 
 <details>
-<summary><code>weekly_review/narrative</code> — 5 scenario(s), 9 record(s), best state current</summary>
+<summary><code>weekly_review/narrative</code>: 5 scenario(s), 9 record(s), best state current</summary>
 
 ##### `weekly_review/narrative`
 

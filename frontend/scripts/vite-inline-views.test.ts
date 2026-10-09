@@ -40,10 +40,23 @@ describe("the built document is validated, not trusted", () => {
     expect(validateDocument(`node.inner${"HTML"} = x`)).not.toEqual([]);
   });
 
-  it("rejects a tool call, which is the widest part of the extension's surface", () => {
+  it("rejects a tool call in a view that declares no action", () => {
     expect(
       validateDocument('<script>post({method:"tools/call"})</script>'),
     ).toContain("tools/call");
+  });
+
+  it("admits a tool call in a view that declares an action, and still refuses the host-tool method and the call helper", () => {
+    const call = '<script>post({method:"tools/call"})</script>';
+    expect(validateDocument(call, ["merge_records"])).toEqual([]);
+    expect(
+      validateDocument('<script>post({method:"ui/tool"})</script>', [
+        "merge_records",
+      ]),
+    ).toContain("ui/tool");
+    expect(
+      validateDocument(`<script>${"call"}Tool(x)</script>`, ["merge_records"]),
+    ).toContain("callTool");
   });
 
   it("rejects a credential, because a view is given an answer and never the means to ask again", () => {

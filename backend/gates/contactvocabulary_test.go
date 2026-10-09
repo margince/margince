@@ -7,8 +7,7 @@
 
 package gates
 
-// The record is called a contact, and this is what stops the other word coming
-// back.
+// The record is called a contact, and its retired name fails here.
 //
 // The screen half was done first and stopped at the last layer a reader can
 // see: the browser said `#/contacts/:id` and the request it fired said
@@ -206,6 +205,10 @@ var retired = gatekit.Waive(map[string]string{
 		"an installation stored under the retired name, which is what the migration it replays exists " +
 		"to carry over",
 	"CHANGELOG.md": "entries say what they said when they were written",
+	"LICENSE": "the licence defines a Seat as a natural person, a legal term the licensor " +
+		"chose, and a licence is not restyled by a vocabulary rule",
+	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
+		"docscodeofconduct_test.go; its people are human beings, never this record",
 	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
@@ -239,6 +242,8 @@ var retired = gatekit.Waive(map[string]string{
 	// the page above, held to it by TestTheEmbeddedHandbookMatchesTheDocs. Waiving the
 	// source without its mirror would fail the moment the two are brought into line.
 	"backend/internal/modules/knowledge/handbook/settings.md": "the embedded copy of the page above",
+	"docs/handbook/plain-words.txt": "the handbook's plain word list must admit every word its " +
+		"pages use: the seats settings group, the trust mark for a value a human typed, and a deal won in person",
 
 	// The German compliance package: a works agreement, a consent form, an
 	// employee information sheet and the processing record. "Die beschäftigte

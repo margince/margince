@@ -47,6 +47,7 @@ import {
   type ChosenFile,
   useCarriageBlocks,
 } from "./composeattachments";
+import { ConversationFold } from "./composeconversation";
 import { DraftBand, RewriteRow } from "./composedraftband";
 import {
   AccountDraftContext,
@@ -1383,11 +1384,11 @@ export function ComposeModal({
   // A shut composer asks for nothing it does not share with the page behind it.
   const voiceProfile = useVoiceProfile(open);
   const bodyId = useId();
-  // WHICH WAY THIS IS GOING, when the record offers more than one. The caller's
-  // opening choice stands until the reader turns the dial; an empty selection
-  // resolves to the record's lead rather than being seeded, so reachability that
-  // arrives after the first render is not stuck behind what existed before it.
-  const [transportId, setTransportId] = useState(initialTransportId ?? "");
+  // WHICH WAY THIS IS GOING: each opening starts on the caller's choice, never on
+  // the last opening's dial; an empty one resolves to the record's lead.
+  const [dial, setDial] = useState({ open, id: initialTransportId ?? "" });
+  const transportId = open && !dial.open ? (initialTransportId ?? "") : dial.id;
+  if (dial.open !== open) setDial({ open, id: transportId });
   const transport =
     transports.find((option) => option.id === transportId) ??
     transports.find((option) => option.id === initialTransportId) ??
@@ -1547,14 +1548,12 @@ export function ComposeModal({
   const stopOfferingRecipient = useCallback(() => {
     offered.current = true;
   }, []);
-  // A reader who picks a DIFFERENT conversation is owed its address: the offer
-  // is once per anchor, not once per composer. Without this the field kept the
-  // first thread's counterparty while the pane showed another's messages. The
+  // A reader who picks a DIFFERENT conversation is owed its address, so the
   // previous offer leaves the field HERE, on the change itself, rather than
-  // when the new address resolves — a lookup still out, or a conversation with
-  // no address on record, must not leave the old counterparty standing as the
-  // recipient of a reply to somebody else. What the reader added beside it is
-  // theirs and stays.
+  // when the new address resolves: a lookup still out, or a conversation
+  // with no address on record, must not leave the old counterparty standing
+  // as the recipient of a reply to somebody else. What the reader added
+  // beside it is theirs and stays.
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the anchor alone — this re-arms the offer when the conversation changes, not when its address resolves.
   useEffect(() => {
     if (restoringRecipient.current) {
@@ -1600,7 +1599,9 @@ export function ComposeModal({
   // sources, because a thread has two sides: colleagues come from the workspace
   // roster, the account's own contacts from the record behind this drawer — whose
   // read is already in cache there, so this costs the composer nothing on the
-  // page it opens over.
+  // page it opens over. Still walks rather than reading useMemberNames by id:
+  // `nameOf` is handed to useRecentConversations, called per value as ITS rows
+  // render.
   const roster = useRoster("user", open);
   const namesCompany = useCompany360(entityType === "company" ? entityId : "");
   const colleagues = new Map(
@@ -1634,8 +1635,8 @@ export function ComposeModal({
   const anchorRead = useThreadProject(answering, open);
   const anchorActivity = anchorRead.activity;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
-  // An anchor named but not yet read. The pane holds its place on this, so
-  // the drawer does not open narrow and snap wide when the read answers. A
+  // An anchor named but not yet read. The column holds its place on this
+  // rather than arriving under the reader when the read answers. A
   // read that FAILED is not one still arriving: the pane lets go, and the
   // composer keeps answering the anchor it was given without drawing it.
   const anchorUnresolved =
@@ -1685,13 +1686,11 @@ export function ComposeModal({
   // composer there means — the account path asked them to name a recipient the
   // thread already knows, in front of a To field the draft would have filled.
   const groundable = !answering && entityType === "company" && !isChannelReply;
-  // What SHAPE the composer takes, split from what it GROUNDS. One flag used to
-  // answer both, so a reply inherited the account path's box — and an account
-  // that had mail lost the drawer that path was given. The shape is every
-  // record's, not the account's: a mail written from a contact, lead or deal
-  // keeps that record on screen beside it just as an account's does, so the
-  // same verb cannot change shape with the page it was pressed on.
-  const asDrawer = !isChannelReply;
+  // Shaped by the transport this opening began on; the dial never reshapes it.
+  const openedOn = useRef(transport);
+  if (!open || !dial.open || !openedOn.current) openedOn.current = transport;
+  const asDrawer =
+    kind !== "message" && (openedOn.current?.id ?? "email") === "email";
   // The conversation rides beside the form only where there IS one and there is
   // room for a second column. A channel reply answers a live conversation the
   // provider owns, and has no thread of its own to draw.
@@ -1708,7 +1707,7 @@ export function ComposeModal({
   // resolves to a filed note collapses the column then — the one case that
   // still changes shape, and the honest one.
   const showConversation =
-    asDrawer &&
+    !isChannelReply &&
     ((answeringCorrespondence &&
       (conversation.messages.length > 0 ||
         conversation.pending ||
@@ -1718,9 +1717,7 @@ export function ComposeModal({
   // The ways in, when the reader has not taken one. Nothing to offer is not a
   // column: an account with no mail gets the plain drawer it had before.
   // While the lookup is still out, the column holds its place with the
-  // pending body — decided by the answer, the drawer opened narrow and
-  // snapped wide a beat later, a shape change under a reader already aiming
-  // at a field.
+  // pending body rather than arriving under a reader aiming at a field.
   // A read that failed keeps the column too, with the failure and a retry in
   // it: collapsed, the composer would offer a fresh mail as though the record
   // had no history, which is the surprise the choices exist to prevent.
@@ -1813,7 +1810,7 @@ export function ComposeModal({
   // reader believes they are writing to and the send never uses.
   const changeTransport = (next: string) => {
     draftEpoch.current += 1;
-    setTransportId(next);
+    setDial({ open, id: next });
     setSubject("");
     setBody("");
     setHtml("");
@@ -2022,12 +2019,12 @@ export function ComposeModal({
       // dialog they just read promised "you can move it or take it back from
       // Scheduled messages", and nothing in the product went there.
       //
-      // The verb makes it sticky, which is what this needs and a plain
-      // confirmation does not: the door is the point, and a toast that withdrew
-      // itself after three and a half seconds would take the door with it.
+      // An `open` verb keeps the toast until dismissed: the door is the point,
+      // and a toast that withdrew itself would take the door with it.
       if (result.scheduled) {
         toast.show(t("compose.scheduledQueued"), {
           action: {
+            kind: "open",
             label: t("compose.scheduledOpenQueue"),
             onAct: () => navigate({ screen: SCHEDULED_SCREEN }),
           },
@@ -2320,20 +2317,9 @@ export function ComposeModal({
               : "compose.sendConfirmTitle",
         )}
         tier="confirm"
-        // The rep is about to send irreversibly, so the body they are
-        // confirming has to be readable at a glance rather than through a
-        // five-line porthole — and the Send button has to sit above the fold,
-        // not below a scroll. A reply takes the split width because it carries
-        // a second column: the conversation it is answering.
-        size={splitColumns ? "split" : "wide"}
-        // A DRAWER for every mail on an account, whether it starts a
-        // conversation or answers one, so the record it is about stays on
-        // screen beside it. It used to turn on `groundable`, which is false as
-        // soon as the account has earlier mail — so the same button gave a
-        // drawer on a quiet account and a centred box on a busy one, and an
-        // account whose first message was still loading changed shape under
-        // the reader mid-open.
-        placement={asDrawer ? "right" : "center"}
+        // A reading drawer for every mail: the record stays in view beside it,
+        // and the body reads at a glance before an irreversible send.
+        intent={asDrawer ? "drawer-reading" : "form"}
         confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
         // The button stays live with fields outstanding. Grey, it refused
         // without saying what for, and the reader was left comparing the form
@@ -2432,31 +2418,35 @@ export function ComposeModal({
           ref={fields}
           className={splitColumns ? "compose-split" : undefined}
         >
-          {showChoices && (
-            <ConversationChoices
-              conversations={recent.conversations}
-              pending={recent.pending}
-              failed={recent.failed}
-              onRetry={recent.retry}
-              onChoose={selectMessage}
-            />
-          )}
-          {showConversation && (
-            <ThreadPane
-              messages={conversation.messages}
-              pending={conversation.pending || anchorUnresolved}
-              failed={conversation.failed || anchorRead.failed}
-              onRetry={
-                anchorRead.failed ? anchorRead.retry : conversation.retry
-              }
-              viewerUserId={viewerId}
-              nameOf={nameOf}
-              named
-              onLeave={() => selectMessage(null)}
-              selectedId={answering}
-              onSelect={selectMessage}
-              disabled={send.isPending || rejectionInFlight}
-            />
+          {splitColumns && (
+            <ConversationFold choosing={showChoices}>
+              {showChoices && (
+                <ConversationChoices
+                  conversations={recent.conversations}
+                  pending={recent.pending}
+                  failed={recent.failed}
+                  onRetry={recent.retry}
+                  onChoose={selectMessage}
+                />
+              )}
+              {showConversation && (
+                <ThreadPane
+                  messages={conversation.messages}
+                  pending={conversation.pending || anchorUnresolved}
+                  failed={conversation.failed || anchorRead.failed}
+                  onRetry={
+                    anchorRead.failed ? anchorRead.retry : conversation.retry
+                  }
+                  viewerUserId={viewerId}
+                  nameOf={nameOf}
+                  named
+                  onLeave={() => selectMessage(null)}
+                  selectedId={answering}
+                  onSelect={selectMessage}
+                  disabled={send.isPending || rejectionInFlight}
+                />
+              )}
+            </ConversationFold>
           )}
           <div className="compose-fields">
             <SavedDraftNotices draft={savedDraft} />

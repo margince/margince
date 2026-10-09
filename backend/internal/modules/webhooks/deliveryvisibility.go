@@ -206,6 +206,22 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		// parent deal behind offer.read, exactly as the offer read path
 		// gates (deals/offer_read.go: auth.Require("offer") + deal scope).
 		return s.offerVisibleTo(ctx, entityID)
+	case "attachment":
+		// A file is scoped by the record it hangs off and by nothing of its
+		// own: no object grant, no owner column. The subject is redirected to
+		// that record and the switch answers the question it already knows.
+		//
+		// Redirected rather than re-entering entityVisibleTo, because this
+		// function has a single door (Deliverer.canSee, which resolves the
+		// owner's live RBAC and binds their principal first). A second caller
+		// would let a later one arrive without that binding, asking as whoever
+		// the caller happens to be, which for a system-principal replay is
+		// everybody.
+		parentType, parentID, err := s.attachmentParent(ctx, entityID)
+		if err != nil || parentType == "" {
+			return false, err
+		}
+		return s.recordVisible(ctx, parentType, parentID)
 	case "contract":
 		// A contract has no owner of its own: it is visible through the deal it
 		// came from, falling back to its company for the agreements that
@@ -248,6 +264,22 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 // EnsureVisible skips) AND the row scope must BOTH admit, exactly as
 // <entity>.Get does. Object denial (ErrPermissionDenied) or a row-scope miss
 // (ErrNotFound) reads as not-visible; a real error surfaces.
+// recordVisible answers whether this owner may read one ordinary record, which
+// is what every row-scoped subject above reduces to. Named because three arms
+// ask it and an attachment asks it about its parent: an activity carries its own
+// content predicate, everything else goes through the shared one, and that split
+// is written here rather than at each call site.
+func (s *Store) recordVisible(ctx context.Context, entityType string, entityID ids.UUID) (bool, error) {
+	if entityType == "activity" {
+		return s.rowScopedVisible(ctx, "activity", func(c context.Context, tx pgx.Tx) error {
+			return auth.EnsureActivityContentVisible(c, tx, entityID)
+		})
+	}
+	return s.rowScopedVisible(ctx, entityType, func(c context.Context, tx pgx.Tx) error {
+		return auth.EnsureVisible(c, tx, entityType, entityID)
+	})
+}
+
 func (s *Store) rowScopedVisible(ctx context.Context, object string, probe func(context.Context, pgx.Tx) error) (bool, error) {
 	readable, err := objectReadable(ctx, object)
 	if err != nil || !readable {

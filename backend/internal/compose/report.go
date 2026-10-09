@@ -285,7 +285,11 @@ type reportOutcome struct {
 	// report's population, "" when it does not (reportownergate.go). A reason
 	// and never a count: how many were left out is the side channel.
 	PopulationNarrowed string
-	GeneratedAt        time.Time
+	// TotalRows is how many groups matched, which exceeds len(Rows) when the
+	// row limit cut the answer. The handler sends it rather than the page
+	// length, so a reader can tell a whole answer from the top of one.
+	TotalRows   int
+	GeneratedAt time.Time
 	// The reading's frame, resolved in the same transaction that ran it. A
 	// number without them is not wrong so much as unplaceable: the reader
 	// cannot tell which zone cut the day, which currency the money is in, or
@@ -354,6 +358,7 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	return reportOutcome{
 		ExcludedByPermission: fetched.excluded,
 		PopulationNarrowed:   fetched.narrowed,
+		TotalRows:            fetched.total,
 		Report:               report,
 		Plan: map[string]any{
 			"object":       string(spec.entity),
@@ -399,6 +404,9 @@ func buildSelectList(spec reportSpec, groupBy []string, aggregates []reportAggre
 		}
 		selects = append(selects, sel)
 		columns = append(columns, name)
+	}
+	if name, dup := firstDuplicate(columns); dup {
+		return nil, nil, &DuplicateColumnError{Name: name}
 	}
 	if len(selects) == 0 {
 		// Its own refusal: nothing here is out of vocabulary, so the vocabulary

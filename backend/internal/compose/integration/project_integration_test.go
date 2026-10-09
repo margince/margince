@@ -751,3 +751,22 @@ func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
 		t.Fatalf("the creating rep attaching their new project to a new deal: %v", err)
 	}
 }
+
+// A reason of spaces is no reason: closing refuses it the way it refuses none,
+// and nothing is written to the project or its history.
+func TestClosingAProjectWithABlankReasonIsRefused(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "BAER Pharma", nil)
+	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
+
+	_, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhaseClosed, Reason: StrPtr("   "),
+	})
+	var needsReason *projects.ClosedReasonRequiredError
+	if !errors.As(err, &needsReason) {
+		t.Fatalf("closing with a blank reason produced %v, want ClosedReasonRequiredError", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM project_phase_history WHERE project_id = $1`, p.ID); n != 1 {
+		t.Errorf("history rows = %d, want only the creation row", n)
+	}
+}

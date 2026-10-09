@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
+import { RECORD_LIST_KEY } from "./recordlistkeys";
+import type { MutationOutcome } from "./undoableremoval";
 
 // The reads and writes behind the record page's tag panel.
 
@@ -13,7 +15,28 @@ export type RecordTag = components["schemas"]["RecordTag"];
 export type Tag = components["schemas"]["Tag"];
 
 /** The record types the tags panel serves. */
-export type TaggableType = "contact" | "company" | "deal";
+export type TaggableType = "contact" | "company" | "deal" | "lead";
+
+/**
+ * The panel, every list drawing this record's chips, and the tag page and its
+ * counts all go stale together: each shows who carries the word.
+ */
+function invalidateTagged(
+  queryClient: ReturnType<typeof useQueryClient>,
+  entityType: TaggableType,
+  entityID: string,
+) {
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: ["record-tags", entityType, entityID],
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [RECORD_LIST_KEY[entityType]],
+    }),
+    queryClient.invalidateQueries({ queryKey: ["tag"] }),
+    queryClient.invalidateQueries({ queryKey: ["tag-records"] }),
+  ]);
+}
 
 /**
  * The tags on one record, and whether the vocabulary was withheld.
@@ -47,9 +70,10 @@ export function useRecordTags(entityType: TaggableType, entityID: string) {
  * It stays on a record that already carries it, which is the panel's business
  * rather than this list's.
  */
-export function useTagVocabulary() {
+export function useTagVocabulary(enabled = true) {
   return useQuery({
     queryKey: ["tags", "vocabulary"],
+    enabled,
     // The catalog is capped and has no cursor, so a workspace past the cap gets
     // a CUT list. Carrying `has_more` through is what lets the picker say the
     // list is short — without it a word beyond the cap is indistinguishable
@@ -79,31 +103,65 @@ export function useApplyTag(entityType: TaggableType, entityID: string) {
       }
     },
     onSuccess: () => {
-      // The panel and any list showing this record's chips both go stale.
-      void queryClient.invalidateQueries({
-        queryKey: ["record-tags", entityType, entityID],
-      });
+      void invalidateTagged(queryClient, entityType, entityID);
     },
   });
 }
 
-/** Take one tag off one record, leaving the tag itself alone. */
-export function useRemoveTag(entityType: TaggableType, entityID: string) {
+export type RemovalUndo = components["schemas"]["RemovalUndo"];
+
+/**
+ * Take one tag off one record, leaving the tag itself alone. `onSuccess` gets
+ * the handle that puts it back, or null when the record did not carry the tag.
+ */
+export function useRemoveTag(
+  entityType: TaggableType,
+  entityID: string,
+  outcome: MutationOutcome<TagRestore | null>,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (tagID: string) => {
-      const { error } = await api.DELETE("/tags/{id}/apply", {
+    mutationFn: async (tagID: string): Promise<TagRestore | null> => {
+      const { data, error } = await api.DELETE("/tags/{id}/apply", {
         params: { path: { id: tagID } },
         body: { entity_type: entityType, entity_id: entityID },
       });
       if (error) {
         throwProblem(error);
       }
+      return data ? { tagID, undo: data } : null;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["record-tags", entityType, entityID],
+    onError: outcome.onError,
+    onSuccess: async (restore) => {
+      await invalidateTagged(queryClient, entityType, entityID);
+      outcome.onSuccess(restore);
+    },
+  });
+}
+
+export type TagRestore = Readonly<{ tagID: string; undo: RemovalUndo }>;
+
+/** Put back a tagging this reader removed, as it was assigned. */
+export function useRestoreTag(
+  entityType: TaggableType,
+  entityID: string,
+  outcome: MutationOutcome<TagRestore>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: TagRestore) => {
+      const { error } = await api.POST("/tags/{id}/apply/restore", {
+        params: { path: { id: input.tagID } },
+        body: input.undo,
       });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onError: outcome.onError,
+    onSuccess: async (_, input) => {
+      await invalidateTagged(queryClient, entityType, entityID);
+      outcome.onSuccess(input);
     },
   });
 }

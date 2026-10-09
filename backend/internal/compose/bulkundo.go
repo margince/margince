@@ -23,6 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -40,6 +41,19 @@ type bulkUndoPlan struct {
 	tasks map[openapi_types.UUID]bulkCreatedTask
 	// taggings is the tag assignment add_tag made on each record.
 	taggings map[openapi_types.UUID]openapi_types.UUID
+	// removals is the audit row remove_tag or remove_from_list wrote per record.
+	removals map[openapi_types.UUID]openapi_types.UUID
+}
+
+// removalOf answers the removal an undo restores a record's link from. A
+// batch recorded before removals were kept names none, and nothing is kept
+// to put back.
+func (p *bulkUndoPlan) removalOf(id openapi_types.UUID) (ids.UUID, error) {
+	removal, known := p.removals[id]
+	if !known {
+		return ids.Nil, collections.ErrRemovalUnkept
+	}
+	return ids.UUID(removal), nil
 }
 
 // bulkCreatedTask is one task create_task filed, at the version it left it.
@@ -108,6 +122,7 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		ownersBefore: make(map[openapi_types.UUID]*openapi_types.UUID, len(op.result.Changed)),
 		tasks:        map[openapi_types.UUID]bulkCreatedTask{},
 		taggings:     map[openapi_types.UUID]openapi_types.UUID{},
+		removals:     map[openapi_types.UUID]openapi_types.UUID{},
 	}
 	items := make([]crmcontracts.BulkItem, len(op.result.Changed))
 	for i, outcome := range op.result.Changed {
@@ -115,6 +130,9 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		plan.ownersBefore[outcome.ID] = outcome.OwnerBefore
 		if outcome.TaskID != nil {
 			plan.tasks[outcome.ID] = bulkCreatedTask{id: *outcome.TaskID, version: outcome.TaskVersion}
+		}
+		if outcome.RemovalID != nil {
+			plan.removals[outcome.ID] = *outcome.RemovalID
 		}
 		if outcome.TaggableID != nil {
 			plan.taggings[outcome.ID] = *outcome.TaggableID
@@ -201,7 +219,11 @@ func handBack(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID)},
 		After:  crmcontracts.BulkRecordState{OwnerId: before},
 	}
-	return sample, crmcontracts.BulkSkip{}, target.reassign(ctx, tx, id, ids.From[ids.UserKind](owner), item.Version)
+	reassigner, err := reassignerOf(target)
+	if err != nil {
+		return crmcontracts.BulkSampleRow{}, crmcontracts.BulkSkip{}, err
+	}
+	return sample, crmcontracts.BulkSkip{}, reassigner.reassign(ctx, tx, id, ids.From[ids.UserKind](owner), item.Version)
 }
 
 // undoSkipFor is bulkSkipFor for an undo, where a version that moved means the

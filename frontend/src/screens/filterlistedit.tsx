@@ -1,44 +1,55 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Changing a Live List's filter: the list page's "Edit filter" opens the
-// builder on the list's own tree, and "Save to <list>" writes it back to that
-// list, held to the version the builder opened.
+// Changing a Live List's filter: the list page's "Edit filter" opens
+// `#/filters/list/<id>` straight into the rows of the list's own tree, and
+// "Save to <list>" writes it back to that list, held to the version read at
+// opening.
 
 import { useState } from "react";
 import { navigate } from "../app/router";
+import { useGuardedLeave } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Panel, PanelBody } from "../design-system/panel";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf } from "./common";
+import { useFilterVocabulary } from "./filterdata";
+import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
+import { FilterEditor, useRowsFocus } from "./filtereditor";
+import { useFilterExport } from "./filterexport";
+import { FilterFoot } from "./filterfoot";
+import { FocusedHead, FocusedPending, FocusedState } from "./filterhead";
+import { FilterOutcome } from "./filtermatches";
+import { usePlainWords } from "./filterpropose";
+import {
+  EDIT_LIST_SEGMENT,
+  type ObjectTab,
+  RESOURCE_OF,
+  TAB_LABEL,
+  tabOfListType,
+  UNIT_LABEL,
+} from "./filtersaddress";
+import { SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
 import {
   type List,
-  type ListRecordType,
   useList,
+  useListsAvailable,
   useUpdateList,
 } from "./lists.queries";
-import { decode, encode, isComplete, type Node } from "./segmentpredicate";
-
-/** The address segment below `filters` that opens a Live List's filter. */
-export const EDIT_LIST_SEGMENT = "list";
-
-/** The builder tab a record type's Live List opens on; projects have none. */
-export function buildTabOf(type: ListRecordType): string | undefined {
-  switch (type) {
-    case "contact":
-      return "contacts";
-    case "company":
-      return "companies";
-    case "deal":
-      return "deals";
-    case "lead":
-      return "leads";
-    default:
-      return undefined;
-  }
-}
+import { useListAudienceLabel } from "./listsharing";
+import {
+  decode,
+  encode,
+  type Group,
+  isComplete,
+  type Node,
+  rootGroup,
+} from "./segmentpredicate";
+import "./filters.css";
 
 /** Whether this reader may change this list's filter here. */
 export function mayEditFilter(list: List): boolean {
@@ -46,14 +57,14 @@ export function mayEditFilter(list: List): boolean {
     list.list_type === "dynamic" &&
     list.can_edit &&
     !list.archived_at &&
-    buildTabOf(list.entity_type) !== undefined
+    tabOfListType(list.entity_type) !== undefined
   );
 }
 
 /** "Edit filter": the builder, opened on this Live List's filter. */
 export function EditFilterAction({ list }: Readonly<{ list: List }>) {
   const t = useT();
-  const tab = buildTabOf(list.entity_type);
+  const tab = tabOfListType(list.entity_type);
   if (!mayEditFilter(list) || tab === undefined) {
     return null;
   }
@@ -69,68 +80,168 @@ export function EditFilterAction({ list }: Readonly<{ list: List }>) {
   );
 }
 
-/** The list the builder is editing, as it was when the builder opened. */
-export type EditedList = Readonly<{ list: List; version: number }>;
-
 /**
- * Loads the filter of the Live List the address names into the builder once,
- * when the list is of the tab's record type. A reader who may change the list
- * also gets it back with the version it was read at: a later refetch must not
- * move the version a save is held to, or a colleague's change would be lost.
+ * `#/filters/list/<id>`. Every state prints one h1: no list is read while
+ * lists are off, and a list whose filter no builder here can hold says so
+ * rather than opening an empty one.
  */
-export function useOpenListFromAddress(
-  listId: string | undefined,
-  tab: string,
-  load: (tree: Node) => void,
-): Readonly<{ edited: EditedList | null; opening: boolean }> {
-  const list = useList(listId ?? "", listId !== undefined);
-  const [edited, setEdited] = useState<EditedList | null>(null);
-  const [settled, setSettled] = useState(false);
-  if (listId === undefined) {
-    return { edited: null, opening: false };
+export function ListFilterPage({ listId }: Readonly<{ listId: string }>) {
+  const t = useT();
+  const listsOn = useListsAvailable();
+  const read = useList(listId, listsOn);
+  // Its version is the one "Save to" is held to, so a colleague's change
+  // since opening is refused rather than overwritten unseen.
+  const opened = useFirstAnswer(read);
+  const title = t("lists.editFilter");
+  if (!listsOn) {
+    return <FocusedState title={title} sentence={t("lists.unavailable")} />;
   }
-  if (!settled && list.data) {
-    const tree = decode(list.data.definition);
-    setSettled(true);
-    if (tree && buildTabOf(list.data.entity_type) === tab) {
-      load(tree);
-      if (mayEditFilter(list.data)) {
-        setEdited({ list: list.data, version: list.data.version });
-      }
-    }
-  } else if (!settled && list.isError) {
-    setSettled(true);
+  const tab = opened ? tabOfListType(opened.entity_type) : undefined;
+  const tree = opened ? decode(opened.definition) : null;
+  if ((read.isError && !opened) || (opened && (!tab || tree === null))) {
+    return (
+      <FocusedState title={title} sentence={t("lists.filterCannotOpen")} />
+    );
   }
-  return { edited, opening: !settled };
+  if (!opened || !tab || tree === null) {
+    return <FocusedPending title={title} label={t("lists.loading")} />;
+  }
+  return <ListFilter list={opened} tab={tab} tree={tree} />;
+}
+
+function ListFilter({
+  list,
+  tab,
+  tree,
+}: Readonly<{ list: List; tab: ObjectTab; tree: Node }>) {
+  const t = useT();
+  const toast = useToast();
+  const audienceOf = useListAudienceLabel();
+  const [draft, dispatch] = useFilterDraft(() => rootGroup(tree));
+  // The tree on screen when Save was pressed, as on a new filter.
+  const [saving, setSaving] = useState<Group | null>(null);
+  const resource = RESOURCE_OF[tab];
+  const vocabulary = useFilterVocabulary(resource);
+  const words = usePlainWords({ resource, dispatch });
+  const exportRun = useFilterExport();
+  const focus = useRowsFocus();
+  const editable = mayEditFilter(list);
+  const complete = isComplete(draft.tree);
+  const changed = wireSignature(draft.tree) !== wireSignature(tree);
+  const leave = useGuardedLeave(changed);
+  const land = useLandOnSaved(tab, leave);
+  const records = t(UNIT_LABEL[tab]);
+
+  const foot = editable ? (
+    <FilterFoot
+      resource={resource}
+      tree={draft.tree}
+      mode={{
+        kind: "list",
+        changed,
+        onDiscard: () => {
+          focus.focusRows();
+          dispatch({ type: "reset", tree });
+        },
+        saveTo: (
+          <SaveToListAction
+            list={list}
+            tree={draft.tree}
+            disabled={!changed || !complete}
+            onSaved={() => {
+              toast.show(t("lists.savedTo", { name: list.name }));
+              leave({ screen: "lists", id: list.id });
+            }}
+          />
+        ),
+      }}
+      onSave={() => setSaving(draft.tree)}
+      exportRun={exportRun}
+    />
+  ) : complete ? (
+    // A list the reader may read but not change: its filter is theirs to
+    // start from, kept the way a new filter is.
+    <FilterFoot
+      resource={resource}
+      tree={draft.tree}
+      mode={{ kind: "new" }}
+      onSave={() => setSaving(draft.tree)}
+      exportRun={exportRun}
+    />
+  ) : undefined;
+
+  return (
+    <div className="wrap filters-screen">
+      <FocusedHead
+        title={list.name}
+        facts={t("filters.listFacts", {
+          records: t(TAB_LABEL[tab]),
+          who: audienceOf(list),
+        })}
+      />
+      {editable && <EditingListNotice list={list} />}
+      <Panel title={t("filters.builderTitle")} footer={foot}>
+        <PanelBody>
+          <div ref={focus.rows}>
+            <FilterEditor
+              draft={draft}
+              dispatch={dispatch}
+              vocabulary={vocabulary}
+              words={words}
+              records={records}
+            />
+          </div>
+        </PanelBody>
+      </Panel>
+      <FilterOutcome tab={tab} tree={draft.tree} vocabulary={vocabulary} />
+      <SaveFilterModal
+        open={saving !== null}
+        onClose={() => setSaving(null)}
+        tab={tab}
+        tree={saving ?? draft.tree}
+        onSaved={(kind, id, name) => {
+          setSaving(null);
+          land(kind, id, name);
+        }}
+      />
+    </div>
+  );
 }
 
 /** Says, above the builder, which list a save will change. */
-export function EditingListNotice({
-  edited,
-}: Readonly<{ edited: EditedList }>) {
+export function EditingListNotice({ list }: Readonly<{ list: List }>) {
   const t = useT();
   return (
-    <Callout
-      tone="info"
-      title={t("lists.editingTitle", { name: edited.list.name })}
-    >
+    <Callout tone="info" title={t("lists.editingTitle", { name: list.name })}>
       {t("lists.editingBody")}
     </Callout>
   );
 }
 
-/** "Save to <list>": writes the tree on screen to the list being edited. */
+/**
+ * "Save to <list>": the page's one emerald verb. It names the automations
+ * watching the list before it writes, held to the version of `list`, and
+ * hands back to the page once the list holds the tree, so the page decides
+ * where the reader goes.
+ */
 export function SaveToListAction({
-  edited,
+  list,
   tree,
-}: Readonly<{ edited: EditedList; tree: Node }>) {
+  disabled = false,
+  onSaved,
+}: Readonly<{
+  /** The list as read when the page opened. */
+  list: List;
+  tree: Node;
+  disabled?: boolean;
+  onSaved: () => void;
+}>) {
   const t = useT();
   const update = useUpdateList();
-  const [open, setOpen] = useState(false);
-  if (!isComplete(tree)) {
-    return null;
-  }
-  const name = edited.list.name;
+  // The tree the reader confirmed is the one on screen when they asked: an
+  // answer landing behind the dialog is not theirs to write to a shared list.
+  const [pinned, setPinned] = useState<Node | null>(null);
+  const name = list.name;
   const error = !update.isError
     ? null
     : problemCodeOf(update.error) === "version_skew"
@@ -138,13 +249,17 @@ export function SaveToListAction({
       : problemMessageOf(update.error, t);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button
+        variant="primary"
+        disabled={disabled}
+        onClick={() => setPinned(tree)}
+      >
         {t("lists.saveFilterTo", { name })}
       </Button>
       <ConfirmModal
-        open={open}
+        open={pinned !== null}
         onClose={() => {
-          setOpen(false);
+          setPinned(null);
           update.reset();
         }}
         title={t("lists.saveFilterTitle", { name })}
@@ -154,20 +269,17 @@ export function SaveToListAction({
         onConfirm={() =>
           update.mutate(
             {
-              id: edited.list.id,
-              version: edited.version,
-              definition: encode(tree) as Record<string, unknown>,
+              id: list.id,
+              version: list.version,
+              definition: encode(pinned ?? tree) as Record<string, unknown>,
             },
-            {
-              onSuccess: () =>
-                navigate({ screen: "lists", id: edited.list.id }),
-            },
+            { onSuccess: onSaved },
           )
         }
       >
         <p>{t("lists.saveFilterBody")}</p>
         <ListRuleUses
-          rules={ruleUsesOf(edited.list)}
+          rules={ruleUsesOf(list)}
           lead={t("lists.rules.settingsLeadLive")}
         />
       </ConfirmModal>

@@ -37,6 +37,7 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		Limit:           params.Limit,
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
 		Sort:            params.Sort,
+		Query:           params.Q,
 		CustomFilters:   httperr.CustomFieldFilters(r),
 		TagIDs:          uuidArgs(params.TagId),
 	}
@@ -136,6 +137,10 @@ func (h Handlers) UpdateDeal(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 
+	if err := refuseClosingFields(req); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	update := dealUpdateInput(req, ifVersion)
 	update.Clear = httperr.ClearedFields(r)
 	deal, err := h.store.UpdateDeal(r.Context(), pathID[ids.DealKind](id), update)

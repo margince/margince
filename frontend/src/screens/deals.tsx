@@ -27,7 +27,7 @@ import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
 import { navigate, routeHash } from "../app/router";
-import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
+import { currentParams, replaceDial, useUrlParams } from "../app/urlstate";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
@@ -35,10 +35,10 @@ import {
   EmptyState,
   SegmentedControl,
 } from "../design-system/atoms";
-import {
-  type BoardColumn,
-  type BoardDeal,
-  type BoardMoneyColumn,
+import type {
+  BoardColumn,
+  BoardDeal,
+  BoardMoneyColumn,
   PipelineBoard,
 } from "../design-system/composed";
 import { DataTable } from "../design-system/datatable";
@@ -126,7 +126,8 @@ import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
-import { dealMailAside, lastMailColumn } from "./dealmailaside";
+import { lastMailColumn } from "./dealmailaside";
+import { DealPipelineBoard } from "./dealpipelineboard";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -141,7 +142,6 @@ import {
   type OwnerNaming,
   rosterOwnerNaming,
   useEntityName,
-  useRoster,
 } from "./entityref";
 import { searchCompanies } from "./filterreference";
 import {
@@ -157,6 +157,7 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
+import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
@@ -164,13 +165,19 @@ import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
 import { RecordFields, rawRecord } from "./recordfields";
-import { tagsColumn } from "./recordlist";
+import {
+  mineEmptyNote,
+  ownerColumn,
+  standardViews,
+  tagsColumn,
+} from "./recordlist";
 import { RecordListsPanel } from "./recordlists";
 import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
+import { WorklistReturnLink } from "./worklist.return";
 
 // Kanban, table and deal detail share the fetched records and approval flow.
 // Mixed-currency columns never sum native minor units; weighting stays server-side.
@@ -215,6 +222,7 @@ function usePipeline(pipelineId?: string | null) {
 
 type DealFilters = {
   pipelineId: string;
+  q: string;
   sort: string;
   includeArchived: boolean;
   filters: Record<string, string>;
@@ -230,17 +238,6 @@ const VIEW_PARAM = "view";
 // between this screen getting it right and the leads queue sending its drawing
 // choice to the server as a filter.
 const DEAL_SCREEN_DIALS: readonly string[] = [PIPELINE_PARAM, VIEW_PARAM];
-
-/** `params` with one dial set, or removed when the value is empty. */
-function withDialSet(params: UrlParams, key: string, value: string): UrlParams {
-  const next = new Map(params);
-  if (value) {
-    next.set(key, value);
-  } else {
-    next.delete(key);
-  }
-  return next;
-}
 
 // FORECAST_FILTER_VALUES are the four buckets a deal's own column can hold.
 // `slipped` is the report's derivation from a claimed category and a close
@@ -274,6 +271,7 @@ function dealsQueryParams(f: DealFilters) {
     limit: 100,
     include_archived: f.includeArchived || undefined,
     pipeline_id: f.pipelineId || undefined,
+    q: f.q || undefined,
     sort: f.sort || undefined,
     stage_id: filters.stage_id || undefined,
     owner_id: filters.owner_id || undefined,
@@ -360,14 +358,15 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // have told a reader whose report answered 422 to press a filter instead of
 // showing them the failure.
 //
-// A TAG has no filter field on the report — sending one is a 422 — so the
-// totals would count deals the board is not showing. Every other dial is one
-// the report takes, and the report measures every deal the reader may see,
-// which is the set `GET /deals` draws as cards.
+// A TAG and a SEARCH have no filter field on the report — sending one is a
+// 422 — so the totals would count deals the board is not showing. Every other
+// dial is one the report takes, and the report measures every deal the reader
+// may see, which is the set `GET /deals` draws as cards.
 function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
   }
+  if (f.q) return "deals.totalsNoSearch";
   return undefined;
 }
 
@@ -1202,9 +1201,8 @@ function AmountCell({
   );
 }
 
-// The table-view column set. Module-level (not inlined in DealsScreen,
-// which is already at the cognitive-complexity ceiling) — stage_id → name
-// and amount/close formatting are the only per-row logic.
+// The table-view column set, module-level because DealsScreen is already at
+// the cognitive-complexity ceiling.
 function dealColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
@@ -1277,6 +1275,7 @@ function dealColumns(
             )
           : null,
     },
+    ownerColumn<Deal>(t),
     {
       // How long since anything happened on this deal. It is the figure a
       // forecast argument rests on — an amount with no recent signal behind it
@@ -1594,11 +1593,10 @@ function DealBoardBody({
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
-  // Only walked when a card has an owner to name: a board of unowned deals
-  // needs no roster read to say so.
-  const roster = useRoster(
-    "user",
-    loadedDeals.some((deal) => Boolean(deal.owner_id)),
+  // Named by id, batched into one request for every card's owner at once;
+  // an unowned deal contributes no id, so a board of them asks nothing.
+  const ownerNames = useMemberNames(
+    loadedDeals.flatMap((deal) => (deal.owner_id ? [deal.owner_id] : [])),
   );
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useCompanyMarks), so no card is left
@@ -1629,7 +1627,7 @@ function DealBoardBody({
             </QueryGate>
           ) : (
             <>
-              <PipelineBoard
+              <DealPipelineBoard
                 cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
                 zone={recordZone}
                 columns={buildColumns(
@@ -1638,10 +1636,9 @@ function DealBoardBody({
                   stageTotalsQuery.data ?? new Map(),
                   companyMarks,
                   totalsWithheld ? t(totalsWithheld) : undefined,
-                  rosterOwnerNaming(roster),
+                  rosterOwnerNaming(ownerNames),
                 )}
                 onOpen={openDeal}
-                mailAside={dealMailAside}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
                 columnExtras={suggestionGhosts}
@@ -1808,14 +1805,14 @@ function useDealScreenDials({
     );
   };
   const pipelineId = params.get(PIPELINE_PARAM) ?? "";
-  const setPipelineId = (next: string) =>
-    setParams(withDialSet(currentParams(), PIPELINE_PARAM, next));
+  const setPipelineId = (next: string) => replaceDial(PIPELINE_PARAM, next);
   const effectivePipeline: Pipeline | undefined =
     pipelines?.find((p) => p.id === pipelineId) ??
     pipelines?.find((p) => p.is_default) ??
     pipelines?.[0];
   const dealFilters: DealFilters = {
     pipelineId: effectivePipeline?.id ?? "",
+    q: query.q,
     sort: query.sort,
     includeArchived: query.includeArchived,
     filters: query.filters,
@@ -1824,9 +1821,7 @@ function useDealScreenDials({
   const view: "board" | "table" =
     params.get(VIEW_PARAM) === "table" ? "table" : "board";
   const setView = (next: "board" | "table") =>
-    setParams(
-      withDialSet(currentParams(), VIEW_PARAM, next === "table" ? next : ""),
-    );
+    replaceDial(VIEW_PARAM, next === "table" ? next : undefined);
 
   return {
     query,
@@ -2055,6 +2050,7 @@ export function DealsScreen({
   const cf = useObjectCustomFields("deal");
   const pipelinesQuery = usePipelines();
   const meQuery = useMe();
+  const viewerId = useViewerId();
   const savedViews = useSavedViewTabs("deals");
   const {
     query,
@@ -2227,7 +2223,6 @@ export function DealsScreen({
         columns={dealColumns(t, locale, recordZone, stageName)}
         rowKey={(deal) => deal.id}
         rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
-        searchable={false}
         action={createAction}
         tools={tools}
         saveView={saveView}
@@ -2254,23 +2249,19 @@ export function DealsScreen({
           acquisitionSources: acquisitionSources,
           retiredSuffix: t("deal.acquisitionRetired"),
         })}
-        views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
+        views={[...standardViews(viewerId, { sort: "" })]}
+        emptyNote={mineEmptyNote({
+          t,
+          state: dealsListState,
+          viewerId,
+          unit: "unit.deals",
+        })}
       />
       <ErrorLine error={advance.error} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
-        onConfirm={(input) =>
-          // mutateAsync REJECTS on failure; this dialog wants the outcome, and
-          // an unhandled rejection in a click handler is not one. onError still
-          // runs, so the screen's own error surface is unaffected. The SAVED
-          // DEAL comes back on success, because the review offered next needs
-          // the closing the server just recorded.
-          advance.mutateAsync(input).then(
-            (deal) => deal,
-            (error: unknown) => error,
-          )
-        }
+        onConfirm={(input) => advance.mutateAsync(input)}
         onClosed={(deal, reason) => setClosed(closedDealOf(deal, reason))}
       />
       {/* Offered the moment a deal closes, from the list as from the record
@@ -2981,12 +2972,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           return (
             <div className="record-sheet">
               <RecordView
-                // Context first: who these contacts are, before the verbs that act
-                // on them. The seats moved out of the main column when the
-                // readings band started counting them — the same two facts were
-                // reaching a reader three times on one screen. The pane is the
-                // one every record page draws, with the same fold and the same
-                // memory of it.
+                back={<WorklistReturnLink />}
+                // Context first: who these contacts are, before the verbs that
+                // act on them. The seats left the main column once the readings
+                // band counted them, or one screen said the same facts three
+                // times. Every record page draws this pane, fold and memory.
                 aside={dealContext(deal)}
                 asideOpen={details.open}
                 name={deal.name}
@@ -3141,12 +3131,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}
-                  onConfirm={(input) =>
-                    advance.mutateAsync(input).then(
-                      (deal) => deal,
-                      (error: unknown) => error,
-                    )
-                  }
+                  onConfirm={(input) => advance.mutateAsync(input)}
                   onClosed={(deal, reason) =>
                     setClosed(closedDealOf(deal, reason))
                   }

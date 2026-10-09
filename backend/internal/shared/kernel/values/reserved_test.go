@@ -61,3 +61,37 @@ func TestIsReservedAddressReadsOnlyTheDomain(t *testing.T) {
 		}
 	}
 }
+
+// The erasure's own address cannot be stored, while the RFC names around it can.
+//
+// The distinction is the whole point of ErasedEmail: a seat is resolved by address, so
+// an erasure writing this over one makes it name every seat any erasure ever wiped. A
+// live record holding it would be indistinguishable from those. The RFC 2606 names are
+// reserved in the weaker sense — no mailbox, but the test mailbox sends to them and
+// fixtures seed contacts under them, so refusing those here would take the tree with it.
+func TestParseEmailRefusesTheErasuresOwnAddressAndNoOtherReservedName(t *testing.T) {
+	t.Parallel()
+	if _, err := ParseEmail(ErasedEmail); err == nil {
+		t.Error("ParseEmail stored the address an erasure writes over a seat, so a subject can " +
+			"hold what marks a seat already erased")
+	}
+	// Case and padding are the same address: the parser lowercases before it decides.
+	if _, err := ParseEmail("  Erased@Example.INVALID  "); err == nil {
+		t.Error("ParseEmail stored the reserved address spelled differently")
+	}
+	for _, addr := range []string{"rita@reviewer.example", "a@anon.test", "x@example.com"} {
+		if _, err := ParseEmail(addr); err != nil {
+			t.Errorf("ParseEmail(%q) → %v: the RFC names stay storable, or the test mailbox and "+
+				"every fixture under them stop working", addr, err)
+		}
+	}
+
+	// And the address stays RESERVED by domain, which is a different question from
+	// whether a record may hold it. The sweeps that skip reserved domains read rows
+	// written before this reservation, so a tombstone that stopped classifying would
+	// start being processed as an ordinary address.
+	if !IsReservedAddress(ErasedEmail) {
+		t.Error("IsReservedAddress no longer recognises the erasure's own address, so a sweep " +
+			"that skips reserved domains stops skipping the rows an erasure already wrote")
+	}
+}

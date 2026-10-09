@@ -622,7 +622,7 @@ func TestAPresetRowNamesTheModelThatAnswersAndTheOneAFailedCallFallsTo(t *testin
 			"a fallback binding the same model",
 			map[ai.Tier]ai.ProviderConfig{first: cheap, next: cheap},
 			[]aicert.Record{cheapRecord},
-			"cheap-1 · " + string(first) + " → " + string(next) + " is the same model, so no separate fallback",
+			"cheap-1 · " + string(first) + " · no separate fallback",
 		},
 		{
 			"no further bound rung",

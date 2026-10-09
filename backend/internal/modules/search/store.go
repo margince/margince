@@ -106,7 +106,7 @@ func (s *Store) forWorkspace(ws ids.WorkspaceID) *Store {
 	return &Store{db: s.db.ForWorkspace(ws)}
 }
 
-// Hit is one ranked result. Score is ts_rank_cd over the entity's
+// Hit is one ranked result. Score is scoreExpression over the entity's
 // search_tsv: it orders hits of one type well and hits of different types
 // poorly, since a message body repeating a name outranks the record that
 // bears it — which is what a grouped search (Input.PerType) answers. A contact
@@ -227,21 +227,9 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			page = shape.page(nil)
 			return nil
 		}
-
-		rows, err := tx.Query(ctx, shape.statement(branches, withinClause(in.Within, arg), arg), args...)
+		hits, err := rank(ctx, tx, shape.statement(branches, withinClause(in.Within, arg), arg), args)
 		if err != nil {
-			return rankingFault(ctx, err)
-		}
-		defer rows.Close()
-		// Through the SAME judgement, because this is where the cancellation
-		// usually lands. pgx returns from Query before the rows are read, so a
-		// statement stopped mid-result reports through the iteration — the
-		// ceiling would otherwise surface as a raw fault from the scan and the
-		// arm above would only ever catch a statement killed before it started
-		// returning.
-		hits, err := scanHits(rows)
-		if err != nil {
-			return rankingFault(ctx, err)
+			return err
 		}
 		page = shape.page(hits)
 		if err := s.countTagReach(ctx, tx, page.Hits); err != nil {
@@ -259,6 +247,27 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		return Page{}, err
 	}
 	return page, nil
+}
+
+func rank(ctx context.Context, tx pgx.Tx, statement string, args []any) ([]Hit, error) {
+	// Unnamed, so Postgres plans it at each Bind with the words: a reused named
+	// statement turns generic and rebuilds every tsquery for each row it scores.
+	rows, err := tx.Query(ctx, statement, append([]any{pgx.QueryExecModeDescribeExec}, args...)...)
+	if err != nil {
+		return nil, rankingFault(ctx, err)
+	}
+	defer rows.Close()
+	// Through the SAME judgement, because this is where the cancellation
+	// usually lands. pgx returns from Query before the rows are read, so a
+	// statement stopped mid-result reports through the iteration — the
+	// ceiling would otherwise surface as a raw fault from the scan and the
+	// arm above would only ever catch a statement killed before it started
+	// returning.
+	hits, err := scanHits(rows)
+	if err != nil {
+		return nil, rankingFault(ctx, err)
+	}
+	return hits, nil
 }
 
 // bindTypedQuery binds a query split at the last separator: the words the
@@ -302,9 +311,9 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 		if !admitted {
 			continue
 		}
-		// What this branch matches, and why it is shaped that way, lives with
-		// the expression in typedquery.go — including the parse configurations
-		// each entity uses and the rule that only the fragment widens.
+		// What this branch matches and how it scores live with the expressions
+		// in typedquery.go — including the parse configurations each entity
+		// uses and the rule that only the fragment widens.
 		tsquery := matchExpression(branch.entity, headPos, tailPos, hasFragment)
 
 		snippet, err := branch.excerpt(ctx, arg)
@@ -313,11 +322,13 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 		}
 		sql := fmt.Sprintf(
 			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
-			        ts_rank_cd(t.search_tsv, %s)::float8 AS score, %s
+			        %s::float8 AS score, %s
 			 FROM %s t
 			 WHERE t.search_tsv @@ %s
 			   AND t.archived_at IS NULL`,
-			branch.entity, branch.title, snippet, tsquery, noEmployer, branch.table, tsquery)
+			branch.entity, branch.title, snippet,
+			scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment),
+			noEmployer, branch.table, tsquery)
 		if narrowing := branch.narrowing("t"); narrowing != "" {
 			sql += " AND " + narrowing
 		}

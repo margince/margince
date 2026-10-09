@@ -1,45 +1,28 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { Button } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
 import {
-  RecordPicker,
-  type RecordPickerCandidate,
-} from "../design-system/recordpicker";
+  ListPopover,
+  type ListPopoverOption,
+} from "../design-system/listpopover";
 import { useT } from "../i18n";
 import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
 import { useUpdateRecord } from "./edit";
 import type { Project } from "./projects.form";
+import { RosterPartialNote, useRoster, useRosterPartial } from "./roster";
 
 // Hands a project directly to a named colleague. The Owner select beside
 // this (projects.form.ts) only ever offers keep-current/Me/Unassign; naming
 // anyone else has no path from the project's own screen otherwise. The
 // server already takes any workspace member in `owner_id` (updateProject is
 // its own bulk transfer's "per-project twin"), so this is transport the
-// contract already supports, reached through the standing RecordPicker
-// search→pick pattern rather than a new one.
-
-// `q` is a server-side filter (not a client-walked page like a deal search),
-// so one page covers every ordinary search — but the endpoint still caps a
-// page at 50 by default. Asking for the contract's own maximum instead means
-// a common name in a large workspace does not quietly lose matches past the
-// default.
-export async function searchColleagues(
-  q: string,
-): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/users", {
-    params: { query: { q, limit: 200 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.map((user) => ({ id: user.id, name: user.display_name }));
-}
-
+// contract already supports.
+//
+// Picking IS the act, as on an assignee picker: the write is one pick away
+// from being walked back, so a confirm step would only add a press.
 export function AssignProjectOwnerAction({
   project,
   disabledReasonId,
@@ -49,7 +32,11 @@ export function AssignProjectOwnerAction({
 }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
+  // The shared roster rather than a search, so the list opens with names.
+  const roster = useRoster("user", open);
+  const partial = useRosterPartial("user", open);
+  // The toast lands after the popover closes, when the roster may be gone.
+  const pickedName = useRef("");
 
   const mutation = useUpdateRecord<Project>({
     update: async (values) => {
@@ -68,63 +55,56 @@ export function AssignProjectOwnerAction({
     invalidate: "projects",
     recordKey: "project",
     recordId: project.id,
-    savedMessage: t("project.assignOwnerDone", { name: picked?.name ?? "" }),
-    onDone: () => {
-      setOpen(false);
-      setPicked(null);
-    },
+    // Named off the pick, never a re-read: the write sends only that option's id.
+    savedMessage: () =>
+      t("project.assignOwnerDone", { name: pickedName.current }),
+    onDone: () => setOpen(false),
   });
 
+  const options = roster.data?.flatMap((entry): ListPopoverOption[] =>
+    "display_name" in entry
+      ? [{ id: entry.id, name: entry.display_name, keywords: [entry.email] }]
+      : [],
+  );
   const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
     ? skew
       ? t("edit.versionSkew")
       : problemMessageOf(mutation.error, t)
-    : null;
+    : undefined;
 
   return (
-    <>
-      <Button
-        reasonId={disabledReasonId}
-        data-testid="assign-project-owner"
-        onClick={() => setOpen(true)}
-      >
-        {t("project.assignOwner")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={() => {
-          setOpen(false);
-          setPicked(null);
-          // A prior failure's error is this action's own transient state, not
-          // a fact about the project — closing the dialog on it, however, is
-          // not the same as it being addressed. Reset so reopening starts
-          // clean rather than showing a refusal from an attempt nobody has
-          // repeated yet.
+    <ListPopover
+      label={t("project.assignOwner")}
+      title={t("project.assignOwnerTitle")}
+      searchLabel={t("project.assignOwnerSearch")}
+      reasonId={disabledReasonId}
+      open={open}
+      onOpenChange={(next) => {
+        // Held open while the write is out, so its refusal has somewhere to land.
+        if (!next && mutation.isPending) {
+          return;
+        }
+        setOpen(next);
+        // A refusal belongs to the attempt it answered, not to the next opening.
+        if (!mutation.isPending) {
           mutation.reset();
-        }}
-        title={t("project.assignOwnerTitle")}
-        // The verb, not "Confirm": the last control before a write says which
-        // write it is, and `deals.confirm` names no outcome at all.
-        confirmLabel={t("project.assignOwnerConfirm")}
-        confirmReason={
-          picked ? undefined : t("project.assignOwnerNoneSelected")
         }
-        onConfirm={() =>
-          picked &&
-          mutation.mutate({ values: { owner_id: picked.id }, rows: {} })
+      }}
+      options={roster.isError ? [] : options}
+      empty={roster.isError ? problemMessageOf(roster.error, t) : undefined}
+      selected={project.owner_id ?? undefined}
+      onPick={(option, done) => {
+        if (option.id === project.owner_id) {
+          done();
+          return;
         }
-        pending={mutation.isPending}
-        error={errorMessage}
-      >
-        <RecordPicker
-          label={t("project.assignOwnerSearch")}
-          searchTargets={searchColleagues}
-          selected={picked}
-          onPick={setPicked}
-          disabled={mutation.isPending}
-        />
-      </ConfirmModal>
-    </>
+        pickedName.current = option.name;
+        mutation.mutate({ values: { owner_id: option.id }, rows: {} });
+      }}
+      pending={mutation.isPending}
+      error={errorMessage}
+      footer={<RosterPartialNote partial={partial} />}
+    />
   );
 }

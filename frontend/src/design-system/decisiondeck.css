@@ -87,7 +87,7 @@
   inset-block: 0 var(--space-6);
   border: 1.5px dashed var(--aiMed);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  background: var(--bgInset);
   transform-origin: top center;
   pointer-events: none;
 }
@@ -262,7 +262,7 @@
 
 .ddeck-ghost[data-verdict="skip"] {
   border-color: var(--borderStrong);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ddeck-ghost[data-verdict="accept"] {

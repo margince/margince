@@ -14,14 +14,14 @@
  * notched at the bottom right. Nothing about who said what rests on colour.
  *
  * A solid fill and no hairline: the bubble is a shape, and an outline around a
- * filled shape draws the same edge twice. --bgCard rather than --bgElevated
+ * filled shape draws the same edge twice. --bgInset rather than --bgElevated
  * because the column it sits in is already elevated — a bubble the same colour
  * as its surface has to borrow the border back to exist at all. */
 .ob-conv-narration p {
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-xs) var(--r-lg) var(--r-lg) var(--r-lg);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-conv-speaker {
@@ -335,8 +335,8 @@
   border-radius: var(--r-md);
   background: var(--bgElevated);
   transition:
-    border-color 0.14s ease,
-    background 0.14s ease;
+    border-color var(--dur-state) ease,
+    background var(--dur-state) ease;
 }
 
 .ob-decision-card:hover {
@@ -444,7 +444,7 @@
   margin-left: calc(20px + var(--space-3));
   padding: var(--space-4);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-decision-proof-head {
@@ -1285,8 +1285,8 @@
   cursor: pointer;
   text-align: start;
   transition:
-    border-color 0.14s ease,
-    background 0.14s ease;
+    border-color var(--dur-state) ease,
+    background var(--dur-state) ease;
 }
 
 .ob-connect-card:hover:not(:disabled) {
@@ -1442,51 +1442,14 @@
   text-align: center;
 }
 
-.ob-connect-dialog-body {
-  margin-top: var(--space-4);
-}
-
-.ob-connect-dialog-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gapActions);
-  margin-top: var(--space-4);
-}
-
-.ob-connect-dialog-actions .btn {
-  width: 100%;
-}
-
-/* The panel spaces its own children with a flex gap, so the actions row asks
-   only for the DIFFERENCE between that gap and the beat it gets in the
-   block-flow dialogs — adding its full margin on top of the gap put 28px above
-   this one row and 16px above the identical row in every other dialog. */
-.ob-connect-linkedin-panel .ob-connect-dialog-actions {
-  margin-top: var(--space-1);
-}
-
-/* Same shape as the primary above it, one weight quieter: a bare label with no
-   padding sat in a row with a 44px-tall button and gave the reader a two-line
-   hit area for the choice that undoes the whole dialog. */
-.ob-connect-dialog-notnow {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-sm);
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.ob-connect-dialog-notnow:hover {
-  background: var(--bgHover);
+.ob-connect-dialog-title:has(+ .form-stack),
+.ob-connect-dialog-intro:has(+ .form-stack) {
+  margin-bottom: var(--space-4);
 }
 
 /* The authorization form itself keeps left-aligned labels — a form reads
    worse centred — inside the otherwise-centred dialog chrome above it. */
 .ob-connect-linkedin-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
   text-align: start;
 }
 
@@ -1603,7 +1566,7 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-company-card-facts dt {
@@ -2052,7 +2015,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  transition: background 0.14s ease;
+  transition: background var(--dur-state) ease;
 }
 
 /* The collapsed weight: the row IS its button — a caret, label, preview and
@@ -2183,7 +2146,7 @@
   padding: var(--space-3);
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-triage-omitted svg {

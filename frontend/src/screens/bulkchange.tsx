@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  type QueryKey,
   skipToken,
   useMutation,
   useQuery,
@@ -255,8 +256,14 @@ export function BulkChangeDialog({
     }
     // A list page reads its members from the record list, and a task lands
     // on the task lists: both go stale with the change.
+    const lists: QueryKey[] = [
+      [kind.list],
+      [LISTS_KEY],
+      ["tasks"],
+      ["activities"],
+    ];
     await Promise.all(
-      [[kind.list], [LISTS_KEY], ["tasks"], ["activities"]].map((queryKey) =>
+      [...lists, ...(kind.stale ?? [])].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey }),
       ),
     );
@@ -296,6 +303,7 @@ export function BulkChangeDialog({
           tone: result.changed > 0 ? "success" : "warning",
           action: undoable
             ? {
+                kind: "undo",
                 label: t("common.undo"),
                 onAct: () => openUndo(undoOf(run.request, result)),
               }
@@ -328,12 +336,19 @@ export function BulkChangeDialog({
   }
 
   return (
-    <Modal open={request !== null} onClose={close} labelledBy={headingId}>
+    <Modal
+      open={request !== null}
+      onClose={close}
+      labelledBy={headingId}
+      intent="confirm"
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {words.title}
       </Heading>
-      <div className="form-stack">{body}</div>
-      <ErrorLine error={execute.error} />
+      <div className="form-stack">
+        {body}
+        <ErrorLine error={execute.error} />
+      </div>
       <div className="actions">
         {runnable ? (
           <>

@@ -99,6 +99,18 @@ func archiverOf(target bulkTarget) (bulkArchiver, error) {
 	return archiver, nil
 }
 
+// reassignerOf answers the record type's reassignment. admit refuses
+// reassign_owner for a type without one, so a miss here is a bug.
+//
+//nolint:ireturn // the reassignment share of a target is exactly the thing asked for
+func reassignerOf(target bulkTarget) (bulkReassigner, error) {
+	reassigner, ok := target.(bulkReassigner)
+	if !ok {
+		return nil, fmt.Errorf("compose: a %T has no owner to hand on", target)
+	}
+	return reassigner, nil
+}
+
 // lockUnmoved locks one record for a forward change, holding it to the version
 // the caller was shown; an undo holds it to nothing, because a tag, a
 // membership or a task never moved the record's version.
@@ -124,7 +136,7 @@ func applyTagging(
 	if err != nil || skip.Reason != "" {
 		return bulkApplied{}, skip, err
 	}
-	assignment, skip, err := tagOne(ctx, tx, change, item, add)
+	outcome, skip, err := tagOne(ctx, tx, change, item, add)
 	if err != nil || skip.Reason != "" {
 		return bulkApplied{}, skip, err
 	}
@@ -134,52 +146,63 @@ func applyTagging(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID), Tagged: &before},
 		After:  crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID), Tagged: &after},
 	}
-	outcome := bulkOutcome{ID: item.Id, Version: row.version, TaggableID: assignment}
+	outcome.ID, outcome.Version = item.Id, row.version
 	return bulkApplied{sample: sample, outcome: outcome}, crmcontracts.BulkSkip{}, nil
 }
 
-// tagOne is one row's tag write. Putting the tag on answers the assignment it
-// made, which is all its undo may take off; the undo of add_tag removes only
-// that assignment, so a tag somebody took off and put back since is theirs and
-// is skipped as changed_since_batch.
+// tagOne is one row's tag write, answering what its undo needs. Putting the
+// tag on answers the assignment it made, which is all its undo may take off,
+// so a tag somebody took off and put back since is skipped as
+// changed_since_batch. Taking it off answers the removal its undo restores.
 func tagOne(
 	ctx context.Context, tx pgx.Tx, change bulkChange, item crmcontracts.BulkItem, add bool,
-) (*openapi_types.UUID, crmcontracts.BulkSkip, error) {
+) (bulkOutcome, crmcontracts.BulkSkip, error) {
 	tag, entity, id := ids.From[ids.TagKind](*change.tagID), string(change.recordType), ids.UUID(item.Id)
 	tags := change.writers.tags
-	if add {
-		row, err := tags.ApplyTagTx(ctx, tx, tag, entity, id)
-		if errors.Is(err, apperrors.ErrConflict) {
-			return nil, skipped(crmcontracts.BulkSkipReasonNoChange), nil
-		}
-		if err != nil {
-			skip, classifyErr := bulkSkipFor(err)
-			return nil, skip, classifyErr
-		}
-		assignment := openapi_types.UUID(row.ID)
-		return &assignment, crmcontracts.BulkSkip{}, nil
-	}
-	var removed bool
+	var out bulkOutcome
 	var err error
 	unmoved := crmcontracts.BulkSkipReasonNoChange
-	if change.undo != nil && change.verb == crmcontracts.BulkVerbAddTag {
+	switch {
+	case add && change.undo != nil:
+		var removal ids.UUID
+		if removal, err = change.undo.removalOf(item.Id); err == nil {
+			_, err = tags.RestoreBatchTagRemovalTx(ctx, tx, tag, removal, change.undo.batchID)
+		}
+	case add:
+		row, applyErr := tags.ApplyTagTx(ctx, tx, tag, entity, id)
+		err = applyErr
+		assignment := openapi_types.UUID(row.ID)
+		out.TaggableID = &assignment
+	case change.undo != nil && change.verb == crmcontracts.BulkVerbAddTag:
 		made, known := change.undo.taggings[item.Id]
 		if !known {
-			return nil, skipped(crmcontracts.BulkSkipReasonNoChange), nil
+			return bulkOutcome{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
 		}
 		unmoved = crmcontracts.BulkSkipReasonChangedSinceBatch
+		var removed bool
 		removed, err = tags.RemoveTagAssignmentTx(ctx, tx, ids.UUID(made), tag, entity, id)
-	} else {
-		removed, err = tags.RemoveTagTx(ctx, tx, tag, entity, id)
+		if err == nil && !removed {
+			return bulkOutcome{}, skipped(unmoved), nil
+		}
+	default:
+		var removal ids.UUID
+		removal, err = tags.RemoveTagTx(ctx, tx, tag, entity, id)
+		if err == nil && removal == ids.Nil {
+			return bulkOutcome{}, skipped(unmoved), nil
+		}
+		kept := openapi_types.UUID(removal)
+		out.RemovalID = &kept
 	}
-	if err != nil {
+	switch {
+	case errors.Is(err, collections.ErrRemovalMovedOn):
+		return bulkOutcome{}, skipped(crmcontracts.BulkSkipReasonChangedSinceBatch), nil
+	case add && change.undo == nil && errors.Is(err, apperrors.ErrConflict):
+		return bulkOutcome{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
+	case err != nil:
 		skip, classifyErr := bulkSkipFor(err)
-		return nil, skip, classifyErr
+		return bulkOutcome{}, skip, classifyErr
 	}
-	if !removed {
-		return nil, skipped(unmoved), nil
-	}
-	return nil, crmcontracts.BulkSkip{}, nil
+	return out, crmcontracts.BulkSkip{}, nil
 }
 
 // applyTask files the change's task under one record, through the mapping the

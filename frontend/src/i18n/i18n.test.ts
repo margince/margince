@@ -65,6 +65,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiProviderSettings.service.together",
   "aiProviderSettings.service.groq",
   "aiProviderSettings.service.deepseek",
+  "aiProviderSettings.service.langdockEu",
+  "aiProviderSettings.service.langdockUs",
+  "aiProviderSettings.service.googleAiStudio",
+  "aiProviderSettings.service.anthropic",
+  "aiProviderSettings.service.openai",
   // Two signed counts and a slash, with no word to translate. Its spoken
   // form, lists.pulse.label, is translated normally.
   "lists.pulse.chip",
@@ -131,6 +136,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiRouting.baseUrl.placeholder",
   "aiRouting.baseUrl.placeholder.jev",
   "aiRouting.baseUrl.placeholder.jevCompatible",
+  "aiRouting.baseUrl.placeholder.gemini",
+  "aiRouting.baseUrl.placeholder.anthropic",
+  "aiRouting.baseUrl.placeholder.openai",
   // A pattern of placeholders with no words in it, and the EU's own
   // abbreviation, which Vietnamese writes the same way.
   "aiRouting.location.option",
@@ -155,6 +163,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "dealSuggestion.name",
   "lead.sla.answeredAt",
   "projectFiling.decision",
+  // A filter clause's slots, a group's brackets, a value not given yet.
+  "filters.sentence.clause",
+  "filters.sentence.clauseBare",
+  "filters.sentence.group",
+  "filters.sentence.pendingValue",
   // Two phase names and an arrow.
   "project.history.moved",
   "brief.digestPhaseChange",
@@ -212,6 +225,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "stageAutomation.pipeline",
   "review.colDeal",
   "worklist.category.leads",
+  "filters.sentence.ref.pipeline_one",
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",

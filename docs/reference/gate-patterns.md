@@ -1,15 +1,15 @@
-# Gate patterns — how to pick one
+<!-- prose:plain -->
+# Gate patterns: how to pick one
 
-A **gate** is a normal Go test that reads the source tree and fails your PR when
-a rule is broken. `backend/gates/` holds a lot of them (`ls backend/gates/*_test.go | wc -l`
-for today's count). They are not that many unrelated tests. They come in eight
-shapes, and each shape fails in its own predictable way.
+A **gate** is a normal Go test that reads the source tree and fails your PR when someone breaks a
+rule. `backend/gates/` holds many of them (`ls backend/gates/*_test.go | wc -l` gives the count for
+today). They come in 8 shapes, and each shape fails in its own way, which you can see coming.
 
-Read this page **before writing a gate**, to pick the right shape.
+Read this page before you write a gate, to pick the right shape.
 
-- The full list of gates, grouped by shape, is generated:
+- The full list of gates, sorted by shape, is generated:
   [gate-inventory.md](gate-inventory.md).
-- The rules for making a gate hold are in
+- The rules that make a gate hold are in
   [derive-the-obligation.md](../principles/derive-the-obligation.md).
 - What will fail your PR today is in
   [backend-onboarding.md](../explanation/backend-onboarding.md).
@@ -18,19 +18,18 @@ Read this page **before writing a gate**, to pick the right shape.
 
 ## Step 1: how strong can your gate be?
 
-Three levels. Aim for the highest one your subject allows, then say in the test
+There are three levels. Go for the highest one your subject lets you reach, then say in the test
 where you had to stop.
 
 | Level | How it reads the tree | Can it miss something? |
 |---|---|---|
-| **H3 — total** | Compares two *lists*. Every item on one side is matched against every item on the other. | **No.** A new item shows up in one list and the diff names it. |
-| **H2 — structural** | Parses Go into an AST and walks it. | **Yes** — at any call it cannot resolve: through an interface, a stored field, or a closure. |
-| **H1 — textual** | Runs a regex over source or SQL text. | **Yes** — at any spelling the regex does not cover, such as a query built with `+`. |
+| **H3: total** | Holds two *lists* side by side. It matches every item on one side against every item on the other. | No, as long as the two lists come from separate sources (see [Parity](#a-parity)). A new item shows up in one list, and the diff names it. |
+| **H2: structure** | Reads Go into an AST and walks it. | Yes, at each call it cannot follow: through an interface, a stored field, or a closure. |
+| **H1: text** | Runs a regex over source or SQL text. | Yes, at each way of writing that the regex does not cover, such as a query built with `+`. |
 
-H1 is not cheating. Go sends SQL as plain strings, so most SQL gates *have* to be
-H1. The difference between a good H1 gate and a useless one is that a good one
-**says which spellings it cannot see** and **counts what it found**, so a broken
-regex fails instead of quietly finding nothing.
+H1 is a good level to use. Go sends SQL as plain strings, so most SQL gates *have* to be H1. A good
+H1 gate says which forms it cannot see, counts what it found, and fails when the count is under a
+floor. That way a broken regex fails, and does not find nothing in silence.
 
 ---
 
@@ -38,77 +37,74 @@ regex fails instead of quietly finding nothing.
 
 Find the sentence that matches your rule.
 
-| Your rule sounds like… | Shape |
+| Your rule reads like… | Shape |
 |---|---|
 | "These two places store the same fact and must agree." | [A. Parity](#a-parity) |
 | "Everything in the list must exist, and everything that exists must be in the list." | [B. Census](#b-census) |
 | "Every function that does X must also call Y." | [C. Reachability](#c-reachability) |
 | "Every query/declaration like this must include Z." | [D. Shape](#d-shape) |
-| "This must not appear anywhere (except here)." | [E. Prohibition](#e-prohibition) |
-| "This comment says it's the only one — prove it." | [F. Claim check](#f-claim-check) |
+| "This must not show up in any place (but here)." | [E. Prohibition](#e-prohibition) |
+| "This comment says it is the only one; prove it." | [F. Claim check](#f-claim-check) |
 | "This number must not grow." | [G. Budget](#g-budget) |
-| "Does my new gate actually reject anything?" | [H. Falsification](#h-falsification) |
+| "Does the new gate really refuse anything?" | [H. Falsification](#h-falsification) |
 
 ---
 
 ### A. Parity
 
-**Checks:** the same fact is written in two places, and they match.
+**Checks:** the same fact is written in two places, and the two match.
 
-**How:** build list A from the owner and list B from the copy, separately. Then
-assert **both** differences are empty — `A minus B` and `B minus A`. Never just
-"A contains B". Write down in the test which side is the owner, so the next
-contact knows which one to fix.
+**How:** build list A from the owner and list B from the copy, each on its own. Then check that
+both diffs are empty: `A minus B` and `B minus A`. Never just "A has B in it". Write down in the
+test which side is the owner, so the next author knows which one to fix.
 
-**Hardness:** H3 if both sides are lists. H1 if one side is text.
+**How strong:** H3 if both sides are lists. H1 if one side is text.
 
-**Use when** a value must exist twice because the two readers can't share code —
-across a language boundary (Go ↔ TypeScript), across a process boundary, or
-across contract ↔ schema ↔ Go.
+**Use when** a value must be in two places because the two readers cannot share code. That is
+across Go and TypeScript, across two programs, or across contract ↔ schema ↔ Go.
 
-**Examples:** `frontendminorunits_test.go` (money scale in the browser vs the
-server) · `enumsync_test.go` (Go enum vs the schema's `CHECK`) ·
-`goversionpins_test.go` · `sendattachmentcap_test.go` (one limit written in five
-places).
+**Examples:**
 
-**⚠ How it silently passes:** both sides read from the *same* source, so the test
-compares a value to itself. This happens most often when side B is read out of a
-generated file that was generated from side A.
+- `frontendminorunits_test.go` (money scale in the web app against the server).
+- `enumsync_test.go` (Go enum against the `CHECK` in the schema).
+- `goversionpins_test.go`.
+- `sendattachmentcap_test.go` (one limit written in 5 places).
 
-**Fix:** trace where each side actually comes from, and assert the list is not
-empty.
+**⚠ How it passes in silence:** both sides read from the *same* source, so the test checks a value
+against itself. This happens most often when side B comes from a generated file that was generated
+from side A.
 
-> Why this matters: a money scale that is wrong on both sides cancels out. The
-> screen agrees with itself, and the customer sees 100× the real price on the
-> offer they sign.
+**Fix:** trace where each side really comes from, and check that the list is not empty.
+
+> Why this matters: a money scale that is wrong on both sides cancels out. The screen agrees with
+> itself, and the customer sees 100× the real price on the offer they sign.
 
 ---
 
 ### B. Census
 
-**Checks:** a registry is complete, in both directions.
+**Checks:** a register is full, in both ways.
 
-**How:** build one list by scanning the tree ("what exists") and another from the
-declaration ("what we claim exists"). Diff both ways.
+**How:** build one list by a scan of the tree ("what exists") and another from the declaration
+("what we claim exists"). Diff both ways.
 
-- Declared but missing → a stale entry.
+- Declared but missing → an old entry.
 - Exists but not declared → the bug you wrote the gate for.
 
-**Hardness:** H2 or H3. The scanning half is the weak one.
+**How strong:** H2 or H3. The scan part is the weak one.
 
-**Use when** there is a catalog, contract, registry, or `doc.go` list that should
-name everything of a kind: jobs, AI tasks, event types, PII tables, tools.
+**Use when** a catalog, contract, register, or `doc.go` list should name everything of a kind:
+jobs, AI tasks, event types, PII tables, tools.
 
-**Examples:** `jobcensus_test.go` (`jobs.yaml` ↔ what compose actually wires) ·
-`piicoverage_test.go` (every PII table is reached by deletion) ·
-`registrarparity_test.go` · `contractproducers_test.go` (a field the API promises
-but nothing writes).
+**Examples:** `jobcensus_test.go` (`jobs.yaml` ↔ what `compose` really wires) ·
+`piicoverage_test.go` (a delete reaches every PII table) · `registrarparity_test.go` ·
+`contractproducers_test.go` (a field the API promises but nothing writes).
 
-**⚠ How it silently passes:** the scan reads a **smaller tree than you think** —
-a glob stopped matching after a rename, or a skip-list excludes the one bad file.
-It finds nothing and reports PASS. Nothing fails, so nobody notices.
+**⚠ How it passes in silence:** the scan reads a smaller tree than you think. A glob stopped
+matching after a rename, or a skip list leaves out the one bad file. It finds nothing and reports
+PASS. Nothing fails, so nobody finds out.
 
-**Fix: count what you found, and fail if the count is too low.**
+**Fix:** count what you found, and fail if the count is too low.
 
 ```go
 // A census that judged nothing certifies nothing. The floor sits BELOW the
@@ -119,253 +115,252 @@ if named < 4 || assembled < 1 {
 }
 ```
 
-Use **two counts, not one**, when the scan has two halves. A single total hides
-which half broke. If your gate walks a subdirectory, use `gatekit.Scope`: it also
-checks the code *outside* your walk root, which proves the root is the right one.
+Use two counts when the scan has two parts; one total hides which part stopped working. If your
+gate walks a folder under the tree, use `gatekit.Scope`. It also checks the code *outside* your
+walk root, which proves the root is the right one.
 
 ---
 
 ### C. Reachability
 
-**Checks:** every function that does X also calls Y somewhere on its call path.
+**Checks:** every function that does X also calls Y on its call path.
 
-**How:** build a call graph of the package. Key it by **receiver type + function
-name**, not by name alone — `apply` is a method on one service and also a common
-name everywhere else. Find the functions that do X, then check each one reaches Y.
+**How:** build a call graph of the package. Key it by receiver type + function name, because
+`apply` is a method on one service and also a common name in other places. Find the functions that
+do X, then check that each one reaches Y.
 
-**The quantifier is the whole gate.** Two ways to write it, and only one works:
+**Whether you write *some* or *all* decides whether the gate works.** There are two ways to write
+it, and only one works:
 
 | Version | Result |
 |---|---|
-| "*some* function above this one can also reach Y" | **Useless.** If Y is called from seven places, this is true of almost everything. |
-| "this function calls Y itself, **or** it has callers and **all** of them are guarded" | Correct. A function with no callers is an entry point — if it hasn't called Y by then, nothing will. |
+| "*some* function above this one can also reach Y" | **Of no use.** If 7 places call Y, this is true of most code. |
+| "this function calls Y itself, **or** it has callers and **all** of them are guarded" | Right. A function with no callers is an entry point: if it has not called Y by then, nothing will. |
 
-**Hardness:** H2. A call through an interface, a stored field, or a closure is
-invisible to the walk. Say that in the test. Never claim those paths carry nothing.
+**How strong:** H2. The walk cannot see a call through an interface, a stored field, or a closure.
+Say that in the test. Never claim those paths carry nothing.
 
-**Use when** the rule is about *pairing or ordering*, not shape: an audit row owes
-an outbox event; a rename owes a duplicate check; a write owes a permission probe.
+**Use when** the rule is about pairs or order, not shape:
 
-**Examples:** `writeshape_test.go` (audit row ⇒ outbox event on the same path) ·
-`writeauthorityreach_test.go` · `rbacgate_test.go` · `contactscrub_test.go`
-(deleting and anonymising a contact clear the same tables) · `dedupespine_test.go` ·
-`companyrenamerecheck_test.go` (every company rename reaches the duplicate check —
-the gate whose first version was vacuous, which is why the quantifier table above
-exists).
+- an audit row owes an outbox event;
+- a rename owes a check for copies;
+- a write owes a permission check.
 
-**⚠ How it silently passes:** the weak quantifier above. It looks exactly like a
-gate that works.
+**Examples:**
 
-**Fix: mutation-test it before you merge.** Delete the required call from each
-real call site, one at a time, and watch the gate fail naming the right function.
-Two rules:
+- `writeshape_test.go` (audit row ⇒ outbox event on the same path).
+- `writeauthorityreach_test.go` · `rbacgate_test.go` · `dedupespine_test.go`.
+- `contactscrub_test.go` (to delete a contact and to remove its personal data empty the same tables).
+- `companyrenamerecheck_test.go` (every company rename reaches the check for copies). Its first
+  version used the weak *some* form and passed everything.
 
-1. **Check each mutant compiles.** A mutant that doesn't compile proves nothing.
-2. **Print the failure message yourself, once.** Swapped arguments — printing the
-   writer's name where the target belongs — is a live bug in a message nobody
-   ever sees.
+**⚠ How it passes in silence:** the weak *some* form above. It looks the same as a gate that works.
+
+**Fix: mutation-test it before you merge.** Delete the needed call from each real call site, one at
+a time, and watch the gate fail and name the right function. Two rules:
+
+1. **Check that each mutation compiles.** A mutation that does not compile proves nothing.
+2. **Print the failure message yourself, once.** Arguments in the wrong order are a live bug in a
+   message nobody reads. One name shows where another belongs.
 
 ---
 
 ### D. Shape
 
-**Checks:** every statement or declaration of a kind includes a required part.
+**Checks:** every statement or declaration of a kind has a part it needs.
 
-**How:** collect the population (SQL statements, exported methods, struct tags),
-then check each one on its own. Unlike C, no call graph is needed.
+**How:** take the full set (SQL statements, public methods, struct tags), then check each one on
+its own. You need no call graph, as you do in C.
 
-**Hardness:** H1 for SQL text, H2 for AST declarations.
+**How strong:** H1 for SQL text, H2 for AST declarations.
 
-**Use when** you can decide by looking at one statement in isolation.
+**Use when** you can decide by looking at one statement by itself.
 
-**Examples:** `updateguard_test.go` (every single-row `UPDATE` has *some*
-concurrency guard) · `tableownership_test.go` (a module only writes its own
-tables) · `errmatch_test.go` (classify DB errors by SQLSTATE, never by message
-text) · `positionalrowscan_test.go`.
+**Examples:**
 
-**⚠ How it silently passes:** a spelling the regex cannot see. Real example from
-this repo — `company_profile_field_write.go` builds its query like this:
+- `updateguard_test.go` (every `UPDATE` of one row has *some* guard against two writes at once).
+- `tableownership_test.go` (a module writes only its own tables).
+- `errmatch_test.go` (sort DB errors by `SQLSTATE`, never by message text).
+- `positionalrowscan_test.go`.
+
+**⚠ How it passes in silence:** a form the regex cannot see. In this repository,
+`company_profile_field_write.go` builds its query like this:
 
 ```go
 `UPDATE company SET ` + column + ` = $2`   // column is "display_name" at runtime
 ```
 
-A regex looking for `display_name` finds nothing, so the gate does not see this
-file as a writer at all. The rule was unenforced for a shape the codebase
-already had.
+A regex that looks for `display_name` finds nothing, so the gate does not see this file as a writer
+at all. No gate kept the rule for a shape the code already had.
 
-**Fix — three things:**
+**Fix:**
 
-1. **Also match the assembled form.** A query that ends at `SET` gets judged like
-   a named one: the gate can't know which column arrives, so it asks the same
-   question.
-2. **Strip SQL comments and quoted strings first.** Without it,
-   `SET description = $1 -- display_name =` counts as a rename, and a `;` inside a
-   comment ends a non-greedy match early and hides a real one on the next line.
-3. **Count the two forms separately**, so a floor can tell you which one broke.
+1. **Also match the built form.** A query that ends at `SET` gets judged like a named one. The
+   gate cannot know which column comes next, so it asks the same question.
+2. **Remove SQL comments and strings in quotes first.** Without that,
+   `SET description = $1 -- display_name =` counts as a rename. And a `;` inside a comment ends a
+   short match early and hides a real one.
+3. **Count the two forms on their own**, so a floor can tell you which one stopped working.
 
 ---
 
 ### E. Prohibition
 
-**Checks:** a pattern does not appear anywhere it shouldn't.
+**Checks:** a pattern does not show up in any place it should not.
 
-**How:** scan the **whole** corpus — not just the folder you expect the problem
-in — and assert zero matches outside approved sites. Here the corpus definition
-*is* the gate.
+**How:** scan the whole body of text, not only the folder where you expect the problem. Check that
+there are no matches outside the approved sites. Here what you scan *is* the gate.
 
-**Hardness:** H1–H2. The weak point is the corpus, not the regex.
+**How strong:** H1 to H2. It can miss in two ways: a place it does not scan, and a form the regex does
+not match. What you scan is the weaker of the two; the regex case is below.
 
-**Use when** the correct answer is "nowhere" or "only here": no direct River
-registration, no `SELECT id FROM workspace` inside a module, no flag default read
-from the environment, no credential in a log field.
+**Use when** the right answer is "in no place" or "only here":
 
-**Examples:** `jobregistrationban_test.go` · `flagdefault_test.go` ·
-`logsecrets_test.go` · `formulafieldscope_test.go` · `publicreferences_test.go`.
+- no River job register by hand;
+- no `SELECT id FROM workspace` inside a module;
+- no flag default read from the environment;
+- no credential in a log field.
 
-**⚠ How it silently passes:** the regex is anchored on the *obvious* spelling.
-Real example — `rulebookdirection_test.go` bans links from `docs/` up to a
-rulebook. Its first version matched `(?:\.\./)+`, which is the obvious way to say
-"goes up a directory". It could not see `](/AGENTS.md)` or `](frontend/AGENTS.md)`.
+**Examples:** `jobregistrationban_test.go` · `flagdefault_test.go` · `logsecrets_test.go` ·
+`formulafieldscope_test.go` · `publicreferences_test.go`.
 
-**Fix:** derive the banned set from **the thing that defines it** — River's actual
-API, the real filesystem — instead of from a list of spellings you remember. Then
-ask what version of the bug your regex still can't see, and add that case.
+**⚠ How it passes in silence:** the regex looks for the *plain* form only. For example,
+`rulebookdirection_test.go` bans links from `docs/` up to a rulebook. Its first version matched
+`(?:\.\./)+`, the plain way to say "goes up a folder". It could not see `](/AGENTS.md)` or
+`](frontend/AGENTS.md)`.
+
+**Fix:** derive the banned set from the thing that defines it, such as the real River API or the
+real file system. Do not derive it from a list of forms you remember. Then ask what version of the
+bug your regex still cannot see, and add that case.
 
 ---
 
 ### F. Claim check
 
-**Checks:** a comment saying "this is the only X" is actually true.
+**Checks:** a comment that says "this is the only X" is really true.
 
-**How:** a detector finds the claim's *phrasing* in a doc comment, works out which
-declaration it belongs to, and holds the tree to it. `uniquenessclaims.txt` is the
-register of recognised claims.
+**How:** a detector finds the *words* of the claim in a doc comment. It works out which declaration
+the claim belongs to, and holds the tree to it. `uniquenessclaims.txt` is the register of the
+claims it knows.
 
-**Hardness:** H1. It can only hold a phrasing it recognises.
+**How strong:** H1. It can only hold words it knows.
 
-**Use when** you are about to write "the only", "the one spelling of", or "spelled
-once" in a comment. That sentence stops the next contact searching: they grep, find
-your claim, and stop. A false one is worse than no comment at all.
+**Use when** you are about to write `the only`, `the one spelling of`, or `spelled once` in a
+comment. That sentence stops the next author from searching: they grep, find your claim, and stop.
+A false claim is worse than no comment at all.
 
-**Examples:** `uniquenessclaims_test.go` and its detector ·
-`consumermailonelist_test.go` · `employmentcurrency_test.go`.
+**Examples:** `uniquenessclaims_test.go` and its detector · `consumermailonelist_test.go` ·
+`employmentcurrency_test.go`.
 
-**⚠ How it silently passes:** a phrasing the detector doesn't know. This is not
-theoretical. `companyform.go` said *"this function is the only writer of that
-column a human drives"*. It was false, and the register never saw it, because that
-wording wasn't a shape the detector recognises. The false comment that motivated a
-whole new gate walked straight past the gate built to catch false comments.
+**⚠ How it passes in silence:** words the detector does not know. `companyform.go` said that this
+function was the only writer of that column a human edits. It was false, and the register never
+found it, because the detector did not know that form of words.
 
-**Fix:** before writing the claim, check the detector recognises your wording — or
-use wording it does. Widening the detector is a separate change, because it will
-turn up claims that were already there.
+**Fix:** before you write the claim, check that the detector knows your words, or use words it does
+know. Make the detector know new forms in a separate change, because it will turn up claims that were
+already there.
 
 ---
 
 ### G. Budget
 
-**Checks:** a cost stays under a stated limit.
+**Checks:** a cost stays under a limit you set.
 
-**How:** compute the cost from the tree or config, compare to a constant, and put
-the reason for the number next to it.
+**How:** work out the cost from the tree or the config, and check it against a constant. Put the
+reason for the number next to it.
 
-**Hardness:** usually H3 — the number is computable.
+**How strong:** most often H3, because you can work out the number.
 
-**Use when** the cost is paid on every session, every CI run, or every connection.
+**Use when** the cost comes with every session, every CI run, or every connection.
 
-**Examples:** `rulebooklength_test.go` (every session reads the rulebook in full) ·
-`laneconnbudget_test.go` (connections = concurrent packages × per-package limit) ·
-`workflowtimeouts_test.go` (a job with no `timeout-minutes` inherits GitHub's
-6-hour default).
+**Examples:**
 
-**⚠ How it silently passes:** the **ratchet**. A limit set to "whatever it is
-today", raised every time it fails, is not a budget — it's a log of the growth it
-was supposed to stop.
+- `rulebooklength_test.go` (every session reads the whole rulebook).
+- `laneconnbudget_test.go` (connections = packages at once × limit per package).
+- `workflowtimeouts_test.go` (a job with no `timeout-minutes` gets the 6-hour GitHub default).
 
-**Fix:** write down what the number buys. Make raising it a decision with a reason,
-not a one-character edit.
+**⚠ How it passes in silence:** the **ratchet**. A limit set to "what it is today", and raised each
+time it fails, only records more and more of what it should stop.
+
+**Fix:** write down what the number buys. Make it a decision with a written reason to raise it; an
+edit of one character should not be enough.
 
 ---
 
 ### H. Falsification
 
-**Checks:** your new gate actually rejects something.
+**Checks:** your new gate really refuses something.
 
-**How:** a companion test with **fake** inputs — every shape the real tree uses,
-proven accepted, plus the shape the gate exists to reject, proven rejected.
+**How:** a second test with input made for it. The input has every shape the real tree uses, which
+the gate must accept. It also has the shape the gate is there to refuse, which it must refuse.
 
-**Use when** the gate is non-trivial: any reachability gate, any whole-tree sweep,
-any detector. "The tree is currently clean" proves nothing about your gate.
+**Use when** the gate is not small: any gate of the Reachability shape, any scan of the whole tree,
+any detector. "The tree is clean today" proves nothing about your gate.
 
-**Examples:** `jobkindgate_test.go` and `jobfleetwideshapes_test.go` (each kept
-next to the gate it falsifies) · `extensionsqlscopecases_test.go` ·
-`uniquenessclaimsdetector_test.go`.
+**Examples:** `jobkindgate_test.go` and `jobfleetwideshapes_test.go` (each kept next to the gate it
+tests) · `extensionsqlscopecases_test.go` · `uniquenessclaimsdetector_test.go`.
 
-One level up, `gatecensus_test.go` checks the gate machinery itself: a gate's
-exceptions must meet the same standard the gate applies to its subjects.
+One level up, `gatecensus_test.go` checks the gate code itself: the waivers of a gate must meet the
+same rules the gate sets for its subjects.
 
 ---
 
-## Don't rebuild the plumbing
+## Do not build the shared helpers again
 
 | Helper | What you get |
 |---|---|
-| `gatekit.Waive` | A waiver that must state what it costs (≥20 chars, and restating the subject doesn't count). `AssertAllMatched` fails a waiver that no longer matches anything — otherwise it quietly exempts whatever inherits that name later. |
+| `gatekit.Waive` | A waiver that must say what it costs (≥20 characters, and to name the subject again does not count). `AssertAllMatched` fails a waiver that no longer matches anything; if it did not, the waiver would cover any later code that takes that name. |
 | `gatekit.Scope` | Proves your walk root is the right one, by also checking the code outside it. |
-| `gatekit.LiteralText` | One way to decode a Go string literal into the SQL it sends — quoted or escaped. |
-| `gatekit.StringExpr` | The shared "what string does this Go expression hold" reader, with the question a parameter: `FoldStrict` for "is this DEFINITELY this string" (an unresolvable part means not a string), `FoldTotal` for "what can I SEE of this string" (an unresolvable part becomes `ComputedFragment` and the fold carries on; the bool then says whether ANY part was readable, so a hole never closes over its neighbours). Both are in use; writing your own decides which shapes your census is blind to. |
-| `gatekit.SQLStatementsIn` | The shared "what SQL does this file send" reader: one entry per statement, escapes decoded, `+` chains flattened. `SQLStatementsOf` takes a parsed subtree, `SQLTextOf` joins the statements with newlines for a line-scanning reader. Reading `ast.BasicLit.Value` yourself gets SOURCE text, so a statement written in double quotes arrives with `\n` as two characters and your census reports a clean tree. |
-| `sqlhelperwalk_test.go` | The shared walk over a package's SQL helpers, so two censuses read the same set. |
-| `callgraph_test.go` | The shared call graph, keyed by receiver type so a method is told from a plain function of the same name. Returns **statements**, so each census decides what a statement means. |
+| `gatekit.LiteralText` | One way to read a Go string literal into the SQL it sends, with quotes or escapes. |
+| `gatekit.StringExpr` | The shared reader for "what string does this Go code hold", with the question as a parameter. `FoldStrict` asks "is this this string, and nothing else": a part it cannot read means not a string. `FoldTotal` asks "what part of this string can be read": a part it cannot read becomes `ComputedFragment`, and it goes on. The bool then says whether any part could be read, so a hole never closes over the parts next to it. Both are in use; to write your own decides which shapes your census cannot see. |
+| `gatekit.SQLStatementsIn` | The shared reader for "what SQL does this file send": one entry per statement, escapes read, `+` parts joined. `SQLStatementsOf` takes a part of the tree that is already read. `SQLTextOf` joins the statements with new lines for a reader that scans line by line. If you read `ast.BasicLit.Value` yourself, you get source text. Then a statement written in `"` quotes comes with `\n` as two characters, and your census reports a clean tree. |
+| `sqlhelperwalk_test.go` | The shared walk over the SQL helpers of a package, so two gates of the Census shape read the same set. |
+| `callgraph_test.go` | The shared call graph, keyed by receiver type so a method is never read as a plain function of the same name. It returns **statements**, so each census decides what a statement means. |
 
-Copying one of these for a second caller is how two gates drift apart. The copy
-walks a smaller tree and reports PASS.
+To copy one of these for a second caller is how two gates drift. The copy walks a smaller
+tree and reports PASS.
 
 ---
 
 ## Before you merge a gate
 
-1. Shape chosen from the rule, not from the file you were already in.
-2. Subject list **derived from the tree**, never hardcoded. A hardcoded list goes short.
-3. A **count floor** — two floors if the scan has two halves.
-4. **Mutation-tested**: mutants applied, compiled, and watched failing with the right name.
-5. Failure message **printed once by you**. Check the argument order.
-6. Escape hatch **next to the subject** where possible — a `doc.go` line, a contract
-   field, a `//craft:ignore <check> <reason>`. A map inside the test file is invisible
-   to exactly the reader who needs it. If you can't, say in the test why.
-7. Waive the **instance, not the category**. A waiver keyed by package or rule name
-   lets the next offender in free.
-8. An **empty waiver map is a result** — say so in a comment, so adding an entry is a
-   visible decision rather than a silent edit to the regex.
-9. **Say what the gate can't see**: unresolvable calls, assembled strings, unknown
-   phrasings.
-10. Tag the file (see [gate-inventory.md](gate-inventory.md)) so it appears in the list.
+1. Pick the shape from the rule, not from the file you were already in.
+2. Derive the subject list from the tree; never type it in. A list typed in goes short.
+3. A count floor; two floors if the scan has two parts.
+4. Mutation-tested: mutations made, compiled, and watched as they fail with the right name.
+5. You printed the failure message once yourself. Check the order of the arguments.
+6. Put the way out next to the subject where you can: a `doc.go` line, a contract field, a
+   `//craft:ignore <check> <reason>`. A map inside the test file does not reach the reader who
+   needs it. If you cannot, say in the test why.
+7. Waive the one case, not the whole kind. A waiver keyed by package or rule name lets the next
+   bad case in for free.
+8. An empty waiver map is a result. Say so in a comment. Then a new entry is a decision a reader can
+   see, not a change to the regex.
+9. Say what the gate cannot see: calls it cannot follow, built strings, words it does not know.
+10. Tag the file (see [gate-inventory.md](gate-inventory.md)) so it shows up in the list.
 
 ---
 
-## When a chokepoint beats a gate
+## When to use a chokepoint, not a gate
 
-A gate holds a rule contacts would otherwise have to remember. A **chokepoint** —
-one function that can't be called wrong — removes the remembering. Prefer it when
-the callers look alike and the whole obligation fits in one call.
+A gate holds a rule a developer would have to remember. A **chokepoint** (one function that nobody
+can call the wrong way) removes the need to remember. Use it when the callers look the same and
+the whole rule fits in one call.
 
-They are not alternatives. The audit+event rule has both: `storekit.Audit` /
-`Emit` is the chokepoint, and `writeshape_test.go` is still the gate, because
-nothing stops the next contact writing the pair by hand next to it. **The
-chokepoint makes the gate simple; the gate keeps the chokepoint the only door.**
+The two work together. The audit+event rule has both: `storekit.Audit` / `Emit` is the chokepoint.
+`writeshape_test.go` is still the gate, because nothing stops the next author from writing the pair
+by hand next to it.
 
-Two things a chokepoint usually can't absorb, both live in this codebase:
+Two things a chokepoint most often cannot take in, and both are live in this code:
 
-- **Lock ordering.** `lockCompanyNameWrites` must be taken *before* locking the row it
-  protects. A helper that takes it on entry takes it *after* the caller already
-  locked the row — baking in the deadlock it was meant to prevent.
-- **Once-per-transaction timing.** A check that must run once after a whole
-  multi-field update can't live in a per-column helper without firing N times,
-  each under a workspace-wide advisory lock held until commit.
+- **Lock order.** Code must take `lockCompanyNameWrites` *before* it locks the row it guards. A
+  helper that takes it on entry takes it *after* the caller already locked the row. That builds in
+  the deadlock it should have stopped.
+- **Once per transaction.** A check that must run once after a change to many fields cannot live
+  in a helper per column without running many times. Each run holds an advisory lock over the whole
+  workspace until commit.
 
-Where those bite, wrap the **obligation**, not the SQL: the write records that it
-happened, and one step near commit discharges it. The gate then shrinks from
-"every writer reaches the check through all-callers-guarded reachability" to
-"nothing outside this file touches these columns" — a stronger claim with far less
-machinery.
+Where those get in the way, wrap the rule, not the SQL. The write records that it happened, and one
+step just before commit does the check. The gate then gets smaller. It goes from "every writer reaches the
+check, through call paths where all callers are guarded" to "nothing outside this file touches
+these columns". That is a stronger claim with much less code.

@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -96,7 +97,7 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 	if err != nil {
 		return GhostedPass{}, err
 	}
-	said := signalSummaryCopyFor(baseLanguageForSummary(ctx, tx))
+	said := signalSummaryCopyFor(identity.BaseLanguageForRecord(ctx, tx))
 	pass := GhostedPass{Considered: len(found)}
 	for _, project := range found {
 		days := int(now.Sub(project.QuietSince).Hours() / 24)

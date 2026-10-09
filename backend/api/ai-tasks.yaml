@@ -239,6 +239,7 @@ tasks:
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
+    on_outage: degrades
     status: shipped
     sites: [company_brief, company_ask, company_dossier, meeting_plan, meeting_brief, contact_brief]
     company_context: {scopes: [identity], token_budget: 300, conditional: true}
@@ -250,6 +251,7 @@ tasks:
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
+    on_outage: degrades
     status: shipped
     sites: [growth_fit]
     company_context: {scopes: [offer, positioning, proof], token_budget: 1200}
@@ -261,6 +263,7 @@ tasks:
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
+    on_outage: degrades
     status: shipped
     sites: [reply, contact, account, first, intro, intro_note]
     company_context: {scopes: [positioning, sales, proof, market], token_budget: 1400}
@@ -308,6 +311,7 @@ tasks:
     ladder: [premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
+    on_outage: degrades
     status: shipped
     sites: [corpus_ask]
     company_context: none
@@ -331,6 +335,7 @@ tasks:
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
+    on_outage: degrades
     status: shipped
     sites: [deal_status]
     company_context: none
@@ -393,6 +398,7 @@ tasks:
     ladder: [cheap_cloud, premium]
     execution_mode: interactive
     on_budget_exhausted: degrade
+    on_outage: degrades
     status: shipped
     sites: [draft]
     company_context: {scopes: [offer, positioning, proof], token_budget: 1600}

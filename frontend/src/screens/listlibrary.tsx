@@ -1,44 +1,47 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Shared views: every Live List and Shortlist shared with a team or with
-// everyone that this reader may find, with what each is for, how many of its
-// members they can see, who looks after it, who else can find it, and whether
-// it needs someone. A row opens the list. Private lists live in My views.
+// The library's rows and the words a list is described by: its kind, its
+// health, what it gained since the last visit, and how many records it holds
+// that this reader can see. Every saved view and list shares one table, so a
+// view and a list read alike wherever they sit.
 
-import { useState } from "react";
-import { navigate } from "../app/router";
+import { type ReactNode, useState } from "react";
+import { navigate, routeHash } from "../app/router";
 import {
   Badge,
   Button,
   Field,
-  SearchField,
-  SegmentedControl,
+  OverflowMenu,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { DataTable } from "../design-system/datatable";
-import { Panel, PanelBody } from "../design-system/panel";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Select } from "../design-system/select";
-import { SurfaceState } from "../design-system/surfacestate";
+import { useTruncationTooltip } from "../design-system/tooltip";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf } from "./common";
+import { EditFilterAction, mayEditFilter } from "./filterlistedit";
+import { RECORDS_COUNT_LABEL } from "./filtersaddress";
 import {
-  type List,
-  type ListRecordType,
-  SHARED_LISTS,
-  useCreateList,
-  useLists,
-} from "./lists.queries";
+  isArchived,
+  keyOf,
+  type LibraryGroup,
+  type LibraryItem,
+  nameOf,
+  resourceOf,
+} from "./library";
+import "./library.css";
+import { type List, type ListRecordType, useCreateList } from "./lists.queries";
 import {
-  DEFAULT_AUDIENCE,
   type ListAudience,
   ListAudienceFields,
   useListAudienceLabel,
 } from "./listsharing";
+import { DeleteViewAction, RenameViewAction } from "./viewactions";
 
 /** The record types a list is made for on this screen, and their words. */
 export const LIST_RECORD_TYPES = [
@@ -56,19 +59,23 @@ export const RECORD_TYPE_LABEL: Record<ListRecordType, MessageKey> = {
   project: "lists.type.project",
 };
 
-const KIND_FILTERS = ["all", "dynamic", "static"] as const;
-type KindFilter = (typeof KIND_FILTERS)[number];
-
-/** What a list is, in the reader's words rather than the wire's. */
+/**
+ * What a list is, in the reader's words rather than the wire's. A Live List
+ * keeps itself current, so it alone wears info's tint and the breathing dot;
+ * emerald stays the page's one primary action and indigo an agent's proposal.
+ */
 export function ListKindBadge({
   list,
 }: Readonly<{ list: Pick<List, "list_type"> }>) {
   const t = useT();
-  return list.list_type === "dynamic" ? (
-    <Badge tone="accent">{t("lists.kind.live")}</Badge>
-  ) : (
-    <Badge tone="info">{t("lists.kind.shortlist")}</Badge>
-  );
+  if (list.list_type === "dynamic") {
+    return (
+      <Badge tone="info" live>
+        {t("lists.kind.live")}
+      </Badge>
+    );
+  }
+  return <Badge>{t("lists.kind.shortlist")}</Badge>;
 }
 
 /** A list that needs somebody, said on the row; a healthy one says nothing. */
@@ -88,74 +95,226 @@ export function ListHealthBadge({
   return null;
 }
 
-/** The library's rows: one list each, opening its page. */
-export function ListTable({
+/**
+ * Which table a group draws. Only me and Shared carry the kind, since both
+ * hold views and lists; Shared adds who can find each row. With lists off,
+ * every row is a saved view, so the kind says nothing and is left out.
+ */
+export type LibraryTableGroup = LibraryGroup | "views";
+
+/**
+ * The library's rows: one saved view or list each. The name is a real link,
+ * stretched over its row, so a row opens from the keyboard and in a new tab,
+ * and a press on ⋯ or inside a dialog it opened never reaches a row handler.
+ * Folded to a phone's width, the facts move under the name. A deleted row
+ * hands focus to `returnFocusTo`, which outlives it.
+ */
+export function LibraryTable({
   label,
-  rows,
-}: Readonly<{ label: string; rows: readonly List[] }>) {
+  items,
+  group,
+  captionOf,
+  folded,
+  returnFocusTo,
+}: Readonly<{
+  label: string;
+  items: readonly LibraryItem[];
+  group: LibraryTableGroup;
+  captionOf: (item: LibraryItem) => string;
+  folded: boolean;
+  returnFocusTo?: () => HTMLElement | null;
+}>) {
   const t = useT();
-  const { locale } = useLocale();
+  const audienceOf = useListAudienceLabel();
+  const name: DataTableColumn<LibraryItem> = {
+    key: "name",
+    header: t("lists.col.name"),
+    grow: true,
+    render: (item) => (
+      <LibraryName
+        item={item}
+        caption={captionOf(item)}
+        facts={folded ? <LibraryFacts item={item} group={group} /> : null}
+      />
+    ),
+  };
+  const more: DataTableColumn<LibraryItem> = {
+    key: "more",
+    header: "",
+    render: (item) => (
+      <LibraryRowMenu item={item} returnFocusTo={returnFocusTo} />
+    ),
+  };
+  const kind: DataTableColumn<LibraryItem> = {
+    key: "kind",
+    header: t("lists.col.kind"),
+    render: (item) => <LibraryKind item={item} />,
+  };
+  const records: DataTableColumn<LibraryItem> = {
+    key: "records",
+    header: t("lists.col.recordType"),
+    align: "end",
+    render: (item) => <LibraryRecords item={item} />,
+  };
+  const who: DataTableColumn<LibraryItem> = {
+    key: "who",
+    header: t("lists.sharingLabel"),
+    render: (item) => (item.kind === "list" ? audienceOf(item.list) : null),
+  };
+  const columns = folded
+    ? [name, more]
+    : [
+        name,
+        ...(group === "views" ? [] : [kind]),
+        records,
+        ...(group === "shared" ? [who] : []),
+        more,
+      ];
+  return (
+    <div className="library-table">
+      <DataTable
+        label={label}
+        rows={[...items]}
+        rowKey={keyOf}
+        columns={columns}
+      />
+    </div>
+  );
+}
+
+function hrefOf(item: LibraryItem): string {
+  return item.kind === "view"
+    ? routeHash({ screen: "filters", id: item.tab, id2: item.view.id })
+    : routeHash({ screen: "lists", id: item.list.id });
+}
+
+function LibraryName({
+  item,
+  caption,
+  facts,
+}: Readonly<{ item: LibraryItem; caption: string; facts: ReactNode }>) {
+  const t = useT();
+  const tip = useTruncationTooltip<HTMLSpanElement>(caption);
+  return (
+    <span className="library-name-cell">
+      <span className="library-name-line">
+        <a className="library-name" href={hrefOf(item)}>
+          {nameOf(item)}
+        </a>
+        {item.kind === "list" && <ListHealthBadge list={item.list} />}
+        {isArchived(item) && <Badge>{t("record.archived")}</Badge>}
+      </span>
+      {caption && (
+        <span
+          className="t-caption library-caption"
+          ref={tip.ref}
+          {...tip.trigger}
+        >
+          {caption}
+          {tip.tip}
+        </span>
+      )}
+      {facts}
+    </span>
+  );
+}
+
+/** A folded row's third line: what the hidden columns would have said. */
+function LibraryFacts({
+  item,
+  group,
+}: Readonly<{ item: LibraryItem; group: LibraryTableGroup }>) {
   const audienceOf = useListAudienceLabel();
   return (
-    <DataTable
-      label={label}
-      rows={[...rows]}
-      rowKey={(list) => list.id}
-      onRowClick={(list) => navigate({ screen: "lists", id: list.id })}
-      columns={[
-        {
-          key: "name",
-          header: t("lists.col.name"),
-          grow: true,
-          render: (list) => (
-            <span className="lists-library-name">
-              <strong>{list.name}</strong>
-              {list.purpose && (
-                <span className="t-caption">{list.purpose}</span>
-              )}
-            </span>
-          ),
-        },
-        {
-          key: "kind",
-          header: t("lists.col.kind"),
-          render: (list) => <ListKindBadge list={list} />,
-        },
-        {
-          key: "type",
-          header: t("lists.col.recordType"),
-          render: (list) => t(RECORD_TYPE_LABEL[list.entity_type]),
-        },
-        {
-          key: "count",
-          header: t("lists.col.count"),
-          align: "end",
-          render: (list) => (
-            <span className="lists-library-count">
-              {list.visible_count == null
-                ? "—"
-                : formatNumber(list.visible_count, locale)}
-              <ListPulseBadge list={list} />
-            </span>
-          ),
-        },
-        {
-          key: "steward",
-          header: t("lists.col.steward"),
-          render: (list) => (
-            <span className="lists-library-steward">
-              {list.steward_name ?? t("lists.noSteward")}
-              <ListHealthBadge list={list} />
-            </span>
-          ),
-        },
-        {
-          key: "sharing",
-          header: t("lists.col.sharing"),
-          render: audienceOf,
-        },
-      ]}
-    />
+    <span className="t-caption library-facts">
+      {group !== "views" && <LibraryKind item={item} />}
+      <LibraryRecords item={item} />
+      {group === "shared" && item.kind === "list" && (
+        <span>{audienceOf(item.list)}</span>
+      )}
+    </span>
+  );
+}
+
+function LibraryKind({ item }: Readonly<{ item: LibraryItem }>) {
+  const t = useT();
+  return item.kind === "view" ? (
+    <Badge>{t("filters.library.kindView")}</Badge>
+  ) : (
+    <ListKindBadge list={item.list} />
+  );
+}
+
+/**
+ * How many records a list holds that this reader can see, in its noun. A
+ * saved view counts nothing until it is opened, and a list the server could
+ * not count says only its type: never a dash and never a zero. A Live List's
+ * pulse stands either way, since it counts past changes rather than members.
+ */
+function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const type = resourceOf(item);
+  if (item.kind === "view") {
+    return <span>{t(RECORD_TYPE_LABEL[type])}</span>;
+  }
+  const count = item.list.visible_count;
+  const records =
+    count == null
+      ? null
+      : plural(RECORDS_COUNT_LABEL[type], count, {
+          count: formatNumber(count, locale),
+        });
+  return (
+    <span className="library-records">
+      {records === null ? (
+        <span>{t(RECORD_TYPE_LABEL[type])}</span>
+      ) : (
+        <>
+          <span aria-hidden="true">{records}</span>
+          <span className="sr-only">
+            {t("filters.library.recordsSeen", { records })}
+          </span>
+        </>
+      )}
+      {item.list.list_type === "dynamic" && <ListPulseBadge list={item.list} />}
+    </span>
+  );
+}
+
+/**
+ * A row's own verbs: a saved view is renamed or deleted here; a Live List's
+ * filter is edited by whoever may change it. A Shortlist has none.
+ */
+function LibraryRowMenu({
+  item,
+  returnFocusTo,
+}: Readonly<{
+  item: LibraryItem;
+  returnFocusTo?: () => HTMLElement | null;
+}>) {
+  const t = useT();
+  const label = t("filters.library.rowMore", { name: nameOf(item) });
+  if (item.kind === "view") {
+    return (
+      <span className="library-more">
+        <OverflowMenu label={label}>
+          <RenameViewAction view={item.view} />
+          <DeleteViewAction view={item.view} returnFocusTo={returnFocusTo} />
+        </OverflowMenu>
+      </span>
+    );
+  }
+  if (!mayEditFilter(item.list)) {
+    return null;
+  }
+  return (
+    <span className="library-more">
+      <OverflowMenu label={label}>
+        <EditFilterAction list={item.list} />
+      </OverflowMenu>
+    </span>
   );
 }
 
@@ -173,67 +332,10 @@ export function ListPulseBadge({
   }
   const counts = { entered: String(pulse.entered), left: String(pulse.left) };
   return (
-    <Badge tone="accent">
+    <Badge>
       <span aria-hidden="true">{t("lists.pulse.chip", counts)}</span>
       <span className="sr-only">{t("lists.pulse.label", counts)}</span>
     </Badge>
-  );
-}
-
-export function ListLibrary() {
-  const t = useT();
-  const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<KindFilter>("all");
-  const lists = useLists({
-    q: query,
-    listType: kind === "all" ? undefined : kind,
-    sharing: SHARED_LISTS,
-  });
-  const rows = lists.data?.data ?? [];
-
-  return (
-    <Panel
-      title={t("lists.library.title")}
-      actions={<NewShortlistAction defaultAudience={DEFAULT_AUDIENCE} />}
-    >
-      <PanelBody className="lists-library-dials">
-        <SearchField
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("lists.library.search")}
-          aria-label={t("lists.library.search")}
-        />
-        <SegmentedControl
-          options={KIND_FILTERS}
-          value={kind}
-          onChange={setKind}
-          labels={{
-            all: t("lists.library.all"),
-            dynamic: t("lists.kind.live"),
-            static: t("lists.kind.shortlist"),
-          }}
-          label={t("lists.library.kind")}
-        />
-      </PanelBody>
-      <PanelBody>
-        <SurfaceState
-          state={
-            lists.isPending
-              ? "loading"
-              : lists.isError
-                ? "unavailable"
-                : rows.length > 0
-                  ? "ready"
-                  : "empty"
-          }
-          emptyLabel={t("lists.library.empty")}
-          loadingLabel={t("lists.library.loading")}
-          loadingLines={4}
-        >
-          <ListTable label={t("lists.library.title")} rows={rows} />
-        </SurfaceState>
-      </PanelBody>
-    </Panel>
   );
 }
 
@@ -241,7 +343,7 @@ export function ListLibrary() {
  * "New Shortlist": an empty list of chosen records, named and typed here and
  * filled from a selection or a record page. A Live List is made from the
  * builder instead, where its filter is previewed before it is saved. It
- * starts with the audience of the section it is made from.
+ * starts with the audience its caller names.
  */
 export function NewShortlistAction({
   defaultAudience,
@@ -259,6 +361,7 @@ export function NewShortlistAction({
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
+        intent="form"
         title={t("lists.newShortlistTitle")}
         confirmLabel={t("lists.create")}
         confirmDisabled={name.trim() === ""}

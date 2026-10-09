@@ -474,3 +474,117 @@ describe("AiProviderKeysCard", () => {
     expect(within(row).getByPlaceholderText(/paste api key/i)).toHaveValue("");
   });
 });
+
+// A key saved in the sheet, or set while the page sat open, changes
+// what the sheet says about the vendor without a reload.
+describe("AiProviderKeysCard after a key changes", () => {
+  const ANTHROPIC_UNSET = {
+    provider: "anthropic",
+    configured: false,
+    env_var: "ANTHROPIC_API_KEY",
+    usable: false,
+    optional: false,
+  };
+  // The last sync ran before the key existed, and its stored line says so.
+  const SYNCED_WITHOUT_KEY = {
+    auto_sync: true,
+    last_run: {
+      ran_at: "2026-10-02T10:00:00Z",
+      trigger: "scheduled",
+      report: {
+        providers: [
+          {
+            provider: "anthropic",
+            outcome: "not_configured",
+            updated: 0,
+            unchanged: 0,
+            added: 0,
+            kept: 0,
+            models: [],
+            unlisted: [],
+          },
+        ],
+      },
+    },
+  };
+
+  function keyedBackend() {
+    let held = false;
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({ allow: { ...KEY_EDITOR, ai_model_rate: ["read"] } }),
+          );
+        }
+        if (req.url.includes("/ai/provider-keys")) {
+          if (req.method === "PUT") {
+            held = true;
+            return new Response(null, { status: 204 });
+          }
+          return jsonResponse({
+            providers: [{ ...ANTHROPIC_UNSET, configured: held, usable: held }],
+          });
+        }
+        if (req.url.endsWith("/ai/price-sync")) {
+          return jsonResponse(SYNCED_WITHOUT_KEY);
+        }
+        if (
+          req.url.includes("/ai/routing") ||
+          req.url.includes("/ai-model-rates")
+        ) {
+          return jsonResponse({}, 404);
+        }
+        throw new Error(`unexpected request: ${req.method} ${req.url}`);
+      },
+    );
+    // The same admin route the sheet writes through, called from elsewhere.
+    return { fetchMock, setElsewhere: () => (held = true) };
+  }
+
+  it("shows the saved key and drops the stale No key line in the open sheet", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", keyedBackend().fetchMock);
+    const { client } = render(<AiProviderKeysCard />);
+    // A model list asked before the key existed, cached by the routing editor.
+    const models = ["ai-available-models", "anthropic", "standard"];
+    client.setQueryData(models, {
+      provider: "anthropic",
+      models: [],
+      unavailable: "unreachable",
+    });
+    const row = await openKey(user, "anthropic");
+    const sheet = screen.getByRole("dialog");
+    expect(within(row).getByText(/^not set$/i)).toBeTruthy();
+    expect(await within(sheet).findByText(/^no key$/i)).toBeTruthy();
+
+    await user.type(
+      within(row).getByPlaceholderText(/paste api key/i),
+      "sk-ant-new",
+    );
+    await user.click(within(row).getByRole("button", { name: /^save key$/i }));
+
+    expect(await within(row).findByText(/^configured$/i)).toBeTruthy();
+    expect(within(row).queryByText(/^not set$/i)).toBeNull();
+    expect(within(sheet).queryByText(/^no key$/i)).toBeNull();
+    expect(client.getQueryState(models)?.isInvalidated).toBe(true);
+  });
+
+  it("reads the key again when the sheet opens, for a key set elsewhere", async () => {
+    const user = userEvent.setup();
+    const backend = keyedBackend();
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiProviderKeysCard />);
+    expect(
+      within(await openSheet(user, "anthropic")).getByText(/^not set$/i),
+    ).toBeTruthy();
+    await user.keyboard("{Escape}");
+
+    backend.setElsewhere();
+    const row = await openSheet(user, "anthropic");
+
+    expect(await within(row).findByText(/^configured$/i)).toBeTruthy();
+  });
+});

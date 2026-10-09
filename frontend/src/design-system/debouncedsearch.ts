@@ -34,8 +34,21 @@ export type SearchResult = Readonly<{ value: string; label: string }>;
  */
 export const SEARCH_DEBOUNCE_MS = 250;
 
-export type DebouncedSearch = Readonly<{
-  results: readonly SearchResult[];
+/**
+ * `typed`, held back until it has stood still for SEARCH_DEBOUNCE_MS: as a query
+ * key it is one request per pause, where the raw text is one per keystroke.
+ */
+export function useSettledValue<T>(typed: T): T {
+  const [settled, setSettled] = useState(typed);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(typed), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [typed]);
+  return settled;
+}
+
+export type DebouncedSearch<R extends SearchResult = SearchResult> = Readonly<{
+  results: readonly R[];
   pending: boolean;
   failed: boolean;
 }>;
@@ -60,11 +73,11 @@ export type DebouncedSearch = Readonly<{
  * than shown — otherwise a slow response for "acme" lands on top of the results
  * for "acme corp" and the reader picks from the wrong list.
  */
-export function useDebouncedSearch(
-  search: ((query: string) => Promise<readonly SearchResult[]>) | undefined,
+export function useDebouncedSearch<R extends SearchResult = SearchResult>(
+  search: ((query: string) => Promise<readonly R[]>) | undefined,
   query: string,
-): DebouncedSearch {
-  const [results, setResults] = useState<readonly SearchResult[]>([]);
+): DebouncedSearch<R> {
+  const [results, setResults] = useState<readonly R[]>([]);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
 

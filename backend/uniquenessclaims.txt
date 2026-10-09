@@ -185,7 +185,6 @@ internal/compose/jobs_documentextract.go#const documentExtractActor
 internal/compose/jobs_integration_test.go#const awaitBudget
 internal/compose/jobs_transcript.go#func withTranscriptReader
 internal/compose/jobs_transcript.go#type TranscriptProposeArgs.RequestedBy
-internal/compose/jobschedule.go#func operatorIntervals
 internal/compose/license.go#func correctTheToken
 internal/compose/linkedinrematch.go#method linkedInRematchWorker.systemContext
 internal/compose/meetingbrief/doc.go#package meetingbrief
@@ -265,7 +264,6 @@ internal/modules/activities/transcriptnorm.go#func transcriptLines
 internal/modules/activities/unsubscribe.go#func listUnsubscribeHeader
 internal/modules/activities/unsubscribe.go#method Store.deliverability
 internal/modules/agents/approvals.go#func pinForWrite
-internal/modules/agents/apps/apps.go#const block at const CompanyBriefURI
 internal/modules/agents/apps/apps.go#func DeclaredViews
 internal/modules/agents/apps/fetch.go#method Fetcher.documentURL
 internal/modules/agents/apps/hold.go#type Provider.quietMu
@@ -466,8 +464,8 @@ internal/modules/privacy/legalholdarms_test.go#func activityHoldSelectors
 internal/modules/privacy/recordhistory.go#const block at const actorTypeAgent
 internal/modules/privacy/restrictedlist.go#type RestrictedRecord
 internal/modules/privacy/retention_floor.go#func correspondenceFloorPredicate
-internal/modules/privacy/retentionactions.go#func ActionsForScope
 internal/modules/privacy/retentionactions.go#var retentionActions
+internal/modules/privacy/retentionauthorable.go#func ActionsForScope
 internal/modules/privacy/retentionpolicystore.go#const fieldAction
 internal/modules/privacy/retentionpolicystore.go#const fieldRetainDays
 internal/modules/privacy/retentionscope.go#func AuthorableScopes

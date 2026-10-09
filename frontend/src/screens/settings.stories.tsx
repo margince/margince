@@ -234,11 +234,9 @@ export const PassportRevokeConfirm: Story = {
   },
 };
 
-// The mint DRAWER, which is where the create form lives now. It used to be a
-// row inside the card — a label, a name field, five scope ticks and the submit
-// on one flex line with one gap value between all eight — so nothing said where
-// the field ended and the choices began.
-export const PassportMintDrawer: Story = {
+// Minting: a name and five scope ticks in a confirm-width dialog, where the
+// token is then shown once.
+export const PassportMintDialog: Story = {
   name: "Mint a passport",
   render: tab("agents", agentsTabRoutes),
   play: async ({ canvasElement }) => {
@@ -249,10 +247,10 @@ export const PassportMintDrawer: Story = {
   },
 };
 
-// The same drawer in dark, because the fieldset's legend, the checkbox rows and
+// The same dialog in dark, because the fieldset's legend, the checkbox rows and
 // the recessed token plate are three surfaces whose separation is carried by
 // tokens that move between themes.
-export const PassportMintDrawerDark: Story = {
+export const PassportMintDialogDark: Story = {
   name: "Mint a passport — dark",
   globals: { theme: "dark" },
   render: tab("agents", agentsTabRoutes),

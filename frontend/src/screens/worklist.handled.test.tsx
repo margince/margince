@@ -38,7 +38,10 @@ describe("what was handled for the reader", () => {
     render(panel());
     await screen.findByText("Sent the confirmation to Kirsten");
 
-    expect(screen.getByText("Kirsten Vogel")).toBeTruthy();
+    // The record it was about is an address, not a verb.
+    expect(
+      screen.getByRole("link", { name: "Kirsten Vogel" }).getAttribute("href"),
+    ).toBe("#/contacts/p1");
     // NO VERBS on a receipt for a DECISION. The work was agreed to and is
     // done, so a control here would ask the reader to redo it on the one
     // surface that exists to tell them they need not. A correction nobody was
@@ -49,8 +52,13 @@ describe("what was handled for the reader", () => {
     // whole-panel assertion pass while a row carried a verb.
     const table = screen.getByRole("table");
     expect(
-      table.querySelectorAll("button, a, input, [role='button']").length,
+      table.querySelectorAll("button, input, [role='button']").length,
     ).toBe(0);
+    // The record link is the only anchor, so a verb drawn as a link still fails.
+    const links = Array.from(table.querySelectorAll("a"), (a) =>
+      a.getAttribute("href"),
+    );
+    expect(links).toEqual(["#/contacts/p1"]);
   });
 
   // The one row on this panel that carries a verb, and why it must.
@@ -138,6 +146,57 @@ describe("what was handled for the reader", () => {
     await screen.findByText("Reordered the follow-up queue");
 
     expect(screen.getByText(en["worklist.handled.noRecord"])).toBeTruthy();
+  });
+
+  // The deal a correction changed, linked, so the reader can judge Undo
+  // against Accept with the record one click away.
+  it("names and links the deal a correction changed", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e006",
+          kind: "close_date_correction",
+          summary: 'Updated close-date confidence on "Ablösung Checkout"',
+          occurred_at: "2026-09-05T08:00:00Z",
+          subject: { type: "deal", id: "d1", label: "Ablösung Checkout" },
+        },
+      ],
+    });
+
+    render(panel());
+
+    const link = await screen.findByRole("link", { name: "Ablösung Checkout" });
+    expect(link.getAttribute("href")).toBe("#/deals/d1");
+    expect(screen.queryByText(en["worklist.handled.noRecord"])).toBeNull();
+  });
+
+  // The server leaves the label off a record this reader may not read. The row
+  // must not print the id or link into a page that would refuse them.
+  it("neither names nor links a record the reader cannot read", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e007",
+          kind: "close_date_correction",
+          summary: "Updated close-date confidence",
+          occurred_at: "2026-09-05T08:00:00Z",
+          subject: { type: "deal", id: "d-hidden" },
+        },
+      ],
+    });
+
+    render(panel());
+
+    expect(
+      await screen.findByText(en["worklist.handled.hiddenRecord"]),
+    ).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByText("d-hidden")).toBeNull();
+    expect(screen.queryByText(en["worklist.handled.noRecord"])).toBeNull();
   });
 
   it("admits a bounded read is not everything that was done", async () => {

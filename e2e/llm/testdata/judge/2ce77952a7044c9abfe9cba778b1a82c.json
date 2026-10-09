@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states visit-notes.md is on Aachener Metallwerke GmbH's Documents tab, confirming the file is stored as a document on the company record, not as a note or activity entry.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer tells the reader that the meeting notes file (visit-notes.md) is now stored on Aachener Metallwerke's company record, as a file, document or attachment. Answer no if it says the notes were saved as a note, activity or timeline entry instead of as a file, or if it never says the notes file was stored.",
+  "answer": "visit-notes.md is on Aachener Metallwerke GmbH's Documents tab. I also read through it and created a task for the sample approval meeting in calendar week 44, and set the company's industry to foundry.\n\nThe SVG logo was refused: that file type is not accepted, so you would need to send it as a PNG."
+}

@@ -157,6 +157,14 @@ export type NavTrailLevel = {
   barIds?: ReadonlySet<string>;
 };
 
+/**
+ * What the level's active row claims, and what anything standing in for that
+ * row claims with it: the page, or only the section the page sits in.
+ */
+export function currentClaim(level: NavTrailLevel): "page" | "true" {
+  return level.ancestor ? "true" : "page";
+}
+
 // The route an entry of `path` addresses. The router parses four segments, so a
 // level can be addressed three deep below the screen and no deeper — a fifth
 // level would have to arrive with the route that can name it.

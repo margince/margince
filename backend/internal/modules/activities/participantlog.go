@@ -18,6 +18,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -130,8 +131,8 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 			}
 		}
 		// The logger put a contact the stated headers do not name in the
-		// conversation, but the headers say who sent it: keep the evidence on
-		// the receiving side, never as the sender.
+		// conversation: keep that evidence on the receiving side, never as the
+		// sender. No reader lists it as a party to the message.
 		if role == "" {
 			role = unstatedRecipientRole(theirRole)
 		}
@@ -142,13 +143,34 @@ func stampLoggedCounterparties(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 	return nil
 }
 
-// unstatedRecipientRole is the role of a linked contact the stated headers do
-// not name: their side's role, unless that would make them the sender.
+// unstatedRecipientRole is the role a linked contact the stated headers do not
+// name is filed under as evidence: their side's role, unless that would make
+// them the sender. unstatedContactSQL keeps such a row out of every party list.
 func unstatedRecipientRole(theirRole string) string {
 	if theirRole == "from" {
 		return "cc"
 	}
 	return theirRole
+}
+
+// unstatedContactSQL is true of a participant row, aliased `alias`, that
+// records a linked contact the message's stated headers do not name. The row
+// stays as relationship evidence, so a reader listing who the message was
+// from or to excludes it. A message that states no header address has only its
+// linked contacts to name, and keeps them all. An archived address still
+// counts: archiving it later does not unsay the header it was named on.
+func unstatedContactSQL(alias string) string {
+	return strings.ReplaceAll(`(ap.contact_id IS NOT NULL AND ap.user_id IS NULL
+		AND ap.address IS NULL AND ap.channel_user_id IS NULL
+		AND EXISTS (
+		    SELECT 1 FROM activity_participant hdr
+		     WHERE hdr.activity_id = ap.activity_id AND hdr.address IS NOT NULL
+		       AND hdr.role IN ('from', 'to', 'cc', 'bcc'))
+		AND NOT EXISTS (
+		    SELECT 1 FROM activity_participant stated
+		      JOIN contact_email e ON e.email = lower(stated.address)
+		     WHERE stated.activity_id = ap.activity_id AND stated.role = ap.role
+		       AND e.contact_id = ap.contact_id))`, "ap.", alias+".")
 }
 
 // envelopeRole is the header a contact's address appears on, with the

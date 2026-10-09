@@ -13,6 +13,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -61,13 +62,20 @@ func applyMembership(
 	member := collections.MemberChange{
 		EntityType: string(change.recordType), EntityID: id, Note: change.note, Reason: collections.ReasonBulk,
 	}
-	if add {
+	var removal ids.UUID
+	switch {
+	case add && change.undo != nil:
+		err = restoreMembership(ctx, tx, change, list, item.Id)
+	case add:
 		_, err = change.writers.lists.AddMemberTx(ctx, tx, list, member)
-	} else {
-		err = change.writers.lists.RemoveMemberTx(ctx, tx, list, member)
+	default:
+		removal, err = change.writers.lists.RemoveMemberTx(ctx, tx, list, member)
 	}
 	if errors.Is(err, collections.ErrAlreadyMember) || errors.Is(err, collections.ErrNotMember) {
 		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
+	}
+	if errors.Is(err, collections.ErrRemovalMovedOn) {
+		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonChangedSinceBatch), nil
 	}
 	if err != nil {
 		skip, classifyErr := bulkSkipFor(err)
@@ -79,7 +87,23 @@ func applyMembership(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID), Listed: &before},
 		After:  crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID), Listed: &after},
 	}
-	return bulkApplied{sample: sample, outcome: bulkOutcome{ID: item.Id, Version: row.version}}, crmcontracts.BulkSkip{}, nil
+	outcome := bulkOutcome{ID: item.Id, Version: row.version}
+	if !add {
+		kept := openapi_types.UUID(removal)
+		outcome.RemovalID = &kept
+	}
+	return bulkApplied{sample: sample, outcome: outcome}, crmcontracts.BulkSkip{}, nil
+}
+
+// restoreMembership undoes remove_from_list on one record through the removal
+// the batch wrote, so the member comes back as it was.
+func restoreMembership(ctx context.Context, tx pgx.Tx, change bulkChange, list ids.ListID, id openapi_types.UUID) error {
+	removal, err := change.undo.removalOf(id)
+	if err != nil {
+		return err
+	}
+	_, err = change.writers.lists.RestoreBatchMemberRemovalTx(ctx, tx, list, removal, change.undo.batchID)
+	return err
 }
 
 // withListsIf runs the list verbs over the installation's collections store

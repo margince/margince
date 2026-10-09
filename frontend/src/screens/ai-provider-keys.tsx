@@ -135,6 +135,9 @@ export function AiProviderKeysCard() {
                   onOpen={() => {
                     setDraftHost(null);
                     setOpened(p.provider);
+                    // The list stays mounted while sheets open and close, so
+                    // a key set elsewhere shows only if opening reads again.
+                    query.refetch();
                   }}
                 />
               ))}
@@ -374,7 +377,10 @@ function ProviderConnection({
 
   return (
     <div>
-      <div data-testid={`ai-provider-key-${status.provider}`}>
+      <div
+        className="form-stack"
+        data-testid={`ai-provider-key-${status.provider}`}
+      >
         <div className="ai-provider">
           <span className="ai-provider-who">
             {/* The variable is the only thing that says HOW a key reached the

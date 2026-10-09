@@ -35,7 +35,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -185,10 +184,6 @@ func (t reviewCommitments) Spec() mcp.ToolSpec {
 			"limit":{"type":"integer","minimum":1,"maximum":50,"description":"Cap the set; omit for 50, the server-side ceiling"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ReviewCommitmentsResult](),
-		// The view renders the same answer as a dated queue. What it buys over
-		// the text is the shape of the backlog at a glance — how far past due
-		// the soonest-due promises are, and which of them nobody owns.
-		UI: &mcp.ToolUI{ResourceURI: apps.CommitmentsURI},
 	}
 }
 

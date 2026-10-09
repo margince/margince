@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -59,5 +60,17 @@ export const NothingConnected: Story = {
         />
       </StoryProviders>
     );
+  },
+};
+
+/** The LinkedIn card's ask, opened: the profile address and why it is wanted. */
+export const LinkedinAsk: Story = {
+  render: NothingConnected.render,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: /^LinkedIn/ }),
+    );
+    await body.findByRole("dialog");
   },
 };

@@ -35,6 +35,12 @@ import {
 } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  CALLED_OFF_MEETING,
+  EXCHANGE_KINDS,
+  type ExchangeKind,
+  isExchange,
+} from "./exchangekinds";
 import "./spine.css";
 
 /**
@@ -99,6 +105,8 @@ export type SpineSource = {
       // that names OUR side of an exchange — a mail carries the contact it was
       // with and nothing about the mailbox behind it.
       host_user_id?: string | null;
+      // Meeting only: whether it was held, booked or called off.
+      meeting_status?: string | null;
     }[];
     // Whether the read sent a cut page. A thread that drew three of four
     // conversations can count the rest; one drawn from a cut page cannot, and
@@ -429,28 +437,6 @@ function on(at: string, ctx: Ctx): string {
   return formatDateAbbrev(at, ctx.locale, ctx.zone);
 }
 
-// The kinds that are an EXCHANGE with the record, each with what a single one
-// of it is called. The timeline section is unfiltered — it carries tasks from
-// the same table — and a task is something we wrote to ourselves rather than
-// something that was said.
-//
-// A map rather than a set plus a template-literal key: `t` takes a declared
-// MessageKey, so writing the key from the kind would put the catalog beyond
-// what the compiler can check and let a new kind ship printing its own id.
-const EXCHANGE_KINDS = {
-  email: "co.spine.kind.email",
-  call: "co.spine.kind.call",
-  meeting: "co.spine.kind.meeting",
-  note: "co.spine.kind.note",
-  message: "co.spine.kind.message",
-} as const satisfies Record<string, MessageKey>;
-
-type ExchangeKind = keyof typeof EXCHANGE_KINDS;
-
-function isExchange(kind: string): kind is ExchangeKind {
-  return kind in EXCHANGE_KINDS;
-}
-
 // How many conversations the thread draws before the silence.
 //
 // Three is what fits above the fold beside the gap and what is left ahead. A
@@ -662,6 +648,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
     const at = Date.parse(entry.occurred_at ?? "");
     if (
       !isExchange(entry.kind) ||
+      CALLED_OFF_MEETING.has(entry.meeting_status ?? "") ||
       !subject ||
       // Already happened, as of the read the rest of the card describes: an
       // `occurred_at DESC` list sorts a meeting booked for next week to the

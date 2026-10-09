@@ -63,7 +63,9 @@ var createRecordCopy = toolCopy{
 		"until the reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
 		"a CSV — go through preview_import, which checks " +
 		"every row and writes nothing; creating them one by one skips that check.",
-	Retain: "The new record's id comes back in the result; keep it for anything that links to it.",
+	Retain: "The new record's id comes back in the result; keep it for anything that links to it. " +
+		"When the user says where they met the contact, pass that word as offer_tag: it only offers " +
+		"the tag, and apply_tag still needs their yes.",
 }
 
 var updateRecordCopy = toolCopy{
@@ -101,7 +103,8 @@ var logActivityCopy = toolCopy{
 		"second call — relink_activity — which waits for the user's yes when it files under a " +
 		"project.",
 	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
-		"act; create_task for something still owed.",
+		"act; create_task for something still owed; attach_document for a file, whose text never " +
+		"goes into a note.",
 	Retain: "Keep the activity id — draft_email, send_email and send_message identify a " +
 		"conversation by it.",
 }
@@ -144,7 +147,9 @@ var relinkActivitiesCopy = toolCopy{
 var bulkUpdateRecordsCopy = toolCopy{
 	Purpose: "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add " +
 		"them to or take them off a Shortlist, put a tag on or take it off, or file one task under " +
-		"each, in one change — or undo such a change.",
+		"each, in one change; or mark up to 500 of the user's Worklist tasks done " +
+		"(record_type worklist_item, verb complete) — or undo such a change. A Worklist " +
+		"commitment is not yours to mark done: it is skipped as commitment_needs_the_user.",
 	Limits: "Call mode preview first and show the user what it says: how many records change, " +
 		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
 		"record is changed only if it still has the version you sent and you may change it. To " +

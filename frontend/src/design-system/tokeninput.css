@@ -26,7 +26,7 @@
  * rather than pointing. */
 .token-input.is-disabled {
   cursor: not-allowed;
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* The box shares the frame's row with the tokens and takes what is left, with a
@@ -78,6 +78,7 @@
   padding: 0 var(--space-1);
   border-radius: var(--r-sm);
   background: var(--bgChip);
+  color: var(--textPrimary);
   /* One step down from the field's own type: a token is a value inside a
    * control, not a heading over one. */
   white-space: nowrap;

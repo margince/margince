@@ -22,7 +22,8 @@ func TestTheDealDoorsAdmitAnAuthorOnlyFromTheImporter(t *testing.T) {
 	hubspot := "mirror:hubspot"
 	body := func(sourceSystem *string) crmcontracts.CreateDealRequest {
 		return crmcontracts.CreateDealRequest{
-			Name: "Imported", SourceSystem: sourceSystem, SourceAuthorId: &seat,
+			Source: "manual",
+			Name:   "Imported", SourceSystem: sourceSystem, SourceAuthorId: &seat,
 			PipelineId: openapi_types.UUID(ids.NewV7()), StageId: openapi_types.UUID(ids.NewV7()),
 		}
 	}

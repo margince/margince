@@ -4,6 +4,13 @@
 import { formatNumber } from "../format/format";
 import { type Locale, type PluralBase, pluralKey } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  beforeRecordedHistory,
+  figureShown,
+  type WeeklyFigure,
+  type WeeklyFigures,
+  weeklyNumericStatus,
+} from "./brief.numeric";
 import type { WeeklyReview } from "./brief.queries";
 import type { BriefSentence } from "./brief.sentence";
 
@@ -24,6 +31,12 @@ import type { BriefSentence } from "./brief.sentence";
 
 type Said = { key: MessageKey; values: Record<string, string> };
 
+/** A count the sentence may cite: non-zero, from a source that measured it. */
+function citable(figures: WeeklyFigures) {
+  return (figure: WeeklyFigure, count: number) =>
+    count > 0 && figureShown(figures[figure]);
+}
+
 function counted(locale: Locale, base: PluralBase, count: number): Said {
   return {
     key: pluralKey(locale, base, count),
@@ -39,9 +52,14 @@ function counted(locale: Locale, base: PluralBase, count: number): Said {
  * are not comparable and picking the bigger integer would let twelve routed
  * leads outrank the deal that paid for the quarter.
  */
-function resultOf(review: WeeklyReview, locale: Locale): Said | null {
+function resultOf(
+  review: WeeklyReview,
+  figures: WeeklyFigures,
+  locale: Locale,
+): Said | null {
   const c = review.counts;
-  if (c.deals_won > 0) {
+  const cites = citable(figures);
+  if (cites("won", c.deals_won)) {
     // THE COUNT, NOT THE MONEY. What the wins were worth is already the Won
     // card's detail line, which gave up its week-on-week delta to carry it
     // (#3898) — and a figure printed twice on one page is two places a reader
@@ -49,25 +67,25 @@ function resultOf(review: WeeklyReview, locale: Locale): Said | null {
     // what it was worth.
     return counted(locale, "brief.week.won", c.deals_won);
   }
-  if (c.deals_lost > 0) {
+  if (cites("lost", c.deals_lost)) {
     return counted(locale, "brief.week.lost", c.deals_lost);
   }
-  if (c.deals_moved > 0) {
+  if (cites("moved", c.deals_moved)) {
     return counted(locale, "brief.week.moved", c.deals_moved);
   }
-  if (c.meetings_held > 0) {
+  if (cites("meetings", c.meetings_held)) {
     return counted(locale, "brief.week.met", c.meetings_held);
   }
-  if (c.leads_answered_in_target > 0) {
+  if (cites("leads", c.leads_answered_in_target)) {
     return counted(locale, "brief.week.responses", c.leads_answered_in_target);
   }
-  if (c.leads_routed > 0) {
+  if (cites("leads", c.leads_routed)) {
     return counted(locale, "brief.week.leads", c.leads_routed);
   }
   if (
-    (c.tasks_completed ?? 0) > 0 ||
-    c.tasks_done > 0 ||
-    c.commitments_kept > 0 ||
+    cites("tasks", c.tasks_completed ?? 0) ||
+    cites("tasks", c.tasks_done) ||
+    cites("commitments", c.commitments_kept) ||
     c.proposals_accepted > 0 ||
     c.proposals_rejected > 0
   ) {
@@ -83,13 +101,18 @@ function resultOf(review: WeeklyReview, locale: Locale): Said | null {
  * said they would do it. Postponed tasks come second: they are older than the
  * week and were already postponed at least once.
  */
-function carryOf(review: WeeklyReview, locale: Locale): Said | null {
+function carryOf(
+  review: WeeklyReview,
+  figures: WeeklyFigures,
+  locale: Locale,
+): Said | null {
   const c = review.counts;
+  const cites = citable(figures);
   const missed = c.commitments_due - c.commitments_kept;
-  if (missed > 0) {
+  if (cites("commitments", missed)) {
     return counted(locale, "brief.week.carryPromises", missed);
   }
-  if (c.tasks_carried_over > 0) {
+  if (cites("tasks", c.tasks_carried_over)) {
     return counted(locale, "brief.week.carryTasks", c.tasks_carried_over);
   }
   return null;
@@ -111,8 +134,13 @@ export function weekSentence(
   if (!review) {
     return null;
   }
-  const result = resultOf(review, locale);
-  const carry = carryOf(review, locale);
+  const { figures } = weeklyNumericStatus(review.numeric_summary);
+  // A week before any source began is not a quiet week: nothing measured it.
+  if (beforeRecordedHistory(figures)) {
+    return { key: "brief.week.beforeHistory", values: {} };
+  }
+  const result = resultOf(review, figures, locale);
+  const carry = carryOf(review, figures, locale);
   // A week with no result of its own still has a true thing to say. It says the
   // week was quiet — never a manufactured outcome, and never silence, which a
   // reader would take for a page that failed to load.

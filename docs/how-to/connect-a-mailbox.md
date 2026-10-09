@@ -1,72 +1,45 @@
-# Connect a mailbox for capture
+<!-- prose:plain -->
+# Set up mailbox and calendar capture
 
-Connect a mailbox so Margince captures its mail onto the timeline — creating contacts, companies and
-activities through the one dedupe chokepoint. **UI-first**, with the equivalent `curl` alongside for
-scripting. Every connection below is standing, and each path has its own section: **Gmail over OAuth**
-(A), **IMAP with an app-password** (B, the way to reach a Gmail or Outlook mailbox with no OAuth app),
-**Graph OAuth** for Outlook / Microsoft 365 (C), and the **calendars** (D). For the mental model, read
-[explanation/capture-connectors.md](../explanation/capture-connectors.md) first.
+The handbook page [connecting-mail-and-calendars.md](../handbook/connecting-mail-and-calendars.md) covers what a
+user does on the screen: connect, reconnect, disconnect, and import mail history. This page is for the operator. It
+covers the provider apps and settings each connection needs, the same steps as `curl` for scripts, and a full check.
+To learn how capture works, read [explanation/capture-connectors.md](../explanation/capture-connectors.md) first.
 
-> **Single-company installation.** One installation serves one company and the server resolves
-> it itself, so no request selects a tenant — the `curl`s below carry only the session cookie.
-> ("Workspace" still names the internal tenant identity `WithWorkspaceTx` binds the transaction to.)
+> **One company per installation.** The server works out the tenant on its own, so no request picks one,
+> and the `curl` commands below carry only the session cookie.
 
-## Where the UI lives
+## Which path needs what
 
-Two entry points, both hitting the same API:
+**Every path keeps the secret the same way.** The credential (refresh token or app password) is sealed in the vault.
+It is never written to the connection row, and it is **deleted on disconnect**. So every path needs
+`MARGINCE_KEYVAULT_ROOT_KEY`, and without it the connect step answers `501` and stores nothing.
 
-- **Settings → Integrations** (`ConnectorsCard`) — the standing-connection roster: a status badge
-  (`connected` / `reauth_required` / `error`), last-synced time, a **reconnect** for a
-  `reauth_required` OAuth connection, and a confirm-gated **disconnect**. Below it an always-present
-  **"Add a connection"** offers whichever providers aren't connected yet: an OAuth pick redirects to
-  that provider's consent screen, IMAP opens the inline form, and a provider whose backend app isn't
-  configured answers **"{provider} isn't configured in this deployment"** rather than a raw error.
-- **Onboarding → connect step** — the same step on a fresh install (or via `onboarding / connect`):
-  live chips for **Google**, **Microsoft** and **IMAP**; neither calendar has one.
-
-> **Restart after backend config.** The api is a compiled binary, so changing an OAuth env var needs
-> `make dev` again; Vite hot-reloads the SPA but not the Go api.
-
-## Which path do I want?
-
-**Custody is the same on every row**: the credential — refresh token or app-password — is
-sealed in the vault, never written to the connection row, and **destroyed on disconnect**.
-
-| Provider | Path | Background sync + backfill | What you need |
+| Provider | Path | Sync and backfill | What the operator sets up |
 |---|---|---|---|
-| **Gmail** | OAuth standing connection | Yes (+ Pub/Sub push) | a Google OAuth app + the vault key |
-| **Gmail** | IMAP standing connection | Sync only (poll-only, no backfill) | a Google **app-password** + the vault key |
-| **Outlook / M365** | IMAP standing connection | Sync only (poll-only, no backfill) | an Outlook **app-password** + the vault key |
-| **Outlook / M365** | Graph OAuth standing connection | Sync + backfill (+ push) | a Microsoft Entra app + the vault key |
-| **Outlook / M365 calendar** | Graph OAuth standing connection | Rolling window (90d back / 1y ahead), no manual backfill | the *same* Entra app + `Calendars.Read`, its own consent |
-| **Google Calendar** | `gcal` OAuth standing connection (separate from Gmail) | Sync only (poll-only, no backfill) | the same Google app as Gmail, with the calendar scope + redirect URI added |
+| **Gmail** | OAuth (`gmail`) | Sync and backfill (and push through `Pub/Sub`) | a Google OAuth app |
+| **Gmail** or **Outlook** | IMAP (`imap`) | Sync only, by poll | only the vault key |
+| **Outlook / Microsoft 365** | Graph OAuth (`graph`) | Sync and backfill (and push) | a Microsoft Entra app |
+| **Outlook calendar** | Graph OAuth (`graphcal`) | A window from 90 days back to 1 year ahead | the same Entra app, with `Calendars.ReadWrite` |
+| **Google Calendar** | OAuth (`gcal`) | The same window | the same Google app as Gmail, with the Calendar API |
 
-Start with **IMAP** if you just want to see capture work against a real mailbox from the UI — it needs no
-OAuth app registration, only the vault key every connect path requires. Use **Gmail OAuth** to exercise
-push and backfill.
+Start with **IMAP** to see capture work against a real mailbox: it needs no OAuth app. Use **Gmail OAuth** to test
+push and backfill. Connecting is `x-agent-access: human-only` on every path: Margince refuses an agent Passport.
 
----
+> Start again with `make dev` after you change any value below. The API connects and the worker syncs, so set
+> each value on **both**.
 
-## Path A — Gmail over OAuth (standing connection)
+## Gmail over OAuth
 
-### A1. Prerequisites (operator config)
+Create a Google OAuth app (Google Cloud project → `APIs & Services → Credentials → OAuth client ID → Web application`):
 
-Connecting is `x-agent-access: human-only` — you must be a signed-in human; an agent Passport is
-refused, by design. Gmail OAuth also needs operator setup that the UI can't do for you:
+- Turn on the **Gmail API**. Put **both** `.../auth/gmail.readonly` and `.../auth/gmail.send` on the consent screen.
+- Allow the redirect URI `<api-base>/v1/connectors/gmail/callback` (in dev:
+  `http://localhost:8080/v1/connectors/gmail/callback`).
 
-- **A Google OAuth app** (Google Cloud project → *APIs & Services → Credentials → OAuth client ID → Web
-  application*) with the **Gmail API** enabled, **both** the `.../auth/gmail.readonly` and
-  `.../auth/gmail.send` scopes on the consent screen, and an **authorized redirect URI** of
-  `<api-base>/v1/connectors/gmail/callback` (dev: `http://localhost:8080/v1/connectors/gmail/callback`).
-  The two scopes ride **one** consent deliberately: Google will not add a scope to an existing refresh
-  token, so a send grant asked for later would mean a second connection for the same mailbox.
-  `gmail.send` transmits only — it cannot read, modify or delete, and there is still no `gmail.modify`,
-  no settings access and no delete. A connection granted read but not send captures normally and
-  refuses every send by name, which is what a mailbox connected before the send scope landed will do
-  until it is reconnected.
-- **The vault key** — the refresh token is sealed at rest; the connect flow refuses without it.
-
-Set these on **both** the api and worker (the api connects, the worker syncs), then `make dev`:
+The two scopes share **one** consent, because Google will not add a scope to a refresh token that already exists.
+`gmail.send` only sends: it cannot read, change or delete. A connection granted read but not send captures as usual,
+and refuses each send by name until the user connects it again.
 
 ```sh
 export MARGINCE_GMAIL_CLIENT_ID="<google-oauth-client-id>"
@@ -79,56 +52,82 @@ export MARGINCE_PUBLIC_BASE_URL="http://localhost:8080"         # post-consent l
 # export MARGINCE_GMAIL_PUSH_TOKEN="$(openssl rand -hex 16)"    # api: enables POST /webhooks/gmail
 ```
 
-Without the client id/secret + state key + public base URL, `/connectors/gmail/*` stays its declared
-`501` and clicking **Gmail** in the Add-a-connection panel shows "Gmail isn't configured in this
-deployment" instead of redirecting. The full table is
-[reference/configuration.md → Capture connector OAuth](../reference/configuration.md).
+Without the client ID and secret, the state key and the public base URL, `/connectors/gmail/*` stays at the `501` it
+declares. The screen then says `Gmail is not configured on this installation.` and sends no one on. The full table is
+in the Capture connector OAuth section of [reference/configuration.md](../reference/configuration.md).
 
-### A2. Connect from the UI
+## IMAP with an app password
 
-1. Open the app, go to **Settings → Integrations**, and click **Gmail** in the **Add a connection**
-   footer or empty state (or click the **Google** chip on the onboarding connect step, on a fresh
-   install).
-2. The page redirects to Google — sign in and consent to the Gmail read and send scopes.
-3. Google returns you to the app; the panel **proves** the connection by re-reading `GET /connectors`
-   and shows a trust pill for the live `gmail` connection. Back in **Settings → Integrations** you'll now
-   see a `gmail` row with a **connected** badge.
+The IMAP path calls a mailbox over IMAPS, proves the credentials, and keeps the connection. The background sync moves
+a UID mark forward, so each pass starts where the last one stopped. There is no push and no backfill: new mail waits
+up to one poll, and nothing older than the connection is imported.
 
-The worker's sync dispatcher (every 30s) picks the connection up on its next due tick and begins
-capturing new mail incrementally.
+The IMAP client **checks for SSRF** (`netguard.RefusePrivate`). It refuses any private, loopback or reserved address,
+and checks the real IP after the DNS lookup, so a DNS change cannot get past it. So **you cannot test against a local
+mail server**: a target on `127.0.0.1`, `localhost` or a private range comes back as `server unreachable`. Test
+against a public server, such as a real Gmail or Outlook mailbox.
 
-<details><summary>Same thing via <code>curl</code></summary>
+## Outlook / Microsoft 365 over Graph
+
+Register a Microsoft Entra app with these delegated permissions: `offline_access User.Read Mail.Read Mail.Send`.
+Give it the redirect URI `<api-base>/v1/connectors/graph/callback`. `Mail.Send` shares the one consent, for the same
+reason as the Gmail send scope.
+
+Then give the app to the installation. A stored app wins, and works from the next consent with no restart. The
+**Microsoft app** form under Settings → General takes the `Application (client) ID` and secret, and a
+`Directory (tenant) ID` if you want to pin it to one directory. It lists the redirect URIs to register, and they must
+match byte for byte.
+
+Or use the environment: `MARGINCE_GRAPH_CLIENT_ID`, `MARGINCE_GRAPH_CLIENT_SECRET`, and if you want it,
+`MARGINCE_GRAPH_TENANT`. Leave that one empty, or set `common`, for any company; set a directory ID to pin it. Add
+the state key, vault key and public base URL from the Gmail section.
+
+You do not need push: the lane polls without it. To turn it on, set the same `MARGINCE_GRAPH_PUSH_TOKEN` on the API
+and the worker, and set `MARGINCE_GRAPH_NOTIFICATION_URL` to `https://<api>/webhooks/graph?token=<that token>`.
+
+For the **Outlook calendar**, add `Calendars.ReadWrite` to the same app, and a second redirect URI:
+`<api-base>/v1/connectors/graphcal/callback`. The write half sends the calendar invitations a user asks for. It is a separate connection
+with its own consent and refresh token.
+
+## Google Calendar over OAuth
+
+Google Calendar (`gcal`) uses the same Google OAuth app and the same environment values as Gmail. On that app's
+project, also turn on the **Calendar API**, and allow `<api-base>/v1/connectors/gcal/callback` (in dev:
+`http://localhost:8080/v1/connectors/gcal/callback`).
+
+It asks for `calendar.readonly` and `calendar.events.owned` as its own grant, and never sets
+`include_granted_scopes`. So the calendar grant and the Gmail grant stay separate, and connecting both means two
+Google consent screens. The first sync reaches back 90 days, and the window reaches a year ahead.
+
+## The same steps from a script
+
+The browser is the shorter way to connect: it carries the CSRF cookie that the OAuth callback checks. For a script,
+get the consent URL and open it in a browser:
 
 ```sh
-# 1. get the consent URL, open it in a browser, sign in + consent
 curl -X POST http://localhost:8080/v1/connectors/gmail/connect \
-  --cookie 'crm_session=<session>' -H 'Content-Type: application/json' -d '{}' \
-  | jq -r '.authorize_url'
-
-# 2. after the callback lands, confirm the standing connection
-curl --cookie 'crm_session=<session>' http://localhost:8080/v1/connectors \
-  | jq '.data[] | {provider, status, last_synced_at, next_sync_due_at}'
+  --cookie 'crm_session=<session>' -H 'Content-Type: application/json' -d '{}' | jq -r '.authorize_url'
+# the same for graph, gcal and graphcal
 ```
 
-Doing it in the browser is smoother — it carries the CSRF cookie the callback checks automatically.
-</details>
+IMAP takes its credentials **under `imap`** (the `ConnectConnectorRequest` of the contract), as `username` and
+`secret`. A body with only `email` and `password` is refused with `422 imap_credentials_required`. Read the app
+password with no echo and pass it on stdin, so it never lands in shell history or a process list:
 
-### A3. Backfill existing mail (preview before spend)
+```bash
+read -rsp 'IMAP app-password: ' APP_PW; echo    # silent — never echoed, never in history
+# printf is a shell builtin, so no process's argv ever holds the secret (a jq `--arg` would).
+printf '%s' "$APP_PW" \
+| jq -Rs '{imap:{host:"imap.gmail.com", port:993, username:"you@gmail.com", secret:.,
+                 mailbox:"INBOX", max_messages:50}}' \
+| curl -X POST http://localhost:8080/v1/connectors/imap/connect \
+    --cookie 'crm_session=<session>' -H 'Content-Type: application/json' --data @- \
+| jq '.connection | {id, provider, status, account_label}'
+unset APP_PW
+```
 
-New mail flows in on the sync poll; to fill the CRM *backward* over a window, use the **backfill panel**
-that appears right after a Google connect:
-
-1. Pick a **window** — 3 months, 6 months, 1 year, 2 years, 3 years, 5 years, 7 years or 10 years (default 6 months). The panel auto-**previews**: it shows the
-   estimated message count and estimated AI cost. This is the consent surface and spends nothing.
-2. Click **Start the import**. A live progress bar tracks scanned vs. estimated — moving *within* a page,
-   not only at each page commit — with running counts of captured emails, contacts created, and **domains
-   queued for a company verdict** (the panel labels the third *companies*; capture creates none itself —
-   see [mail-history-import.md](../explanation/mail-history-import.md)). **Cancel** keeps everything
-   already captured.
-
-Windows are **widen-only**, up to ten years. Extending a completed import preserves already captured emails. The wider scan revisits overlapping messages, but capture deduplicates them.
-
-<details><summary>Same thing via <code>curl</code></summary>
+The two IMAP failures are `422 imap_login_rejected` and `502 imap_unreachable`. Backfill (Gmail and Graph) is a
+preview that spends nothing, a start, and a status read:
 
 ```sh
 curl -X POST http://localhost:8080/v1/connectors/gmail/backfill/preview \
@@ -141,210 +140,32 @@ curl -X POST http://localhost:8080/v1/connectors/gmail/backfill \
 curl --cookie 'crm_session=<session>' http://localhost:8080/v1/connectors/gmail/backfill \
   | jq '{state, estimated_messages, counts}'   # state: queued → running → done
 ```
-</details>
 
----
+## Check it from end to end
 
-## Path B — IMAP with an app-password (Gmail or Outlook, standing connection)
+1. **The mailbox is connected.** `GET /connectors` shows a `connected` row for every provider. The first IMAP
+   messages come on the next sync, not when you connect.
+2. **Mail turned into timeline activities.** `GET /activities` shows each message as an email activity, stamped
+   `connector:<name>`.
+3. **Contacts were created; companies were *asked about*.** A new outside contact comes in through the one place
+   that finds copies. A close match goes to its review queue.
+4. **The credential never shows.** The list carries only a `credential_ref`, kept on the server. Disconnect deletes
+   the sealed secret from the vault, and the row too.
+5. **A failure degrades, and never ends the link.** Revoke a Gmail token: the row goes to `reauth_required`. Point
+   IMAP at a host it cannot reach: you get a plain failure that shows nothing of the inside.
+6. **Backfill shows the cost first, and only grows.** A smaller window after a wider one is refused
+   (`409 window_narrowing`). Cancel keeps the captured rows.
+7. **IMAP still refuses SSRF.** A target on `127.0.0.1`, or on a private host, fails as `unreachable`.
 
-The IMAP path dials a mailbox over IMAPS, proves the credentials, and keeps the connection standing: the
-app-password is **sealed in the vault** and reused by the background sweep, which advances a UID
-watermark so each cycle resumes where the last stopped. There is no push and no backfill, so latency is
-the poll interval and mail older than the connection is not imported.
+More on step 3: **capture does not create the company.** It records an open question against the domain of the sender
+(`company_domain_disposition`, verdict `pending`), and a site read in the background answers it:
 
-**Read this before you paste an app-password.** The secret is stored — encrypted, never logged, never
-returned by any read surface, and never on the connection row — for as long as the connection stands.
-**Disconnecting destroys it**, which is the guarantee that makes handing it over reversible from inside
-the product. Revoking it at the provider works too.
+- `company` creates the company from what the site states, and links the contact to it;
+- `personal` and `provider` refuse one for good;
+- `no_site` ends the question either way.
 
-It needs no OAuth app registration, but it does need `MARGINCE_KEYVAULT_ROOT_KEY`: without the vault the
-connector surface answers `501` rather than store the password anywhere else.
+Each verdict tells the next message to stop asking. See
+[explanation/mail-history-import.md](../explanation/mail-history-import.md) for what backfill counts.
 
-### B1. Get an app-password
-
-Basic-auth IMAP with your normal password is blocked by both providers — you need an **app-password**
-(which requires 2-step verification on the account):
-
-- **Gmail** — enable 2-Step Verification, then *Google Account → Security → App passwords* → generate one
-  for "Mail". Host `imap.gmail.com`, port `993`.
-- **Outlook / Microsoft 365** — enable two-step verification, then *Security → Advanced security options
-  → App passwords* → create one. Host `outlook.office365.com`, port `993`. (If your tenant disables IMAP
-  or app-passwords, use the Graph OAuth path — Path C.)
-
-### B2. Connect from the UI
-
-1. **Settings → Integrations** → click **IMAP mailbox** in the **Add a connection** footer or empty state
-   (or the **IMAP** chip on the onboarding connect step).
-2. Fill the form: **IMAP host** (`imap.gmail.com` or `outlook.office365.com`), **Email** (the mailbox
-   login), **App password**, **IMAP mailbox** (`INBOX`), and **Max messages** — the per-sync ceiling, and
-   the size of the bounded recent window a first sync anchors with (capped at `200`).
-3. Submit. The connect answers **before any mail is read**, so there is no capture tally here — you get
-   the connected row, and the first messages land a few minutes later when the sweep runs. **Settings →
-   Integrations** then shows the `imap` row with its last-synced time and a **disconnect** action.
-
-<details><summary>Same thing via <code>curl</code></summary>
-
-Read the app-password **silently** and build the JSON on stdin, so the secret never lands in your shell
-history or a process listing (mirroring the "never logged" guarantee):
-
-The credentials are **nested under `imap`** (the contract's `ConnectConnectorRequest`), and `username` /
-`secret` are the field names — a flat `email`/`password` body is refused with
-`422 imap_credentials_required`. The response is the connected row (`{connection: CaptureConnection}`),
-not a capture tally.
-
-```bash
-read -rsp 'IMAP app-password: ' APP_PW; echo    # silent — never echoed, never in history
-# The secret reaches jq on stdin, never on a command line: printf is a shell
-# builtin, so no process's argv ever holds it (a jq `--arg` would, and `ps` reads
-# argv).
-printf '%s' "$APP_PW" \
-| jq -Rs '{imap:{host:"imap.gmail.com", port:993, username:"you@gmail.com", secret:.,
-                 mailbox:"INBOX", max_messages:50}}' \
-| curl -X POST http://localhost:8080/v1/connectors/imap/connect \
-    --cookie 'crm_session=<session>' -H 'Content-Type: application/json' --data @- \
-| jq '.connection | {id, provider, status, account_label}'
-unset APP_PW
-```
-
-For Outlook, set `username` to your `@outlook.com` / tenant address and `host` to
-`outlook.office365.com`.
-</details>
-
-Failure modes are honest and leak no internals — the form surfaces them directly:
-
-- **credentials rejected** (`422 imap_login_rejected`) — wrong host/email/password, or a normal password
-  where an app-password is required.
-- **server unreachable** (`502 imap_unreachable`) — DNS / TCP / TLS / timeout.
-
-### B3. Local-testing gotcha — no localhost mailserver
-
-The IMAP dialer is **SSRF-guarded** (`netguard.RefusePrivate`): it refuses to dial any private,
-loopback, or reserved address, checked post-DNS on the concrete IP so a DNS-rebind can't bypass it.
-So you **cannot point it at a mailserver on `127.0.0.1`, `localhost`, or a private-range host** — it
-comes back "server unreachable" by design. Test against a **public** IMAP server (a real Gmail/Outlook
-mailbox is easiest). This is a security guard, not a bug.
-
----
-
-## Path C — Outlook / Microsoft 365 over Graph (standing connection)
-
-Graph is the richer Outlook path — delta-cursor sync, backfill and push — and mirrors Path A's shape.
-
-### C1. Prerequisites (operator config)
-
-Register a Microsoft Entra (Azure AD) app with delegated permissions `offline_access User.Read
-Mail.Read Mail.Send` and a redirect URI of `<api-base>/v1/connectors/graph/callback`. `Mail.Send`
-rides the same consent because Microsoft will not add a permission to an existing refresh token — a
-mailbox connected without it captures normally and refuses every send by name until it is
-reconnected.
-
-Then give the app to the installation, either way — a stored app wins and takes effect on the next
-consent, with no restart. **Settings → General → Microsoft app** takes the Application (client)
-ID and secret, optionally a Directory (tenant) ID to pin it to one directory, and lists the redirect
-URIs to register byte for byte. Or the environment, which still works: `MARGINCE_GRAPH_CLIENT_ID`,
-`MARGINCE_GRAPH_CLIENT_SECRET`, optional `MARGINCE_GRAPH_TENANT` (unset or `common` for any
-company, a directory id to pin it), plus the same A1 keys — then `make dev`. Push is optional
-and the lane polls without it: the SAME `MARGINCE_GRAPH_PUSH_TOKEN` on api and worker, and
-`MARGINCE_GRAPH_NOTIFICATION_URL` of `https://<api>/webhooks/graph?token=<that token>`.
-
-### C2. Connect from the UI
-
-1. Either click the **Microsoft** chip on the onboarding connect step, or go to **Settings →
-   Integrations** and click **Microsoft** in the **Add a connection** footer (or empty state).
-2. The page redirects to Microsoft — sign in and consent to `offline_access User.Read Mail.Read
-   Mail.Send`. Consenting without `Mail.Send` gives a capture-only mailbox that refuses every send
-   until it is reconnected: Microsoft will not add a permission to a refresh token it already issued.
-3. Microsoft returns you to the app; **Settings → Integrations** shows a `graph` row with a **connected**
-   badge, reconnect/disconnect actions, and the backfill panel.
-
-For the **Outlook calendar**, add `Calendars.Read` to the same app and a second redirect URI,
-`<api-base>/v1/connectors/graphcal/callback`, then start it from **Settings → Integrations**. Separate
-connection, own consent, own refresh token — connecting one never brings the other. It captures a
-rolling window (90 days back through a year ahead, reopened monthly), with no manual backfill.
-
-<details><summary>Same thing via <code>curl</code></summary>
-
-```sh
-curl -X POST http://localhost:8080/v1/connectors/graph/connect \
-  --cookie 'crm_session=<session>' -H 'Content-Type: application/json' -d '{}' | jq -r '.authorize_url'
-```
-
-Consent in the browser; the callback seals the refresh token and the worker syncs it.
-</details>
-
-### C3. Backfill
-
-Backfill (`/connectors/graph/backfill*`) works exactly as in [A3](#a3-backfill-existing-mail-preview-before-spend) —
-same window/preview/progress panel, just on the `graph` connection.
-
----
-
-## Path D — Google Calendar over OAuth (standing connection, separate from Gmail)
-
-Google Calendar (`gcal`) is a **second, independent** standing connection, not a mode of the Gmail one.
-It reuses the same Google OAuth app as Path A but requests only `calendar.readonly` as its own
-authorization (deliberately never `include_granted_scopes`), so the calendar grant never inherits — and
-never bleeds into — the Gmail mail-read grant. **Connecting both means signing two separate Google
-consent screens** — a deliberate least-privilege split, not a rough edge.
-
-### D1. Prerequisites (operator config)
-
-Same env vars as [A1](#a1-prerequisites-operator-config) (`MARGINCE_GMAIL_CLIENT_ID/SECRET`,
-`MARGINCE_CONNECTOR_STATE_KEY`, `MARGINCE_KEYVAULT_ROOT_KEY`, `MARGINCE_PUBLIC_BASE_URL`) — Calendar rides
-the same Google OAuth app as Gmail. On that app's Google Cloud project, additionally enable the
-**Calendar API** and add `<api-base>/v1/connectors/gcal/callback` (dev:
-`http://localhost:8080/v1/connectors/gcal/callback`) as an authorized redirect URI.
-
-### D2. Connect from the UI
-
-1. Go to **Settings → Integrations** and click **Google Calendar** in the **Add a connection** footer (or
-   empty state) — there is no onboarding chip for Calendar, so Settings is the only first-connect path.
-2. The page redirects to Google — sign in and consent to the read-only Calendar scope (a separate consent
-   screen from Gmail's, even if you're already connected to Gmail).
-3. Google returns you to the app; **Settings → Integrations** shows a `gcal` row with a **connected**
-   badge. There is no backfill panel for Calendar — it syncs forward from connect time only.
-
-<details><summary>Same thing via <code>curl</code></summary>
-
-```sh
-curl -X POST http://localhost:8080/v1/connectors/gcal/connect \
-  --cookie 'crm_session=<session>' -H 'Content-Type: application/json' -d '{}' \
-  | jq -r '.authorize_url'
-```
-</details>
-
----
-
-## Verify end-to-end
-
-1. **The mailbox connected.** **Settings → Integrations** shows a `connected` row for every provider,
-   IMAP included (or `GET /connectors`). IMAP's first messages arrive on the next sweep, not at connect.
-2. **Mail became timeline activities.** Open a captured counterparty's timeline (or `GET /activities`)
-   and confirm each message is an email activity, provenance-stamped `connector:<name>`.
-3. **Contacts were auto-created; companies were *asked about*.** A new external counterparty becomes a
-   contact through the dedupe chokepoint, and a fuzzy near-match lands in the dedupe review queue rather
-   than duplicating. The **company is not created here.** Capture records an open question against the
-   sender's domain (`company_domain_disposition`, verdict `pending`) and a background site read
-   answers it: `company` creates the company from what the site states and plants the employment
-   edge, `personal` and `provider` refuse one for good, and `no_site` settles it either way. All four
-   mean the same thing for the next message — stop asking. So a freshly connected mailbox shows contacts
-   immediately and companies as the crawls land, not in the same tick.
-4. **The credential is never echoed, and disconnect destroys it.** No read surface returns a secret —
-   the roster carries only a server-side `credential_ref`, for the IMAP app-password exactly as for an
-   OAuth refresh token. Disconnect deletes the sealed secret from the vault, not just the row.
-5. **A failure degrades, never kills.** Revoke/expire a Gmail token and the row goes `reauth_required`
-   with a **reconnect** action in Settings; point IMAP at an unreachable host and get a clean failure —
-   no internals leaked.
-6. **Backfill is preview-before-spend and widen-only.** The preview spends nothing; a narrower window
-   after a wider one is refused (`409 window_narrowing`); cancel keeps captured rows.
-7. **The IMAP SSRF guard holds.** A `127.0.0.1` / private-host IMAP target fails as "unreachable" —
-   never a successful dial to an internal service.
-
-## Current UI gaps
-
-Every mail and calendar connector has a first-connect affordance in **Settings → Integrations**; only
-Gmail, Microsoft and IMAP also have an onboarding chip, so neither calendar does. **Telegram** sits in
-its own Settings card — a bot is a workspace-wide binding, not one human's grant
-([connect-telegram.md](connect-telegram.md)). Neither calendar has a manual backfill, and IMAP syncs
-forward from connect time only. What is still scoped out:
-[capture-connectors.md → Honest limitations](../explanation/capture-connectors.md#honest-limitations).
+**Telegram** is a bot for the whole workspace, not one user's grant: see [connect-telegram.md](connect-telegram.md).
+For what capture still leaves out, see [capture-connectors.md](../explanation/capture-connectors.md#limitations).

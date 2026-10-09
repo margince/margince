@@ -44,19 +44,32 @@ func (d replyDrafter) loadVoice(ctx context.Context) draftvoice.Context {
 // failure as a rejected learning signal.
 //
 // It PROPAGATES its model failures — unlike loadVoice, recordVoiceDraft and
-// recordVoiceRejection below, which are best-effort and log. Three of its four
-// exits return an error, and the containment for all three is the caller's:
-// DraftEmailWithProvenance answers with the DETERMINISTIC draft, not with a
-// retry that drops the profile. Read as best-effort, the error return looks
-// vestigial and the caller's degrade looks removable — and removing it turns
-// every transient model failure into a failed draft_reply.
+// recordVoiceRejection below, which are best-effort and log. The containment
+// for every error it returns is the caller's: DraftEmailWithProvenance answers
+// with the DETERMINISTIC draft, not with a retry that drops the profile. Read
+// as best-effort, the error return looks vestigial and the caller's degrade
+// looks removable — and removing it turns every transient model failure into a
+// failed draft_reply.
 func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data replyActivityData, voice draftvoice.Context) (replyDraft, *int, *string, error) {
 	draft, version, ref, err := d.voicedDraft(ctx, anchor, data, voice)
-	return data.greeted(draft), version, ref, err
+	if err != nil {
+		return replyDraft{}, nil, nil, err
+	}
+	served, err := data.greeted(draft)
+	if err != nil {
+		return replyDraft{}, nil, nil, err
+	}
+	// The signal says a voice draft was served, so it is written only once the
+	// greeted draft is known to be, and it keeps the model's own text.
+	if ref != nil {
+		d.recordVoiceDraft(ctx, voice, anchor, draft)
+	}
+	return served, version, ref, nil
 }
 
 // voicedDraft is completeVoiced before the greeting repair: the model's own
-// text, which the voice floor judges and the learning signal records.
+// text, which the voice floor judges and the learning signal records. A ref
+// comes back only for a draft written under the voice.
 func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data replyActivityData, voice draftvoice.Context) (replyDraft, *int, *string, error) {
 	// Every model call in this lane is ABOUT the message being answered, and
 	// the request carries that message's text. Named here rather than at each
@@ -105,7 +118,6 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 		plain, plainErr := d.completeChecked(ctx, replyDraftSystem, data, nil)
 		return plain, nil, nil, plainErr
 	}
-	d.recordVoiceDraft(ctx, voice, anchor, draft)
 	ref := voiceDraftRef(voice, anchor, draft)
 	return draft, &version, &ref, nil
 }

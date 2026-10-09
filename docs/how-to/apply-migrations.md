@@ -1,12 +1,12 @@
+<!-- prose:plain -->
 # Apply migrations
 
-Schema changes ship as embedded SQL migrations in two namespaces:
-`backend/migrations/core/` (upstream-owned) and
-`backend/migrations/custom/` (fork-owned — upstream never writes there).
-`cmd/migrate` applies both, in order, with the **owner-role** DSN; the
-runtime app role never owns schema.
+Schema changes ship as SQL migrations built into the binary, in two folders. `backend/migrations/core/` is
+owned by the main project. `backend/migrations/custom/` is owned by a fork, and the main project never
+writes there. `cmd/migrate` applies both, in order, with the **owner role** DSN.
+The role the app runs as never owns the schema.
 
-## The golden path
+## The main path
 
 ```sh
 make db-up    # once: start the dev Postgres and create the app role
@@ -19,123 +19,115 @@ make migrate  # apply everything pending
 MARGINCE_OWNER_DSN="<the owner DSN>" go run ./cmd/migrate up
 ```
 
-The DSN reaches the command through the environment rather than argv — it carries
-a password, and argv is world-readable. The recipe announces its target with the
-credential stripped (`postgres://***@localhost:15432/margince`), so `migrate-down`
-says which database it is about to revert.
+The DSN reaches the command through the environment instead of the command line. It holds a password, and
+any user on the machine can read a command line. The `make` target names its target database with the
+password removed (`postgres://***@localhost:15432/margince`), so `migrate-down` says which database it is
+about to roll back.
 
-## Direct invocation
+## Run the command by hand
 
 ```sh
 MARGINCE_OWNER_DSN=<owner-dsn> migrate up
 MARGINCE_OWNER_DSN=<owner-dsn> migrate down --steps 1
 ```
 
-`--dsn <owner-dsn>` still works and takes precedence; prefer the environment so
-the credential stays out of the process list.
+`--dsn <owner-dsn>` still works and comes before the environment. Use the environment, so the password stays
+out of the process list.
 
-- `up` applies every pending core + custom migration.
-- `down` reverts the most recent `--steps` migrations (default 1).
-  Migrations are written reversible, but treat `down` as a dev tool —
-  shipped core migrations are additive-only and are never edited.
+- `up` applies every pending core and custom migration.
+- `down` rolls back the newest `--steps` migrations (default 1).
+  Migrations can roll back, but use `down` only as a dev tool.
+  Shipped core migrations only add, and no one edits them.
 
-With no `--dsn`, the DSN comes from `MARGINCE_OWNER_DSN`, else `MARGINCE_DSN`.
-The owner variable takes precedence because every verb here runs DDL — tables,
-roles and triggers need owner privileges to create — while
-`MARGINCE_DSN` is the app role elsewhere in the product (`NOSUPERUSER
-NOBYPASSRLS`, no DDL rights). `MARGINCE_DSN` remains the last resort for an
-installation running everything under one sufficiently-privileged credential.
+With no `--dsn`, the DSN comes from `MARGINCE_OWNER_DSN`, else from `MARGINCE_DSN`. The owner value comes first
+because every command here runs DDL, and only the owner may run `CREATE TABLE`, `CREATE ROLE` and `CREATE TRIGGER`.
+In the rest of the product, `MARGINCE_DSN` is the app role (`NOSUPERUSER NOBYPASSRLS`, no DDL rights).
+`MARGINCE_DSN` stays the last option, for an installation that runs everything under one account with
+enough rights.
 
-An explicitly empty `--dsn ""` is refused rather than falling through to the
-environment, so a wrapper passing an unset variable aborts instead of running
-`down` or `drop-db` against whatever the ambient DSN names.
+An empty `--dsn ""` is refused, so it does not go back to the environment. A script that passes an empty
+value then stops. It does not run `down` or `drop-db` against any DSN the environment names.
 
-## Writing a migration
+## Write a migration
 
-Follow this checklist — several obligations are enforced by fitness tests, so missing one fails
-`make check` / `make test-integration` rather than shipping a latent bug.
+Follow this checklist. Fitness tests check several of these rules, so a missed one fails `make check` or
+`make test-integration`.
 
-1. **Scaffold the pair** — `make migrate-create NAME=<name>` writes
-   `<unix-seconds>_<name>.up.sql` **and** `.down.sql` in `backend/migrations/core/`. Both halves are
-   mandatory (the runner rejects a missing `.down.sql`). The version is the clock, not the next
-   number in a sequence: two branches open at once pick the same *number* and `main` stops loading
-   the moment both merge, which is how core `0240` and then `0248` were each claimed twice. The
-   four-digit sequence `0001`–`0292` is closed, not renamed — those versions are recorded in every
-   database that applied them, and renaming one strands that database.
-   **Never edit a shipped core migration** — additive migrations only; extend a `CHECK` vocabulary
-   with a new migration rather than rewriting the old one. (The runner is
-   hand-rolled — one transaction per migration under a cluster-wide advisory
-   lock — because the core/custom/jurisdiction ownership namespaces don't fit
-   an off-the-shelf one-dir-one-table migrator.)
+1. **Create the pair.** `make migrate-create NAME=<name>` writes two files in `backend/migrations/core/`.
+   They are `<unix-seconds>_<name>.up.sql` **and** `.down.sql`.
+   You need both files; the runner refuses a missing `.down.sql`.
+   The version is that time in seconds, so two branches cannot pick the same number.
 
-   A stamp removes collisions, not the ordering rule: a migration must still sort after everything
-   on `origin/main`, so a branch that sat while another migration merged re-runs
-   `make migrate-create` and moves its SQL across. `make check` reports that
-   (`scripts/check-migration-versions.sh`).
-2. **No table carries row-level security.** An installation holds one company (ADR-0061), so a
-   tenant predicate separates nothing; a schema fitness test derived from the live schema fails a
-   table that declares a policy.
-3. **Keep enums in sync** — a new `CHECK (col IN (...))` that a Go enum mirrors means extending that Go
-   const set, or `enumsync_test.go` fails.
-4. **Reach erasure + SAR** if the table holds PII (`piicoverage_test.go`), and record the table in the
-   owning module's `doc.go` "Tables owned" list (`tableownership_test.go`).
-5. **`SET LOCAL lock_timeout` bounds the WAIT, never the HOLD.** It caps how long a statement
-   queues for a lock before giving up. Once the lock is granted it is held until the transaction
-   ends — and the runner wraps each migration in exactly one transaction, so an `ALTER TABLE ...
-   ADD COLUMN` followed by a full-table `UPDATE` and a `CHECK` keeps `ACCESS EXCLUSIVE` for the
-   whole backfill. Every reader of that table blocks for the duration.
+   **Never edit a shipped core migration.** Migrations only add.
+   To add a value to a `CHECK` list, write a new migration; do not change the old one.
 
-   `backend/migrations/core/1788572167_a_suppression_records_who_decided_it.up.sql` has this shape,
-   and its own comment claims the timeout makes it safe on a live table. It does not. The migration
-   is harmless in practice — `communication_suppression` was empty when it ran, and a fresh install
-   backfills nothing — but do not copy the pattern onto a table that holds rows and expect the
-   timeout to protect readers.
+   A migration must still sort after everything on `origin/main`. Another migration may merge while your
+   branch waits. Then run `make migrate-create` again and move your SQL across. `make check` reports this
+   case (`scripts/check-migration-versions.sh`).
+2. **No table carries row-level security.**
+   An installation holds one company, so a tenant filter separates nothing.
+   A schema test reads the live schema and fails a table that declares a policy.
+3. **Keep each enum in step.** A Go enum may mirror a new `CHECK (col IN (...))`.
+   Then add the value to that Go `const` set too, or `enumsync_test.go` fails.
+4. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
+   Add the table to the "Tables owned" list in the owning module's `doc.go` (`tableownership_test.go`).
+5. **`SET LOCAL lock_timeout` limits the wait, never the hold.**
+   It limits how long a statement waits for a lock before it gives up.
+   Once the statement has the lock, it holds it until the transaction ends.
 
-   On a table with real rows, the backfill cannot be batched here: one transaction per migration is
-   the runner's contract. Land the column with a `DEFAULT` and no rewrite, then backfill from
-   application code or a job, then add the `CHECK` as `NOT VALID` and `VALIDATE` it in a
-   **migration of its own**.
+   The runner puts each migration in one transaction. Take an `ALTER TABLE ... ADD COLUMN`, then an
+   `UPDATE` of every row and a `CHECK`. The migration keeps `ACCESS EXCLUSIVE` while it fills every row.
+   Every reader of that table waits that whole time. `lock_timeout` does not keep readers safe while
+   you fill rows.
 
-   The separate file is the whole of what makes the two-step work, and it is easy to get wrong:
-   `NOT VALID` records the constraint without scanning, and `VALIDATE` does drop to
-   `SHARE UPDATE EXCLUSIVE` — but only for itself. Run in the same file, it asks for that lighter
-   lock while the `ACCESS EXCLUSIVE` the `ALTER` took is still held to commit, so readers and
-   writers queue exactly as long as a plain `ADD CONSTRAINT` would have made them.
-   `backend/gates/migrationvalidatesplit_test.go` refuses the same-file form; fourteen applied
-   migrations carry it and are registered there, because an applied migration is never edited.
+   On a table with real rows, you cannot fill the rows over many transactions here. One transaction per
+   migration is the contract of the runner. So add the column with a `DEFAULT`, so no row is written again. Then fill the rows from app
+   code or a job. Then add the `CHECK` as `NOT VALID` and `VALIDATE` it in a **migration of its own**.
+
+   The two steps work only as two files. `NOT VALID` records the rule without a scan, and `VALIDATE` takes
+   only `SHARE UPDATE EXCLUSIVE` for itself.
+
+   In the same file, it asks for that lighter lock while the
+   `ALTER` still holds `ACCESS EXCLUSIVE` until the commit. Readers and writers then wait as long as a
+   plain `ADD CONSTRAINT` would have made them wait. `backend/gates/migrationvalidatesplit_test.go`
+   refuses the same-file form. The applied migrations that have it are registered there, because no one
+   edits an applied migration.
 
    `1787968162_a_brief_names_the_currency_it_normalized_against.up.sql` and
-   `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair, and the second
-   explains why it is a file of its own.
-6. **Apply and verify** — `make migrate`, then `make check` / `make test-integration`.
+   `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair. The second one explains
+   why it is a file of its own.
+6. **Apply and check.** Run `make migrate`, then `make check` or `make test-integration`.
 
-Fork-local schema goes in `backend/migrations/custom/`, which has its own tracking table and applies
-after core (`YYYYMMDDHHMMSS`-named, `x_`-prefixed columns) and survives upstream merges untouched.
+Schema that only a fork needs goes in `backend/migrations/custom/`. It has its own tracking table and
+applies after core. Its files are named `YYYYMMDDHHMMSS` and its columns start with `x_`. It stays as it is
+when the fork merges from the main project.
 
-## Why a shipped migration is never edited
+## Migrations that lock a busy table
 
-On the ordinary `up` path an applied version never re-runs — `migrate down`
-is the one thing that lets a version execute again, deliberately and by hand.
-Editing an applied migration therefore changes what a FRESH
-installation gets while every already-deployed database keeps the old behaviour,
-and the two diverge with nothing reporting it. Editing history without a second,
-additive half that reaches deployed databases is how an installation ends up
-permanently missing a backfill nobody can see is missing.
+Some migrations take a lock on a whole table, and every other user of that table waits on it. Such a
+migration sets a short `lock_timeout`, so on a busy installation it fails, and does not wait without end.
+Run it when the app is not busy, and run `migrate up` again if it timed out.
 
-Two edits to applied migrations are on the record, and each names the reason it
-was safe rather than the fact that it happened:
+- `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing
+  time. It locks the whole activity table, and waits at most three seconds for that lock.
 
-1. **The 2026-08 tenant-scope sweep** edited applied migrations and shipped WITH
-   additive repair migrations, so every already-deployed database was reached.
-2. **The 2026-08-21 baseline consolidation** replaced core's 318 migrations and
-   custom's 24 with one baseline file each. It carries no repair half and needs
-   none: at the time no installation held data anybody could not rebuild. Rather
-   than reach a stale database it STOPS one — the baseline reuses version `0001`,
-   whose ledger row on such a database names a migration that no longer exists,
-   so `dbmigrate.assertLedgerMatches` refuses and tells the operator to run
-   `make dev-fresh`.
+## Why no one edits a shipped migration
 
-**Neither generalizes.** The second was available only while every database was
-rebuildable, and it was checkable only because `scripts/migration-baseline.sh
-verify` could prove the baseline builds the schema the history built, byte for
-byte. Without both of those, the rule is the one at the top of this section.
+On the `up` path an applied version never runs again. Only `migrate down` runs a version again, by
+hand. So an edit to an applied migration changes what a new installation gets, while every database already
+in use keeps working the old way. Nothing shows this. An installation can end up without a
+row fill, with no sign that it is missing.
+
+Two edits to applied migrations exist, and each one was safe for a stated reason:
+
+1. **The tenant scope work** edited applied migrations.
+   It shipped with repair migrations that only add, so it reached every database in use.
+2. **The baseline merge** put one baseline file each in place of the history of core and custom.
+   It has no repair half, because no installation then held data that could not be built again.
+   It stops an old database instead.
+   The baseline uses version `0001` again, and on such a database that row names a migration that no longer exists.
+   So `dbmigrate.assertLedgerMatches` refuses and tells the operator to run `make dev-fresh`.
+
+Neither case sets a rule for others. The second needed every database to be one that could be built again.
+`scripts/migration-baseline.sh verify` also needed to prove that the baseline builds the same schema as the
+history, byte for byte. Without both, never edit a shipped migration.

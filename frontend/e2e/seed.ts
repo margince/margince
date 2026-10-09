@@ -8,6 +8,7 @@ import {
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
+import { defaultOperations } from "../src/screens/operationsettings.fixtures";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -216,6 +217,19 @@ export const stages = [
   },
 ];
 
+// The one colleague every spec drives. `/users` (the roster page) and
+// `/users/names` (the by-id name lookup) both read this array, so a seeded
+// name cannot drift from the roster's own.
+export const seats = [
+  {
+    id: "u1",
+    email: "lena@seed.test",
+    display_name: "Lena Fischer",
+    status: "active",
+    is_agent: false,
+  },
+];
+
 // One working lead for the leads list and page: named, owned by u1, scored,
 // promotable (it has an email), with the identity fields the inline rows edit.
 export const seededLead = {
@@ -277,6 +291,9 @@ export const deals = [
     pipeline_id: "pl",
     stage_id: "s2",
     company_id: "o-brandt",
+    // The seeded seat carries it, so the card's owner mark and the table's
+    // owner column both have a colleague to name.
+    owner_id: "u1",
     project_id: null as string | null,
     status: "open",
     // The reason a win carries when no signed agreement backs it. Declared on
@@ -579,6 +596,55 @@ export const seededAutomation = {
   version: 3,
   created_at: "2026-06-20T08:00:00Z",
 };
+
+// The reader's saved views. Two are filters the Filters and views library
+// lists, naming fields the vocabularies below hold; only v-fleet's is the
+// filter the preview authors, so v-owned previews empty.
+//
+// v-partner is a deals list's whole state, and it names the NON-default
+// pipeline: pressing its tab has to restore the pipeline it was saved on.
+const seededViews: components["schemas"]["SavedView"][] = [
+  {
+    id: "v-owned",
+    resource: "contacts",
+    name: "Contacts I own",
+    owner_id: "u1",
+    shared_scope: "private",
+    query: {
+      filter: { and: [{ field: "owner_id", op: "eq", value: "u1" }] },
+    },
+    version: 1,
+  },
+  {
+    id: "v-fleet",
+    resource: "companies",
+    name: "Fleet companies",
+    owner_id: "u1",
+    shared_scope: "private",
+    query: {
+      filter: { and: [{ field: "industry", op: "eq", value: "automotive" }] },
+    },
+    version: 1,
+  },
+  {
+    id: "v-partner",
+    resource: "deals",
+    name: "Partner deals",
+    owner_id: "u1",
+    shared_scope: "private",
+    query: {
+      list: {
+        q: "",
+        sort: "",
+        includeArchived: false,
+        filters: { pipeline_id: "pl-partner" },
+      },
+    },
+    version: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+];
 
 export const passports = [
   {
@@ -1153,6 +1219,9 @@ export async function mockApi(
   // ["deal", id] after a save) reflects the write instead of reverting to the
   // seed.
   const dealPatches: Record<string, Partial<(typeof deals)[number]>> = {};
+  // per-page saved views, so a rename or a save is read back as written and
+  // the next write is held to the version that one left
+  let views = seededViews.map((view) => ({ ...view }));
   // per-page brief state so act/dismiss marks stick within a test
   const brief = {
     ...briefRun,
@@ -1218,6 +1287,7 @@ export async function mockApi(
     signature_enrich: true,
     auto_enrich_daily_cap: 500,
     site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+    mail_sync_interval_seconds: 120,
   };
   const captureConnections = [
     {
@@ -1452,6 +1522,7 @@ export async function mockApi(
         base_currency_locked: false,
         max_upload_bytes: 25_000_000,
         oauth_access_token_ttl_minutes: 43_200,
+        operations: defaultOperations,
         // Two providers, one of each state, so the sign-in methods card renders
         // both an offered and a withheld row rather than only the empty case.
         sign_in_providers: [
@@ -1849,17 +1920,17 @@ export async function mockApi(
       });
     }
     if (path === "/users") {
-      return json(
-        page([
-          {
-            id: "u1",
-            email: "lena@seed.test",
-            display_name: "Lena Fischer",
-            status: "active",
-            is_agent: false,
-          },
-        ]),
-      );
+      return json(page(seats));
+    }
+    if (path === "/users/names") {
+      // Names only the ids the caller asked about; an id the roster does not
+      // hold is simply absent, matching the real endpoint's contract.
+      const asked = new Set(url.searchParams.getAll("id"));
+      return json({
+        data: seats
+          .filter((seat) => asked.has(seat.id))
+          .map(({ id, display_name }) => ({ id, display_name })),
+      });
     }
     if (path === "/pipelines") {
       // TWO boards, because the deals screen holds the pipeline in the address
@@ -2035,35 +2106,78 @@ export async function mockApi(
       return json(page([]));
     }
     if (path === "/views" && method === "GET") {
-      // One saved deals view, and it names the NON-default pipeline. A view is
-      // stored as the reader's whole list state, so the pipeline it was saved
-      // on is part of what pressing its tab has to restore.
-      if (url.searchParams.get("resource") !== "deals") {
-        return json(page([]));
-      }
+      // One store answers every read, so the library, a list's rail and an
+      // opened view agree after a write. Archived views are left out unless
+      // the read asks for them, as the contract's include_archived does.
+      const resource = url.searchParams.get("resource");
+      const archivedToo = url.searchParams.get("include_archived") === "true";
       return json(
-        page([
-          {
-            id: "v-partner",
-            workspace_id: "w",
-            resource: "deals",
-            name: "Partner deals",
-            owner_id: "u1",
-            shared_scope: "private",
-            query: {
-              list: {
-                q: "",
-                sort: "",
-                includeArchived: false,
-                filters: { pipeline_id: "pl-partner" },
-              },
-            },
-            version: 1,
-            created_at: "2026-01-01T00:00:00Z",
-            updated_at: "2026-01-01T00:00:00Z",
-          },
-        ]),
+        page(
+          views.filter(
+            (view) =>
+              (archivedToo || !view.archived_at) &&
+              (resource === null || view.resource === resource),
+          ),
+        ),
       );
+    }
+    if (path === "/views" && method === "POST") {
+      const asked: components["schemas"]["CreateSavedViewRequest"] = route
+        .request()
+        .postDataJSON();
+      const created: components["schemas"]["SavedView"] = {
+        id: `v-${views.length + 1}`,
+        owner_id: "u1",
+        shared_scope: "private",
+        resource: asked.resource,
+        name: asked.name,
+        query: asked.query,
+        version: 1,
+      };
+      views = [...views, created];
+      return json(created, 201);
+    }
+    const viewRoute = /^\/views\/([^/]+)$/.exec(path);
+    if (viewRoute) {
+      const existing = views.find((view) => view.id === viewRoute[1]);
+      if (!existing || (method !== "GET" && existing.archived_at)) {
+        return json({ title: "Not Found", code: "not_found" }, 404);
+      }
+      if (method === "PATCH") {
+        // Remembered and held to If-Match, as the deals advance below is: a
+        // missing or stale version fails the spec instead of writing over.
+        if (
+          route.request().headers()["if-match"] !== String(existing.version)
+        ) {
+          return json(
+            {
+              title: "Conflict",
+              detail: "version skew — reload and retry",
+              code: "version_skew",
+            },
+            409,
+          );
+        }
+        const asked: components["schemas"]["UpdateSavedViewRequest"] = route
+          .request()
+          .postDataJSON();
+        const updated = {
+          ...existing,
+          ...asked,
+          version: existing.version + 1,
+        };
+        views = views.map((view) => (view.id === existing.id ? updated : view));
+        return json(updated);
+      }
+      if (method === "DELETE") {
+        // The contract archives rather than deletes: one read still finds it.
+        const archived = { ...existing, archived_at: "2026-09-13T08:00:00Z" };
+        views = views.map((view) =>
+          view.id === existing.id ? archived : view,
+        );
+        return json(archived);
+      }
+      return json(existing);
     }
     if (path === "/deals" && method === "GET") {
       // The LIST reflects the writes too. A detail read that shows the advance

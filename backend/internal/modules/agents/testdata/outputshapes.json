@@ -671,6 +671,131 @@
       "warnings"
     ]
   },
+  "attach_document": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "byte_size": {
+            "type": "integer"
+          },
+          "captured_by": {
+            "type": "string"
+          },
+          "checksum": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entity_type": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "attachment_id",
+          "byte_size",
+          "captured_by",
+          "checksum",
+          "content_type",
+          "created_at",
+          "entity_id",
+          "entity_type",
+          "filename"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "book_meeting": {
     "type": "object",
     "properties": {
@@ -855,6 +980,9 @@
                     "archived": {
                       "type": "boolean"
                     },
+                    "done": {
+                      "type": "boolean"
+                    },
                     "listed": {
                       "type": "boolean"
                     },
@@ -878,6 +1006,9 @@
                   "type": "object",
                   "properties": {
                     "archived": {
+                      "type": "boolean"
+                    },
+                    "done": {
                       "type": "boolean"
                     },
                     "listed": {
@@ -1820,6 +1951,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "candidate_id": {
+                  "type": "string"
+                },
                 "confidence": {
                   "type": "number"
                 },
@@ -1854,6 +1988,7 @@
                 }
               },
               "required": [
+                "candidate_id",
                 "confidence",
                 "evidence",
                 "other_record_id"
@@ -1869,6 +2004,29 @@
           },
           "record_type": {
             "type": "string"
+          },
+          "tag_offer": {
+            "type": "object",
+            "properties": {
+              "exists": {
+                "type": "boolean"
+              },
+              "may_create": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "tag_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "exists",
+              "may_create",
+              "name"
+            ]
           },
           "trust_tier": {
             "type": "string"
@@ -2539,6 +2697,101 @@
         },
         "required": [
           "members"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "decide_duplicate": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "disposition": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "disposition"
         ]
       },
       "evidence": {
@@ -4230,6 +4483,9 @@
           "deals": {
             "type": "integer"
           },
+          "leads": {
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },
@@ -4242,6 +4498,7 @@
           "companies",
           "contacts",
           "deals",
+          "leads",
           "name",
           "tag_id"
         ]
@@ -4957,6 +5214,145 @@
         },
         "required": [
           "colleagues"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "list_documents": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "attachment_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "byte_size": {
+                  "type": "integer"
+                },
+                "captured_by": {
+                  "type": "string"
+                },
+                "checksum": {
+                  "type": "string"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "entity_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "entity_type": {
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attachment_id",
+                "byte_size",
+                "captured_by",
+                "checksum",
+                "content_type",
+                "created_at",
+                "entity_id",
+                "entity_type",
+                "filename"
+              ]
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "documents"
         ]
       },
       "evidence": {

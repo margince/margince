@@ -76,6 +76,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Consented Buyer",
 		"emails":    []AnyMap{{"email": "buyer@preflight.test"}},
 	}, nil, &contact); status != http.StatusCreated {

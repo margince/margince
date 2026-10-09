@@ -349,14 +349,18 @@ describe("silence on the relationship slot names which silence it is", () => {
     return card;
   }
 
-  it("says there is no exchange when nothing was ever sent either", async () => {
+  // An unrated account with no mail either way may still have meetings and
+  // calls. The brief reads the same missing rating as not assessed, and the
+  // tile says what the brief says.
+  it("says not assessed when unrated and nothing was ever sent", async () => {
     stubFinance(NO_CONNECTION);
     renderStrip(
       view({ state_strip: spoken, health: { days_since_last_inbound: null } }),
     );
     const card = relationship((await readings()).plate);
 
-    const value = within(card).getByText(en["co.strip.noInboundEver"]);
+    expect(within(card).queryByText(en["co.strip.noInboundEver"])).toBeNull();
+    const value = within(card).getByText(en["co.strip.notAssessed"]);
     expect(card.querySelector(".stat-card-detail")).toBeNull();
     // Untouched is not bad news. A row that lit up for every account nobody
     // has approached would say the same thing about the ones being ignored.
@@ -451,6 +455,67 @@ describe("silence on the relationship slot names which silence it is", () => {
     expect(card.textContent).not.toMatch(/inbound/i);
   });
 
+  // One verdict on the card. When the rating says a meeting keeps the account
+  // in touch, the headline must not call the same relationship quiet because
+  // the inbox alone is.
+  it.each([
+    ["old mail", 77],
+    ["no mail at all", null],
+  ])(
+    "follows the rating when a meeting keeps it in touch despite %s",
+    async (_, days) => {
+      stubFinance(NO_CONNECTION);
+      renderStrip(
+        view({
+          state_strip: spoken,
+          health: {
+            days_since_last_inbound: days,
+            relationship: {
+              rating: "strong",
+              reason: "Last met them 21 days ago.",
+              reason_code: "last_met",
+              reason_params: { days: 21 },
+            },
+          },
+        }),
+      );
+      const card = relationship((await readings()).plate);
+
+      expect(within(card).getByText(en["co.strip.healthActive"])).toBeTruthy();
+      expect(within(card).queryByText(en["co.strip.healthQuiet"])).toBeNull();
+      expect(within(card).queryByText(en["co.strip.noInboundEver"])).toBeNull();
+      expect(
+        within(card).getAllByText("Last met them 21 days ago.").length,
+      ).toBeGreaterThan(0);
+    },
+  );
+
+  // An at-risk rating keeps the quiet headline, and its detail is the rating's
+  // own reason, measured from the later of their last word and our last meeting.
+  it("says the rating's reason under a quiet headline", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: spoken,
+        health: {
+          days_since_last_inbound: 77,
+          relationship: {
+            rating: "at_risk",
+            reason: "No reply and no meeting for 40 days.",
+            reason_code: "quiet",
+            reason_params: { days: 40 },
+          },
+        },
+      }),
+    );
+    const card = relationship((await readings()).plate);
+
+    expect(within(card).getByText(en["co.strip.healthQuiet"])).toBeTruthy();
+    expect(
+      within(card).getAllByText("No reply and no meeting for 40 days.").length,
+    ).toBeGreaterThan(0);
+  });
+
   // The share belongs to the relationships that are still running: there the
   // dates say nothing a reader can act on and the balance does.
   it("keeps the share of the exchange for a live relationship", async () => {
@@ -539,5 +604,59 @@ describe("a reading offers the tab it is a reading of", () => {
     await readings();
 
     expect(screen.queryAllByRole("button", { name: /^Open / })).toHaveLength(0);
+  });
+});
+
+// The tile reads the server's last contact, which counts a meeting and a call
+// as well as mail. Reading only the two mail directions told an account with
+// three meetings that it had no contact at all.
+describe("the last-contact tile", () => {
+  const PROSPECT: StateStripSection = {
+    account: { lifecycle: "prospect", relationship_types: [] },
+    commercial: null,
+  };
+
+  function lastContact(plate: HTMLElement): HTMLElement {
+    const card = within(plate)
+      .getByText(en["co.strip.lastTouch"])
+      .closest(".stat-card");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("the last-contact reading has no card");
+    }
+    return card;
+  }
+
+  it("names a meeting when no mail was ever exchanged", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: PROSPECT,
+        last_inbound_at: null,
+        last_outbound_at: null,
+        last_contact: {
+          at: "2026-08-13T09:00:00Z",
+          kind: "meeting",
+          activity_id: "00000000-0000-4000-8000-0000000000aa",
+        },
+      }),
+    );
+    const card = lastContact((await readings()).plate);
+
+    expect(within(card).queryByText(en["co.strip.lastTouch.never"])).toBeNull();
+    expect(card.textContent).toContain("5 d");
+    expect(card.textContent).toContain(en["co.spine.kind.meeting"]);
+  });
+
+  it("says none when the server names no last contact", async () => {
+    stubFinance(NO_CONNECTION);
+    renderStrip(
+      view({
+        state_strip: PROSPECT,
+        last_outbound_at: "2026-08-10T09:00:00Z",
+      }),
+    );
+    const card = lastContact((await readings()).plate);
+
+    expect(within(card).getByText(en["co.strip.lastTouch.never"])).toBeTruthy();
   });
 });

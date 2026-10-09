@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
-  CheckCircle2,
   Circle,
+  CircleCheck,
   Mail,
   ShieldCheck,
 } from "lucide-react";
@@ -175,29 +175,42 @@ export function OAuthConnectPanel({
   }, [connect.isPending, onPendingChange]);
   return (
     <>
-      {connect.isError && (
-        <ConnectWarn
-          title={t(copy.failed)}
-          body={problemMessageOf(connect.error, t)}
-        />
-      )}
-      {/* What the grant covers is background: true, and not what the reader is
+      <div className="form-stack">
+        {connect.isError && (
+          <ConnectWarn
+            title={t(copy.failed)}
+            body={problemMessageOf(connect.error, t)}
+          />
+        )}
+        {/* What the grant covers is background: true, and not what the reader is
           deciding at this moment, which is whether to press Connect. */}
-      <Disclosure summary={t("ob.s4.accessToggle")}>
-        <p className="spoken-hint t-caption">
-          <ShieldCheck aria-hidden /> {t(copy.hint)}
-        </p>
-      </Disclosure>
-      {/* The warning stays on the surface. It describes the NEXT screen — the
+        <Disclosure summary={t("ob.s4.accessToggle")}>
+          <p className="spoken-hint t-caption">
+            <ShieldCheck aria-hidden /> {t(copy.hint)}
+          </p>
+        </Disclosure>
+        {/* The warning stays on the surface. It describes the NEXT screen — the
           provider calls a self-hosted app unverified — so a reader who meets
           that screen without having been told reasonably concludes something
           is wrong with the thing they just pressed. A caution about what a
           button does belongs beside the button, never behind a fold. */}
-      <p className="ob-google-unverified">{t(copy.unverified)}</p>
-      {/* Last thing read before the grant screen, because after it the mailbox
+        <p className="ob-google-unverified">{t(copy.unverified)}</p>
+        {/* Last thing read before the grant screen, because after it the mailbox
           is connected and the telling is too late. */}
-      <CaptureNotice />
-      <div className="ob-connect-dialog-actions">
+        <CaptureNotice />
+      </div>
+      <div className="actions">
+        <Button
+          // Dismissal is a decision NOT to connect, so it must not be
+          // available while the credential POST it would abandon is still
+          // in flight: a success landing after the reader already backed out
+          // would leave a mailbox connected against a "no" the panel already
+          // promised.
+          disabled={connect.isPending}
+          onClick={onDismiss}
+        >
+          {t("ob.s4.notNow")}
+        </Button>
         <Button
           variant="primary"
           disabled={connect.isPending}
@@ -213,19 +226,6 @@ export function OAuthConnectPanel({
             </>
           )}
         </Button>
-        <button
-          type="button"
-          className="ob-connect-dialog-notnow"
-          // Dismissal is a decision NOT to connect, so it must not be
-          // available while the credential POST it would abandon is still
-          // in flight: a success landing after the reader already backed out
-          // would leave a mailbox connected against a "no" the panel already
-          // promised.
-          disabled={connect.isPending}
-          onClick={onDismiss}
-        >
-          {t("ob.s4.notNow")}
-        </button>
       </div>
     </>
   );
@@ -314,7 +314,7 @@ export function OAuthReturnPanel({
   return (
     <div className="connect-result">
       <div className="cr-h">
-        <CheckCircle2 aria-hidden /> {t("ob.s4.connectOkTitle")}
+        <CircleCheck aria-hidden /> {t("ob.s4.connectOkTitle")}
       </div>
       <p className="ob-sub">{t("ob.s4.connectOkBody")}</p>
       {connections.isPending && (
@@ -467,7 +467,7 @@ export function ImapConnectPanel({
     return (
       <div className="connect-result">
         <div className="cr-h">
-          <CheckCircle2 aria-hidden /> {t("ob.s4.capturedTitle")}
+          <CircleCheck aria-hidden /> {t("ob.s4.capturedTitle")}
         </div>
         <p className="ob-sub">{t("ob.s4.capturedBody")}</p>
         {/* The same question the OAuth arm asks, in the same place: after the
@@ -495,98 +495,108 @@ export function ImapConnectPanel({
 
   return (
     <>
-      <div className="imap-form">
-        <Field label={t("ob.s4.imapHost")}>
-          {(control) => (
-            <input
-              {...control}
-              className="input"
-              value={host}
-              placeholder={t("ob.s4.imapHostPlaceholder")}
-              onChange={(e) => setHostVal(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("ob.s4.imapPort")}>
-          {(control) => (
-            <input
-              {...control}
-              className="input"
-              type="number"
-              min={1}
-              max={65535}
-              value={port}
-              onChange={(e) => setPort(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field className="full" label={t("ob.s4.imapEmail")}>
-          {(control) => (
-            <input
-              {...control}
-              className="input"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field className="full" label={t("ob.s4.imapPassword")}>
-          {(control) => (
-            <input
-              {...control}
-              className="input"
-              type="password"
-              autoComplete="off"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("ob.s4.imapMailbox")}>
-          {(control) => (
-            <input
-              {...control}
-              className="input"
-              value={mailbox}
-              onChange={(e) => setMailbox(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("ob.s4.imapMax")}>
-          {(control) => (
-            <input
-              {...control}
-              className="input"
-              type="number"
-              min={1}
-              max={200}
-              value={max}
-              onChange={(e) => setMax(e.target.value)}
-            />
-          )}
-        </Field>
+      <div className="form-stack">
+        <div className="imap-form">
+          <Field label={t("ob.s4.imapHost")}>
+            {(control) => (
+              <input
+                {...control}
+                className="input"
+                value={host}
+                placeholder={t("ob.s4.imapHostPlaceholder")}
+                onChange={(e) => setHostVal(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("ob.s4.imapPort")}>
+            {(control) => (
+              <input
+                {...control}
+                className="input"
+                type="number"
+                min={1}
+                max={65535}
+                value={port}
+                onChange={(e) => setPort(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field className="full" label={t("ob.s4.imapEmail")}>
+            {(control) => (
+              <input
+                {...control}
+                className="input"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field className="full" label={t("ob.s4.imapPassword")}>
+            {(control) => (
+              <input
+                {...control}
+                className="input"
+                type="password"
+                autoComplete="off"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("ob.s4.imapMailbox")}>
+            {(control) => (
+              <input
+                {...control}
+                className="input"
+                value={mailbox}
+                onChange={(e) => setMailbox(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("ob.s4.imapMax")}>
+            {(control) => (
+              <input
+                {...control}
+                className="input"
+                type="number"
+                min={1}
+                max={200}
+                value={max}
+                onChange={(e) => setMax(e.target.value)}
+              />
+            )}
+          </Field>
+        </div>
+
+        <Disclosure summary={t("ob.s4.accessToggle")}>
+          <p className="spoken-hint t-caption">
+            <ShieldCheck aria-hidden /> {t("ob.s4.imapHint")}
+          </p>
+        </Disclosure>
+
+        {connect.isError && (
+          <ConnectWarn
+            title={t("ob.s4.connectFailed")}
+            body={imapErrorMessage(connect.error, t)}
+          />
+        )}
+
+        {/* Same words as the OAuth panel, and in the same place: the last thing
+          read before the mailbox is connected. */}
+        <CaptureNotice />
       </div>
 
-      <Disclosure summary={t("ob.s4.accessToggle")}>
-        <p className="spoken-hint t-caption">
-          <ShieldCheck aria-hidden /> {t("ob.s4.imapHint")}
-        </p>
-      </Disclosure>
-
-      {connect.isError && (
-        <ConnectWarn
-          title={t("ob.s4.connectFailed")}
-          body={imapErrorMessage(connect.error, t)}
-        />
-      )}
-
-      {/* Same words as the OAuth panel, and in the same place: the last thing
-          read before the mailbox is connected. */}
-      <CaptureNotice />
-
-      <div className="ob-connect-dialog-actions">
+      <div className="actions">
+        <Button
+          // See `OAuthConnectPanel`'s own `onDismiss` for why the in-flight
+          // POST has to finish before this becomes a real choice again.
+          disabled={connect.isPending}
+          onClick={onDismiss}
+        >
+          {t("ob.s4.notNow")}
+        </Button>
         <Button
           variant="primary"
           disabled={!ready || connect.isPending}
@@ -602,16 +612,6 @@ export function ImapConnectPanel({
             </>
           )}
         </Button>
-        <button
-          type="button"
-          className="ob-connect-dialog-notnow"
-          // See `OAuthConnectPanel`'s own `onDismiss` for why the in-flight
-          // POST has to finish before this becomes a real choice again.
-          disabled={connect.isPending}
-          onClick={onDismiss}
-        >
-          {t("ob.s4.notNow")}
-        </button>
       </div>
     </>
   );

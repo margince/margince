@@ -37,6 +37,7 @@ const (
 // Connection statuses and the backfill terminal state this read derives from
 // (capture_connection.status / capture_backfill.status vocabularies).
 const (
+	statusConnected      = "connected"
 	statusReauthRequired = "reauth_required"
 	statusError          = "error"
 	statusDisconnected   = "disconnected"

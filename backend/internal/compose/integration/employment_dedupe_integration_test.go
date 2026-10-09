@@ -43,7 +43,7 @@ func (e *relEnv) secondCompany(t *testing.T, name string) string {
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name}, nil, &company); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create %s → %d", name, status)
 	}
 	return company.ID

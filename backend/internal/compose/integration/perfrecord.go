@@ -102,6 +102,40 @@ type BudgetMeasurement struct {
 	// be reporting a number that satisfies a bound it was never measured
 	// against — true arithmetic, false claim.
 	Caveat string `json:"caveat,omitempty"`
+	// The fields below are written by the daily-use bench and read by
+	// tools/gen-perfdoc's measurement struct, which mirrors them; older
+	// records leave them empty and render as they always did.
+	Seat string `json:"seat,omitempty"`
+	Flow string `json:"flow,omitempty"`
+	// Verdict is a DailyVerdict string; gen-perfdoc refuses any other value.
+	Verdict    string `json:"verdict,omitempty"`
+	KnownIssue int    `json:"known_issue,omitempty"`
+	Status5xx  int    `json:"status_5xx,omitempty"`
+	// Allowed5xx marks server errors a known issue lists as its own symptom;
+	// the gate let them pass, so the page reads them against that issue.
+	Allowed5xx    bool    `json:"allowed_5xx,omitempty"`
+	Status422     int     `json:"status_422,omitempty"`
+	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
+	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`
+	Acquires      int64   `json:"acquires,omitempty"`
+	PoolSize      int32   `json:"pool_size,omitempty"`
+	// Note says what a reader should know about a row without doubting its
+	// verdict; anything that does cast doubt on it is a Caveat.
+	Note string `json:"note,omitempty"`
+}
+
+// CorpusFacts is what a seeded bench ran over, so the pages state the size
+// from the record rather than from a number typed into the renderer.
+type CorpusFacts struct {
+	Scale      float64 `json:"scale"`
+	Contacts   int     `json:"contacts"`
+	Companies  int     `json:"companies"`
+	Deals      int     `json:"deals"`
+	Leads      int     `json:"leads"`
+	Projects   int     `json:"projects"`
+	Activities int     `json:"activities"`
+	Reps       int     `json:"reps"`
+	Managers   int     `json:"managers"`
 }
 
 // PerfRecord is one target's whole run: the machine, the day, and every budget
@@ -113,6 +147,10 @@ type PerfRecord struct {
 	MeasuredOn string              `json:"measured_on"`
 	Machine    MachineFacts        `json:"machine"`
 	Budgets    []BudgetMeasurement `json:"budgets"`
+	Corpus     *CorpusFacts        `json:"corpus,omitempty"`
+	// Advisories are known-issue entries the daily bench found clear of their
+	// budget; the run passes, and the page lists them for somebody to remove.
+	Advisories []string `json:"advisories,omitempty"`
 }
 
 // RecordingEnabled reports whether this run should leave a record.
@@ -132,7 +170,11 @@ func RecordingEnabled() bool { return os.Getenv("MARGINCE_BENCH_RECORD") == "1" 
 // record it is how a page goes stale while every run looks green.
 func WritePerfRecord(t *testing.T, target string, postgres string, budgets []BudgetMeasurement) {
 	t.Helper()
-	record := PerfRecord{
+	writePerfRecordTo(t, PerfRecordDir(t), newPerfRecord(target, postgres, budgets))
+}
+
+func newPerfRecord(target, postgres string, budgets []BudgetMeasurement) PerfRecord {
+	return PerfRecord{
 		Target: target,
 		// The DAY, not the instant. A record that changed on every run would
 		// churn the committed page for no reader's benefit; the day is what
@@ -141,15 +183,18 @@ func WritePerfRecord(t *testing.T, target string, postgres string, budgets []Bud
 		Machine:    readMachineFacts(postgres),
 		Budgets:    budgets,
 	}
+}
+
+func writePerfRecordTo(t *testing.T, dir string, record PerfRecord) {
+	t.Helper()
 	body, err := json.MarshalIndent(record, "", "  ")
 	if err != nil {
-		t.Fatalf("rendering the %s perf record: %v", target, err)
+		t.Fatalf("rendering the %s perf record: %v", record.Target, err)
 	}
-	dir := PerfRecordDir(t)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatalf("creating %s: %v", dir, err)
 	}
-	path := filepath.Join(dir, target+".json")
+	path := filepath.Join(dir, record.Target+".json")
 	if err := os.WriteFile(path, append(body, '\n'), 0o600); err != nil {
 		t.Fatalf("writing %s: %v", path, err)
 	}

@@ -133,7 +133,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 // With two families registered the count could not change for a tool in a third,
 // which is a census reporting PASS over two thirds of its subject.
 func registerEveryStageableFamily(r *Registry, p datasource.SystemOfRecordProvider, comms Comms) {
-	RegisterCoreTools(r, p, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil)
+	RegisterCoreTools(r, p, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil, nil)
 	RegisterCommsTools(r, comms, p)
 	RegisterLifecycleTools(r, p, nil, nil, nil, nil)
 	RegisterTagTools(r, stagingTags{})

@@ -9,6 +9,7 @@ import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { openAnalyticsSection } from "./analytics.address";
 import { QueryGate, throwProblem } from "./common";
 import { executionLabel } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
@@ -52,13 +53,22 @@ export function ReportingLibrary() {
     <Panel
       title={t("reporting.reports")}
       titleAction={
-        canCreate ? (
-          <Button
-            onClick={() => navigate({ screen: "analytics", id: "performance" })}
-          >
-            {t("reporting.createReport")}
+        <>
+          {/* The two ways a report starts: a Performance view kept as it is,
+              or a question of the reader's own. */}
+          {canCreate ? (
+            <Button
+              onClick={() =>
+                navigate({ screen: "analytics", id: "performance" })
+              }
+            >
+              {t("reporting.createReport")}
+            </Button>
+          ) : null}
+          <Button onClick={() => openAnalyticsSection("questions")}>
+            {t("reporting.newCustomReport")}
           </Button>
-        ) : undefined
+        </>
       }
     >
       <PanelBody>

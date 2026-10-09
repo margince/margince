@@ -89,6 +89,11 @@ type Input struct {
 	LostCount *int     `json:"lost_count,omitempty"`
 	OpenTasks []TaskIn `json:"open_tasks,omitempty"`
 	Recent    []ActIn  `json:"recent,omitempty"`
+	// LastContact is the activity the page's "Last contact" tile names, nil
+	// when it names none. Tasks and notes can push it out of Recent, so it
+	// rides the fingerprint on its own. Two readers who see different activity
+	// never share a brief that names it.
+	LastContact *ActIn `json:"last_contact,omitempty"`
 	// SectionsOmitted names what the reader could NOT see. It rides the
 	// fingerprint so two readers with different grants never share a cached
 	// brief, and it tells the writer to stay silent about those sections
@@ -369,6 +374,7 @@ func foldRecent(view crmcontracts.Company360, in *Input) {
 		}
 		in.Recent = append(in.Recent, act)
 	}
+	foldLastContact(view, in)
 }
 
 // Fingerprint identifies the assembled input, together with the prompt and

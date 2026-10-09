@@ -1,14 +1,26 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { steppedClock } from "../testing/steppedclock";
+import { useArrivalFocus } from "./arrivalfocus";
 import { Button } from "./atoms";
+import { useFocusHandoff } from "./focushandoff";
+import { Heading } from "./heading";
 import {
+  type Toast,
   type ToastOptions,
   ToastProvider,
   ToastRegion,
+  useOwnToast,
   useToast,
 } from "./toast";
 
@@ -43,7 +55,7 @@ function Triggers({
           show second
         </Button>
       )}
-      <Button onClick={toast.dismiss}>dismiss</Button>
+      <Button onClick={() => toast.dismiss()}>dismiss</Button>
     </>
   );
 }
@@ -83,6 +95,37 @@ function Bodied({ sticky = false }: Readonly<{ sticky?: boolean }>) {
 const show = (props: Partial<React.ComponentProps<typeof Triggers>> = {}) =>
   render(<Harness message="Saved." {...props} />);
 
+// The controls held outside the tree, for a message that must arrive without a
+// trigger press moving focus or the pointer.
+function controlled(): () => Toast {
+  let held: Toast | null = null;
+  function Capture() {
+    held = useToast();
+    return null;
+  }
+  render(
+    <LocaleProvider initial="en">
+      <ToastProvider>
+        <Capture />
+        <ToastRegion />
+      </ToastProvider>
+    </LocaleProvider>,
+  );
+  return () => {
+    if (held === null) {
+      throw new Error("the toast controls were never rendered");
+    }
+    return held;
+  };
+}
+
+const undo = (onAct = () => {}): ToastOptions => ({
+  action: { kind: "undo", label: "Undo", onAct },
+});
+const open = (onAct = () => {}): ToastOptions => ({
+  action: { kind: "open", label: "Show all", onAct },
+});
+
 // The clock is driven in every test, not only the ones that watch a message go:
 // what this suite measures is a deadline, and `userEvent` waits on timers of its
 // own between the events that make up a click. `steppedClock` puts both on the
@@ -99,6 +142,10 @@ const wait = (ms: number) => {
 };
 
 const press = (name: string) => screen.getByRole("button", { name });
+
+// `Button` takes one press per commit and releases its latch in a microtask,
+// which a synchronous `act` never drains; pressing the same trigger again needs this.
+const release = () => act(async () => {});
 
 describe("the toast region", () => {
   it("says nothing until something is shown", () => {
@@ -159,16 +206,80 @@ describe("the toast region", () => {
 });
 
 describe("a confirmation carrying a verb", () => {
-  const undo = (onAct = () => {}) => ({ action: { label: "Undo", onAct } });
-
-  it("does not withdraw on its own", async () => {
-    // A reader reaching for Undo must not lose it mid-reach, and there is no
-    // timeout long enough to be safe that is also short enough to be a toast.
+  it("withdraws after eight seconds", async () => {
+    // Longer than a report, so a reader reaching for Undo has time to get there.
     const acting = steppedClock();
     show({ options: undo() });
     await acting.click(press("show"));
-    wait(30_000);
+    wait(7900);
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    wait(200);
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("holds its clock while a pointer is over it", async () => {
+    const acting = steppedClock();
+    show({ options: undo() });
+    await acting.click(press("show"));
+    await acting.hover(screen.getByRole("status"));
+    wait(30_000);
+    expect(press("Undo")).toBeInTheDocument();
+  });
+
+  it("stays when the caller asks for sticky as well", async () => {
+    const acting = steppedClock();
+    show({ options: { ...undo(), sticky: true } });
+    await acting.click(press("show"));
+    wait(30_000);
+    expect(press("Undo")).toBeInTheDocument();
+  });
+
+  it("closes with one press after several identical ones", async () => {
+    // Three Done presses in a row: one × must clear the region, not the first
+    // of three identical messages queued behind one another.
+    const acting = steppedClock();
+    show({ message: "Task completed", options: undo() });
+    for (let done = 0; done < 3; done += 1) {
+      await acting.click(press("show"));
+      await release();
+    }
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    await acting.click(press("Close"));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("is replaced by a newer one, whose Undo is the one that runs", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const acting = steppedClock();
+    show({
+      message: "Task completed",
+      options: undo(first),
+      second: "Task completed",
+      secondOptions: undo(second),
+    });
+    await acting.click(press("show"));
+    const replaced = screen.getByRole("status");
+    await acting.click(press("show second"));
+    // A new node, so the arrival animation plays again for the same words.
+    expect(screen.getByRole("status")).not.toBe(replaced);
+    await acting.click(press("Undo"));
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("gives the replacement its own full life", async () => {
+    const acting = steppedClock();
+    show({ options: undo() });
+    await acting.click(press("show"));
+    await release();
+    wait(6000);
+    await acting.click(press("show"));
+    wait(7900);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    wait(200);
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("runs the verb and then withdraws", async () => {
@@ -200,10 +311,71 @@ describe("a confirmation carrying a verb", () => {
     await acting.click(press("show second"));
     await acting.click(press("Close"));
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    // The click left the pointer on the region, which holds whatever it shows,
+    // so the reader moves away before the clock is read.
+    await acting.hover(screen.getByRole("status"));
+    await acting.unhover(screen.getByRole("status"));
     // And what was waiting behind it is an ordinary confirmation again, with its
     // own full life rather than the remainder of somebody else's.
     wait(3600);
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("is not evicted by a verb that only leads somewhere", async () => {
+    const acting = steppedClock();
+    show({
+      message: "Task completed",
+      options: undo(),
+      second: "Moved to Jana.",
+      secondOptions: open(),
+    });
+    await acting.click(press("show"));
+    await acting.click(press("show second"));
+    expect(screen.getByRole("status")).toHaveTextContent("Task completed");
+    await acting.click(press("Close"));
+    expect(screen.getByRole("status")).toHaveTextContent("Moved to Jana.");
+  });
+
+  it("queues an undo behind a verb that leads somewhere", async () => {
+    const acting = steppedClock();
+    show({
+      message: "Moved to Jana.",
+      options: open(),
+      second: "Task completed",
+      secondOptions: undo(),
+    });
+    await acting.click(press("show"));
+    await acting.click(press("show second"));
+    expect(screen.getByRole("status")).toHaveTextContent("Moved to Jana.");
+  });
+
+  it("keeps a verb that leads somewhere until it is dismissed", async () => {
+    const acting = steppedClock();
+    show({ options: open() });
+    await acting.click(press("show"));
+    wait(30_000);
+    expect(press("Show all")).toBeInTheDocument();
+  });
+
+  it("replaces an undo waiting in the queue rather than stacking a second", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Moved to Jana.", open());
+      toast().show("First done", undo());
+      toast().show("Second done", undo());
+    });
+    await acting.click(press("Close"));
+    expect(screen.getByRole("status")).toHaveTextContent("Second done");
+    await acting.click(press("Close"));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("carries its own way out", async () => {
+    const acting = steppedClock();
+    show({ options: undo() });
+    await acting.click(press("show"));
+    expect(press("Close")).toBeInTheDocument();
   });
 
   it("gives a sticky confirmation its own way out", async () => {
@@ -335,5 +507,304 @@ describe("the completion mark", () => {
     await acting.click(press("show"));
     expect(screen.getByRole("status")).toHaveTextContent("That did not work.");
     expect(view.baseElement.querySelector(".toast-dot-success")).toBeNull();
+  });
+});
+
+describe("a caller withdrawing its own message", () => {
+  it("withdraws only the message its id names", () => {
+    steppedClock();
+    const toast = controlled();
+    let saved = 0;
+    act(() => {
+      toast().show("Moved to Jana.", open());
+      saved = toast().show("Draft saved");
+    });
+    act(() => toast().dismiss(saved));
+    expect(screen.getByRole("status")).toHaveTextContent("Moved to Jana.");
+    act(() => toast().dismiss());
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("goes with a caller that asked for it to leave with it", () => {
+    steppedClock();
+    function Caller({ leaves }: Readonly<{ leaves: boolean }>) {
+      const own = useOwnToast({ leavesWithCaller: leaves });
+      useEffect(() => own.show("Moved to Jana.", open()), [own]);
+      return null;
+    }
+    const stage = (caller: ReactNode) => (
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {caller}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    );
+    const view = render(stage(<Caller leaves />));
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    view.rerender(stage(null));
+    expect(screen.queryByRole("status")).toBeNull();
+
+    view.rerender(stage(<Caller leaves={false} />));
+    view.rerender(stage(null));
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("leaves the screen alone once its own message has gone", () => {
+    steppedClock();
+    const toast = controlled();
+    let saved = 0;
+    act(() => {
+      saved = toast().show("Draft saved");
+    });
+    wait(3600);
+    act(() => {
+      toast().show("Settings saved.", { sticky: true });
+    });
+    act(() => toast().dismiss(saved));
+    expect(screen.getByRole("status")).toHaveTextContent("Settings saved.");
+  });
+});
+
+describe("focus after the verb runs", () => {
+  function Row({
+    landing,
+    onTake,
+  }: Readonly<{ landing: () => HTMLElement | null; onTake: () => void }>) {
+    const row = useRef<HTMLDivElement | null>(null);
+    useFocusHandoff(row, landing);
+    return (
+      <div ref={row}>
+        <Button onClick={onTake}>take off</Button>
+      </div>
+    );
+  }
+
+  // The message is shown first and the row leaves after, handing focus to the
+  // block: the order a write that runs at once produces.
+  function Shortlist() {
+    const toast = useToast();
+    const [onList, setOnList] = useState(true);
+    const block = useRef<HTMLDivElement | null>(null);
+    const landing = useCallback(() => block.current, []);
+    return (
+      <div ref={block} tabIndex={-1} data-testid="block">
+        {onList && (
+          <Row
+            landing={landing}
+            onTake={() => {
+              toast.show(
+                "Taken off",
+                undo(() => setOnList(true)),
+              );
+              setOnList(false);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  it("hands focus back to where it was before it entered the toast", async () => {
+    const acting = steppedClock();
+    render(
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Shortlist />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    await acting.click(press("take off"));
+    expect(screen.getByTestId("block")).toHaveFocus();
+    act(() => press("Undo").focus());
+
+    await acting.click(press("Undo"));
+    wait(16);
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByTestId("block")).toHaveFocus();
+  });
+
+  it("moves focus nowhere when that place has left the page", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    const field = document.createElement("input");
+    document.body.append(field);
+    act(() => field.focus());
+    act(() => {
+      toast().show("Taken off", undo());
+    });
+    field.remove();
+    act(() => press("Undo").focus());
+
+    await acting.click(press("Undo"));
+    wait(16);
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("leaves focus alone when the verb takes that place off the page", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    const field = document.createElement("input");
+    document.body.append(field);
+    act(() => field.focus());
+    act(() => {
+      toast().show(
+        "Scheduled",
+        open(() => field.remove()),
+      );
+    });
+    act(() => press("Show all").focus());
+
+    await acting.click(press("Show all"));
+    wait(16);
+
+    expect(field.isConnected).toBe(false);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("keeps the focus a destination takes as it arrives", async () => {
+    function Destination() {
+      const title = useArrivalFocus<HTMLHeadingElement>();
+      return (
+        <Heading size="large" ref={title} tabIndex={-1}>
+          Scheduled sends
+        </Heading>
+      );
+    }
+    function Page() {
+      const toast = useToast();
+      const [arrived, setArrived] = useState(false);
+      return (
+        <>
+          <Button
+            onClick={() =>
+              toast.show(
+                "Scheduled",
+                open(() => setArrived(true)),
+              )
+            }
+          >
+            schedule
+          </Button>
+          {arrived && <Destination />}
+        </>
+      );
+    }
+    const acting = steppedClock();
+    render(
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Page />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    act(() => press("schedule").focus());
+    await acting.click(press("schedule"));
+    act(() => press("Show all").focus());
+
+    await acting.click(press("Show all"));
+    wait(16);
+
+    expect(
+      screen.getByRole("heading", { name: "Scheduled sends" }),
+    ).toHaveFocus();
+  });
+});
+
+describe("a replacement under the reader's hand", () => {
+  it("keeps focus on the same control when the message is replaced", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("First done", undo());
+    });
+    const first = press("Undo");
+    act(() => first.focus());
+    act(() => {
+      toast().show("Second done", undo());
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Second done");
+    expect(press("Undo")).not.toBe(first);
+    expect(press("Undo")).toHaveFocus();
+  });
+
+  it("keeps focus on a link in the message body when the message is replaced", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show(<a href="#/contacts/p-1">Jana Brandt</a>, { sticky: true });
+    });
+    act(() => screen.getByRole("link", { name: "Jana Brandt" }).focus());
+    act(() => {
+      toast().show(<a href="#/contacts/p-2">Jonas Petersen</a>, {
+        sticky: true,
+      });
+    });
+    expect(screen.getByRole("link", { name: "Jonas Petersen" })).toHaveFocus();
+  });
+
+  it("hands focus to nobody when the reader puts the message down", () => {
+    // The next message advancing is not a replacement: the reader closed one
+    // toast and did not ask to be moved into the next.
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Task completed", undo());
+      toast().show("Moved to Jana.", open());
+    });
+    act(() => press("Close").focus());
+    act(() => toast().dismiss());
+    expect(screen.getByRole("status")).toHaveTextContent("Moved to Jana.");
+    expect(press("Show all")).not.toHaveFocus();
+    expect(press("Close")).not.toHaveFocus();
+  });
+
+  it("keeps focus on Close when the message is replaced", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("First done", undo());
+    });
+    act(() => press("Close").focus());
+    act(() => {
+      toast().show("Second done", undo());
+    });
+    expect(press("Close")).toHaveFocus();
+  });
+
+  it("holds a replacement that arrives under a resting pointer", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("First done", undo());
+    });
+    await acting.hover(screen.getByRole("status"));
+    act(() => {
+      toast().show("Second done", undo());
+    });
+    wait(30_000);
+    expect(screen.getByRole("status")).toHaveTextContent("Second done");
+  });
+
+  it("forgets the hold once the region has emptied", async () => {
+    // An unmounted region hears no pointerleave; the next message must not
+    // inherit a hold from a pointer that left with the last one.
+    const acting = steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("First done", undo());
+    });
+    await acting.hover(screen.getByRole("status"));
+    act(() => toast().dismiss());
+    act(() => {
+      toast().show("Saved.");
+    });
+    wait(3600);
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

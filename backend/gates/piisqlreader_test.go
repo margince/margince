@@ -99,6 +99,10 @@ func sqlLiterals(t *testing.T, path string) []string {
 var erasureCascadeFiles = []string{
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/erasure.go",
+	// The per-reader brief cache, which both acts purge: the row holds
+	// generated prose about the subject and no cascade reaches it while the
+	// contact row survives anonymized.
+	"internal/modules/privacy/erasurebriefcache.go",
 	// The subject's TIMELINE and everything derived from it — split out of
 	// erasure.go when that file crossed the size cap. It is the same Art. 17
 	// transaction, so it counts here; leaving it off would let a table look
@@ -165,6 +169,12 @@ var erasureCascadeFiles = []string{
 	// from it.
 	"internal/modules/privacy/erasure_restrict.go",
 	"internal/modules/privacy/erasuredealroom.go",
+	// What colleagues wrote about the subject while asking each other for an
+	// introduction. Its own file because the table is the introductions module's,
+	// and on this list because the row survives the cascade that was meant to
+	// reach it: intro_request's contact FK cascades on DELETE, and an erasure
+	// anonymizes the contact instead.
+	"internal/modules/privacy/erasureintroductions.go",
 	// The subject's own columns, and the strings the anonymize-in-place writes
 	// over them. Reached from the same transaction and each executing SQL of
 	// its own.
@@ -219,6 +229,11 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
 	"internal/modules/privacy/retentionactions.go",
+	// The lead half of the same sweep — anonymizeLead and the communication
+	// record it clears. Its DELETE of communication_override by lead_id is the
+	// statement that satisfies that table's lead retentionPurge predicate; the
+	// contact arm in retentionactions.go cannot reach a row keyed to a lead.
+	"internal/modules/privacy/retention_leadrecord.go",
 	// The two executors that DELETE a row rather than scrub one — the ai_call
 	// payload and the stored provider original. They left retentionactions.go
 	// when it crossed the length cap, and this list is what noticed, exactly as

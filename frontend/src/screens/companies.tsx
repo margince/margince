@@ -7,7 +7,7 @@ import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
-import { navigate, useRoute } from "../app/router";
+import { navigate } from "../app/router";
 import {
   Avatar,
   Badge,
@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
@@ -89,7 +90,8 @@ import {
   type ActivityDrawer,
   CompanyHeaderActions,
 } from "./companyheaderactions";
-import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
+import { CompanyIdentityFacts } from "./companyheaderfacts";
+import { CompanyNameLine } from "./companylifecycle";
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
@@ -101,12 +103,7 @@ import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { wholeCount } from "./companyrailshared";
-import {
-  COMPANY_TABS,
-  type CompanyTab,
-  companyTabRoute,
-  isCompanyTab,
-} from "./companytab";
+import { COMPANY_TABS, type CompanyTab } from "./companytab";
 import { TechnicalProfilePanel } from "./companytechnical";
 import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
 import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
@@ -165,7 +162,9 @@ import { groupChronology } from "./timelinegroups";
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 import { useAccountScan } from "./accountscan";
+import { useAddressedTab } from "./recordtab";
 import { invalidateRecord } from "./recordwritekeys";
+import { WorklistReturnLink } from "./worklist.return";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
 // evidence-or-omit: a field with no stored value is absent, never guessed.
@@ -662,38 +661,8 @@ function companyTabsFor(
     : COMPANY_TABS.filter((id) => !drop.has(id));
 }
 
-// useCompanyTab is scoped to the ACCOUNT being read, the same reason the
-// chronology filter is (useChronologyFilter): the route swaps one company
-// for another without ever unmounting this component, so a reader who opened
-// Partner on one account met it again on the next — and companyTabsFor's own
-// carveout (a reader mid-way through setting up a programme keeps the tab
-// while `tab === "partner"`) has no way to tell "still this account" from
-// "a different one" unless something resets it at the boundary.
-function useCompanyTab(
-  recordId: string,
-): [CompanyTab, (next: CompanyTab) => void] {
-  const route = useRoute();
-  // Read off the ADDRESS rather than held beside it, so the tab a reader is on
-  // is the tab the URL names — and the per-record reset this used to do by
-  // hand is gone with it: a tab belongs to the account it is addressed with,
-  // so swapping accounts cannot carry one along.
-  const addressed =
-    route.screen === "companies" && route.id === recordId
-      ? route.id2
-      : undefined;
-  return [
-    isCompanyTab(addressed) ? addressed : "overview",
-    // A PUSH, so Back steps between the tabs a reader opened rather than
-    // leaving the account altogether — the same thing the contact page's strip
-    // does. The per-record reset this used to hold is now the address's: a tab
-    // belongs to the account it names, so moving to another account cannot
-    // carry one along.
-    (next: CompanyTab) => navigate(companyTabRoute(recordId, next)),
-  ];
-}
-
 // openTaskId is scoped to the ACCOUNT being read, the same reason
-// useCompanyTab is: the route swaps one company for another without ever
+// the tab is: the route swaps one company for another without ever
 // unmounting this component, so a task detail modal opened on one account
 // would keep rendering over the next one.
 //
@@ -740,7 +709,14 @@ function useOpenTaskId(
 // roster behind the owner picker, and the record slice they prefill.
 export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const [tab, setTab] = useCompanyTab(id);
+  // The tab is scoped to the ACCOUNT being read, the same reason the
+  // chronology filter is (useChronologyFilter): the route swaps one company
+  // for another without ever unmounting this component, so a reader who opened
+  // Partner on one account met it again on the next — and companyTabsFor's own
+  // carveout (a reader mid-way through setting up a programme keeps the tab
+  // while `tab === "partner"`) has no way to tell "still this account" from
+  // "a different one" unless something resets it at the boundary.
+  const [tab, setTab] = useAddressedTab("companies", id, COMPANY_TABS);
   const view = useCompany360(id);
   // Only an assembled 360 counts as a visit: a page that never rendered the
   // account is not one the reader saw.
@@ -913,9 +889,9 @@ function useChronologySlots({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The workspace roster, for the ids a change row stores. Read here rather
-  // than inside the adapter: the roster is a workspace query and the adapter
-  // is a pure mapping, which is what lets it be tested without one.
+  // The workspace roster, for the ids a change row stores. Still walks rather
+  // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
+  // `values.nameOf`, called per row as it renders, so the ids are unknown here.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
@@ -1261,6 +1237,7 @@ function CompanyPage({
   return (
     <div className="record-sheet">
       <RecordView
+        back={<WorklistReturnLink />}
         name={company.display_name}
         identity={company.id}
         avatarSrc={company.logo_url}
@@ -1268,10 +1245,10 @@ function CompanyPage({
         // on the page, but beside a work column that opens on the reader's ask
         // it no longer needs to be the size of a masthead.
         scale="compact"
-        // What the account is, and the one way in every reader already knows,
-        // on the name's own line, the contact record's own shape.
-        nameBadge={<CompanySubtitle company={company} />}
-        // The account's standing, as the pills row under the name.
+        // Where the account stands, the one control on the name's own line.
+        nameBadge={<CompanyNameLine company={company} />}
+        // What the account is, the way in, what it is to us and who may read
+        // it, as the row under the name.
         pulse={<CompanyMarks company={company} />}
         zone={recordZone}
         // The way in, who holds the account and when its own row was written,
@@ -1402,29 +1379,28 @@ function CompanyPage({
           open={auditOpen}
           onClose={() => setAuditOpen(false)}
           labelledBy="co-audit-title"
-          size="wide"
+          intent="drawer-reading"
         >
-          <Heading
-            size="large"
-            id="co-audit-title"
-            className="t-h2 modal-title"
-          >
-            {t("record.fullHistory")}
-          </Heading>
-          {/* Mounted only while open: the two history reads behind it are the
-            page's most expensive, and nobody who never opens the panel should
-            pay for them. */}
-          {auditOpen && (
-            <RecordHistoryTab
-              kind="company"
-              id={company.id}
-              restore={{
-                version: company.version,
-                onRestored: () =>
-                  invalidateRecord(queryClient, "company", company.id),
-              }}
-            />
-          )}
+          <DrawerHead>
+            <Heading size="large" id="co-audit-title" className="t-h2">
+              {t("record.fullHistory")}
+            </Heading>
+          </DrawerHead>
+          <DrawerBody>
+            {/* Mounted only while open: the two history reads behind it are
+              the page's most expensive, and only a reader who opens it pays. */}
+            {auditOpen && (
+              <RecordHistoryTab
+                kind="company"
+                id={company.id}
+                restore={{
+                  version: company.version,
+                  onRestored: () =>
+                    invalidateRecord(queryClient, "company", company.id),
+                }}
+              />
+            )}
+          </DrawerBody>
         </Modal>
       </RecordView>
     </div>
@@ -1800,10 +1776,10 @@ function CompanyOverviewStack({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The names the reading resolves ids against: the account's own records, and
-  // the workspace roster for the colleague who held a meeting. Read here rather
-  // than inside the thread, because the roster is a workspace read and the
-  // thread is a presentational component that holds none of its own.
+  // The names the reading resolves ids against: the account's own records, and the
+  // workspace roster for the colleague who held a meeting. Still walks rather than
+  // reading useMemberNames by id, for the same reason useChronologySlots above does:
+  // `nameOf` is handed down and called per value as the reading's own rows render.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>

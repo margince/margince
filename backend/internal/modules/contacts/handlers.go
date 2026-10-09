@@ -170,6 +170,24 @@ func duplicateID(id ids.UUID) string {
 	return id.String()
 }
 
+// duplicateLeadProblem is the 409 for a lead refused over a key another live
+// lead holds, or nil when err is no such refusal.
+func duplicateLeadProblem(err error) *httperr.DetailedError {
+	var dupLead *DuplicateLeadError
+	if errors.As(err, &dupLead) {
+		return httperr.Duplicate("duplicate_email", duplicateID(dupLead.ExistingID.UUID))
+	}
+	var dupLeadLinkedIn *DuplicateLeadLinkedInError
+	if errors.As(err, &dupLeadLinkedIn) {
+		return httperr.Duplicate("duplicate_linkedin_url", duplicateID(dupLeadLinkedIn.ExistingID.UUID))
+	}
+	var dupContactLead *DuplicateContactLeadError
+	if errors.As(err, &dupContactLead) {
+		return httperr.Duplicate("duplicate_contact_lead", duplicateID(dupContactLead.ExistingID.UUID))
+	}
+	return nil
+}
+
 // writeStoreErr maps this module's typed store errors onto the wire
 // codes the contract names, then falls through to the sentinel registry.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
@@ -198,14 +216,8 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_domain", duplicateID(dupDomain.ExistingID.UUID)))
 		return
 	}
-	var dupLead *DuplicateLeadError
-	if errors.As(err, &dupLead) {
-		httperr.Write(w, r, httperr.Duplicate("duplicate_email", duplicateID(dupLead.ExistingID.UUID)))
-		return
-	}
-	var dupLeadLinkedIn *DuplicateLeadLinkedInError
-	if errors.As(err, &dupLeadLinkedIn) {
-		httperr.Write(w, r, httperr.Duplicate("duplicate_linkedin_url", duplicateID(dupLeadLinkedIn.ExistingID.UUID)))
+	if dup := duplicateLeadProblem(err); dup != nil {
+		httperr.Write(w, r, dup)
 		return
 	}
 	var primaryConflict *PrimaryConflictError

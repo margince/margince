@@ -157,8 +157,7 @@ type threadIdentity struct {
 // query already avoids by excluding them.
 func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity, error) {
 	var thread threadIdentity
-	var key, provider *string
-	var direction string
+	var key, provider, direction *string
 	if err := tx.QueryRow(ctx,
 		`SELECT thread_key, kind, channel_provider, direction FROM activity WHERE id = $1`,
 		id).Scan(&key, &thread.kind, &provider, &direction); err != nil {
@@ -170,7 +169,7 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 			Message: "only an email or a channel message carries a disposition",
 		}
 	}
-	if direction != directionInbound {
+	if direction == nil || *direction != directionInbound {
 		return threadIdentity{}, &values.ParseError{
 			Field: "id", Code: "not_inbound",
 			Message: "a disposition answers a message somebody sent US",

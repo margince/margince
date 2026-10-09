@@ -52,7 +52,23 @@ const MaxBodyBytes = 1 << 20
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func Decode(w http.ResponseWriter, r *http.Request, into any) bool {
-	err := DecodeOrRefusal(w, r, into)
+	return decodeWrite(w, r, into, nil, false)
+}
+
+// DecodeClosed is Decode for a body whose contract closes its nested objects
+// (additionalProperties: false): a key no object on the way down declares is a
+// 422 naming its path rather than a value encoding/json drops. Endpoints opt in,
+// because other bodies carry nested keys their handlers have always ignored.
+// `owned` names a path a later layer judges and reports in its own words.
+//
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func DecodeClosed(w http.ResponseWriter, r *http.Request, into any, owned func(path string) bool) bool {
+	return decodeWrite(w, r, into, owned, true)
+}
+
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func decodeWrite(w http.ResponseWriter, r *http.Request, into any, owned func(string) bool, closed bool) bool {
+	err := decodeRefusal(w, r, into, owned, closed)
 	if err == nil {
 		return true
 	}
@@ -86,14 +102,16 @@ func Decode(w http.ResponseWriter, r *http.Request, into any) bool {
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
+	return decodeRefusal(w, r, into, nil, false)
+}
+
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(string) bool, closed bool) error {
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			return &DetailedError{
-				Status: http.StatusRequestEntityTooLarge,
-				Code:   codeBodyTooLarge, Detail: "request body exceeds the 1 MiB cap",
-			}
+			return BodyTooLargeRefusal("request body exceeds the 1 MiB cap")
 		}
 		// A read that failed mid-body is a transport fact — timed-out sockets
 		// carry host and port — so the caller is told what to do about it and
@@ -109,6 +127,11 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 	// so REST and MCP agree on which keys are a field patch.
 	if kErr := datasource.RejectNonCanonicalKeys(raw, into); kErr != nil {
 		return Validation("body", "unknown_field", kErr.Error())
+	}
+	if closed {
+		if kErr := datasource.RejectUnknownNestedKeys(raw, into, owned); kErr != nil {
+			return Validation("body", "unknown_field", kErr.Error())
+		}
 	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	if err := dec.Decode(into); err != nil {
@@ -133,6 +156,12 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 func BodyTooLarge(err error) bool {
 	var detailed *DetailedError
 	return errors.As(err, &detailed) && detailed.Code == codeBodyTooLarge
+}
+
+// BodyTooLargeRefusal is the 413 for a body over its ceiling. The detail should
+// name the limit, the one fact the sender can act on.
+func BodyTooLargeRefusal(detail string) *DetailedError {
+	return &DetailedError{Status: http.StatusRequestEntityTooLarge, Code: codeBodyTooLarge, Detail: detail}
 }
 
 // presentFieldsKey carries the decoded body's top-level keys, so a handler can

@@ -1,338 +1,349 @@
+<!-- prose:plain -->
 # Roles, teams, and record sharing
 
-The companion to [authorization.md](authorization.md). That page explains **where** the access check
-lives (at the store, with the transaction seam and the app role's own grants beneath) and how the
-three transports resolve one gate. This
-page explains the **data model that gate reads**: what a role grants, how row scope narrows it, how
-teams widen it, and how a single-record share layers on top.
+This page goes with [authorization.md](authorization.md). That page says **where** the access check
+lives: at the store, with the transaction seam and the app role's own grants below it. It also says
+how the three transports reach one gate. This one covers the **data that gate reads**. That is what a
+role grants and how row scope narrows it. It is also how teams make it wider, and how a share of
+one record adds to that.
 
-If you just watched a freshly-created user get "permission denied" on every screen, skip to
-[A user with no role sees nothing](#a-user-with-no-role-sees-nothing) — that is almost always why.
+If a new user gets `permission denied` on every screen, skip to
+[A user with no role sees nothing](#a-user-with-no-role-sees-nothing). In most cases, that is why.
 
-## Three independent questions
+## Three separate questions
 
-A read or write is allowed only when all three pass. They are separate gates; widening one does not
-substitute for another.
+A read or write is allowed only when all three pass. They are separate gates; opening one wider does
+not stand in for another.
 
-1. **Admission** — *may this caller act at all?* Scope ∧ seat ceiling ∧ autonomy tier. (See
-   authorization.md; not covered here.)
-2. **Object RBAC** — *may this role do this verb on this **type** of record?* e.g. "may a `rep`
-   `read` a `deal`?" Decided by the caller's **role permissions**. Failure → **403**.
-3. **Row scope** — *may this caller see this **particular** record?* e.g. "may this rep read *deal
-   #42*?" Decided by **row scope + record grants**. Failure → **404** (existence-hiding — a row you
-   can't see is indistinguishable from one that doesn't exist).
+1. **Admission**: *may this caller act at all?* Scope ∧ seat limit ∧ autonomy tier. (See
+   [authorization.md](authorization.md); not covered here.)
+2. **Object RBAC**: *may this role do this action on this **type** of record?* Such as "may a
+   `rep` `read` a `deal`?" The **role permissions** of the caller decide. If not → **403**.
+3. **Row scope**: *may this caller see this **one** record?* Such as "may this rep read *deal
+   #42*?" **Row scope + record grants** decide. If not → **404**, which hides that the row exists. A
+   row you cannot see looks the same as one that does not exist.
 
-The trap the whole feature hinges on: **a record share only answers question 3.** It never grants
-question 2. Sharing a deal with someone whose role has no `deal.read` still denies them — and the
-share is invisible until they have a role that clears the object gate.
+The thing the whole feature turns on: **a record share only answers question 3.** It never grants
+question 2. Sharing a deal with someone whose role has no `deal.read` still refuses them. The share
+does nothing for them until they have a role that passes the object gate.
 
 ## Roles
 
-A role is a row in the `role` table (`migrations/core/0002_identity.up.sql`), scoped to one
-workspace. Its `permissions` JSONB holds two things:
+A role is a row in the `role` table (`backend/migrations/core/0001_baseline.up.sql`), scoped to one
+workspace. Its `permissions` column (`jsonb`) holds two things:
 
-- **`objects`** — a per-object-type grant of `{create, read, update, delete}` over the 29 core
+- **`objects`**: for each object type, a grant of `{create, read, update, delete}` over the core
   objects (`contact`, `company`, `deal`, `lead`, `activity`, `pipeline`, `list`, `custom_field`,
-  `offer_template`, …). The closed set is `policy.coreObjects`, published cell-by-cell in
+  `offer_template`, …). The closed set is `policy.coreObjects`, published in full in
   [reference/rbac-matrix.md](../reference/rbac-matrix.md).
-- **`row_scope`** — `own` | `team` | `all` (see below).
+- **`row_scope`**: `own` | `team` | `all` (see below).
 
-A fresh workspace is seeded with six **system roles** (`is_system = true`), whose exact grants are
-compiled in and are the source of truth — do not transcribe the full matrix elsewhere, it will
-drift. Read it in **`backend/internal/modules/identity/internal/policy/policy.go`** (`defaults`), or
-cell by cell in [reference/rbac-matrix.md](../reference/rbac-matrix.md), which is rendered from those
-same values by a test and so cannot drift from them. The shape:
+A new workspace starts with 6 **system roles** (`is_system = true`). Their grants are compiled in
+and are the one true source, so do not copy the full table into another place; the copy will drift.
+Read it in **`backend/internal/modules/identity/internal/policy/defaults.go`** (`defaults`), or in
+full in [reference/rbac-matrix.md](../reference/rbac-matrix.md), which a test builds from those same
+values. The shape:
 
-| Role | Posture | Row scope |
+| Role | What it may do | Row scope |
 |---|---|---|
 | `admin` | Full CRUD on everything (config included). | `all` |
-| `management` | The `manager` object grid, over every row: the sales leader. | `all` |
-| `ops` | Same CRUD reach as admin — the operations counterpart. | `all` |
-| `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
-| `rep` | Create/read/update records (delete only where it's routine, e.g. disqualify a lead); **read-only** on config. | `own` |
-| `read_only` | Reads every record kind and every config surface a rep can see; writes nothing except its own saved views. The four admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`) are closed to it entirely — not even read. | `all` |
+| `management` | The `manager` object grants, over every row: the sales leader. | `all` |
+| `ops` | The same CRUD reach as admin: the ops side. | `all` |
+| `manager` | CRUD on records; **read-only** on most config (pipeline, `automation`, `custom_field`); **no access at all** to the admin-only tables (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
+| `rep` | Create, read and update records (delete only where it is normal work, such as to drop a lead that will not buy); **read-only** on config. | `own` |
+| `read_only` | Reads every kind of record and every config surface a rep can see; writes nothing but its own saved views. The four admin-only tables (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`) are closed to it, even for reading. | `all` |
 
-Two things surprise contacts:
+Three things new readers do not expect:
 
-- **`read_only` is `row_scope: all`, and `rep` is `row_scope: own`.** Scope and object reach
-  are orthogonal — a read-only auditor is *meant* to see the whole workspace and write none of it,
-  while a rep reads every record and writes only their own. On the five customer-record tables the
-  read tier is not what scope decides at all (see *Reads* below); scope decides writes.
-- **`manager` is `row_scope: team`, and it is the only seeded role that is.** A Team Lead writes
-  their teammates' records as well as their own, resolved through live team membership. The seat
-  above it, `management`, is the same object grid at `all` — the sales leader over every row.
-- **Config objects (pipeline, custom_field, automation) are read-only below admin/ops.** This
-  is why a `rep` gets `pipeline.read: permission denied`-adjacent behaviour only when they have **no
-  role at all** — with the `rep` role they *can* read pipelines; they just can't edit them.
+- **`read_only` is `row_scope: all`, and `rep` is `row_scope: own`.** Scope and object reach are
+  separate. A read-only reviewer is *there* to see the whole workspace and write none of it. A rep
+  reads every record and writes only their own. On the customer record tables, scope does
+  not decide the read tier at all (see *Reads* below); scope decides writes.
+- **Of seeded roles, only `manager` is `team`.** A Team Lead writes their team members'
+  records as well as their own, worked out through live team membership. The seat above it,
+  `management`, has the same object grants at `all`: the sales leader over every row.
+- **Config objects are read-only below admin and ops.** That covers pipeline, `custom_field` and
+  `automation`. So a `rep` sees an error such as `pipeline.read: permission denied` only when they
+  have **no role at all**. With the `rep` role they *can* read pipelines; they only cannot edit them.
 
-Custom roles are additive on the same shape. An admin makes one in **Settings → Roles and
-permissions** by copying an existing role, then renames it, moves its row scope and switches its
-object grants there; archiving takes it out of use while nobody who can sign in holds it. When a user holds several roles, permissions **merge to
-the widest** held (object grants union; row scope takes the widest — `all` > `team` > `own`); see
-`policy.Merge`.
+Custom roles add to the same shape. An admin makes one in **Settings → Roles and permissions** by
+copying a role that exists. Then they rename it, move its row scope and switch its object grants
+there. Archiving takes it out of use, while nobody who can sign in holds it. When a user holds
+several roles, permissions **merge to the widest** one held: object grants join, and row scope
+takes the widest, `all` > `team` > `own`. See `policy.Merge`.
 
-## Row scope — which rows of a permitted object
+## Row scope: which rows of an allowed object
 
-Row scope is evaluated in SQL at every list/read over an owner-scoped table
-(`platform/auth/rowscope.go`). It means different things for READS and for WRITES, and for two
-classes of table (`platform/auth/tableclass.go`).
+SQL checks row scope at every list or read over a table with owners (`platform/auth/rowscope.go`).
+It means different things for reads and for writes, and for two classes of table
+(`platform/auth/tableclass.go`).
 
-### Reads: customer identity is shared, commercial work is scoped
+### Reads: customer identity is shared, sales work is scoped
 
-**Identity tables — `contact`, `company`, `lead`, `deal`, `project` — are readable by every seat
-that holds the object grant, whatever its row scope.** The decision behind this (2026-08-19): the model
-that hid customer records per team made a rep miss that a company was already a customer of another
-team and contact it again. A rep now finds the company, sees who owns it and when it was last
-touched, and cannot edit it. Deals are in this class deliberately — a workspace-wide deal count was
-already the rule, and a deal a rep cannot see is the duplicate-outreach failure in a different coat.
-Two narrowings survive on identity tables:
+**Identity tables are open to every granted seat.** Any seat that holds the object grant reads
+them, with any row scope, for `contact`, `company`, `lead`, `deal` and `project`. Hiding
+customer records per team makes a rep miss that a company is already a customer of another team,
+and contact it again. So a rep finds the company, sees who owns it and when someone last touched it,
+and cannot edit it. Deals are in this class because a deal a rep cannot see leads to a rep
+contacting the same customer twice.
 
-- **Capture privacy** — a row a connector minted as `visibility = 'owner'` answers to its owner
-  alone until it is promoted, even for `row_scope: all`. It is a property of the row, not of the
-  scope tier.
-- A **record grant** can still widen an owner-private row (an explicit share by someone who could
-  already read it).
+`project` is in it because someone put on a project must still open it. They may not own it, and
+may have no grant to it. `platform/auth/tableclass.go` records the reason. Who may change sales work
+is scoped; everyone with the grant may see it.
 
-`project` joined that class after the same failure appeared in delivery: a consultant working a
-project they neither owned nor had been granted got a 404 on the record they were staffed to
-(`platform/auth/tableclass.go` records the reasoning). Commercial work is scoped by who may CHANGE
-it, not by who may see it.
+Two rules narrow reads on identity tables:
 
-**The personal tables — `list`, `saved_view`, `automation`, `voice_profile` — keep the classic row
-scope.** They are a seat's own working material rather than a record of the business, so the
-predicate applies to reads as well. Given the object gate already passed:
+- **Capture privacy**: a row a connector made with `visibility = 'owner'` answers to its owner
+  alone until a `promote` action runs on it, even for `row_scope: all`. It is a setting on the row,
+  not on the scope tier.
+- A **record grant** can still open up a private row of one owner. That is a direct share by someone
+  who could already read it.
 
-- **`all`** — no row filter. Sees every row in the workspace. (`Unbounded` — also the system actor.)
-- **`team`** — sees rows they **own**, rows owned by a **teammate** (any member of a team they belong
-  to, via `team_membership`), and **ownerless** rows.
-- **`own`** — sees rows they own, and ownerless rows.
+**The personal tables (`list`, `saved_view`, `automation`, `voice_profile`) keep the old row
+scope.** They are a seat's own work, not a record of the business, so the scope check applies to
+reads as well. Once the object gate has passed:
 
-### Writes: the owner, an explicit share, or an unbounded seat
+- **`all`**: no row filter. Sees every row in the workspace. (`Unbounded`; also the system actor.)
+- **`team`**: sees rows they **own**, rows a **team member** owns (any member of a team they are in,
+  through `team_membership`), and rows with **no owner**.
+- **`own`**: sees rows they own, and rows with no owner.
 
-Row scope decides **who may change** an identity row: the write-authority probe
-(`platform/auth/writescope.go`, `EnsureWritable`) is the owner predicate OR a live `write` grant. A
-rep who can read a colleague's deal and tries to edit it gets **403**, not 404 — the row is visibly
-theirs to read, so there is nothing left for a 404 to hide.
+### Writes: the owner, a direct share, or a seat with no limit
 
-**Team membership grants nothing to a `rep`.** The seeded `rep` is `own`-scoped, so for them a
-colleague's record takes an explicit share — a `record_grant` naming the user or one of their teams —
-or an unbounded seat. Being in somebody's team is not by itself permission to rewrite their records.
+Row scope decides **who may change** an identity row. The write check
+(`platform/auth/writescope.go`, `EnsureWritable`) is the owner check or a live `write` grant. A
+rep who can read the deal of a colleague and tries to edit it gets **403**, not 404. The rep can see the
+row, so there is nothing left for a 404 to hide.
 
-**For a `manager` it grants exactly one thing: their teammates.** A Team Lead is `team`-scoped, so the
-owner predicate resolves to themselves plus everyone sharing a live team with them. That is the seat's
-purpose — a lead who cannot work their team's records is a lead in name only — and it is bounded by
-membership rather than by the company chart: an archived team grants nothing, and `parent_team_id` is not
-walked, so leading a parent team reaches a child team's members only by belonging to that team too.
+**Team membership grants nothing to a `rep`.** The seeded `rep` has `own` scope. So for them, the
+record of a colleague takes a direct share or a seat with no limit. The share is a `record_grant`
+that names the user or one of their teams. Being in someone's team does not by itself allow you to change their
+records.
 
-A record grant may still name a **team**, so sharing with a group is one act rather than one per
-member, and it stays the mechanism for reaching ACROSS teams and for every seat that is not this one.
+**A `manager` gets their team members.** A Team Lead has `team` scope, so the owner check covers
+them plus everyone who shares a live team with them. A lead who cannot work the records of their
+team is a lead in name only. Membership sets the limit of that reach, not the reporting lines of the
+company. An archived team grants nothing, and the check does not walk `parent_team_id`. A lead of a
+team above reaches the members of a team below it only by being in that team too.
 
-An **ownerless** row (`owner_id IS NULL`) is nobody's to change until somebody claims it
-(`EnsureClaimable`, `POST /v1/records/{record_type}/{id}/claim`); claiming makes the claimer the
-owner. It stays readable by everyone throughout.
+A record grant may still name a **team**, so sharing with a group is one act, not one per member.
+It stays the way to reach across teams, and the way for every seat other than `manager`.
+
+A row with **no owner** (`owner_id IS NULL`) is nobody's to change until someone claims it
+(`EnsureClaimable`, `POST /v1/records/{record_type}/{id}/claim`). Claiming makes the claimer the
+owner. Everyone can read the row the whole time.
 
 A record carries the answer on the wire: `writable` on a contact, company, lead, deal or project
-says whether **this** caller may change **this** row, so a client draws its edit affordances from the
-same question the server answers. It is a UX signal and never the enforcement.
+says whether **this** caller may change **this** row. So a client builds its edit buttons from the
+same question the server answers. It is a signal for the screen, and never the check itself.
 
-### Activities: discoverable versus readable
+### Activities: who can find them and who can read them
 
-An activity has no owner; it inherits visibility from the records it links to (the any-link walk),
-and a link-less note is workspace-shared. On top of that sits a per-activity **audience**
-(`activity.audience`, `activity_audience_member`):
+An activity has no owner. It takes its visibility from the records it links to (the walk over every
+link). A note with no link is shared with the workspace. On top of that sits an **audience** on
+each activity (`activity.audience`, `activity_audience_member`):
 
-- `workspace` — everyone who can discover the row reads it;
-- `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant
-  by seat);
-- `selected` — the participants plus the users and teams a human named.
+- `workspace`: everyone who can find the row reads it;
+- `participants`: the humans on it (the owner of the mailbox that captured it, and every seat
+  marked as a participant);
+- `selected`: the participants plus the users and teams a human named.
 
-`workspace` is the default for a row a human logged. For a row a MAILBOX brought in it is derived,
-not defaulted: `activities.RecomputeAudienceTx` takes the strictest contribution across every
-importing seat's `capture_import` row — the mailbox's posture, the thread's verdict, that seat's
-counterparty holds — so a colleague whose mailbox shares cannot publish a message another importer
-is holding, in whatever order the two syncs ran. `activity.audience_reason` names the strictest
-contributor, and is withheld with the content: the reason describes what the message is about.
+`workspace` is the default for a row a human logged. For a row a mailbox captured, it is worked
+out. `activities.RecomputeAudienceTx` looks at the `capture_import` row of every seat that imported
+it. It takes the setting that holds back the most: the mailbox's setting, the thread's verdict, and
+that seat's counterparty holds. So a colleague whose mailbox shares cannot publish a message another
+importer is holding, in any order the two imports run.
 
-A direct `PATCH /activities/{id}/audience` on a captured row is refused (`audience_is_derived`) and
-points at `POST /activities/threads/{key}/audience`, which releases the caller's own contribution
-and reports how many other seats still hold the thread — a count, never a name.
+`activity.audience_reason` names the setting that holds back the most. It is held back with the
+content, because the reason says what the message is about.
 
-`auth.ActivityDiscoverClause` answers "may I learn this row exists" (date, direction, kind, who owns
-it — the last-touch marker); `auth.ActivityContentClause` answers "may I read it" (subject, body,
-participants, attachments, and everything derived from them: search, briefs, exports, webhooks).
-A reader that serves content composes the content clause; a limited activity the caller may discover
-but not read is withheld, with only the safe markers shown. The audience does **not** yield to
-`row_scope: all` — only the system principal reads the arm away.
+A direct `PATCH /activities/{id}/audience` on a captured row is refused (`audience_is_derived`), and
+points at `POST /activities/threads/{key}/audience`. That drops the own setting of the caller, and reports
+how many other seats still hold the thread: a count, never a name.
 
-Note that `owner_id` is **optional**. A manual create stamps the creator when the caller names
-nobody, and asks the assignment question when they name somebody else (`storekit.NewRecordOwner`):
-a record cannot be born on a seat no handover could hand it to. But a record can still arrive
-without an owner — an import, a connector
-that had no seat to attribute. Such a row is readable by everyone and writable by **nobody** until a
-seat claims it, which is the opposite of what this paragraph used to say: an ownerless customer
-record every seat could rewrite is how two teams edit one company past each other.
+`auth.ActivityDiscoverClause` answers "may this seat learn this row exists" (date, direction, kind,
+and who owns it: the last-touch marker). `auth.ActivityContentClause` answers "may this seat read
+it". That covers
+the subject, body, participants, attachments, and everything built from them: search, briefs,
+exports, webhooks. A reader that serves content uses the content clause. A limited activity the
+caller may find but not read is held back, and shows only the safe markers. The audience does
+**not** give way to `row_scope: all`; only the system principal reads past it.
+
+`owner_id` **may be empty**. A create by hand makes the user who creates it the owner when the
+caller names nobody. It asks who to assign it to when they name someone else
+(`storekit.NewRecordOwner`). A record cannot start on a seat that nobody could later hand it to. A
+record can still come in with no owner, from an import or a connector that has no seat to name.
+
+Everyone can read such a row, and **nobody** can write it until a seat claims it. If every seat could change a customer record with no
+owner, two teams would edit one company past each other.
 
 The seeded `rep` is `row_scope: own`, `manager` is `team`, and `read_only`, `ops`, `admin` and
-`management` are `all`. The `team` tier is also what a team-subject record grant resolves against,
+`management` are `all`. The `team` tier is also what a record grant to a team is checked against,
 and a custom role may claim it.
 
-## Field masks — one column of a readable row
+## Field masks: one column of a row you can read
 
 A role can read a kind of record and still not read every column of it. `field_mask`
 (`backend/migrations/core/…_field_mask.up.sql`) names, per **role key**, an object, a field and a
-condition: `always`, or `outside_write_authority` — the row is readable but not the caller's to
-change. The masks are loaded into the principal at login with the grants (a seat carries the union
-over its roles) and applied where a store maps the row onto the wire (`platform/auth/fieldmask.go`,
-`deals/fieldmask.go`): the field goes out `null` and the record names it in `masked_fields`, so a
-reader can tell withheld from empty. Sorting or filtering a list by a masked column is refused
-(422), because ordering by a value is reading it. An unbounded seat (`row_scope: all`) carries no
-mask.
+rule. The rule is `always`, or `outside_write_authority`: the caller can read the row but may not
+change it. The masks load into the principal at sign-in with the grants; a seat carries the masks of
+all its roles together.
 
-**No seeded role carries a mask.** The baseline shipped one — `rep` → `deal` → `amount_minor` →
-`outside_write_authority`, so a rep read the value of a deal outside their write authority as
-withheld — and it has been removed. Deal amounts are open to every seat that may read the deal.
+They apply where a store maps the row on the wire (`platform/auth/fieldmask.go`,
+`deals/fieldmask.go`). The field goes out as `null`, and the record
+names it in `masked_fields`, so a reader can tell held-back from empty. Ordering or filtering a list
+by a masked column is refused (422), because ordering by a value is reading it.
 
-It was written when a rep's write authority covered their whole team, so it hid other teams' numbers
-and left the rep's own team visible. Once the seeded rep became `own`-scoped that same mask would
-have blacked out every deal a rep does not personally own, which is a decision about what contacts may
-SEE arrived at as a side effect of a decision about what they may WRITE. The product answer is that
-deal values are open: a rep who cannot see what a colleague's deal is worth cannot judge their own
-pipeline against it.
+A seat with no limit (`row_scope: all`) carries no mask.
 
-The machinery above stays and is not dead — an operator may author a mask on a custom role, and every
-path that applies one is tested. What went is the row the product shipped.
+No seeded role carries a mask: deal values are open to every seat that may read the deal. A rep who
+cannot see the value of a colleague's deal cannot judge their own pipeline against it. Operators can
+still write masks on custom roles, and every path that applies one is tested.
 
-**What a mask may name is a catalog, not a free field.** Withholding is written per field: a column
-with no withhold rule is dropped rather than applied, so a mask naming one would be accepted, stored,
-read back unchanged, and hide nothing. `maskable_field` holds the pairs this build can actually
-withhold — today the deal's money and its three references, which is the whole of `deals/fieldmask.go`
-— and `field_mask` references it, so an operator naming anything else is refused by the database where
-they write it instead of finding out from a screen that still shows the number. Extending a mask to a
-new column is therefore two halves in one change: the withhold rule, and the migration that offers the
-pair. `migrations/testdata/maskable_fields.txt` is what fails when only one of them moves.
+**Masks name only fields in the catalog.** Holding back is written per field. A column with no rule
+to hold it back is dropped, not applied. So a mask that names such a column would be accepted,
+stored, read back with no change, and hide nothing. `maskable_field` holds the pairs this build can really
+hold back: today the deal's money and its three references, which is the whole of
+`deals/fieldmask.go`.
+
+`field_mask` points at `maskable_field`, so the database refuses an operator who names anything else,
+at the time they write it. Without that, a screen would later still show the number. So adding a mask
+to a new column takes two parts in one change. One is the rule to hold it back. The other is the
+migration that offers the pair. `migrations/testdata/maskable_fields.txt` is what fails when only one of them moves.
 
 ## Teams
 
-A **team** (`team` table) is a named group; **`team_membership`** joins users to teams (many-to-many
-— a user can be in several). Teams do two jobs:
+A **team** (`team` table) is a named group; **`team_membership`** joins users to teams (many to
+many: a user can be in several). Teams do several jobs:
 
-1. **They are a share target**, and this is now the primary job. A record grant can name a team
-   instead of a contact, so everyone in it — present and future members — gets the widened access.
-   Sharing with a group is one act rather than one per member.
-2. **They resolve `row_scope: team`** for a role that carries it. Of the seeded roles only
-   `manager` does: putting a rep in a team does not by itself let them edit that team's records. An operator who
-   wants standing write access among colleagues authors a custom role at `team` scope, and the
-   predicate still renders the arm for it.
+1. **They are a share target.** A record grant can name a team instead of a user. Then everyone in
+   it, members now and later, gets the wider access. Sharing with a group is one act, not one
+   per member.
+2. **They answer `row_scope: team`** for a role that carries it. Of the seeded roles only
+   `manager` does. So putting a rep in a team does not by itself let them edit that team's records.
+   An operator who wants colleagues to have write access to each other's records writes a custom
+   role at `team` scope. The scope check still builds the arm for it.
+3. **They decide who may coach which colleague.** They answer "may this seat coach the work of
+   this colleague?". Row scope cannot answer it, because it is not about which rows may be read. Two surfaces ask it: a
+   coaching notice into someone's Worklist, and the coaching layer on their meeting brief. Both ask
+   it the same way and in the same order.
 
-**Only a literal admin changes who is on a team**: adding or removing a member, archiving or
-restoring the team, or inviting a member onto one (`identity/teams.go`,
-`refuseTeamMembershipUnlessAdmin`, 403 `team_membership_requires_admin`). Membership widens or
-ends a member's team reach and decides who leads and coaches them, which is role authority, and
-`team_admin` is not. A holder of `team_admin` creates and renames teams; neither changes anybody's
-reach.
+   First `auth.RequireCoach` checks the seat: a human who holds `team_lead.create`, seeded to
+   `admin`, `management` and `manager`. `rep` holds nothing on it, or a rep on a team would coach
+   their team members. Then a live shared team decides the edge, through one membership seam, so
+   the two cannot drift. Membership comes from `team_membership` and live teams only; the check does
+   not walk the tree of teams, the same as row scope.
 
-Teams do **not** carry their own permissions — a team is not a role. (A role *assignment* can be
+   No surface makes wider what the asker may read. The coaching layer on a meeting brief adds to
+   the brief that lead would get in any case. A lead and their rep still see two briefs of one
+   meeting with different scopes, because every read here is scoped to the caller.
+
+4. **They decide who reads a coaching week.** They answer "may this seat read this team's
+   coaching week?". That is the closed week that names each member with a verdict their lead
+   should take up with them. Row scope does not answer it, because a `read_only` seat reaches
+   every record and leads nobody.
+
+   `auth.TeamWeekReachOf` answers it once, for both `GET /weekly-reviews/team` and the
+   `team_week` field of the Worklist. That field is what Home offers the week on, so Home never
+   offers a week the server refuses. The `team` scope of the Worklist is the team's live work, and
+   stays on row scope.
+
+   Every arm needs `deal.read`, because the week carries the money on deals. A seat that holds
+   `team_oversight.read` (seeded to `admin` and `management`) opens every team. A human seat that
+   holds `team_lead.read` opens a team it is a live member of. `team_membership` records who is on a
+   team, not who leads it, so the `team_lead` grant is what says "lead". Because it is a grant, a
+   custom role can lead a team.
+
+   Every other seat, and every seat with `own` scope, is refused with 403. A lead who asks about a
+   team they are not on gets 404, so no one can test a team id to learn whether it exists.
+
+**Only a real admin changes team membership.** That means adding or removing a member, archiving or
+restoring the team, or inviting a member to it (`identity/teams.go`,
+`refuseTeamMembershipUnlessAdmin`, 403 `team_membership_requires_admin`). Membership makes wider or
+ends a member's team reach, and decides who leads and coaches them. That is role authority, and
+`team_admin` does not have it. A holder of `team_admin` creates and renames teams; both leave the
+reach of every member as it is.
+
+Teams do **not** carry their own permissions; a team is not a role. (An *assigned* role can be
 scoped to a team, but the grants still come from the role.)
-
-3. **They answer "may I speak into this colleague's work?"** — a question row scope cannot answer,
-   because it is not about which rows may be read. Two surfaces ask it: raising a coaching notice
-   into somebody's Worklist, and the coaching layer on their meeting brief. Both ask it the same
-   way and in the same order — `auth.RequireCoach` for the SEAT (a human holding
-   `team_lead.create`, seeded to `admin`, `management` and `manager`; `rep` holds nothing on it
-   deliberately, or a rep on a team would coach their teammates), then a live shared team for the
-   EDGE, through one membership seam so the two cannot
-   drift. Membership resolves through `team_membership` and live teams only; the parent hierarchy
-   is not walked, matching row scope.
-
-   Neither surface WIDENS what the asker may read. The coaching layer on a meeting brief attaches
-   to the brief that lead would have got anyway — a lead and their rep still see two differently
-   scoped briefs of one meeting, because every read here is caller-scoped.
-
-4. **They answer "may I read this team's coaching week?"** — the frozen week that names each
-   member with a verdict their lead is meant to raise. Row scope does not answer it: a `read_only`
-   seat reaches every record and leads nobody. `auth.TeamWeekReachOf` answers it once, for both
-   `GET /weekly-reviews/team` and the Worklist's `team_week` field, which is what Home offers the
-   week on, so Home never offers a week the server refuses. The Worklist's `team` scope is the
-   team's live work and stays on row scope. Every arm needs `deal.read`, because the week carries
-   deal totals. A seat holding `team_oversight.read` (seeded to `admin` and `management`) opens
-   every team. A human seat holding `team_lead.read` opens a team it is a live member of —
-   `team_membership` records who is on a team, not who leads it, so the `team_lead` grant is what
-   says "lead". Because it is a grant, a custom role can lead a team. Every other seat, and every own-scoped seat, is refused with 403. A lead
-   asking about a team they are not on gets 404, so a team id cannot be probed for existence.
 
 ## A user with no role sees nothing
 
-`role_assignment` links a user to a role. **A user with zero role assignments has zero object
-permissions** — every object gate (question 2) fails closed, so every list and record 404/403s, even
-the pipeline board. This is not a row-scope subtlety; the user simply cannot clear the object gate
-for anything.
+`role_assignment` links a user to a role. **A user with no assigned role has no object
+permissions.** Every object gate (question 2) fails closed, so every list and record answers 404 or
+403, even the pipeline board. Row scope has no part in it; the user cannot pass the object gate for
+anything.
 
-The workspace bootstrap assigns the founding admin the `admin` role (`identity/service.go`,
-`seedSystemRoles`). Any user created by another path — a SQL seed, a future invite flow — **must be
-given a role explicitly**, or they log in to a wall of permission errors. (This is exactly what bit
-the dev seed's second user before it assigned `rep`; see `scripts/seed-dev.sql`.)
+The workspace setup gives the first admin the `admin` role (`identity/service.go`,
+`seedSystemRoles`). Any user made by another path, such as a SQL seed or an invite path still to
+come, **must get a role directly**. If not, they sign in to a screen full of permission errors. `scripts/seed-dev.sql`
+gives `rep` to its second user for this reason.
 
-## Record sharing — a per-record grant on top of scope
+## Record sharing: a grant per record on top of scope
 
-Row scope is coarse (own / team / all). **Record sharing** is the fine-grained layer:
-grant **one specific record** to **one contact or team**, at **read or write**, optionally expiring,
-with a reason. This is the Share screen (`frontend/src/screens/share.tsx`, `#/share/<type>/<id>`) and
-the `record_grant` table / `/v1/record-grants` API.
+Row scope has only three steps (own / team / all). **Record sharing** works on one record at a time.
+It grants **one record** to **one user or team**, at **read or write**, with a reason. It can also
+carry an end date.
+This is the Share screen (`frontend/src/screens/share.tsx`, `#/share/<type>/<id>`) and the
+`record_grant` table and `/v1/record-grants` API.
 
-How it composes with everything above:
+How it works with everything above:
 
-- **It only widens question 3 (row visibility), never question 2 (object RBAC).** The grantee still
-  needs a role granting the verb on that object type. Share a deal with a user whose role lacks
-  `deal.read` and they still can't open it — the grant is inert until their role clears the object
-  gate.
-- **It applies only to shareable tables** — `contact`, `company`, `deal`, `lead`, `project`
-  (`rowscope.go` `shareableTables`; the `record_grant` CHECK is the schema-side twin). Config and
-  other objects have no per-record share. On an identity table a `read` grant only matters for an
-  owner-private captured row; a `write` grant is what widens editing.
-- **A `write` grant satisfies a read** (write ⊇ read).
-- **It is evaluated live on every query** — the visibility predicate `OR EXISTS (…record_grant…
-  AND (expires_at IS NULL OR expires_at > now()))`. So **revoking or expiring a share binds on the
-  next read**, no session to wait out.
-- **A grant can't exceed the granter.** The server rejects a grant wider than the granter's own
-  access to that record (surfaced as `approval_required` / 422 in the UI), so sharing can't launder
-  privilege.
+- **It only opens up question 3 (row visibility).** It never opens up question 2 (object RBAC). The
+  user who gets the grant still needs a role that grants the action on that object type. Share a deal
+  with a user whose role has no `deal.read`, and they still cannot open it. The grant does nothing
+  until their role passes the object gate.
+- **It applies only to tables you can share**: `contact`, `company`, `deal`, `lead`, `project`.
+  See `shareableTables` in `rowscope.go`; the `record_grant` CHECK is the same rule on the database
+  side. Config and other objects have no share per record. On an identity table, a `read` grant only
+  counts for a private captured row of one owner; a `write` grant is what opens up editing.
+- **A `write` grant covers a read** (write ⊇ read).
+- **SQL checks it live on every query**: the visibility check
+  `OR EXISTS (…record_grant… AND (expires_at IS NULL OR expires_at > now()))`. So **a share that is
+  revoked or past its end date stops at the next read**, with no session to wait out.
+- **A grant cannot go past its granter.** The server refuses a grant wider than the
+  own access of the granter to that record (shown as `approval_required` / 422 in the UI). So sharing
+  cannot be a way to get more access than you have.
 
-In SQL terms, a read over a shareable table is `ownerPredicate OR liveGrantExists` — the grant is a
-second way in, checked in the same statement as the scope filter (`VisiblePredicate` in `rowscope.go`).
+In SQL, a read over a table you can share is `ownerPredicate OR liveGrantExists`. The grant is
+a second way in, checked in the same statement as the scope filter (`VisiblePredicate` in
+`rowscope.go`).
 
-## Worked example — the dev seed
+## A worked case: the dev seed
 
-The dev seed (`scripts/seed-dev.sql`) sets up three seats so every branch above is observable:
+The dev seed (`scripts/seed-dev.sql`) sets up three seats, so you can see every branch above:
 
-- **Demo Admin** — `admin` role, `row_scope: all`, member of **DACH Sales**. Owns the seeded contacts
+- **Demo Admin**: `admin` role, `row_scope: all`, member of **DACH Sales**. Owns the seeded contacts
   and deals; sees everything.
-- **Rep One** — `rep` role, `row_scope: own`, member of **DACH Sales** (with Demo Admin). *The
-  shared-with seat.*
-  - Object gate: `rep` grants `deal.read`, `pipeline.read` (read-only) → the deals board loads, and
-    shows Demo Admin's records like everyone else's: customer identity is workspace-readable.
-  - Row scope: `own` → being in Demo Admin's team buys Rep One nothing. Every one of Demo Admin's
-    records is **readable and not editable** — pressing save answers 403, and the record's `writable`
-    flag says so before you press it.
+- **Rep One**: `rep` role, `row_scope: own`, member of **DACH Sales** (with Demo Admin). *The
+  seat that gets a share.*
+  - Object gate: `rep` grants `deal.read` and `pipeline.read` (read-only) → the deals board loads.
+    It shows Demo Admin's records the same as everyone else's: every seat can read customer identity.
+  - Row scope: `own` → being in Demo Admin's team gives Rep One nothing. Every one of Demo Admin's
+    records is **open to read, not to edit**. Saving answers 403, and the record's `writable` flag
+    says so before you try to save.
   - The seed shares **one** of Demo Admin's contacts with Rep One at `write`. That record, and only
-    that record, is theirs to change — which is what makes the grant the observable cause.
-- **Rep Two** — `individual` role (a clone of `rep`), **in no team**. *The nothing-shared seat.*
-  - Object gate passes (same object grants as `rep`) → the board loads and shows every deal, read-only.
+    that record, is theirs to change, which makes the grant the reason you can see.
+- **Rep Two**: `individual` role (a copy of `rep`), **in no team**. *The seat with no shares.*
+  - The object gate passes (the same object grants as `rep`) → the board loads and shows every
+    deal, read-only.
   - Row scope: `own` → owns nothing and holds no grant → may **edit nothing**.
-  - The contrast with Rep One is now the GRANT rather than the team: two own-scoped seats, one of
-    which has been handed a record.
+  - What Rep One has and Rep Two does not is the grant. Both seats have `own` scope, and one of
+    them has a record shared with it.
 
-Remove a user's role assignment entirely and every read fails at the object gate (403/404 across the
-board) — the symptom that means "no role," distinct from "role present but scope hides the row."
+Remove every role a user holds and every read fails at the object gate (403 or 404 across the
+board). That sign means "no role", which is not the same as "role held, but scope hides the row".
 
-## Where this is enforced (pointers)
+## Where this is enforced
 
-- Role definitions + merge: `backend/internal/modules/identity/internal/policy/policy.go`
-- Object-level gate: `backend/internal/platform/auth/rbac.go`
+- Role setup: `backend/internal/modules/identity/internal/policy/defaults.go`; merge:
+  `policy.go`
+- The object gate: `backend/internal/platform/auth/rbac.go`
   (`Require`, `RequireAny`, `UpsertAction`, `RequireHuman`, `RequireAdmin`)
-- Row-scope + record-grant SQL predicates: `backend/internal/platform/auth/rowscope.go`
-  (`OwnerPredicate`, `VisiblePredicate`, `ScopeClauseFor`, `shareableTables`); the read classes in
-  `tableclass.go`; the activity discover/content gates in `inheritedscope.go`
-- Schema: `role`, `role_assignment`, `team`, `team_membership`, `record_grant`
+- The SQL for row scope and record grants: `backend/internal/platform/auth/rowscope.go`
+  (`OwnerPredicate`, `VisiblePredicate`, `ScopeClauseFor`, `shareableTables`). The read classes are
+  in `tableclass.go`, and the activity find and content gates in `inheritedscope.go`
+- Tables: `role`, `role_assignment`, `team`, `team_membership`, `record_grant`
   (`backend/migrations/core/`)
-- The enforcement architecture (one gate, three transports, structural backstop):
+- How the checks are built (one gate, three transports, and a code check behind them):
   [authorization.md](authorization.md)

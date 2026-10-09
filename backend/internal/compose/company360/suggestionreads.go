@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // lastMessage is the newest two-way exchange on an account, as the no-reply
@@ -64,13 +65,14 @@ const excerptRunes = 200
 // newestMessage reads the newest two-way exchange linked to the account, or
 // reports that there is none.
 //
-// The kind set is every channel an answer can ARRIVE on, which is wider than
-// the set we send on. A returned call or a meeting answers an email as
-// completely as a reply does, so leaving them out would tell a rep to chase
-// someone they spoke to yesterday. A note or a task is excluded for the
-// opposite reason: it is something we wrote to ourselves, nobody owes a reply
-// to it, and letting one count would silence the rule every time a rep left
-// themselves a reminder.
+// The filter is relstrength's interaction rule: every channel an answer can
+// ARRIVE on, which is wider than the set we send on. A returned call or a
+// meeting answers an email as completely as a reply does, so leaving them out
+// would tell a rep to chase someone they spoke to yesterday. A note or a task
+// is excluded for the opposite reason: it is something we wrote to ourselves,
+// nobody owes a reply to it, and letting one count would silence the rule
+// every time a rep left themselves a reminder. A canceled or no-show meeting
+// answers nothing either.
 //
 // Reachability is activities.CompanyLinkedActivityExists, the walk every reader of
 // the account's timeline uses — one spelling, so they cannot drift. Every
@@ -104,10 +106,11 @@ func newestMessage(
 		       CASE WHEN %[3]s THEN a.subject END,
 		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END
 		FROM activity a
-		WHERE a.kind IN ('email','message','call','meeting') AND a.archived_at IS NULL AND %[1]s
+		WHERE %[5]s AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s`+opts.projectScope(arg)+`
 		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes), args...).
+		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
+		relstrength.InteractionCountsSQL("a")), args...).
 		Scan(&found.ID, &direction, &found.At, &found.Kind, &subject, &excerpt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lastMessage{}, false, nil

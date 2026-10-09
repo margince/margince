@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { LeadDealSection } from "./leadraillinks";
+import { LeadScreen } from "./leads";
 import {
   installFetchStub,
   jsonResponse,
@@ -92,4 +94,74 @@ export const Closed: Story = {
  */
 export const Refused: Story = {
   render: () => section({}, "lead-not-yours"),
+};
+
+/** The project verb's picker, a search list anchored to the verb. */
+export const AttachingAProject: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /leads/l-1": () => jsonResponse(lead({ writable: true })),
+      "GET /me": meRoute({ lead: ["read", "update"], project: ["read"] }),
+      "GET /projects": () =>
+        jsonResponse({
+          data: [
+            { id: "pr-2", name: "Beacon rollout", key: "BEA" },
+            { id: "pr-3", name: "Beacon phase two", key: "BE2" },
+          ],
+          page: { has_more: false, next_cursor: null },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LeadScreen id="l-1" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [attach] = await canvas.findAllByRole("button", {
+      name: "Attach project",
+    });
+    await userEvent.click(attach);
+    const panel = within(await within(document.body).findByRole("dialog"));
+    await userEvent.type(panel.getByRole("combobox"), "Beacon");
+    await panel.findByRole("option", { name: /Beacon rollout/ });
+  },
+};
+
+/**
+ * The lead's tags in its rail, applied and removable by a reader who may change
+ * the lead — the same panel a contact, an account and a deal carry.
+ */
+export const Tagged: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /leads/l-1": () => jsonResponse(lead({ writable: true })),
+      "GET /me": meRoute({ lead: ["read", "update"], tag: ["read"] }),
+      "GET /records/lead/l-1/tags": () =>
+        jsonResponse({
+          data: [
+            {
+              tag_id: "t-1",
+              name: "Product A",
+              color: "teal",
+              archived: false,
+              assigned_at: "2026-09-01T08:00:00Z",
+            },
+          ],
+          withheld: false,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LeadScreen id="l-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+/** The same rail in dark, where the tag pills are re-derived. */
+export const TaggedDark: Story = {
+  ...Tagged,
+  globals: { theme: "dark" },
 };

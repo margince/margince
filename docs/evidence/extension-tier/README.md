@@ -1,19 +1,17 @@
-# Video walkthrough — the extension tier, `notes` end to end
+# Video walkthrough: the extension tier, `notes` end to end
 
 > **Historical record, 2026-08-28.** The `notes` unit this evidence shows was
-> REMOVED, together with `yogi` and `relay-probe`, when `openchannel` replaced the
+> removed, together with `yogi` and `relay-probe`, when `openchannel` replaced the
 > three as the tier's one reference unit. Nothing below describes code that is in
-> the tree. It is kept because it is the acceptance evidence for the capabilities
-> the tier still has — screens, secrets, jobs, migrations, a governed surface —
-> and deleting a review's evidence to tidy up destroys the record of what was
-> actually checked. Read it as "how the tier was proved", never as "what ships".
+> the tree. It is kept as the acceptance evidence for the capabilities the tier
+> still has (screens, secrets, jobs, migrations, a governed surface), because it
+> records what was checked. Read it as "how the tier was proved", never as "what ships".
 
-`notes.mp4` (1.0 MB, 1360×860, 1:23) — same take as `notes.webm` (5.6 MB), re-encoded.
-Attach the **mp4** to the PR; the webm is the Playwright original.
+`notes.mp4` (1.0 MB, 1360×860, 1:23), re-encoded from the Playwright webm, which was not committed.
 
 One continuous browser session, recorded by Playwright at `feat/extension-tier-capabilities`
 `11e05fee`. Nothing is cut or re-ordered. The dark strip along the bottom is a caption overlay
-injected by the recording script — it labels the step and, where it quotes a number, that number was
+injected by the recording script. It labels the step, and where it quotes a number, that number was
 computed live in the page at that moment (the DOM check in step 2, the button counts in step 6).
 Everything above the strip is the real application.
 
@@ -22,26 +20,26 @@ Everything above the strip is the real application.
 | Time | What is on screen |
 |---|---|
 | 0:00 | Sign-in page; signing in as `admin@demo.test`. |
-| 0:14 | **1/6** `#/ext/notes` — the **Demo Notepad** screen, reached from the composed extension registry. Breadcrumb reads `ext · notes`. |
+| 0:14 | **1/6** `#/ext/notes`: the **Demo Notepad** screen, reached from the composed extension registry. Breadcrumb reads `ext · notes`. |
 | 0:20 | **2/6** A signing key is typed into the `Signing key` field and `Store key` clicked. |
-| 0:29 | The status chip flips to **Connected**. The caption reports a check run in the page at that instant: the key string appears **nowhere** in the DOM (`false`) and **nowhere** in local/sessionStorage (`false`). The `Signing key` input is empty again. |
+| 0:29 | The status chip flips to **Connected**. The caption reports a check run in the page at that instant: the key string appears nowhere in the DOM (`false`) and nowhere in local/sessionStorage (`false`). The `Signing key` input is empty again. |
 | 0:33 | **3/6** `hello-from-the-video` is signed. A real signature renders under the button: `hmac-sha256 b25ef76473352036e75e752c75f97dd6b63349bdc1a04272c0eb4b344eda4102`. |
 | 0:38 | **4/6** A note is typed and `Add` clicked; the row appears at the top of the Notes list. |
-| 0:50 | A **full page reload**. The note is still there — it lives in the unit's own `ext.ext_notes_note` table. |
+| 0:50 | A **full page reload**. The note is still there; it lives in the unit's own `ext.ext_notes_note` table. |
 | 0:58 | **5/6** Nothing is clicked from here. Caption records 3 heartbeat rows visible and waits. |
-| 1:03 | A **fourth heartbeat row arrives unprompted** (3 → 4) — `⟳ heartbeat — workspace 019fe43b-a518-7b95-be24-642be40ef8f1`. The unit's scheduled job ticks every 60 s; the screen polls every 15 s. Each row names the workspace the tick was for. |
+| 1:03 | A fourth heartbeat row arrives unprompted (3 → 4): `⟳ heartbeat — workspace 019fe43b-a518-7b95-be24-642be40ef8f1`. The unit's scheduled job ticks every 60 s; the screen polls every 15 s. Each row names the workspace the tick was for. |
 | 1:08 | **6/6** The session cookie is cleared and the read-only seat `readonly@demo.test` signs in. |
-| 1:17 | The same screen on the **read-only seat**: the Notes list renders all five rows, and `Add`, per-row `Remove`, the `New note` field and `Store key` are all **gone** (counts in the caption: 0 / 0 / 0). The status still reads `Connected` and `Sign` is still offered — that seat holds `read` on `ext_notes_signing_key` but not `update`. |
+| 1:17 | The same screen on the **read-only seat**: the Notes list renders all five rows, and `Add`, per-row `Remove`, the `New note` field and `Store key` are all gone (counts in the caption: 0 / 0 / 0). The status still reads `Connected` and `Sign` is still offered, because that seat holds `read` on `ext_notes_signing_key` but not `update`. |
 
 ## Stills
 
 `01-screen.png` · `02-connected.png` · `03-signature.png` · `04-note-added.png` ·
-`05-after-reload.png` · `06-heartbeat.png` · `07-readonly.png` — fallback if the video does not
+`05-after-reload.png` · `06-heartbeat.png` · `07-readonly.png`: fallback if the video does not
 embed.
 
 ## Corroboration taken outside the video
 
-The signature the **screen** rendered is a real HMAC of the key the tester stored:
+The signature the screen rendered is a real HMAC of the key the tester stored:
 
 ```
 $ python3 -c "import hmac,hashlib;print(hmac.new(b'VIDEO-DEMO-KEY-0123456789abcdef',b'hello-from-the-video',hashlib.sha256).hexdigest())"
@@ -79,30 +77,29 @@ SQL
 psql … -c "INSERT INTO app_user (workspace_id,email,display_name,status,is_agent,seat_type)
            SELECT id,'agent@demo.test','Demo Agent Seat','active',true,'full' FROM workspace LIMIT 1;"
 
-node .superpowers/sdd/extension-tier-slices/video/record.mjs
+# recording driver: an untracked Playwright script, not committed
 ```
 
-`record.mjs` is the throwaway driver, kept outside the repository rather than in `frontend/e2e/`: no
-tracked file was touched to make the recording. The walkthrough itself IS tracked — the mp4 and the
-seven stills are committed under `docs/evidence/extension-tier/`, which nothing in the root
-`.gitignore` excludes, so they are about two megabytes of binaries in the history and should be counted
-as such before another one is added.
+The driver script lived outside the repository rather than in `frontend/e2e/`, so no tracked file was
+touched to make the recording. The walkthrough itself is tracked: the mp4 and the seven stills are
+committed under `docs/evidence/extension-tier/`, which nothing in the root `.gitignore` excludes. They
+add about two megabytes of binaries to the history; count that before adding another recording.
 
 ## What the video does not show
 
 - **The agent path.** `list_notes` and friends over MCP are not a browser surface, so they are
-  absent. See `UAT-EVIDENCE-RERUN.md` step 6.
+  absent. The agent path was checked separately and that record was not committed.
 - **The API refusing the read-only seat's write.** The video shows the control being *absent*; it
-  does not show the 403 the API returns if you call `notes/add` anyway (also in the evidence file).
-- **The removal / empty-tree legs** (step 8 of the acceptance run) — nothing about them is visible
+  does not show the 403 the API returns if you call `notes/add` anyway (checked in the same uncommitted record).
+- **The removal / empty-tree legs** (step 8 of the acceptance run). Nothing about them is visible
   in a browser.
 - The cold-start company-context onboarding gate is cleared in the first seconds of the recording.
   It is core onboarding, not the extension tier.
 
 ## The rest of this record
 
-- [DESIGN.md](DESIGN.md) — what the tier was asked to prove, and the capability
+- [DESIGN.md](DESIGN.md): what the tier was asked to prove, and the capability
   expansion this run accepted.
-- [NOTES-SCOPE.md](NOTES-SCOPE.md) — the scope of the `extensions/notes` unit the
+- [NOTES-SCOPE.md](NOTES-SCOPE.md): the scope of the `extensions/notes` unit the
   run exercised. It describes a unit no longer in the tree; the note at the top
   of this page says why it is kept.

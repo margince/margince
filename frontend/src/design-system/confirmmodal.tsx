@@ -4,7 +4,10 @@ import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
+import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
+
+type DotTier = Parameters<typeof AutonomyDot>[0]["tier"];
 
 // The body and its fields are the caller's; the dialog owns their spacing.
 
@@ -22,8 +25,7 @@ export function ConfirmModal({
   onConfirm,
   pending,
   error,
-  size,
-  placement,
+  intent = "confirm",
   returnFocusTo,
   initialFocusTo,
   children,
@@ -31,18 +33,8 @@ export function ConfirmModal({
   open: boolean;
   onClose: () => void;
   title: string;
-  tier?: "confirm";
+  tier?: DotTier;
   confirmLabel: string;
-  // Passed through to Modal. A confirm whose body is a form the user has to
-  // READ before an irreversible act — an email about to leave — needs more
-  // than the compact width every yes/no confirm uses. "split" is the two-column
-  // drawer: the reply beside the conversation it answers.
-  size?: "default" | "wide" | "split";
-  // Passed through to Modal. "right" is the drawer form: the record the
-  // confirm is about stays visible beside it as context, which a centred box
-  // covers. The composer uses it so a rep can read the account while writing
-  // to it.
-  placement?: "center" | "right";
   // The confirm button's tone. Defaults to "primary" (backward-compatible);
   // a destructive confirm (e.g. reject-with-reason) passes "danger" so it
   // doesn't read green like an approve.
@@ -74,6 +66,7 @@ export function ConfirmModal({
   onConfirm: () => void;
   pending?: boolean;
   error?: string | null;
+  intent?: Exclude<ModalIntent, "full">;
   // Passed through to Modal. A confirm whose action destroys its own trigger —
   // deactivating a member, ending a connection, closing a request — names the
   // place focus should land instead, since the trigger will not be there to
@@ -86,13 +79,17 @@ export function ConfirmModal({
   const t = useT();
   const headingId = useId();
   const body = Children.toArray(children).length > 0 || Boolean(error);
+  // Escape, the backdrop and the corner X all wait for a write in flight.
+  const close = () => {
+    if (!pending) onClose();
+  };
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       labelledBy={headingId}
-      size={size}
-      placement={placement}
+      intent={intent}
+      closeDisabled={pending}
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
     >

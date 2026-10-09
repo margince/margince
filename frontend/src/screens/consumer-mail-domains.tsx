@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import { useCanUpsert, useCanWrite } from "../app/capability";
 import { isOption } from "../app/options";
@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { useSettledValue } from "../design-system/debouncedsearch";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -22,7 +23,6 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import "./consumer-mail-domains.css";
 
 // This installation's own consumer-mail list (CAP-PARAM-5). Mail from a consumer
@@ -126,16 +126,6 @@ function useRemoveConsumerMailDomain() {
   });
 }
 
-/** A typed value held back until the typing stops, so it can be a query key. */
-function useSettledSearch(typed: string): string {
-  const [settled, setSettled] = useState(typed);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(typed), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
-  return settled;
-}
-
 // The shipped baseline, searchable in place: an operator deciding whether a
 // domain needs an entry first sees what the shipped list already says about
 // it. It is a lookup rather than a setting, so it sits in the card's
@@ -151,7 +141,7 @@ function BaselineRow() {
   // a list of 8 700 domains — and the answers could land out of order, leaving
   // the results of a prefix under the word the reader had finished typing. The
   // shared list surface settles on the same constant.
-  const needle = useSettledSearch(q.trim());
+  const needle = useSettledValue(q.trim());
   const query = useConsumerMailBaseline(needle);
   const result = query.data;
   return (
@@ -348,15 +338,17 @@ function AddConsumerMailDialog({
   // here with the control it refuses — a reason outside the dialog is a reason
   // a reader inside it never gets.
   const carveOutDenialId = useId();
+  const formId = useId();
   const [domain, setDomain] = useState("");
   const [kind, setKind] = useState<Kind>("extra");
   const typed = domain.trim();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("consumerMail.addTitle")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(e) => {
           e.preventDefault();
@@ -406,19 +398,20 @@ function AddConsumerMailDialog({
             {problemMessageOf(add.error, t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={add.isPending || typed === ""}
-          >
-            {t("consumerMail.add")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={add.isPending || typed === ""}
+        >
+          {t("consumerMail.add")}
+        </Button>
+      </div>
     </Modal>
   );
 }

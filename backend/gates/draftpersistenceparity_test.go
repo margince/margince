@@ -5,7 +5,7 @@
 
 package gates
 
-// Two drafting tools keep their drafts in different places ON PURPOSE, and each
+// Two drafting tools keep their drafts in different places by design, and each
 // says so beside the other's name.
 //
 // `draft_email` drafts one first message for one recipient and leaves it in the

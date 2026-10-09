@@ -60,13 +60,14 @@ func ensurePairWritable(ctx context.Context, tx pgx.Tx, entityType string, left,
 
 // DisposeDedupeCandidate decides one pair. merge executes the owner's
 // merge verb with the LOSER folding into the winner; not_a_duplicate
-// suppresses the pair forever. Human-only (the transport enforces the
-// x-agent-access posture; the store re-checks the principal).
+// suppresses the pair forever. A human, or an agent acting for one: the
+// not_a_duplicate arm is undoable, and the merge arm is the same merge verb
+// merge_records runs.
 func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposition string, winnerID *ids.UUID) (DedupeCandidateRow, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return DedupeCandidateRow{}, fmt.Errorf("contacts: only a human disposes a dedupe pair: %w", apperrors.ErrPermissionDenied)
+	if err := auth.RequireActingForAHuman(ctx, "a dedupe pair is decided"); err != nil {
+		return DedupeCandidateRow{}, err
 	}
+	actor, _ := principal.Actor(ctx)
 	row, err := s.GetDedupeCandidate(ctx, id)
 	if err != nil {
 		return DedupeCandidateRow{}, err
@@ -170,10 +171,10 @@ func (s *Store) executeDedupeMergeTx(
 ) error {
 	switch entityType {
 	case entityContact:
-		_, err := s.mergeContactTx(ctx, tx, ids.From[ids.ContactKind](loser), ids.From[ids.ContactKind](winner), active)
+		_, err := s.mergeContactTx(ctx, tx, ids.From[ids.ContactKind](loser), ids.From[ids.ContactKind](winner), nil, active)
 		return err
 	case entityCompany:
-		_, err := mergeCompanyTx(ctx, tx, ids.From[ids.CompanyKind](loser), ids.From[ids.CompanyKind](winner), active)
+		_, err := mergeCompanyTx(ctx, tx, ids.From[ids.CompanyKind](loser), ids.From[ids.CompanyKind](winner), nil, active)
 		return err
 	case entityLead:
 		_, err := s.mergeLeadTx(ctx, tx, ids.From[ids.LeadKind](loser), ids.From[ids.LeadKind](winner), active, capturedBy)
@@ -259,9 +260,8 @@ func reopenDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error 
 // verb's own reversibility (PO-AC-M6), which does not exist yet — the
 // queue must not pretend otherwise.
 func (s *Store) UndoDedupeDisposition(ctx context.Context, id ids.UUID) (DedupeCandidateRow, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return DedupeCandidateRow{}, fmt.Errorf("contacts: only a human re-opens a dedupe pair: %w", apperrors.ErrPermissionDenied)
+	if err := auth.RequireActingForAHuman(ctx, "a dedupe pair is re-opened"); err != nil {
+		return DedupeCandidateRow{}, err
 	}
 	row, err := s.GetDedupeCandidate(ctx, id)
 	if err != nil {

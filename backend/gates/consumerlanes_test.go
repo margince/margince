@@ -5,8 +5,8 @@
 
 package gates
 
-// Every consumer group the catalog declares is subscribed by some process
-// role — or is a reserved placeholder that says so.
+// Every consumer group the catalog declares is subscribed by some process role,
+// or is a reserved placeholder that says so.
 //
 // A group with no subscriber is the quietest failure the bus has. Nothing
 // errors: the relay ships every event onto the stream, the group simply never

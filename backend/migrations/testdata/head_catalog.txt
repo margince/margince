@@ -11,7 +11,7 @@ public.activity.activity_exact_booking_duration CHECK (((NOT booking_interval_ex
 public.activity.activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL (host_user_id)
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
 public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text]))))
-public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_last_activity()
+public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status))) EXECUTE FUNCTION trg_activity_last_activity()
 public.activity.activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text)))
 public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + ((
 CASE
@@ -1444,8 +1444,8 @@ public.bulk_confirmation_pkey CREATE UNIQUE INDEX bulk_confirmation_pkey ON publ
 public.bulk_operation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.bulk_operation.bulk_operation_counts_check CHECK (((changed_count >= 0) AND (skipped_count >= 0)))
 public.bulk_operation.bulk_operation_pkey PRIMARY KEY (id)
-public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text])))
-public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text, 'add_tag'::text, 'remove_tag'::text, 'create_task'::text])))
+public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'worklist_item'::text])))
+public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text, 'add_tag'::text, 'remove_tag'::text, 'create_task'::text, 'complete'::text])))
 public.bulk_operation.changed_count integer NOT NULL gen=- def=-
 public.bulk_operation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.bulk_operation.id uuid NOT NULL gen=- def=uuidv7()
@@ -2118,6 +2118,30 @@ BEGIN
   RETURN NEW;
 END 
 public.communication_instruction_review_id_key CREATE UNIQUE INDEX communication_instruction_review_id_key ON public.communication_instruction USING btree (review_id)
+public.communication_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_override.captured_by text NOT NULL gen=- def=-
+public.communication_override.carried_from uuid gen=- def=-
+public.communication_override.category text NOT NULL gen=- def=-
+public.communication_override.communication_override_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_override(id) ON DELETE SET NULL
+public.communication_override.communication_override_category CHECK ((category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
+public.communication_override.communication_override_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.communication_override.communication_override_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['user'::text, 'admin'::text])))
+public.communication_override.communication_override_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.communication_override.communication_override_names_a_target CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+public.communication_override.communication_override_pkey PRIMARY KEY (id)
+public.communication_override.contact_id uuid gen=- def=-
+public.communication_override.decided_by_level text NOT NULL gen=- def=-
+public.communication_override.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_override.lead_id uuid gen=- def=-
+public.communication_override.reason text NOT NULL gen=- def=-
+public.communication_override.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_override.revoked_at timestamp with time zone gen=- def=-
+public.communication_override_carried_from CREATE INDEX communication_override_carried_from ON public.communication_override USING btree (carried_from) WHERE (carried_from IS NOT NULL)
+public.communication_override_contact_cascade CREATE INDEX communication_override_contact_cascade ON public.communication_override USING btree (contact_id) WHERE (contact_id IS NOT NULL)
+public.communication_override_lead_cascade CREATE INDEX communication_override_lead_cascade ON public.communication_override USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.communication_override_live_contact CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_live_lead CREATE INDEX communication_override_live_lead ON public.communication_override USING btree (lead_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_pkey CREATE UNIQUE INDEX communication_override_pkey ON public.communication_override USING btree (id)
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.approval_id uuid gen=- def=-
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
@@ -4044,6 +4068,7 @@ public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-
 public.forecast_contribution.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_contribution.in_best_case boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_evidence boolean NOT NULL gen=- def=false
+public.forecast_contribution.in_lost boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
@@ -4267,8 +4292,8 @@ public.idx_company_import_legal_name CREATE INDEX idx_company_import_legal_name 
 public.idx_company_last_activity_keyset CREATE INDEX idx_company_last_activity_keyset ON public.company USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_company_legal_name_trgm CREATE INDEX idx_company_legal_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(legal_name)) gin_trgm_ops)
 public.idx_company_lifecycle CREATE INDEX idx_company_lifecycle ON public.company USING btree (lifecycle) WHERE (archived_at IS NULL)
-public.idx_company_name_keyset CREATE INDEX idx_company_name_keyset ON public.company USING btree (display_name, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_company_name_keyset_desc CREATE INDEX idx_company_name_keyset_desc ON public.company USING btree (display_name DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_company_name_keyset CREATE INDEX idx_company_name_keyset ON public.company USING btree ("left"(display_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_company_name_keyset_desc CREATE INDEX idx_company_name_keyset_desc ON public.company USING btree ("left"(display_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_company_name_trgm CREATE INDEX idx_company_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(display_name)) gin_trgm_ops)
 public.idx_company_owner CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_company_parent CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL)
@@ -4287,8 +4312,8 @@ public.idx_contact_email_correspondence CREATE INDEX idx_contact_email_correspon
 public.idx_contact_from_lead CREATE INDEX idx_contact_from_lead ON public.contact USING btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)
 public.idx_contact_last_activity_keyset CREATE INDEX idx_contact_last_activity_keyset ON public.contact USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_merged_into CREATE INDEX idx_contact_merged_into ON public.contact USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)
-public.idx_contact_name_keyset CREATE INDEX idx_contact_name_keyset ON public.contact USING btree (full_name, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_contact_name_keyset_desc CREATE INDEX idx_contact_name_keyset_desc ON public.contact USING btree (full_name DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_contact_name_keyset CREATE INDEX idx_contact_name_keyset ON public.contact USING btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_contact_name_keyset_desc CREATE INDEX idx_contact_name_keyset_desc ON public.contact USING btree ("left"(full_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_name_trgm CREATE INDEX idx_contact_name_trgm ON public.contact USING gin (f_fold_apostrophes(lower(full_name)) gin_trgm_ops)
 public.idx_contact_owner CREATE INDEX idx_contact_owner ON public.contact USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON public.contact_phone USING btree (contact_id)
@@ -4366,6 +4391,7 @@ public.idx_import_record_map_run CREATE INDEX idx_import_record_map_run ON publi
 public.idx_import_run_status CREATE INDEX idx_import_run_status ON public.import_run USING btree (status)
 public.idx_lead_candidate_company CREATE INDEX idx_lead_candidate_company ON public.lead USING btree (candidate_company_key) WHERE ((candidate_company_key IS NOT NULL) AND (archived_at IS NULL))
 public.idx_lead_disqualify_reason CREATE INDEX idx_lead_disqualify_reason ON public.lead USING btree (disqualify_reason_id) WHERE (disqualify_reason_id IS NOT NULL)
+public.idx_lead_from_contact CREATE INDEX idx_lead_from_contact ON public.lead USING btree (from_contact_id) WHERE (from_contact_id IS NOT NULL)
 public.idx_lead_linkedin CREATE INDEX idx_lead_linkedin ON public.lead USING btree (linkedin_url) WHERE (linkedin_url IS NOT NULL)
 public.idx_lead_manual_signal_lead CREATE INDEX idx_lead_manual_signal_lead ON public.lead_manual_signal USING btree (lead_id, set_at DESC)
 public.idx_lead_merged_into CREATE INDEX idx_lead_merged_into ON public.lead USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)
@@ -4409,8 +4435,8 @@ public.idx_product_search CREATE INDEX idx_product_search ON public.product USIN
 public.idx_project_company CREATE INDEX idx_project_company ON public.project USING btree (company_id) WHERE (archived_at IS NULL)
 public.idx_project_health_current CREATE INDEX idx_project_health_current ON public.project_health_assessment USING btree (project_id, assessed_at DESC, created_at DESC, id DESC)
 public.idx_project_last_activity_keyset CREATE INDEX idx_project_last_activity_keyset ON public.project USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_project_name_trgm CREATE INDEX idx_project_name_trgm ON public.project USING gin (f_unaccent(lower(name)) gin_trgm_ops)
 public.idx_project_owner CREATE INDEX idx_project_owner ON public.project USING btree (owner_id) WHERE (archived_at IS NULL)
+public.idx_project_quickfind_trgm CREATE INDEX idx_project_quickfind_trgm ON public.project USING gin (f_fold_apostrophes(lower(((COALESCE(name, ''::text) || ' '::text) || COALESCE(key, ''::text)))) gin_trgm_ops)
 public.idx_project_search CREATE INDEX idx_project_search ON public.project USING gin (search_tsv)
 public.idx_provider_applied_field_run_contact_provider CREATE INDEX idx_provider_applied_field_run_contact_provider ON public.provider_applied_field USING btree (run_id, contact_id, provider)
 public.idx_provider_run_contact CREATE INDEX idx_provider_run_contact ON public.provider_run USING btree (contact_id)
@@ -4594,7 +4620,7 @@ public.knowledge_corpus.knowledge_corpus_min_similarity_range CHECK (((min_simil
 public.knowledge_corpus.knowledge_corpus_pkey PRIMARY KEY (id)
 public.knowledge_corpus.knowledge_corpus_touch CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.knowledge_corpus.managed_source text gen=- def=-
-public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
+public.knowledge_corpus.min_similarity double precision gen=- def=-
 public.knowledge_corpus.name text NOT NULL gen=- def=-
 public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
 public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-
@@ -4638,6 +4664,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE l.company_id = cid
     UNION ALL
     -- Filed against one of its deals.
@@ -4647,6 +4674,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE d.company_id = cid
     UNION ALL
     -- Filed against a contact it currently employs.
@@ -4656,6 +4684,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE r.company_id = cid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
   ) arms
@@ -4666,6 +4695,7 @@ public.last_activity_of_contact(cid uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
    WHERE l.contact_id = cid
 
 public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
@@ -4674,6 +4704,7 @@ public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
    WHERE l.deal_id = did
 
 public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=- 
@@ -4705,11 +4736,13 @@ public.lead.disqualify_reason_id uuid gen=- def=-
 public.lead.email text gen=- def=-
 public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
+public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
 public.lead.id uuid NOT NULL gen=- def=uuidv7()
 public.lead.lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES lead_disqualify_reason(id) ON DELETE RESTRICT
 public.lead.lead_email_norm CHECK (((email IS NULL) OR (email = lower(email))))
 public.lead.lead_first_response_follows_creation CHECK (((first_response_at IS NULL) OR (first_response_at >= created_at)))
+public.lead.lead_from_contact_id_fkey FOREIGN KEY (from_contact_id) REFERENCES contact(id) ON DELETE SET NULL
 public.lead.lead_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES lead(id) ON DELETE SET NULL (merged_into_id)
 public.lead.lead_override_retains_the_computed_score CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))
 public.lead.lead_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
@@ -4936,6 +4969,7 @@ public.list_member_event.list_member_event_entity_type_check CHECK ((entity_type
 public.list_member_event.list_member_event_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_member_event.list_member_event_pkey PRIMARY KEY (id)
 public.list_member_event.list_member_event_reason_check CHECK ((reason = ANY (ARRAY['chosen'::text, 'bulk'::text, 'record_archived'::text, 'record_restored'::text, 'evaluated'::text, 'filter_changed'::text, 'automation'::text])))
+public.list_member_event.member_note text gen=- def=-
 public.list_member_event.note text gen=- def=-
 public.list_member_event.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.list_member_event.reason text NOT NULL gen=- def=-
@@ -4997,6 +5031,7 @@ public.mail_draft.bcc_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.body text NOT NULL gen=- def=''::text
 public.mail_draft.cc_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.mail_draft.grounding jsonb NOT NULL gen=- def='[]'::jsonb
 public.mail_draft.html_body text gen=- def=-
 public.mail_draft.id uuid NOT NULL gen=- def=-
 public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
@@ -6945,6 +6980,7 @@ public.uq_forecast_snapshot_daily_workspace CREATE UNIQUE INDEX uq_forecast_snap
 public.uq_forecast_snapshot_period_close CREATE UNIQUE INDEX uq_forecast_snapshot_period_close ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'period_close'::text)
 public.uq_forecast_snapshot_period_close_workspace CREATE UNIQUE INDEX uq_forecast_snapshot_period_close_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'period_close'::text) AND (scope_id IS NULL))
 public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.lead USING btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))
+public.uq_lead_from_contact_live CREATE UNIQUE INDEX uq_lead_from_contact_live ON public.lead USING btree (from_contact_id) WHERE ((from_contact_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)

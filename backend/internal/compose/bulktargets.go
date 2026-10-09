@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -27,10 +28,14 @@ type bulkRow struct {
 	ownerID *ids.UUID
 }
 
-// bulkTarget is one record type's share of a bulk change. version is the one
-// the caller was shown; each write is conditioned on it.
+// bulkTarget is one record type's share of a bulk change.
 type bulkTarget interface {
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
+}
+
+// bulkReassigner is the share of a record type that has an owner to hand on.
+// version is the one the caller was shown; the write is conditioned on it.
+type bulkReassigner interface {
 	reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error
 }
 
@@ -44,7 +49,8 @@ type bulkArchiver interface {
 	restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind) (storekit.RestoreReport, error)
 }
 
-// bulkTargets builds the four adapters over the stores the REST handlers use.
+// bulkTargets builds the four record adapters over the stores the REST
+// handlers use; the Worklist's own adapter is bulkworklist.go's.
 func bulkTargets(contactsStore *contacts.Store, dealsStore *deals.Store) map[crmcontracts.BulkRecordType]bulkTarget {
 	return map[crmcontracts.BulkRecordType]bulkTarget{
 		crmcontracts.BulkRecordTypeContact: contactBulkTarget{store: contactsStore},
@@ -59,6 +65,11 @@ func bulkTargets(contactsStore *contacts.Store, dealsStore *deals.Store) map[crm
 // reader of it.
 func archiveIsBehindErasure(ctx context.Context, tx pgx.Tx, archiveAuditID ids.UUID) (bool, error) {
 	return rowIsBehindTheErasureBoundary(ctx, tx, AuditRow{ID: archiveAuditID})
+}
+
+// unarchiveWith is what an un-archive needs besides the record.
+func unarchiveWith(pending []storekit.LeftBehind) storekit.RestoreWith {
+	return storekit.RestoreWith{Erased: archiveIsBehindErasure, Links: collections.ArchivedLinkRestore(), PendingLinks: pending}
 }
 
 type contactBulkTarget struct{ store *contacts.Store }
@@ -80,7 +91,7 @@ func (t contactBulkTarget) restore(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
 ) (storekit.RestoreReport, error) {
 	return t.store.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](id), &version,
-		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
+		unarchiveWith(pending))
 }
 
 type companyBulkTarget struct{ store *contacts.Store }
@@ -102,7 +113,7 @@ func (t companyBulkTarget) restore(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
 ) (storekit.RestoreReport, error) {
 	return t.store.RestoreCompanyTx(ctx, tx, ids.From[ids.CompanyKind](id), &version,
-		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
+		unarchiveWith(pending))
 }
 
 type dealBulkTarget struct{ store *deals.Store }
@@ -124,7 +135,7 @@ func (t dealBulkTarget) restore(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
 ) (storekit.RestoreReport, error) {
 	return t.store.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](id), &version,
-		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
+		unarchiveWith(pending))
 }
 
 type leadBulkTarget struct{ store *contacts.Store }

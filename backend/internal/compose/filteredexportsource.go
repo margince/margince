@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -14,12 +15,25 @@ import (
 )
 
 // exportedIDs is the slice an export reads: the rows its filter matches, or a
-// Shortlist's members, through the same scope-forcing executor either way.
+// Shortlist's members, through the same scope-forcing executor either way. It
+// is not bounded by the list page limit, since an export is the surface a
+// larger slice is read through, but by ExportRowLimit: a slice past it is
+// refused, never cut short.
 func exportedIDs(ctx context.Context, tx pgx.Tx, engine storekit.Query, src collections.FilterSource) ([]ids.UUID, error) {
+	var matched []ids.UUID
+	var err error
 	if src.Members != nil {
-		return engine.SelectMemberIDs(ctx, tx, src.Members, storekit.PredicateRowLimit)
+		matched, err = engine.SelectExportMemberIDs(ctx, tx, src.Members)
+	} else {
+		matched, err = engine.SelectExportIDs(ctx, tx, src.Predicate)
 	}
-	return engine.SelectIDs(ctx, tx, src.Predicate, storekit.PredicateRowLimit)
+	if err == nil && len(matched) > storekit.ExportRowLimit {
+		return nil, &exportBadRequest{
+			field:  logDetailFilter,
+			reason: fmt.Sprintf("matches more than %d rows, which is more than one export holds; narrow the filter and export in slices", storekit.ExportRowLimit),
+		}
+	}
+	return matched, err
 }
 
 // exportedSlice is how the export's log row names its slice: the filter, or

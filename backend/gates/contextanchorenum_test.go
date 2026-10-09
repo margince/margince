@@ -5,9 +5,9 @@
 
 package gates
 
-// GET /records/{entity_type}/{id}/context accepts exactly the record types the
-// search module can anchor a context read on — every searchable type but the
-// text-only ones — and the contract has to say the same set. The full
+// GET /records/{entity_type}/{id}/context accepts the record types the search
+// module can anchor a context read on (every searchable type but the text-only
+// ones), and the contract has to say the same set. The full
 // searchable set is searchtypeenum_test.go's.
 //
 // The handler derives its own admission from that table (search.knownEntity),

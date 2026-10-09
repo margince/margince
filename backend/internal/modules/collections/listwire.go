@@ -210,6 +210,12 @@ func wireList(l listSummary) crmcontracts.List {
 	if len(l.RetiredFields) > 0 {
 		out.RetiredFields = &l.RetiredFields
 	}
+	if len(l.RetiredTags) > 0 {
+		out.RetiredTags = &[]openapi_types.UUID{}
+		for _, id := range l.RetiredTags {
+			*out.RetiredTags = append(*out.RetiredTags, openapi_types.UUID(id))
+		}
+	}
 	if l.TeamID != nil {
 		team := openapi_types.UUID(l.TeamID.UUID)
 		out.TeamId = &team

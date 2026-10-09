@@ -365,6 +365,12 @@ describe("what a className can be shown to produce", () => {
     ]);
   });
 
+  it("reads a concatenation as the text it joins", () => {
+    expect(names('<p className={"card tone-" + level}>x</p>')).toEqual([
+      "card",
+    ]);
+  });
+
   it("reads nothing out of an expression it cannot resolve", () => {
     expect(names("<p className={styles.row}>x</p>")).toEqual([]);
   });

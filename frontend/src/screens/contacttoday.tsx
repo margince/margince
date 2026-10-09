@@ -2,14 +2,13 @@ import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Button, EmptyState } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
 import { formatDate, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
-import { contactTabRoute } from "./contacttab";
-import { useRoster } from "./entityref";
+import { MayBeDoneVerbs } from "./contactmaybedone";
+import { useMemberNames } from "./membernames";
 import { MoveButton } from "./movebutton";
 import {
   basisAddsARecord,
@@ -21,6 +20,7 @@ import {
   WithheldNotice,
 } from "./record360";
 import "./record360/record360.css";
+import { openContactTab } from "./worklist.return";
 
 // WHAT NEEDS A CONTACT TODAY, as the contact page assembles it: the move the
 // server selected at the top of the panel, and the record's own open tasks
@@ -156,33 +156,41 @@ function MomentMove({
               );
               if (activity?.kind === "email" && onOpenEmail && item.id)
                 onOpenEmail(item.id);
-              else navigate(contactTabRoute(view.contact.id, "timeline"));
+              else openContactTab(view.contact.id, "timeline");
             }}
           />
         ) : undefined
       }
       action={
-        // A fragment, not a column of its own: FoundMove owns the one
-        // `.today-actions` column its row draws, defer included, so a second
-        // column nested inside it laid the defer button beside these verbs
-        // in a row instead of under them.
-        <>
-          <ActionVerb
-            action={moment.recommended_action}
-            primary
-            onAction={onAction}
+        moment.may_be_done ? (
+          <MayBeDoneVerbs
+            moment={moment}
+            question={moment.may_be_done}
+            view={view}
           />
-          {/* Every other verb the moment carries, beside the one it leads with
-              rather than in a second list elsewhere on the page, which would
-              let the two disagree about what to do next. */}
-          {secondary.map((action) => (
+        ) : (
+          // A fragment, not a column of its own: FoundMove owns the one
+          // `.today-actions` column its row draws, defer included, so a second
+          // column nested inside it laid the defer button beside these verbs
+          // in a row instead of under them.
+          <>
             <ActionVerb
-              key={action.label}
-              action={action}
+              action={moment.recommended_action}
+              primary
               onAction={onAction}
             />
-          ))}
-        </>
+            {/* Every other verb the moment carries, beside the one it leads with
+              rather than in a second list elsewhere on the page, which would
+              let the two disagree about what to do next. */}
+            {secondary.map((action) => (
+              <ActionVerb
+                key={action.label}
+                action={action}
+                onAction={onAction}
+              />
+            ))}
+          </>
+        )
       }
     />
   );
@@ -262,21 +270,17 @@ function useOpenTaskRows(
   const tasks = (view.next_steps?.data ?? []).filter(
     (task) => !task.is_done && !named.has(task.id),
   );
-  // The assignee's name off the workspace roster, so the row's mark is the
-  // colleague it sits with rather than an id. Asked for only when a task names
-  // one.
-  const roster = useRoster(
-    "user",
-    tasks.some((task) => Boolean(task.assignee_id)),
+  // The assignee's name by id, one request for every task on the row at
+  // once, so the row's mark is the colleague it sits with rather than an id.
+  const assigneeNames = useMemberNames(
+    tasks.flatMap((task) => (task.assignee_id ? [task.assignee_id] : [])),
   );
   const assigneeOf = (userId: string | null | undefined) => {
     if (!userId) {
       return undefined;
     }
-    const entry = roster.data?.find((candidate) => candidate.id === userId);
-    return entry && "display_name" in entry
-      ? { name: entry.display_name, identity: userId }
-      : undefined;
+    const name = assigneeNames.get(userId);
+    return name ? { name, identity: userId } : undefined;
   };
   const asOf = Date.parse(view.as_of);
   return {

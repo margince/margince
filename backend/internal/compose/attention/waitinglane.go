@@ -142,6 +142,11 @@ type WaitingCustomer struct {
 	// folded into this card; FirstAskedAt is when the first arrived.
 	EarlierRequests int
 	FirstAskedAt    time.Time
+	// MeetingBookedAt is when the soonest booked meeting with the sender
+	// starts; nil when none is booked. It does not settle the wait — the card
+	// stays — but it says the work is scheduled, so the card stops counting
+	// waiting days and stops claiming Focus priority.
+	MeetingBookedAt *time.Time
 	// ActivityID is the message itself — what a reply would be drafted to.
 	ActivityID ids.UUID
 	// EmailSummary is the canonical email row, present exactly when this wait
@@ -221,7 +226,7 @@ func (s *Service) waitingCustomers(
 	}
 	var rows []WaitingCustomer
 	var cut bool
-	err := s.degradable(ctx, func(ctx context.Context) error {
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
 		rows, cut, err = s.waiting.Unanswered(ctx, asOf)
 		return err

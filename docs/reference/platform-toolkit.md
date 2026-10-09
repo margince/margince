@@ -1,218 +1,231 @@
+<!-- prose:plain -->
 # Platform & shared toolkit
 
-The reusable utilities every module composes — **reach for these instead of reinventing them**. A new
-store, handler, or consumer is mostly assembling the pieces below. Everything here lives under
-`backend/internal/platform/` (technical plumbing) or `backend/internal/shared/` (stdlib-only leaves);
-a module may import both, never a sibling module.
+The shared parts every module builds on. Use these and do not build your own: a new store, handler or
+consumer is mostly these parts put together. All of it is under `backend/internal/platform/` (the parts
+under every module) or `backend/internal/shared/` (packages that use only the Go standard library). A module may import
+both, and never another module.
 
-The signatures are abbreviated (contexts/errors elided) — read the package for the exact shape.
+The signatures below are short (no `ctx` and no error returns); read the package for the full shape.
 
 ---
 
-## `platform/` — plumbing
+## `platform/`: the base parts
 
-### `platform/database` — the pool & the workspace transaction
-The **only** place a module transaction is opened; no store issues its own `pool.Begin`.
-- `WithWorkspaceTx(ctx, pool, fn func(pgx.Tx) error) error` — the workspace transaction every store uses; refuses with `ErrNoWorkspace` when the context carries no tenant.
-- `WithInfraTx(ctx, pool, fn) error` — a transaction for the few installation-wide infra paths (relay, bootstrap), which need no tenant on the context.
+### `platform/database`: the pool & the workspace transaction
+The one place a module opens a transaction; no store calls its own `pool.Begin`.
+- `WithWorkspaceTx(ctx, pool, fn func(pgx.Tx) error) error`: the workspace transaction every store uses. It refuses with `ErrNoWorkspace` when the context carries no tenant.
+- `WithInfraTx(ctx, pool, fn) error`: a transaction for the few paths that serve the whole installation (relay, bootstrap). These need no tenant on the context.
 - `NewPool(ctx, dsn) (*pgxpool.Pool, error)`, `RegisterIDTypes(conn)`.
-- **Reach for it when:** you need a DB transaction — always through these, never a raw `pool.Begin`.
+- **Use it when:** you need a database transaction. Always go through these, never a plain `pool.Begin`.
 
-### `platform/database/storekit` — the write shape & store mechanics
-The one spelling of "domain row + `audit_log` + `event_outbox` in one tx", plus pagination, version
-patches, predicate compilation, and SQLSTATE branch helpers. (Deep dive:
+### `platform/database/storekit`: the write shape & store tools
+The one spelling of "domain row + `audit_log` + `event_outbox` in one transaction". It also holds paging,
+version updates, list filters and checks on the `SQLSTATE` of an error. (More:
 [write-backbone.md](../explanation/write-backbone.md).)
-- Write triple: `Audit(...) (auditID, err)`, `AuditWithEvidence(..., evidence)`, `Emit(..., auditID, eventType, ...)`.
-- Version patch: `NewPatch()`, `Patch.Set(col, old, new)`, `ApplyWithVersion(...)`, `ApplyGuarded(..., ifVersion)`, `ApplyLocked(..., lock)` → `ErrVersionSkew`.
+- The three writes: `Audit(...) (auditID, err)`, `AuditWithEvidence(..., evidence)`, `Emit(..., auditID, eventType, ...)`.
+- Version update: `NewPatch()`, `Patch.Set(col, old, new)`, `ApplyWithVersion(...)`, `ApplyGuarded(..., ifVersion)`, `ApplyLocked(..., lock)` → `ErrVersionSkew`.
 - Row locks: `LockRow(...)`, `LockPair(...)`.
-- Keyset pagination: `EncodeCursor`, `DecodeCursor` (→ `MalformedCursorError`), `ClampLimit`, `QuickFindClause`.
-- List predicates: `CompilePredicate(pred, fields, arg)`, `Query.SelectIDs(...)`.
-- SQLSTATE branch: `IsUniqueViolation`, `UniqueViolation(err) (constraint, ok)`, `IsForeignKeyViolation`, `CheckViolation`, `ExclusionViolation`.
-- Context/provenance: `Actor(ctx)`, `CapturedBy(ctx)`, `MustWorkspace(ctx)`, `StampFields`, `FieldOrigins`, `EmailSuppressed`, `SuppressionHash`, `EscapeLike`, `JSONArg`, `UUIDOrNil`.
-- **Reach for it when:** writing a store — compose these instead of hand-rolling audit/outbox/pagination/version SQL.
+- Paging by keyset: `EncodeCursor`, `DecodeCursor` (→ `MalformedCursorError`), `ClampLimit`, `QuickFindClause`.
+- List filters: `CompilePredicate(pred, fields, arg)`, `Query.SelectIDs(...)`.
+- `SQLSTATE` checks: `IsUniqueViolation`, `UniqueViolation(err) (constraint, ok)`, `IsForeignKeyViolation`, `CheckViolation`, `ExclusionViolation`.
+- Context and source of a write: `Actor(ctx)`, `CapturedBy(ctx)`, `MustWorkspace(ctx)`, `StampFields`, `FieldOrigins`, `EmailSuppressed`, `SuppressionHash`, `EscapeLike`, `JSONArg`, `UUIDOrNil`.
+- **Use it when:** you write a store. Build on these, and do not write your own audit, outbox, paging or version SQL.
 
-### `platform/auth` — the admission point
-Object RBAC + row scope enforced at every store entry point, so HTTP and MCP ride one gate. (Why it
-lives here: [authorization.md](../explanation/authorization.md).)
-- `Require(ctx, object, action)` — object-level gate (may this role do this verb on this type?).
-- `EnsureVisible(ctx, tx, table, id)` — row scope on a single-row get/update/archive (out-of-scope → `ErrNotFound`).
-- `EnsureLinkTarget(ctx, tx, table, id)` — row-scoped existence probe for FK targets.
-- `VisibleTo(ctx, tx, table, id) (bool, error)` — non-erroring probe for dedupe-409 paths.
-- `ScopeClause` / `ScopeClauseFor(table, alias, arg)` — the SQL row-visibility predicate for list/search builders.
-- `AuthzRule(p, entityType, action)` — the `audit_log.authorization_rule` attribution string.
-- `NewGate(authority).Admit(ctx, spec, resolve)` — the agent admission gate (scope ∧ tier ∧ seat), re-derived live.
-- **Reach for it when:** any store read/write over an owner-scoped table, or admitting an agent/MCP call.
+### `platform/auth`: the admission point
+Object RBAC and row scope, checked at every store entry point, so HTTP and MCP go through one gate. (Why it
+is here: [authorization.md](../explanation/authorization.md).)
+- `Require(ctx, object, action)`: the gate for one object type (may this role do this action on this type?).
+- `EnsureVisible(ctx, tx, table, id)`: row scope on a get, update or archive of one row (out of scope → `ErrNotFound`).
+- `EnsureLinkTarget(ctx, tx, table, id)`: a row-scoped check that the row a link points to exists.
+- `VisibleTo(ctx, tx, table, id) (bool, error)`: a check that returns no error, for the paths that answer 409 on a copy.
+- `ScopeClause` / `ScopeClauseFor(table, alias, arg)`: the SQL that limits a list or search to the rows a user may see.
+- `AuthzRule(p, entityType, action)`: the text for `audit_log.authorization_rule`.
+- `NewGate(authority).Admit(ctx, spec, resolve)`: the gate that admits an agent (scope ∧ tier ∧ seat), checked again live.
+- **Use it when:** a store reads or writes a table with owners, or admits an agent or MCP call.
 
-### `platform/events` — the bus side of the backbone
-Outbox relay + consumer-group subscriber + dedupe. Never originates events. (Deep dive:
+### `platform/events`: the bus side of the write path
+Outbox relay, a reader for each consumer group, and dedupe. It never starts an event. (More:
 [write-backbone.md](../explanation/write-backbone.md).)
 - `NewRelay(pool, rdb, log)`, `OutboxBacklog(ctx, pool)`, `PublishedTotal()`.
 - `NewSubscriber(rdb, group, handler, log)`; `type Handler func(ctx, env) error`.
 - `Dedupe(rdb, group, next)` (`DedupeTTL = 96h`), `ForWorkspace(wsID, next)`, `NewClient(ctx, addr)`.
-- **Reach for it when:** consuming domain events or wiring the relay.
+- **Use it when:** you read domain events or connect the relay.
 
-### `platform/httperr` — the sentinel → HTTP choke point
-Maps `apperrors` sentinels to RFC 7807 problem+json with stable machine codes; no handler hand-writes a status body.
-- `Write(w, r, err)` — maps any sentinel / `DetailedError` / parse error onto the wire; unknown → opaque 500.
-- `NotImplemented(w, r, op)` — explicit 501 (what the generated stubs return).
+### `platform/httperr`: the one place an error becomes HTTP
+Maps `apperrors` errors to RFC 7807 `problem+json` with fixed machine codes. No handler writes a status
+body by hand.
+- `Write(w, r, err)`: maps any sentinel, `DetailedError` or parse error to the response; any other error → a plain 500.
+- `NotImplemented(w, r, op)`: a clear 501 (what the generated code returns before a handler exists).
 - `Unauthorized(w, r, detail)`, `Validation(field, code, msg) *DetailedError` (422), `Duplicate(code, existingID) *DetailedError` (409).
-- **Reach for it when:** a handler needs to return any error — return a sentinel/`DetailedError` and call `Write`.
+- **Use it when:** a handler needs to return any error. Return a sentinel or a `DetailedError` and call `Write`.
 
-### `platform/httpserver` — the HTTP chassis
-The middleware every process role rides; owns no domain.
-- Middleware: `Correlate` (mints the per-request `correlation_id`), `SecureHeaders`, `RecoverPanics`, `LimitBodies`, `AccessLog`.
-- Probes: `Healthz`, `Readyz(checks…)`, `Metrics(pool, backlog, published)`.
-- Logging: `LogHandler(w, level, format)`, `WithCorrelation(handler)`.
-- **Reach for it when:** assembling any HTTP surface — wrap routes in these, don't reinvent middleware.
+### `platform/httpserver`: the HTTP base
+The middleware every process role uses; it owns no domain.
+- `Correlate` (makes the `correlation_id` for each request), `SecureHeaders`, `RecoverPanics`, `LimitBodies`, `AccessLog` (all middleware).
+- Health: `Healthz`, `Readyz(checks…)`, `Metrics(pool, backlog, published)`.
+- Logs: `LogHandler(w, level, format)`, `WithCorrelation(handler)`.
+- **Use it when:** you build any HTTP surface. Put routes in these; do not write your own middleware.
 
-### `platform/jobs` — durable background work (River)
-Peer of the outbox: an event announces something happened, a job asks for work to be done.
+### `platform/jobs`: lasting background work (River)
+Works next to the outbox: an event says something happened, a job asks for work to happen.
 - `New(pool, cfg, log) (*Runner, error)`, `Migrate(ctx, pool)`.
-- **Reach for it when:** you need durable, retryable background work (the worker's periodic passes ride this).
+- **Use it when:** you need background work that lasts and can try again (the timed passes in the worker use this).
 
-### `platform/blobstore` — object bytes
-DB row stays system-of-record; the store holds opaque bytes at a workspace-prefixed key.
+### `platform/blobstore`: object bytes
+The database row stays the true record; the store holds bytes it does not read, at a key that starts
+with the workspace.
 - `type Store interface { Put; Get; Delete; Health }`, `WorkspaceKey(ws, kind, id)`, `NewMemory()`, `New(ctx, cfg)`, `FromEnv(ctx)`, `ErrNotFound`.
-- **Reach for it when:** persisting/fetching binary blobs tied to an entity (attachments, logos).
+- **Use it when:** you store or fetch files of a record (files added to mail, company images).
 
-### `platform/keyvault` — secret material
-A domain row references an opaque, workspace-scoped `Ref`; the vault holds the secret bytes. Plaintext/root key never reach a log.
-- `type Vault interface { Put; Get; Delete; Health }`, `type Ref string` (log-safe, resolves only under its minting workspace), `New(cfg)`, `NewMemory()`, `FromEnv(pool)`.
-- **Reach for it when:** storing/retrieving a credential a domain row points at (e.g. `connector_connection.credential_ref`).
+### `platform/keyvault`: secrets
+A domain row points to a `Ref` that is scoped to the workspace and says nothing; the key store holds the secret
+bytes. The plain secret and the root key never reach a log.
+- `type Vault interface { Put; Get; Delete; Health }`, `type Ref string` (safe to log; it opens only in the workspace that created it), `New(cfg)`, `NewMemory()`, `FromEnv(pool)`.
+- **Use it when:** you store or read a credential a domain row points at (for example `connector_connection.credential_ref`).
 
-### `platform/netguard` — SSRF egress guard
-A tenant-supplied host must never probe the deployment's own network; classifies the *resolved* IP so DNS can't bypass it.
-- `RefusePrivate(network, address, rawConn)` — a `net.Dialer.Control`; `PublicIP(ip) bool`.
-- **Reach for it when:** building an HTTP client that fetches a tenant-supplied URL — set `Dialer.Control = netguard.RefusePrivate`.
+### `platform/netguard`: SSRF guard on outbound calls
+A host a tenant gives must never reach the installation's own network. The guard checks the IP *after* the DNS
+answer, so DNS cannot be used to pass it.
+- `RefusePrivate(network, address, rawConn)`: a `net.Dialer.Control`; `PublicIP(ip) bool`.
+- **Use it when:** you build an HTTP client that fetches a URL a tenant gave. Set `Dialer.Control = netguard.RefusePrivate`.
 
-### `platform/ratelimit` — fixed-window limiter, one ceiling across replicas
-For unauthenticated endpoints (login brute-force, workspace-bootstrap) and for
-pacing an authenticated surface.
-- `New(name, kind, limit, window)`, `Allow(key)`, `Record(key)`, `Blocked(key)`, `NewWithClock(...)` (inject a clock in tests).
-- `name` is the bucket in the store replicas share, in `area/subject` form. Two
-  limiters that name one thing are one ceiling spent by both, which is invisible
-  at either site — `backend/gates/ratelimitnames_test.go` fails a collision.
-- `kind` says what the limiter answers when it cannot count: `FailClosed`
-  refuses, `FailOpen` admits. Choose on what one unmetered window buys that
-  cannot be taken back — a guessed password, a minted link, a provider account
-  throttled for the day — against what one refused window costs.
-- Counts live in this process until a role calls `ShareProcess(rdb)` at boot —
-  `cmd/api` and `cmd/worker` both do. Without it each replica enforces its own
-  copy of every ceiling, so N replicas admit N times the configured rate.
-- **Reach for it when:** throttling an expensive unauthenticated endpoint by key (IP/email).
+### `platform/ratelimit`: fixed-window limit, one limit over all copies of a process
+For endpoints that need no sign-in (password guessing, workspace bootstrap), and to slow down a surface
+that does.
+- `New(name, kind, limit, window)`, `Allow(key)`, `Record(key)`, `Blocked(key)`, `NewWithClock(...)` (give it a clock in tests).
+- `name` is the count key in the store that all copies share, in `area/subject` form. Two limits that use
+  one name are one limit used up by both, and no one at the two call sites can see it.
+  `backend/gates/ratelimitnames_test.go` fails when two names match.
+- `kind` says what the limit answers when it cannot count: `FailClosed` refuses, `FailOpen` admits. Choose
+  by what one window with no count allows that you cannot undo. Think of a guessed password, a new link,
+  or a provider account slowed for the day. Compare that with what one refused window costs.
+- Counts live in this process until a role calls `ShareProcess(rdb)` at start; `cmd/api` and `cmd/worker`
+  both do. Without it each copy keeps its own count of every limit, so `N` copies admit `N` times the set
+  rate.
+- **Use it when:** you slow down a costly endpoint with no sign-in, by key (IP or email).
 
-### `platform/dbmigrate` — the migration runner
-Hand-rolled runner for the ownership namespaces (core, custom, packs), each with its own tracking table.
+### `platform/dbmigrate`: the migration runner
+Our own runner for the migration sets (core, custom, `packs`), each with its own table that tracks what has run.
 - `Load(fsys, dir)`, `Up(ctx, conn, namespaces…)`, `Down(ctx, conn, ns, n)`.
-- **Reach for it when:** applying/rolling back migrations in tooling (usually you just run `cmd/migrate`).
+- **Use it when:** you apply or undo migrations in a tool (most of the time you only run `cmd/migrate`).
 
-### `platform/deployconfig` — the installation config (`margince.yaml`)
-Loads the operator's deployment file: the singleton company, the bootstrap admin,
-auth/email/AI/capture posture, and the ordered `company_context.rollout` capability
-(`off < read < tasks < onboarding`; empty resolves to `onboarding`).
+### `platform/deployconfig`: the installation config (`margince.yaml`)
+Loads the file the operator writes for the installation. It holds the one company, the first admin, the
+sign-in, email, AI and capture posture, and the `company_context.rollout` level (`off < read < tasks <
+onboarding`; empty means `onboarding`).
 - `Load(path)`, the typed `Config` tree, `EffectiveRollout()`.
-- **Reach for it when:** a behavior is an operator deployment choice, not workspace data — it belongs in this file, not a new flag.
+- **Use it when:** how the product acts is a choice of the operator for the installation, not workspace data. It goes in
+  this file, not in a new flag.
 
-### `platform/mailer` — transactional email
-The ONE outbound channel for product-originated mail, operator-configured SMTP; first
-consumer is password-reset delivery. Consent's marketing lanes are a separate, gated concern.
-- **Reach for it when:** the product itself must send a mail (never for tenant marketing sends).
+### `platform/mailer`: product email
+The outbound path for mail the product itself sends, over SMTP the operator sets up. Its first user is the
+password reset mail. The consent module's marketing mail is a separate path with its own gate.
+- **Use it when:** the product itself must send a mail (never for the marketing mail of a tenant).
 
-### `platform/webread` — the public-web fetcher
-The outbound page fetcher behind the scrape/enrichment seam: plain GETs of tenant-named pages reduced
-to whitespace-normalized text. SSRF-guarded post-dial (every redirect hop re-enters the guard),
-robots-aware, paced, byte/time-bounded. No extraction, no discovery policy — those stay with callers.
-- **Reach for it when:** fetching a tenant-supplied URL — never hand-roll an `http.Client` for one.
+### `platform/webread`: the public web reader
+The outbound page reader behind the seam that reads public pages to enrich records. It makes plain GET calls for pages a tenant
+names, and turns each page into text with clean spacing. The SSRF guard runs after each connect (the guard runs again on every
+HTTP redirect). It reads `robots.txt`, goes slowly, and has a limit on bytes
+and time. What to pull out of a page, and what to look for, stays with the caller.
+- **Use it when:** you fetch a URL a tenant gave. Never write your own `http.Client` for one.
 
-### `platform/testdb` — test database harness
-Migrate-once schema setup + fast data-only reset for the integration lanes (`EnsureSchema`,
-`Reset`); the `integrationmigrateonce_test.go` gate enforces its use.
-- **Reach for it when:** writing a real-Postgres test setup.
+### `platform/testdb`: the test database setup
+Builds the schema once and resets only the data, fast, for the integration lanes (`EnsureSchema`, `Reset`).
+The `integrationmigrateonce_test.go` gate makes tests use it.
+- **Use it when:** you write the setup of a test that runs on a real Postgres.
 
 ---
 
-## `shared/` — stdlib-only leaves
+## `shared/`: packages that use only the standard library
 
-### `shared/apperrors` — the fixed error-sentinel registry
-Callers branch with `errors.Is`; the HTTP/MCP choke-points own the wire mapping. **Never** invent a
-new error string a handler must parse — extend this registry (with the contract) instead.
+### `shared/apperrors`: the fixed list of error sentinels
+Callers check with `errors.Is`; the HTTP and MCP layers own the map to the response. Never make up a new
+error string a handler must parse; add to this list (with the contract) instead.
 - Core sentinels: `ErrNotFound`, `ErrConflict`, `ErrScopeExceeded`, `ErrPermissionDenied`, `ErrRequiresApproval`, `ErrVersionSkew`, `ErrBudgetExceeded`, `ErrApprovalTokenInvalid`, `ErrConsentNotGranted`, `ErrSeatTierInsufficient`.
-- System-of-record sentinel: `ErrUnsupportedBySoR`.
-- **Reach for it when:** returning any domain error.
+- For an outside record system: `ErrUnsupportedBySoR`.
+- **Use it when:** you return any domain error.
 
-### `shared/kernel/ids` — UUIDv7 identifiers
-Dependency-free so seam signatures don't drag in a UUID library.
-- `type UUID [16]byte`, `Nil`, `NewV7()` (time-ordered), `Parse`, `MustParse`, `String()`, `IsZero()`.
-- Typed ids: `type ID[K]`, `New[K]()`, `From[K](u)`, `ParseAs[K](s)`, and aliases `WorkspaceID`, `UserID`, `ContactID`, `DealID`, … (per-entity phantom types).
-- **Reach for it when:** minting or parsing any entity id.
+### `shared/kernel/ids`: `UUIDv7` ids
+Has no outside imports, so seam signatures do not pull in a UUID library.
+- `type UUID [16]byte`, `Nil`, `NewV7()` (in time order), `Parse`, `MustParse`, `String()`, `IsZero()`.
+- Typed ids: `type ID[K]`, `New[K]()`, `From[K](u)`, `ParseAs[K](s)`, and the other names `WorkspaceID`, `UserID`, `ContactID`, `DealID`, … (one type per record kind, which only the compiler sees).
+- **Use it when:** you make or parse any record id.
 
-### `shared/kernel/principal` — per-request identity
-The tenant key, acting principal, and trace ids on the context — read only through typed accessors (loose context keys are forbidden).
-- Accessors: `WithActor`/`Actor`, `WithWorkspaceID`/`WorkspaceID`, `WithCorrelationID`/`CorrelationID`, `WithCausationEvent`/`CausationEvent`.
+### `shared/kernel/principal`: who is acting in a request
+The tenant key, the acting principal and the trace ids on the context. Read them only through the typed
+functions here (any other context key is not allowed).
+- Read and set: `WithActor`/`Actor`, `WithWorkspaceID`/`WorkspaceID`, `WithCorrelationID`/`CorrelationID`, `WithCausationEvent`/`CausationEvent`.
 - `type Principal { Type, ID, UserID, TeamIDs, PassportID, OnBehalfOf, Scopes, SeatType, Permissions }`.
-- Enums: `PrincipalType` (Human/Agent/Connector/System), `Scope` (Read/Draft/Write/Send/Enrich), `SeatType` (Full/Read, `.CanMutate()`), `Action` (Create/Read/Update/Delete), `RowScope` (Own/Team/All).
+- Value sets: `PrincipalType` (`Human`/`Agent`/`Connector`/`System`), `Scope` (`Read`/`Draft`/`Write`/`Send`/`Enrich`).
+- More value sets: `SeatType` (`Full`/`Read`, `.CanMutate()`), `Action` (`Create`/`Read`/`Update`/`Delete`), `RowScope` (`Own`/`Team`/`All`).
 - `Permissions.Allows(object, action)`, `ScopeSet.Has(scope)`.
-- **Reach for it when:** reading who's acting / the tenant / trace ids from context, or checking RBAC in memory.
+- **Use it when:** you read who is acting, the tenant or the trace ids from the context, or check RBAC in
+  memory.
 
-### `shared/kernel/events` — the bus wire contract
-The `Envelope`, the `<entity>.<verb>` catalog, and the stream layout — shared by publisher and consumer.
+### `shared/kernel/events`: the contract on the bus
+The `Envelope`, the `<entity>.<verb>` catalog and the stream names, shared by publisher and consumer.
 - `type Envelope { EventID, Type, Version, WorkspaceID, OccurredAt, Actor, Entity, Payload, Trace }`, `Envelope.Validate()`.
 - `type Trace { CorrelationID, CausationID, AuditLogID }`, `type Actor`, `type EntityRef`.
 - Catalog: `StreamFor(type)`, `VersionOf(type)`, `Types()`, `Streams()`, `Groups()`, `SplitType(type)`.
-- **Reach for it when:** publishing to the outbox (via storekit) or writing a consumer. Adding an event type = one catalog line.
+- **Use it when:** you publish to the outbox (through `storekit`) or write a consumer. A new event type
+  is one catalog line.
 
-### `shared/kernel/provenance` — write provenance
-Store APIs accept no write without it (missing provenance is a compile error).
+### `shared/kernel/provenance`: the source of a write
+Store functions accept no write without it (a missing `Provenance` does not compile).
 - `type Provenance { Source, CapturedBy }`, `Validate()`.
-- **Reach for it when:** any write — pass where the value came from and who wrote it.
+- **Use it when:** you make any write. Pass the source of the value and who wrote it.
 
-### `shared/kernel/values` — domain value objects
-Parse-don't-validate types for formats that would otherwise travel as bare strings: email lowercasing,
-E.164 phones, host-only domains, slugs, timezones, the money pair. Each parses/normalizes ONCE at the
-seam where input enters a store; a malformed value is unrepresentable downstream. Constructors return
-`ParseError`, which the transport maps to the 422 validation shape.
-- **Reach for it when:** accepting an email/phone/domain/money/… input — parse it here, don't validate ad hoc.
+### `shared/kernel/values`: domain value types
+Types that parse a value once, so it does not move from place to place as a plain string. They
+cover email in lower case, `E.164` phone numbers, domains with only a host, slug values and time zones.
+They also cover money: an amount and a currency code. Each one parses and cleans input once, at the seam where it comes into a store.
+A value read back from the database through `Scan` is not parsed again.
+The parse functions return `ParseError`, which the HTTP layer maps to the 422 shape for bad input.
+- **Use it when:** you accept an email, phone, domain, money or other such input. Parse it here; do not
+  check it by hand.
 
-### `shared/kernel/diffhash` — the one diff-hash canonicalization
-The ONE spelling of a `diff_hash`: decode to maps, re-marshal (sorting keys at every
-depth), hash. Staging, redemption, and modify-then-approve all hash through here — "identical call"
-is a property of content, never whitespace or key order.
-- **Reach for it when:** comparing or binding a staged payload by content.
+### `shared/kernel/diffhash`: the one way to hash a diff
+The spelling of a `diff_hash`: read it into maps, write it out again (with the keys in order at every level), hash.
+Staging, use of a staged call and change-then-approve all hash through here. So "the same call" depends on content,
+never on spaces or key order.
+- **Use it when:** you compare or bind a staged payload by content.
 
-### `shared/schema` — structured-output JSON Schema builder
-Composable `Record`/`Object`/`Array`/`String`/`Integer`/`Enum`/`Optional`/… builders rendering the
-`model.Request.ResponseSchema` value, so every structured-output schema is compile-checked and built
-one way. Objects are CLOSED (`additionalProperties: false`); `Record` also requires every field and
-keeps the declared field order, and `Optional` spells an absent value as null. The vocabulary stops
-at the strict structured-output profile: value bounds (`maxLength`, `maxItems`, `minimum`, …) are
-not emitted, because Anthropic and strict mode refuse them — the site's validator enforces them.
-- **Reach for it when:** constraining a model call to a JSON shape — never hand-write the schema string.
+### `shared/schema`: the `JSON Schema` builder for structured output
+Builders (`Record`/`Object`/`Array`/`String`/`Integer`/`Enum`/`Optional`/…) that make the
+`model.Request.ResponseSchema` value. So every schema for structured output is checked by the compiler and
+built one way. Objects are closed (`additionalProperties: false`). `Record` also requires every field and
+keeps the declared field order, and `Optional` spells a missing value as `null`.
 
-### `shared/ports/*` — the frozen seam interfaces
-Dependency-free interfaces that decouple platform/AI/UI (and one module from another) from concrete
-implementations; the composition root injects the impls. **Depend on the interface, never the concrete
-module.**
+The builders stop at the strict profile for structured output. Value limits (`maxLength`, `maxItems`, `minimum`, …) are not part of the schema,
+because Anthropic and strict mode refuse them. The check at the call site holds them.
+- **Use it when:** you hold a model call to a JSON shape. Never write the schema string by hand.
+
+### `shared/ports/*`: the fixed seam interfaces
+Interfaces with no outside imports. They keep platform, AI and UI code (and one module from another) separate
+from the code that does the work. The `compose` root puts that code in place. Depend on the interface, never
+on the module behind it.
 
 | Port | Interface | Role |
 |---|---|---|
-| `authz` | `Resolver { EffectiveRBAC; SeatType }` | live RBAC/seat resolver the auth gate re-derives an agent's authority through (impl: identity) |
-| `datasource` | `SystemOfRecordProvider { Read/Search/Create/Update/Archive/Merge/AdvanceDeal/PromoteLead/StageSemantic/RunReport/Freshness/ListObjects/ListFields }` | the system-of-record seam AI/MCP/UI bind to (impl: the compose `Provider` over contacts/deals/activities/reports) |
-| `mcp` | `Tool { Spec; Handle }`, `Registry { Register; Invoke; Specs }` | the governed tool contract (`ToolSpec`, `RiskTier` auto_execute/confirmation_required/dynamic, tier resolver) — admission runs before `Handle` |
-| `connector` | `Connector { Descriptor/Authenticate/Sync/Normalize/HealthCheck }`, `Sink { Upsert }` | the capture/integration seam; a connector normalizes, the capture module writes |
-| `model` | `Client { Complete/Stream/Embed/Caps }`, `SecretStripper` | the provider-agnostic LLM seam (model choice is config, not architecture) |
-| `retrieval` | `Retriever { Search; AssembleContext }` | grounded hybrid retrieval with per-item evidence (evidence-or-omit) |
-| `workflow` | `Handler { Spec; Match; Plan }` | the automation seam — typed trigger + effect + idempotency key + risk tier; runs ride the job queue |
-| `extraction` | `Extractor { Extract }` | the staged attachment-extraction seam — grounded-or-omitted fields, never a guess (prod default: the honestly-empty `NoOpExtractor`) |
-| `fieldcatalog` | `Reader { ActiveColumns }` | how record stores learn the active `cf_*` custom-field columns per object (impl: customfields' Service) without importing the module |
-| `jurisdiction` | `Pack { Code; Retention }` + `Register`/`For`/`Applicable` | compile-time country packs (the `de` pack); core never names a jurisdiction |
+| `authz` | `Resolver { EffectiveRBAC; SeatType }` | the live RBAC and seat resolver the auth gate checks an agent's rights through again (built by: the `identity` module) |
+| `datasource` | `SystemOfRecordProvider { Read/Search/Create/Update/Archive/Merge/AdvanceDeal/PromoteLead/StageSemantic/RunReport/Freshness/ListObjects/ListFields }` | the record-system seam that AI, MCP and UI bind to (built by: the compose `Provider` over contacts, deals, activities and reports) |
+| `mcp` | `Tool { Spec; Handle }`, `Registry { Register; Invoke; Specs }` | the tool contract under rules (`ToolSpec`, `RiskTier` `auto_execute`/`confirmation_required`/`dynamic`, tier resolver); admission runs before `Handle` |
+| `connector` | `Connector { Descriptor/Authenticate/Sync/Normalize/HealthCheck }`, `Sink { Upsert }` | the capture and integration seam; a connector cleans the data, the capture module writes it |
+| `model` | `Client { Complete/Stream/Embed/Caps }`, `SecretStripper` | the LLM seam that works with any provider (the choice of model is config, not code shape) |
+| `retrieval` | `Retriever { Search; AssembleContext }` | search over records and text, with proof for each item (proof, or leave the item out) |
+| `workflow` | `Handler { Spec; Match; Plan }` | the seam for work the product does on its own: typed trigger + result + idempotency key + risk tier; runs go on the job queue |
+| `extraction` | `ExtractedField` (a type, no interface) | the shape of one field read from a document: it points to its words, or it is empty with a reason, never a guess. The activities store keeps it and the document reader in compose makes it |
+| `fieldcatalog` | `Reader { ActiveColumns }` | how record stores learn the active `cf_*` custom-field columns per object (built by: the `Service` of `customfields`) without importing the module |
+| `jurisdiction` | `Pack { Code; Retention }` + `Register`/`For`/`Applicable` | country `packs` built in at compile time (for example `extensions/de`); core never names a country |
 
-**Reach for a ports interface when:** code above a seam needs a module's capability without importing it.
+**Use a ports interface when:** code above a seam needs a module's work without importing it.
 
 ---
 
 ## The pattern, in one line
 
-A typical CRUD store method = `WithWorkspaceTx` (database) → `auth.Require`/`EnsureVisible` (auth) →
-SQL over your owned tables → `storekit.Audit` + `Emit` (storekit) → return, mapping errors through the
-`apperrors` sentinels that `httperr.Write` renders. You wrote the SQL and the mapping; everything else
-is composed from the toolkit above.
+A normal CRUD store method is `WithWorkspaceTx` (database) → `auth.Require`/`EnsureVisible` (auth) → SQL
+over your own tables → `storekit.Audit` + `Emit` (`storekit`) → return. Errors map through the `apperrors`
+sentinels that `httperr.Write` turns into a response. You wrote the SQL and the error map; all the rest
+comes from the toolkit above.

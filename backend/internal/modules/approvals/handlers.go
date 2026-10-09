@@ -212,13 +212,6 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Validation("bundle_id", "bundle_too_large", oversized.Error()))
 		return
 	}
-	var decided *AlreadyDecidedError
-	if errors.As(err, &decided) {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "already_decided", Detail: decided.Error(),
-		})
-		return
-	}
 	var retargeted *RetargetedEditError
 	if errors.As(err, &retargeted) {
 		httperr.Write(w, r, httperr.Validation("edited_payload", "retargeted", retargeted.Error()))

@@ -1,50 +1,49 @@
+<!-- prose:plain -->
 # Contract-first
 
-This repository is not built from a specification that outranks it. What the
-product exposes is defined by `backend/api/crm.yaml` and the Go generated from
-it — see [the record is the code](../principles/the-record-is-the-code.md) for
-the precedence order that replaced the older arrangement. This page is how that
-contract becomes Go, and why drift is merge-blocking.
+What the product exposes is set by `backend/api/crm.yaml` and the Go code
+generated from it. No separate document comes before them. The order of
+authority is in [the record is the code](../principles/the-record-is-the-code.md).
+Below: how that contract becomes Go, and why drift blocks a merge.
 
-## The contract is the source of truth
+## The contract decides
 
-`backend/api/crm.yaml` (OpenAPI 3.1) is the authoritative API surface.
-Nothing is exposed that isn't in it, and everything in it exists at
-runtime from day one:
+`backend/api/crm.yaml` (OpenAPI 3.1) is the API surface that decides.
+Nothing is exposed that is not in it, and everything in it exists at
+runtime from the first day:
 
-1. `make gen` downgrades the 3.1 contract to a 3.0 overlay
-   (`tools/contract-overlay`) and runs oapi-codegen over it, producing
-   the request/response types and the chi `ServerInterface`
-   (`internal/contracts/` — generated, never hand-edited).
-2. `tools/gen-stubs` derives one explicit **501 stub** per contract
-   operation (`internal/compose/stubs_gen.go`). Module handlers shadow
-   the operations they implement; an unimplemented operation answers a
-   loud 501, never a silent 404.
-3. `tools/gen-agentpolicy` derives the agent admission table from the
-   contract's `x-mcp-tool` / `x-agent-access` annotations — and **fails
-   generation** for any mutating operation carrying neither, so an
-   un-tiered endpoint cannot ship.
-4. `tools/gen-aitasks` compiles the **AI task contract**
-   (`backend/api/ai-tasks.yaml` — the task/tier/ladder table) into
-   `internal/modules/ai/tasks_gen.go`; `tools/gen-configschema` reads the tier
-   names from there into the routing shape in `config/margince.schema.json`, so
-   the runtime's task registry and the operator's config validation both derive
-   from the one contract.
+1. `make gen` turns the 3.1 contract into a 3.0 copy (`tools/contract-overlay`)
+   and runs `oapi-codegen` over it.
+   That builds the request and response types and the `chi` `ServerInterface`.
+   They live in `internal/contracts/`, generated and never edited by hand.
+2. `tools/gen-stubs` derives one **501 stub** per contract operation
+   (`internal/compose/stubs_gen.go`). Nothing embeds it. `Server` implements
+   the whole interface itself, so an operation with no handler fails the build.
+   A module handler that cannot serve yet answers a clear 501, never a silent 404.
+3. `tools/gen-agentpolicy` derives the agent access table from the contract's
+   `x-mcp-tool` and `x-agent-access` notes. It **fails the generate step** for any
+   operation that changes data and carries neither. So an endpoint with no
+   tier cannot ship.
+4. `tools/gen-aitasks` builds the **AI task contract**
+   (`backend/api/ai-tasks.yaml`, the task, tier and ladder table) into
+   `internal/modules/ai/tasks_gen.go`. `tools/gen-configschema` reads the tier
+   names from there into the routing shape in `config/margince.schema.json`.
+   So the runtime's task registry and the operator's config check both derive
+   from that contract.
 
 ## Drift is merge-blocking
 
-`make drift` regenerates everything and fails on any diff (`git diff
---exit-code` over `*_gen.go`, `internal/contracts/`, and
-`config/margince.schema.json`). That gate is part of
-`make check`, so:
+`make drift` generates everything again and fails on any change. It runs
+`git diff --exit-code` over `*_gen.go`, `internal/contracts/` and
+`config/margince.schema.json`. That gate is part of `make check`, so:
 
-- hand-editing a generated file fails the build;
-- changing the contract without regenerating fails the build;
-- changing generator output (even by one byte) is visible in review.
+- editing a generated file by hand fails the build;
+- changing the contract without generating again fails the build;
+- changing what a generate tool writes, even in one place, shows in review.
 
 ## Changing the surface
 
-The order is always **contract first, then code**: edit `crm.yaml`, regenerate (`make gen`), implement
-the handler in the owning module shadowing the generated stub, and let `make check` prove the contract,
-the generated artifacts, and the implementation agree. The step-by-step checklist is a how-to:
-**[how-to/add-an-endpoint.md](../how-to/add-an-endpoint.md)**.
+The order is always **contract first, then code**. Edit `crm.yaml`, generate again (`make gen`), and
+write the handler in the module that owns the operation, in place of the generated stub. Then let
+`make check` prove that the contract, the generated files and the code agree. The step-by-step list is a
+how-to: **[how-to/add-an-endpoint.md](../how-to/add-an-endpoint.md)**.

@@ -6,7 +6,7 @@
 package gates
 
 // The openchannel connector's failure vocabulary and its locale copy must name
-// the SAME set of classes, or a member sees a raw translation key in place of a
+// the same set of classes, or a member sees a raw translation key in place of a
 // sentence for whichever class was renamed on one side and not the other.
 //
 // failureclasses.go is the SUBJECT: it is where the unit declares what can go

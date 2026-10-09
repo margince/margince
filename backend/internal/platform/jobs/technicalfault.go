@@ -102,6 +102,24 @@ var technicalFaults = []technicalFault{
 		sentence: "the provider answered with a server error",
 		remedy:   "Theirs to fix. Retry is correct and the run does it; a day of these is a status page to read rather than a change to make here.",
 	},
+	{
+		match:    siteRefused,
+		class:    "site_refused_the_read",
+		sentence: "the website refused the read",
+		remedy:   "Bot protection or a rate limit on the site's side; the read is retried later. Nothing to change here, and the company's own site-read record says the same.",
+	},
+	{
+		match:    siteServerError,
+		class:    "site_server_error",
+		sentence: "the website answered with a server error",
+		remedy:   "Theirs to fix. The read is retried later.",
+	},
+	{
+		match:    siteAnswerNotRetried,
+		class:    "site_page_unreadable",
+		sentence: "the website would not serve that page",
+		remedy:   "The site moved, removed or closed it. The company's domain may need correcting; retrying does not help.",
+	},
 }
 
 // isInterrupted answers a job whose work context was cancelled under it — what
@@ -170,6 +188,43 @@ func providerStatusIn(statuses ...int) func(error) bool {
 func providerServerError(err error) bool {
 	var provider *connector.ProviderError
 	return errors.As(err, &provider) && provider.Status >= 500 && provider.Status <= 599
+}
+
+// siteAnswer is a website's refusal of a read, seen by shape. webread's own
+// StatusError satisfies it, and its Retryable is the decision the crawl's stop
+// reason also follows, so the three classes below say what the site-read
+// record says.
+type siteAnswer interface {
+	error
+	HTTPStatus() int
+	Retryable() bool
+}
+
+// siteAnswerOf is a pointer-free read of the shape: the answer, or false.
+//
+//nolint:ireturn // the interface is the point: jobs matches the shape without importing the crawler
+func siteAnswerOf(err error) (siteAnswer, bool) {
+	var site siteAnswer
+	return site, errors.As(err, &site)
+}
+
+// siteRefused is a retryable answer below the server errors: bot protection or
+// a throttle on the site's side.
+func siteRefused(err error) bool {
+	site, ok := siteAnswerOf(err)
+	return ok && site.Retryable() && site.HTTPStatus() < 500
+}
+
+// siteServerError is any 5xx a website answered.
+func siteServerError(err error) bool {
+	site, ok := siteAnswerOf(err)
+	return ok && site.HTTPStatus() >= 500 && site.HTTPStatus() <= 599
+}
+
+// siteAnswerNotRetried matches the answers the crawl does not retry.
+func siteAnswerNotRetried(err error) bool {
+	site, ok := siteAnswerOf(err)
+	return ok && !site.Retryable()
 }
 
 // technicalFaultFor answers the authored classification for a cause's shape.

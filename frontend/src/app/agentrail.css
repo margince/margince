@@ -314,23 +314,6 @@
   transform: rotate(180deg);
 }
 
-/* The one thing you can do about it, where there is one. Its own row under the
-   report rather than a control inside it: the row is already a button, and a
-   link inside a button is a control inside a control. */
-.argo {
-  display: block;
-  margin-top: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--r-sm);
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-  text-align: center;
-  text-decoration: none;
-}
-.argo:hover {
-  filter: brightness(1.05);
-}
-
 /* ===== A short window =====
  *
  * The destinations have a fixed cost (about 530px of rows and headings on a full
@@ -402,8 +385,7 @@
  * this width. The button keeps its accessible name, so nothing is lost to a
  * screen reader. */
 .rail.collapsed .arwords,
-.rail.collapsed .arlast,
-.rail.collapsed .argo {
+.rail.collapsed .arlast {
   display: none;
 }
 .rail.collapsed .arhit {
@@ -430,8 +412,7 @@
  * lost to a screen reader.
  */
 .rail.leveled .arwords,
-.rail.leveled .arlast,
-.rail.leveled .argo {
+.rail.leveled .arlast {
   display: none;
 }
 /* `:not(.collapsed)` rather than source order: the collapsed rail reduces the

@@ -383,7 +383,7 @@ export function CommandPalette({
               kind="outcome"
               title={t("palette.searchFailedTitle")}
             >
-              {t("palette.searchFailed")}
+              {search.failure}
             </Callout>
           )}
           {/* Held back until the wait is real (SEARCH_PENDING_DELAY_MS): a bar

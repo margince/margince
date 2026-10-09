@@ -228,6 +228,11 @@ func validateProviderEntry(name string, settings ProviderSettings, bound bool) e
 		return fmt.Errorf("ai: routing config: providers: %q is not a provider this build knows (have: %s)",
 			name, strings.Join(providerNames(), ", "))
 	}
+	if name == providerGeminiVertex {
+		if err := vertexBaseURLError("providers: "+name, settings.BaseURL); err != nil {
+			return err
+		}
+	}
 	if err := validateUnboundHost(name, settings.BaseURL, bound); err != nil {
 		return err
 	}

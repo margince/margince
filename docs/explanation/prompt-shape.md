@@ -1,13 +1,13 @@
-# How we write prompts — the password, the cost, and one item at a time
+<!-- prose:plain -->
+# How we write prompts: the password, the cost, and one item at a time
 
-Almost every prompt this product sends has the same three parts. One carries no
-boundary at all (it is shown nothing untrusted), and the largest deliberately
-puts the boundary last — see §2. This
-page explains what each part is for, what it costs us, and the one decision that
-follows: whether a task asks about **one thing per call** or **several at once**.
+Most prompts this product sends have the same three parts. One carries no
+boundary at all, as it is shown no untrusted text. The one with the most text
+puts the boundary last (see *Prompt caching* below). What follows is what each
+part is for and what it costs us. Then comes the one thing to decide from that:
+whether a task asks about **one thing per call** or **several at once**.
 
-Written to be readable without opening the code. Source references are at the
-bottom.
+You can read it without opening the code. Code references are at the end.
 
 ---
 
@@ -27,16 +27,16 @@ bottom.
   +----------------------------------------------+
 ```
 
-Almost everything else on this page follows from part 2 being random.
+Most of the rest of this page comes from part 2 being random.
 
 ---
 
 ## 1. Why the password exists
 
-We show the model text written by strangers — emails, web pages. A stranger
-could try to make their text read as *our* instructions.
+We show the model text written by strangers: emails, web pages. A stranger
+could write text that reads as *our* orders.
 
-If the wrapper were a fixed word, they could simply type it:
+If the wrap is a fixed word, they can type it:
 
 ```
   WITHOUT a random password
@@ -59,26 +59,27 @@ If the wrapper were a fixed word, they could simply type it:
         they would have to guess a random ID they have never seen
 ```
 
-Sending us one email is enough to try the attack, so the password is generated
-fresh — **for every call, with one deliberate exception.**
+One email is enough to start the attack, so the password is made new **for every
+call, with one exception.**
 
 ```
   a one-shot task  (a verdict, an extraction)   a fresh password EVERY call
   a multi-step agent run                        ONE password for the whole run
 ```
 
-An agent run's transcript is cumulative: something written at step 2 is still in
-the prompt at step 9, so a new password each turn would claim a boundary the
-older text never had. The exception is written down where the password is made,
-along with what it costs: the model is shown the marker and could put it in a
-tool argument, so a run whose tools reach an outsider can leak its own boundary.
+The transcript of an agent run only grows: text written at step 2 is still in the
+prompt at step 9. So a new password each turn would claim a boundary that the
+older text does not have. The exception is written down where the password is
+made, and so is what it costs. The model sees the marker and could put it in a
+tool input. So a run whose tools reach an outsider can hand its own boundary to
+that outsider.
 
-**What it promises is exact, and narrow:** a stranger cannot *close* the wrapper
-and escape. It says nothing about WHO wrote what is inside — it is a boundary,
-not an identity check. It does **not** promise that text inside the wrapper is harmless —
-see §4.
+**What it promises is narrow:** a stranger cannot *end* the wrap and get out.
+It says nothing about who wrote what is inside, because it is a boundary and
+checks no identity. It does **not** promise that text inside the wrap does no
+harm; see *One item per call, or several?*
 
-## The other protections we use
+## The other checks we use
 
 ```
   closed answer list   the model may only answer from a fixed list of
@@ -102,12 +103,12 @@ see §4.
 
 ---
 
-## 2. Prompt caching — what actually stops it
+## 2. Prompt caching: what really stops it
 
-AI providers MAY reuse part of a previous question if the new one *starts with
-exactly the same text*. "May" is the honest word: where it happens
-automatically it is best-effort, and one provider does not do it at all unless
-the request asks. The password limits how much of ours can ever qualify:
+AI providers *may* reuse part of an earlier question if the new one starts with
+the same text. Where that happens on its own, the provider does it only when it
+can, and one provider does it only when the request asks. The password limits how
+much of ours can count:
 
 ```
   [ the rules ][ password ][ the email ]
@@ -115,19 +116,20 @@ the request asks. The password limits how much of ours can ever qualify:
     reusable      everything from here differs
 ```
 
-So **where the password sits decides how much of ours could qualify.** That is a
-design choice, not a law — and one prompt had it in the worst possible place.
+So **where the password sits caps reuse.** It decides how much of ours could
+count. That is a design call, and one prompt put it in the place that costs the
+most.
 
-But where the password sits is not what decides whether anything is reused. A
-provider will not cache a prefix **below a minimum size**, and every prefix in
-this product except one is far under it. That floor, not the password, is why
-the measured reuse is nearly zero. *The floor*, below, has the measurement.
+Still, where the password sits does not decide whether anything is reused. A
+provider will not cache a prefix **below a floor size**, and every prefix in this
+product but one is much smaller than it. That floor is why the measured reuse is
+about 0. *The floor*, below, has the numbers.
 
 ### What we measured
 
-Over 7 days on staging — `margince-staging`, every task on its configured
-binding, which means Gemini on `gemini-3.1-flash-lite` for the background lanes
-and `gemini-3.5-flash` above them:
+Over 7 days on staging (`margince-staging`, every task on its set-up binding:
+Gemini on `gemini-3.1-flash-lite` for the background lanes and `gemini-3.5-flash`
+above them):
 
 ```
   input tokens sent ............. 10,700,530
@@ -135,59 +137,34 @@ and `gemini-3.5-flash` above them:
   caches we created ourselves ...          0   never
 ```
 
-Be careful what that 0.38% proves, because it is not what it looks like. **Every
-reused token in the window belongs to ONE task** — `growth_fit`, which ran four
-times at about 33,500 input tokens a call. No other task has ever recorded a
-single cached token. The figure moves between 0% and 5% depending on whether one
-of those four calls falls inside the window; it is not a trend and it does not
-respond to anything we have changed.
+That 0.38% does not prove much. **Every reused token in the window comes from
+one task**: `growth_fit`, with four calls at about 33,500 input tokens a call. No
+other task has recorded a single cached token yet. The number moves between 0%
+and 5%, by whether one of those four calls is inside the window. It
+does not show a change over time, and nothing we have changed moves it.
 
-"Caches we created: 0" is a separate fact with a separate cause: **the caching we
-would have to ask for, we never ask for.** Gemini has a `cachedContents` API and
-Anthropic has a per-block marker. Nothing in our code calls either one.
+"Caches we created: 0" is a separate fact with a separate reason: **the caching we
+would have to ask for, we never ask for.** Gemini has a `cachedContents` API, and
+Anthropic has a marker per block. Nothing in our code calls either one.
 
-### The one that was in the wrong place
+### Where `agent_loop` puts the boundary
 
-`agent_loop` — the agent runner — has by far the largest prompt in the product,
-ten times the next one. Its password was written **before** the tool catalog:
+`agent_loop`, the agent runner, puts the boundary sentence after the tool
+catalog, so the catalog is part of the prefix that can be cached. The catalog is
+the same for every run of one tool surface, which is the kind of text reuse
+exists for. Each site of `agent_loop` is one scheduled agent that lists only the
+tools it has. The size per site is in
+[ai-prompts.json](../reference/ai-prompts.json), and what each run's list costs is
+in [agent-tool-budget.md](../reference/agent-tool-budget.md). `agent_loop` made
+only **four calls in 7 days** on staging, so there are not enough calls there for
+a share to move.
 
-```
-  the marker in front               the marker last
-  [ rules        ~1 KB ]            [ rules                ]
-  [ MARKER             ]            [ tool catalog  ~97 KB ]
-  [ tool catalog ~97 KB]            [ MARKER               ]
-        ^                                  ^
-   ~1% reusable                       ~99% reusable
-```
+### The floor: why next to nothing is reused
 
-Moving one line took its reusable prefix from about 1% of the prompt to
-virtually all of it — the current figures are in
-[ai-prompts.json](../reference/ai-prompts.json), which is regenerated, rather
-than typed here where they would go stale. The
-catalog is identical for every run of a given tool surface, so it is exactly
-the kind of text reuse exists for. Nothing about the protection changed: the
-sentence still names the boundary that bounds the captured text, and the
-captured text still arrives after the whole instruction block either way.
-
-That move was right and it is not what the dashboard is waiting for. `agent_loop`
-ran **four times in seven days** on staging; there is no volume there for a
-percentage to move.
-
-**The ~97 KB catalog above was never a run's.** It was the certification
-window, which then offered every served tool. `agent_loop` is an engine, and
-each of its sites is one scheduled agent that lists only the tools it attaches —
-a few KB, not ninety — and the certification lane now drives exactly those
-windows. So the figures in this section, and the `agent_loop` row in the table
-below, describe a prompt no run sends; the current per-site sizes are in
-[ai-prompts.json](../reference/ai-prompts.json) and what each run's listing
-costs is in [agent-tool-budget.md](../reference/agent-tool-budget.md).
-
-### The floor — why almost nothing is reused
-
-A provider will not cache a prefix below a minimum number of tokens, and the two
-kinds of caching have **different** minimums. Neither is documented for the model
-we actually run, so both were measured against it directly — send the same prefix
-three times and read what the provider says it reused:
+A provider will not cache a prefix below a floor number of tokens, and the two
+kinds of caching have **different** floors. No docs give either one for the model
+we run, so we measured both against it directly. Send the same prefix three
+times, and read what the provider says it reused.
 
 ```
   gemini-3.1-flash-lite, prefix repeated 3x, cachedContentTokenCount on call 2
@@ -207,9 +184,9 @@ three times and read what the provider says it reused:
                                           min_total_token_count=1024"
 ```
 
-Now put every prompt in the product against those two floors. The rules block
-ahead of the password, counted by the provider's own tokenizer rather than
-estimated from bytes:
+Now put every prompt in the product against those two floors. Here is the rules
+block before the password, counted by the provider's own token counter, not
+worked out from bytes:
 
 ```
   clears ~6,100 — automatic reuse possible      1 of 46 sites
@@ -229,19 +206,18 @@ estimated from bytes:
       capture_classify                  298 tok    212 calls / 7d
 ```
 
-**The volume and the prefix size run opposite ways.** The tasks that run
-thousands of times a week carry a few hundred tokens of rules; the tasks with
-rules worth caching barely run. `capture_confidentiality_verdict` alone pays
-~1.99M tokens a week re-stating 878 tokens of rules (2,262 calls × 878), and it
-is 146 tokens under the lowest floor there is.
+**The busy tasks have the small prefixes.** The tasks that run over 1,000
+times a week carry under 1,000 tokens of rules. The tasks with rules long enough
+to cache next to never run. `capture_confidentiality_verdict` alone pays `~1.99M`
+tokens a week to state 878 tokens of rules again and again (2,262 calls × 878).
+It is 146 tokens under the smallest floor there is.
 
-Nothing about where the password sits changes any line of that table. The
-password costs us the last ~64 tokens of a prefix; the floor costs us the other
-thousand.
+Where the password sits changes no line of that table. The password costs us
+the last ~64 tokens of a prefix; the floor costs us the other 1,000.
 
 ### Reading the numbers on the reference page
 
-[ai-prompts.md](../reference/ai-prompts.md) prints the split for every site, and
+[ai-prompts.md](../reference/ai-prompts.md) shows the split for every site, and
 [ai-prompts.json](../reference/ai-prompts.json) carries it as data:
 
 ```
@@ -249,28 +225,27 @@ thousand.
                               . after boundary 0 B . cacheable 93%
 ```
 
-- **rules** — the job description. Identical every call, so reusable.
-- **boundary** — the sentence naming the password. ~280 bytes, different every
+- **rules**: what the job is. The same every call, so it can be reused.
+- **boundary**: the sentence naming the password. ~280 bytes, different every
   call. This is where reuse has to stop.
-- **after boundary** — anything written AFTER it. Dead weight for caching
-  however identical it is. **Should normally be 0.**
-- **cacheable** — rules as a share of the whole.
+- **after boundary**: anything written after it. Of no use for caching, even when
+  it is the same each time. **Should be 0 in the normal case.**
+- **cacheable**: rules as a share of the whole.
 
-The token figures on that page are estimated from bytes and run about 10% high:
+The token numbers on that page are worked out from bytes and run about 10% over:
 `capture_confidentiality_verdict` reads as ~962 there and counts 878 on the
-model. Estimated is the right thing for a generated page to carry — it needs no
-provider call — but when a number decides whether a prefix clears a floor, count
-it against the model.
+model. A generated page should carry the number worked out from bytes, because
+that needs no provider call. When a number decides whether a prefix is over a
+floor, count it against the model.
 
-A small prompt shows a low percentage simply because the 280-byte boundary
-sentence is a big slice of a 600-byte prompt. That is not a problem to fix;
-there is nothing there to save.
+A small prompt shows a small share only because the 280-byte boundary sentence is
+much of a 600-byte prompt. There is nothing there to save.
 
-Two sites still strand text after the boundary — `cold_start/company_message`
-(768 B) and `weekly_review/narrative` (232 B). Both were left alone on purpose:
-moving a line of prompt text restamps that task's certification records and
-costs a re-certification run, which under a kilobyte does not repay. The column
-is there so whoever comes next can see them and judge for themselves.
+Two sites still leave text after the boundary: `cold_start/company_message`
+(768 B) and `weekly_review/narrative` (232 B). Moving a line of prompt text
+changes that task's certification records and costs a new certification run.
+Under 1 kB, that does not pay for itself. The column shows them so the next
+reader can judge.
 
 ### Where that leaves us
 
@@ -289,55 +264,53 @@ is there so whoever comes next can see them and judge for themselves.
                           actually runs.
 ```
 
-**"Caching cannot work here" was the wrong conclusion, reached for too weak a
-reason.** The accurate statement: the password costs a prefix its last ~64
-tokens, and that is not what stops reuse — a provider floor of 1,024 tokens
-stops it, and 38 of our 46 prompts are under it. Moving the password is free
-and worth doing; it will not show up in the dashboard, and expecting it to lead
-three sessions to re-measure the same thing.
+The boundary costs a prefix about 64 tokens. The provider floor of 1,024 tokens
+is what stops reuse, and 38 of 46 prompts are below it. Moving the password is
+free and right to do, but it will not show up on the dashboard.
 
-> **Careful: two different things are called "cache".** One dashboard number
-> counts answers we served from our own memory without calling the AI at all.
-> A different number counts text the provider reused. They are unrelated.
+> **Watch out: two different things are called "cache".** One dashboard number
+> counts answers we served from our own store without calling the AI at all.
+> A different number counts text the provider reused. The two have nothing to
+> do with each other.
 
-## 3. What the repeated rules cost
+## 3. What stating the rules each time costs
 
-For a typical verdict task:
+For a normal verdict task:
 
 ```
   the rules      953 units   #######################   58%
   the item       678 units   ################          42%
 ```
 
-Those figures are the **confidentiality check's** — the task that decides
-whether a thread stays private. Its rulebook lists seven kinds of thread.
+Those numbers are the **confidentiality check's**: the task that decides
+whether a thread stays private. Its rules list 7 kinds of thread.
 
-**This is not waste.** The model cannot sort mail into seven kinds without being
-told what the seven kinds are, and every paragraph in that block is there
-because something was once filed wrongly without it.
+The model cannot put mail into 7 kinds unless the prompt says what the 7 kinds are.
+Every part of that block is there because the model filed something wrong
+without it. This is the price of stating the job. We pay it once per call,
+because nothing keeps it from one call to the next.
 
-It is the price of stating the job. We pay it once per call, because nothing
-makes it stick between calls.
-
-The only way to spread that cost is to ask about several items in one call —
-which is the next section, and the reason this page exists.
+The only way to share that cost is to ask about several items in one call, which
+is the next section.
 
 ---
 
 ## 4. One item per call, or several?
 
-Plenty of our tasks do ask about several things at once. Classifying messages
-handles ten per call. Six other tasks put several items in one prompt.
+Many of our tasks do ask about several things at once. `capture_classify` handles
+10 messages per call. 6 other tasks put several items in one prompt.
 
-**Two tasks refuse, deliberately.** Their reason, in their own words:
+**Two tasks refuse.** Their reason, in their own words:
 
-> "The only text in a prompt is the text of the sender being judged, so a
-> hostile message has **nobody else to speak for**... Putting several mutually
-> untrusted senders in one call makes both of those reachable, and **no
-> validator can tell a dictated answer from a judged one** when the victim's id
-> was legitimately in the request."
+```text
+"The only text in a prompt is the text of the sender being judged, so a
+hostile message has nobody else to speak for... Putting several mutually
+untrusted senders in one call makes both of those reachable, and no
+validator can tell a dictated answer from a judged one when the victim's id
+was legitimately in the request."
+```
 
-### The attack the password does NOT stop
+### The attack the password does not stop
 
 ```
   ESCAPE - blocked                    INFLUENCE - not blocked
@@ -353,14 +326,13 @@ handles ten per call. Six other tasks put several items in one prompt.
                                       treated as data. Data can still argue.
 ```
 
-The password marks **where the data region starts and stops**. It does not
-authenticate anybody: the sender's name and address are themselves
-sender-supplied, and nothing here checks them. What it guarantees is only that
-text inside the region cannot escape it.
+The password marks **where the data starts and stops**. It does not prove who
+someone is: the name and address of the sender come from the sender too, and nothing
+here checks them. It promises only that text inside the wrap cannot get out of it.
 
-So it cannot stop text *about the neighbours* from swaying the answer — and no
-check can catch that, because the neighbour's ID was legitimately in the
-question.
+So it cannot stop text *about the other items* from moving the answer. No check
+can see that either, because the ID of the other item is in the question for a
+good reason.
 
 ```
   escape the wrapper .............. BLOCKED  (random password)
@@ -391,14 +363,13 @@ Ask one question:
                                                forget.
 ```
 
-The second case pays the repeated rules on purpose. That is a considered trade,
-not an oversight — one of those engines says so outright: *"the right price for
-a decision that creates or destroys records."*
+The second case pays for the rules each time. One of those engines says so
+itself: *"the right price for a decision that creates or destroys records."*
 
-### The clever compromise that does not work
+### The plan that does not work
 
-The obvious idea: batch everything, then re-ask the dangerous answers one at a
-time. We measured it on the confidentiality check:
+The first plan most of us think of: batch everything, then ask again, one at a
+time, about the answers that can do harm. We measured it on the confidentiality check:
 
 ```
   emails whose answer OPENS them to colleagues    86.3%   (measured)
@@ -408,50 +379,48 @@ time. We measured it on the confidentiality check:
   batch + re-ask the openers     2,276 units per email    ~40% WORSE
 ```
 
-It re-asks the *common* case. The idea only works where the dangerous answer is
-**rare** — and here the whole point of the task is to open ordinary mail, so the
-dangerous answer is the normal one.
+It asks again about the *normal* case. The plan only works where the answer that
+can do harm comes in **a small share** of cases. Here the task exists to open
+normal mail, so the answer that can do harm is the normal one.
 
-**Before proposing this compromise anywhere: measure how often the dangerous
-answer actually happens.** One query. It settles the question outright.
+**Measure how many times that answer comes** before you propose this plan. One
+query answers it.
 
 ### Where our tasks stand today
 
-[ai-prompts.md](../reference/ai-prompts.md) publishes, per site, **what one real
-call carried** — how many separately fenced items, and whether the site's own
+[ai-prompts.md](../reference/ai-prompts.md) shows **what one real call carried**
+for each site. That is how many fenced items it held, and whether the site's own
 code declares one item per call.
 
 ```
-   2   ONE per call, declared in code
+   2   one per call, declared in code
   12   several fenced items in the call we measured
   31   one fenced item
 ```
 
-**It does not tell you whether a prompt holds several AUTHORS**, and that is the
-question that decides safety. One fenced region can hold a whole thread two
-parties wrote; several regions can all be one party's. An earlier version of
-that page tried to publish the author question as a per-site verdict and got it
-wrong twice in opposite directions — so it now publishes only what a request
-shows, and leaves the judgement to the test above.
+**It does not count who wrote the text**, and that is the question that decides
+whether it is safe. One fenced part can hold a whole thread that two parties wrote; several
+parts can all come from one party. The page shows only what a request shows, and
+leaves the rest to the test above.
 
-The two declared ones are the counterparty verdict (creates and deletes contact
-records) and the confidentiality verdict (decides who may read somebody's mail).
-Each says so in its own code, and the page checks that sentence still exists
-before repeating the claim.
+The two declared ones are the counterparty verdict (it creates and deletes contact
+records) and the confidentiality verdict (it decides who may read someone's mail).
+Each says so in its own code, and the page checks that the sentence still exists
+before it says the claim again.
 
-Worth knowing when you apply the test: the hazard is not only about strangers.
-`signal_extract` reads one email thread with each message separately fenced —
-the parties are the customer and our side, not unrelated strangers — and its own
-comment still names the risk: *"none can reach another sender's mail in the same
-thread to put words in their mouth."* Two authors is enough.
+The risk is not only about strangers. `signal_extract` reads one email thread,
+with each message in its own fence. The parties are the customer and our side,
+not strangers. Its own comment still names the risk:
+`none can reach another sender's mail in the same thread to put words in their mouth.`
+Two writers are enough.
 
-If a consequential task ever must carry several authors, `propose_roles` is the
-shape to copy: every claim must quote the message it came from, AND that
-message's author must be whoever the claim is about.
+If a task with real effects must carry text from several writers, copy the
+shape of `propose_roles`. Every claim must quote, word for word, the message it comes from.
+The writer of that message must be the one the claim is about.
 
-### If a task must batch untrusted text anyway
+### If a task must still batch untrusted text
 
-Group by **who wrote it**, not by convenience:
+Group by **who wrote it**:
 
 ```
   risky      [ stranger A ][ stranger B ][ stranger C ]   can argue about
@@ -461,10 +430,10 @@ Group by **who wrote it**, not by convenience:
                                                           about themselves
 ```
 
-This reduces the risk; it does not remove it. The sender address comes from the
-email header, which the sender chooses — so one attacker can group themselves on
-purpose. But it does take *mutually untrusted strangers* out of one prompt,
-which is exactly what the objection is about.
+This makes the risk smaller, but does not remove it. The sender address comes from
+the email header, which the sender chooses, so one attacker can put all their
+texts in one group. It does take strangers who do not trust each other out of one prompt,
+and that is what the reason to refuse is about.
 
 ---
 
@@ -477,8 +446,8 @@ which is exactly what the objection is about.
   ONE PER CALL    is the only thing that removes the neighbour entirely
 ```
 
-The 58% we spend re-stating the rules is what that isolation costs. It buys
-something specific.
+The 58% that goes to stating the rules again and again is the cost of keeping
+each item alone.
 
 ---
 
@@ -486,29 +455,30 @@ something specific.
 
 | what | where |
 |---|---|
-| The password (fence) | `backend/internal/shared/kernel/promptfence` — `New`, `Rule`, `Wrap`, `WrapAttr` |
-| Its exact promise | the package doc comment in `promptfence.go` |
+| The password (fence) | `backend/internal/shared/kernel/promptfence`: `New`, `Rule`, `Wrap`, `WrapAttr` |
+| Its promise | the package doc comment in `promptfence.go` |
 | One boundary per prompt | `backend/internal/compose/companycontextprompt.go`, `contextFence` |
-| Closed answer list | e.g. `confidentialitySchema` in `backend/internal/compose/confidentialityverdictask.go` |
-| Multi-item correlation | `backend/internal/compose/batchfidelity.go`, `checkBatchFidelity` |
+| Closed answer list | such as `confidentialitySchema` in `backend/internal/compose/confidentialityverdictask.go` |
+| Matching answers to items | `backend/internal/compose/batchfidelity.go`, `checkBatchFidelity` |
 | A task that batches | `backend/internal/compose/captureclassify.go`, `classifyBatchSize` |
 | A task that refuses, and why | `backend/internal/compose/captureverdict.go`, `judgeClaimed` doc comment |
-| The other refusal | `backend/internal/compose/confidentialityverdictask.go`, `confidentialityRequest` doc comment |
+| The other task that refuses | `backend/internal/compose/confidentialityverdictask.go`, `confidentialityRequest` doc comment |
 | Provider cache tokens | metric `margince_ai_tokens_total{class="cached_read"}` |
-| Our own result cache (different thing) | metric `margince_ai_call_cache_hits_total` |
-| Every prompt, as sent | [ai-prompts.md](../reference/ai-prompts.md) — generated |
-| Routing, metering, tracing | [ai-runtime.md](ai-runtime.md) |
+| Our own answer cache (a different thing) | metric `margince_ai_call_cache_hits_total` |
+| Every prompt, as sent | [ai-prompts.md](../reference/ai-prompts.md) (generated) |
+| Routes, token counts, traces | [ai-runtime.md](ai-runtime.md) |
 | What the company block carries | [company-context.md](company-context.md) |
 
-Measurements on this page were taken from staging in September 2026 over a 7-day
-window: the 0.38% cache figure and the per-task table in §2.2, and the 86.3%
-open rate from `capture_thread_verdict`. All are worth re-taking before they are
-relied on again.
+We measured the numbers on this page on staging in September 2026, over a 7-day
+window. They are the 0.38% cache number, the table per task in *The floor*, and
+the 86.3% share of opened emails from `capture_confidentiality_verdict`. Measure
+them again before you trust them again.
 
-To re-take them: the cache share is `margince_ai_tokens_total{class="cached_read"}`
-against `class=~"prompt|cached_read"` on the AI router dashboard, and the
-per-task split is the same metric summed `by (task)` — ask that question first,
-because a share that looks like a trend has twice turned out to be one task's
-handful of calls. The floors are not published per model; get them from the
-model itself by repeating one prefix and reading `cachedContentTokenCount`, and
-from the `cachedContents` refusal, which names the minimum it wanted.
+To measure them again: the cache share is `margince_ai_tokens_total{class="cached_read"}`
+against `class=~"prompt|cached_read"` on the AI router dashboard. The split per
+task is the same metric added up `by (task)`. Ask for the split per task first. A share that reads
+as a real change can be a small number of calls from one task.
+
+The floors are not published per model. Get them from the model itself by
+sending one prefix again and again and reading `cachedContentTokenCount`. Also
+read the `cachedContents` refusal, which names the floor it wanted.

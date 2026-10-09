@@ -69,6 +69,7 @@ func TestWriteStagesOneCompleteEnvelope(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Grace Hopper",
 		"emails":    []AnyMap{{"email": "grace@example.com"}},
 	}, nil, &contact); status != http.StatusCreated {

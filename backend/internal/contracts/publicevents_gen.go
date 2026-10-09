@@ -452,6 +452,9 @@ const (
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
+	AttachmentArchived                    SubscribableEventType = "attachment.archived"
+	AttachmentCreated                     SubscribableEventType = "attachment.created"
+	AttachmentUpdated                     SubscribableEventType = "attachment.updated"
 	AuditAppended                         SubscribableEventType = "audit.appended"
 	ColdstartAccepted                     SubscribableEventType = "coldstart.accepted"
 	ColdstartReadBackProposed             SubscribableEventType = "coldstart.read_back_proposed"
@@ -465,6 +468,8 @@ const (
 	CompanyRestored                       SubscribableEventType = "company.restored"
 	CompanyUpdated                        SubscribableEventType = "company.updated"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
+	ConsentOverrideLifted                 SubscribableEventType = "consent.override_lifted"
+	ConsentOverrideRecorded               SubscribableEventType = "consent.override_recorded"
 	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
 	ConsentSuppressionLifted              SubscribableEventType = "consent.suppression_lifted"
 	ContactArchived                       SubscribableEventType = "contact.archived"
@@ -590,6 +595,12 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case ApprovalRequested:
 		return true
+	case AttachmentArchived:
+		return true
+	case AttachmentCreated:
+		return true
+	case AttachmentUpdated:
+		return true
 	case AuditAppended:
 		return true
 	case ColdstartAccepted:
@@ -615,6 +626,10 @@ func (e SubscribableEventType) Valid() bool {
 	case CompanyUpdated:
 		return true
 	case ConsentChanged:
+		return true
+	case ConsentOverrideLifted:
+		return true
+	case ConsentOverrideRecorded:
 		return true
 	case ConsentSuppressed:
 		return true
@@ -1001,6 +1016,56 @@ type PublicEventApprovalRequested struct {
 	TargetEntityType string `json:"target_entity_type"`
 }
 
+// PublicEventAttachmentArchived Payload for attachment.archived. A file was archived off a record.
+// Archiving is this subsystem's delete: the row and the stored bytes stay, and the file leaves every live listing. It carries the same shape as the other two so a subscriber routes all three the same way, and the same omissions for the same reasons.
+type PublicEventAttachmentArchived struct {
+	// ByteSize The stored size.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hung off.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hung off.
+	ParentType string `json:"parent_type"`
+}
+
+// PublicEventAttachmentCreated Payload for attachment.created. A file was uploaded against a record.
+// The attachment's own id is the envelope's `entity.id` and the uploader is its `actor`, so neither is repeated here.
+// No filename, and no content. A filename is text a stranger or a rep typed, and it can be the sensitive part by itself: "redundancy letter Weber.pdf" states a fact about a named human to every subscriber of the workspace. A subscriber that needs the name reads the attachment back through the API under its own reader's permissions, which is the rule the envelope follows for every record body.
+// An attachment that arrives with captured mail emits no event of its own. The mail's own activity.captured covers it, and a second event for one arrival would make one delivery look like two.
+type PublicEventAttachmentCreated struct {
+	// ByteSize The size counted while storing the bytes, not the length the upload declared. Null on a row stored before the column was counted, because the column is nullable and this mirrors it rather than inventing a zero.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hangs off. A subscriber routes on this rather than on the attachment.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hangs off. That record is also where the authority to change the file comes from (activity | contact | company | deal | lead | contract).
+	ParentType string `json:"parent_type"`
+}
+
+// PublicEventAttachmentUpdated Payload for attachment.updated. A file's metadata was edited: its category, title, document state, pinning, or which document it supersedes.
+// It carries which file changed and not what it now says. The omission is the one attachment.created makes: a title is typed text just as a filename is, so a delta carrying the new title would publish what the filename rule withholds. A subscriber that needs the current metadata reads the attachment back under its own permissions.
+type PublicEventAttachmentUpdated struct {
+	// ByteSize The stored size. A metadata edit does not change it.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none. A metadata edit does not change it.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hangs off.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hangs off.
+	ParentType string `json:"parent_type"`
+}
+
 // PublicEventAuditAppended Payload for audit.appended — not currently delivered: there is no emit site for this type, and none is planned for V1. It exists so the §5 catalog (events.Types()) is completely covered by a payload schema (the whole-catalog coverage gate), never carrying a subscribable type with no contract. An empty payload by design — the audit ledger row it would announce is workspace-level (its subject is resolved back under the receiver's own scope), so no record detail rides the event.
 type PublicEventAuditAppended struct{}
 
@@ -1136,6 +1201,36 @@ type PublicEventConsentChanged struct {
 
 	// PurposeId The consent purpose this state change applies to.
 	PurposeId openapi_types.UUID `json:"purpose_id"`
+}
+
+// PublicEventConsentOverrideLifted Payload for consent.override_lifted — somebody with the authority to do so took back ONE standing override (consent/override.go's RevokeOverride).
+// That is not the same as "the refusal now applies again for every category" — a contact can carry more than one override, one per category, and revoking one says nothing about the others. A consumer wanting the categories still vouched for reads the contact's live overrides rather than inferring them from this event.
+// ONE PER ROW TAKEN BACK, and the entity says which. A merge COPIES a vouch onto the survivor under a new id and announces the copy with its own consent.override_recorded on the survivor's stream; revoking the original takes back every copy, and each gets its own lifted event on the stream that heard it recorded. A consumer is told about the id it is holding rather than about one it was never given.
+// It carries BOTH levels: the one the override was recorded at and the one that revoked it, the same pairing consent.suppression_lifted carries and for the same reason — an auditor needs to see that the second was allowed to take back the first without joining a row that no longer says so. Allowed, not outranked: a vouch is the one decision an admin may take back from a peer admin, because admin is the top human authority and nothing higher exists to reach an admin-recorded override.
+// It never carries the category the override covered or the reason either party gave. The category is what `override_id` lets a reader look up on the still-standing audit trail; the reason belongs to the seats who wrote it, and an event reaches readers neither explanation was given to.
+type PublicEventConsentOverrideLifted struct {
+	// OverrideId Which override was revoked. Without it a consumer holding several overrides for one contact cannot tell which one this event describes.
+	OverrideId openapi_types.UUID `json:"override_id"`
+
+	// RecordedAtLevel The authority the override was originally recorded at (user | admin). Paired with revoked_by_level so an auditor can see the second was allowed to take back the first without joining a row that no longer says so.
+	RecordedAtLevel string `json:"recorded_at_level"`
+
+	// RevokedByLevel The authority that revoked it (user | admin).
+	RevokedByLevel string `json:"revoked_by_level"`
+}
+
+// PublicEventConsentOverrideRecorded Payload for consent.override_recorded — a rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). Its own event rather than a consent.changed: an override is not consent and not a lawful basis, it outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row.
+// The subject is a contact and only a contact: the write door names that object as a literal, so this is a static entity whose delivery scope the fan-out gate proves mechanically rather than by hand-ratification.
+// It names WHAT category was vouched for and at WHICH authority, never the reason the rep gave: that explanation belongs to the audit trail a rep reviewing the contact reads, not to every subscriber the event reaches.
+type PublicEventConsentOverrideRecorded struct {
+	// Category Which category of send this vouch covers. The engine resolves every send to exactly one category, and the override applies to that one only.
+	Category string `json:"category"`
+
+	// DecidedByLevel Whose decision it is (user | admin) — always the recording seat's own authority, never a value the request body could name.
+	DecidedByLevel string `json:"decided_by_level"`
+
+	// OverrideId Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke), and a contact can hold several live vouches at once — one per category, and after a merge more than one for a single category — so a consumer with no id cannot say which of them any later consent.override_lifted describes.
+	OverrideId openapi_types.UUID `json:"override_id"`
 }
 
 // PublicEventConsentSuppressed Payload for consent.suppressed — somebody recorded that we may not write to a subject (consent/suppress.go's Suppress). Its own event rather than a consent.changed, because a suppression is not the absence of consent: it outranks a grant, it does not expire on its own, and a later re-grant must not silently erase it. A consumer that folded the two would resume mail the subject asked us to stop.
@@ -2487,6 +2582,18 @@ func (PublicEventApprovalRequested) EventType() string { return "approval.reques
 
 func (PublicEventApprovalRequested) EntityType() string { return "approval" }
 
+func (PublicEventAttachmentArchived) EventType() string { return "attachment.archived" }
+
+func (PublicEventAttachmentArchived) EntityType() string { return "attachment" }
+
+func (PublicEventAttachmentCreated) EventType() string { return "attachment.created" }
+
+func (PublicEventAttachmentCreated) EntityType() string { return "attachment" }
+
+func (PublicEventAttachmentUpdated) EventType() string { return "attachment.updated" }
+
+func (PublicEventAttachmentUpdated) EntityType() string { return "attachment" }
+
 func (PublicEventAuditAppended) EventType() string { return "audit.appended" }
 
 func (PublicEventAuditAppended) EntityType() string { return "audit" }
@@ -2538,6 +2645,14 @@ func (PublicEventCompanyUpdated) EntityType() string { return "company" }
 func (PublicEventConsentChanged) EventType() string { return "consent.changed" }
 
 func (PublicEventConsentChanged) EntityType() string { return "dynamic" }
+
+func (PublicEventConsentOverrideLifted) EventType() string { return "consent.override_lifted" }
+
+func (PublicEventConsentOverrideLifted) EntityType() string { return "contact" }
+
+func (PublicEventConsentOverrideRecorded) EventType() string { return "consent.override_recorded" }
+
+func (PublicEventConsentOverrideRecorded) EntityType() string { return "contact" }
 
 func (PublicEventConsentSuppressed) EventType() string { return "consent.suppressed" }
 
@@ -2993,6 +3108,9 @@ var PublicEventVersions = map[string]int{
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.requested":                        1,
+	"attachment.archived":                       1,
+	"attachment.created":                        1,
+	"attachment.updated":                        1,
 	"audit.appended":                            1,
 	"coldstart.accepted":                        1,
 	"coldstart.read_back_proposed":              1,
@@ -3006,6 +3124,8 @@ var PublicEventVersions = map[string]int{
 	"company.restored":                          1,
 	"company.updated":                           1,
 	"consent.changed":                           1,
+	"consent.override_lifted":                   1,
+	"consent.override_recorded":                 1,
 	"consent.suppressed":                        1,
 	"consent.suppression_lifted":                1,
 	"contact.archived":                          1,

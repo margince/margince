@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -86,6 +87,10 @@ func backoffDelay(consecutiveFailures int) time.Duration {
 func (r *Registry) recordSyncSuccess(ctx context.Context, connectionID ids.UUID) error {
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		now := r.now()
+		interval, err := settings.ApplyTx(ctx, tx, MailSyncIntervalSeconds)
+		if err != nil {
+			return err
+		}
 		// The interval is a DELAY the database applies to its own clock; the
 		// two last_*_at columns record when this process observed the sync and
 		// stay on its clock, which is the one that observed it.
@@ -103,7 +108,7 @@ func (r *Registry) recordSyncSuccess(ctx context.Context, connectionID ids.UUID)
 			  -- One success ends the streak, so the next failure starts a new
 			  -- one from its own instant rather than continuing this one.
 			  failing_since = NULL`,
-			connectionID, r.syncInterval.Seconds(), now); err != nil {
+			connectionID, interval, now); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `

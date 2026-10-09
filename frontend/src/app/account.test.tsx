@@ -294,7 +294,12 @@ describe("AccountMenu", () => {
     const page = (dialogOpen: boolean) => (
       <>
         <AccountMenu />
-        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+        <Modal
+          open={dialogOpen}
+          onClose={onDialogClose}
+          labelledBy="edit"
+          intent="form"
+        >
           <Heading size="large" id="edit">
             Edit deal
           </Heading>

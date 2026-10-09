@@ -5,9 +5,9 @@
 
 package gates
 
-// The LIVENESS obligation as a fitness function: a write that targets one
-// standing row of a table which can be archived either REFUSES an archived row,
-// DECLARES that it deliberately reaches one, or is ratified with a reason.
+// A write that targets one standing row of a table which can be archived either
+// refuses an archived row, declares that it reaches one by design, or is
+// ratified with a reason.
 //
 // It is the fourth of the four obligations a write in this tree owes, and it was
 // the only one with no gate. The other three each have theirs — tableownership
@@ -149,7 +149,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// THE RETIREMENT TRANSITION ITSELF. Each is idempotent by construction: the
 	// write sets the retired state absolutely rather than deriving it from a
 	// pre-read, so a second attempt converges on the same row instead of racing.
-	"internal/modules/activities:ArchiveAttachment":   "the archive transition for a filed document. Refusing an archived row would turn a repeated archive into an error where it is the same answer, and the parent's authority is probed above through resolveAttachmentParent",
 	"internal/modules/activities:archiveAbsorbedEcho": "folding a duplicate capture into its survivor, which takes the echo off the timeline. archived_at is coalesced so a row a noise disposition already hid keeps the instant its undo window is measured from — a filter here would refuse exactly that row",
 	"internal/modules/capture:withdrawConnection":     "disconnecting a mailbox, and the retry that re-drives the cleanup a previous call left unfinished. The already-withdrawn arm is the one that must reach a retired row, and it is what makes the withdrawal recoverable rather than half-done",
 	"internal/modules/customfields:Retire":            "the catalog field's own retirement, which moves `status` and not archived_at; lockField holds the row from before the decision read, and a repeat converges on the same status",

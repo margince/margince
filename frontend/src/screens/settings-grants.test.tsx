@@ -82,7 +82,10 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("company")));
+    // System health too: its schedule cards are this same editor's.
+    await waitFor(() =>
+      expect(offeredPages()).toEqual(floorPlus("company", "system-health")),
+    );
   });
 
   it("opens Seats & license for a lone license read", async () => {

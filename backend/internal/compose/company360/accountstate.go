@@ -12,80 +12,38 @@ package company360
 // date that hid which side it belonged to.
 
 import (
-	"errors"
-	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// readLastTouch answers which direction went last, and when — the pair that
-// replaced the header's 0-100 score (AC-company-2, ADR-0079 arc).
-//
-// Two timestamps rather than one "last touch", because which side wrote last
-// IS the question: an account we mailed a fortnight ago with no reply and one
-// that wrote to us this morning have the same last-touch date and opposite
-// meanings.
-//
-// It walks the same three links the timeline does (activities.CompanyLinkedActivityExists),
-// so the header can never disagree with the list under it, and
-// it carries the caller's activity row scope, so a rep sees the last message
-// THEY may read rather than the account's true last message.
+// readLastTouch is LastTouchFor over a set of one, so the header and a queue
+// row naming this account read the same statement.
 func (a *assembly) readLastTouch() error {
-	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
-		return err
-	}
-	args := []any{a.companyID.UUID}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	scope, err := auth.ActivityDiscoverClause(a.ctx, "a", arg)
+	touched, err := LastTouchFor(a.ctx, a.tx, []ids.CompanyID{a.companyID}, a.now, a.opts)
 	if err != nil {
 		return err
 	}
-	where := "a.archived_at IS NULL AND " + activities.CompanyLinkedActivityExists(1)
-	if scope != "" {
-		where += " AND " + scope
-	}
-	where += a.opts.projectScope(arg)
-	// Two ordered LIMIT-1 arms in ONE round trip, rather than two FILTERed
-	// max() aggregates. An aggregate has to see every qualifying row before it
-	// can answer; each arm here stops at the first, so the cost is bounded by
-	// how far back the newest message of that direction is rather than by the
-	// account's whole history.
-	rows, err := a.tx.Query(a.ctx, `
-		(SELECT 'inbound' AS direction, a.occurred_at FROM activity a
-		  WHERE `+where+` AND a.direction = 'inbound'
-		  ORDER BY a.occurred_at DESC LIMIT 1)
-		UNION ALL
-		(SELECT 'outbound', a.occurred_at FROM activity a
-		  WHERE `+where+` AND a.direction = 'outbound'
-		  ORDER BY a.occurred_at DESC LIMIT 1)`, args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var direction string
-		var at time.Time
-		if err := rows.Scan(&direction, &at); err != nil {
-			return err
+	// An absent direction is how the null reaches the wire: nothing of that
+	// direction was ever captured.
+	touch := touched[a.companyID]
+	a.out.LastInboundAt = touch.InboundAt
+	a.out.LastOutboundAt = touch.OutboundAt
+	if c := touch.Contact; c != nil {
+		a.out.LastContact = &crmcontracts.Company360LastContact{
+			ActivityId: openapi_types.UUID(c.ActivityID.UUID),
+			At:         c.At,
+			Kind:       crmcontracts.Company360LastContactKind(c.Kind),
 		}
-		// A direction with no message returns no row at all, which is how the
-		// null reaches the wire: nothing of that direction was ever captured.
-		when := at
-		if direction == "inbound" {
-			a.out.LastInboundAt = &when
-			continue
-		}
-		a.out.LastOutboundAt = &when
 	}
-	return rows.Err()
+	return nil
 }
 
 // readStateStrip is the three readings the overview leads with (AC-company-13).
@@ -258,146 +216,15 @@ func (a *assembly) readHealth() error {
 		health.OpenCommitments = &open
 	}
 
-	lastMeeting, err := a.lastMeetingAt()
+	lastMeeting, nextMeeting, err := a.readableMeetings()
 	if err != nil {
 		return err
 	}
 	health.LastMeetingAt = lastMeeting
 
-	rateHealthDimensions(&health, a.out.StateStrip)
+	touch := relstrength.ReadInTouch(a.out.LastInboundAt, lastMeeting, nextMeeting, a.now)
+	rateHealthDimensions(&health, a.out.StateStrip, touch)
 
 	a.out.Health = &health
 	return nil
-}
-
-// rateHealthDimensions turns the parts above into the named dimensions the card
-// draws (PO-AC-N-10..12).
-//
-// TWO of the three, deliberately. Relationship and commercial are readable from
-// this assembly; PAYMENT is not — the finance mirror is another module's, and a
-// module never imports a sibling. The surface composes it from the finance read
-// it already makes, which is also why `overall` is computed there rather than
-// here: a verdict that ignored payment would be the exact "strong relationship
-// hides a payment problem" failure the worst-of rule exists to prevent.
-//
-// A dimension that cannot be read is ABSENT rather than rated. Absence is a
-// fact about the reading; a rating is a claim about the account.
-func rateHealthDimensions(
-	health *crmcontracts.Company360Health,
-	strip *crmcontracts.Company360StateStrip,
-) {
-	// Relationship: are both sides talking? An account nobody has ever reached
-	// is not "at risk" — it is unstarted, and rating it would put a verdict on
-	// a relationship that has not begun.
-	if health.ActiveContacts != nil && *health.ActiveContacts > 0 {
-		switch {
-		case health.DaysSinceLastInbound == nil:
-			health.Relationship = &crmcontracts.HealthDimension{
-				Rating: crmcontracts.HealthDimensionRatingAtRisk,
-				Reason: "They have never written to us.",
-			}
-		case *health.DaysSinceLastInbound > healthQuietDays:
-			health.Relationship = &crmcontracts.HealthDimension{
-				Rating: crmcontracts.HealthDimensionRatingAtRisk,
-				Reason: fmt.Sprintf("No reply from them for %d days.", *health.DaysSinceLastInbound),
-			}
-		case health.SingleThreaded != nil && *health.SingleThreaded:
-			health.Relationship = &crmcontracts.HealthDimension{
-				Rating: crmcontracts.HealthDimensionRatingGood,
-				Reason: "In contact, but one contact carries the whole account.",
-			}
-		default:
-			health.Relationship = &crmcontracts.HealthDimension{
-				Rating: crmcontracts.HealthDimensionRatingStrong,
-				Reason: fmt.Sprintf("%d contacts here are in contact with us.", *health.ActiveContacts),
-			}
-		}
-	}
-
-	// Commercial: is work moving? Null commercial means the caller has no deal
-	// grant, which is a fact about the reader rather than about the account.
-	//
-	// An account with NOTHING open is not rated at all. "No open deal" is not a
-	// risk — a customer under contract who is not being sold to right now is in
-	// the ordinary state of a customer — and rating it at risk put every such
-	// account under a red verdict it had done nothing to earn, then dragged the
-	// overall standing down with it through the worst-of rule. There is no
-	// commercial verdict to give on a pipeline that does not exist, and an
-	// absent dimension is exactly how this reading says so.
-	if strip != nil && strip.Commercial != nil && strip.Commercial.OpenCount > 0 {
-		open := strip.Commercial.OpenCount
-		stalled := strip.Commercial.StalledCount
-		switch {
-		case stalled >= open:
-			health.Commercial = &crmcontracts.HealthDimension{
-				Rating: crmcontracts.HealthDimensionRatingAtRisk,
-				Reason: fmt.Sprintf("All %d open deals have stalled.", open),
-			}
-		case stalled > 0:
-			health.Commercial = &crmcontracts.HealthDimension{
-				Rating: crmcontracts.HealthDimensionRatingGood,
-				Reason: fmt.Sprintf("%d of %d open deals have stalled.", stalled, open),
-			}
-		default:
-			health.Commercial = &crmcontracts.HealthDimension{
-				Rating: crmcontracts.HealthDimensionRatingStrong,
-				Reason: fmt.Sprintf("%d open deals, none stalled.", open),
-			}
-		}
-	}
-}
-
-// healthQuietDays is how long without a word from them before the relationship
-// reads as at risk. Named rather than inlined so the threshold is one number a
-// reader can find and argue with.
-const healthQuietDays = 30
-
-// lastMeetingAt is when this account was last actually IN a room with us —
-// the most recent meeting that has already happened.
-//
-// A different question from the next-meeting section, which looks forward and
-// excludes cancellations because a rep must not prepare for a meeting that will
-// not happen. Looking back, a canceled row is simply not a meeting that took
-// place, so it is excluded for the same reason from the other direction.
-//
-// Nil is "we have no meeting on record", which is a fact about the reading
-// rather than a claim that none happened — the caller may hold no scope over
-// the activity that would prove otherwise.
-func (a *assembly) lastMeetingAt() (*time.Time, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	companyPos := arg(a.companyID.UUID)
-	nowPos := arg(a.now)
-	activityScope, err := auth.ActivityDiscoverClause(a.ctx, "a", arg)
-	if err != nil {
-		return nil, err
-	}
-	if activityScope == "" {
-		activityScope = scopeAll
-	}
-	// The body of work, on the same terms as every other activity read on this
-	// page. A page narrowed to one project that dated its health from another
-	// project's meeting would put the right timeline under a number computed
-	// somewhere else.
-	within := a.opts.projectScope(arg)
-	var occurred *time.Time
-	err = a.tx.QueryRow(a.ctx, fmt.Sprintf(`
-		SELECT a.occurred_at
-		  FROM activity a
-		 WHERE a.kind = 'meeting' AND a.archived_at IS NULL
-		   AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
-		   AND a.occurred_at <= $%[3]d
-		   AND %[1]s AND %[2]s`+within+`
-		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT 1`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos), nowPos),
-		args...,
-	).Scan(&occurred)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("read the last meeting: %w", err)
-	}
-	return occurred, nil
 }

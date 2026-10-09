@@ -58,9 +58,10 @@ func (s *Service) detached(ctx context.Context) context.Context {
 // unavailable source rather than as its own failure. Every producer of a
 // failed WorklistSourceUnavailable reads through it, because a lane that
 // errors on the shared snapshot without it aborts every read that follows.
-func (s *Service) degradable(ctx context.Context, fn func(context.Context) error) error {
+// budget is laneBudget, or what is left of it for a lane read in parts.
+func (s *Service) degradable(ctx context.Context, budget time.Duration, fn func(context.Context) error) error {
 	if s.snapshots == nil {
 		return fn(ctx)
 	}
-	return s.snapshots.Degradable(ctx, laneBudget, fn)
+	return s.snapshots.Degradable(ctx, budget, fn)
 }

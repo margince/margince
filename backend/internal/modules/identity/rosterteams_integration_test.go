@@ -127,7 +127,8 @@ func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
 
 	buyerCtx := principal.WithActor(
 		principal.WithWorkspaceID(context.Background(), e.ws.UUID),
-		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
+		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"},
+	)
 
 	for _, tc := range []struct {
 		name string

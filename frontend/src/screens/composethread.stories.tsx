@@ -62,10 +62,13 @@ function Conversation() {
     </StoryProviders>
   );
 }
-const meta: Meta = { title: "Patterns/Compose mail/Conversation" };
+const meta: Meta = {
+  title: "Patterns/Compose mail/Conversation",
+  excludeStories: ["selectedReplyRoutes"],
+};
 export default meta;
 export const SelectAndPreview: StoryObj = { render: () => <Conversation /> };
-function selectedReplyRoutes() {
+export function selectedReplyRoutes() {
   return {
     "GET /me": meRoute({}),
     "GET /activities": () =>

@@ -248,6 +248,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		deals: deals.NewStore(db, DealsInstallation()),
 		now:   now,
 	}).
+		// The mirror: the reader's own sends nobody has answered, once the
+		// workspace's follow-up window has passed.
+		WithAwaiting(attentionAwaiting{
+			store: activities.NewStore(db).WithOwnDomains(
+				ownDomainReader{store: capture.NewOwnDomainStore(db)}),
+		}).
 		// The reader's own override. The ranking has carried a pin level since
 		// it was written and nothing could set it, so the one control that says
 		// "I know, and I want this first anyway" did not exist.
@@ -274,6 +280,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress).
+		WithMeetingHorizon(attentionMeetingHorizon{
+			registry: captureHealthRegistry(db), store: activities.NewStore(db),
+		}).
 		// The reader's OWN undecided domains. Bound to the contacts store the
 		// rest of this seam already reads: the question is opened by capture and
 		// answered against the same disposition ledger the admin list shows, so
@@ -288,6 +297,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// When the contact a row names last wrote to us and when we last wrote
 		// to them, from the same reader the contact's own page uses.
 		WithContactTouch(attentionContactTouch{pool: pool}).
+		// And the same pair for a row about an account, from the company page's reader.
+		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
 		// Which account a meeting row's contact works for, from the employer
 		// read every contact page carries.
 		WithContactEmployers(contacts.NewStore(db)).

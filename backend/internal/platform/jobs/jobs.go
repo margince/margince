@@ -94,18 +94,29 @@ type Runner struct {
 // New builds a River client over the given pool. The pool must outlive the
 // runner (River holds it for the client's lifetime).
 func New(pool *pgxpool.Pool, cfg Config, log *slog.Logger) (*Runner, error) {
-	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
-		Queues:          cfg.Queues,
-		Workers:         cfg.Workers,
-		PeriodicJobs:    cfg.PeriodicJobs,
-		SoftStopTimeout: cfg.SoftStopTimeout,
-		Logger:          log,
-		TestOnly:        cfg.TestOnly,
-	})
+	client, err := river.NewClient(riverpgxv5.New(pool), riverConfig(cfg, log))
 	if err != nil {
 		return nil, fmt.Errorf("jobs: new client: %w", err)
 	}
 	return &Runner{client: client}, nil
+}
+
+// riverConfig is the worker client's River configuration.
+//
+// ReindexerSchedule is never: River's default rebuilds its job indexes at
+// midnight UTC, and that statement needs the index's owner. The worker connects
+// as the restricted application role, which holds no DDL, so every index would
+// answer a permission error each night. Rebuilding them is the owner role's job.
+func riverConfig(cfg Config, log *slog.Logger) *river.Config {
+	return &river.Config{
+		Queues:            cfg.Queues,
+		Workers:           cfg.Workers,
+		PeriodicJobs:      cfg.PeriodicJobs,
+		SoftStopTimeout:   cfg.SoftStopTimeout,
+		Logger:            log,
+		ReindexerSchedule: river.NeverSchedule(),
+		TestOnly:          cfg.TestOnly,
+	}
 }
 
 // NewInserter builds an insert-only Runner for a role that enqueues jobs
@@ -162,6 +173,23 @@ func (r *Runner) EnqueueTxUnique(ctx context.Context, tx pgx.Tx, args river.JobA
 func (r *Runner) Start(ctx context.Context) error {
 	if err := r.client.Start(ctx); err != nil {
 		return fmt.Errorf("jobs: start: %w", err)
+	}
+	return nil
+}
+
+// RemovePeriodic takes the schedule registered under id off this client.
+// Removing one that is not registered does nothing.
+func (r *Runner) RemovePeriodic(id string) {
+	//nolint:forbidigo // the schedule book's move of a kind periodicFor already built from its api/jobs.yaml cadence; no other caller
+	r.client.PeriodicJobs().RemoveByID(id)
+}
+
+// AddPeriodic registers a schedule on this client. A job with RunOnStart runs
+// once now, then on its schedule.
+func (r *Runner) AddPeriodic(job *river.PeriodicJob) error {
+	//nolint:forbidigo // puts back a job periodicFor built from its api/jobs.yaml cadence, at the interval its setting now holds; no other caller
+	if _, err := r.client.PeriodicJobs().AddSafely(job); err != nil {
+		return fmt.Errorf("jobs: adding a schedule: %w", err)
 	}
 	return nil
 }

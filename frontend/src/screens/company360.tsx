@@ -23,7 +23,6 @@ import {
   sectionState,
 } from "../design-system/surfacestate";
 import {
-  calendarDaysBetween,
   formatDate,
   formatDateAbbrev,
   formatMoneyCompact,
@@ -43,10 +42,13 @@ import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import "./company360.css";
 import { FactList } from "../design-system/factlist";
+import { HealthStat, WITHHELD_READING } from "./company360health";
+import { LastTouchStat } from "./company360lasttouch";
 import {
   HEALTH_DIMENSION_LABEL,
   HEALTH_RATING_LABEL,
   LIFECYCLE_LABELS,
+  useHealthReason,
 } from "./companylookups";
 import { EntityRef } from "./entityref";
 import {
@@ -595,17 +597,6 @@ export const ENGAGEMENT_TONE: Partial<
   dormant: "warning",
 };
 
-// A reading the caller's grants withheld, in the word every stat card in the
-// product uses. `record.notShown` stays on the contact record's readings row
-// and rail: retargeting it would restyle two surfaces nobody looked at here.
-const WITHHELD_READING: MessageKey = "reading.restricted";
-
-// A reading nobody has judged. It is NOT the withheld word — "you may not see
-// this" and "there is no verdict yet" are opposite facts about who is missing
-// what, and confusing them sends the reader to ask for a grant that would show
-// them nothing. Its own key rather than the lifecycle label it matches today.
-const UNASSESSED_READING: MessageKey = "co.strip.notAssessed";
-
 /**
  * StateStrip is the readings row under the tab strip: FIVE doors, always
  * five — open deals, invoiced, the relationship, the last contact, and what
@@ -670,21 +661,21 @@ export function StateStrip({
   // The stage the money slot reads to know whether there is a window to read
   // at all, and to name itself under the word when there is not.
   const lifecycle = strip.account.lifecycle;
-  // The contract pairs an absent optional section with its name in
-  // `sections_omitted` (Company360), so the reason `health` did not arrive
-  // is readable rather than guessable — and guessing is how a grant boundary
-  // gets reported as an account nobody has assessed.
+  // An absent section is named in `sections_omitted`, so a grant boundary is
+  // never reported as an account nobody has assessed.
   const healthWithheld = view != null && omitted(view, "health");
-  // The same boundary read ONCE for the two cards that depend on it: the last
-  // contact IS this section, and the relationship card reads its outbound date
-  // to tell silence with nothing sent from silence after we wrote.
+  // Read once for the two cards on this section: last contact, and the
+  // relationship card's outbound date.
   const touchWithheld = view != null && omitted(view, "last_touch");
   const door = (tab: CompanyTab) => onOpenTab && (() => onOpenTab(tab));
   return (
-    // The shared strip: five readings read ACROSS as one row of doors, each
-    // into the tab that holds its rows. The region's name is the SCREEN's to
-    // set; the cards inside are the shared primitive's, unreached-into.
-    <StatStrip label={t("co.strip.title")} testId="company-strip">
+    // Five readings in one compact row of doors, each into the tab that holds
+    // its rows, so the brief below shows without scrolling.
+    <StatStrip
+      label={t("co.strip.title")}
+      testId="company-strip"
+      density="compact"
+    >
       <PipelineCard
         commercial={strip.commercial}
         dimension={view?.health?.commercial}
@@ -734,69 +725,6 @@ export function StateStrip({
         t={t}
       />
     </StatStrip>
-  );
-}
-
-// How long ago an instant fell, against the read's own `as_of` and never the
-// reader's clock. `undefined` is TODAY, decided here and nowhere else: zero
-// days is today, and a NEGATIVE span is skew between a timestamp and the read
-// instant, which no slot may print.
-function daysAgo(at: string, asOf: string): number | undefined {
-  const days = calendarDaysBetween(new Date(at), new Date(asOf));
-  return days > 0 ? days : undefined;
-}
-
-// The last word exchanged, as days since it fell, and who said it. Read off
-// the account's own timestamps rather than the health reading: the two dates
-// are the fact, and the reading is a judgement made from them.
-function LastTouchStat({
-  view,
-  withheld,
-  locale,
-  recordZone,
-  onOpen,
-  t,
-}: Readonly<{
-  view?: Company360;
-  // Refused, read once by the strip and shared with the relationship card.
-  withheld: boolean;
-  locale: Locale;
-  recordZone: string;
-  onOpen?: () => void;
-  t: ReturnType<typeof useT>;
-}>) {
-  const slot = { label: t("co.strip.lastTouch"), narrow: "row" } as const;
-  if (!view || withheld) {
-    return <StatCard onOpen={onOpen} {...slot} value={t(WITHHELD_READING)} />;
-  }
-  const inbound = view.last_inbound_at ?? undefined;
-  const outbound = view.last_outbound_at ?? undefined;
-  const theirs = Boolean(inbound && (!outbound || inbound > outbound));
-  const last = theirs ? inbound : outbound;
-  if (!last) {
-    return (
-      <StatCard
-        onOpen={onOpen}
-        {...slot}
-        value={t("co.strip.lastTouch.never")}
-      />
-    );
-  }
-  const days = daysAgo(last, view.as_of);
-  return (
-    <StatCard
-      onOpen={onOpen}
-      {...slot}
-      value={
-        days === undefined
-          ? t("co.strip.lastTouch.today")
-          : t("co.strip.lastTouch.ago", { count: formatNumber(days, locale) })
-      }
-      detail={join(
-        t(theirs ? "co.strip.lastTouch.theirs" : "co.strip.lastTouch.ours"),
-        formatDateAbbrev(last, locale, recordZone),
-      )}
-    />
   );
 }
 
@@ -955,7 +883,6 @@ function noFigureReason(
 type StripLifecycle = NonNullable<
   Company360["state_strip"]
 >["account"]["lifecycle"];
-type Translate = ReturnType<typeof useT>;
 
 // The stages whose page leads with a money figure. A former customer's does:
 // the trailing year is a fact about invoices, not about where the account
@@ -1140,6 +1067,7 @@ function PipelineCard({
   onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
+  const healthReason = useHealthReason();
   const basis = dimension ? (
     <FactList
       facts={[
@@ -1147,7 +1075,7 @@ function PipelineCard({
           key: "commercial",
           term: t(HEALTH_DIMENSION_LABEL.commercial),
           value: t(HEALTH_RATING_LABEL[dimension.rating]),
-          note: dimension.reason,
+          note: healthReason(dimension),
         },
       ]}
     />
@@ -1236,168 +1164,6 @@ function PipelineCard({
 function join(...parts: (string | undefined)[]): string {
   return parts.filter(Boolean).join(" · ");
 }
-
-// How long nothing has come back, in the ONE spelling this row has: the
-// unanswered slot and the quiet one make the same claim.
-function noReply(days: number, locale: Locale, t: Translate): string {
-  return t("co.strip.unansweredDetail", { days: formatNumber(days, locale) });
-}
-
-// They have never written, which is three different accounts and only one is
-// bad news. With nothing sent either, the account has not been worked — a row
-// that lit up for every untouched account would say the same of the ones being
-// ignored. With something sent we are talking into silence, and a letter
-// posted TODAY is not yet unanswered news: the word stands, but there is no
-// span to state and nothing to warn about until a day has passed. And with the
-// outbound date refused, the row says so rather than guessing which it is.
-function silenceReading(
-  touchWithheld: boolean,
-  lastOutboundAt: string | undefined,
-  asOf: string | undefined,
-  locale: Locale,
-  t: Translate,
-): Readonly<{ value: string; detail?: string; tone?: "warning" }> {
-  if (touchWithheld) {
-    // "No exchange" here would report a refusal as a fact about the account,
-    // the one thing this row may never do, and what the health section still
-    // supports has no word left in this catalogue.
-    return { value: t(WITHHELD_READING) };
-  }
-  if (!lastOutboundAt || !asOf) {
-    return { value: t("co.strip.noInboundEver") };
-  }
-  const days = daysAgo(lastOutboundAt, asOf);
-  return days === undefined
-    ? { value: t("co.strip.unanswered") }
-    : {
-        value: t("co.strip.unanswered"),
-        tone: "warning",
-        detail: noReply(days, locale, t),
-      };
-}
-
-// Health as a STATUS with its reason, never a 0-100 verdict (§4.2). The card
-// below the fold decomposes it; this says which way it points and why.
-//
-// A LIVE relationship is reported by the balance of the exchange rather than
-// by its recency: one where they write and we do not answer, and one where we
-// write into silence, are equally recent and opposite problems. A silent one
-// has no balance worth stating — nothing came back, and for how long.
-function HealthStat({
-  health,
-  touchWithheld,
-  lastOutboundAt,
-  asOf,
-  locale,
-  withheld,
-  onOpen,
-  t,
-}: Readonly<{
-  health?: Health;
-  // Whether the section the outbound date lives in was refused: without it, a
-  // missing date is not evidence that nothing was ever sent.
-  touchWithheld: boolean;
-  // The last word WE sent, which the reading itself does not carry.
-  lastOutboundAt?: string;
-  // The instant the 360 was read at, which every age on this row measures from.
-  asOf?: string;
-  locale: Locale;
-  withheld: boolean;
-  // Handed to every shape this reading takes: a door on only one would make
-  // the way out look like a property of the figure.
-  onOpen?: () => void;
-  t: ReturnType<typeof useT>;
-}>) {
-  const dimension = health?.relationship;
-  const slot = {
-    label: t("co.strip.health"),
-    narrow: "row",
-    basis: dimension ? (
-      <FactList
-        facts={[
-          {
-            key: "relationship",
-            term: t(HEALTH_DIMENSION_LABEL.relationship),
-            value: t(HEALTH_RATING_LABEL[dimension.rating]),
-            note: dimension.reason,
-          },
-        ]}
-      />
-    ) : undefined,
-  } as const;
-  if (!health) {
-    // No health section at all. Withheld says so; anything else has simply not
-    // been assessed. Neither is "they have never written", a claim about the
-    // account this read has no basis for.
-    return (
-      <StatCard
-        onOpen={onOpen}
-        {...slot}
-        value={t(withheld ? WITHHELD_READING : UNASSESSED_READING)}
-      />
-    );
-  }
-  const days = health.days_since_last_inbound;
-  const share = health.reply_balance;
-  if (days == null) {
-    const silence = silenceReading(
-      touchWithheld,
-      lastOutboundAt,
-      asOf,
-      locale,
-      t,
-    );
-    return (
-      <StatCard
-        onOpen={onOpen}
-        value={silence.value}
-        tone={silence.tone}
-        detail={silence.detail}
-        {...slot}
-      />
-    );
-  }
-  if (days > HEALTH_QUIET_DAYS) {
-    // A share of the exchange here would describe a conversation that has
-    // stopped; what a reader acts on is that nothing has come back.
-    return (
-      <StatCard
-        onOpen={onOpen}
-        value={t("co.strip.healthQuiet")}
-        tone="warning"
-        detail={noReply(days, locale, t)}
-        {...slot}
-      />
-    );
-  }
-  // A live relationship: say who is carrying it. Below a third of the
-  // exchange coming from them is us talking to ourselves, whatever the dates
-  // say; above two thirds they are asking more than we are answering.
-  if (share == null) {
-    return (
-      <StatCard onOpen={onOpen} value={t("co.strip.healthActive")} {...slot} />
-    );
-  }
-  const oneSided = share < 0.34 || share > 0.66;
-  return (
-    <StatCard
-      onOpen={onOpen}
-      value={
-        oneSided ? t("co.strip.healthOneSided") : t("co.strip.healthBalanced")
-      }
-      tone={oneSided ? "warning" : undefined}
-      detail={t("co.strip.replyShare", {
-        percent: formatNumber(Math.round(share * 100), locale),
-      })}
-      {...slot}
-    />
-  );
-}
-
-// The threshold that separates a live conversation from a quiet one. It names
-// a number the strip states rather than one the reader must infer from a date,
-// and it is deliberately the same span the dormant engagement state uses.
-const HEALTH_QUIET_DAYS = 30;
 
 export type SuggestionAction = NonNullable<Suggestion["action"]>;
 

@@ -2,8 +2,8 @@
 
 Vietnamese is translated from the English catalog beside it: `frontend/src/i18n/en.ts`
 for `frontend/src/i18n/vi.ts`, and the sibling `en.json` for each extension's
-`vi.json` (for example `extensions/openchannel/frontend/i18n/en.json`).
-[ui-copy-style.md](ui-copy-style.md) binds it too; this page states only what
+`vi.json` (for example `extensions/openchannel/frontend/i18n/en.json`). It
+also follows [ui-copy-style.md](ui-copy-style.md); this page states only what
 Vietnamese adds or changes. [ui-copy-style-de.md](ui-copy-style-de.md) is a
 sibling, not a source: where German keeps a loanword, Vietnamese decides.
 
@@ -24,27 +24,27 @@ against this page.
 - **Nothing added, nothing dropped.** No fact, reassurance, feature or caveat
   the English does not carry. A label stays a label: "Permissions" is "Quyền",
   never "Họ được làm gì?".
-- **Claim strength is kept exactly.** Legal, privacy, consent, retention,
-  licence and AI-notice text keeps every qualifier: can and may (có thể),
-  designed to (được thiết kế để), intended to (nhằm), subject to (tùy thuộc
-  vào), where applicable (trong trường hợp áp dụng), typically (thường), does
-  not guarantee (không đảm bảo). "Designed to support compliance" never becomes
+- **Claim strength is kept.** Legal, privacy, consent, retention, licence
+  and AI-notice text keeps every qualifier. That covers can and may (có thể),
+  designed to (được thiết kế để), intended to (nhằm) and subject to (tùy thuộc
+  vào). It also covers where applicable (trong trường hợp áp dụng), typically
+  (thường) and does not guarantee (không đảm bảo). "Designed to support compliance" never becomes
   "đảm bảo tuân thủ".
 - **No superlative the English does not state.** "nhất", "duy nhất", "hàng
   đầu" and "số 1" are regulated claims under Luật Quảng cáo 16/2012/QH13.
 - **Unchanged**: Margince, Gradion, Voice DNA, Deal Room, vendor and product
   names (Google Workspace, Microsoft 365, OpenRouter), URLs, code, file
   extensions, identifiers and placeholders.
-- **A vendor's label** quoted in “…” stays exactly as the English quotes it:
+- **A vendor's label** quoted in “…” stays as the English quotes it:
   the language of the reader's vendor console is unknown.
 
 ## Address
 
 - **Address nobody by default.** Labels, titles, statuses, table headers, menu
   items, toasts and most hints address nobody.
-- **bạn only where the English says you or your**, and then only when the
-  sentence needs a subject or an owner: "Deal của bạn" beside "Deal của nhóm",
-  but "Đăng nhập lại để tiếp tục" needs none. Lowercase mid-sentence; a capital
+- **bạn only where the English says you** or your, and then only when the
+  sentence needs a subject or an owner. "Deal của bạn" sits beside "Deal của
+  nhóm", but "Đăng nhập lại để tiếp tục" needs none. Lowercase mid-sentence; a capital
   only where a sentence opens.
 - **Five families are read by an outsider**: the four German Sie families in
   `frontend/src/i18n/address-register.test.ts` (`privacynotice.`, `confirm.`,
@@ -109,8 +109,8 @@ bạn".
 ## Mechanics
 
 - **Tone marks kiểu cũ**: on the first vowel of an open oa, oe or uy (hòa,
-  xóa, khóa, tùy, hủy, khỏe); before a final consonant on the second, in both
-  styles (hoàn, khuyên). "quý" and "quỹ" are qu and y.
+  xóa, khóa, tùy, hủy, khỏe). Before a final consonant it goes on the second,
+  in both styles (hoàn, khuyên). "quý" and "quỹ" are qu and y.
 - **NFC only**: an NFD value looks identical and breaks search and length.
 - **Sentence case**: a capital on the first word and on proper nouns only,
   never "Cài Đặt Tài Khoản". A named screen keeps its nav capital mid-sentence
@@ -132,8 +132,8 @@ bạn".
   wants them; "Nhãn: {count}" where a noun reads wrong at 0.
 - **No plural.** Vietnamese has one form, and `Intl.PluralRules` gives `other`
   for every count. `X_one` equals `X_other`. Where the English arms carry
-  different placeholders, `_one` carries exactly the English `_one`
-  placeholders and otherwise reads like `_other`. Never "các" or "những" in
+  different placeholders, `_one` carries the same placeholders as
+  the English `_one` and otherwise reads like `_other`. Never "các" or "những" in
   front of every plural.
 
 ## Natural Vietnamese, not calques
@@ -175,8 +175,8 @@ Vietnamese is a layout bug.
 ## Vocabulary
 
 One Vietnamese word per concept, the same word on every screen. In the Never
-column a word in code format is retired by `copy-style-vi.test.ts`: it fails as
-a whole word in any case, and an English one in its plural too, outside a
+column, `copy-style-vi.test.ts` retires a word in code format. Such a word fails
+as a whole word in any case, and an English one in its plural too, outside a
 quoted vendor label, a file name and a URL. A word goes in code format only
 when no value has a legitimate use for it; one that does stays plain, held by
 the reviewer in the sense its row gives.
@@ -263,16 +263,16 @@ trị viên or ai where they read naturally.
 - **tổ chức and công ty**: English "company" names both the tenant and the
   record; two words keep the reader's installation apart from a customer.
 - **Kiểu cũ**: the product owner's call. Both styles are correct; mixing is not.
-- **Danh sách công việc, Bản tin sáng, nhận định**: the loanwords are deal,
+- **Danh sách công việc**, **Bản tin sáng**, **nhận định**: the loanwords are deal,
   lead and pipeline only; đánh giá is a rating, dự báo the forecast.
 - **Commit, Best case, agent, passport, endpoint stay English**: cam kết is the
   commitment, "tốt nhất" a regulated superlative, trợ lý an assistant and hộ
   chiếu a travel document.
-- **trình kết nối, việc cần làm, thẻ, nhật ký kiểm tra**: Google's and
-  Microsoft's Vietnamese; a UI card is "khung", so thẻ stays unambiguous, and
+- **trình kết nối**, **việc cần làm**, **thẻ**, **nhật ký kiểm tra**: Google's
+  and Microsoft's Vietnamese. A UI card is "khung", so thẻ stays unambiguous, and
   kiểm toán is a financial audit.
 - **suất** is the countable licensed slot; chỗ ngồi is a chair.
-- **lưu giữ pháp lý, nhóm quyết định mua, việc tiếp theo**: no settled loanword,
+- **lưu giữ pháp lý**, **nhóm quyết định mua**, **việc tiếp theo**: no settled loanword,
   and theo dõi is watch, which the product also does.
 - **máy chủ, tệp, trang web**: the reader is a sales team, not engineers;
   thu thập is the verb of Nghị định 13/2023/NĐ-CP on data protection.
@@ -327,7 +327,7 @@ holds key and placeholder parity, untranslated values and the tenant word.
 without approval.
 
 None of them sees meaning and claim strength, calques, bạn where nobody needed
-addressing, mixed address on one surface, slot grammar, end punctuation and
-edge spaces against the English, sentence case, hand-formatted numbers,
-length, or the plain words of the Never column. Those are the author's and the
+addressing, or mixed address on one surface. Nor do they see slot grammar, end
+punctuation and edge spaces against the English, sentence case, hand-formatted
+numbers, length, or the plain words of the Never column. Those are the author's and the
 reviewer's judgement.

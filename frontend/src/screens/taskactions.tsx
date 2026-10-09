@@ -17,17 +17,19 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { DEAL_COMMITMENTS_KEY } from "./activitykeys";
-import { provenanceOf, throwProblem } from "./common";
+import { CLAIM_SETTLED_KEYS } from "./activitykeys";
+import { problemCodeOf, provenanceOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "./activityread";
+import { refetchAfterWrite } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -67,14 +69,18 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
       // skew by the very write it is undoing.
       return data?.version;
     },
-    onSuccess: (_data, input) => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
+    // Returned, so the mutation stays pending until the reads have landed. The
+    // row the press came from stays drawn at the version it was fetched at
+    // until then, and a second press in that window re-sends it and is
+    // refused as skew by the write that has just succeeded.
+    onSuccess: (_data, input) =>
+      refetchAfterWrite(queryClient, invalidateKeys, input.id),
+    // A stale press is not a failed one: the task moved on under it, so the
+    // reads are refreshed to show where it is now.
+    onError: (error, input) => {
+      if (problemCodeOf(error) === "version_skew") {
+        return refetchAfterWrite(queryClient, invalidateKeys, input.id);
       }
-      // The task's own detail read too, always: a modal open on the task that
-      // was just completed would otherwise keep showing the old due date and
-      // offering the verbs that no longer apply.
-      queryClient.invalidateQueries({ queryKey: ["activity", input.id] });
     },
   });
 }
@@ -319,13 +325,13 @@ export function TaskDetailModal({
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} placement="right">
-      <div className="drawer-head task-detail-head">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
         </Heading>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
         <ErrorLine error={query.error} />
         {task && (
@@ -385,7 +391,7 @@ export function TaskDetailModal({
             )}
           </div>
         )}
-      </div>
+      </DrawerBody>
       {openSource && (
         <SourceActivity
           activityId={openSource}
@@ -414,27 +420,29 @@ function SourceActivity({
   const query = useActivity(activityId);
   const meeting: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {meeting?.subject ?? t("tasks.source")}
-      </Heading>
-      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-      <ErrorLine error={query.error} />
-      {meeting && (
-        <div className="form-stack">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {meeting?.subject ?? t("tasks.source")}
+        </Heading>
+        {meeting && (
           <p className="t-caption">
             {formatDateTime(meeting.occurred_at, locale, recordZone)}
           </p>
-          {/* The transcript, as it was captured. `pre-wrap` because a
-              transcript is line-per-turn and reflowing it into a paragraph
-              takes away the one structure it has. */}
-          {meeting.body && (
-            <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-              {meeting.body}
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </DrawerHead>
+      <DrawerBody>
+        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+        <ErrorLine error={query.error} />
+        {/* The transcript, as it was captured. `pre-wrap` because a
+            transcript is line-per-turn and reflowing it into a paragraph
+            takes away the one structure it has. */}
+        {meeting?.body && (
+          <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
+            {meeting.body}
+          </p>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }
@@ -565,11 +573,9 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The contact's own page and a deal's watch card list the same open
-      // claims, so either would keep showing a commitment just settled.
-      queryClient.invalidateQueries({ queryKey: ["contact"] });
-      queryClient.invalidateQueries({ queryKey: ["contact360"] });
-      queryClient.invalidateQueries({ queryKey: DEAL_COMMITMENTS_KEY });
+      for (const queryKey of CLAIM_SETTLED_KEYS) {
+        queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }

@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -346,9 +347,23 @@ func (s *Store) UpdateAttachmentMetadata(
 		// Audited against the PARENT's object type, which is where the authority
 		// came from: an auditor asking who may change this file reads the same
 		// answer the gate above applied.
-		if _, err := storekit.Audit(ctx, tx, "update", "attachment", id,
-			p.Before(), p.After()); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "update", "attachment", id,
+			p.Before(), p.After())
+		if err != nil {
 			return fmt.Errorf("activities: auditing document metadata on a %s attachment: %w", entityType, err)
+		}
+		// Which file changed, not what it now says. The audit row above carries
+		// the before and after, and answers to an auditor inside the workspace.
+		// The event does not, because a title is text somebody typed just as a
+		// filename is: publishing the new one would hand out through the delta
+		// what the filename rule withholds.
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventAttachmentUpdated{
+			ParentType:  entityType,
+			ParentId:    openapi_types.UUID(before.EntityId),
+			ContentType: before.ContentType,
+			ByteSize:    before.ByteSize,
+		}); err != nil {
+			return err
 		}
 		out, err = readAttachment(ctx, tx, id)
 		return err

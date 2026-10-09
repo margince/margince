@@ -115,11 +115,15 @@ const offsets = new Map<string, number>();
  * offset is actually reachable is what makes it land, and a reader who scrolls
  * in the meantime is left alone: their scroll is the answer to where they want
  * to be.
+ *
+ * `span: "load"` keys the lane by name alone, for a surface the reader returns
+ * to through a NEW entry — the Worklist drawer reopened by a record's way back.
  */
 export function useScrollMemory(
   column: React.RefObject<HTMLElement | null>,
   address: string,
   lane = "page",
+  span: "entry" | "load" = "entry",
 ): void {
   // Recomputed per address rather than read in the effect, so the id belongs to
   // the entry being LEFT when the cleanup runs — by then `history.state` is
@@ -160,7 +164,7 @@ export function useScrollMemory(
     if (!scroller) {
       return;
     }
-    const place = `${entry}:${lane}`;
+    const place = span === "load" ? `load:${lane}` : `${entry}:${lane}`;
     const target = offsets.get(place) ?? 0;
     wanted.current = target;
     const seek = () => {
@@ -296,5 +300,5 @@ export function useScrollMemory(
       // it. Every guard that matters is inside `remember`.
       remember();
     };
-  }, [scroller, entry, lane]);
+  }, [scroller, entry, lane, span]);
 }

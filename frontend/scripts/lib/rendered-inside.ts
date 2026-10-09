@@ -71,6 +71,106 @@ export function renderedInside(root: string): Map<string, Set<string>[]> {
   return inside;
 }
 
+// Every element the components draw with a literal class, with the classes it
+// carries together and whether it draws anything a reader reads. A modifier
+// is read beside its base this way — `.token-standalone` is always also a
+// `.token` — and a meter's track, which holds only its fill, is told
+// apart from a chip that holds a label.
+//
+// Content is conservative. A component or an `<svg>` counts, because an icon
+// draws in `currentColor`; so does any expression this cannot follow to JSX. A
+// class that is only ever computed appears in no element at all, and the
+// caller must read that as unknown rather than as textless. `tag` is the
+// element's own name, and unknown on a component, whose class lands on
+// whatever it renders.
+export type DrawnElement = {
+  classes: Set<string>;
+  tag: string | undefined;
+  textless: boolean;
+};
+
+export function drawnElements(root: string): DrawnElement[] {
+  const drawn: DrawnElement[] = [];
+  for (const file of componentFiles(root)) {
+    const source = parseSource(file, readFileSync(file, "utf8"));
+    const walk = (node: ts.Node) => {
+      const classes = classNamesOfElement(node);
+      if (classes.length > 0) {
+        drawn.push({
+          classes: new Set(classes),
+          tag: intrinsicTagOf(node),
+          textless: !drawsContent(node),
+        });
+      }
+      ts.forEachChild(node, walk);
+    };
+    walk(source);
+  }
+  return drawn;
+}
+
+function jsxTagOf(node: ts.Node): ts.JsxTagNameExpression | undefined {
+  return ts.isJsxElement(node)
+    ? node.openingElement.tagName
+    : ts.isJsxSelfClosingElement(node)
+      ? node.tagName
+      : undefined;
+}
+
+function intrinsicTagOf(node: ts.Node): string | undefined {
+  const tag = jsxTagOf(node);
+  return tag === undefined ? undefined : intrinsicName(tag);
+}
+
+function drawsContent(node: ts.Node): boolean {
+  const tag = jsxTagOf(node);
+  if (tag === undefined) return true;
+  const name = intrinsicName(tag);
+  if (name === undefined || name === "svg") return true;
+  if (!ts.isJsxElement(node)) return false;
+  return node.children.some((child) =>
+    ts.isJsxText(child)
+      ? !child.containsOnlyTriviaWhiteSpaces
+      : ts.isJsxExpression(child)
+        ? child.expression !== undefined &&
+          expressionDrawsContent(child.expression)
+        : drawsContent(child),
+  );
+}
+
+// `{far ? null : <span/>}` and `{open && <span/>}` draw only what their
+// branches do; anything else is a value this cannot see the text of.
+function expressionDrawsContent(expression: ts.Expression): boolean {
+  if (ts.isParenthesizedExpression(expression)) {
+    return expressionDrawsContent(expression.expression);
+  }
+  if (ts.isConditionalExpression(expression)) {
+    return (
+      expressionDrawsContent(expression.whenTrue) ||
+      expressionDrawsContent(expression.whenFalse)
+    );
+  }
+  if (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+  ) {
+    return expressionDrawsContent(expression.right);
+  }
+  if (expression.kind === ts.SyntaxKind.NullKeyword) return false;
+  if (ts.isJsxElement(expression) || ts.isJsxSelfClosingElement(expression)) {
+    return drawsContent(expression);
+  }
+  return true;
+}
+
+// `<Icon/>` and `<icons.Check/>` are components; `<span>` is an element.
+// A lowercase identifier is an HTML or SVG element; anything else is a component.
+function intrinsicName(tag: ts.JsxTagNameExpression): string | undefined {
+  return ts.isIdentifier(tag) && !/^[A-Z]/.test(tag.text)
+    ? tag.text
+    : undefined;
+}
+
 function componentFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);

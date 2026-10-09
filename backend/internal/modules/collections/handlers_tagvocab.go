@@ -206,6 +206,7 @@ func wireTagDetail(t tagRow, usage TagUsage) crmcontracts.TagDetail {
 			Contacts:  usage.Contacts,
 			Companies: usage.Companies,
 			Deals:     usage.Deals,
+			Leads:     usage.Leads,
 		},
 	}
 }

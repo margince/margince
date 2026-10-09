@@ -5,7 +5,7 @@
 
 package gates
 
-// A connector's actor id is DERIVED from the work, never written down.
+// A connector's actor id is derived from the work, never written down.
 //
 // Every value a provider run writes is bought from a vendor rather than typed
 // by anybody, so the audit row names the connector — and WHICH connector is a

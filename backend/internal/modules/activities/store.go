@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -14,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
@@ -167,6 +169,14 @@ func (s *Store) now() time.Time {
 // are there, and the role that was supposed to read them was assembled without
 // a handle to them.
 func (s *Store) HasBlobstore() bool { return s.blob != nil }
+
+// ErrBlobstoreUnconfigured reports that this process role wired no object
+// store. It carries its own 501 so the REST handler and the tool surface,
+// which both classify through httperr, give one answer.
+var ErrBlobstoreUnconfigured error = &httperr.DetailedError{
+	Status: http.StatusNotImplemented, Code: "not_implemented",
+	Detail: "this server has no object store configured, so files cannot be stored or read here",
+}
 
 // WithBlobstore returns a store that backs the attachment endpoints with the
 // given object store. It returns a copy so the base store stays unchanged.

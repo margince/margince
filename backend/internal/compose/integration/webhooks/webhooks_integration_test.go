@@ -853,3 +853,62 @@ func mustParseUUID(t *testing.T, s string) ids.UUID {
 	}
 	return u
 }
+
+// A file's events reach a subscriber as far as the record the file hangs off
+// does, and no further.
+//
+// The one claim nothing else proves end to end: that these events are delivered
+// at all. An attachment has no object grant and no owner, so the subject is
+// redirected to its parent, and a subject that resolves to nothing is
+// fail-closed-denied without saying so, which looks like a subscription nobody
+// made. Driven through the real Deliverer and a real receiver, so what is
+// counted is POSTs rather than a probe's opinion.
+func TestWebhookAttachmentFanOutFollowsTheRecordItHangsOff(t *testing.T) {
+	we := setupWebhooks(t)
+	rcv := newReceiver(t, http.StatusOK)
+	now := time.Now().UTC()
+	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
+
+	we.createSubscription(t, rcv.server.URL+"/hook",
+		[]string{"attachment.created", "attachment.archived"})
+
+	// postsFor stages one file against a parent and reports the POSTs the
+	// fan-out produced for it.
+	postsFor := func(eventType, parentType string, parentID ids.UUID, archived bool) int64 {
+		t.Helper()
+		attachment := ids.NewV7()
+		we.execInWorkspace(t, `
+			INSERT INTO attachment (id, entity_type, entity_id, filename, byte_size,
+				storage_key, checksum, source, captured_by, archived_at)
+			VALUES ($1, $2, $3, 'terms.pdf', 9, $4, 'sha256:z', 'upload', 'human:test',
+				CASE WHEN $5 THEN now() ELSE NULL END)`,
+			attachment, parentType, parentID, "k/"+attachment.String(), archived)
+		env := makeEnvelopeFor(we.wsID, eventType, "attachment")
+		env.Entity.ID = attachment
+		before := rcv.count.Load()
+		if err := deliverer.HandleEvent(context.Background(), env); err != nil {
+			t.Fatalf("handle %s: %v", eventType, err)
+		}
+		return rcv.count.Load() - before
+	}
+
+	// A file on a contact the owner can see is delivered.
+	contact := we.seedContact(t, "Filed Upon")
+	if got := postsFor("attachment.created", "contact", contact, false); got != 1 {
+		t.Errorf("a file on a visible contact produced %d POSTs, want 1", got)
+	}
+
+	// An archived file still announces its own archival. The probe does not
+	// filter the file's archived_at, because attachment.archived is emitted
+	// after that column is set, so a probe wanting a live row would decline to
+	// deliver the one event saying the file is gone.
+	if got := postsFor("attachment.archived", "contact", contact, true); got != 1 {
+		t.Errorf("an archived file's own archival produced %d POSTs, want 1", got)
+	}
+
+	// A file whose parent is not there resolves to nobody rather than to
+	// everyone: the existence floor every anchored subject keeps.
+	if got := postsFor("attachment.created", "contact", ids.NewV7(), false); got != 0 {
+		t.Errorf("a file on a contact that does not exist produced %d POSTs, want 0", got)
+	}
+}

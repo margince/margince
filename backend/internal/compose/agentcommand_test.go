@@ -246,7 +246,7 @@ func TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead(t *testing.T) {
 			}
 			return mcp.TierAutoExecute, false
 		}))
-	agents.RegisterCoreTools(reg, mirroredRecord{}, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, mirroredRecord{}, nil, nil, nil, nil, nil, nil)
 
 	_, err := reg.Invoke(anArchivingAgent(), "archive_record",
 		json.RawMessage(`{"record_type":"contact","id":"`+ids.NewV7().String()+`"}`))

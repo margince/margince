@@ -1,178 +1,87 @@
-# Check a company's VAT number
+<!-- prose:plain -->
+# Set up VAT number checks
 
-Margince can ask the EU VAT register whether a company's stated VAT ID is real, and keep the receipt.
-This guide is **UI-first**: you drive it from the company record, with the equivalent `curl` shown
-alongside for scripting and verification.
+The handbook page [records.md](../handbook/records.md) covers what a user does on the company. There, a
+user types the **Register / VAT ID**, reads the receipt, and presses **Check again**. This page is for the
+operator. It covers turning the register on, what a check does on the server, and what to do when no answer comes.
 
-Two things make this worth doing rather than trusting the number on a page. A VAT ID copied from a
-website's imprint is often somebody **else's** — a template reused, a subsidiary's number left in place —
-and only the register's own answer exposes that. And a business treating a sale as intra-EU has to be
-able to **show** it verified its counterpart; what a tax authority accepts is the *consultation number*
-the register issues, tied to the number asked about and the day it was asked.
+Margince can ask the EU VAT register whether the VAT ID a company gives is real, and keep the receipt. A
+business that counts a sale as a sale inside the EU must **show** that it checked the other party. A tax
+office accepts the *consultation number* the register gives, for the number asked about, on that day.
 
-> **This is off unless an operator turns it on.** Without a register configured, a VAT number is stored
-> exactly as stated and never verified. [Turn it on](#turn-the-register-on) is the first section for a
-> reason: everything below does nothing until it is done.
-
-## Where the UI lives
-
-On a **company record**, in the right-hand **Details** panel, on the **Register / VAT ID** row.
-
-- The number itself is an inline field — click it to type or correct one.
-- Beside it sits a **shield mark** carrying the verdict. Green is valid, red is not valid, grey is
-  either "not checked yet" or "the register did not answer".
-- Clicking the shield opens the receipt: **Register answer**, **Number consulted**, **Registered to**,
-  **Consulted on**, **Consultation number**, and the button that asks again.
-
-The verdict is readable **without opening anything**. That is deliberate — whether a stated number holds
-up is the fact you want at a glance, and a number validating to a company nobody recognises is the
-finding this exists for.
+> **Off by default.** With no register in the config, Margince stores a VAT number as typed and never
+> checks it.
 
 ## Turn the register on
 
-The check needs a register to ask. Set it in `.env.local` at the repository root — the dev script sources
-that file and both the api and the worker inherit it, so no value lands in a config file:
+The check needs a register to ask. Set it in `.env.local` at the root of the repository. The dev script
+reads that file, and both the API and the worker get it from there, so no value goes into a config file:
 
 ```
 MARGINCE_VAT_CHECK_BASE_URL=public
 ```
 
-`public` is a shorthand, not a URL: it resolves to the European Commission's own VIES service. Point it
-at a different base URL to use a proxy or a test double.
+`public` is a short name for VIES, the service of the European Commission. Point it at a different URL
+to use a proxy or a test service.
 
-Each check is made under **this installation's own VAT ID**: the **Register / VAT ID** on Settings →
-Company profile, once somebody has entered or confirmed it. A number the website reader proposed is not
-used until somebody confirms it. VIES issues a consultation number only for a check made under a
-requester's number, so without one the check still runs and still answers — it comes back with no proof
-attached, and the card says *"None issued."* If you rely on these checks for filings, confirm it.
+Each check runs under this installation's own VAT ID. That is the **Register / VAT ID** on
+Settings → Company profile, once someone has typed or confirmed it. Margince does not use a number from
+the website reader until someone confirms it. VIES gives a consultation number only for a check run
+under the number of the one who asks. Without it, the check still answers, but the receipt says
+*"None issued."*
 
-> **Restart after backend config.** The api is a compiled binary — changing an env var needs `make dev`
-> again to take effect. Vite hot-reloads the SPA but not the Go api, so a stale api keeps answering
-> happily and the feature breaks exactly like a bug in your own work.
+> Start again with `make dev` after you change the value.
 
-It is also a plain command-line flag on a deployment that configures processes rather than
-environments: `--vat-check-base-url` on **both** the api and the worker (the worker makes the request,
-the api decides whether to queue one at all — set it on only one role and the other silently disagrees).
+On a deployment that sets up programs with flags, not with environment values, it is also a flag. Set
+`--vat-check-base-url` on **both** the API and the worker. The API decides whether to queue a check at
+all, and the worker sends the request. So if you set it on one role only, the two disagree.
 
-## Give a company a VAT number
+## What a check does
 
-1. Open the company. In the right-hand **Details** panel, find **Register / VAT ID**.
-2. Click **Add VAT ID** (or the existing number to correct it), type the number, press Enter.
+**Writing the number queues the first check**, in the same transaction as the write. A site read that
+finds a number in a German *Impressum* does the same. Before the check, Margince drops case, spaces,
+`.`, `-` and `/`, so `de 811 907 980` and `DE811907980` are the same ID. A number with no two-letter
+country code is answered **Not valid** without a request.
 
-Or:
-
-```bash
-curl -sS -b cookies.txt -X PATCH \
-  "$BASE/v1/companies/$COMPANY/profile-fields/register_vat" \
-  -H 'content-type: application/json' \
-  -d '{"value":"DE811907980"}'
-```
-
-**Writing the number is what queues the first check.** You do not have to ask separately: a number that
-has just been stated has not been verified, so the consultation is queued in the same transaction as the
-write. A site read that finds a number in a German *Impressum* does the same thing.
-
-The number is normalised before it is consulted — case, spaces, dots, hyphens and slashes are dropped —
-so `de 811 907 980` and `DE811907980` are the same ID.
-
-## Read the answer
-
-The shield beside the number carries it. Open it for the whole receipt.
-
-| Verdict | What it means |
-|---|---|
-| **Valid** | The register recognises the number. **Read Registered to before you trust it** — see below. |
-| **Not valid** | The number does not hold up. A typo, a value that is not VAT-ID shaped at all, a number since deregistered, or one that was never real. |
-| *(grey, "not checked yet")* | Nobody has asked. Distinct from having asked and been told no. |
-
-Three states, and deliberately no fourth. A number the register rejects and a
-number it was never asked about — because the value cannot be a VAT ID — are the
-same problem on your record, and what you do about either is identical: fix the
-field. Splitting them would ask you to interpret a distinction you cannot act on.
-
-**Valid does not mean "belongs to this company."** A VAT ID copied from another company's imprint — a
-template reused, a subsidiary's number left in place — is a *real* number, so the register returns
-**Valid**. What exposes it is **Registered to**: the name the register holds against that number. If it
-is not the company you think you have, the number is somebody else's, whatever the verdict says.
-
-That is why the name is shown beside the verdict rather than folded away, and it is the single most
-useful line in the receipt.
-
-**Consulted on** is the date the *register* reported, not the day this installation recorded it — a
-receipt attests to when the register was asked.
-
-## Ask again
-
-Nothing re-asks on a schedule. A verdict going stale is not an event the product can observe, so the
-automatic lanes consult only about a number they have not seen — which means a stored answer stands until
-somebody asks for a fresh one.
-
-Open the shield and press **Check again** (or **Check with the register**, on a company never consulted).
+Nothing asks again on a schedule: the product cannot see when a verdict goes stale. So the parts that
+run on their own ask only about a number they do not know yet. A user asks again from the receipt, or
+with a script:
 
 ```bash
 curl -sS -b cookies.txt -X POST "$BASE/v1/companies/$COMPANY/vat-check"
 # 202 Accepted, no body
 ```
 
-The button then goes **busy**, saying *"Asking the register — the answer appears here once it replies."*
-It is not pressable again while it is: the request is accepted in milliseconds and the register answers
-seconds later, and a second press would either queue a duplicate consultation or meet the rate floor
-below and refuse you over your own in-flight request.
+A worker writes the answer, a few seconds later. The worker tries again when the service refused, and
+waits when the register says when to come back. So a verdict can change a minute after the screen
+stops waiting (about 15 seconds).
 
-The answer arrives on its own — it is written by a background worker, so the mark looks again a few
-times over the following seconds rather than making you reload.
-
-**The busy state lasts about fifteen seconds, not forever.** If the answer has not landed by then the
-button frees up, because a register that never replies must not leave you with a control you cannot
-press and no reason given. The consultation may still be running: the worker retries a service that
-refused, and a register that told us when to come back is obeyed. So a verdict can change a minute after
-the button came back — reopen the shield to see it, and the five-minute floor stops you spending a
-second consultation in the meantime.
-
-### Why a request can be refused
-
-| Answer | What to do |
+| Answer | Why |
 |---|---|
-| **429** *"This number was checked in the last few minutes…"* | Wait. The answer on the record **is** that check. The floor is five minutes per company. |
-| **404** *"This company states no VAT number yet."* | Add one in the Details panel; the write checks it automatically. |
+| **429** *"This number was checked in the last few minutes…"* | The five-minute floor for each company. The answer on the record **is** that check. |
+| **404** *"This company states no VAT number yet…"* | No number to check. Writing one checks it. |
+| **404** *"This installation does not consult the VAT register…"* | The API role has no register in its config, so it queues nothing. |
 
-There is deliberately **no refusal for an unconfigured register**, and this is the trap worth knowing.
-The api role always accepts the request and queues the job; the register itself lives on the **worker**.
-A worker with no register configured runs the job, records nothing — an absent check is not a failed one
-— and reports success. So on an installation that was never [turned on](#turn-the-register-on), the
-button works, the busy state runs its fifteen seconds, and no answer ever appears. Nothing on screen says
-why, which is the first thing to suspect when a check produces silence.
+The register is a shared public service. Margince asks it from one worker, at about one request every
+two seconds, and its rules say it is for a check now and then. The five-minute floor, and the rule that
+only a human can use this endpoint, keep an installation from being blocked for every user. **An agent
+cannot ask.**
 
-The register is a shared public service consulted on one worker at roughly one request every two
-seconds, and its terms describe it as intended for occasional verification rather than bulk lookup. The
-five-minute floor and the human-only restriction on this endpoint are both there to keep an installation
-from being blocked for everybody — **an agent cannot press this button.**
+## When a check gets no answer
 
-## What a number that changed looks like
+The API refuses when **it** has no register. But say the API has one and the **worker** does not. Then
+the API queues the job, and the worker runs it, records nothing, and reports that it worked. The screen
+waits, and no answer appears. A check that is missing is not a check that failed. So look at the
+environment of the worker first, then run `make dev`.
 
-The VAT field stays editable after a check, so a receipt can end up beside a number nobody consulted.
-When that happens the panel says so: *"The number on this record has changed since this check. Ask the
-register again to check the new one."* The old verdict is still shown, because it is still true — about
-the old number.
-
-## Troubleshooting
-
-**The shield never appears.** The row draws it only once a number is stated. An empty VAT field has
-nothing to verify.
-
-**I pressed the button and nothing came back.** Almost always the register is not configured on the
-**worker**. Nothing refuses the request in that case — see the note under
-[Ask again](#ask-again) — so the only symptom is silence. Check the worker's own environment rather than
-the api's, and remember `make dev` after changing it: the api and worker are compiled binaries.
-
-Confirm what is on record with:
+See what is on record:
 
 ```bash
 curl -sS -b cookies.txt "$BASE/v1/companies/$COMPANY/vat-check"
 ```
 
-`404` means never consulted; a body with `"status"` means an answer is on record. If the job ran and
-still nothing landed, the worker had no register to ask:
+`404` means never checked. A body with `"status"` means an answer is on record. If the job has run and
+nothing is there, the worker has no register to ask:
 
 ```bash
 # the job completed, and recorded nothing
@@ -180,27 +89,23 @@ psql "$DSN" -c "SELECT state, attempt FROM river_job
                  WHERE kind = 'check_company_vat' ORDER BY id DESC LIMIT 3;"
 ```
 
-**A number I know is real reads Not valid.** Check its shape first. A VAT ID starts with a two-letter
-country code — `122323235sdf` is not one, so no request is made and the answer is **Not valid** without
-the register ever being asked. Then check **Registered to**: a real number belonging to somebody else
-answers **Valid**, and only the name exposes it.
-
-**The shield shows a grey question mark I can press.** The check could not be **read** — a network or
-server fault, not a fact about the company. Pressing it reads again.
+A grey question mark the user can press means Margince could not **read** the stored check. That is a
+network or server error, and it says nothing about the company.
 
 ## What is stored, and where
 
-One row per company, replaced on each check: the number as consulted, the verdict, the consultation
-number, the name and address the register holds, and both dates. The number as consulted is kept beside
-the answer on purpose — a profile field edited afterwards must not silently inherit a receipt issued for
-a different number.
+There is one row for each company, and each check replaces it. It holds the number as checked, the
+verdict, the consultation number, the name and address the register holds, and both dates. The number
+as checked sits next to the answer, so a profile field edited later cannot take over a receipt issued
+for a different number. **Consulted on** is the date the *register* reported, which can differ from the
+day this installation recorded it.
 
-The history is the audit log's. Every check writes an audit entry, and a check somebody **asked for**
-writes its own entry naming who asked — the worker itself runs under a system principal, so without that
-row "a contact spent a consultation on this company" would be answerable from nothing.
+The history lives in the audit log. Every check writes an audit entry. A check that someone **asked
+for** writes its own entry, which names who asked. The worker runs as the system, so without that
+entry nothing would record which user used a check on this company.
 
 ## See also
 
-- [configuration.md](../reference/configuration.md) — every env var and flag, in one table.
-- [company-context.md](../explanation/company-context.md) — where a company's profile fields come from,
-  including the site read that finds a VAT number in a German imprint in the first place.
+- [configuration.md](../reference/configuration.md): every environment value and flag, in one table.
+- [company-context.md](../explanation/company-context.md): where the profile fields of a company come
+  from, with the site read that finds a VAT number in a German imprint.

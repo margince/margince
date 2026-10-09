@@ -3,12 +3,17 @@ import { useEffect, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal } from "../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { FileDropzoneControl } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { uploadAttachment } from "./attachmentupload";
+import { ACCEPTED_ATTACHMENT_ATTR, uploadAttachment } from "./attachmentupload";
 import { ContractCustomFields } from "./contractcustomfields";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";
@@ -99,6 +104,7 @@ export function ContractForm({
 }>) {
   const t = useT();
   const titleId = useId();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<ContractDraft>(draftOf(contract));
   const [file, setFile] = useState<File | undefined>();
@@ -145,14 +151,6 @@ export function ContractForm({
     }
   }, [open, contract?.id]);
 
-  // The custom half, seeded SEPARATELY from the terms above.
-  //
-  // Two reasons it cannot ride in the effect beside them. The catalog can land
-  // after the form opens — the schema read runs beside the contract's — so an
-  // agreement's existing answers would be missing from a form that opened
-  // first. And re-running the whole seed when it arrives would throw away the
-  // terms the reader had already typed, and the file they had already picked.
-  //
   // The custom half, seeded SEPARATELY from the terms above: the catalog is a
   // second read, and what a reader has already typed has to survive its arrival.
   useSeededCustomFields({
@@ -212,9 +210,8 @@ export function ContractForm({
         queryKey: ["companyContracts", companyId],
       });
       queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
-      // The project 360 draws this agreement too. Without this a value saved
-      // here reaches the account and not the delivery it belongs to, and the
-      // project keeps serving the pre-save row from cache.
+      // The project 360 draws this agreement too, and would keep serving the
+      // pre-save row from cache.
       if (contract?.project_id) {
         queryClient.invalidateQueries({
           queryKey: ["project", contract.project_id],
@@ -223,10 +220,8 @@ export function ContractForm({
       queryClient.invalidateQueries({
         queryKey: ["companyDocuments", companyId],
       });
-      // The paper list this form and the contract row BOTH read. Without it an
-      // upload lands on the server and neither surface shows it: the row keeps
-      // the pre-upload list, and reopening the form serves the same stale cache
-      // while it refetches behind.
+      // The paper list this form and the contract row both read; without it
+      // an upload lands on the server and neither surface shows it.
       queryClient.invalidateQueries({ queryKey: ["contractPaper", companyId] });
       onClose();
     },
@@ -235,46 +230,58 @@ export function ContractForm({
   const invalid = draftProblem(draft);
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="modal-title">
-        {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
-      </Heading>
-
-      <div className="form-stack">
-        <ContractTermsFields
-          draft={draft}
-          setDraft={setDraft}
-          currency={contractCurrency}
-        />
-        <ContractCustomFields
-          fields={cf.formFields}
-          values={draft.customValues}
-          onChange={(customValues) => setDraft({ ...draft, customValues })}
-        />
-        <SignedFileField
-          companyId={companyId}
-          contractID={contract?.id}
-          file={file}
-          onPick={setFile}
-        />
-        <ErrorLine error={save.error} />
-      </div>
-      <div className="actions">
+    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={titleId}>
+          {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        {/* Not native validation: a browser's step rule refuses amounts that
+            draftProblem and the server accept. */}
+        <form
+          id={formId}
+          className="form-stack"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (invalid === null) {
+              save.mutate({ draft: pricedIn(draft, baseCurrency), file });
+            }
+          }}
+        >
+          <ContractTermsFields
+            draft={draft}
+            setDraft={setDraft}
+            currency={contractCurrency}
+          />
+          <ContractCustomFields
+            fields={cf.formFields}
+            values={draft.customValues}
+            onChange={(customValues) => setDraft({ ...draft, customValues })}
+          />
+          <SignedFileField
+            companyId={companyId}
+            contractID={contract?.id}
+            file={file}
+            onPick={setFile}
+          />
+          <ErrorLine error={save.error} />
+        </form>
+      </DrawerBody>
+      <DrawerFoot className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
-        {/* The refusal travels WITH the control: a disabled button whose
-            reason lives in a paragraph somewhere above it is announced to
-            nobody using a screen reader, and cannot be focused to find out. */}
+        {/* A reason in a paragraph above the button reaches no screen reader. */}
         <Button
+          type="submit"
+          form={formId}
           variant="primary"
           reason={invalid ? t(invalid) : undefined}
           pending={save.isPending}
-          onClick={() =>
-            save.mutate({ draft: pricedIn(draft, baseCurrency), file })
-          }
         >
           {t(contract ? "contracts.form.saveEdit" : "contracts.form.save")}
         </Button>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }
@@ -332,14 +339,6 @@ function draftOf(contract: Contract | undefined): ContractDraft {
  * half-pair the form actually holds. That is the one honest option left: the
  * server refuses it where the reader can see the refusal, whereas dropping the
  * amount would report a saved agreement whose value quietly went nowhere.
- */
-/**
- * The nine fields an agreement's own terms are made of — title through signed
- * date — shared between recording one (this file) and renewing one
- * (contractlifecycle.tsx's ContractRenewModal). Both write the same shape of
- * request (RenewContractRequest's terms are CreateContractRequest's minus
- * company_id), so this is the one place the fields are drawn rather than
- * a second, driftable copy of each.
  */
 export function pricedIn(
   draft: ContractDraft,
@@ -451,6 +450,7 @@ export function SignedFileField({
             control={props}
             file={file}
             onPick={onPick}
+            accept={ACCEPTED_ATTACHMENT_ATTR}
             emptyLabel={t(
               state !== "empty"
                 ? "contracts.form.fileAdd"

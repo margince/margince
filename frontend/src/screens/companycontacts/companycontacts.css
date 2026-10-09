@@ -53,12 +53,5 @@
 }
 
 .cp-intro-why {
-  margin: var(--space-3) 0 var(--space-1);
-}
-
-.cp-intro-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gapActions);
-  margin-top: var(--space-3);
+  margin: 0 0 var(--space-1);
 }

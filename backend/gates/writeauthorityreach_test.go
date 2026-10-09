@@ -48,8 +48,16 @@ const wantMinimumShareableWriters = 15
 // merely inconvenient: where the probe is simply a no-op today it was added
 // instead, because a no-op costs nothing and closes the drift.
 var writesWithoutARowProbe = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:relinkLeadsToContact":     "the contact merge repointing the leads that name the merged-away contact (promoted_contact_id, from_contact_id) at the survivor. Reached only from relinkContactReferences inside the merge, whose mergePair holds both contacts writable. A row probe on each lead would be the wrong test: it would refuse the merge over leads a colleague owns and leave them naming an archived contact",
 	"internal/modules/contacts:ClaimRecord":              "taking ownership of a record nobody owns. EnsureWritable would be the WRONG test and would refuse the write this exists to make: an unowned row is nobody's to change (writescope.go reads it as unownedIsNobodys), so a write probe answers no for exactly the rows a claim is for. The right gate is auth.EnsureClaimable — visible, and unowned or already the caller's — which storekit.ClaimOwnership takes on the locked row before it writes, together with the object grant through auth.Require at this entry point",
 	"internal/modules/contacts:startLeadResponseClockTx": "the routed_at stamp that runs inside a claim or an assignment, on the SAME transaction and the SAME row its caller has already gated: the claim path through EnsureClaimable inside ClaimOwnership, the assignment path through ensureLeadUpdateAuthority. A second probe here would ask a different question from the act that authorized it — and for the claim path it would be the wrong one, refusing the unowned lead the claim is taking on. It locks the row LiveOnly and stamps only when no clock has started",
+	"internal/modules/privacy:redactIntroductionRequests": "a SELECT ... FOR UPDATE, not a mutation: it holds the erased contact so an ask created " +
+		"under introductions.lockNamedContacts cannot land between this scrub's snapshot and its " +
+		"commit. The extractor reads the locking SELECT as a write to `contact`; the row is never " +
+		"changed here. A write probe would also be the wrong test on EITHER caller — the Art. 17 " +
+		"erasure a human asked for, and the clock-driven retention anonymize, are both system " +
+		"cleanup rather than a caller's write, and respecting a caller's grants would leave " +
+		"standing the prose each exists to clear",
 	"internal/modules/deals:HoldClosingOccurrenceTx": "a SELECT ... FOR SHARE, not a mutation. " +
 		"It takes the deal's row lock so the closing it answers cannot move before its caller " +
 		"writes a review against it — the extractor reads the locking SELECT as a write to " +

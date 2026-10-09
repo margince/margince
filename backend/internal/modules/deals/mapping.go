@@ -118,9 +118,16 @@ func dealCreateInputFromImporter(req crmcontracts.CreateDealRequest) (CreateDeal
 }
 
 func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool) (CreateDealInput, error) {
-	if req.Name == "" {
-		return CreateDealInput{}, &RequiredFieldError{Field: "name"}
+	name, err := httperr.RequireNonBlank("name", req.Name)
+	if err != nil {
+		return CreateDealInput{}, err
 	}
+	req.Name = name
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateDealInput{}, err
+	}
+	req.Source = source
 	// Provenance first, and before the structural checks below: a caller writing
 	// the importer's namespace is claiming to BE the importer, and that is refused
 	// on the attempt rather than only on an otherwise-complete body. Answering
@@ -178,6 +185,22 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 		in.ExpectedClose = &req.ExpectedCloseDate.Time
 	}
 	return in, nil
+}
+
+// refuseClosingFields answers the first closing field a patch carries.
+func refuseClosingFields(req crmcontracts.UpdateDealRequest) error {
+	switch {
+	case req.Status != nil:
+		//nolint:goconst // a wire field name; filterStatus names a query parameter, a different vocabulary
+		return &ClosingViaPatchError{Field: "status"}
+	case req.LostReason != nil:
+		return &ClosingViaPatchError{Field: "lost_reason"}
+	case req.FxRateToBase != nil:
+		return &ClosingViaPatchError{Field: "fx_rate_to_base"}
+	case req.FxRateDate != nil:
+		return &ClosingViaPatchError{Field: "fx_rate_date"}
+	}
+	return nil
 }
 
 func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) UpdateDealInput {

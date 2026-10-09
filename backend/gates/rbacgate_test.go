@@ -5,11 +5,10 @@
 
 package gates
 
-// The store-entry-point admission rule as a fitness function: every
-// exported method on a module's *Store or *Service — the seam both the
-// HTTP handlers and the MCP tool surface call through — references the
-// platform auth gate (object RBAC and/or the row-scope spellings),
-// directly or through a same-package helper. A store method without one
+// Every exported method on a module's *Store or *Service (the seam both the
+// HTTP handlers and the MCP tool surface call through) references the platform
+// auth gate (object RBAC and/or the row-scope spellings), directly or through a
+// same-package helper. A store method without one
 // is an ungoverned door into tenant data: reachable by any transport
 // wired to it, invisible to review. Row-scope composition itself stays
 // a call-site obligation until it moves into the database (the ADR
@@ -526,7 +525,7 @@ var entryPointsOutsideModules = gatekit.Waive(map[string]string{
 	"internal/compose/attention/assemble.go":              "attention.Service.Assemble — the day's read, matched because its dependency interfaces carry List/Count methods. It holds no store and opens no transaction: every lane is a read through the owning module's own gated entry point (approvals.Service.ListWire, contacts.Store.ListDedupeCandidates and CountOpenDedupeCandidates, activities.Store.ListActivities), and a lane whose read is refused is omitted and named rather than returned empty. Ratified here only as a subject the roots do not cover",
 	"internal/compose/attention/worklist.go":              "attention.Service.Worklist — the same day's read, ranked. Matched for the reason feed.go is: its dependency interfaces carry List/Count methods. It holds no store and opens no transaction of its own, and it reads NOTHING the lane feed did not already read — it calls Assemble and re-projects the result, so every gate that admitted a lane there is the gate that admitted it here, and a lane refused there arrives refused. Ratified here only as a subject the roots do not cover",
 	"internal/compose/attention/materialrecord.go":        "attention.Service.MaterialAtRisk — the queue's material verdict, asked by the hourly pass that records it. It holds no store and opens no transaction of its own: the deals come from the at-risk lane, which is deals.Store.ListDeals behind auth.Require on deal plus the list scope clause, and the prices from the base-money seam. It writes nothing; the verdict rows are written by deals.Store.RecordRiskDay, which this gate DOES judge and which refuses every principal but the system. Ratified here only as a subject the roots do not cover",
-	"internal/compose/attention/namedteam.go":             "Named-team composition reader: requireLeadTier gates the request, LiveMembersOfTeam enforces live membership and row scope, and boardForRoster delegates to the existing gated attention sources. No table access or mutation lives here.",
+	"internal/compose/attention/namedteam.go":             "Named-team composition reader: requireLeadTier gates the request, MembersOfTeam enforces live-team authority and row scope, and boardForRoster delegates to the existing gated attention sources. No table access or mutation lives here.",
 	"internal/compose/attention/teamboard.go":             "attention.Service.TeamBoard — the manager's counts over the same work, matched for the reason its two siblings are. It holds no store and opens no transaction. It admits the read on the reader's own ROW SCOPE first, before touching a source: a tier below team is ErrPermissionDenied, and an unbound membership reader is refused rather than answered as an empty team. Every count then comes from a read the caller makes themselves — identity.Service.LiveTeammatesOfCaller (auth.RequireHuman, and the roster it walks is the caller's own teams), activities.Store.WaitingReplies and OverdueLoadByAssignee (auth.Require plus the activity scope clauses), the at-risk lane's own gated list — so what it reports is bounded by what this reader may already open, and a source that refuses fails the board rather than drawing a column of zeros. It writes nothing. Ratified here only as a subject the roots do not cover",
 	"internal/compose/runnerservice.go":                   "RunnerService.TickWorkspace — the agent runner's worker-loop seam, which carries no human principal at all; that posture is what the module-side waivers spell out for their sweep entry points, and applying the same reasoning to compose needs the tier brought under the gate first",
 	"internal/compose/runnerresume.go":                    "RunnerService.HandleEvent — the same posture on the event-bus seam: a decision arrives on the bus under no human principal, and the authority it resumes under is re-derived from the parked run's own passport",

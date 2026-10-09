@@ -587,7 +587,7 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
  * grow-into-the-leftover-room sizing this replaced, and would have passed on
  * the defect it exists to catch.
  */
-const STAGE_WIDTH_PX = 240;
+const STAGE_WIDTH_PX = 300;
 
 /**
  * The stage geometry a reader is actually handed, read off the rendered board.
@@ -940,6 +940,30 @@ test("AC-pipeline-10: the bar under the pointer is the one that lights", async (
     });
 });
 
+// Whose deal it is reads the same in both views: the card's mark names the
+// owner on hover, and the table gives the owner a column of its own.
+test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
+  await page.goto("/#/deals");
+  const mark = page
+    .locator('[data-deal="d-fleet"]')
+    .getByRole("img", { name: "Lena Fischer" });
+  // Playwright refuses to hover an element another one covers, so this also
+  // holds the mark above the deal's link, which is stretched over the card.
+  await mark.hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Lena Fischer");
+  // Raised above the link, the mark still opens the deal like the rest of the
+  // card: the middle button in a new tab, a click in place.
+  const tab = page.context().waitForEvent("page");
+  await mark.click({ button: "middle" });
+  await expect(await tab).toHaveURL(/#\/deals\/d-fleet$/);
+  await mark.click();
+  await expect(page).toHaveURL(/#\/deals\/d-fleet$/);
+  await page.goto("/#/deals");
+  await page.getByRole("button", { name: "Tabelle" }).click();
+  const row = page.getByRole("row", { name: /Fleet retrofit/ });
+  await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
+});
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
@@ -949,6 +973,9 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   const card = page.locator('[data-deal="d-fleet"]');
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
+  // The board scrolls sideways and the terminal stage starts at this window's
+  // edge, so it is brought into view the way a rep scrolls to it before a drop.
+  await won.scrollIntoViewIfNeeded();
   await card.dragTo(won);
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 
@@ -1808,11 +1835,24 @@ test.describe("the cold start's board on a phone at 200% text", () => {
       document.documentElement.style.fontSize = "200%";
     });
     await expectBoardReachable(page);
+    // The Core's row is what a room this short against its text gives up —
+    // folded, never unmounted, or its WebGL loop restarts on the way back.
+    await expect(page.locator(".ob-stage-core")).toHaveCount(1);
+    await expect(page.locator(".ob-stage-core")).toBeHidden();
     // The ignition is the widest step: the sealed badge and the capability
     // lines are the lines that outgrew the board.
     await page.getByRole("button", { name: de["firstRun.continue"] }).click();
     await expect(page.locator(".ob-ig-can li")).toHaveCount(3);
     await expectBoardReachable(page);
+  });
+
+  // The same window at the text size it was built for keeps the Core: the fold
+  // is measured against the reader's text, not against the phone.
+  test("keeps the Core at the default text size", async ({ page }) => {
+    await mockApi(page, { journey: "unconfigured" });
+    await page.goto("/#/onboarding");
+    await expect(page.locator(".ob-stage-title")).toBeVisible();
+    await expect(page.locator(".ob-stage-core")).toBeVisible();
   });
 });
 
@@ -1987,6 +2027,9 @@ const ADDRESSED_VIEWS = [
   // purpose and everybody lands on.
   "search/brandt",
   "projects/pr-fleet",
+  // A focused filter page names itself, so the shell's heading stands down:
+  // the one-h1 sweep is what holds the two from both printing one.
+  "filters/companies",
 ];
 
 // The SAME sweep under the dark palette, which the suite measured by accident
@@ -2764,10 +2807,12 @@ test.describe("filters and views", () => {
     await page.goto("/#/filters/companies");
     await expectShellRendered(page);
 
-    // Before anything is authored the count says so, rather than showing a zero
-    // that would read as "no companies match".
+    // Before anything is authored the page says what would bring a count,
+    // rather than showing a zero that would read as "no companies match".
     await expect(
-      page.getByText("Bedingung hinzufügen, um Treffer anzuzeigen"),
+      page.getByText(
+        de["filters.hint.start"].replace("{records}", "Unternehmen"),
+      ),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
@@ -2843,32 +2888,36 @@ test.describe("filters and views", () => {
     ]);
   });
 
-  test("AC-filters-and-views-4: clauses combine, the group names the join, and a linked field is narrowed", async ({
+  test("AC-filters-and-views-4: conditions combine through the word between them, a group nests the other join, and a linked field is narrowed", async ({
     page,
   }) => {
     await page.goto("/#/filters/companies");
     await expectShellRendered(page);
 
-    // The join control is present before a second clause exists, because it is a
-    // property of the GROUP rather than of having two of anything.
-    const joins = page.getByRole("group", {
-      name: "Verknüpfungsmodus",
-    });
-    await expect(joins).toHaveCount(1);
-    await expect(
-      joins.getByRole("button", { name: "Alle (UND)", pressed: true }),
-    ).toBeVisible();
-    await joins.getByRole("button", { name: "Mindestens eine (ODER)" }).click();
-    await expect(
-      joins.getByRole("button", {
-        name: "Mindestens eine (ODER)",
-        pressed: true,
-      }),
-    ).toBeVisible();
-
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
     await expect(page.getByRole("combobox", { name: "Feld" })).toHaveCount(2);
+
+    // The join is the word between two conditions, and it is the switch: one
+    // group has one join, so pressing it flips the group.
+    const matchAll = page.getByRole("button", {
+      name: de["filters.connector.matchAll"].replace(
+        "{word}",
+        de["filters.join.and"],
+      ),
+      exact: true,
+    });
+    await expect(matchAll).toHaveCount(1);
+    await matchAll.click();
+    await expect(
+      page.getByRole("button", {
+        name: de["filters.connector.matchAny"].replace(
+          "{word}",
+          de["filters.join.or"],
+        ),
+        exact: true,
+      }),
+    ).toHaveCount(1);
 
     // A tag leaf is reached through a join, so the engine narrows it to the link
     // operators — `enthält` is gone, and a picker that offered it would produce
@@ -2884,9 +2933,18 @@ test.describe("filters and views", () => {
     ]);
     await page.keyboard.press("Escape");
 
-    // And nesting: a group inside a group is what mixing AND with OR needs.
-    await page.getByRole("button", { name: "Gruppe hinzufügen" }).click();
-    await expect(joins).toHaveCount(2);
+    // And nesting: from two conditions, More offers a group of the other join,
+    // arriving with a condition in it — what mixing AND with OR needs.
+    await page
+      .getByRole("button", { name: de["filters.rowsMore"], exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: de["filters.addGroup"], exact: true })
+      .click();
+    await expect(
+      page.getByText(de["filters.group.all"], { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Feld" })).toHaveCount(3);
   });
 
   test("AC-filters-and-views-5: the preview shows matching records, and says it is a page of them", async ({
@@ -2923,6 +2981,22 @@ test.describe("filters and views", () => {
         "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
       ),
     ).toBeVisible();
+  });
+
+  // The 390px sweep visits the library; a filter page with a condition on it
+  // is a different width problem — a clause row of three controls — and is
+  // measured where it is drawn.
+  test("at 390px a written condition fits without scrolling sideways, under one heading", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/#/filters/companies");
+    await expectShellRendered(page);
+    await authorIndustryIs(page);
+
+    await expect(page.getByText("Passende Unternehmen: 812")).toBeVisible();
+    expect(await pageOverflow(page)).toEqual([]);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   });
 
   test("AC-filters-and-views-1: the object tab is part of the address", async ({

@@ -57,6 +57,25 @@ reviews:
         the code, narrates how it got here ("used to", "was answered twice", a
         rule or ticket number), or repeats a rule a gate already holds.
         `make comment-budget` fails a change adding more comment lines than code.
+    - path: "**/*.md"
+      instructions: |
+        Documentation is held to docs/reference/docs-prose-style.md. Review
+        added or changed prose for what backend/gates/docsprose_test.go cannot
+        see:
+        - Facts: check each number, default, path, command and "only" or
+          "every" claim against the code in this pull request. A count of
+          things the code owns should link to the generated page.
+        - Self-consistency: a lead-in count against its list, a table against
+          the prose beside it, one rule stated two ways on one page.
+        - Job: a how-to gives steps, reference gives facts, explanation gives
+          specific reasons. Handbook and user-guide pages use the words on the
+          screen, not developer terms.
+        - Density: a sentence whose deletion loses no fact, a recap that
+          repeats its section, a reason that names no mechanism.
+        - Public repository: nothing a reader cannot open.
+        Do not flag what the gate already enforces (em dashes, the banned
+        words, capitals for emphasis, bold spans, sentence length, history
+        phrases, counted lead-ins).
     - path: "frontend/src/i18n/en.ts"
       instructions: |
         English is the source catalog; German and Vietnamese are translated from

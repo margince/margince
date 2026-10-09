@@ -161,10 +161,14 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
-	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
+	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
+	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf)
+	horizon := reader.meetingHorizon(ctx, day, beside.until)
+	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
-		ctx, day, resolved, filter, limit, waiting, cursor,
-		append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, beside.failed...))
+		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
+	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
+	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	teamWeek := teamWeekFor(ctx)
@@ -198,7 +202,7 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf, s.money)
-	rows = append(rows, s.planRows...)
+	rows = append(append(rows, s.planRows...), s.followUps.rows...)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	rows = append(rows, waits...)
 	// What the night thought of each deal, onto whichever row is about it — the
@@ -253,6 +257,12 @@ func (s *Service) worklistFrom(
 	if waiting.read {
 		bounded[sourceWaiting] = waiting.cut
 	}
+	// A team's promises are read beside the day too, and a roster cut at its
+	// cap leaves teammates past it never asked.
+	if s.planCoverage != nil {
+		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
+	}
+	s.followUps.bound(bounded)
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
 	// entirely — a rep narrowing to meetings would read "no tasks" rather than

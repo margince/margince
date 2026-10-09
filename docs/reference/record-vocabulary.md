@@ -1,90 +1,84 @@
+<!-- prose:plain -->
 # The record nouns
 
-One rule, for both of them: **the reader and the program say the same word, and
-the schema follows.**
+One rule covers both record nouns: the reader and the program say the same
+word, and the schema follows.
 
-| The record | What everything calls it | What it used to be called |
+| The record | What all code and text calls it | Dropped words |
 |---|---|---|
-| A human being an installation does business with | `contact` | `person`, `people`, `persons` |
+| A human an installation does business with | `contact` | `person`, `people`, `persons` |
 | A company an installation does business with | `company` | `organization`, `org`, `account` |
 
-"Everything" is the whole stack and not just the screen: the URL, the HTTP path,
-the operation id, the public event type, the search DSL's traverse relation, the
-agent tool's `record_type` argument, the table, the column, the constraint, the
-index, the Go identifier, the file name, the i18n key and the prose in `docs/`.
+"All code and text" is the whole stack. Over the network that is the URL, the
+HTTP path, the `operationId` and the public event type. It is also the
+`traverse` name in the search DSL and the `record_type` input of the agent tool.
+In the tree it is every table, column and other schema name. It is also
+the Go name, the file name, the `i18n` key and the text in `docs/`.
 
-## Why the rule is this way round
+## Why one word in every place
 
-It was settled the other way first. The recorded position was "a person reads
-*company*, a program is compiled against *organization*" — one word for the
-screen and another for the schema, translated at the boundary. Applied to the
-sibling noun it says the screen may say *contact* while the schema keeps
-`person`, which is the state this product was in and which cost something every
-time:
+One word per record on the screen, in the API and in the schema means no one
+has to map one word to another. A split costs something in every place:
 
-- A reader grepping for the contact table found nothing and concluded there
-  wasn't one.
-- A model asking for `record_type: "company"` was refused by a registry that
-  admitted only `"organization"`.
-- The browser said `#/contacts/:id` and the request it fired said
-  `GET /people/{id}`, so every new surface had to learn that they were the same
-  thing.
-- A third spelling appeared without anybody deciding on it: the search DSL's
-  traverse relation was `persons`, because it is derived from the kind word and
-  nothing had ever been asked to agree with it.
+- A reader who searches for the contact table finds nothing and thinks there is
+  none.
+- A model that asks for `record_type: "company"` is refused by a register that
+  takes only `"organization"`.
+- The browser says `#/contacts/:id` while the request it sends says
+  `GET /people/{id}`, so every new screen has to learn they are the same thing.
+- A third spelling comes in with no one deciding on it: the `traverse` name in
+  the search DSL followed the kind word and read `persons`.
 
-Two record nouns cannot hold opposite rules — that is what makes every new
-surface ask the question again, which is the cost the original rule was written
-to remove. So both nouns take the same one, and it is the human word: the
-product's vocabulary is the vocabulary a reader already has, and a program is
-easier to read when it agrees with the screen than when it is one translation
-away from it.
+Both nouns follow the same rule, and the word is the one on the screen. A
+program is easier to read when it agrees with the screen.
 
 ## The words that are not these records
 
-A blind substitution breaks each of these, and each survives on purpose.
+These words are not the record nouns. Do not rename them.
 
-**Not a contact.** `personal` — a counterparty verdict, a mail posture, a purge
-scope, an exclusion container. `in_person` — a consent qualifying event's kind,
-where the word means physically present. `personality_md` — a voice profile's
-prose. `personnel` — a confidentiality class. `persona`, `impersonate`,
-`salesperson`. In German, `Personen` and `personenbezogene Daten` are the legal
-term and are not this record. **Settings → People** is the SEATS group, beside
-Company and Sales: it heads the pages about colleagues with a licence, and it is
-the one surface where the plural still means the humans who work here.
+**Not a contact.** `personal`: a counterparty verdict, a mail posture, a purge
+scope, the container of a `capture_exclusion`. `in_person`: the kind of a
+consent event, where the word means the humans are in the same place.
+`personality_md`: the text of a voice profile. `personnel`: a level of private
+data. `persona`, `impersonate`, `salesperson`.
 
-**Not a company.** A meeting `organizer`, the adjective `organizational`, a
-`.org` TLD, Microsoft's `organizations` authority alias (a literal path segment
-at `login.microsoftonline.com`, and renaming it stops sign-in working), vCard's
-`ORG` property, and schema.org's own type names.
+In German, `Personen` and `personenbezogene Daten` are the legal words and are
+not this record. **`Settings → People`** is the seats group, next to Company and
+Sales. It holds the pages about members with a license. It is the one screen
+where the word still means the humans who work here.
 
-**Already spelled `contact` before the rename, and not this record.**
-`graph_contact_edge` (two contacts observed on one thread — it keeps its name,
-because with `contact_a` and `contact_b` it now reads as what it is),
-`organization_fact.field = 'contact_email'`, `partner.last_contact_at`,
-`intro_request.route_type = 'through_contact'`, and a lead whose status is
-`contacted`.
+**Not a company.** A meeting `organizer`, the word `organizational` and a
+`.org` domain. The `organizations` name in Microsoft sign-in, a fixed part
+of the path at `login.microsoftonline.com`: renaming it stops sign-in working.
+The `ORG` field of a vCard, and the type names of `schema.org`.
+
+**Spelled `contact` but not this record.** `graph_contact_edge` links two
+contacts on one thread, and with `contact_a` and `contact_b` it reads as
+what it is. Also `organization_fact.field = 'contact_email'`,
+`partner.last_contact_at`, `intro_request.route_type = 'through_contact'`, and
+a lead whose status is `contacted`.
 
 ## What holds it
 
-Three censuses, each deriving its corpus from the tree rather than from a list:
+Three scans, each taking its list of files from the tree:
 
-- `frontend/src/i18n/record-noun.test.ts` — the copy, in both directions. Every
-  key that offers the record TYPE carries the contact noun, and no catalog value
-  says the retired noun unless its key is listed there as one where the word
-  means a human being, grouped by the reason it stays.
-- `backend/gates/contactvocabulary_test.go` — the code. Every git-tracked file,
-  path and contents, fails on the retired word. It derives the human-sense
-  sentences from the catalogs above rather than keeping a second copy of them.
-  The sibling noun takes a census of the same shape.
-- `backend/internal/shared/gatekit/migrationrenames.go` — not a gate itself, but what
-  stops the others going quiet: a census that reads migration TEXT reads the
-  name a thing was CREATED under, so every one of them reads through the
-  `ALTER ... RENAME` statements the migrations themselves declare.
+- `frontend/src/i18n/record-noun.test.ts` checks the copy both ways.
+  Every key that offers the record type carries the contact noun. No catalog
+  value says the dropped noun, unless its key is listed there as one where the
+  word means a human. That list is grouped by the reason each key stays.
+- `backend/gates/contactvocabulary_test.go` checks the code. It fails on the
+  dropped word in the path or text of every file git tracks. It takes the
+  sentences where the word means a human from the catalogs above, and does not
+  keep a second copy. The other record noun has a scan of the same shape.
+- `backend/internal/shared/gatekit/migrationrenames.go` is not a gate itself. A
+  scan that reads migration text sees the first name of a table or column. So
+  every scan reads through the `ALTER ... RENAME` statements the migrations
+  declare. Without it the other scans miss every name that changed.
 
-Audit rows keep the retired word forever. `trg_audit_no_mutate` refuses an
-UPDATE on `audit_log`, which is the property that makes the trail worth having,
-so a mutation recorded before a rename still says `entity_type = 'person'` or
-`'organization'`. The two read paths that filter the trail by record type accept
-both words, and `backend/internal/compose/auditlegacytype.go` says so once
-instead of twice.
+An audit row keeps the dropped word for as long as the row is kept.
+`trg_audit_no_mutate` refuses a DELETE or an UPDATE on `audit_log`, which is
+what makes the audit log safe to trust. So a
+change recorded before a rename still says `entity_type = 'person'` or
+`'organization'`. The two read paths that filter the audit log by record type accept
+both words, and `backend/internal/compose/auditlegacytype.go` holds that map for
+both.

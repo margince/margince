@@ -35,11 +35,18 @@ import {
  * `tone: "danger"`, because the green completion dot the default tone draws
  * says the opposite of what the sentence says.
  *
- * **An action is offered only where an inverse write actually exists.** Most of
- * this product's destructive verbs have none: every `DELETE` is a soft archive
- * with no restore endpoint, and the record-history put-back refuses an archive
- * outright (`not_a_replayable_verb`). An Undo with nothing behind it is worse
- * than no Undo, because the reader stops looking for the real way back.
+ * **An action is offered only where an inverse write actually exists.** A
+ * contact, company or deal archive comes back through
+ * `POST /records/{entity_type}/{id}/history/{audit_id}/restore`, and pipelines,
+ * lists, tags and roles have their own `/restore`; a merge or a send has none.
+ * An Undo with nothing behind it is worse than no Undo, because the reader
+ * stops looking for the real way back.
+ *
+ * **An Undo replaces a confirm only where the inverse is exact**: one call puts
+ * the prior state back with nothing lost, as un-hiding a deal file, putting a
+ * tag back on a record and putting a record back on a Shortlist do. A way back
+ * that re-stamps who added it, drops a note, needs a reason, reaches someone
+ * outside or changes access keeps its `ConfirmModal`.
  */
 const meta: Meta<typeof ToastRegion> = {
   title: "Components/Messaging/Toast",
@@ -61,7 +68,7 @@ type Story = StoryObj<typeof ToastRegion>;
 
 /**
  * Live, because the region's whole subject is timing: a confirmation withdraws
- * itself, one carrying a verb does not, and hovering either stops the clock.
+ * itself, one carrying an Undo lasts longer, and hovering either stops the clock.
  * None of that is visible in a static frame.
  */
 function Bench({
@@ -144,9 +151,8 @@ export const Refusal: Story = {
 };
 
 /**
- * The verb, which is what this exists for. A toast carrying one never withdraws
- * on a timer: a reader reaching for Undo must not lose it mid-reach, and there
- * is no timeout long enough to be safe that is also short enough to be a toast.
+ * The verb, which is what this exists for. A toast carrying one stays about
+ * eight seconds, and not at all while the pointer or focus is on it.
  *
  * Pressing it runs the inverse write and puts the message down — a message still
  * offering an action it has already taken is a second press waiting to happen.
@@ -154,10 +160,10 @@ export const Refusal: Story = {
 export const CarryingAnUndo: Story = {
   render: () => (
     <Bench
-      label="Remove access"
-      message="Access removed for Jana Brandt."
+      label="Hide a file"
+      message="Hidden from this deal"
       options={{
-        action: { label: "Undo", onAct: () => {} },
+        action: { kind: "undo", label: "Undo", onAct: () => {} },
       }}
     />
   ),
@@ -165,15 +171,15 @@ export const CarryingAnUndo: Story = {
 
 /**
  * A message the reader has not answered is never taken away by one that is only
- * reporting. Press both: the archive keeps the region until it is dismissed, and
- * the save waits its turn behind it.
+ * reporting. Press both: the archive keeps the region until it goes, and the
+ * save waits its turn behind it.
  */
 export const AVerbOutranksAReport: Story = {
   render: () => (
     <Bench
       label="Archive"
       message="Contract archived."
-      options={{ action: { label: "Undo", onAct: () => {} } }}
+      options={{ action: { kind: "undo", label: "Undo", onAct: () => {} } }}
       extra={<QueuedBehind />}
     />
   ),
@@ -198,7 +204,7 @@ export const LongContent: Story = {
     <Bench
       label="Archive a long one"
       message="Archived “Nordwest Maschinenbau Vertriebsgesellschaft mbH & Co. KG — Rahmenvertrag 2026”."
-      options={{ action: { label: "Undo", onAct: () => {} } }}
+      options={{ action: { kind: "undo", label: "Undo", onAct: () => {} } }}
     />
   ),
 };

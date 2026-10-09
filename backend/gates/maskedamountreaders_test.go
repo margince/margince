@@ -21,7 +21,7 @@ import (
 )
 
 // maskableCatalog is what this build can withhold, one "<object> <field>" per
-// line — the owner of this census's subject, and the only place it is named.
+// line; it owns this census's subject and is the only place it is named.
 const maskableCatalog = "migrations/testdata/maskable_fields.txt"
 
 // dealBaseAmount is the deal's money in its converted column, and no catalog

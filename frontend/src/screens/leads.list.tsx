@@ -7,52 +7,37 @@ import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
-import { currentParams, useUrlParams } from "../app/urlstate";
-import { Badge, SegmentedControl } from "../design-system/atoms";
+import { replaceDial, useUrlParams } from "../app/urlstate";
+import { SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { CellStrip } from "../design-system/listtable";
-import { useToast } from "../design-system/toast";
-import { formatDateAbbrev, formatNumber } from "../format/format";
+import { useOwnToast } from "../design-system/toast";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useAssignableUserOptions } from "./assigneepicker";
 import { ProblemError, QueryGate, throwProblem, useMe } from "./common";
-import { CreateAction, type CreateField } from "./create";
+import { CreateAction } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { LeadBulkBar } from "./leadbulk";
-import {
-  LEAD_STATUS_FILTER_OPTIONS,
-  LeadBoard,
-  SlaBadge,
-  StatusBadge,
-  scoreFactorLabel,
-  scoreTone,
-} from "./leadpresentation";
+import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
+import { leadColumns } from "./leads.columns";
+import { leadIdentityFields } from "./leads.contactoffers";
 import {
   sourceFilterOptions,
-  sourceLabelFor,
   sourcePickOptions,
   useLeadSettings,
   useLeadSources,
 } from "./leadsources";
-import { terminalBadge } from "./leadstanding";
 import {
   type ListPage,
   type ListQuery,
   ListTable,
   listFetchLimit,
   useListQuery,
-  useOwnerChips,
 } from "./listquery";
-import {
-  createdColumn,
-  lastActivityColumn,
-  mineEmptyNote,
-  ownerColumn,
-  standardViews,
-} from "./recordlist";
+import { mineEmptyNote, standardViews, useOwnerTagChips } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
+import { listQueryParams } from "./tagfilter";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
@@ -70,7 +55,7 @@ async function fetchLeadsPage(
         include_archived: query.includeArchived || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        ...query.filters,
+        ...listQueryParams(query.filters),
       },
     },
   });
@@ -99,6 +84,7 @@ export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
     linkedin_url: values.linkedin_url?.trim() || undefined,
     title: values.title?.trim() || undefined,
     company_name: values.company_name?.trim() || undefined,
+    contact_id: values.contact_id || undefined,
     owner_id:
       values.owner_id === UNASSIGNED_OWNER
         ? undefined
@@ -113,14 +99,6 @@ export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
 // do not skip the question. The server reads an omitted owner_id as exactly
 // that: an unassigned lead for routing or a claim to pick up.
 export const UNASSIGNED_OWNER = "unassigned";
-
-const leadCreateFields: CreateField[] = [
-  { key: "full_name", label: "create.fullName", required: true },
-  { key: "email", label: "create.email", type: "email" },
-  { key: "linkedin_url", label: "create.linkedinUrl" },
-  { key: "title", label: "create.contactTitle" },
-  { key: "company_name", label: "create.companyName" },
-];
 
 const leadStatusFilterOptions = LEAD_STATUS_FILTER_OPTIONS;
 
@@ -229,7 +207,7 @@ function LeadsWorkbench({
   viewerId,
   opensOnAll,
 }: Readonly<{ viewerId: string; opensOnAll: boolean }>) {
-  const ownerChips = useOwnerChips();
+  const ownerChips = useOwnerTagChips();
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
   const assignable = useAssignableUserOptions();
@@ -261,7 +239,7 @@ function LeadsWorkbench({
   // What the last bulk write did to a row the current view then stopped
   // showing — a successful assign out of "Mine" must never look like nothing
   // happened (or like a failure).
-  const toast = useToast();
+  const assignedAway = useOwnToast({ leavesWithCaller: true });
   const showingMine = state.query.filters.owner_id === viewerId;
   // Only ids the list currently holds count as selected: a row that left the
   // result set (refetched away, paged out, filtered out) must not linger as
@@ -273,18 +251,11 @@ function LeadsWorkbench({
   // is the screen's OWN name rather than a wire one, because which of the two
   // is drawn changes nothing about which leads exist — the same split the deals
   // screen makes.
-  const [params, setParams] = useUrlParams();
+  const [params] = useUrlParams();
   const view: "table" | "board" =
     params.get(LEAD_VIEW_PARAM) === "board" ? "board" : "table";
-  const setView = (next: "table" | "board") => {
-    const dials = new Map(currentParams());
-    if (next === "board") {
-      dials.set(LEAD_VIEW_PARAM, next);
-    } else {
-      dials.delete(LEAD_VIEW_PARAM);
-    }
-    setParams(dials);
-  };
+  const setView = (next: "table" | "board") =>
+    replaceDial(LEAD_VIEW_PARAM, next === "board" ? next : undefined);
   const sources = useLeadSources();
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },
@@ -340,7 +311,7 @@ function LeadsWorkbench({
             create={(values) => createLead(values, cf.toBody(values), t)}
             resolveExisting={(_code, id) => ({ screen: "leads", id })}
             fields={[
-              ...leadCreateFields,
+              ...leadIdentityFields,
               {
                 key: "owner_id",
                 label: "lead.ownerLabel",
@@ -361,93 +332,7 @@ function LeadsWorkbench({
             ]}
           />
         }
-        columns={[
-          {
-            key: "name",
-            header: t("contacts.name"),
-            cell: (lead: Lead) => {
-              const terminal = terminalBadge(lead);
-              return (
-                <span>
-                  <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>
-                  {lead.company_name && (
-                    <span className="t-caption"> · {lead.company_name}</span>
-                  )}
-                  {terminal && (
-                    <Badge tone={terminal.tone}>{t(terminal.label)}</Badge>
-                  )}
-                </span>
-              );
-            },
-            // `full_name` is in the server's lead sort vocabulary, so the
-            // header is live and the attribute joins the sort menu — which is
-            // the only place an alphabetical order is offered now that no view
-            // tab spells one.
-            sort: "full_name",
-            fixed: true,
-          },
-          {
-            key: "score",
-            header: t("lead.score"),
-            cell: (lead: Lead) => (
-              <CellStrip>
-                <Badge tone={scoreTone(lead.score)}>
-                  {formatNumber(lead.score, locale)}
-                </Badge>
-                <span className="t-caption">
-                  {lead.score_reason
-                    ? scoreFactorLabel(lead.score_reason, t)
-                    : t("lead.scoreNoSignals")}
-                </span>
-              </CellStrip>
-            ),
-            sort: "score",
-            numeric: true,
-          },
-          {
-            key: "status",
-            header: t("lead.status"),
-            sort: "status",
-            cell: (lead: Lead) => (
-              <span className="lead-status-cell">
-                <StatusBadge status={lead.status} />
-                <SlaBadge state={lead.sla_state} />
-              </span>
-            ),
-          },
-          {
-            key: "nextTask",
-            header: t("lead.nextTask"),
-            sort: "next_task_due_at", // the deadline, not the title
-
-            cell: (lead: Lead) => (
-              <span>
-                {lead.next_task_subject ?? t("lead.noNextTask")}
-                {lead.open_task_count
-                  ? ` · ${t("lead.openTaskCount", {
-                      count: formatNumber(lead.open_task_count, locale),
-                    })}`
-                  : ""}
-                {lead.next_task_due_at
-                  ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, recordZone)}`
-                  : ""}
-              </span>
-            ),
-          },
-          // The shared column, now that this header can offer a sort.
-          lastActivityColumn<Lead>(t, locale, recordZone),
-          {
-            key: "source",
-            header: t("lead.source"),
-            sort: "source", // the catalog's label, which is what the cell prints
-
-            cell: (lead: Lead) => (
-              <span>{sourceLabelFor(lead, sources.data?.data, t)}</span>
-            ),
-          },
-          ownerColumn<Lead>(t),
-          createdColumn<Lead>(t, locale, recordZone),
-        ]}
+        columns={leadColumns(t, locale, recordZone, sources.data?.data)}
         rowKey={(lead) => lead.id}
         selection={{
           selected: liveSelection,
@@ -481,7 +366,7 @@ function LeadsWorkbench({
                 );
                 // Each run says its own thing; a sentence about the last one
                 // must not stand beside this one's rows.
-                toast.dismiss();
+                assignedAway.withdraw();
                 const moved = outcomes.filter((o) => !o.error);
                 if (
                   action.kind === "assign" &&
@@ -489,18 +374,17 @@ function LeadsWorkbench({
                   action.ownerId !== viewerId &&
                   moved.length > 0
                 ) {
-                  // The verb goes through `action` rather than into the
-                  // message: the region draws it, so it is one control on one
-                  // ground rather than a `Button` hand-placed on the toast's
-                  // dark plate, and the region withdraws the message once it
-                  // has been pressed.
-                  toast.show(
+                  // The verb goes through `action`: the region draws it as one
+                  // control on one ground, not a `Button` hand-placed on the
+                  // toast's dark plate, and withdraws the message once pressed.
+                  assignedAway.show(
                     t("lead.assignedAway", {
                       names: moved.map((o) => o.name).join(", "),
                       owner: action.ownerName,
                     }),
                     {
                       action: {
+                        kind: "open",
                         label: t("list.showAll"),
                         onAct: () =>
                           state.setQuery((q) => {

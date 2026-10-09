@@ -5,7 +5,7 @@
 
 package gates
 
-// The census says a site EXISTS; this says a process role runs it.
+// The census says a site exists; this says a process role runs it.
 //
 // Those are two claims, and only the first one had a gate. A site can be
 // registered, bound to a certification case, scored by the corpus and written

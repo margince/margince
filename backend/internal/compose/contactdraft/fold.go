@@ -190,6 +190,7 @@ func foldProject(in *Input, view crmcontracts.Contact360, projectID *ids.Project
 			continue
 		}
 		folded := ProjectIn{
+			ID:    projectID.String(),
 			Name:  project.Name,
 			Phase: string(project.Phase),
 		}
@@ -394,8 +395,12 @@ func stamp(at *time.Time) string { return contactcontext.Stamp(at) }
 // prefix. Only a message THEY sent counts: our own last outbound carries a
 // subject too, and "Re:" on it replies to ourselves.
 func (in Input) Threaded() bool {
-	return len(in.Recent) > 0 && in.Recent[0].Inbound && in.Recent[0].Subject != ""
+	mail, ok := in.threadMail()
+	return ok && mail.Inbound
 }
+
+// threadMail is the thread a draft answers: draftcore.ThreadMail on Recent.
+func (in Input) threadMail() (ActIn, bool) { return draftcore.ThreadMail(in.Recent) }
 
 // Booked is whether this contact has a meeting on file. foldMeeting only
 // carries one this contact actually attends, so a non-nil Meeting is a real
@@ -418,7 +423,7 @@ func foldMeeting(in *Input, view crmcontracts.Contact360, now time.Time) {
 	if !attends(meeting, view.Contact.Id) {
 		return
 	}
-	folded := MeetingIn{StartsAt: meeting.StartsAt.UTC().Format(time.RFC3339)}
+	folded := MeetingIn{ActivityID: meeting.ActivityId.String(), StartsAt: meeting.StartsAt.UTC().Format(time.RFC3339)}
 	if meeting.Subject != nil {
 		folded.Subject = *meeting.Subject
 	}

@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { today } from "../format/calendarday";
 import { stable } from "../format/collate";
@@ -83,14 +84,8 @@ export function ProviderSheet({
   const titleId = useId();
   const state = providerState(status, usage);
   return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy={titleId}
-      placement="right"
-      size="wide"
-    >
-      <div className="drawer-head">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
+      <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {providerName(status.provider, t)}
         </Heading>
@@ -102,8 +97,8 @@ export function ProviderSheet({
               : t("aiProviders.notUsed")}
           </span>
         </p>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         <section className="ai-sheet-section">
           <Heading size="small" className="t-h3">
             {t("aiProviders.connection")}
@@ -114,9 +109,10 @@ export function ProviderSheet({
         <ProviderPrices
           provider={status.provider}
           pricedBy={status.priced_by}
+          keyed={status.usable}
           usage={usage}
         />
-      </div>
+      </DrawerBody>
     </Modal>
   );
 }
@@ -139,10 +135,12 @@ function firstVerb(section: HTMLElement | null): HTMLElement | null {
 function ProviderPrices({
   provider,
   pricedBy,
+  keyed,
   usage,
 }: Readonly<{
   provider: string;
   pricedBy?: string;
+  keyed: boolean;
   usage: ProviderUsage | undefined;
 }>) {
   const t = useT();
@@ -150,8 +148,11 @@ function ProviderPrices({
   const canWrite = useCanUpsert("ai_model_rate");
   const sheet = useAiModelCatalogue(canRead);
   const sync = usePriceSync(canRead);
+  // The last sync's line is stored with its run. Its "No key" is about the key
+  // held then, and says nothing true once one is held now.
   const lastLine = sync.data?.last_run?.report.providers.find(
-    (p) => p.provider === provider,
+    (p) =>
+      p.provider === provider && !(keyed && p.outcome === "not_configured"),
   );
   // The row being edited, `{}` for a new price, nothing while the table shows.
   const [form, setForm] = useState<{

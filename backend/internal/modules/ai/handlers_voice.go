@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -52,6 +53,10 @@ type Handlers struct {
 	// providers is the process's record of which providers are answering, the
 	// same book the Router reads when it refuses a call.
 	providers *providerBook
+	// boundModels is what each lane serves now, read on every health request
+	// so a rebind moves the rows with it. Nil on a role that resolved no model
+	// path, where every attempt stays on its tier.
+	boundModels func() map[Tier]ModelRef
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the
@@ -179,18 +184,26 @@ func (h Handlers) IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Request
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// source_ref is required and non-empty on the wire, so it is refused here
+	// before the store's content-keyed default can answer for a missing one.
+	sourceRef := strings.TrimSpace(req.SourceRef)
+	if sourceRef == "" {
+		writeVoiceErr(w, r, &CorpusIngestError{Field: voiceKeySourceRef, Reason: voiceValidationNotEmpty})
+		return
+	}
 	in := IngestSourceInput{
 		Kind:        string(req.Kind),
 		SourceLabel: req.SourceLabel,
 		Register:    string(req.Register),
-		SourceRef:   req.SourceRef,
+		SourceRef:   sourceRef,
 		Format:      string(req.Format),
 	}
 	if req.Content != nil {
 		in.Content = *req.Content
 	}
 	if req.Weight != nil {
-		in.Weight = float64(*req.Weight)
+		weight := float64(*req.Weight)
+		in.Weight = &weight
 	}
 	if req.SpeakerLabel != nil {
 		in.SpeakerLabel = *req.SpeakerLabel

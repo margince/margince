@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -25,7 +26,15 @@ type tagAdapter struct{ store *collections.Store }
 // tag applied over MCP and one applied in the web app pass the same gates and
 // write the same audit row.
 func tagSeam(pool *pgxpool.Pool) agents.Tags {
-	return tagAdapter{store: collections.NewStore(InstallationDB(pool))}
+	return tagSeamFor(InstallationDB(pool))
+}
+
+// tagSeamFor binds the tag verbs to one workspace-bound handle, so a registry
+// built for a named workspace offers and applies a tag in the same one.
+//
+//nolint:ireturn // the seam is an interface by design: agents may not import the collections module
+func tagSeamFor(db *database.DB) agents.Tags {
+	return tagAdapter{store: collections.NewStore(db)}
 }
 
 // ResolveTag answers the id of an EXISTING workspace tag with this name, and
@@ -77,6 +86,7 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 		Contacts:  usage.Contacts,
 		Companies: usage.Companies,
 		Deals:     usage.Deals,
+		Leads:     usage.Leads,
 	}
 	if row.Color != nil {
 		out.Color = *row.Color
@@ -159,7 +169,8 @@ func (a tagAdapter) ApplyTag(ctx context.Context, tagID ids.UUID, entityType str
 }
 
 func (a tagAdapter) RemoveTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error {
-	return a.store.RemoveTag(ctx, ids.From[ids.TagKind](tagID), entityType, entityID)
+	_, err := a.store.RemoveTag(ctx, ids.From[ids.TagKind](tagID), entityType, entityID)
+	return err
 }
 
 // --- the vocabulary verbs ---

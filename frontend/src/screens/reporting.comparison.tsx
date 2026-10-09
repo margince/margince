@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
@@ -66,12 +67,14 @@ export function ReportingComparison({
     label: editionLabel(edition, locale),
   }));
   return (
-    <Modal open onClose={onClose} labelledBy={title} size="wide">
-      <Heading size="large" id={title} className="t-h2 modal-title">
-        {t("reporting.compare")}
-      </Heading>
-      <div className="form-stack">
+    <Modal open onClose={onClose} labelledBy={title} intent="drawer-reading">
+      <DrawerHead>
+        <Heading size="large" id={title} className="t-h2 modal-title">
+          {t("reporting.compare")}
+        </Heading>
         <p>{t("reporting.comparisonHelp")}</p>
+      </DrawerHead>
+      <DrawerBody className="form-stack">
         {hasMore && (
           <Button variant="ghost" pending={loadingMore} onClick={onLoadMore}>
             {t("reporting.loadOlder")}
@@ -139,7 +142,7 @@ export function ReportingComparison({
             onClose={() => setEvidence(null)}
           />
         )}
-      </div>
+      </DrawerBody>
     </Modal>
   );
 }

@@ -708,7 +708,7 @@
 .pe-why {
   margin-top: var(--space-5);
   padding: var(--space-4);
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-sm);
 }
 
@@ -735,6 +735,14 @@
   display: flex;
   align-items: center;
   gap: var(--gapActions);
+}
+
+/* On a phone the verbs drop under the disclosure rather than past the edge. */
+.pe-research-foot {
+  flex-wrap: wrap;
+}
+.pe-research-foot > .pe-drawer-actions {
+  margin-inline-start: auto;
 }
 
 /* Research: the staged notice is the whole promise of the drawer — nothing

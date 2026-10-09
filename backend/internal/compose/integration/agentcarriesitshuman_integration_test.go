@@ -183,7 +183,7 @@ func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
 	}
 }
 
-// TestAnAgentDoesNotConsumeItsHumansDismissal drives momentDismissed through
+// TestAnAgentDoesNotConsumeItsHumansDismissal drives momentDismissals through
 // the real assembly rather than asserting auth.RequireHuman in isolation.
 //
 // This is the arm that matters: an agent CAN already assemble a contact page

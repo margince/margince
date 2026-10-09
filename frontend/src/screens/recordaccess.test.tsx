@@ -22,8 +22,8 @@ import {
   emptyPage,
   jsonResponse,
   company as pageCompany,
-  stubFetch,
 } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 import { useContact360 } from "./contact360";
 import { RecordAccess } from "./recordaccess";
 
@@ -56,10 +56,7 @@ const mayWrite: Seat = {
   },
 };
 
-const ROSTER = {
-  data: [{ id: "u-owner", display_name: "Mira Voss" }],
-  page: { next_cursor: null, has_more: false },
-};
+const NAMES = { data: [{ id: "u-owner", display_name: "Mira Voss" }] };
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -80,7 +77,9 @@ function stub(
     writes?: { body: unknown; version: string | null }[];
     status?: number;
     seat?: Seat;
-    roster?: unknown;
+    // What GET /users/names answers about the owner; { data: [] } is a
+    // settled absence: the roster never held this id.
+    names?: unknown;
     // The record's own read answers 404: the reader can no longer open it.
     gone?: boolean;
     // The record's own read fails on the network rather than answering.
@@ -102,7 +101,7 @@ function stub(
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       sent.push(key);
       if (key === "GET /me") return me(seat);
-      if (key === "GET /users") return json(options.roster ?? ROSTER);
+      if (key === "GET /users/names") return json(options.names ?? NAMES);
       if (options.gone && method === "GET")
         return json({ status: 404, title: "Not found" }, 404);
       if (options.probeFails && key === "GET /contacts/p-1")
@@ -283,11 +282,9 @@ describe("RecordAccess — who the sentence names", () => {
     ).toBeTruthy();
   });
 
-  it("says 'its owner' when the roster cannot name them", async () => {
+  it("says 'its owner' when the naming read cannot name them", async () => {
     const user = userEvent.setup();
-    stub({
-      roster: { data: [], page: { next_cursor: null, has_more: false } },
-    });
+    stub({ names: { data: [] } });
     drawContact({
       ...base,
       visibility: "owner",

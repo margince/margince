@@ -14,6 +14,7 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
+import { steppedClock } from "../testing/steppedclock";
 import { type GrantSpec, meFixture } from "./mefixture";
 import { CREATE_ID } from "./nav";
 import {
@@ -32,6 +33,7 @@ import {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   window.location.hash = "";
   vi.unstubAllGlobals();
 });
@@ -289,6 +291,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   });
 
   it("surfaces live record hits from /search plus a see-all row (RS-1)", async () => {
+    const user = steppedClock();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -299,13 +302,13 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("searchbox"), "acme");
     await waitFor(() =>
       expect(screen.getByText("Dana Buyer at Acme")).toBeTruthy(),
     );
     expect(screen.getByText("See all results for “acme”")).toBeTruthy();
 
-    await userEvent.click(screen.getByText("Dana Buyer at Acme"));
+    await user.click(screen.getByText("Dana Buyer at Acme"));
     expect(window.location.hash).toBe("#/contacts/p1");
   });
 
@@ -314,12 +317,13 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // workspace holds nothing. It says what happened now, and the builtin
   // commands stay usable beside it, which is the degradation that was wanted.
   it("says the record search failed rather than reporting an empty workspace", async () => {
+    const user = steppedClock();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response("nope", { status: 500 })),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("searchbox"), "acme");
 
     expect(await screen.findByText(/Search failed/)).toBeTruthy();
     // Not the empty state: the list is not empty, and saying so would be the
@@ -329,8 +333,8 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // "acme" and no builtin command carries that word — the claim is that a
     // failed RECORD search leaves the command list working, not that it leaves
     // the previous query matching something it never matched.
-    await userEvent.clear(screen.getByRole("searchbox"));
-    await userEvent.type(screen.getByRole("searchbox"), "Deals");
+    await user.clear(screen.getByRole("searchbox"));
+    await user.type(screen.getByRole("searchbox"), "Deals");
     expect(
       destinationRows().some((row) => row.textContent?.includes("Deals")),
     ).toBe(true);
@@ -339,6 +343,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // A hit's kind is the heading of its group, in the reader's words. It used to
   // be the row's own second line, and before that the untranslated wire word.
   it("names a hit's kind in the reader's language, not the wire's", async () => {
+    const user = steppedClock();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -351,7 +356,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const { container } = render(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "brandt");
+    await user.type(screen.getByRole("searchbox"), "brandt");
     const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
     expect(
       [...container.querySelectorAll(".palette-group")].map(
@@ -368,7 +373,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // every thread about it, and a short list ranked across kinds was all mail.
   // The palette asks for a few of each kind and draws the account first.
   it("draws the account above the mail that outranks it, asking for a few of each kind", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
       jsonResponse({
         data: [
@@ -421,6 +426,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // A partner is a property of a company rather than a kind of its own, so the
   // account sits with the companies and its second line says it is a partner.
   it("names a partner company as one on its second line", async () => {
+    const user = steppedClock();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -438,7 +444,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "brandt");
+    await user.type(screen.getByRole("searchbox"), "brandt");
     const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
     expect(row.querySelector(".sub")?.textContent).toBe("Partner");
   });
@@ -447,7 +453,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // reader meets a name with no reason it is in the list. The palette asks
   // for those contacts, and the row draws the record's own mark.
   it("says which matched company a contact works at, under its mark", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
       jsonResponse({
         data: [
@@ -481,7 +487,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   });
 
   it("draws a company's logo on its mark", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const logo =
       "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E";
     vi.stubGlobal(
@@ -511,7 +517,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // The marker means nothing off a company, so a hit of another kind draws no
   // partner line whatever the server sent beside it.
   it("draws no partner line on a non-company hit despite a partner marker", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -538,6 +544,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // page — so that is where the hit goes. Being findable at all is the change;
   // an address of its own is worth having and is not this one.
   it("opens the catalog page from a product hit", async () => {
+    const user = steppedClock();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -548,11 +555,11 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "scrub");
+    await user.type(screen.getByRole("searchbox"), "scrub");
     await waitFor(() =>
       expect(screen.getByText("Floor scrubber")).toBeTruthy(),
     );
-    await userEvent.click(screen.getByText("Floor scrubber"));
+    await user.click(screen.getByText("Floor scrubber"));
     // `fields`, the current spelling of the entry that carries products today.
     // The catalog splits it into fields/tags/products; this follows when the
     // screen renders those pages rather than the combined one.
@@ -564,7 +571,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // gated on whether the reader may see the account. The palette used to read
   // each project and its company again to build the same line.
   it("routes a project hit to its page, with its key and account as its line", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
       jsonResponse({
         data: [
@@ -606,6 +613,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // a tag has one, so a searcher was left with no autocomplete for the
   // vocabulary at all.
   it("offers a tag hit and opens its page", async () => {
+    const user = steppedClock();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -616,10 +624,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       ),
     );
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "key");
+    await user.type(screen.getByRole("searchbox"), "key");
     await waitFor(() => expect(screen.getByText("Key Account")).toBeTruthy());
 
-    await userEvent.click(screen.getByText("Key Account"));
+    await user.click(screen.getByText("Key Account"));
     expect(window.location.hash).toBe("#/tags/t-1");
   });
 });
@@ -692,7 +700,12 @@ function ShellWithDialog({
         onClose={() => setPaletteOpen(false)}
         commands={commands}
       />
-      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit-deal">
+      <Modal
+        open={dialogOpen}
+        onClose={onDialogClose}
+        labelledBy="edit-deal"
+        intent="form"
+      >
         <Heading size="large" id="edit-deal">
           Edit deal
         </Heading>

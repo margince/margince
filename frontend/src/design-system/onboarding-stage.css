@@ -190,7 +190,7 @@
   gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--borderSubtle);
-  background: color-mix(in srgb, var(--bgCard) 70%, transparent);
+  background: color-mix(in srgb, var(--bgInset) 70%, transparent);
 }
 
 .ob-stage-who {
@@ -681,6 +681,24 @@
   .ob-stage-where {
     display: none;
   }
+  /* The room is exactly the window here, so its height can be asked of it in
+     the reader's own text size — see the short-room rule below. */
+  .ob-stage {
+    container: ob-stage / size;
+  }
+}
+
+/* A room short against its own text — a phone on its side, or any phone read
+   at large text — folds the Core, whose row does not shrink with the text and
+   would leave the question a slot to scroll through. The band and the foot stay:
+   they say where the reader is and carry the way onward, and the orb is
+   decoration whose state the band states in words. `rem` follows the root, so
+   the larger the text, the taller the window this reaches. Hidden, never
+   unmounted, for the WebGL reason at `.ob-stage-core[data-hidden]`. */
+@container ob-stage (height < 30rem) {
+  .ob-stage-core {
+    display: none;
+  }
 }
 
 @media (width < 64rem) {
@@ -696,7 +714,16 @@
     justify-self: stretch;
     gap: var(--space-2);
   }
+  /* The step's name, held to its separator, takes the next line whole. */
+  .ob-stage-who {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  /* The state wraps its own words rather than pushing the theme toggle onto a
+     row of its own: at large text the unbroken label is the whole row. */
   .ob-stage-corestate {
-    margin-inline-end: auto;
+    flex: 1 1 0;
+    min-inline-size: min(100%, 6rem);
+    white-space: normal;
   }
 }

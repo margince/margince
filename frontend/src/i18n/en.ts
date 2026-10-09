@@ -5,7 +5,6 @@
 export const en = {
   "reporting.latestSnapshot": "Latest snapshot",
   "reporting.contextDetails": "Reporting details",
-  "reporting.pipelineFilter": "Open pipeline · expected close",
   "reporting.targetRemaining": "{amount} remaining",
   "reporting.targetExceeded": "{amount} above target",
   "reporting.targetPeriodSummary": "{actual} of {target} · {percent}%",
@@ -52,7 +51,6 @@ export const en = {
   "reporting.remaining": "Remaining",
   "reporting.ownerMetric": "{metric} by team member",
   "reporting.quarterStart": "Choose the first month of the fiscal quarter.",
-  "reporting.additional": "More analysis",
   "reporting.settings": "Reporting settings",
   "reporting.execution.skipped": "Skipped",
   "reporting.execution.suspended": "Paused",
@@ -79,6 +77,7 @@ export const en = {
   "reporting.capturePending":
     "Snapshot queued. It will appear here when ready.",
   "reporting.createReport": "Create from Performance",
+  "reporting.newCustomReport": "New custom report",
   "reporting.observations_one": "Observation: {count}",
   "reporting.observations_other": "Observations: {count}",
   "reporting.observationsUnavailable": "Sample size unavailable",
@@ -583,7 +582,6 @@ export const en = {
   "aiAdmin.impact.exempt": "Continues beyond allowance",
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
-  "aiAdmin.thenLadder": "then",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
@@ -601,6 +599,15 @@ export const en = {
   "brief.weekly.noCommitments": "None due",
   "brief.weekly.basis":
     "Recorded CRM work for this closed week. Missing records do not establish inactivity.",
+  "brief.weekly.notRecorded": "Not recorded",
+  "brief.weekly.recordedFrom": "Recorded from {date}",
+  "brief.weekly.noRecords": "No records from this source",
+  "brief.weekly.partialFrom": "Partial week: counted from {date}",
+  "brief.weekly.partialValue": "{value} (partial)",
+  "brief.week.beforeHistory":
+    "This week falls before the first records, so it has no figures to report.",
+  "teamweekly.headline.notRecorded":
+    "Some figures were not recorded for this week and are left out.",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",
@@ -615,7 +622,6 @@ export const en = {
   "worklist.bandCount_one": "{count} item",
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
-  "brief.focus.back": "Back to Focus",
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
@@ -631,11 +637,20 @@ export const en = {
   "brief.schedule.unavailable": "Calendar did not load.",
   "brief.schedule.more":
     "Load more agenda items to see the remaining meetings.",
+  "brief.schedule.notConnected":
+    "No calendar is connected, so today’s meetings cannot be shown.",
+  "brief.schedule.unreadable":
+    "Your calendar is not syncing, so today’s meetings cannot be shown.",
+  "brief.schedule.connect": "Connect a calendar",
+  "brief.schedule.reconnect": "Reconnect your calendar",
+  "brief.schedule.nextAt": "Next meeting at {time}",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "1 deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
   "brief.coverage.source.generic": "Other work",
   "brief.coverage.source.weekly_commitment": "Weekly commitments",
+  "brief.coverage.source.awaiting_reply": "Follow-ups",
+  "brief.coverage.source.meeting_follow_up": "Follow-ups after meetings",
   "brief.coverage.source.batch": "Grouped work",
   "brief.coverage.source.introduction_request": "Introduction requests",
   "brief.coverage.source.automation_run": "Automation failures",
@@ -647,6 +662,8 @@ export const en = {
   "brief.coverage.source.relationship_decay": "Quiet relationships",
   "brief.coverage.source.meeting_outcome": "Meeting follow-up",
   "brief.coverage.source.meeting": "Upcoming meetings",
+  "brief.coverage.source.calendar": "Calendar connection",
+  "brief.coverage.source.next_meeting": "Next meeting",
   "brief.coverage.source.deal_at_risk": "Flagged deals",
   "brief.coverage.source.lead_response": "Assigned leads",
   "brief.coverage.source.customer_waiting": "Unanswered messages",
@@ -711,6 +728,9 @@ export const en = {
   "brief.plan.open": "Open weekly plan",
   "worklist.source.weekly_commitment": "Weekly commitment",
   "worklist.untitled.weekly_commitment": "Weekly commitment",
+  "worklist.source.awaiting_reply": "Follow-up",
+  "worklist.untitled.awaiting_reply": "Follow-up",
+  "worklist.untitled.meeting_follow_up": "Meeting",
   "brief.plan.select": "Find a deal, lead, contact, company or project",
   "brief.plan.period": "Current plan · week of {date}",
   "brief.forecast.period":
@@ -739,7 +759,6 @@ export const en = {
   "brief.readings.unavailable.leads": "Tasks unavailable",
   "brief.readings.unavailable.decisions": "Source unavailable",
   "brief.feed.incomplete": "No items loaded. Some work could not be checked.",
-  "brief.feed.fullWorklist": "Open full Worklist",
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads_one": "{count} lead assigned.",
   "brief.week.leads_other": "{count} leads assigned.",
@@ -837,6 +856,10 @@ export const en = {
     "{count} field reverts to its value before this change:",
   "history.undo.confirmBody_other":
     "{count} fields revert to their values before this change:",
+  "history.undo.leftBehind_one":
+    "Put back. {count} item could not come back with it.",
+  "history.undo.leftBehind_other":
+    "Put back. {count} items could not come back with it.",
   "history.undo.versionSkew":
     "The record changed while open. The history was reloaded; review the change again before undoing it.",
   "history.undo.noBeforeImage":
@@ -889,6 +912,8 @@ export const en = {
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
   "history.field.nudge_dismissal": "Nudge dismissed",
+  "history.field.override_category": "Override category",
+  "history.field.overrides_carried": "Overrides carried",
   "history.field.phones": "Phone numbers",
   "history.field.invitation_status": "Invitation status",
   "history.field.proposal_status": "Meeting proposal status",
@@ -931,6 +956,10 @@ export const en = {
   "history.field.reply_verdict": "Reply result",
   "history.field.reply_verdict_by": "Reply result by",
   "history.field.research_claims_accepted": "Research claims accepted",
+  "history.field.revoked_by": "Revoked by",
+  "history.field.revoked_by_level": "Revoked at level",
+  "history.field.revoked_override": "Revoked override",
+  "history.field.revoked_rows": "Overrides taken back",
   "history.field.scope": "Scope",
   "history.field.stopped": "Stopped",
   "history.field.stops_carried": "Contact blocks copied",
@@ -1138,6 +1167,10 @@ export const en = {
   "deal.undated": "no close date",
   "deal.lastMail": "Last email",
   "deal.mail.title": "Previous emails",
+  "deal.openDeal": "Open deal",
+  "deal.card.summary": "Deal summary: {name}",
+  "deal.card.email": "Write email: {name}",
+  "deal.card.addTask": "Add task: {name}",
   "deal.mail.sent": "Sent {ago}",
   "deal.mail.received": "Received {ago}",
   "deal.mail.none": "No email on this deal yet",
@@ -1428,6 +1461,8 @@ export const en = {
   // that has not run: both drew the same empty space before, and a reader
   // could not tell "nobody here" from a field still thinking.
   "picker.noMatch": "No match",
+  "picker.results_one": "{count} result",
+  "picker.results_other": "{count} results",
 
   // The app-level boundary's fallback. It says what happened and what to do
   // next, and nothing about the error itself: a render throw carries our own
@@ -1528,6 +1563,7 @@ export const en = {
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
+  "unit.worklistItems": "tasks and commitments",
   "unit.partners": "partners",
   "unit.products": "products",
   "unit.offerTemplates": "offer templates",
@@ -1571,6 +1607,11 @@ export const en = {
   "views.deleteAsk":
     "Deleting {name} removes its tab. The records it lists are not changed.",
   "views.deleteConfirm": "Delete view",
+  "views.renameTitle": "Rename view",
+  "views.renamed": "View renamed",
+  "views.deleteTitle": "Delete this view?",
+  "views.deleteBody": "“{name}” leaves Filters and views. No records change.",
+  "views.deleted": "View deleted: “{name}”",
   "list.viewMine": "Mine",
   "list.viewCustomers": "Customers",
   "list.viewProspects": "Prospects",
@@ -1699,8 +1740,6 @@ export const en = {
   "co.strip.lastTouch": "Last contact",
   "co.strip.lastTouch.today": "Today",
   "co.strip.lastTouch.ago": "{count} d",
-  "co.strip.lastTouch.theirs": "Inbound",
-  "co.strip.lastTouch.ours": "Outbound",
   "co.strip.lastTouch.never": "None",
   // Named for what the card READS. "Next" over a meeting date, on a card whose
   // door opened the task list, let a company with a due task and no meeting
@@ -1792,7 +1831,7 @@ export const en = {
   // "Commercial · Good" was read from, and a rating a reader cannot interpret
   // is one they have to take on trust.
   "co.health.means.relationship":
-    "Whether contacts at this company are still in touch: who wrote, how recently and which side started.",
+    "Whether contacts at this company are still in touch: who wrote, when the last meeting took place or the next one is booked, and which side started.",
   "co.health.means.commercial":
     "Whether open deals are moving: their stages and how long each has been idle.",
   "co.health.means.payment":
@@ -1803,6 +1842,28 @@ export const en = {
   "co.health.payment.overdue": "Payment is overdue.",
   "co.health.payment.late": "Typically pays {days} days after due.",
   "co.health.payment.onTime": "Pays on time.",
+  // The server's reason codes for the relationship and commercial ratings.
+  "co.health.reason.neverWritten": "No message from them and no meeting yet.",
+  "co.health.reason.quiet_one": "No reply and no meeting for {days} day.",
+  "co.health.reason.quiet_other": "No reply and no meeting for {days} days.",
+  "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
+  "co.health.reason.lastMet_one": "Last met them {days} day ago.",
+  "co.health.reason.lastMet_other": "Last met them {days} days ago.",
+  "co.health.reason.singleThreaded":
+    "In contact, but one contact carries the whole account.",
+  "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
+  "co.health.reason.severalContacts_other":
+    "{count} contacts here are in touch.",
+  "co.health.reason.dealsAllStalled_one": "The one open deal has stalled.",
+  "co.health.reason.dealsAllStalled_other":
+    "All {count} open deals have stalled.",
+  "co.health.reason.dealsSomeStalled_one":
+    "{count} of {total} open deals has stalled.",
+  "co.health.reason.dealsSomeStalled_other":
+    "{count} of {total} open deals have stalled.",
+  "co.health.reason.dealsNoneStalled_one": "{count} open deal, not stalled.",
+  "co.health.reason.dealsNoneStalled_other":
+    "{count} open deals, none stalled.",
   "company.partnerSetUp": "Set up partner program",
   "signal.kind.stalled_deal": "Deal stalled",
   "signal.kind.champion_left": "Champion left",
@@ -2854,12 +2915,11 @@ export const en = {
   "tags.more": "+{count} more",
   "tags.showLess": "Show less",
   "tags.removeTag": "Remove {name}",
-  "tags.removeTitle": "Remove {name} from this record?",
+  "tags.removed": "{name} removed from this record",
+  "tags.restored": "{name} is back on this record",
   "tags.addedBy": "Added by {who} · {when}",
   "tags.addedByUndated": "Added by {who}",
   "tags.addedOn": "Added {when}",
-  "tags.visibleWorkspaceWide": "Tag names are visible across the company.",
-  "tags.removeFromRecord": "Remove from this record",
   "tags.withheld": "Hidden for your role",
   "tags.emptyTitle": "No tags yet",
   "tags.emptyBody":
@@ -2877,10 +2937,11 @@ export const en = {
   "tagResult.contacts": "Contacts",
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
+  "tagResult.leads": "Leads",
   "tagResult.viewAll": "View all {count} {kind}",
   "tagResult.resultsTitle": "Records with this tag",
   "tagResult.nothingCarries":
-    "No records have this tag yet. Apply it from any contact, company or deal.",
+    "No records have this tag yet. Apply it from any contact, company, deal or lead.",
   "tagResult.loadingRows": "Loading {kind}…",
   "tagResult.noneLeft": "No records have this tag anymore",
   "tagResult.unnamed": "Unnamed",
@@ -2967,6 +3028,13 @@ export const en = {
   "leadReasons.removeTitle": "Remove this reason?",
   "leadReasons.removeBody":
     "“{label}” is not used by any lead and is removed from the list.",
+  "followUpSettings.title": "Follow-ups",
+  "followUpSettings.sub":
+    "When a message sent to a customer comes back on the sender’s Home as a follow-up.",
+  "followUpSettings.days": "Remind after (days)",
+  "followUpSettings.daysHint":
+    "Days a sent message can go unanswered before its sender is reminded to follow up, 1 to 30.",
+  "followUpSettings.outOfRange": "Enter a whole number of days from 1 to 30.",
   "leadHandling.title": "Lead handling",
   "leadHandling.sub": "How new leads are handled.",
   "leadHandling.firstResponse": "First-response target",
@@ -3173,7 +3241,8 @@ export const en = {
   "lead.trigger.humanQualify": "Qualified manually",
   "lead.evidenceNote": "Evidence note (optional)",
   "lead.segregationTitle": "Leads are kept separate from contacts",
-  "lead.segregation": "A lead becomes a contact only when you qualify it.",
+  "lead.segregation":
+    "Qualifying a lead makes it a contact. To work a contact you already have, open it and choose Work as a lead.",
   "lead.segregationDismiss": "Dismiss this notice",
   "list.emptyMine": "No {unit} owned by you.",
   "list.showAll": "Show all",
@@ -3439,6 +3508,8 @@ export const en = {
     "Loaded deals only. This owner’s totals are outside what you may measure.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
+  "deals.totalsNoSearch":
+    "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterMotion": "Motion",
@@ -3455,7 +3526,6 @@ export const en = {
   "deals.filterStalledAll": "All deals",
   "deals.filterOwnerAll": "All owners",
   "deals.filterPartnerAll": "All sources",
-  "deals.sortNewest": "Newest",
   "deals.unit": "deals",
   "deals.bulkStage": "Move to stage",
   "deals.bulkStagePick": "Pick a stage",
@@ -3560,6 +3630,19 @@ export const en = {
   "bulk.doneLeads_other": "{count} leads changed.",
   "bulk.undoneLeads_one": "{count} lead put back.",
   "bulk.undoneLeads_other": "{count} leads put back.",
+  "bulk.doneWorklistItems_one": "{count} item marked done.",
+  "bulk.doneWorklistItems_other": "{count} items marked done.",
+  "bulk.undoneWorklistItems_one": "{count} item reopened.",
+  "bulk.undoneWorklistItems_other": "{count} items reopened.",
+  "bulk.titleComplete": "Mark selected {unit} done?",
+  "bulk.confirmComplete": "Mark done",
+  "bulk.stateDone": "Done",
+  "bulk.stateOpen": "Open",
+  "bulk.reason.no_change_done": "Already in that state",
+  "worklist.bulk.selectAll_one": "Select the {count} item shown",
+  "worklist.bulk.selectAll_other": "Select all {count} items shown",
+  "worklist.bulk.clear": "Clear selection",
+  "worklist.bulk.markDone": "Mark done",
 
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
@@ -3971,6 +4054,14 @@ export const en = {
   "brief.readings.needsPrep_other": "{count} need prep",
   "brief.readings.prepUnknown": "Prep not checked",
   "brief.readings.prepared": "All prepared",
+  "brief.readings.calendarNotConnected": "Not connected",
+  "brief.readings.calendarNotConnectedWhy":
+    "Connect your calendar to count meetings.",
+  "brief.readings.calendarUnreadable": "Not syncing",
+  "brief.readings.calendarUnreadableWhy":
+    "Reconnect your calendar to count meetings.",
+  "brief.readings.nextMeeting": "Next: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Next: {date}",
   "brief.readings.leads": "Prospecting",
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
@@ -4121,7 +4212,7 @@ export const en = {
     "A .vcf file, the contact export format of phones and mail clients. A card comes from its owner, so imported cards skip approval.",
   "vcardImport.choose": "Select .vcf file",
   "vcardImport.working": "Reading cards…",
-  "vcardImport.done": "Close",
+  "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
   "vcardImport.failed": "The cards were not imported. Retry.",
   "vcardImport.outcome.created": "Added",
@@ -4153,6 +4244,9 @@ export const en = {
   "create.region": "State or region",
   "create.postalCode": "Postal code",
   "create.country": "Country code (ISO 3166)",
+  "lead.fillFromContact": "Fill from a contact",
+  "lead.fillFromContactSearch": "Search contacts by name or email",
+  "lead.create.fromContact": "Filled in from this contact.",
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
@@ -4202,7 +4296,6 @@ export const en = {
   "co.spine.kind.email": "Email",
   "co.spine.kind.call": "Call",
   "co.spine.kind.meeting": "Meeting",
-  "co.spine.kind.note": "Note",
   "co.spine.kind.message": "Message",
   "co.spine.andOthers": "{names} and {count} others",
   "co.spine.said.to": "{what} to {who}",
@@ -4381,9 +4474,6 @@ export const en = {
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
   "files.delete": "Delete",
-  "files.hideTitle": "Hide {name} from this deal?",
-  "files.hideBody":
-    "The message and its attachment stay on the activity and in the company library. Only this deal stops listing it.",
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and from any Deal Room sharing it.",
@@ -4685,6 +4775,10 @@ export const en = {
   "compose.threadHeading": "This thread",
   "compose.continueHeading": "Continue thread?",
   "compose.threadLeave": "New email",
+  "compose.threadShow": "Show this thread",
+  "compose.threadHide": "Hide this thread",
+  "compose.choicesShow": "Show earlier threads",
+  "compose.choicesHide": "Hide earlier threads",
   "compose.messageCount_one": "{count} message",
   "compose.messageCount_other": "{count} messages",
   "compose.threadContinuing": "Last exchange in this thread",
@@ -4803,7 +4897,7 @@ export const en = {
   "analytics.reportDeals": "Open deals by stage",
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
-  "analytics.sectionPipeline": "Pipeline analysis",
+  "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionPerformance": "Performance",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
@@ -4812,6 +4906,22 @@ export const en = {
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
   "analytics.sectionQuestions": "Custom reports",
+  "analytics.sectionReports": "Reports",
+  "analytics.setup": "Setup",
+  "analytics.attention": "Needs your attention",
+  "analytics.attentionChecks_one": "1 forecast check to answer",
+  "analytics.attentionChecks_other": "{count} forecast checks to answer",
+  "analytics.attentionChecksDetail":
+    "Answer them before you update the forecast.",
+  "analytics.attentionChecksAction": "Review in Forecast",
+  "analytics.attentionUnpriced": "{priced} of {eligible} open deals are priced",
+  "analytics.attentionUnpricedDetail":
+    "A deal without a price adds nothing to the forecast.",
+  "analytics.attentionUnpricedAction": "Open Forecast",
+  "analytics.attentionCoverage_one": "1 data source was not fully checked",
+  "analytics.attentionCoverage_other":
+    "{count} data sources were not fully checked",
+  "analytics.attentionCoverageAction": "View data coverage",
   "analytics.reportDealsByStage": "All deals by stage",
   "analytics.reportLeadsByStatus": "Leads by status",
   "analytics.reportActivitiesByKind": "Activities by type",
@@ -5539,6 +5649,8 @@ export const en = {
     "Import a CSV of leads, contacts or companies. Nothing is written until you review what the import will do.",
   "import.startLabel": "Import CSV file",
   "import.start": "Start import",
+  "import.continue": "Continue import",
+  "import.back": "Back to data import",
   "import.objectLabel": "Row type",
   "import.object.lead": "Prospects",
   "import.object.company": "Companies",
@@ -5552,6 +5664,8 @@ export const en = {
   "import.fileLabel": "CSV file",
   "import.choose": "Choose file",
   "import.chooseAnother": "Choose another file",
+  "import.discardFile":
+    "Starting over clears the import in progress from this page: its file, column mapping and report.",
   "import.profiled": "Rows profiled from the start of the file: {rows}.",
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
@@ -6754,7 +6868,6 @@ export const en = {
   "connectors.oauthConnected": "Connected",
   "connectors.oauthNotConnected": "Nothing was connected",
   "connectors.connectFailed": "Could not connect",
-  "connectors.imapConnectFailed": "Mailbox not connected",
 
   // The "Add a connection" affordance (Task 1): one verb in the card's header
   // opens a dialog listing the providers still addable, each with the sentence
@@ -6796,6 +6909,8 @@ export const en = {
   "connectors.imapSubmitCta": "Connect",
   "connectors.imapNeeded": "Required fields",
   "connectors.imapStillNeeded": "Required: {fields}",
+  "connectors.imapRange": "From {min} to {max}",
+  "connectors.imapOutOfRange": "Out of range: {fields}",
   "connectors.imapLoginRejected":
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable":
@@ -8885,7 +9000,7 @@ export const en = {
   "users.link.copy": "Copy link",
   "users.link.copied": "Copied",
   "users.link.copyFailed":
-    "Copy failed. Select the link in the field and copy it manually.",
+    "Copy failed. Select the link above and copy it manually.",
   "users.link.expires": "Expires {when}.",
   "users.link.failedTitle": "Link not created",
   "users.link.failed":
@@ -9389,10 +9504,6 @@ export const en = {
   "aiRouting.location.label": "Location",
   "aiRouting.location.help":
     "Where Google processes the calls this lane makes.",
-  "aiRouting.location.residentHelp":
-    "The eu_hosted profile admits only the locations marked EU resident.",
-  "aiRouting.location.forbidden":
-    "This location is outside the EU, so the eu_hosted profile refuses it. Choose an EU-resident location.",
   "aiRouting.location.loading":
     "Asking Google which locations this key can reach…",
   "aiRouting.location.noKey":
@@ -9409,7 +9520,6 @@ export const en = {
   "aiRouting.location.group.global": "Global",
   "aiRouting.location.resident": "EU resident",
   "aiRouting.location.nonResident": "Not resident",
-  "aiRouting.location.notResident": "outside the EU",
   "aiRouting.probe.checking": "Checking whether {location} serves this model…",
   "aiRouting.probe.served": "Served in {location}.",
   "aiRouting.probe.notServed":
@@ -9453,6 +9563,16 @@ export const en = {
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
+  "aiRouting.baseUrl.help.gemini":
+    "Host up to the API version, such as /v1beta; model paths are added after it.",
+  "aiRouting.baseUrl.placeholder.gemini":
+    "https://generativelanguage.googleapis.com/v1beta",
+  "aiRouting.baseUrl.help.openai":
+    "Host root; /v1 is added. Blank uses OpenAI’s own API.",
+  "aiRouting.baseUrl.placeholder.openai": "https://api.openai.com",
+  "aiRouting.baseUrl.help.anthropic":
+    "Host root; /v1 is added. Blank uses Anthropic’s own API.",
+  "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
   "aiRouting.models.askingLocation":
     "Asking Google which models {location} serves…",
   "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",
@@ -9524,10 +9644,33 @@ export const en = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
-    "Edit a task to see how its calls went and to set its thinking level and timeouts. Its tier is fixed by contract; each row shows the tier and the model it runs on now.",
+    "Each row shows a task’s tier and the provider that serves it. Select a task’s name for what it does, its state, and what it does while its provider is down. Edit sets its thinking level and timeouts; its tier is fixed by contract.",
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
+  "aiTasks.deferral.nowEmbedding":
+    "Refused now: search indexing tries again on its own schedule.",
+  "aiTasks.deferral.embedding":
+    "When its provider is down, out of credit or refusing its key, search indexing is refused and tries again on its own schedule.",
+  "aiTasks.dot.ok": "Answering",
+  "aiTasks.dot.bad": "Needs attention",
+  "aiTasks.dot.idle": "No recent calls",
+  "aiTasks.deferral.background":
+    "When every model this task can use is down, out of credit or refusing its key, its work waits and tries again at the provider’s next check, without using up its attempts.",
+  "aiTasks.deferral.interactive":
+    "When every model this task can use is down, out of credit or refusing its key, a request fails at once and asks the user to contact their administrator.",
+  "aiTasks.deferral.nowBackground":
+    "Waiting now: every model this task can use is blocked.",
+  "aiTasks.deferral.nowInteractive":
+    "Failing now: every model this task can use is blocked.",
+  "aiTasks.deferral.degrades":
+    "When every model this task can use is down, out of credit or refusing its key, it still answers from its own facts, without a model, instead of failing.",
+  "aiTasks.deferral.nowDegrades":
+    "Answering from its own facts now: every model this task can use is blocked.",
+  "aiTasks.deferral.skipping":
+    "A blocked provider is skipped, and the next model in line answers.",
+  "aiTasks.embeddingsEdit":
+    "Search and retrieval has no thinking level or timeouts to set. Change its provider and model on the embeddings row under Model tiers.",
   "workingHours.title": "Bookable hours",
   "workingHours.sub": "Personal setting. Only you set your hours.",
   "workingHours.unsetTitle": "Not set yet",
@@ -9616,6 +9759,69 @@ export const en = {
   "agentConnections.ttl.refusal":
     "Enter a whole number of minutes from 5 to 129,600.",
   "agentConnections.updateFailed": "Setting not changed",
+  "operations.schedules.title": "Background schedules",
+  "operations.schedules.sub":
+    "How often each background pass runs. A running worker picks up a change within a minute: the pass runs once, then continues at the new interval.",
+  "operations.pacing.title": "Send pacing",
+  "operations.pacing.sub":
+    "How fast one mailbox may send. A change applies to the next send.",
+  "operations.adminOnly":
+    "Only an administrator or operations user can change this.",
+  "operations.updateFailed": "Setting not changed",
+  "operations.refusal": "Enter a whole number in the range shown.",
+  "operations.agentRunner.label": "Agent runs (seconds)",
+  "operations.agentRunner.help":
+    "How often scheduled agents are checked for a run that is due, 10 to 3,600.",
+  "operations.webhookRetry.label": "Webhook retries (seconds)",
+  "operations.webhookRetry.help":
+    "How often failed webhook deliveries are retried, 10 to 3,600.",
+  "operations.timeScan.label": "Time-based automations (seconds)",
+  "operations.timeScan.help":
+    "How often rules that fire on time are checked, 60 to 86,400.",
+  "operations.closeDate.label": "Overdue close dates (seconds)",
+  "operations.closeDate.help":
+    "How often deals past their close date are flagged, 3,600 to 604,800.",
+  "operations.followUp.label": "Follow-up proposals (seconds)",
+  "operations.followUp.help":
+    "How often stalled deals are checked for a follow-up to propose, 3,600 to 604,800.",
+  "operations.retention.label": "Data retention (seconds)",
+  "operations.retention.help":
+    "How often data past its retention period is removed, 3,600 to 604,800. Always on.",
+  "operations.geocode.label": "Address lookup sweep (seconds)",
+  "operations.geocode.help":
+    "How often addresses without coordinates are looked up, 300 to 604,800, or 0 for off.",
+  "operations.technical.label": "Technical lookup sweep (seconds)",
+  "operations.technical.help":
+    "How often domains without technical facts are looked up, 300 to 604,800, or 0 for off.",
+  "operations.gmailWatchScan.label": "Gmail push check (seconds)",
+  "operations.gmailWatchScan.help":
+    "How often Gmail push subscriptions are checked for renewal, 600 to 43,200.",
+  "operations.graphWatchScan.label": "Microsoft 365 push check (seconds)",
+  "operations.graphWatchScan.help":
+    "How often Microsoft 365 mail subscriptions are checked for renewal, 600 to 43,200.",
+  "operations.gmailWatchRenew.label": "Gmail renewal margin (hours)",
+  "operations.gmailWatchRenew.help":
+    "How long before its 7-day expiry a Gmail subscription is renewed, 24 to 144.",
+  "operations.graphWatchRenew.label": "Microsoft 365 renewal margin (hours)",
+  "operations.graphWatchRenew.help":
+    "How long before its 3-day expiry a Microsoft 365 subscription is renewed, 24 to 60.",
+  "operations.sendRateLimit.label": "Messages per window",
+  "operations.sendRateLimit.help":
+    "How many messages one mailbox may send in one window, 1 to 1,000.",
+  "operations.sendRateWindow.label": "Window (seconds)",
+  "operations.sendRateWindow.help":
+    "The window messages are counted over, 10 to 3,600.",
+  "operations.sendMaxAge.label": "Longest wait (hours)",
+  "operations.sendMaxAge.help":
+    "How long a held-back message may wait before it stops with a reason, 1 to 168.",
+  "captureMailSync.title": "Mail sync",
+  "captureMailSync.sub":
+    "How often each connected mailbox is checked for new mail.",
+  "captureMailSync.interval.label": "Sync interval (seconds)",
+  "captureMailSync.interval.help":
+    "Time between one mailbox’s syncs, 30 to 3,600. Applies from each mailbox’s next sync.",
+  "captureMailSync.interval.refusal":
+    "Enter a whole number of seconds from 30 to 3,600.",
 
   "ownDomains.companyTitle": "Company domains",
   "captureExclusions.title": "Capture exclusions",
@@ -9666,6 +9872,7 @@ export const en = {
   "capturePurge.done": "Close",
   "capturePurge.failed":
     "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
+  "capturePurge.refused": "The deletion was refused, so nothing was destroyed.",
   "capturePurge.wouldDestroy_one": "{count} message would be destroyed.",
   "capturePurge.wouldDestroy_other": "{count} messages would be destroyed.",
   "capturePurge.destroyed_one": "{count} message destroyed.",
@@ -10170,6 +10377,8 @@ export const en = {
   "contact.action.noTransport": "No address and no thread to reply to.",
   "contact.action.call": "Call",
   "contact.action.meetings": "Meetings",
+  "contact.action.workAsLead": "Work as a lead",
+  "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
 
@@ -10256,6 +10465,7 @@ export const en = {
   "contact.memory.replied": "Replied",
   "contact.memory.unanswered": "Unanswered",
 
+  "contact.mayBeDone.notYet": "Not yet",
   "contact.rail.blocked": "Blocked",
   "contact.rail.direction": "Direction",
   "contact.rail.lastReply": "Last reply",
@@ -10564,14 +10774,73 @@ export const en = {
   // per reading rather than per symbol: the same `gte` is "on or after" a date
   // and "at least" a quantity, and one label for both would send a reader
   // looking for a calendar on a score.
-  "filters.joinAll": "All (AND)",
-  "filters.joinAny": "Any (OR)",
-  "filters.joinLabel": "Match mode",
   "filters.removeGroup": "Remove group",
-  "filters.addGroup": "Add group",
-  "filters.addClause": "Add clause",
-  "filters.emptyGroup":
-    "No clauses yet. An empty group matches nothing; add a clause.",
+  "filters.addGroup": "Add a group",
+  "filters.addClause": "Add condition",
+  "filters.addToGroup": "Add condition to group",
+  "filters.find": "Find {records} where…",
+  "filters.hint.start": "Add a condition to see how many {records} match.",
+  "filters.hint.finish":
+    "Finish the condition to see how many {records} match.",
+  "filters.hint.update": "Finish the condition to update the count.",
+  "filters.startOr": "or",
+  "filters.start.buildTitle": "Build it condition by condition",
+  "filters.start.buildBody":
+    "Pick a field, how to compare it, and a value. Add more conditions as you go.",
+  "filters.describeChanges": "Describe changes in plain words",
+  // Named by the word the button shows, then what pressing it does (WCAG
+  // 2.5.3): {word} is filters.join.and or filters.join.or.
+  "filters.connector.matchAll":
+    "{word}: match all of these. Press to match any.",
+  "filters.connector.matchAny":
+    "{word}: match any of these. Press to match all.",
+  "filters.group.all": "All of these",
+  "filters.group.any": "Any of these",
+  "filters.rowsMore": "More for these conditions",
+  "filters.groupMore": "More for this group",
+  "filters.proposed": "Proposed",
+  "filters.switch.title": "Switch to {records}?",
+  "filters.switch.body.contacts":
+    "The conditions are cleared, because they name contact fields.",
+  "filters.switch.body.companies":
+    "The conditions are cleared, because they name company fields.",
+  "filters.switch.body.deals":
+    "The conditions are cleared, because they name deal fields.",
+  "filters.switch.body.leads":
+    "The conditions are cleared, because they name lead fields.",
+  "filters.switch.confirm": "Switch and clear",
+  "filters.showMore": "Show up to 100",
+  "filters.save": "Save",
+  "filters.unsavedFilter": "Unsaved filter",
+  "filters.footMore": "More for this filter",
+  "filters.exporting": "Exporting…",
+  "filters.saveAsNew": "Save as new view",
+  "filters.saveTitle": "Save this filter",
+  "filters.namePlaceholder": "German {records}, quiet for 45 days",
+  "filters.keepAs": "Keep it as",
+  "filters.keepViewHint":
+    "Only you can find it. It counts again each time you open it.",
+  "filters.keepListHint":
+    "Checked every 15 minutes, and records who joins and leaves. Choose who can find it.",
+  "filters.purpose": "Purpose (optional)",
+  "filters.viewSaved": "View saved",
+  "filters.listCreated": "Live List “{name}” created",
+  "filters.view.facts": "Saved view · {records} · Only me",
+  "filters.listFacts": "Live List · {records} · {who}",
+  "filters.view.saveAsList": "Save as Live List",
+  "filters.editConditions": "Edit conditions",
+  "filters.done": "Done",
+  "filters.noChanges": "No changes yet",
+  "filters.unsavedChanges": "Unsaved changes",
+  "filters.discardChanges": "Discard changes",
+  "filters.saveChanges": "Save changes",
+  "filters.changesSaved": "Changes saved",
+  "filters.view.conflict":
+    "This view changed since you opened it. Reload it to see the latest version.",
+  "filters.view.reload": "Reload view",
+  "filters.view.gone": "This saved view was deleted or cannot be found.",
+  "filters.backToLibrary": "Back to Filters and views",
+  "filters.emptyGroup": "An empty group matches nothing.",
   "filters.field": "Field",
   "filters.field.amount": "Converted amount",
   "filters.field.city": "City",
@@ -10598,7 +10867,7 @@ export const en = {
   "filters.value": "Value",
   "filters.values": "Values",
   "filters.addValue": "Add value",
-  "filters.removeClause": "Remove {field} clause",
+  "filters.removeClause": "Remove {field} condition",
   "filters.existsLabel": "Field has value",
   "filters.hasValue": "has a value",
   "filters.isEmpty": "is empty",
@@ -10617,6 +10886,42 @@ export const en = {
   "filters.op.atLeast": "is at least",
   "filters.op.lessThan": "is less than",
   "filters.op.atMost": "is at most",
+  "filters.join.and": "and",
+  "filters.join.or": "or",
+  "filters.sentence.clause": "{field} {op} {value}",
+  "filters.sentence.clauseBare": "{field} {op}",
+  "filters.sentence.group": "({clauses})",
+  "filters.sentence.pendingValue": "…",
+  "filters.sentence.emptyGroup": "an empty group",
+  "filters.sentence.retiredField": "a retired field",
+  "filters.sentence.inCounted": "is any of",
+  "filters.sentence.withinLast_one": "is within the last day",
+  "filters.sentence.withinLast_other": "is within the last {count} days",
+  "filters.sentence.moreThanAgo": "is more than",
+  "filters.sentence.atLeastAgo": "is at least",
+  "filters.sentence.daysAgo_one": "{count} day ago",
+  "filters.sentence.daysAgo_other": "{count} days ago",
+  "filters.sentence.conditions_one": "{count} condition",
+  "filters.sentence.conditions_other": "{count} conditions",
+  "filters.sentence.ref.stage_one": "{count} stage",
+  "filters.sentence.ref.stage_other": "{count} stages",
+  "filters.sentence.ref.pipeline_one": "{count} pipeline",
+  "filters.sentence.ref.pipeline_other": "{count} pipelines",
+  "filters.sentence.ref.app_user_one": "{count} team member",
+  "filters.sentence.ref.app_user_other": "{count} team members",
+  "filters.sentence.ref.team_one": "{count} team",
+  "filters.sentence.ref.team_other": "{count} teams",
+  "filters.sentence.ref.company_one": "{count} company",
+  "filters.sentence.ref.company_other": "{count} companies",
+  "filters.sentence.ref.tag_one": "{count} tag",
+  "filters.sentence.ref.tag_other": "{count} tags",
+  "filters.sentence.ref.retiredTag_one": "{count} archived tag",
+  "filters.sentence.ref.retiredTag_other": "{count} archived tags",
+  "filters.sentence.someRetired": "{tags}, {retired} archived",
+  "filters.sentence.retiredTagNote":
+    "For filters, no record carries an archived tag.",
+  "filters.sentence.ref.project_one": "{count} project",
+  "filters.sentence.ref.project_other": "{count} projects",
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "{count} lead matches",
   "filters.matchLeads_other": "{count} leads match",
@@ -10624,26 +10929,18 @@ export const en = {
   "filters.date.daysAgo": "Days ago",
   "filters.date.mode": "How the date is given",
   "filters.date.daysAgoCount": "{field}: days before today",
-  "filters.saveList": "Save as Live List",
-  "filters.saveListTitle": "Save this filter as a Live List",
   "filters.saveListConfirm": "Save list",
-  "filters.propose.label": "Describe the list in plain words",
+  "filters.propose.label": "Describe the {records} you want",
   "filters.propose.hint":
-    "Margince proposes conditions for the filter below. Nothing is saved until you press Save.",
+    "Proposed conditions are shown for review. Nothing is saved until you save.",
   "filters.propose.placeholder":
-    "Companies in Germany with no activity in the last 45 days",
-  "filters.propose.submit": "Propose filter",
+    "In Germany, with no activity in the last 45 days",
+  "filters.propose.submit": "Propose conditions",
   "filters.propose.busy": "Reading your description",
   "filters.propose.noModel":
     "Plain-words filters need an AI model configured. You can still build the filter by hand.",
   "filters.propose.unreadable":
-    "The proposal could not be read. Try describing the list another way.",
-  "filters.propose.readyTitle": "A filter is ready",
-  "filters.propose.readyBody":
-    "Your filter already has conditions. Replace them with the proposal, or add the proposal to them.",
-  "filters.propose.replace": "Replace current filter",
-  "filters.propose.add": "Add to current filter",
-  "filters.propose.discard": "Discard proposal",
+    "The proposal could not be read. Try describing it another way.",
   "filters.propose.unusedTitle": "Could not use",
   "filters.propose.unusedDismiss": "Dismiss",
   "filters.propose.unusedItem": "“{phrase}”: {reason}",
@@ -10655,11 +10952,20 @@ export const en = {
     "{field} lists options you cannot see, so the value could not be checked.",
   "filters.propose.reason.tooMany":
     "The filter already holds as many conditions as it can.",
+  "filters.proposal.title_one":
+    "Margince proposed {count} condition from “{text}”.",
+  "filters.proposal.title_other":
+    "Margince proposed {count} conditions from “{text}”.",
+  "filters.proposal.body":
+    "Dashed rows are proposals: change anything, and a row you change becomes yours.",
+  "filters.proposal.keepAll": "Keep all",
+  "filters.proposal.replaceMine": "Replace my conditions",
+  "filters.foot.proposed_one":
+    "{count} proposed condition in this filter. Saving keeps it.",
+  "filters.foot.proposed_other":
+    "{count} proposed conditions in this filter. Saving keeps them.",
   "lists.page": "List",
-  "lists.section.label": "Show",
-  "lists.section.views": "My views",
-  "lists.section.lists": "Shared views",
-  "lists.section.build": "Build",
+  "lists.loading": "Loading list",
   "lists.kind.live": "Live List",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Contacts",
@@ -10682,19 +10988,9 @@ export const en = {
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
   "lists.health.retiredField": "Uses a retired field",
-  "lists.library.title": "Shared views",
-  "lists.library.search": "Search lists",
-  "lists.library.all": "All",
-  "lists.library.kind": "List type",
-  "lists.library.empty":
-    "No shared lists yet. Save a filter as a Live List, or start a Shortlist.",
-  "lists.library.loading": "Loading lists",
   "lists.col.name": "Name",
   "lists.col.kind": "Type",
   "lists.col.recordType": "Records",
-  "lists.col.count": "You can see",
-  "lists.col.steward": "Steward",
-  "lists.col.sharing": "Shared with",
   "lists.noSteward": "Nobody",
   "lists.newShortlist": "New Shortlist",
   "lists.newShortlistTitle": "Start a Shortlist",
@@ -10713,6 +11009,7 @@ export const en = {
   "lists.unnamed": "Unnamed",
   "lists.head.facts":
     "{type} · {visible} you can see · who can find it: {sharing} · looked after by {steward}",
+  "lists.filterLine": "Filter: {records} where {sentence}",
   "lists.head.exported_one": "Exported {count} time, last on {when}",
   "lists.head.exported_other": "Exported {count} times, last on {when}",
   "lists.archived.title": "This list is archived",
@@ -10783,7 +11080,6 @@ export const en = {
   "lists.why.inDays_one": "in {count} day",
   "lists.why.inDays_other": "in {count} days",
   "lists.remove": "Take off the Shortlist",
-  "lists.removeTitle": "Take this record off the Shortlist?",
   "lists.note": "Why (optional)",
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.record.title": "Lists",
@@ -10792,15 +11088,12 @@ export const en = {
   "lists.record.check": "Check a Live List",
   "lists.record.checkPick": "Pick a Live List",
   "lists.record.truncated": "And more lists not shown here.",
+  "lists.record.takenOff": "Taken off {name}",
+  "lists.record.putBack": "Back on {name}",
   "lists.addToShortlist": "Add to Shortlist",
   "lists.add": "Add",
   "lists.shortlist": "Shortlist",
   "lists.pickShortlist": "Pick a Shortlist",
-  "lists.views.empty": "No views yet. Build a filter and press Save view.",
-  "lists.views.loading": "Loading saved filters",
-  "lists.myLists.title": "My lists",
-  "lists.myLists.empty":
-    "No private lists. A list only you can find shows here. Share it and it moves to Shared views.",
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label": "{entered} joined and {left} left since your last visit",
   "lists.head.lastChecked": "Last checked {when}",
@@ -10821,9 +11114,11 @@ export const en = {
   "lists.history.liveNote":
     "The check runs every 15 minutes and takes the lists checked longest ago first, so with very many lists one can wait longer; “Last checked” says when it was. Who joined and left is recorded as of the check that noticed it, and a record that joins and leaves between two checks is not recorded.",
   "lists.editFilter": "Edit filter",
+  "lists.filterCannotOpen": "This list’s filter cannot be opened here.",
+  "lists.savedTo": "Saved to “{name}”",
   "lists.editingTitle": "Editing the filter of {name}",
   "lists.editingBody":
-    "Save to the list to change which records it holds. Save as Live List makes a new list instead.",
+    "Save to the list to change which records it holds. To keep a copy instead, save the filter as a new view.",
   "lists.saveFilterTo": "Save to {name}",
   "lists.saveFilterTitle": "Change the filter of {name}?",
   "lists.saveFilterBody":
@@ -10859,33 +11154,80 @@ export const en = {
   // placeholder that some grammars cannot place.
   "filters.title": "Filters and views",
   "filters.subtitle":
-    "Build a filter, preview its matches and save it as a view.",
+    "Every saved view and list you can use, and where a new filter starts.",
+  "filters.library.loading": "Loading views and lists",
+  "filters.library.search": "Search views and lists",
+  "filters.library.all": "All",
+  "filters.library.newFilter": "New filter",
+  "filters.new.contacts": "New contact filter",
+  "filters.new.companies": "New company filter",
+  "filters.new.deals": "New deal filter",
+  "filters.new.leads": "New lead filter",
+  "filters.library.whichRecords": "Filter which records?",
+  "filters.library.mine": "Only me",
+  "filters.library.shared": "Shared",
+  "filters.library.views": "Saved views",
+  "filters.library.kindView": "Saved view",
+  "filters.library.rowMore": "More actions for {name}",
+  "filters.library.records.contact_one": "{count} contact",
+  "filters.library.records.contact_other": "{count} contacts",
+  "filters.library.records.company_one": "{count} company",
+  "filters.library.records.company_other": "{count} companies",
+  "filters.library.records.deal_one": "{count} deal",
+  "filters.library.records.deal_other": "{count} deals",
+  "filters.library.records.lead_one": "{count} lead",
+  "filters.library.records.lead_other": "{count} leads",
+  "filters.library.records.project_one": "{count} project",
+  "filters.library.records.project_other": "{count} projects",
+  "filters.library.recordsSeen": "{records} you can see",
+  "filters.library.mineEmpty": "Views you save show here.",
+  "filters.library.sharedEmpty":
+    "No shared lists yet. A list shared with a team or everyone shows here.",
+  "filters.library.noHits": "No views or lists match “{q}”.",
+  "filters.library.clearSearch": "Clear search",
+  "filters.library.noTypeHits.contacts": "No contact views or lists.",
+  "filters.library.noTypeHits.companies": "No company views or lists.",
+  "filters.library.noTypeHits.deals": "No deal views or lists.",
+  "filters.library.noTypeHits.leads": "No lead views or lists.",
+  "filters.library.noTypeHits.projects": "No project lists.",
+  "filters.library.truncated":
+    "Showing the first {limit}. Search to narrow the list.",
+  "filters.library.listsFailed": "Lists did not load.",
+  "filters.library.viewsFailed": "Saved views did not load.",
+  "filters.library.showArchived": "Show archived lists",
+  "filters.library.hideArchived": "Hide archived lists",
+  "filters.library.firstRunTitle": "No saved views or lists yet",
+  "filters.library.firstRunBody":
+    "A filter finds records by their fields. Save it as a view for yourself, or as a Live List others can find.",
+  "filters.library.viewsEmptyTitle": "No saved views yet",
+  "filters.library.viewsEmptyBody":
+    "A filter finds records by their fields. Save it as a view to open it again.",
   "filters.objectLabel": "Record type",
   "filters.tab.contacts": "Contacts",
   "filters.tab.companies": "Companies",
   "filters.tab.deals": "Deals",
   "filters.builderTitle": "Filter",
-  "filters.dynamic": "Dynamic: updates on every event",
   "filters.matchContacts_one": "{count} contact matches",
   "filters.matchContacts_other": "{count} contacts match",
   "filters.matchCompanies_one": "{count} company matches",
   "filters.matchCompanies_other": "{count} companies match",
   "filters.matchDeals_one": "{count} deal matches",
   "filters.matchDeals_other": "{count} deals match",
-  "filters.noFilterYet": "Add a clause to preview matches",
-  // The count when the server was asked and did not answer. It must not fall
-  // back to noFilterYet: a reader looking at a finished clause would read a
-  // refusal as their own unfinished work. Three words, because this sits in a
-  // header row beside two buttons; the reason and the retry go in the results
-  // card below, which is the only row wide enough for a sentence.
+  // The count when the server was asked and did not answer. It must not read
+  // as the hint to finish a condition: a reader looking at a finished one
+  // would read a refusal as their own unfinished work. Three words, because it
+  // sits beside the results title; the reason and the retry go in the panel
+  // body, which is the only row wide enough for a sentence.
   "filters.countUnavailable": "Count unavailable",
   "filters.loadingVocabulary": "Loading fields…",
   "filters.noFields": "No filterable fields for this record type.",
   "filters.resultsTitle": "Matching records",
   "filters.resultsCaption":
     "First page of matches, for checking the filter. Not the full selection.",
-  "filters.noMatches": "No records match this filter.",
-  "filters.loadView": "Load saved filter",
+  "filters.noMatches":
+    "No {records} match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
+  "filters.noMatchesLoosen":
+    "No {records} match this filter. Loosen or remove a condition.",
   "filters.pickRecord": "Select record",
   "filters.searchRecords": "Search companies",
   "filters.typeToSearch": "Type to search",
@@ -10896,6 +11238,8 @@ export const en = {
   "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Select value",
+  "filters.amountUnpriced":
+    "This amount has no known currency, so it cannot be shown or changed.",
   "filters.exportCsv": "Export CSV",
   "filters.exportJson": "Export JSON",
 
@@ -11025,11 +11369,6 @@ export const en = {
   "project.assignOwner": "Assign to a colleague",
   "project.assignOwnerTitle": "Assign to a colleague",
   "project.assignOwnerSearch": "Search colleagues",
-  "project.assignOwnerNoneSelected": "Select a colleague first",
-  // The dialog's own confirm verb. The trigger and the title both read "Assign
-  // to a colleague"; the button says what pressing it does, and a button
-  // repeating the heading it sits under reads as chrome rather than a verb.
-  "project.assignOwnerConfirm": "Assign",
   "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
@@ -11179,6 +11518,8 @@ export const en = {
   "worklist.pane.nothing": "Nothing recorded yet.",
   "worklist.pane.lastInbound": "Last from this contact",
   "worklist.pane.lastOutbound": "Last to this contact",
+  "worklist.pane.lastFromCompany": "Last from this company",
+  "worklist.pane.lastToCompany": "Last to this company",
   "worklist.pane.never": "Never",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
@@ -11272,6 +11613,7 @@ export const en = {
   "worklist.handled.about": "Record",
   "worklist.handled.when": "When",
   "worklist.handled.noRecord": "No record",
+  "worklist.handled.hiddenRecord": "Record not available",
   "worklist.handled.wayBack": "Undo",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
@@ -11297,6 +11639,18 @@ export const en = {
   "worklist.board.atRisk": "Deals at risk",
   "worklist.board.overdue": "Overdue",
   "worklist.board.nobody": "Unassigned work",
+  "worklist.board.notMeasured": "Not measured",
+  "worklist.planCoverage.all_one":
+    "Weekly plan read for the team’s one member.",
+  "worklist.planCoverage.all_other":
+    "Weekly plans read for all {count} teammates.",
+  "worklist.planCoverage.some_one":
+    "Weekly plan read for {read} of the team’s one member.",
+  "worklist.planCoverage.some_other":
+    "Weekly plans read for {read} of {count} teammates.",
+  "worklist.planCoverage.unread": "Not read: {names}.",
+  "worklist.planCoverage.truncated":
+    "The team list was cut short, so later teammates were not checked.",
   "worklist.coaching.title": "Coaching suggestions",
   "worklist.coaching.promises_one":
     "{name} has {count} customer commitment due",
@@ -11421,8 +11775,18 @@ export const en = {
   "worklist.because.opened_overdue":
     "recorded after its deadline, from imported history",
   "worklist.because.meeting_soon": "starting soon",
+  "worklist.because.meeting_booked": "meeting booked",
+  "worklist.because.meeting_booked.value": "meeting booked for {value}",
   "worklist.because.meeting_unprepared": "nothing prepared",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
+  "worklist.because.you_wrote_last": "you wrote last",
+  "worklist.because.no_reply_days": "no reply",
+  "worklist.because.no_reply_days.value_one": "no reply for {value} day",
+  "worklist.because.no_reply_days.value_other": "no reply for {value} days",
+  "worklist.because.met_days_ago": "met",
+  "worklist.because.met_days_ago.value_one": "met {value} day ago",
+  "worklist.because.met_days_ago.value_other": "met {value} days ago",
+  "worklist.because.nothing_sent_since": "nothing sent since",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",
@@ -11568,6 +11932,8 @@ export const en = {
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",
   "worklist.verb.completeFailed": "Task was not completed. Retry.",
+  "worklist.verb.completeStale":
+    "This task changed since you opened it, so it was not completed here. The list was refreshed.",
   "worklist.verb.pin": "Pin",
   // WHAT A PIN ACTUALLY DOES, because the word says none of it. Each clause
   // is checked against the code and none of them may be written loosely:
@@ -11628,6 +11994,7 @@ export const en = {
   // Where the composer actually opens, the verb is the ACT rather than the way
   // to it. The two labels are separate keys because the two clicks differ.
   "worklist.verb.draft_reply_now": "Draft reply",
+  "worklist.verb.draft_follow_up_now": "Draft follow-up",
   // A FIRST message rather than an answer to one. Separate keys because the two
   // are different acts: a row saying "reply" over an opening outreach names a
   // conversation that has not happened yet.
@@ -11837,6 +12204,17 @@ export const en = {
   "aiProviderSettings.service.together": "Together",
   "aiProviderSettings.service.groq": "Groq",
   "aiProviderSettings.service.deepseek": "DeepSeek",
+  "aiProviderSettings.service.langdockEu": "Langdock (EU)",
+  "aiProviderSettings.service.langdockUs": "Langdock (US)",
+  "aiProviderSettings.service.langdockGemini.note":
+    "Langdock serves no Gemini embeddings. If search and retrieval use Gemini, move them to another provider first, or they stop working.",
+  "aiProviderSettings.service.googleAiStudio": "Google AI Studio",
+  "aiProviderSettings.service.openai": "OpenAI",
+  "aiProviderSettings.service.otherOpenai": "Other OpenAI API host",
+  "aiProviderSettings.service.anthropic": "Anthropic",
+  "aiProviderSettings.service.otherGemini": "Other Gemini-compatible host",
+  "aiProviderSettings.service.otherAnthropic":
+    "Other Anthropic-compatible host",
   "aiProviderSettings.service.typesafe": "TypeSafe (default)",
   "aiProviderSettings.service.otherChat": "Other OpenAI-compatible service",
   "aiProviderSettings.service.otherDecisions": "Other decision server",

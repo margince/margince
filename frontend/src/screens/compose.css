@@ -78,7 +78,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
-  margin-block-end: var(--space-4);
 }
 @media (min-width: 40rem) {
   .schedule-pick {
@@ -169,7 +168,7 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-md);
 }
 .compose-reasons .chips {

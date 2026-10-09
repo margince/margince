@@ -1,13 +1,19 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import type { ListChip } from "../design-system/listsurface.dials";
 import type { ListColumn } from "../design-system/listtable";
 import { RowTags } from "../design-system/rowtags";
 import { formatDateAbbrev } from "../format/format";
 import type { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { OwnerName } from "./entityref";
-import type { ListState, ViewSpec } from "./listquery";
+import {
+  type ListState,
+  useOwnerChips,
+  useTagChips,
+  type ViewSpec,
+} from "./listquery";
 
 type RowTag = components["schemas"]["RowTag"];
 
@@ -53,6 +59,11 @@ export function tagsColumn<Row extends TaggedRecord>(
     header: t("tags.columnHeader"),
     cell: (row) => <RowTags tags={row.tags} />,
   };
+}
+
+/** The filter chips an owner-scoped, taggable list opens with, in this order. */
+export function useOwnerTagChips(): readonly ListChip[] {
+  return [...useOwnerChips(), ...useTagChips()];
 }
 
 /** The Owner column: whose record this is, sortable by owner_id. */
@@ -160,9 +171,10 @@ export function standardViews(
  * contacts lists — same tab, same emptiness a reader reaches in one click —
  * said nothing at all.
  *
- * Undefined unless Mine is what is actually on screen. Under any other
- * narrowing the table's own line is the right one, and a sentence about
- * ownership would name a cause that is not the cause.
+ * Undefined unless Mine is what is actually on screen, and the ONLY thing
+ * narrowing it. Under a search or another filter the table's own line is the
+ * right one: "no deals owned by you" over a search that matched nothing names a
+ * cause that is not the cause, and its Show all would leave the search standing.
  *
  * "Show all" drops the owner filter and nothing else, which is what makes it
  * worth having beside the table's own "clear filters": one undoes the tab, the
@@ -180,7 +192,11 @@ export function mineEmptyNote<Row>({
   /** The plural noun for these rows, so the sentence names them. */
   unit: MessageKey;
 }>): ReactNode | undefined {
-  if (!viewerId || state.query.filters.owner_id !== viewerId) {
+  const { owner_id: owner, ...others } = state.query.filters;
+  if (!viewerId || owner !== viewerId) {
+    return undefined;
+  }
+  if (state.query.q || Object.values(others).some(Boolean)) {
     return undefined;
   }
   return (

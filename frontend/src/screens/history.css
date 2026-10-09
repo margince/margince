@@ -28,7 +28,7 @@
   gap: var(--space-2);
 }
 
-/* A well inside the card, which is what --bgCard is for, and the list's own gap
+/* A well inside the card, which is what --bgInset is for, and the list's own gap
    is what separates two of them. `card-inset` states the same thing one tier up:
    a recessed plate takes the fill and no border, because the outline would be a
    second box drawn inside the box already around it. */
@@ -37,7 +37,7 @@
   flex-direction: column;
   gap: 4px;
   padding: var(--space-3);
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-md);
 }
 
@@ -60,15 +60,11 @@
   gap: var(--space-1);
 }
 
-/* Named by its list, not by class alone: this row is an <li> inside the
-   timeline's own list, and the timeline lays every descendant <li> on its
-   date-rail-body grid. On its own class this row lost that contest and drew
-   its field name in the date gutter and its diff in the rail. */
 .entry-fields > .entry-field {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: 0 var(--space-2);
 }
 
 /* The diff takes the row after the field's name. Its sides may break
@@ -101,6 +97,19 @@
 
 .reversal-toggle {
   margin-top: var(--space-2);
+}
+/* In a timeline row's body these blocks sit --space-3 below the line above,
+   and the body's own --space-1 gap already pays part of that. */
+.timeline
+  .tl-body
+  > :is(
+    .entry-fields,
+    .entry-undo,
+    .entry-edge,
+    .reversal-toggle,
+    .reversal-pair-body
+  ) {
+  margin-top: calc(var(--space-3) - var(--space-1));
 }
 /* An edge row's own block: the mark saying this row is a LINK rather than a
  * field edit, and the record at the other end. It carries the accent hairline

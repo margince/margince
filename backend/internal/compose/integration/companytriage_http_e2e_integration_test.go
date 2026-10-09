@@ -70,6 +70,7 @@ func TestTheCompanyDoorAnswersWhichDomainsWereTriagedIntoIt(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
+		"source":       "manual",
 		"display_name": "Nordwind Energie GmbH",
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
@@ -117,6 +118,7 @@ func TestACompanyNobodyTriagedIntoIsAnsweredRatherThanRefused(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
+		"source":       "manual",
 		"display_name": "Typed In By Hand Ltd",
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)

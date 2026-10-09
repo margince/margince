@@ -130,7 +130,6 @@ export function ProjectFilingModal({
   };
 
   const close = () => {
-    if (undo.isPending) return;
     if (undone) refreshReads();
     undo.reset();
     setUndone(null);

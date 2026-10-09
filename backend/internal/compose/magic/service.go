@@ -114,7 +114,11 @@ func (s *Service) Read(
 		SourcesUnavailable: []crmcontracts.WorklistSourceUnavailable{},
 	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, notShown, capped, err := doneSince(ctx, tx, from, limit)
+		entries, capped, err := doneSince(ctx, tx, from, limit)
+		if err != nil {
+			return err
+		}
+		notShown, err := notShownSince(ctx, tx, from)
 		if err != nil {
 			return err
 		}

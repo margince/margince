@@ -107,6 +107,7 @@ func (r laneReconcile) location(label, provider, location string) error {
 }
 
 func (r laneReconcile) host(label, provider, host string) error {
+	host = hostRoot(provider, host)
 	entry := r.providers[provider]
 	switch {
 	case host == "" || sameHost(provider, entry.BaseURL, host):

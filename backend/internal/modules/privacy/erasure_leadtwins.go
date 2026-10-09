@@ -50,6 +50,8 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		    disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		    archived_at = coalesce(archived_at, now())%s
 		  WHERE promoted_contact_id = $1
+		     OR from_contact_id = $1
+		     OR from_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
 		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE id = $1 AND converted_from_lead_id IS NOT NULL)
 		     OR (email IS NOT NULL AND lower(email) = ANY($2))
 		  RETURNING id
@@ -76,6 +78,12 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		  DELETE FROM communication_suppression
 		  WHERE lead_id IN (SELECT id FROM wiped)
 		     OR (address IS NOT NULL AND lower(address) = ANY($2))
+		), leadoverrides AS (
+		  -- BY lead_id ONLY: an override has no address column, so unlike the
+		  -- suppression above there is no address arm to add — a vouch is
+		  -- always written against a contact or lead id, never a bare address.
+		  DELETE FROM communication_override
+		  WHERE lead_id IN (SELECT id FROM wiped)
 		), leadcredentials AS (
 		  DELETE FROM withdrawal_credential
 		  WHERE lead_id IN (SELECT id FROM wiped)

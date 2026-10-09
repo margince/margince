@@ -36,6 +36,7 @@ import {
 } from "./listsurface";
 import { Select } from "./select";
 import "./listtable.css";
+import { SelectionBar } from "./selectionbar";
 
 export type {
   ListChip,
@@ -199,16 +200,7 @@ function BulkBar<Row>({
   if (!selection || selection.selected.size === 0) {
     return null;
   }
-  return (
-    /* aria-live and no role="region": the announcement is what this element is
-       for, and aria-live delivers it on any element. The landmark did not — a
-       region must be named to be worth anything, this one never was, and an
-       anonymous landmark in the list costs a reader a stop that tells them
-       nothing. */
-    <div className="lt-bulkbar" aria-live="polite">
-      {selection.bar}
-    </div>
-  );
+  return <SelectionBar>{selection.bar}</SelectionBar>;
 }
 
 /**
