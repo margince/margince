@@ -429,6 +429,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `agentgateinstalled_test.go` | H1 | `x-agent-access: human-only` is enforced by one line, and this holds it there. |
+| `agentskillprose_test.go` | H2 | The skill bundle's guides are Markdown pages a user reads, so they meet the house prose bar and cite nothing private. |
 | `aiprovenancenotice_test.go` | H1 | The AI provenance notice has one spelling, and it is draftfloor.AIProvenanceNotice. |
 | `approvalsameagent_test.go` | H2 | "Is this the agent that staged the proposal" has one spelling, and it is not passport equality. |
 | `arch_test.go` | H2 | The boundary rules between packages hold as a plain `go test`, with the package list derived from the tree so a new package is enrolled the moment it exists. |

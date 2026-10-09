@@ -387,6 +387,13 @@ func WithPublicBaseURL(base string) Option {
 	}
 }
 
+// WithAPIBaseURL sets the API's own external base, for a deployment that
+// serves the API on a different origin than the SPA. Where a passport calls
+// the API is read from it first (agentAPIOrigin).
+func WithAPIBaseURL(base string) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.apiBaseURL = base }
+}
+
 // WithDelivery wires the machinery an accepted send is staged for
 // transmission with, onto BOTH send transports this role serves: the HTTP
 // handler and the MCP send_email tool. Without it a send refuses rather than

@@ -5177,7 +5177,7 @@ export const vi = {
   "rbac.masked": "Giá trị đã che",
   "settings.passports": "Passport cho Agent",
   "settings.passportsSub":
-    "Agent hành động với danh nghĩa của bạn, không bao giờ vượt quá bạn: mỗi lần gọi đều kiểm tra lại phân quyền của bạn.",
+    "Passport là token truy cập cá nhân của bạn. Mọi thứ dùng nó đều hành động với tư cách của bạn, chỉ với những quyền bạn đã tick và không bao giờ hơn. Mỗi yêu cầu đều kiểm tra lại quyền của bạn.",
   "passport.scope.read": "Đọc bản ghi",
   "passport.scope.draft": "Soạn nháp tin nhắn",
   "passport.scope.write": "Thay đổi bản ghi",
@@ -5185,8 +5185,31 @@ export const vi = {
   "passport.scope.enrich": "Mua dữ liệu liên hệ",
   "passport.select": "Passport",
   "passport.noneOption": "Không dùng passport",
-  "settings.passportsLendHint":
-    "Thông tin xác thực bạn đã tạo cho script và tích hợp. Kết nối một client MCP không dùng những passport này — nó tạo kết nối riêng của nó, liệt kê bên dưới.",
+  "settings.passportUseAi": "Trong công cụ AI",
+  "settings.passportUseAiDetail":
+    "Cài skill Margince vào Claude, Codex hoặc Gemini, rồi đưa passport cho nó. Skill hướng dẫn AI cách làm việc trong Margince thay bạn.",
+  "settings.skillDownload": "Tải skill",
+  "settings.skillDownloadFailed": "Chưa tải được skill",
+  "settings.passportUseCode": "Trong code của bạn",
+  "settings.passportUseCodeDetail":
+    "Gửi nó dưới dạng bearer token. Tệp openapi.yaml của skill liệt kê mọi lệnh gọi mà nó có thể thực hiện.",
+  "settings.snippetLanguage": "Ngôn ngữ",
+  "settings.snippetLabel": "Ví dụ {language}",
+  "settings.snippetCopy": "Sao chép ví dụ",
+  "settings.snippetCopied": "Đã sao chép",
+  "settings.snippetCopyFailed":
+    "Hãy bôi đen ví dụ ở trên rồi sao chép thủ công.",
+  "settings.snippetFoot": "Hãy đặt {variable} trong shell trước.",
+  "settings.passportsYours": "Passport của bạn",
+  "settings.passportsMcpHint":
+    "Client MCP nhận thông tin xác thực riêng khi bạn kết nối nên không cần passport. Nó nằm trong mục Client MCP đã kết nối.",
+  "settings.passportCreated":
+    "Đã tạo passport. Passport chỉ hiển thị một lần, hãy sao chép ngay.",
+  "settings.tokenCopy": "Sao chép passport",
+  "settings.tokenCopied": "Đã sao chép",
+  "settings.tokenCopyFailed":
+    "Hãy bôi đen passport ở trên rồi sao chép thủ công.",
+  "settings.passportNext": "Cách dùng passport",
   "settings.passportLabel": "Tên Agent",
   "settings.mint": "Tạo passport",
   "settings.minting": "Đang tạo…",
@@ -5384,10 +5407,10 @@ export const vi = {
   "agent.tip.recap": "Mở tôi để xem hoạt động hôm nay.",
   "agent.tip.edge": "Viền màn hình sáng lên khi tôi làm việc.",
 
-  "agents.connected": "Agent đã kết nối",
+  "agents.connected": "Client MCP đã kết nối",
   "agents.connectedSub":
     "Các client MCP giữ thông tin xác thực của riêng mình, với đúng quyền bạn đã tick khi cấp quyền",
-  "agents.noneConnected": "Chưa có Agent nào kết nối.",
+  "agents.noneConnected": "Chưa có client MCP nào kết nối.",
   "agents.connectedOn": "kết nối {date}",
   "agents.disconnect": "Ngắt kết nối",
   "agents.disconnectOpen": "Ngắt kết nối",
@@ -5401,7 +5424,7 @@ export const vi = {
   "agents.revokeGrantNamed": "Kết thúc kết nối tới {client}",
   "agents.disconnectConfirm":
     "Việc này kết thúc toàn bộ kết nối, không chỉ một thông tin xác thực: Agent mất quyền truy cập ở lần gọi kế tiếp và không gia hạn được. Muốn kết nối lại thì phải cấp quyền truy cập lần nữa.",
-  "agents.connectHow": "Kết nối một Agent",
+  "agents.connectHow": "Kết nối client MCP",
   "agents.connectSteps":
     "Hãy chạy một trong các lệnh sau. Client sẽ tự đăng ký và đưa bạn quay lại đây để chọn quyền truy cập mà nó được phép có.",
   "agents.connectAntigravityPath":
@@ -5409,7 +5432,6 @@ export const vi = {
   "agents.connectorOff": "Connector MCP đang tắt trên bản cài đặt này.",
   "agents.connectorOffDetail":
     "Không Agent nào kết nối được cho đến khi người vận hành bật lên. Các passport của bạn vẫn dùng được như thông tin xác thực REST.",
-  "settings.tokenOnce": "Sao chép ngay — token này chỉ hiển thị một lần.",
   "settings.token": "token",
   "settings.autonomy": "Bậc tự chủ",
   "settings.autonomySub": "cái gì chạy ngay, cái gì chờ trong hộp phê duyệt",

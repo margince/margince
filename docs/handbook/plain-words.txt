@@ -962,7 +962,6 @@ reassign
 receipt
 receive
 recent
-recheck
 recipient
 reconnect
 record
