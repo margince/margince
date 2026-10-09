@@ -14,10 +14,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { en } from "../i18n/en";
 import { ListScreen } from "./listpage";
 import {
   chosenListing,
+  exportDependencies,
   history,
   LIVE_ID,
   listingAnswer,
@@ -32,13 +35,23 @@ import {
   shortlist,
   visitAnswer,
 } from "./lists.fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import type { List } from "./lists.queries";
+import {
+  emptyPage,
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
 
 const vocabulary = { resource: "company", fields: [] };
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(URL, "createObjectURL");
+  Reflect.deleteProperty(URL, "revokeObjectURL");
 });
 
 function page(listID: string) {
@@ -47,6 +60,46 @@ function page(listID: string) {
       <ListScreen listID={listID} />
     </StoryProviders>,
   );
+}
+
+/** Every answer a Live List's page reads, `list` standing for the list. */
+function stubLivePage(list: List, routes: RouteMap = {}) {
+  installFetchStub({
+    "GET /me": listsMe(true),
+    [`GET /lists/${LIVE_ID}`]: () => jsonResponse(list),
+    [`POST /lists/${LIVE_ID}/visit`]: visitAnswer(LIVE_ID),
+    [`GET /lists/${LIVE_ID}/history`]: () => jsonResponse(emptyPage),
+    "GET /companies": () =>
+      jsonResponse({ data: members, page: { has_more: false } }),
+    ...routes,
+  });
+}
+
+const moreFor = (name: string) =>
+  en["filters.library.rowMore"].replace("{name}", name);
+
+function whatChanged() {
+  return screen.findByRole("region", { name: en["lists.history.title"] });
+}
+
+/** The facts under the list's name, found by the label every list carries. */
+function facts(): HTMLElement {
+  const strip = screen.getByText(en["lists.col.recordType"]).closest("dl");
+  if (!(strip instanceof HTMLElement)) {
+    throw new Error("the Records label sits in no facts list");
+  }
+  return strip;
+}
+
+/** The panel a ⋯ trigger opens, which is portalled away from the trigger. */
+function menuOf(trigger: HTMLElement): HTMLElement {
+  const menu = document.getElementById(
+    trigger.getAttribute("aria-controls") ?? "",
+  );
+  if (menu === null) {
+    throw new Error("the menu trigger controls no panel");
+  }
+  return menu;
 }
 
 describe("an opened list", () => {
@@ -98,6 +151,9 @@ describe("an opened list", () => {
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(
       screen.getByRole("heading", { level: 1, name: en["lists.page"] }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: en["filters.backToLibrary"] }),
     ).toBeInTheDocument();
   });
 
@@ -220,6 +276,10 @@ describe("an opened list", () => {
         screen.getByRole("columnheader", { name: header }),
       ).toBeInTheDocument();
     }
+    // The notice is the one place that says so: no badge repeats it, and no
+    // Steward fact names the nobody it is about.
+    expect(screen.queryByText(en["lists.health.ownerless"])).toBeNull();
+    expect(screen.queryByText(en["lists.fact.steward"])).toBeNull();
   });
 
   it("says which retired field a Live List still filters on and who should replace it", async () => {
@@ -246,9 +306,7 @@ describe("an opened list", () => {
         en["lists.retiredField.body_one"].replace("{fields}", "last touch"),
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByText(en["lists.health.retiredField"]).length,
-    ).toBeGreaterThan(0);
+    expect(screen.queryByText(en["lists.health.retiredField"])).toBeNull();
   });
 
   it("records the visit once the list is read, reads it again, and marks the members the server says joined", async () => {
@@ -295,7 +353,10 @@ describe("an opened list", () => {
         jsonResponse({ data: members, page: { has_more: false } }),
     });
     page(LIVE_ID);
-    expect(await screen.findByText(/^Last checked /)).toBeInTheDocument();
+    expect(
+      await within(await whatChanged()).findByText(/^Last checked /),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/^Last checked /)).toHaveLength(1);
     expect(
       screen.getByText("Since your last visit: 3 joined, 1 left"),
     ).toBeInTheDocument();
@@ -314,7 +375,7 @@ describe("an opened list", () => {
     });
     page(LIVE_ID);
     const line = await screen.findByText(
-      "Filter: Companies where Industry is Manufacturing and last touch is more than 45 days ago",
+      "Filter: Industry is Manufacturing and last touch is more than 45 days ago",
     );
     expect(line.previousElementSibling).toHaveTextContent(
       liveList.purpose ?? "",
@@ -377,14 +438,16 @@ describe("an opened list", () => {
     });
     page(LIVE_ID);
     expect(
-      await screen.findByText(en["lists.head.notChecked"]),
+      await within(await whatChanged()).findByText(
+        en["lists.history.notChecked"],
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByText(/^Since your last visit/),
     ).not.toBeInTheDocument();
   });
 
-  it("names a Live List's observed changes as of the check that saw them, and says what a check cannot see", async () => {
+  it("credits a Live List's observed changes to the check that saw them, and says what a check cannot see when asked", async () => {
     installFetchStub({
       "GET /me": listsMe(true),
       [`GET /lists/${LIVE_ID}`]: () => jsonResponse(liveList),
@@ -394,13 +457,25 @@ describe("an opened list", () => {
       "GET /companies": () =>
         jsonResponse({ data: members, page: { has_more: false } }),
     });
+    const user = userEvent.setup();
     page(LIVE_ID);
+    const region = await whatChanged();
     expect(
-      await screen.findByText(/^Joined as of .+ · after the filter changed$/),
+      await within(region).findByText("Joined · after the filter changed"),
     ).toBeInTheDocument();
-    expect(screen.getByText(/^Left as of [^·]+$/)).toBeInTheDocument();
+    expect(
+      within(region).getByText(en["lists.history.left"]),
+    ).toBeInTheDocument();
     expect(screen.getAllByText(en["lists.history.checker"])).toHaveLength(2);
-    expect(screen.getByText(en["lists.history.liveNote"])).toBeInTheDocument();
+    expect(screen.queryByText(en["lists.history.liveNote"])).toBeNull();
+    await user.click(
+      within(region).getByRole("button", {
+        name: en["lists.history.howChecks"],
+      }),
+    );
+    expect(
+      await screen.findByText(en["lists.history.liveNote"]),
+    ).toBeInTheDocument();
   });
 
   it("keeps the check note off a Shortlist's history", async () => {
@@ -414,12 +489,20 @@ describe("an opened list", () => {
         jsonResponse({ data: members, page: { has_more: false } }),
     });
     page(SHORTLIST_ID);
+    const region = await whatChanged();
     expect(
-      await screen.findByText(/^Added a record · by hand/),
+      await within(region).findByText("Added a record · by hand"),
     ).toBeInTheDocument();
+    // The note is a line of its own under the change, joined by no dash.
     expect(
-      screen.queryByText(en["lists.history.liveNote"]),
-    ).not.toBeInTheDocument();
+      within(region).getByText("Signed the quote for the launch deck"),
+    ).toBeInTheDocument();
+    expect(within(region).queryByText(/—/)).toBeNull();
+    expect(
+      within(region).queryByRole("button", {
+        name: en["lists.history.howChecks"],
+      }),
+    ).toBeNull();
     expect(screen.queryByText(/^Last checked /)).not.toBeInTheDocument();
   });
 
@@ -465,13 +548,14 @@ describe("an opened list", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("names the automations an archive will pause before archiving", async () => {
+  it("names the automations an archive will pause before archiving, then hands focus to the list's name", async () => {
     const archived: string[] = [];
     installFetchStub({
       "GET /me": listsMe(true),
       [`GET /lists/${LIVE_ID}`]: () =>
         jsonResponse({
           ...liveList,
+          archived_at: archived.length > 0 ? "2026-09-30T08:00:00Z" : null,
           dependencies: [
             {
               kind: "automation",
@@ -499,8 +583,9 @@ describe("an opened list", () => {
     const user = userEvent.setup();
     page(LIVE_ID);
     await user.click(
-      await screen.findByRole("button", { name: en["lists.archive"] }),
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
     );
+    await user.click(screen.getByRole("button", { name: en["lists.archive"] }));
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByText(
@@ -512,6 +597,336 @@ describe("an opened list", () => {
       within(dialog).getByRole("button", { name: en["lists.archive"] }),
     );
     await waitFor(() => expect(archived).toEqual([LIVE_ID]));
-    expect(screen.queryByText(/^Exported /)).not.toBeInTheDocument();
+    expect(screen.queryByText(en["lists.fact.exported"])).toBeNull();
+    // The confirm closes with the menu that opened it gone, so focus has no
+    // opener to return to and falls to the head that replaced it.
+    expect(
+      await screen.findByText(en["lists.archived.title"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: liveList.name }),
+    ).toHaveFocus();
+  });
+
+  it("keeps Export CSV and Edit filter in view and folds Edit list and Archive list into the list's menu", async () => {
+    stubLivePage(liveList);
+    const user = userEvent.setup();
+    page(LIVE_ID);
+    expect(
+      await screen.findByRole("button", { name: en["filters.exportCsv"] }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: en["lists.editFilter"] }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: en["lists.settings"] }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["lists.archive"] }),
+    ).toBeNull();
+    const more = screen.getByRole("button", { name: moreFor(liveList.name) });
+    await user.click(more);
+    expect(
+      within(menuOf(more))
+        .getAllByRole("button")
+        .map((verb) => verb.textContent),
+    ).toEqual([en["lists.settings"], en["lists.archive"]]);
+  });
+
+  it("offers a reader who may not change the list its export and nothing else", async () => {
+    stubLivePage({ ...liveList, can_edit: false });
+    page(LIVE_ID);
+    expect(
+      await screen.findByRole("button", { name: en["filters.exportCsv"] }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: moreFor(liveList.name) }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["lists.editFilter"] }),
+    ).toBeNull();
+  });
+
+  it("lays out how many records a reader can see, who can find the list and who looks after it", async () => {
+    stubLivePage(liveList);
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.col.recordType"]),
+    ).toBeInTheDocument();
+    const strip = facts();
+    expect(within(strip).getByText("42 companies")).toBeInTheDocument();
+    expect(
+      await within(strip).findByText(en["lists.audience.yourTeams"]),
+    ).toBeInTheDocument();
+    expect(within(strip).getByText("Lena Vogt")).toBeInTheDocument();
+    expect(within(strip).queryByText(/—/)).toBeNull();
+  });
+
+  it("states a broken filter in its notice alone, and names the record type when the server could not count", async () => {
+    stubLivePage({ ...liveList, health: "invalid", visible_count: null });
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.invalid.title"]),
+    ).toBeInTheDocument();
+    // Members are read by now, so a Select all would have been drawn.
+    expect(
+      await screen.findByRole("button", { name: en["filters.exportCsv"] }),
+    ).toBeInTheDocument();
+    expect(
+      within(facts()).getByText(en["lists.type.company"]),
+    ).toBeInTheDocument();
+    expect(within(facts()).queryByText(/—/)).toBeNull();
+    expect(screen.queryByText(en["lists.health.invalid"])).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Select all/ })).toBeNull();
+  });
+
+  it("dates a list's exports by the latest of them, whatever order they arrive in", async () => {
+    stubLivePage({ ...liveList, dependencies: exportDependencies });
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.fact.exported"]),
+    ).toBeInTheDocument();
+    const when = formatDateTime("2026-09-20T14:30:00Z", "en", viewerZone());
+    expect(
+      within(facts()).getByText(
+        en["lists.head.exported_other"]
+          .replace("{count}", "2")
+          .replace("{when}", when),
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves focus alone when the list first opens", async () => {
+    stubLivePage(liveList);
+    page(LIVE_ID);
+    const name = await screen.findByRole("heading", {
+      level: 1,
+      name: liveList.name,
+    });
+    expect(
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
+    ).toBeInTheDocument();
+    expect(name).not.toHaveFocus();
+  });
+
+  // Each verb takes its own button away by changing the notice, so the name
+  // heading the fresh page is where a keyboard reader carries on from.
+  it("hands focus to the list's name when archiving or restoring takes away the button pressed", async () => {
+    let archivedAt: string | null = null;
+    stubLivePage(liveList, {
+      [`GET /lists/${LIVE_ID}`]: () =>
+        jsonResponse({ ...liveList, archived_at: archivedAt }),
+      [`DELETE /lists/${LIVE_ID}`]: () => {
+        archivedAt = "2026-09-30T08:00:00Z";
+        return jsonResponse({ ...liveList, archived_at: archivedAt });
+      },
+      [`POST /lists/${LIVE_ID}/restore`]: () => {
+        archivedAt = null;
+        return jsonResponse(liveList);
+      },
+    });
+    const user = userEvent.setup();
+    page(LIVE_ID);
+    await user.click(
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.archive"] }));
+    expect(
+      await screen.findByText(en["lists.archived.title"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: liveList.name }),
+    ).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: en["lists.restore"] }));
+    await waitFor(() =>
+      expect(screen.queryByText(en["lists.archived.title"])).toBeNull(),
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: liveList.name }),
+    ).toHaveFocus();
+  });
+
+  it("hands focus to the list's name when taking over a list nobody looks after takes away the button pressed", async () => {
+    let taken = false;
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${SHORTLIST_ID}`]: () =>
+        jsonResponse(
+          taken
+            ? {
+                ...shortlist,
+                steward_id: liveList.steward_id,
+                steward_name: liveList.steward_name,
+                health: "ok",
+              }
+            : shortlist,
+        ),
+      [`GET /lists/${SHORTLIST_ID}/history`]: () => jsonResponse(emptyPage),
+      "GET /companies": () =>
+        jsonResponse({ data: members, page: { has_more: false } }),
+      [`GET /lists/${SHORTLIST_ID}/members`]: listingAnswer(chosenListing),
+      [`PATCH /lists/${SHORTLIST_ID}`]: () => {
+        taken = true;
+        return jsonResponse({ ...shortlist, steward_id: liveList.steward_id });
+      },
+    });
+    const user = userEvent.setup();
+    page(SHORTLIST_ID);
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["lists.ownerless.takeOver"],
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText(en["lists.ownerless.title"])).toBeNull(),
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: shortlist.name }),
+    ).toHaveFocus();
+  });
+
+  it("still names the health and the missing steward of an archived list, whose notice says only that it is archived", async () => {
+    stubLivePage({
+      ...liveList,
+      archived_at: "2026-09-30T08:00:00Z",
+      health: "ownerless",
+      steward_id: null,
+      steward_name: null,
+    });
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.archived.title"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(en["lists.ownerless.title"])).toBeNull();
+    expect(screen.getAllByText(en["lists.health.ownerless"])).toHaveLength(1);
+    expect(within(facts()).getByText(en["lists.fact.steward"])).toBeVisible();
+    expect(within(facts()).getByText(en["lists.noSteward"])).toBeVisible();
+  });
+
+  it("says an archived list's broken filter once, beside its name", async () => {
+    stubLivePage({
+      ...liveList,
+      archived_at: "2026-09-30T08:00:00Z",
+      health: "invalid",
+      visible_count: null,
+    });
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.archived.title"]),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(en["lists.health.invalid"])).toHaveLength(1);
+    expect(screen.queryByText(en["lists.invalid.title"])).toBeNull();
+  });
+
+  it("opens the archive dialog to say why when an archive with no rules to name fails", async () => {
+    stubLivePage(liveList, {
+      [`DELETE /lists/${LIVE_ID}`]: () =>
+        jsonResponse({ title: "Conflict", status: 409 }, 409),
+    });
+    const user = userEvent.setup();
+    page(LIVE_ID);
+    await user.click(
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.archive"] }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("alert")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: en["lists.archive"] }),
+    ).toBeEnabled();
+  });
+
+  it("says in the notice why Restore failed", async () => {
+    const archived = { ...liveList, archived_at: "2026-09-30T08:00:00Z" };
+    stubLivePage(archived, {
+      [`POST /lists/${LIVE_ID}/restore`]: () =>
+        jsonResponse({ title: "Forbidden", status: 403 }, 403),
+    });
+    const user = userEvent.setup();
+    page(LIVE_ID);
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.restore"] }),
+    );
+    const notice = screen
+      .getByText(en["lists.archived.title"])
+      .closest(".callout");
+    if (!(notice instanceof HTMLElement)) {
+      throw new Error("the archived title sits in no notice");
+    }
+    expect(await within(notice).findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("says under the list's name why an export failed", async () => {
+    stubLivePage(liveList, {
+      "POST /exports": () =>
+        jsonResponse({ title: "Forbidden", status: 403 }, 403),
+    });
+    const user = userEvent.setup();
+    page(LIVE_ID);
+    await user.click(
+      await screen.findByRole("button", { name: en["filters.exportCsv"] }),
+    );
+    const head = screen
+      .getByRole("heading", { level: 1, name: liveList.name })
+      .closest("header");
+    if (!(head instanceof HTMLElement)) {
+      throw new Error("the list's name sits in no header");
+    }
+    expect(await within(head).findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("counts a finished export in the Exported fact without a reload", async () => {
+    let exported: NonNullable<List["dependencies"]> = [];
+    stubLivePage(liveList, {
+      [`GET /lists/${LIVE_ID}`]: () =>
+        jsonResponse({ ...liveList, dependencies: exported }),
+      "POST /exports": () => {
+        exported = [exportDependencies[1]];
+        return new Response("id,name\n", {
+          status: 200,
+          headers: { "Content-Type": "text/csv" },
+        });
+      },
+    });
+    Object.defineProperties(URL, {
+      createObjectURL: { configurable: true, value: vi.fn(() => "blob:test") },
+      revokeObjectURL: { configurable: true, value: vi.fn() },
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      () => undefined,
+    );
+    const user = userEvent.setup();
+    page(LIVE_ID);
+    await user.click(
+      await screen.findByRole("button", { name: en["filters.exportCsv"] }),
+    );
+    expect(
+      await screen.findByText(en["lists.fact.exported"]),
+    ).toBeInTheDocument();
+  });
+
+  it("reads no members for a list of projects and offers no export of them", async () => {
+    const memberReads: string[] = [];
+    const recordRead = (path: string) => () => {
+      memberReads.push(path);
+      return jsonResponse(emptyPage);
+    };
+    stubLivePage(
+      { ...liveList, entity_type: "project" },
+      {
+        "GET /contacts": recordRead("/contacts"),
+        "GET /companies": recordRead("/companies"),
+        "GET /deals": recordRead("/deals"),
+        "GET /leads": recordRead("/leads"),
+      },
+    );
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.members.projects"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: en["filters.exportCsv"] }),
+    ).toBeNull();
+    expect(memberReads).toEqual([]);
   });
 });

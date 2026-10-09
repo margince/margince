@@ -286,15 +286,15 @@ Add a note under **Why (optional)** and press **Add**. To add many records at on
 Also called: static list, hand-picked list, target list, account list.
 
 ### Who can find a list?
-Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** on the list's page.
-Sharing a list shows nobody a record they could not already see. Each reader sees only the members they may see, and the count says how many that is ("12 you can see"). So two colleagues can see different numbers on the same list. A contact, company, deal or lead page shows the lists that record is on under **Lists**, again only those you can find.
+Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** under **⋯** on the list's page.
+Sharing a list shows nobody a record they could not already see. Each reader sees only the members they may see, and **Records** on the list's page says how many that is ("12 companies"). So two colleagues can see different numbers on the same list. A contact, company, deal or lead page shows the lists that record is on under **Lists**, again only those you can find.
 
 Also called: share a list, list permissions, private list, team list.
 
 ### What is a list's steward?
 The steward looks after a list. It is whoever made it, unless it was given to someone else. The steward can edit, archive and restore the list and change a Shortlist's members. So can anyone whose role sees every record, such as an admin. Everyone else who can find the list can read it.
 
-When the steward leaves, the list shows **Needs a steward** and "Nobody looks after this list". Someone whose role sees every record can press **Look after it** to become its steward.
+When the steward leaves, the library shows **Needs a steward** on the list's row, and the list's page says "Nobody looks after this list". Someone whose role sees every record can press **Look after it** to become its steward.
 Also called: list owner, who manages this list.
 
 ### Why is this record on the list, or not on it?
@@ -308,16 +308,16 @@ Also called: why is this contact here, why is this record missing, list membersh
 
 ### How often does a Live List update?
 A Live List's members are worked out again every time you open it, so the list itself is always up to date. Apart from that, Margince checks every Live List every 15 minutes and records who joined and who left. That record is what **What changed** and "since your last visit" show.
-- The list's page says **Last checked** with the time of the last check. A new list says "Not checked yet" until its first check.
+- **What changed** on the list's page says **Last checked** with the time of the last check. A new list says "Not checked yet" until its first check.
 - The check takes the lists checked longest ago first, so with many lists one can wait longer than 15 minutes.
 - A record that joins and leaves between two checks is not recorded.
-- A Live List that matches more than 50,000 records is too large to compare. It still shows its members, but the page says "It matched too many records to record who joined and left."
+- A Live List that matches more than 50,000 records is too large to compare. It still shows its members, but **What changed** says "It matched too many records to record who joined and left."
 Also called: refresh a list, list sync, when does my list update.
 
 ### What changed on a list since my last visit?
 Margince keeps a note of when you last opened each list. In the **Filters and views** library, a Live List that changed since then shows "+3 / −1": three joined, one left. On a Live List's page, "Since your visit on" and the date give the same counts. They name the newest three records that joined and that left as links ("+2 more" for the rest), and say how often the filter changed. Each member that joined since your visit has a **New** mark.
 
-**What changed**, at the bottom of the list's page, is the full history. It shows who was added or taken off, and how. That can be by hand, in a change to many rows, by an automation, or because the record was archived or restored. It also shows "Joined as of" and "Left as of" entries from the 15-minute check, and every change to the list itself. You see only the records you may see.
+**What changed**, at the bottom of the list's page, is the full history. It shows who was added or taken off, and how. That can be by hand, in a change to many rows, by an automation, or because the record was archived or restored. It also shows each change to the list, and **Joined** and **Left** entries by **The 15-minute check**, with the date of its check. You see only the records you may see.
 Also called: list history, list activity, who joined, who left, new members.
 
 ### How do I act on a list's members?
@@ -325,12 +325,13 @@ To change many members of a list at once in Margince, open the list. Tick the me
 1. The bar offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and, except for leads, **Archive**. On a Shortlist you may change, it also offers **Remove from this Shortlist**.
 2. Every change shows a preview first: how many records will change and some examples. It names each record left as it is, with its reason. A change of more than 10 records shows a "Large change" warning you confirm.
 3. The message after that has an **Undo** button.
-One change takes at most 500 records, so **Select all** selects the first 500 and says so. Act on them, then select the rest. **Export CSV** on the list's page downloads its members. Only records you can see are exported, and the page says how many times the list has been exported.
+One change takes at most 500 records, so **Select all** selects the first 500 and says so. Act on them, then select the rest. **Export CSV** beside the list's name downloads the members you can see. **Exported** on the list's page says how many times the list was exported, and when.
 Also called: bulk edit a list, reassign everyone on a list, export a list.
 
 ### What does "Uses a retired field" mean on a list?
-A Live List shows **Uses a retired field** when its filter names a custom field that has been archived. The list still works on the values already stored, but nothing new is recorded in that field. Its steward should change the clause with **Edit filter** on the notice. Before you archive a custom field, Margince names the Live Lists that filter on it.
-The notice **Filter no longer works** means a field the filter names has changed, so the filter cannot run. Its steward fixes it the same way, with **Edit filter**.
+A Live List's row in the library shows **Uses a retired field** when its filter names a custom field that has been archived. Its page says "This filter uses a retired field". The list still works on the values already stored, but nothing new is recorded in that field. Its steward should change the clause with **Edit filter** on the notice. Before you archive a custom field, Margince names the Live Lists that filter on it.
+
+In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**.
 
 Also called: broken list, list warning, archived custom field.
 
@@ -343,8 +344,8 @@ If someone changed the list after you opened it, Margince says so and saves noth
 Also called: edit a list's criteria, change a segment, update a smart list.
 
 ### How do I rename, archive or restore a list?
-To change a list in Margince, open it and press **Edit list**. Change the **Name**, **What it is for** and **Who can find it**, then press **Save**. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit list**.
-- **Archive list** makes the list read-only. Its members and history are kept, and **Restore** on the list's page brings it back.
+To change a list in Margince, open it, press **⋯** beside its name and choose **Edit list**. Change the **Name**, **What it is for** and **Who can find it**, then press **Save**. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **⋯**.
+- **Archive list**, last under the same **⋯**, makes the list read-only. Its members and history are kept, and **Restore** on the list's page brings it back.
 - If an automation uses the list, archiving it names the automations first. They pause, and restoring the list does not start them again.
 Also called: delete a list, rename a list, change who can see a list.
 
@@ -370,9 +371,9 @@ Also called: lists missing, Live Lists not available.
 ## Exporting a list
 
 ### How do I export a list to CSV or Excel?
-To export records from Margince, build a filter on **Filters and views**. Choose **Export CSV** or **Export JSON** under **⋯** at the bottom of the filter. A Live List or Shortlist exports with **Export CSV** on its page. The list screens have no export button.
+To export records from Margince, build a filter on **Filters and views**. Choose **Export CSV** or **Export JSON** under **⋯** at the bottom of the filter. A Live List or Shortlist exports with **Export CSV** beside its name. The **Contacts**, **Companies**, **Deals** and **Leads** screens have no export button.
 1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
 2. Press **Add condition** and fill at least one condition. **⋯** (**More for this filter**) then shows next to **Save**.
 3. Choose **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view offers both under **⋯** next to its name.
-Only records you can see are exported, and each export goes into the audit log. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** above its members.
+Only records you can see are exported, and each export goes into the audit log. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
 Also called: download a list, export to spreadsheet, extract contacts.

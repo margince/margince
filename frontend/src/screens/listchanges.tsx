@@ -11,6 +11,7 @@ import { formatDateAbbrev, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { List } from "./lists.queries";
+import "./lists.css";
 
 type Summary = NonNullable<List["changes_since_visit"]>;
 type Group = Summary["joined"];
@@ -71,27 +72,38 @@ function Names({
   if (group.records.length === 0) {
     return null;
   }
+  const last = group.records.length - 1;
   return (
     <>
-      {" ("}
       {group.records.map((record, i) => {
         const name = record.name ?? t("lists.unnamed");
+        const open = i === 0 && "(";
+        const close = i < last || more > 0 ? "," : ")";
+        // A name drawn as a button breaks the line on both sides, so the
+        // brackets and comma around it are held to it; plain text wraps freely.
         return (
           <Fragment key={record.entity_id}>
-            {i > 0 && ", "}
+            {" "}
             {onOpen ? (
-              <Button variant="link" onClick={() => onOpen(record.entity_id)}>
-                {name}
-              </Button>
+              <span className="lists-change-name">
+                {open}
+                <Button variant="link" onClick={() => onOpen(record.entity_id)}>
+                  {name}
+                </Button>
+                {close}
+              </span>
             ) : (
-              name
+              <>
+                {open}
+                {name}
+                {close}
+              </>
             )}
           </Fragment>
         );
       })}
       {more > 0 &&
-        `, ${plural("lists.changes.more", more, { count: formatNumber(more, locale) })}`}
-      {")"}
+        ` ${plural("lists.changes.more", more, { count: formatNumber(more, locale) })})`}
     </>
   );
 }

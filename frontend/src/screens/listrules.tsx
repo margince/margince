@@ -53,7 +53,9 @@ export function ListRuleUses({
 
 /**
  * Archives the list. With rules depending on it, the reader first sees which
- * rules the archive will pause.
+ * rules the archive will pause. It is drawn as a menu item, where danger keeps
+ * the red ink without the fill; the menu closes on the press, so a direct
+ * archive that fails opens the dialog to say why and offer it again.
  */
 export function ArchiveListAction({ list }: Readonly<{ list: List }>) {
   const t = useT();
@@ -63,12 +65,12 @@ export function ArchiveListAction({ list }: Readonly<{ list: List }>) {
   const run = () =>
     archive.mutate(
       { id: list.id, archive: true },
-      { onSuccess: () => setOpen(false) },
+      { onSuccess: () => setOpen(false), onError: () => setOpen(true) },
     );
   return (
     <>
       <Button
-        variant="ghost"
+        variant="danger"
         pending={archive.isPending && !open}
         onClick={() => (rules.length > 0 ? setOpen(true) : run())}
       >

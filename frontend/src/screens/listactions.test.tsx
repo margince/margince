@@ -31,6 +31,10 @@ afterEach(() => {
 
 const empty = { data: [], page: { has_more: false } };
 
+// Edit list and Archive list sit behind the list's own ⋯ menu.
+const moreFor = (name: string) =>
+  en["filters.library.rowMore"].replace("{name}", name);
+
 describe("changing a list from its page", () => {
   it("saves a new name, purpose and sharing against the version it opened", async () => {
     const patched: unknown[] = [];
@@ -51,7 +55,10 @@ describe("changing a list from its page", () => {
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: en["lists.settings"] }),
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["lists.settings"] }),
     );
     const name = screen.getByRole("textbox", { name: en["lists.name"] });
     await user.clear(name);
@@ -97,7 +104,10 @@ describe("changing a list from its page", () => {
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: en["lists.settings"] }),
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["lists.settings"] }),
     );
     await user.click(
       screen.getByRole("combobox", { name: en["lists.teamLabel"] }),
@@ -185,6 +195,9 @@ describe("changing a list from its page", () => {
       await screen.findByRole("button", {
         name: en["lists.ownerless.takeOver"],
       }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: moreFor(shortlist.name) }),
     );
     await user.click(screen.getByRole("button", { name: en["lists.archive"] }));
     expect(await screen.findByText("MiTek")).toBeInTheDocument();

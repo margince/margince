@@ -254,7 +254,9 @@ export function recordKindOf(route: Route): EntityKind | undefined {
 // Every one of them reads DOWN: Brief is a briefing in sentences beside a rail
 // of context, with decision cards carrying drafted prose somebody has to read
 // before they can decide; Today is a queue worked top to bottom; Filters is a
-// list of saved views; Analytics is a column of report sections; a share view is one record handed to a
+// list of saved views; an opened list reads down from its facts to its
+// members and history, between the library and its Edit filter page, which
+// both keep this column; Analytics is a column of report sections; a share view is one record handed to a
 // reader, prose beside facts; an offer is a detail page drawing its own
 // surface. Uncapped, each of them ran a line of text the full width of a wide
 // display with the words hugging the left edge, which is the failure the cap
@@ -266,6 +268,7 @@ export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
   "home",
   "worklist",
   "filters",
+  "lists",
   "analytics",
   "share",
   "offers",

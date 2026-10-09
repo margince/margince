@@ -5,21 +5,35 @@
 // members the reader selected — explicit records, never "whoever matches
 // later" — through the bulk dialog every record list uses.
 
-import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
-import { api } from "../api/client";
+import {
+  skipToken,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useState } from "react";
+import { api, FIRST_PAGE } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
 import { type ListColumn, ListTable } from "../design-system/listtable";
-import { SurfaceState } from "../design-system/surfacestate";
+import { Panel, PanelBody } from "../design-system/panel";
+import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BulkVerbs } from "./bulkverbs";
 import { throwProblem } from "./common";
 import { downloadBytes, filenameFromDisposition } from "./download";
-import { type List, type ListMember, listMembersAmong } from "./lists.queries";
+import {
+  LISTS_KEY,
+  type List,
+  type ListMember,
+  type ListRecordType,
+  listMembersAmong,
+} from "./lists.queries";
+import "./lists.css";
+import "./listsection.css";
 
 /** Where each record type's rows are read, and the screen a row opens. */
 export const MEMBER_SOURCES = {
@@ -32,7 +46,7 @@ export const MEMBER_SOURCES = {
   { path: string; screen: string; unit: MessageKey }
 >;
 
-export type MemberSource = keyof typeof MEMBER_SOURCES;
+type MemberSource = keyof typeof MEMBER_SOURCES;
 
 export type MemberRow = Readonly<
   Record<string, unknown> & {
@@ -116,7 +130,86 @@ async function selectableMembers(
   }
 }
 
-export function MemberRows({
+export function isMemberSource(type: ListRecordType): type is MemberSource {
+  return type in MEMBER_SOURCES;
+}
+
+/**
+ * The members this reader can see, a page at a time. The page's head and its
+ * Members panel both read them, and React Query serves both from one request.
+ * A list of a type the record lists do not serve reads nothing.
+ */
+function useListMembers(list: List, source: MemberSource | undefined) {
+  const members = useInfiniteQuery({
+    queryKey: ["lists", "members", list.id, list.version],
+    initialPageParam: FIRST_PAGE,
+    queryFn:
+      source === undefined
+        ? skipToken
+        : ({ pageParam }) =>
+            listedPage(source, list.id, pageParam ?? undefined),
+    getNextPageParam: (last) =>
+      last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
+  });
+  const shown: MemberRow[] =
+    members.data?.pages.flatMap((page) => [...page.data]) ?? [];
+  const state: SectionState = members.isPending
+    ? "loading"
+    : members.isError
+      ? "unavailable"
+      : shown.length > 0
+        ? "ready"
+        : "empty";
+  return { members, shown, state };
+}
+
+/**
+ * The list's members as a CSV file, through the one export the filters use.
+ * It is offered once the members are read and there are some to export, and
+ * `awaited` while a list whose members can be read is still reading them.
+ */
+export function useListExport(list: List) {
+  const client = useQueryClient();
+  const source = isMemberSource(list.entity_type)
+    ? list.entity_type
+    : undefined;
+  const { state } = useListMembers(list, source);
+  const run = useMutation({
+    mutationFn: async (
+      input: Readonly<{ listId: string; recordType: ListRecordType }>,
+    ) => {
+      const { data, error, response } = await api.POST("/exports", {
+        body: { list_id: input.listId, format: "csv" },
+        parseAs: "text",
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      downloadBytes(
+        data,
+        filenameFromDisposition(
+          response.headers.get("Content-Disposition"),
+          `${input.recordType}-export.csv`,
+        ),
+        "text/csv",
+      );
+    },
+    // The server logs each export on the list, which its Exported fact reads.
+    onSuccess: (_, input) =>
+      client.invalidateQueries({ queryKey: [LISTS_KEY, "one", input.listId] }),
+  });
+  return {
+    offered: state === "ready",
+    awaited: source !== undefined && state === "loading",
+    run,
+  };
+}
+
+/**
+ * The list's members as one Panel: the table is the Panel's own content, so
+ * the surface sheds its box (listsection.css) and the Panel is the one card.
+ */
+export function MembersPanel({
   list,
   source,
   columns,
@@ -128,48 +221,42 @@ export function MemberRows({
   onOpen: (row: MemberRow) => void;
 }>) {
   const t = useT();
-  const members = useInfiniteQuery({
-    queryKey: ["lists", "members", list.id, list.version],
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => listedPage(source, list.id, pageParam),
-    getNextPageParam: (last) =>
-      last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
-  });
-  const shown: MemberRow[] =
-    members.data?.pages.flatMap((page) => [...page.data]) ?? [];
+  const { members, shown, state } = useListMembers(list, source);
   const chosen = useMemberSelection(list, source, shown);
   return (
-    <SurfaceState
-      state={
-        members.isPending
-          ? "loading"
-          : members.isError
-            ? "unavailable"
-            : shown.length > 0
-              ? "ready"
-              : "empty"
+    <Panel
+      className="listsection"
+      title={t("lists.members.title")}
+      titleAction={
+        state === "ready" ? (
+          <SelectAllMembers list={list} chosen={chosen} />
+        ) : undefined
       }
-      emptyLabel={
-        list.list_type === "dynamic"
-          ? t("lists.members.emptyLive")
-          : t("lists.members.emptyShortlist")
-      }
-      loadingLabel={t("lists.members.loading")}
-      loadingLines={5}
     >
-      <MemberTools list={list} source={source} chosen={chosen} />
-      <ListTable<MemberRow>
-        rows={shown}
-        columns={columns}
-        rowKey={(row) => row.id}
-        onRowClick={onOpen}
-        unit={t(MEMBER_SOURCES[source].unit)}
-        selection={chosen.selection}
-        hasMore={members.hasNextPage}
-        onLoadMore={() => members.fetchNextPage()}
-        pending={members.isFetchingNextPage}
-      />
-    </SurfaceState>
+      <MemberNotices chosen={chosen} />
+      <SurfaceState
+        state={state}
+        emptyLabel={
+          list.list_type === "dynamic"
+            ? t("lists.members.emptyLive")
+            : t("lists.members.emptyShortlist")
+        }
+        loadingLabel={t("lists.members.loading")}
+        loadingLines={5}
+      >
+        <ListTable<MemberRow>
+          rows={shown}
+          columns={columns}
+          rowKey={(row) => row.id}
+          onRowClick={onOpen}
+          unit={t(MEMBER_SOURCES[source].unit)}
+          selection={chosen.selection}
+          hasMore={members.hasNextPage}
+          onLoadMore={() => members.fetchNextPage()}
+          pending={members.isFetchingNextPage}
+        />
+      </SurfaceState>
+    </Panel>
   );
 }
 
@@ -250,98 +337,55 @@ function useMemberSelection(
   };
 }
 
-/** "Select all N members", the cap's notices, and the list's export. */
-function MemberTools({
+/** "Select all N members", for a list the server could count. */
+function SelectAllMembers({
   list,
-  source,
   chosen,
-}: Readonly<{ list: List; source: MemberSource; chosen: MemberSelection }>) {
-  const t = useT();
+}: Readonly<{ list: List; chosen: MemberSelection }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const total = list.visible_count ?? 0;
-  const cap = { count: formatNumber(BULK_MAX_ITEMS, locale) };
-  const notices: ReactNode[] = [];
-  if (chosen.capped) {
-    notices.push(
-      <Callout
-        key="capped"
-        tone="info"
-        title={t("lists.members.selectAllCappedTitle")}
-      >
-        {plural("lists.members.selectAllCapped", BULK_MAX_ITEMS, cap)}
-      </Callout>,
-    );
-  }
-  if (chosen.full) {
-    notices.push(
-      <Callout
-        key="full"
-        tone="info"
-        title={t("lists.members.selectionFullTitle")}
-      >
-        {plural("lists.members.selectionFull", BULK_MAX_ITEMS, cap)}
-      </Callout>,
-    );
+  if (total === 0) {
+    return null;
   }
   return (
-    <>
-      <div className="card-actions">
-        {total > 0 && (
-          <Button
-            variant="ghost"
-            pending={chosen.selectAll.isPending}
-            onClick={() => chosen.selectAll.mutate({ listId: list.id })}
-          >
-            {plural("lists.members.selectAll", total, {
-              count: formatNumber(total, locale),
-            })}
-          </Button>
-        )}
-        <ExportListAction list={list} source={source} />
-      </div>
-      <ErrorLine inline error={chosen.selectAll.error} />
-      {notices}
-    </>
+    <Button
+      variant="ghost"
+      pending={chosen.selectAll.isPending}
+      onClick={() => chosen.selectAll.mutate({ listId: list.id })}
+    >
+      {plural("lists.members.selectAll", total, {
+        count: formatNumber(total, locale),
+      })}
+    </Button>
   );
 }
 
-/** The list's members as a CSV file, through the one export the filters use. */
-function ExportListAction({
-  list,
-  source,
-}: Readonly<{ list: List; source: MemberSource }>) {
+/** Why "Select all" fell short, or why a tick adds nothing more. */
+function MemberNotices({ chosen }: Readonly<{ chosen: MemberSelection }>) {
   const t = useT();
-  const run = useMutation({
-    mutationFn: async (input: Readonly<{ listId: string }>) => {
-      const { data, error, response } = await api.POST("/exports", {
-        body: { list_id: input.listId, format: "csv" },
-        parseAs: "text",
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      downloadBytes(
-        data,
-        filenameFromDisposition(
-          response.headers.get("Content-Disposition"),
-          `${source}-export.csv`,
-        ),
-        "text/csv",
-      );
-    },
-  });
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (!chosen.capped && !chosen.full && !chosen.selectAll.error) {
+    return null;
+  }
+  const cap = { count: formatNumber(BULK_MAX_ITEMS, locale) };
   return (
-    <>
-      <Button
-        variant="ghost"
-        pending={run.isPending}
-        onClick={() => run.mutate({ listId: list.id })}
-      >
-        {t("filters.exportCsv")}
-      </Button>
-      <ErrorLine inline error={run.error} />
-    </>
+    <PanelBody>
+      <div className="lists-member-notices">
+        <ErrorLine error={chosen.selectAll.error} />
+        {chosen.capped && (
+          <Callout tone="info" title={t("lists.members.selectAllCappedTitle")}>
+            {plural("lists.members.selectAllCapped", BULK_MAX_ITEMS, cap)}
+          </Callout>
+        )}
+        {chosen.full && (
+          <Callout tone="info" title={t("lists.members.selectionFullTitle")}>
+            {plural("lists.members.selectionFull", BULK_MAX_ITEMS, cap)}
+          </Callout>
+        )}
+      </div>
+    </PanelBody>
   );
 }
 
