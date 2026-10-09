@@ -11,9 +11,9 @@ import (
 )
 
 // withoutScoreOverrideClears takes the score pair out of the named clears and
-// reports whether either was there. A null on either field is the gesture that
-// ends an override, and ending one restores the machine score instead of
-// writing NULL to a column, so applyScoreOverride owns it, not ApplyClears.
+// reports whether either was there. A null on either field ends an override.
+// Ending one restores the machine score rather than writing NULL to a column,
+// so applyScoreOverride owns it, not ApplyClears.
 func withoutScoreOverrideClears(fields []string) ([]string, bool) {
 	kept := make([]string, 0, len(fields))
 	named := false
@@ -27,14 +27,11 @@ func withoutScoreOverrideClears(fields []string) ([]string, bool) {
 	return kept, named
 }
 
-// applyScoreOverride folds the §3.1 sticky-override rules into the patch
-// and reports whether the caller must resume recompute (an override was
-// cleared). Setting `score` establishes/refreshes an override — it
-// requires a non-empty reason and captures the machine value into
-// score_computed the first time. An explicit JSON null on score or the
-// reason clears the override. A non-empty reason with no score amends
-// the note on an override already in force; an empty-string reason is
-// invalid input (the clear gesture is null, not "").
+// applyScoreOverride folds the sticky score override into the patch and
+// reports whether the caller must resume recompute (an override was cleared).
+// Setting `score` needs a non-empty reason and keeps the machine value in
+// score_computed. A null on score or the reason clears the override. A reason
+// with no score amends the note on an override in force; "" is invalid input.
 func applyScoreOverride(p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) (resumeRecompute bool, err error) {
 	overrideInForce := current.ScoreOverrideReason != nil
 
@@ -49,10 +46,9 @@ func applyScoreOverride(p *storekit.Patch, current crmcontracts.Lead, in UpdateL
 		}
 		p.Set("score", current.Score, *in.Score)
 		p.Set("score_override_reason", current.ScoreOverrideReason, reason)
-		// Retain the last machine value the first time an override takes
-		// hold; if one is already in force, score_computed already holds it
-		// and the recompute keeps it fresh — don't clobber it with a human
-		// number.
+		// Keep the machine value only when the override first takes hold.
+		// Under an override already in force, score_computed holds it and
+		// recompute keeps it fresh, so a human number must not replace it.
 		if !overrideInForce {
 			p.Set("score_computed", current.ScoreComputed, current.Score)
 		}
@@ -63,7 +59,7 @@ func applyScoreOverride(p *storekit.Patch, current crmcontracts.Lead, in UpdateL
 			return false, &ScoreOverrideClearConflictError{}
 		}
 		if !overrideInForce {
-			return false, nil // no override to clear — a no-op
+			return false, nil // no override to clear: a no-op
 		}
 		p.Set("score_override_reason", current.ScoreOverrideReason, nil)
 		// Resume: score tracks the retained machine value, then recompute

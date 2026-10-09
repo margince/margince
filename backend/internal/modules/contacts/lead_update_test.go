@@ -171,9 +171,9 @@ func TestLeadUpdateRequestKeepsNullDistinctFromAbsent(t *testing.T) {
 	}
 }
 
-// The HTTP and MCP doors both list a null field in Clear as well as setting
-// ClearScoreOverride, so the patch builder must route the score pair to the
-// override rule instead of refusing it as a column it cannot clear.
+// The HTTP handler lists a null field in Clear and also sets ClearScoreOverride.
+// The patch builder must hand the score pair to the override rule. Refusing it
+// as a column it cannot clear leaves the override in place forever.
 func TestANamedNullOnTheScorePairEndsTheOverride(t *testing.T) {
 	for name, clear := range map[string][]string{
 		"score":        {leadScoreField},

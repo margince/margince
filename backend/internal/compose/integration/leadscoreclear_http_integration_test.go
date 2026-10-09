@@ -6,8 +6,8 @@
 package integration
 
 // Ending a manual score override over HTTP. The store's own suite clears it
-// through UpdateLeadInput directly; only the door also lists the null in the
-// request's named clears, and that list is what refused the gesture.
+// through UpdateLeadInput directly. Only the HTTP handler also lists the null in
+// the named clears, and that list is what refused the clear.
 
 import (
 	"context"
