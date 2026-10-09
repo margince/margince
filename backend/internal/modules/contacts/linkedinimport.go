@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // LinkedInImportResult reports what one import did, in the terms a human
@@ -277,11 +278,13 @@ func linkedInRowFrom(record []string, index map[string]int) (linkedInRow, bool) 
 		profileURL:  at(csvURL),
 	}
 	// LinkedIn has shipped at least three date formats across locales and
-	// years. An unparseable date is not a reason to lose the connection — it
-	// only weakens the fallback dedupe key.
+	// years. An unparseable date, or one outside the storable range, is not a
+	// reason to lose the connection. It only weakens the fallback dedupe key.
 	for _, layout := range []string{"02 Jan 2006", "2 Jan 2006", "2006-01-02", "01/02/2006"} {
 		if when, err := time.Parse(layout, at(csvConnected)); err == nil {
-			row.connectedOn = &when
+			if datasource.InstantInRange(when) {
+				row.connectedOn = &when
+			}
 			break
 		}
 	}

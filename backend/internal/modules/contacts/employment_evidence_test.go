@@ -43,3 +43,16 @@ func TestContradictoryDepartureNeedsReview(t *testing.T) {
 		t.Fatal("a former role in this month need not invent its departure day")
 	}
 }
+
+// A provider date outside the storable range reads as no date, as an
+// unreadable one does. No relationship then stores an instant no zone can render.
+func TestAnEmploymentDateNoZoneCanRenderReadsAsNoDate(t *testing.T) {
+	for _, raw := range []string{"9999-12-31", "0000-01", "9999-12-31T23:59:59Z"} {
+		if text, at := preciseEmploymentDate(raw); text != "" || at != nil {
+			t.Errorf("preciseEmploymentDate(%q) = (%q, %v), want no date", raw, text, at)
+		}
+	}
+	if text, at := preciseEmploymentDate("2020-02"); text != "2020-02" || at == nil || !at.Equal(time.Date(2020, 2, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("preciseEmploymentDate(2020-02) = (%q, %v), want the month", text, at)
+	}
+}

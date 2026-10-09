@@ -81,6 +81,10 @@ func TestDefaultOccurredAt(t *testing.T) {
 	if got.Before(before) || got.After(after) {
 		t.Errorf("a zero timestamp must default to capture time, got %v", got)
 	}
+	far := defaultOccurredAt(time.Date(9999, 12, 31, 23, 0, 0, 0, time.UTC))
+	if far.Before(before) || far.After(time.Now().UTC()) {
+		t.Errorf("a timestamp outside the storable range must default to capture time, got %v", far)
+	}
 }
 
 func TestCaptureSourceFallsBackToTheNaturalKeySystem(t *testing.T) {

@@ -334,18 +334,21 @@ func (s *Store) scheduleSend(
 
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		prov := provenanceOf(actor)
-		if _, err := tx.Exec(ctx, `
+		// The row's stamps come back from the insert, so the answer to a
+		// scheduling carries the times a later read of the same row shows.
+		if err := tx.QueryRow(ctx, `
 			INSERT INTO scheduled_send
 			  (id, status, scheduled_at, scheduled_tz,
 			   origin_kind, anchor_activity_id, origin_links, also_links,
 			   payload, payload_version, scheduled_by, principal_kind,
 			   agent_actor_id, agent_passport_id, agent_on_behalf_of)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			RETURNING created_at, updated_at`,
 			row.ID, row.Status, row.ScheduledAt, row.ScheduledTZ,
 			row.OriginKind, nullableAnchor(origin), originLinks, alsoLinks,
 			payload, payloadVersionCurrent, row.ScheduledBy, principalKind(actor),
 			prov.ActorID, prov.PassportID, prov.OnBehalfOf,
-		); err != nil {
+		).Scan(&row.CreatedAt, &row.UpdatedAt); err != nil {
 			return fmt.Errorf("scheduled send: recording the intention: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "schedule", "scheduled_send", row.ID, nil, map[string]any{

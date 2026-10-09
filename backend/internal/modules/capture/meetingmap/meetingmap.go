@@ -482,5 +482,5 @@ func eventDuration(event Event) *int {
 		return nil
 	}
 	seconds := int(event.EndsAt.Sub(event.StartsAt) / time.Second)
-	return &seconds
+	return capture.StorableDuration(&seconds)
 }

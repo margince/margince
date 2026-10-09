@@ -84,7 +84,14 @@ func instantRefused(value reflect.Value, sent bool) bool {
 	if !ok || (instant.IsZero() && !sent) {
 		return false
 	}
-	return instant.Before(earliestAcceptedInstant) || instant.After(latestAcceptedInstant)
+	return !InstantInRange(instant)
+}
+
+// InstantInRange reports whether t may be stored. A writer asks it before it
+// stores an instant read from text no decoder checked: a mail header, an
+// imported file.
+func InstantInRange(t time.Time) bool {
+	return !t.Before(earliestAcceptedInstant) && !t.After(latestAcceptedInstant)
 }
 
 func (w *timeWalk) outOfRangeField(value reflect.Value) bool {
