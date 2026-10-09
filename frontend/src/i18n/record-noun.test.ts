@@ -74,7 +74,7 @@ const RECORD_NOUN: Record<string, RegExp> = {
 const RETIRED_NOUN: Record<string, RegExp> = {
   en: /\bpeople\b|\bpersons?\b/i,
   de: /\bperson(en)?\b/i,
-  vi: /\bngười\b/i,
+  vi: /(?<!\p{L})người(?!\p{L})/iu,
 };
 
 // Keys whose value says the word about a human being. Everything else in the

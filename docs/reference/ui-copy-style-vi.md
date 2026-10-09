@@ -70,9 +70,9 @@ the gate reads them from `copy-style.test.ts`:
 | a value whose English says me, my or mine | tôi | "Giao cho tôi", "Chỉ tôi", "Deal của tôi" name the reader in a control |
 
 A reader's answer on a consent page may speak as the reader: "Không gửi tin cho tôi".
-Reflexive mình refers back to a third party: "của mình", "chính mình", "riêng
-mình", "tự mình", "một mình", "chỉ mình". A bare "tên mình" reads as "my name",
-so write "tên của mình". Status lines of the trợ lý AI are neutral ("Đang tóm tắt tuần…",
+Reflexive mình refers back to a third party: "chính mình", "tự mình", "một
+mình". "Của mình", "riêng mình" and "chỉ mình" can mean the speaker's own, so
+only a consent statement says them; elsewhere write "của chính mình". Status lines of the trợ lý AI are neutral ("Đang tóm tắt tuần…",
 never "Tôi đang…"), and "waiting on us" follows the English: "Đang chờ nhóm của
 bạn".
 
@@ -202,7 +202,7 @@ Vietnamese is a layout bug.
 One Vietnamese word per concept, the same word on every screen. In the Never
 column, `copy-style-vi.test.ts` retires a word in code format. Such a word fails
 as a whole word in any case, and an English one in its plural too, outside a
-quoted vendor label, a file name and a URL. A word goes in code format only
+quoted vendor label, a file name, a URL and a compound its row says keeps it. A word goes in code format only
 when no value has a legitimate use for it; one that does stays plain, held by
 the reviewer in the sense its row gives.
 
@@ -265,7 +265,7 @@ the reviewer in the sense its row gives.
 | AI quota | hạn mức | `định mức` |
 | Credit | credit (enrichment units); số dư (an AI provider's prepaid balance, on an admin screen) | |
 | Currency | loại tiền; a custom field of type Currency is Số tiền | tiền tệ in UI copy |
-| Licensed seat | tài khoản (tài khoản đầy đủ quyền, tài khoản chỉ xem); a seat holder is thành viên | `chỗ ngồi`, `ghế`, `suất` (hiệu suất, xác suất, tần suất and thuế suất keep theirs) |
+| Licensed seat | tài khoản (tài khoản đầy đủ quyền, tài khoản chỉ xem); a seat holder is thành viên | `chỗ ngồi`, `ghế`, `suất` (hiệu suất, xác suất, tần suất, thuế suất, lãi suất, năng suất, công suất, áp suất, tỷ suất, tỉ suất, suất ăn and suất học bổng keep theirs) |
 | Retention; legal hold | lưu trữ (thời hạn lưu trữ, quy tắc lưu trữ); lưu trữ pháp lý | `legal hold`, `lưu giữ pháp lý`; nghĩa vụ lưu trữ for the hold (a statutory retention obligation keeps it) |
 | Archive | chuyển vào kho lưu trữ; state trong kho lưu trữ; unarchive khôi phục từ kho lưu trữ (Khôi phục beside the archived item) | bare lưu trữ for archive (it is retention) |
 | Route into a buyer | hướng tiếp cận | |
@@ -276,7 +276,7 @@ the reviewer in the sense its row gives.
 | Knowledge (settings, sources) | Tài liệu; a knowledge base is kho tài liệu | kiến thức for the settings surface |
 | Follow-up | việc tiếp theo; the verb follow up is liên hệ lại | `follow-up`; theo dõi for a follow-up (it is watch) |
 | Priced offer, quote | báo giá | `chào giá` |
-| Close date; a closed deal, won or lost; close as an outcome | ngày chốt (ngày chốt dự kiến); đã đóng; kết thúc | `ngày đóng`; chốt for a deal closed won or lost |
+| Close date; a closed deal, won or lost; close as an outcome | ngày chốt (ngày chốt dự kiến); đã đóng; kết thúc | `ngày đóng` (ngày đóng cửa keeps it); chốt for a deal closed won or lost |
 | A won deal, won value; the outcome pair; win rate | đã chốt (deal đã chốt, doanh số đã chốt); Thắng and Thua as the outcome or stage-type label; tỷ lệ thắng | đã thắng for a won deal or amount |
 | File | tệp | `file` |
 | Website | trang web | `website` |
@@ -353,8 +353,10 @@ trị viên or ai where they read naturally.
 
 `frontend/src/i18n/copy-style-vi.test.ts` checks every value of `vi.ts` and of
 every extension `vi.json`, one test per rule, and lists each offender as its
-source file, key and value. Placeholders are removed before the word rules run,
-and the five server-worded consent keys are skipped.
+source file, key and value. Placeholders are removed before the word rules run.
+The five server-worded consent keys skip the speaker, address and vocabulary
+rules: the three Never rows, Formal address, Outsider address and Retired
+vocabulary.
 
 | Rule | What fails |
 |---|---|
@@ -369,18 +371,19 @@ and the five server-worded consent keys are skipped.
 | One plural form | An `_one` value that differs from its `_other`, where the English arms carry the same placeholders |
 | Never tôi | tôi outside `ob.conv.`, the consent statements and a value whose English says me, my or mine |
 | Never chúng tôi | chúng tôi outside `privacynotice.` and the consent statements |
-| Never chúng ta or mình | Either outside the consent statements; reflexive mình is removed first |
-| Formal address | quý vị, anh/chị, anh chị or kính thưa anywhere |
+| Never chúng ta or mình | Either outside the consent statements; chính mình, tự mình and một mình are removed first |
+| Formal address | quý vị, anh/chị, anh chị or kính thưa anywhere; anh chị em (siblings) passes |
 | Outsider address | quý khách or vui lòng outside the outsider families; bạn inside them |
 | Capitals | Bạn or Quý khách capitalised where no sentence opens |
-| Retired vocabulary | A word in code format in the Vocabulary table's Never column; suất only outside the compounds its row keeps |
+| Retired vocabulary | A word in code format in the Vocabulary table's Never column, outside the compounds its row keeps |
 | No failure word in a short value | thất bại in a value of at most 8 words: a title, label, status or counter |
 
 The prefixes come from the gates that own them: the speaker exemptions from
 `copy-style.test.ts`, the outsider families from `address-register.test.ts`
-with `book.` added, the consent keys from `marketingquestion_test.go`. A last
-test fails any difference between the Never column's code-format words and the
-words the test retires.
+with `book.` added, the consent keys from `marketingquestion_test.go`, and the
+retired words and their kept compounds from the Vocabulary table. Two more
+tests fail a `vi.json` a unit ships that the gate did not read, and a unit
+value whose words equal its English.
 
 `record-noun.test.ts` holds the record noun: a record-type key that does not
 say liên hệ, and người outside its Vietnamese human-sense list. `i18n.test.ts`

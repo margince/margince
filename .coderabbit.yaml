@@ -96,11 +96,12 @@ reviews:
         (dashes, exclamation marks, straight quotes, ellipsis, double spaces,
         Latin abbreviations, "please", contractions, "we", "I", ampersands,
         British spelling, retired words).
-    - path: "frontend/src/i18n/de.ts"
+    - path: "{frontend/src/i18n/de.ts,extensions/**/frontend/**/de.json}"
       instructions: |
-        German is translated from frontend/src/i18n/en.ts. Read
-        docs/reference/ui-copy-style-de.md and review every added or changed
-        value against it and against the English value of the same key:
+        German is translated from the English catalog beside it (en.ts, or
+        the sibling en.json). Read docs/reference/ui-copy-style-de.md and
+        review every added or changed value against it and against the
+        English value of the same key:
         - Meaning and claim strength match the English: nothing added, no
           qualifier dropped, no claim strengthened.
         - Address: du only, never Sie/Ihr/Ihnen, except the four outsider
@@ -118,7 +119,7 @@ reviews:
         ellipsis, double spaces, exclamation marks, "bitte", abbreviations,
         contractions, percent spacing, gender marks, ich, wir, retired words,
         Sie outside the outsider families, capitalised du mid-sentence).
-    - path: "{frontend/src/i18n/vi.ts,extensions/**/i18n/vi.json}"
+    - path: "{frontend/src/i18n/vi.ts,extensions/**/frontend/**/vi.json}"
       instructions: |
         Vietnamese is translated from the English catalog beside it (en.ts,
         or the sibling en.json). Read docs/reference/ui-copy-style-vi.md and

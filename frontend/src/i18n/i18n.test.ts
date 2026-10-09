@@ -418,15 +418,15 @@ describe("i18n catalogs", () => {
     expect(leftovers, `untranslated keys: ${leftovers.join(", ")}`).toEqual([]);
   });
 
-  // The allowlist above is the one hand-written list in this file, and a key
-  // deleted from the catalogs leaves its entry behind silently — an exemption
-  // for a string that no longer exists, which the next reader has to research
-  // before they can tell it is stale.
-  it("the untranslated-copy allowlist names only keys that still exist", () => {
-    const stale = [...KEPT_IN_ENGLISH].filter((key) => !(key in en));
-    expect(stale, `allowlist entries with no key: ${stale.join(", ")}`).toEqual(
-      [],
+  // The allowlist is the one hand-written list in this file, and a key deleted
+  // or translated since leaves an exemption behind that nothing else notices.
+  it("the untranslated-copy allowlist names only keys vi still copies from en", () => {
+    const reference: Record<string, string> = en;
+    const translated: Record<string, string> = viCatalog;
+    const stale = [...KEPT_IN_ENGLISH].filter(
+      (key) => !(key in en) || translated[key] !== reference[key],
     );
+    expect(stale, `stale allowlist entries: ${stale.join(", ")}`).toEqual([]);
   });
 });
 

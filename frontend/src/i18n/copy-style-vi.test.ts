@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -104,7 +105,7 @@ function readByAnOutsider(key: string): boolean {
 }
 
 // The server publishes these consent answers and a proof records their exact
-// wording, so a fix starts in the server copy, not here.
+// wording, so the wording rules leave them to the server copy.
 function serverWordedKeys(): Set<string> {
   const gate = readFileSync(
     resolve(repoRoot, "backend", "gates", "marketingquestion_test.go"),
@@ -120,12 +121,11 @@ function serverWordedKeys(): Set<string> {
 }
 const SERVER_WORDED = serverWordedKeys();
 
-function judged(): LocaleEntry[] {
-  return entries().filter(([, key]) => !SERVER_WORDED.has(key));
-}
-
-function offenders(breaks: (entry: LocaleEntry) => boolean): string[] {
-  return judged()
+function offenders(
+  breaks: (entry: LocaleEntry) => boolean,
+  corpus: readonly LocaleEntry[] = entries(),
+): string[] {
+  return corpus
     .filter(breaks)
     .map(
       ([source, key, value]) => `${source} ${key}: ${JSON.stringify(value)}`,
@@ -137,10 +137,20 @@ function matching(
   options: {
     text?: (value: string) => string;
     exempt?: (entry: LocaleEntry) => boolean;
+    wording?: boolean;
   } = {},
 ): string[] {
-  const { text = (value: string) => value, exempt = () => false } = options;
-  return offenders((entry) => !exempt(entry) && pattern.test(text(entry[2])));
+  const {
+    text = (value: string) => value,
+    exempt = () => false,
+    wording = false,
+  } = options;
+  return offenders(
+    (entry) =>
+      !(wording && SERVER_WORDED.has(entry[1])) &&
+      !exempt(entry) &&
+      pattern.test(text(entry[2])),
+  );
 }
 
 // A placeholder names a parameter, not copy. A space keeps the words on either
@@ -162,109 +172,15 @@ function escaped(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Owned by the Never column of the Vietnamese style page's Vocabulary table, in
-// code format; the last test holds the two equal.
-const RETIRED_WORDS = [
-  "thương vụ",
-  "đầu mối",
-  "phễu",
-  "worklist",
-  "hàng đợi công việc",
-  "bản tóm tắt buổi sáng",
-  "briefing",
-  "chấp thuận",
-  "hộ chiếu",
-  "bộ kết nối",
-  "connector",
-  "phòng deal",
-  "spine",
-  "backread",
-  "đọc sâu",
-  "deep read",
-  "phán quyết",
-  "verdict",
-  "admission check",
-  "phần của bản ghi",
-  "lời hứa",
-  "dự phóng",
-  "forecast",
-  "trường hợp tốt nhất",
-  "khả quan nhất",
-  "TTNT",
-  "login",
-  "log in",
-  "đăng nhập vào trong",
-  "thử lần nữa",
-  "upload",
-  "download",
-  "thư điện tử",
-  "e-mail",
-  "mailbox",
-  "buổi họp",
-  "meeting",
-  "task",
-  "tag",
-  "report",
-  "định mức",
-  "chỗ ngồi",
-  "ghế",
-  "legal hold",
-  "buying center",
-  "nhóm mua hàng",
-  "thực thể pháp lý",
-  "nhật ký kiểm toán",
-  "audit log",
-  "audit trail",
-  "follow-up",
-  "chào giá",
-  "ngày đóng",
-  "file",
-  "website",
-  "server",
-  "lí do",
-  "chứng cứ",
-  "tác tử",
-  "bản ghi lời",
-  "làm giàu dữ liệu",
-  "điểm cuối",
-  "nhật ký kiểm tra",
-  "dừng giữa chừng",
-  "quản trị viên hệ thống",
-  "nhờ quản trị viên",
-  "lưu giữ pháp lý",
-  "suất",
-];
-
-// The compounds where a retired word keeps an ordinary sense: hiệu suất is
-// performance, not a seat.
-const ORDINARY_COMPOUNDS = word(
-  "(?:hiệu|xác|tần|thuế|lãi|năng|công|áp) suất",
-  "giu",
-);
+const WEB_ADDRESS = /[a-z][a-z\d+.-]*:\/\/[^\s“”()]+/gu;
+const FILE_NAME = /[^\s“”(),]+\.[a-z][a-z\d]{0,4}(?![\p{L}\d])/gu;
 
 // A file name or a URL keeps the spelling the reader must type.
 function withoutPaths(value: string): string {
-  return unquoted(value).replace(
-    /[^\s“”(),]*(?:\/|\.[a-z])[^\s“”(),]*/giu,
-    " ",
-  );
+  return unquoted(value).replace(WEB_ADDRESS, " ").replace(FILE_NAME, " ");
 }
 
-// An English loanword is retired in its plural too: "tasks" is "task".
-const RETIRED = word(
-  RETIRED_WORDS.map(
-    (retired) =>
-      `${escaped(retired)}${/^[\x20-\x7e]+$/.test(retired) ? "s?" : ""}`,
-  ).join("|"),
-);
-
-function gatedNeverWords(): string[] {
-  return [...vocabularyNeverColumn().matchAll(/`([^`]+)`/g)].map(
-    ([, gated]) => gated,
-  );
-}
-
-function vocabularyNeverColumn(): string {
+function vocabularyNeverCells(): string[] {
   const page = readFileSync(
     resolve(repoRoot, "docs", "reference", "ui-copy-style-vi.md"),
     "utf8",
@@ -274,12 +190,46 @@ function vocabularyNeverColumn(): string {
     .split("\n")
     .filter((line) => line.startsWith("|") && !line.startsWith("|---"))
     .slice(1)
-    .map((row) => row.split("|")[3] ?? "")
-    .join("\n");
+    .map((row) => row.split("|")[3] ?? "");
 }
+const NEVER_CELLS = vocabularyNeverCells();
 
-// Reflexive "mình" refers back to a third party, not to the product.
-const REFLEXIVE = word("(?:của|chính|riêng|tự|một|chỉ) mình", "giu");
+function gatedNeverWords(): string[] {
+  const gated = NEVER_CELLS.flatMap((cell) =>
+    [...cell.matchAll(/`([^`]+)`/g)].map(([, retired]) => retired),
+  );
+  if (gated.length === 0) {
+    throw new Error("the Vocabulary table's Never column sets no word in code");
+  }
+  return gated;
+}
+const RETIRED_WORDS = gatedNeverWords();
+
+const RETIRED = word(
+  RETIRED_WORDS.map(
+    (retired) =>
+      `${escaped(retired)}${/^[\x20-\x7e]+$/.test(retired) ? "s?" : ""}`,
+  ).join("|"),
+);
+
+// A row's "(hiệu suất, xác suất and tần suất keep theirs)" names the compounds
+// where a retired word keeps an ordinary sense.
+function keptCompounds(): string[] {
+  const kept = NEVER_CELLS.flatMap((cell) =>
+    [...cell.matchAll(/\(([^()]*) (?:keep theirs|keeps it)\)/g)].flatMap(
+      ([, list]) => list.split(/, | and /),
+    ),
+  ).filter((compound) => RETIRED.test(compound));
+  if (kept.length === 0) {
+    throw new Error("the Vocabulary table keeps no compound of a retired word");
+  }
+  return kept;
+}
+const ORDINARY_COMPOUNDS = word(keptCompounds().map(escaped).join("|"), "giu");
+
+// "của mình", "riêng mình" and "chỉ mình" can mean the speaker's own, which
+// only a consent statement may say.
+const REFLEXIVE = word("(?:chính|tự|một) mình", "giu");
 
 // What can stand before a capital that opens a sentence. `\}\s` because a
 // placeholder's value may itself end a sentence.
@@ -295,6 +245,38 @@ function catalogOf(source: string): Readonly<Record<string, string>> {
 
 function englishOf(source: string): Readonly<Record<string, string>> {
   return VIETNAMESE.find((copy) => copy.source === source)?.english ?? {};
+}
+
+// Listed by git rather than by the walk the corpus uses, so a unit that walk
+// misses still counts.
+function shippedUnitCatalogs(): string[] {
+  const listed = execFileSync(
+    "git",
+    [
+      "ls-files",
+      "-z",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "extensions",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  return listed
+    .split("\0")
+    .filter(
+      (path) =>
+        /(?:^|\/)frontend\/(?:.+\/)?vi\.json$/.test(path) &&
+        !path.includes("/node_modules/"),
+    );
+}
+
+function lettersOf(value: string): string {
+  return (
+    prose(value)
+      .replace(WEB_ADDRESS, " ")
+      .match(/\p{L}+/gu) ?? []
+  ).join(" ");
 }
 
 describe("vi copy style", () => {
@@ -376,6 +358,7 @@ describe("vi copy style", () => {
           key.startsWith(AGENT_SPEAKS_PREFIX) ||
           spokenByTheReader(key) ||
           /\b(?:me|my|mine)\b/i.test(english),
+        wording: true,
       }),
     ).toEqual([]);
   });
@@ -386,6 +369,7 @@ describe("vi copy style", () => {
         text: prose,
         exempt: ([, key]) =>
           key.startsWith(CONTROLLER_SPEAKS_PREFIX) || spokenByTheReader(key),
+        wording: true,
       }),
     ).toEqual([]);
   });
@@ -395,13 +379,17 @@ describe("vi copy style", () => {
       matching(word("chúng ta|mình"), {
         text: (value) => prose(value).replace(REFLEXIVE, " "),
         exempt: ([, key]) => spokenByTheReader(key),
+        wording: true,
       }),
     ).toEqual([]);
   });
 
   it("never addresses anyone as quý vị, anh/chị or kính thưa", () => {
     expect(
-      matching(word("quý vị|anh/chị|anh chị|kính thưa"), { text: prose }),
+      matching(word("quý vị|anh/chị|anh chị(?! em)|kính thưa"), {
+        text: prose,
+        wording: true,
+      }),
     ).toEqual([]);
   });
 
@@ -410,6 +398,7 @@ describe("vi copy style", () => {
       matching(word("quý khách|vui lòng"), {
         text: prose,
         exempt: ([, key]) => readByAnOutsider(key),
+        wording: true,
       }),
     ).toEqual([]);
   });
@@ -419,6 +408,7 @@ describe("vi copy style", () => {
       matching(word("bạn"), {
         text: prose,
         exempt: ([, key]) => !readByAnOutsider(key),
+        wording: true,
       }),
     ).toEqual([]);
   });
@@ -446,6 +436,7 @@ describe("vi copy style", () => {
     expect(
       matching(RETIRED, {
         text: (value) => withoutPaths(value).replace(ORDINARY_COMPOUNDS, " "),
+        wording: true,
       }),
     ).toEqual([]);
   });
@@ -464,12 +455,21 @@ describe("vi copy style", () => {
     ).toEqual([]);
   });
 
-  it("retires exactly the words the Vocabulary table sets in code format", () => {
-    const gated = gatedNeverWords();
-    expect(gated.length).toBeGreaterThan(0);
-    expect(RETIRED_WORDS.filter((retired) => !gated.includes(retired))).toEqual(
-      [],
-    );
-    expect(gated.filter((never) => !RETIRED_WORDS.includes(never))).toEqual([]);
+  it("reads the core catalog and every vi.json a unit ships", () => {
+    expect(
+      VIETNAMESE.filter(({ catalog }) => Object.keys(catalog).length === 0),
+    ).toEqual([]);
+    const read = new Set(VIETNAMESE.map(({ source }) => source));
+    expect(shippedUnitCatalogs().filter((path) => !read.has(path))).toEqual([]);
+  });
+
+  it("ships no unit value as its English", () => {
+    expect(
+      offenders(
+        ([, , value, english]) =>
+          lettersOf(value) !== "" && lettersOf(value) === lettersOf(english),
+        catalogEntries(VIETNAMESE.filter(({ catalog }) => catalog !== vi)),
+      ),
+    ).toEqual([]);
   });
 });

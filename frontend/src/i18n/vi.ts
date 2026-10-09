@@ -6474,7 +6474,7 @@ export const vi = {
   "aiHealth.callCounts_other": "{count} lượt gọi, {failures} lượt bị lỗi",
   "heldThreads.title": "Chuỗi thư đang giữ lại",
   "heldThreads.sub":
-    "Chuỗi thư mà hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi thư thì mọi đồng nghiệp đều đọc được; chỉ bạn mới chia sẻ được chuỗi thư của mình.",
+    "Chuỗi thư mà hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi thư thì mọi đồng nghiệp đều đọc được; chỉ bạn mới chia sẻ được chuỗi thư của chính mình.",
   "heldThreads.empty": "Hộp thư của bạn không giữ lại chuỗi thư nào.",
   "heldThreads.colThread": "Chuỗi thư",
   "heldThreads.colWhy": "Lý do",
@@ -6558,7 +6558,7 @@ export const vi = {
   "mailSharing.posture.where": "Thay đổi trong Quy tắc thu thập",
   "mailSharing.sharedPosture.label": "Cho phép hộp thư chia sẻ ngay khi nhận",
   "mailSharing.sharedPosture.help":
-    "Cho phép đồng nghiệp chuyển hộp thư của mình sang chế độ chia sẻ, để cả nhóm đọc được email thu thập ngay khi đến, trước mọi bước phân loại. Mặc định tắt.",
+    "Cho phép đồng nghiệp chuyển hộp thư của chính mình sang chế độ chia sẻ, để cả nhóm đọc được email thu thập ngay khi đến, trước mọi bước phân loại. Mặc định tắt.",
   "mailSharing.sharedPosture.warning":
     "Ở Đức và Áo, việc đọc hộp thư của nhân viên vào một CRM dùng chung thuộc phạm vi của thỏa thuận với hội đồng lao động. Bật mục này là khẳng định công ty của bạn đã có thỏa thuận đó. Margince không kiểm tra điều này.",
   "mailSharing.dangerTitle": "Chia sẻ email đang tắt",
