@@ -68,6 +68,7 @@ function mintBackend(
     hang?: boolean;
     expired?: boolean;
     bundle?: "serves" | "refuses";
+    listHangs?: boolean;
   } = {},
 ): ReturnType<typeof vi.fn> {
   return vi.fn(async (input: RequestInfo | URL) => {
@@ -136,6 +137,7 @@ function mintBackend(
         },
       });
     }
+    if (opts.listHangs) return new Promise<Response>(() => {});
     return jsonResponse({
       data: [],
       api_base_url: API_BASE,
@@ -391,11 +393,18 @@ describe("PassportCard — using a passport", () => {
       await screen.findByText(/a passport is your personal access token/i),
     ).toBeTruthy();
     expect(screen.getByText("In your AI tool")).toBeTruthy();
-    expect(screen.getByText("In your own code")).toBeTruthy();
+    expect(await screen.findByText("In your own code")).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "Your passports" }),
     ).toBeTruthy();
     expect(screen.getByText(/listed under Connected MCP clients/)).toBeTruthy();
+  });
+
+  it("shows no code row until the server states the API address", async () => {
+    vi.stubGlobal("fetch", mintBackend({ listHangs: true }));
+    render("agents");
+    expect(await screen.findByText("In your AI tool")).toBeTruthy();
+    expect(screen.queryByText("In your own code")).toBeNull();
   });
 
   it("downloads the skill as margince-skill.zip with no passport minted", async () => {

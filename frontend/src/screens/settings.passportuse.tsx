@@ -144,7 +144,7 @@ export function PassportSnippet({
 }
 
 // The two ways to put a passport to work, shared by the card and the mint
-// dialog. The snippet waits for the API address the server states.
+// dialog. The code row waits for the API address the server states.
 export function PassportUses({
   apiBaseUrl,
   onSnippetCopied,
@@ -162,20 +162,20 @@ export function PassportUses({
         description={t("settings.passportUseAiDetail")}
         control={<SkillDownloadButton />}
       />
-      <SettingRow
-        layout="stack"
-        label={t("settings.passportUseCode")}
-        description={t("settings.passportUseCodeDetail")}
-        control={
-          apiBaseUrl === undefined ? null : (
+      {apiBaseUrl !== undefined && (
+        <SettingRow
+          layout="stack"
+          label={t("settings.passportUseCode")}
+          description={t("settings.passportUseCodeDetail")}
+          control={
             <PassportSnippet
               apiBaseUrl={apiBaseUrl}
               onCopied={onSnippetCopied}
               holdsClipboard={snippetHoldsClipboard}
             />
-          )
-        }
-      />
+          }
+        />
+      )}
     </SettingList>
   );
 }
