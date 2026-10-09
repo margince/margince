@@ -106,8 +106,8 @@ describe("StatStrip stretches its last slot over the rest of the row", () => {
   it("draws a seven-slot strip six across and stretches the seventh", () => {
     render(<Strip count={7} />);
     const strip = screen.getByTestId("strip");
-    // The grid and the span must agree on the columns: seven columns with a
-    // tail told to span six wrapped the last slot onto a row of its own.
+    // The grid and the span must agree on the columns. Seven columns with a
+    // tail told to span six wrap the last slot onto a row of its own.
     expect(strip.style.getPropertyValue("--stat-strip-slots")).toBe("6");
     expect(strip.style.getPropertyValue("--stat-strip-tail-6")).toBe("6");
     expect(strip.style.getPropertyValue("--stat-strip-slots-3")).toBe("3");
