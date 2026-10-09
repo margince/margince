@@ -360,7 +360,7 @@ export const approval = {
   created_at: "2026-07-05T05:00:00Z",
 };
 
-// The closed automation starter library (B-EP09.15): two types with one
+// The closed automation starter library: two types with one
 // integer parameter each. The editor derives its form from params_schema.
 export const automationCatalog = [
   {
