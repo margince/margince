@@ -224,16 +224,12 @@ var prebuiltReports = map[string]reportSpec{
 	// where every neighbour here excludes archived rows: an archived lead is
 	// not noise on this report, it IS the report.
 	//
-	// A count here never reaches a lead the caller's own list would withhold,
-	// and the reason is the TABLE rather than the clause: lead is an identity
-	// table (platform/auth/tableclass.go), so every seat reads it whole and the
-	// scope clause the engine binds renders empty. The engine does bind it —
+	// A count here never reaches a lead the caller's own list (archived rows
+	// included) would withhold, and the reason is the TABLE rather than the
+	// clause: lead is an identity table (platform/auth/tableclass.go), so every
+	// seat reads it whole and the scope clause the engine binds renders empty. The engine does bind it —
 	// reading that as "row scope narrows this count" is the mistake, because
 	// the list it is being compared against is not narrowed either.
-	//
-	// Held by analyticsleadpopulation_integration_test.go, which asks this
-	// report and the same caller's own lead list and compares them, so the
-	// claim stops depending on this sentence.
 	"leads-by-status": {
 		entity:    datasource.EntityLead,
 		table:     tableLead,

@@ -81,7 +81,9 @@ func TestALeadCountNeverExceedsTheCallersOwnList(t *testing.T) {
 		t.Fatalf("the count came back as %T (%v), which this suite cannot compare", n, n)
 	}
 
-	listed, _, err := contacts.NewStore(InstallationDB(e.Pool)).ListLeads(manager, contacts.ListLeadsInput{})
+	listed, _, err := contacts.NewStore(InstallationDB(e.Pool)).ListLeads(manager, contacts.ListLeadsInput{
+		IncludeArchived: true, // the report counts archived leads, so the list must show them too
+	})
 	if err != nil {
 		t.Fatalf("the same caller's own lead list was refused: %v", err)
 	}
