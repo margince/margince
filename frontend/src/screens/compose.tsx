@@ -1305,7 +1305,7 @@ export { RELINK_KINDS, type RelinkKind, RelinkModal };
 // re-rendered the drawer.
 const NO_TRANSPORTS: readonly Transport[] = [];
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this modal was already at the ceiling; the account-started origin (ADR-0087/A132) adds three necessary branches — the recipient/deal pickers, the grounded-draft gate and the drawer placement, and the transport dial adds the fourth. The head, the attachment shelf, the drafting call, the form fill, the body edit and both draft controls are extracted (composehead.tsx, composeattachments.tsx); what is left is one dialog's own wiring, and splitting the send/consent/refusal/voice flow apart from the fields it gates would scatter it.
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity lint/complexity/noExcessiveLinesPerFunction: the send, consent and voice flow still gates the fields it sits beside; splitting it is #7198
 export function ComposeModal({
   initialMessage,
   activityId,

@@ -1,12 +1,6 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import { navigate } from "../app/router";
 import { Button, Disclosure, OverflowMenu } from "../design-system/atoms";
@@ -32,12 +26,9 @@ import {
   type ReportingEvidenceRef,
   type ReportingReport,
 } from "./reporting.model";
+import { useReportDetailQueries } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
-
-function firstPage(): string | undefined {
-  return undefined;
-}
 
 export function ReportingReportDetail({
   reportId,
@@ -63,67 +54,11 @@ export function ReportingReportDetail({
   const canReadSchedules = useCan("report_schedule", "read");
   const canReadEditions = useCan("report_edition", "read");
   const canSchedule = useCanWrite("report_schedule", "create");
-  const report = useQuery({
-    queryKey: ["reporting-report", reportId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/reports/{id}", {
-        params: { path: { id: reportId } },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
-  const live = useQuery({
-    enabled: !editionId,
-    queryKey: ["reporting-live", reportId],
-    queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/analytics/reports/{id}/evaluation",
-        { params: { path: { id: reportId } } },
-      );
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
-  const edition = useQuery({
-    enabled: !!editionId,
-    queryKey: ["reporting-edition", editionId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/editions/{id}", {
-        params: { path: { id: editionId ?? "" } },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
-  const editions = useInfiniteQuery({
-    enabled: canReadEditions,
-    queryKey: ["reporting-editions", reportId],
-    initialPageParam: firstPage(),
-    getNextPageParam: (
-      lastPage: components["schemas"]["ReportingEditionList"],
-    ) => lastPage.next_cursor,
-    queryFn: async ({ pageParam: cursor }) => {
-      const { data, error } = await api.GET(
-        "/analytics/reports/{id}/editions",
-        { params: { path: { id: reportId }, query: { cursor, limit: 5 } } },
-      );
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
-  const schedules = useQuery({
-    enabled: canReadSchedules,
-    queryKey: ["reporting-schedules", reportId],
-    queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/analytics/reports/{id}/schedules",
-        { params: { path: { id: reportId } } },
-      );
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
+  const { report, live, edition, editions, schedules } = useReportDetailQueries(
+    reportId,
+    editionId,
+    { editions: canReadEditions, schedules: canReadSchedules },
+  );
   const write = useMutation({
     mutationFn: async (action: ReportAction) => {
       switch (action.kind) {
