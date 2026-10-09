@@ -147,6 +147,9 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 		Location: in.Location, Start: in.Start, End: in.End, Attendees: []string{string(in.AttendeeEmail)},
 		VideoCall: videoCallFor(profile, in.VideoCall),
 	}
+	if intent.DescriptionFromBooker {
+		row.Appointment.Description = ""
+	}
 	if profile.EmailReminder != nil && *profile.EmailReminder {
 		row.Appointment.EmailReminder = true
 		row.ReminderStatus = invitationPending

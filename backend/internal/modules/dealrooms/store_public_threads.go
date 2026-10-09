@@ -34,6 +34,20 @@ func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.
 	}
 	var out []crmcontracts.DealRoomThread
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// Asked of the ROOM, not inferred from an empty document list: a live
+		// room with nothing in it yet serves its conversation, and reading
+		// "no documents" as "serves nothing" would take that away. A paused or
+		// finished room answers with no threads at all — the document-scoped
+		// ones already fall out below, and the room-level ones did not, so the
+		// conversation went on being served while the room served nothing else.
+		st, err := readStanding(ctx, tx, sess.RoomID)
+		if err != nil {
+			return err
+		}
+		if !servesContent(st.access(time.Now())) {
+			out = []crmcontracts.DealRoomThread{}
+			return nil
+		}
 		docs, err := visibleDocuments(ctx, tx, sess.RoomID, time.Now())
 		if err != nil {
 			return err
