@@ -47973,6 +47973,20 @@ export interface operations {
                 /** @description Read one Kanban column. */
                 stage_id?: string;
                 owner_id?: string;
+                /**
+                 * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+                 *     a team the caller cannot see returns their own visible rows filtered to nothing, not a
+                 *     wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+                 *     and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+                 *     (DM-VOCAB-OWN-1).
+                 */
+                owner_team_id?: string;
+                /**
+                 * @description `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+                 *     (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+                 *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+                 */
+                unassigned?: boolean;
                 company_id?: string;
                 /** @description Full-text query over the deal's name and description, plus a substring match on the name. */
                 q?: string;
@@ -48035,6 +48049,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createDeal: {
@@ -48340,6 +48355,20 @@ export interface operations {
                 /** @description The anchor company. A project has exactly one. */
                 company_id?: string;
                 owner_id?: string;
+                /**
+                 * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+                 *     a team the caller cannot see returns their own visible rows filtered to nothing, not a
+                 *     wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+                 *     and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+                 *     (DM-VOCAB-OWN-1).
+                 */
+                owner_team_id?: string;
+                /**
+                 * @description `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+                 *     (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+                 *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+                 */
+                unassigned?: boolean;
                 /** @description Omit for all phases; `phase != closed` is the open-projects slice the link ladder probes. */
                 phase?: "initiative" | "pursuing" | "delivering" | "closed";
                 /** @description Exact (case-insensitive) key lookup. */
@@ -48364,15 +48393,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description A sort or filter field outside the allow-list. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            422: components["responses"]["ValidationError"];
         };
     };
     createProject: {

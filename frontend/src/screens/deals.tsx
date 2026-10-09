@@ -159,6 +159,7 @@ import {
 } from "./listquery";
 import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
+import { useOwnerChips } from "./ownerdials";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
@@ -275,6 +276,8 @@ function dealsQueryParams(f: DealFilters) {
     sort: f.sort || undefined,
     stage_id: filters.stage_id || undefined,
     owner_id: filters.owner_id || undefined,
+    owner_team_id: filters.owner_team_id || undefined,
+    unassigned: filters.unassigned === "true" ? true : undefined,
     company_id: filters.company_id || undefined,
     partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
@@ -358,15 +361,18 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // have told a reader whose report answered 422 to press a filter instead of
 // showing them the failure.
 //
-// A TAG and a SEARCH have no filter field on the report — sending one is a
-// 422 — so the totals would count deals the board is not showing. Every other
-// dial is one the report takes, and the report measures every deal the reader
-// may see, which is the set `GET /deals` draws as cards.
+// A tag, a search, a team and the unassigned queue have no filter field on the
+// report, and sending one is a 422. The totals would count deals the board is
+// not showing. The report takes every other dial, and it measures every deal
+// the reader may see, which is the set `GET /deals` draws as cards.
 function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
   }
   if (f.q) return "deals.totalsNoSearch";
+  if (f.filters.owner_team_id || f.filters.unassigned === "true") {
+    return "deals.totalsNoTeamFilter";
+  }
   return undefined;
 }
 
@@ -2049,7 +2055,7 @@ export function DealsScreen({
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("deal");
   const pipelinesQuery = usePipelines();
-  const meQuery = useMe();
+  const ownerChips = useOwnerChips();
   const viewerId = useViewerId();
   const savedViews = useSavedViewTabs("deals");
   const {
@@ -2239,11 +2245,10 @@ export function DealsScreen({
         // changes every row without touching `filters`. Naming it here is
         // what puts the reader back on page 1.
         scopeKey={effectivePipeline?.id ?? ""}
-        dataChips={[...dealChips, ...tagChips]}
+        dataChips={[...ownerChips, ...dealChips, ...tagChips]}
         dataViews={savedViews}
         selection={rowSelection}
         chips={dealSurfaceChips({
-          me: meQuery.data,
           partnerOptions,
           partnerApplied: query.filters.partner_company_id,
           acquisitionSources,

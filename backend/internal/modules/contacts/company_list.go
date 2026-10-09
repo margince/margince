@@ -50,7 +50,7 @@ type ListCompaniesInput struct {
 	OwnerID       *ids.UserID
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
-	// listFilters.ownershipClause, which also refuses two of them at once.
+	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
 	// Two questions, asked separately because one value could not answer both:
@@ -89,7 +89,7 @@ var companyListFields = map[string]storekit.SortField{
 	createdAtColumn:    storekit.Column(storekit.KindTimestamp),
 	updatedAtColumn:    storekit.Column(storekit.KindTimestamp),
 	companyNameColumn:  storekit.Column(fieldcatalog.TypeText),
-	ownerIDColumn:      storekit.Column(storekit.KindUUID),
+	ownerIDColumn:      storekit.OwnerNameSort(companyEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	columnDescription:  storekit.Column(fieldcatalog.TypeText),
 	// classification is retired and the column the list draws is lifecycle, so

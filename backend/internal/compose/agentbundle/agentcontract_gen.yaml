@@ -1259,6 +1259,20 @@ paths:
         - name: owner_id
           in: query
           schema: {type: string, format: uuid}
+        - name: owner_team_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: |-
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant. One dial for every owner-scoped list.
+        - name: unassigned
+          in: query
+          schema: {type: boolean}
+          description: |-
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope, so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: company_id
           in: query
           schema: {type: string, format: uuid}
@@ -1333,6 +1347,7 @@ paths:
               schema: {$ref: '#/components/schemas/DealListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
     post:
       tags: [Deals]
@@ -1541,6 +1556,20 @@ paths:
         - name: owner_id
           in: query
           schema: {type: string, format: uuid}
+        - name: owner_team_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: |-
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant. One dial for every owner-scoped list.
+        - name: unassigned
+          in: query
+          schema: {type: boolean}
+          description: |-
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope, so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: phase
           in: query
           schema: {type: string, enum: [initiative, pursuing, delivering, closed]}
@@ -1561,11 +1590,7 @@ paths:
               schema: {$ref: '#/components/schemas/ProjectListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '422':
-          description: A sort or filter field outside the allow-list.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: List projects (live by default; cursor-paginated).
     post:
       tags: [Projects]

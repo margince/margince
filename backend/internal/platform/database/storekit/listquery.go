@@ -34,14 +34,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// KindTimestamp and KindUUID type the core vocabulary entries the six
-// fieldcatalog custom-column types do not cover: the timestamptz columns
-// (created_at, updated_at, last_activity_at) and the uuid references the
-// spec's sort tables name (owner_id, DM-VOCAB-1/2).
-const (
-	KindTimestamp = "timestamptz"
-	KindUUID      = "uuid"
-)
+// KindTimestamp types the core vocabulary entries the six fieldcatalog
+// custom-column types do not cover: the timestamptz columns (created_at,
+// updated_at, last_activity_at).
+const KindTimestamp = "timestamptz"
 
 // defaultSortSpelling is the contract's documented default sort. It IS
 // the default, so the spelling is accepted and normalized to it — the
@@ -83,6 +79,11 @@ type SortField struct {
 	// continuation, so a page cannot be ordered by one expression and
 	// continued by another.
 	Expr func(ctx context.Context, arg func(any) int) (string, error)
+	// CursorField is what a page cursor records this sort as, when the wire
+	// name once ordered by something else. A cursor minted under the old
+	// ordering then names a different field and is refused. Comparing its key
+	// against the new values would skip or repeat rows.
+	CursorField string
 }
 
 // Column is the ordinary sortable field: the row's own column of that name.
@@ -112,6 +113,9 @@ type ListSort struct {
 	name string
 	kind string
 	desc bool
+	// cursorField is the name page cursors carry (SortField.CursorField, or
+	// the wire name).
+	cursorField string
 	// expr is the rendered ordering expression, empty for a plain column.
 	// Rendered ONCE, at parse time, because it may bind parameters and every
 	// clause that orders or continues this page has to name the same ones.
@@ -146,7 +150,10 @@ func ParseListSort(ctx context.Context, spec *string, vocab map[string]SortField
 			Message: fmt.Sprintf("field %q is not sortable on this resource", name),
 		}
 	}
-	sorted := &ListSort{name: name, kind: field.Kind, desc: strings.HasPrefix(raw, "-")}
+	sorted := &ListSort{name: name, kind: field.Kind, desc: strings.HasPrefix(raw, "-"), cursorField: name}
+	if field.CursorField != "" {
+		sorted.cursorField = field.CursorField
+	}
 	if field.Expr != nil {
 		// A caller with no binder is one whose vocabulary is plain columns —
 		// a fixed internal sort, not a client's. Reaching an expression there
@@ -221,7 +228,7 @@ func (s *ListSort) EncodePageCursor(sortKey *string, createdAt time.Time, id ids
 	if s == nil {
 		return EncodeCursor(createdAt, id)
 	}
-	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id, SortField: s.name, SortDesc: s.desc, SortKey: sortKey})
+	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id, SortField: s.cursorField, SortDesc: s.desc, SortKey: sortKey})
 }
 
 // KeysetClause renders the WHERE fragment that continues the page after
@@ -245,7 +252,7 @@ func (s *ListSort) KeysetClause(token string, arg func(any) int) (string, error)
 		}
 		return SQLf("(created_at, id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID)), nil
 	}
-	if c.SortField != s.name || c.SortDesc != s.desc {
+	if c.SortField != s.cursorField || c.SortDesc != s.desc {
 		return "", &CursorSortMismatchError{}
 	}
 
@@ -335,9 +342,6 @@ func parsesAsKind(kind, value string) bool {
 		return err == nil
 	case fieldcatalog.TypeBoolean:
 		return value == "true" || value == "false"
-	case KindUUID:
-		_, err := ids.Parse(value)
-		return err == nil
 	case KindTimestamp:
 		return parsesAsTimestamptz(value)
 	default: // text, picklist
@@ -376,8 +380,6 @@ func kindOperandShape(kind string) string {
 		return "an ISO date (YYYY-MM-DD)"
 	case fieldcatalog.TypeBoolean:
 		return "true or false"
-	case KindUUID:
-		return "a UUID"
 	case KindTimestamp:
 		return "a timestamp"
 	default: // text, picklist
@@ -400,8 +402,6 @@ func listBindCast(kind string) string {
 		return "::bigint"
 	case KindTimestamp:
 		return "::timestamptz"
-	case KindUUID:
-		return "::uuid"
 	default: // text, picklist
 		return "::text"
 	}

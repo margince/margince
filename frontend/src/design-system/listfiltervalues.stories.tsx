@@ -108,3 +108,24 @@ export const NothingPicked: Story = {
 export const Searched: Story = {
   render: () => <Values chip={company} />,
 };
+
+/** Every colleague, drawn whole and narrowed by a box as the reader types. */
+const owner: ListChip = {
+  key: "owner",
+  label: "Owner",
+  allLabel: "Any owner",
+  filterable: true,
+  options: [
+    { value: "owner_id:u-me", label: "Owned by you" },
+    { value: "owner_id:u-1", label: "Anna Becker" },
+    { value: "owner_id:u-2", label: "Jonas Petersen" },
+    { value: "owner_id:u-3", label: "Mia Schulz" },
+    { value: "unassigned:true", label: "Unassigned" },
+  ],
+};
+
+// A list that is long but still in hand. Unlike the searched variant, every
+// option shows before anything is typed, so "Owned by you" is one press away.
+export const Filterable: Story = {
+  render: () => <Values chip={owner} picked="owner_id:u-2" />,
+};

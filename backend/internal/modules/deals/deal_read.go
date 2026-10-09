@@ -73,14 +73,18 @@ const dealTaggableType = "deal"
 type ListDealsInput struct {
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
-	TagIDs           []ids.UUID
-	TagMode          storekit.TagMode
-	Cursor           *string
-	Limit            *int
-	Query            *string
-	PipelineID       *ids.PipelineID
-	StageID          *ids.StageID
-	OwnerID          *ids.UserID
+	TagIDs     []ids.UUID
+	TagMode    storekit.TagMode
+	Cursor     *string
+	Limit      *int
+	Query      *string
+	PipelineID *ids.PipelineID
+	StageID    *ids.StageID
+	OwnerID    *ids.UserID
+	// OwnerTeamID and Unassigned are the other two owner dials; with OwnerID
+	// they are one predicate, storekit.OwnershipClause.
+	OwnerTeamID      *ids.TeamID
+	Unassigned       *bool
 	CompanyID        *ids.CompanyID
 	ProjectID        *ids.ProjectID
 	PartnerCompanyID *ids.CompanyID
@@ -145,7 +149,7 @@ var dealListFields = map[string]storekit.SortField{
 	closeDateField:          storekit.Column(fieldcatalog.TypeDate),
 	dealNameColumn:          storekit.Column(fieldcatalog.TypeText),
 	"status":                storekit.Column(fieldcatalog.TypeText),
-	filterOwnerID:           storekit.Column(storekit.KindUUID),
+	filterOwnerID:           storekit.OwnerNameSort(dealTable),
 	filterStageID:           {Kind: fieldcatalog.TypeNumber, Expr: orderByStagePosition},
 	filterCompanyID:         {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterCompanyID)},
 	filterPartnerCompanyID:  {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompanyName(filterPartnerCompanyID)},
@@ -276,8 +280,12 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	if in.StageID != nil {
 		where = append(where, storekit.SQLf("stage_id = $%d", arg(*in.StageID)))
 	}
-	if in.OwnerID != nil {
-		where = append(where, storekit.SQLf("owner_id = $%d", arg(*in.OwnerID)))
+	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
+	if err != nil {
+		return nil, err
+	}
+	if ownership != "" {
+		where = append(where, ownership)
 	}
 	if clause := storekit.TagFilterClause(ctx, dealTaggableType, "deal.id", in.TagIDs, in.TagMode, arg); clause != "" {
 		where = append(where, clause)
@@ -339,6 +347,12 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))
 	}
 	where = appendCommercialFilters(where, in, arg)
+	return appendIdleFilters(where, in), nil
+}
+
+// appendIdleFilters adds the two activity-clock filters: the product-wide
+// stalled status and the caller's own quiet window.
+func appendIdleFilters(where []string, in ListDealsInput) []string {
 	if in.Stalled != nil {
 		if *in.Stalled {
 			where = append(where, StalledSQL(""))
@@ -349,7 +363,7 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	if in.QuietForDays != nil {
 		where = append(where, QuietSQL("", *in.QuietForDays))
 	}
-	return where, nil
+	return where
 }
 
 // uuidOfFilter widens one optional typed filter id to the untyped UUID the

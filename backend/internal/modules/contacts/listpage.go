@@ -334,7 +334,7 @@ func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, 
 	if !f.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
-	ownership, err := f.ownershipClause(arg)
+	ownership, err := storekit.OwnershipClause(f.OwnerID, f.OwnerTeamID, f.Unassigned, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -377,43 +377,6 @@ func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, 
 		where = append(where, clause)
 	}
 	return where, nil
-}
-
-// ownershipClause spells the three owner dials as ONE predicate, because they
-// answer one question — whose rows — and a caller who sends two of them has
-// asked for two different answers. Combining them is refused rather than
-// silently resolved: `owner_id` AND `unassigned=true` can only ever match
-// nothing, and an empty page is indistinguishable from an honest one.
-//
-// Every clause here NARROWS. The caller's row-scope predicate is already in the
-// WHERE chain (auth.ScopeClauseFor, added before these), so a team id the
-// caller cannot see filters their own visible rows down to nothing instead of
-// reaching that team's — the filter cannot widen what authorization admitted.
-func (f listFilters) ownershipClause(arg func(any) int) (string, error) {
-	unassigned := f.Unassigned != nil && *f.Unassigned
-	named := 0
-	for _, set := range []bool{f.OwnerID != nil, f.OwnerTeamID != nil, unassigned} {
-		if set {
-			named++
-		}
-	}
-	if named > 1 {
-		return "", httperr.Validation("owner_id", "conflicting_filters",
-			"owner_id, owner_team_id and unassigned each name a different set of rows; send one")
-	}
-	switch {
-	case f.OwnerID != nil:
-		return storekit.SQLf("owner_id = $%d", arg(*f.OwnerID)), nil
-	case f.OwnerTeamID != nil:
-		return storekit.SQLf(
-			"owner_id IN (SELECT tm.user_id FROM team_membership tm WHERE tm.team_id = $%d)",
-			arg(*f.OwnerTeamID)), nil
-	case unassigned:
-		return "owner_id IS NULL", nil
-	}
-	// `unassigned=false` is not "only owned rows": the reader asked to stop
-	// narrowing, and the honest answer to that is the unnarrowed list.
-	return "", nil
 }
 
 // capturedByKindArg maps the optional provenance parameter onto the store
