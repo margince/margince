@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -234,7 +235,7 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 	if p.DurationMinutes < 15 || p.DurationMinutes > 480 || p.NoticeMinutes < 0 || p.NoticeMinutes > 10080 ||
 		p.HorizonDays < 1 || p.HorizonDays > 90 || p.BufferMinutes < 0 || p.BufferMinutes > 120 ||
-		len(p.Title) > 200 || len(p.Location) > 1000 || strings.TrimSpace(p.Title) == "" || p.CalendarId == "" {
+		utf8.RuneCountInString(p.Title) > 200 || utf8.RuneCountInString(p.Location) > 1000 || strings.TrimSpace(p.Title) == "" || p.CalendarId == "" {
 		return &SchedulingArgumentError{Field: "profile", Code: faultInvalid, Message: "Choose valid meeting details and availability limits"}
 	}
 	return nil
