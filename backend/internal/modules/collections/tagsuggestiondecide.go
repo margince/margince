@@ -82,7 +82,7 @@ func openTagSuggestionForDecision(ctx context.Context, tx pgx.Tx, id ids.UUID) (
 	if err != nil {
 		return TagSuggestion{}, err
 	}
-	if err := auth.Require(ctx, current.EntityType, principal.ActionUpdate); err != nil {
+	if err := requireRecordUpdate(ctx, current.EntityType); err != nil {
 		return TagSuggestion{}, err
 	}
 	if err := auth.EnsureWritableLive(ctx, tx, current.EntityType, current.EntityID); err != nil {
@@ -92,6 +92,15 @@ func openTagSuggestionForDecision(ctx context.Context, tx pgx.Tx, id ids.UUID) (
 		return TagSuggestion{}, &TagSuggestionDecidedError{State: current.State}
 	}
 	return current, nil
+}
+
+// requireRecordUpdate asks the update grant on the suggestion's record type,
+// naming each object as a literal so the grant scan can resolve it.
+func requireRecordUpdate(ctx context.Context, entityType string) error {
+	if entityType == "company" {
+		return auth.Require(ctx, "company", principal.ActionUpdate)
+	}
+	return auth.Require(ctx, "contact", principal.ActionUpdate)
 }
 
 // recordTagSuggestionDecision moves an open suggestion to its decided state,
