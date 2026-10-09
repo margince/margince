@@ -12,6 +12,7 @@ import {
 } from "react";
 import { AskFromAddress } from "./app/askfromaddress";
 import { isPublicBookingId } from "./app/bookingroute";
+import { AuthSplash } from "./app/bootsplash";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
 import {
@@ -985,19 +986,6 @@ function RaillessFrame({ children }: Readonly<{ children: ReactNode }>) {
       <main className="main">
         <div className="scroll">{children}</div>
       </main>
-    </div>
-  );
-}
-
-function AuthSplash() {
-  const t = useT();
-  // A plain column. It used to borrow onboarding's `.ob-top`, which is that
-  // flow's sticky blurred header — so the splash drew a bar with a bottom
-  // border across a screen that has no header, and took that class's
-  // horizontal padding on top of the column's own.
-  return (
-    <div className="wrap narrow">
-      <EmptyState>{t("auth.checking")}</EmptyState>
     </div>
   );
 }
