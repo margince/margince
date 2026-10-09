@@ -19,6 +19,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 	"os"
 	"strconv"
 	"testing"
@@ -137,9 +138,10 @@ func appliedIntConst(t *testing.T, file, name string) int {
 				if !ok || literal.Kind != token.INT {
 					t.Fatalf("%s in %s is not an integer literal — this gate reads only that shape", name, file)
 				}
-				n, err := strconv.Atoi(literal.Value)
+				text := types.ExprString(literal)
+				n, err := strconv.Atoi(text)
 				if err != nil {
-					t.Fatalf("%s = %q: %v", name, literal.Value, err)
+					t.Fatalf("%s = %q: %v", name, text, err)
 				}
 				return n
 			}
