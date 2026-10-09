@@ -50,10 +50,17 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
 }
 
-// RequiredFieldError maps to 422 on both surfaces.
+// RequiredFieldError answers 422 naming the field the body left out.
 type RequiredFieldError struct{ Field string }
 
 func (e *RequiredFieldError) Error() string { return e.Field + " is required" }
+
+// The refusals below carry their verdict through apperrors.FieldFault, so
+// httperr answers them without a per-type list in this module's handlers
+// that a new refusal could be left out of.
+func (e *RequiredFieldError) FieldFault() (field, code, message string) {
+	return e.Field, "required", e.Error()
+}
 
 // NotResolvableError answers 422: the signal carries nothing the resolver
 // could work from, or its resolution is already terminal.
@@ -61,11 +68,22 @@ type NotResolvableError struct{ Reason string }
 
 func (e *NotResolvableError) Error() string { return e.Reason }
 
+func (e *NotResolvableError) FieldFault() (field, code, message string) {
+	return resolutionStateField, "not_resolvable", e.Error()
+}
+
 // NoWarmthError answers 422: warmth/intro-path questions only make sense
 // for a signal resolved to a company (and, for the path, a warm one).
 type NoWarmthError struct{ Reason string }
 
 func (e *NoWarmthError) Error() string { return e.Reason }
+
+func (e *NoWarmthError) FieldFault() (field, code, message string) {
+	return resolutionStateField, "no_warmth", e.Error()
+}
+
+// resolutionStateField is the contract field a resolution refusal points at.
+const resolutionStateField = "resolution_state"
 
 // signalEntityTables is the store-side spelling of the schema's
 // signal_entity_type CHECK: a signal's subject is a deal, company,
@@ -87,4 +105,8 @@ type InvalidSignalEntityTypeError struct{ EntityType string }
 
 func (e *InvalidSignalEntityTypeError) Error() string {
 	return "entity_type " + e.EntityType + " is not one of " + strings.Join(SignalEntityTables(), ", ")
+}
+
+func (e *InvalidSignalEntityTypeError) FieldFault() (field, code, message string) {
+	return "entity_type", "invalid_entity_type", e.Error()
 }
