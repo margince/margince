@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// GET /agent-bundle, the Margince skill an AI tool installs, and the one answer
+// to where a passport calls this API. The ZIP and the Settings card both read
+// that address from agentAPIOrigin.baseFor, so the snippet a human copies and
+// the openapi.yaml the agent reads cannot name two different hosts.
+
+import (
+	"log/slog"
+	"net/http"
+
+	"github.com/margince/margince/backend/internal/compose/agentbundle"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+)
+
+// agentAPIOrigin is the deployment's two configured bases.
+type agentAPIOrigin struct{ api, public string }
+
+// baseFor is the API address a passport calls, `/v1` included.
+func (o agentAPIOrigin) baseFor(r *http.Request) string {
+	base := apiOrigin(o.api, o.public)
+	if base == "" {
+		// Only this session's no-store answer carries it, so a forged Host misleads nobody but the forger.
+		base = requestOrigin(r)
+	}
+	return apiV1Base(base)
+}
+
+// apiOrigin is where the API is served: its own base when it has one, else the
+// public one, which serves the API too on a same-origin deployment.
+func apiOrigin(apiBaseURL, publicBaseURL string) string {
+	if apiBaseURL != "" {
+		return apiBaseURL
+	}
+	return publicBaseURL
+}
+
+// requestOrigin is the scheme and host this request arrived on.
+func requestOrigin(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host
+}
+
+type agentBundleHandlers struct {
+	origin  agentAPIOrigin
+	builder *agentbundle.Builder
+	log     *slog.Logger
+}
+
+func newAgentBundleHandlers(origin agentAPIOrigin, log *slog.Logger) agentBundleHandlers {
+	return agentBundleHandlers{origin: origin, builder: &agentbundle.Builder{}, log: log}
+}
+
+// DownloadAgentSkillBundle answers the skill ZIP. Human-only here as well as at
+// the gate: an agent has no use for it, and the route is not one to rest on
+// pattern resolution alone.
+func (h agentBundleHandlers) DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request) {
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	archive, err := h.builder.Build(h.origin.baseFor(r))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httperr.Download{ContentType: "application/zip", Filename: "margince-skill.zip", Size: int64(len(archive))}.WriteHeaders(w)
+	if _, err := w.Write(archive); err != nil {
+		h.log.WarnContext(r.Context(), "agent bundle: the client's download is truncated", "err", err)
+	}
+}

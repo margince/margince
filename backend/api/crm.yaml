@@ -829,11 +829,18 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, api_base_url]
                 properties:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/PassportSummary' }
+                  api_base_url:
+                    type: string
+                    format: uri
+                    description: >-
+                      The address a passport calls this API at, `/v1` included: the configured
+                      API base URL, else the public base URL, else the origin this request
+                      arrived on. The skill bundle's `openapi.yaml` names the same address.
         '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [Identity]
@@ -889,6 +896,32 @@ paths:
           description: Passport revoked (or already revoked).
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /agent-bundle:
+    get:
+      tags: [Identity]
+      operationId: downloadAgentSkillBundle
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Download the Margince skill for an AI tool, as a ZIP.
+      description: |
+        The skill an AI tool (Claude, Codex, Gemini) installs to call this API with a passport. The
+        ZIP holds one folder, `margince/`, with `README.md` (how to save a passport and install the
+        skill), `SKILL.md` (the rules an agent follows), `INDEX.md` (one row per operation a passport
+        can call) and `openapi.yaml` (those operations in full, generated from this contract).
+        `servers` in `openapi.yaml` and the base URL in both guides are this install's API address,
+        the same value `GET /passports` answers as `api_base_url`.
+
+        It carries no credential. The passport is saved apart from the skill, so one download serves
+        every passport and a revoked passport leaves nothing to delete. Human-only: the bundle is how a
+        human hands an agent the API, and an agent that can call the API already has it.
+      responses:
+        '200':
+          description: The skill as a downloadable ZIP attachment, `margince-skill.zip`.
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /oauth/consent-request:
     get:

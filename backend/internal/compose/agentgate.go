@@ -152,13 +152,25 @@ func refuseAgentRead(w http.ResponseWriter, r *http.Request, next http.Handler, 
 // human's RBAC and row scope at the store, unchanged.
 func refusedAsHumanOnly(w http.ResponseWriter, r *http.Request) bool {
 	pattern := chi.RouteContext(r.Context()).RoutePattern()
-	pol, known := agentPolicies[r.Method+" "+pattern]
-	if !known || pol.Access == accessTool {
+	pol, admitted := routeAdmitsAgents(r.Method, pattern)
+	if admitted {
 		return false
 	}
 	httperr.Write(w, r, fmt.Errorf(
 		"agent gate: %s is %s: %w", pol.Op, pol.Access, apperrors.ErrPermissionDenied))
 	return true
+}
+
+// routeAdmitsAgents is the gate's first question of a route: may an agent
+// principal call it at all, before scope, tier and volume are asked. A read is
+// admitted unless the contract marks it; a mutation only under a tool policy.
+// It answers the route's policy, zero when the table has none.
+func routeAdmitsAgents(method, pattern string) (agentPolicy, bool) {
+	pol, known := agentPolicies[method+" "+pattern]
+	if !known {
+		return pol, !mutatingMethod(method)
+	}
+	return pol, pol.Access == accessTool
 }
 
 // prepareAgentGate resolves the admission inputs for a mutating agent call:
@@ -172,13 +184,13 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 	// router registered; a mutating route it doesn't know is refused, never
 	// admitted ungated (ADR-0055 §2).
 	pattern := chi.RouteContext(ctx).RoutePattern()
-	pol, known := agentPolicies[r.Method+" "+pattern]
-	if !known {
+	pol, admitted := routeAdmitsAgents(r.Method, pattern)
+	if pol.Op == "" {
 		httperr.Write(w, r, fmt.Errorf(
 			"agent gate: %s %s carries no autonomy tier: %w", r.Method, pattern, apperrors.ErrPermissionDenied))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
-	if pol.Access != accessTool {
+	if !admitted {
 		// human-only governance (the credential class: lending authority,
 		// recording consent, moving what the tiers read) and the
 		// session/bootstrap machinery: an agent principal is rejected

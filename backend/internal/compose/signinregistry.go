@@ -130,14 +130,14 @@ func installationSignInApp(pool *pgxpool.Pool, stored appResolver) appResolver {
 	}
 }
 
-// signInRedirectBase is the origin a sign-in callback is served on: the
-// deployment's own, plus the `/v1` the API mounts its contract under.
+// apiV1Base is an origin plus the `/v1` the API mounts its contract under: where
+// a sign-in callback is served, and where a passport calls the API.
 //
 // One spelling for every provider, because it is used twice for each — once to
 // WIRE the routes and once to tell an operator what to register — and the two
 // must be the same bytes, or the value pasted into the vendor's console fails
 // the very flow it was meant to enable.
-func signInRedirectBase(base string) string {
+func apiV1Base(base string) string {
 	if base == "" {
 		return ""
 	}
