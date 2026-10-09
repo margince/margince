@@ -101,7 +101,18 @@ func liveRoomForBuyerWrite(ctx context.Context, tx pgx.Tx, sess Session) (crmcon
 	}
 	var room crmcontracts.DealRoom
 	room.Id = openapi_types.UUID(sess.RoomID.UUID)
-	if err := tx.QueryRow(ctx, `SELECT deal_id FROM deal_room WHERE id = $1`, sess.RoomID).Scan(&room.DealId); err != nil {
+	// The share lock serializes this write with an archive of the deal: one
+	// that committed after readStanding's check is seen here and refuses.
+	err = tx.QueryRow(ctx,
+		`SELECT r.deal_id
+		   FROM deal_room r
+		   JOIN deal d ON d.id = r.deal_id AND d.archived_at IS NULL
+		  WHERE r.id = $1
+		    FOR SHARE OF d`, sess.RoomID).Scan(&room.DealId)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return crmcontracts.DealRoom{}, apperrors.ErrNotFound
+	}
+	if err != nil {
 		return crmcontracts.DealRoom{}, fmt.Errorf("read deal room for a buyer write: %w", err)
 	}
 	return room, nil
