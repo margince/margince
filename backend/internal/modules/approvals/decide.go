@@ -159,6 +159,18 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 		// refuse would land.
 		return err
 	}
+	// A decided card is answered as decided, before the kind's precheck runs.
+	// The precheck asks whether the effect COULD run.
+	//
+	// Without this, a stale second click on a rejected draft is told to
+	// reconnect a mailbox that is not the problem.
+	//
+	// The refusal inside the transaction is still the authority. This is the
+	// same question asked early, so the answer names the card's state rather
+	// than the estate's.
+	if st := a.effectiveStatus(s.now()); st != "pending" {
+		return &AlreadyDecidedError{Status: st}
+	}
 	check, ok := s.prechecks[a.Kind]
 	if !ok || !serverProposed(a) {
 		return nil
