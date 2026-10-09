@@ -9,6 +9,7 @@ package compose
 // when somebody asks.
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ func TestADrillLeavesTheTwoNumbersItWasRunToProduce(t *testing.T) {
 
 	// A backup taken half an hour before the failure it stands in for.
 	restoredTo := time.Now().Add(-30 * time.Minute)
-	id, err := store.Begin(e.Admin(), restoredTo, "quarterly rehearsal")
+	id, err := store.Begin(e.Admin(), restoredTo, "Dana Ops", "quarterly rehearsal")
 	if err != nil {
 		t.Fatalf("Begin: %v", err)
 	}
@@ -75,7 +76,7 @@ func TestAFailedDrillIsRecorded(t *testing.T) {
 	e := integration.Setup(t)
 	store := continuity.NewStore(InstallationDB(e.Pool))
 
-	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Hour), "")
+	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Hour), "Dana Ops", "")
 	if err != nil {
 		t.Fatalf("Begin: %v", err)
 	}
@@ -101,7 +102,7 @@ func TestARunningDrillReportsNoRecoveryWindowYet(t *testing.T) {
 	e := integration.Setup(t)
 	store := continuity.NewStore(InstallationDB(e.Pool))
 
-	if _, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), ""); err != nil {
+	if _, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "Dana Ops", ""); err != nil {
 		t.Fatalf("Begin: %v", err)
 	}
 	drill, ever, err := store.Latest(e.Admin())
@@ -122,7 +123,7 @@ func TestADrillCannotBeClosedTwice(t *testing.T) {
 	e := integration.Setup(t)
 	store := continuity.NewStore(InstallationDB(e.Pool))
 
-	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "")
+	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "Dana Ops", "")
 	if err != nil {
 		t.Fatalf("Begin: %v", err)
 	}
@@ -147,7 +148,7 @@ func TestRecordingADrillNeedsTheSettingsGrant(t *testing.T) {
 	e := integration.Setup(t)
 	store := continuity.NewStore(InstallationDB(e.Pool))
 
-	_, err := store.Begin(e.As(e.Rep1, nil, integration.AccountRepPerms), time.Now(), "")
+	_, err := store.Begin(e.As(e.Rep1, nil, integration.AccountRepPerms), time.Now(), "Dana Ops", "")
 	if err == nil {
 		t.Fatal("a seat without the installation-settings grant recorded a drill")
 	}
@@ -160,11 +161,22 @@ func TestADrillRefusesAnOutcomeItDoesNotDefine(t *testing.T) {
 	e := integration.Setup(t)
 	store := continuity.NewStore(InstallationDB(e.Pool))
 
-	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "")
+	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "Dana Ops", "")
 	if err != nil {
 		t.Fatalf("Begin: %v", err)
 	}
 	if err := store.Finish(e.Admin(), id, "mostly fine", ""); err == nil {
 		t.Fatal("an undefined outcome was accepted")
+	}
+}
+
+// A drill nobody is named on is evidence of nothing, so the ledger refuses it.
+func TestADrillWithNoOperatorIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	store := continuity.NewStore(InstallationDB(e.Pool))
+
+	_, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "  ", "")
+	if !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("Begin with a blank operator: %v, want ErrInvalidArgument", err)
 	}
 }

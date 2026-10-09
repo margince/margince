@@ -378,6 +378,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/recovery-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * When the restore procedure was last rehearsed, and what it measured.
+         * @description Admin and ops only (`job_health:read`). Reports the most recent restore drill from the installation's drill ledger, against the two published recovery targets: back within four hours, and no more than one hour of data lost. The recovery time is measured by the database clock between drill-start and drill-finish. The data lost is the start minus the restore point the operator gave to drill-start. `last_drill` is null on an installation that has never recorded a drill. Drills are recorded by the operator with `margince-migrate drill-start` and `drill-finish`; there is no HTTP write. Margince does not observe backups, so this report names none. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getRecoveryHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports": {
         parameters: {
             query?: never;
@@ -34864,6 +34884,45 @@ export interface components {
             /** @description One row per composed unit with anything refused in the window. */
             units: components["schemas"]["ExtensionUnitIngestHealth"][];
         };
+        /**
+         * @description The installation's restore-drill evidence, read against the published recovery
+         *     targets. Margince does not observe backups; this report carries none.
+         */
+        RecoveryHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description The published recovery target, in seconds. */
+            recovery_target_seconds: number;
+            /** @description The published data-loss target, in seconds. */
+            data_loss_target_seconds: number;
+            /** @description The most recent drill, or null when none was ever recorded. */
+            last_drill: components["schemas"]["RestoreDrill"] | null;
+        };
+        /** @description One rehearsal of the restore procedure, as the drill ledger holds it. */
+        RestoreDrill: {
+            /** Format: date-time */
+            started_at: string;
+            /**
+             * Format: date-time
+             * @description Null while the drill runs, and on a drill nobody closed.
+             */
+            finished_at: string | null;
+            /**
+             * Format: date-time
+             * @description The point in time the backup was restored to.
+             */
+            restored_to: string;
+            /** @enum {string} */
+            outcome: "running" | "passed" | "failed";
+            /** @description Who ran the drill, as the operator named themselves on the command line. */
+            operator: string;
+            /** @description What the drill checked, or why it failed. */
+            notes: string | null;
+            /** @description Finished minus started. Null until the drill finishes. */
+            recovery_seconds: number | null;
+            /** @description Started minus the restore point. The restore point is what the operator gave to drill-start, so this figure is only as true as that input. */
+            data_loss_seconds: number;
+        };
         ExtensionUnitIngestHealth: {
             /** @description The composed unit's name. */
             unit: string;
@@ -44040,6 +44099,36 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a human without the admin role. Not an object/action RBAC grant denial. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getRecoveryHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The installation's restore-drill evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
             403: {
                 headers: {
                     [name: string]: unknown;
