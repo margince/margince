@@ -274,7 +274,7 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 // CONFIGURATION.MD, the table of record, in the section it gives the entrypoint
 // variables. Splitting variables across two documents by which process happens
 // to read them is how an operator ends up checking the wrong one. The section,
-// not the whole file, is read: `MARGINCE_DSN` is named in a dozen other rows, so
+// not the whole file, is read. `MARGINCE_DSN` is named in a dozen other rows, so
 // a whole-file match would pass with the entrypoint section deleted.
 //
 // It reuses obligation 4's `${VAR:?}` set rather than sweeping for mentions,
