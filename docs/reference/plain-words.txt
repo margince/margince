@@ -574,7 +574,6 @@ finds
 fine
 fingerprint
 finish
-fires
 first
 fit
 fitness
@@ -598,7 +597,6 @@ forbids
 force
 forecast
 foreign
-forever
 forge
 fork
 form
@@ -1375,7 +1373,6 @@ security
 see
 seeded
 seeds
-seems
 segment
 sek
 selects
@@ -1464,7 +1461,6 @@ spend
 spent
 spine
 split
-spot
 spread
 sse
 stable
