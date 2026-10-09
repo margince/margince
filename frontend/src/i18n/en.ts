@@ -5330,7 +5330,7 @@ export const en = {
   "rbac.masked": "Masked value",
   "settings.passports": "Agent passports",
   "settings.passportsSub":
-    "An agent acts with your permissions and never more: every request rechecks your permissions.",
+    "A passport is your personal access token. Whatever uses it acts as you, with the permissions you tick, and never more. Every request checks your permissions again.",
   // What each passport scope admits, in words. The wire carries `read`/`draft`/
   // `write`/`send`/`enrich`; a human granting them is choosing what an agent may
   // do on their behalf, and the protocol token alone does not say — "write" and
@@ -5342,8 +5342,30 @@ export const en = {
   "passport.scope.enrich": "Buy contact data",
   "passport.select": "Passport",
   "passport.noneOption": "No passport",
-  "settings.passportsLendHint":
-    "Passports you created for scripts and other tools. An MCP client connection does not use these; it is listed below.",
+  "settings.passportUseAi": "In your AI tool",
+  "settings.passportUseAiDetail":
+    "Install the Margince skill in Claude, Codex or Gemini, then give it your passport. The skill tells the AI how to work in Margince for you.",
+  "settings.skillDownload": "Download skill",
+  "settings.skillDownloadFailed": "Skill not downloaded",
+  "settings.passportUseCode": "In your own code",
+  "settings.passportUseCodeDetail":
+    "Send it as a bearer token. The skill’s openapi.yaml lists every call it can make.",
+  "settings.snippetLanguage": "Language",
+  "settings.snippetLabel": "{language} example",
+  "settings.snippetCopy": "Copy example",
+  "settings.snippetCopied": "Copied",
+  "settings.snippetCopyFailed": "Select the example above and copy it by hand.",
+  "settings.snippetFoot":
+    "Set {variable} in your shell, or swap it for your passport.",
+  "settings.passportsYours": "Your passports",
+  "settings.passportsMcpHint":
+    "An MCP client gets its own credential when you connect it, so it does not need a passport. It is listed under Connected MCP clients.",
+  "settings.passportCreated":
+    "Passport created. It is shown only once, so copy it now.",
+  "settings.tokenCopy": "Copy passport",
+  "settings.tokenCopied": "Copied",
+  "settings.tokenCopyFailed": "Select the passport above and copy it by hand.",
+  "settings.passportNext": "Next, use it",
   "settings.passportLabel": "Agent name",
   "settings.mint": "Mint passport",
   "settings.minting": "Minting…",
@@ -5595,10 +5617,10 @@ export const en = {
   "agent.tip.recap": "Open the agent panel for today’s activity.",
   "agent.tip.edge": "The screen edge lights up while the agent works.",
 
-  "agents.connected": "Connected agents",
+  "agents.connected": "Connected MCP clients",
   "agents.connectedSub":
     "MCP clients with their own credential, limited to the access you approved",
-  "agents.noneConnected": "No agents connected yet.",
+  "agents.noneConnected": "No MCP clients connected yet.",
   "agents.connectedOn": "connected {date}",
   "agents.disconnect": "Disconnect",
   "agents.disconnectOpen": "Disconnect",
@@ -5612,7 +5634,7 @@ export const en = {
   "agents.revokeGrantNamed": "End connection to {client}",
   "agents.disconnectConfirm":
     "This ends the whole connection, not one credential. The agent loses access on its next call and cannot renew. Reconnecting requires approving access again.",
-  "agents.connectHow": "Connect an agent",
+  "agents.connectHow": "Connect MCP client",
   "agents.connectSteps":
     "Run one of these commands. The client registers itself and returns here so you can choose its access.",
   "agents.connectAntigravityPath":
@@ -5620,7 +5642,6 @@ export const en = {
   "agents.connectorOff": "The MCP connector is off for this installation.",
   "agents.connectorOffDetail":
     "No agent can connect until an administrator or operations user enables it. Passports still work as REST credentials.",
-  "settings.tokenOnce": "Copy it now. This credential is shown only once.",
   "settings.token": "Credential",
   "settings.autonomy": "Autonomy tiers",
   "settings.autonomySub": "What runs immediately and what waits for approval",

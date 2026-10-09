@@ -127,17 +127,27 @@
    fieldset and form-stack draw it, so this sheet declares nothing for it. What
    is left is the token the drawer hands back.
 
-   The always-mounted live region the minted token lands in. It has no box of
-   its own — the plate inside it is the surface — and no focus ring, because
-   focus arrives here programmatically rather than by tabbing to it. */
+   The region the minted passport lands in. It has no box of its own and no
+   focus ring, because focus arrives here programmatically, not by tabbing. */
+.passport-token {
+  display: grid;
+  gap: var(--space-3);
+}
 .passport-token:focus {
   outline: none;
 }
-.passport-token-value {
-  margin-top: var(--space-1);
-  /* A token is one unbroken run of characters and must wrap inside the panel
-     rather than set its minimum width. */
-  overflow-wrap: anywhere;
+/* The minted token with its copy control, and the code example with its
+   language switch: each a column at one interval. */
+.passport-stack {
+  display: grid;
+  gap: var(--space-2);
+}
+.passport-snippet-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 /* Struck, not dimmed: dimming a revoked row drops it under the AA contrast
    floor (B-EP09.21), and the revoked row is the one a reader most needs. */

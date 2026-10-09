@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import { SettingsScreen, settingsAddress } from "./settings";
 
@@ -28,7 +29,10 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(URL, "createObjectURL");
+  Reflect.deleteProperty(URL, "revokeObjectURL");
   globalThis.localStorage.clear();
   globalThis.location.hash = "";
 });
@@ -56,8 +60,15 @@ const render = (tab: string) => {
 // The POST answers with a token exactly once, and the caller decides whether it
 // succeeds or hangs, so a refusal and an in-flight attempt are both reachable
 // without a second fixture.
+const API_BASE = "https://crm.example.test/v1";
+
 function mintBackend(
-  opts: { refuse?: boolean; hang?: boolean; expired?: boolean } = {},
+  opts: {
+    refuse?: boolean;
+    hang?: boolean;
+    expired?: boolean;
+    bundle?: "serves" | "refuses";
+  } = {},
 ): ReturnType<typeof vi.fn> {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -105,8 +116,29 @@ function mintBackend(
         token: "mgp_live_0f3a91c4",
       });
     }
+    if (url.endsWith("/v1/agent-bundle")) {
+      if (opts.bundle === "refuses") {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Service Unavailable",
+            status: 503,
+            detail: "Set MARGINCE_PUBLIC_BASE_URL to serve the skill.",
+          },
+          503,
+        );
+      }
+      return new Response(new Blob(["PK"]), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/zip",
+          "Content-Disposition": 'attachment; filename="margince-skill.zip"',
+        },
+      });
+    }
     return jsonResponse({
       data: [],
+      api_base_url: API_BASE,
       page: { next_cursor: null, has_more: false },
     });
   });
@@ -184,10 +216,10 @@ describe("PassportCard — minting", () => {
     );
 
     const token = await within(dialog).findByText("mgp_live_0f3a91c4");
-    // The region is a live one and focus lands in it: the token is disclosed
-    // exactly once, so a reader whose focus stayed on the button would have to
-    // hunt for what they just made.
-    const region = token.closest('[role="status"]');
+    // Focus lands on the region holding it: the token is disclosed exactly
+    // once, so a reader whose focus stayed on the button would have to hunt
+    // for what they just made.
+    const region = token.closest(".passport-token");
     expect(region).toBeTruthy();
     expect(region).toHaveFocus();
     // Still open. Closing on success would take the only sight of the
@@ -321,5 +353,140 @@ describe("PassportCard — minting", () => {
     expect(reopened).toBeTruthy();
     expect(within(reopened).queryByText("mgp_live_0f3a91c4")).toBeNull();
     expect(within(reopened).getByLabelText("Agent name")).toHaveValue("");
+  });
+});
+
+// What the anchor was told to save, read at the click: the module removes it
+// straight after.
+function captureDownloads(): string[] {
+  const saved: string[] = [];
+  Object.defineProperties(URL, {
+    createObjectURL: { configurable: true, value: vi.fn(() => "blob:skill") },
+    revokeObjectURL: { configurable: true, value: vi.fn() },
+  });
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
+    saved.push(this.download);
+  });
+  return saved;
+}
+
+function bundleRequests(backend: ReturnType<typeof vi.fn>): number {
+  return backend.mock.calls.filter((call) =>
+    String(call[0] instanceof Request ? call[0].url : call[0]).endsWith(
+      "/v1/agent-bundle",
+    ),
+  ).length;
+}
+
+async function snippetOf(scope: HTMLElement) {
+  return within(scope).findByTestId("passport-snippet");
+}
+
+describe("PassportCard — using a passport", () => {
+  it("says what a passport is and offers both ways to use one", async () => {
+    vi.stubGlobal("fetch", mintBackend());
+    render("agents");
+    expect(
+      await screen.findByText(/a passport is your personal access token/i),
+    ).toBeTruthy();
+    expect(screen.getByText("In your AI tool")).toBeTruthy();
+    expect(screen.getByText("In your own code")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Your passports" }),
+    ).toBeTruthy();
+    expect(screen.getByText(/listed under Connected MCP clients/)).toBeTruthy();
+  });
+
+  it("downloads the skill as margince-skill.zip with no passport minted", async () => {
+    const user = userEvent.setup();
+    const backend = mintBackend();
+    vi.stubGlobal("fetch", backend);
+    const saved = captureDownloads();
+    render("agents");
+    await user.click(
+      await screen.findByRole("button", { name: "Download skill" }),
+    );
+    await vi.waitFor(() => expect(saved).toEqual(["margince-skill.zip"]));
+    expect(bundleRequests(backend)).toBe(1);
+  });
+
+  it("says why the skill did not download", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", mintBackend({ bundle: "refuses" }));
+    const saved = captureDownloads();
+    render("agents");
+    await user.click(
+      await screen.findByRole("button", { name: "Download skill" }),
+    );
+    const cause = await screen.findByText(/MARGINCE_PUBLIC_BASE_URL/);
+    expect(cause.closest('[role="alert"]')).toHaveTextContent(
+      "Skill not downloaded",
+    );
+    expect(saved).toEqual([]);
+  });
+
+  it("switches the example's language and copies the code it shows", async () => {
+    const user = userEvent.setup();
+    const clipboard = stubClipboard("accepts");
+    vi.stubGlobal("fetch", mintBackend());
+    render("agents");
+    const snippet = await snippetOf(document.body);
+    expect(snippet).toHaveTextContent(`curl "${API_BASE}/companies?limit=5"`);
+
+    await user.click(screen.getByRole("button", { name: "Python" }));
+    expect(snippet).toHaveTextContent('os.environ["MARGINCE_PASSPORT"]');
+    await user.click(screen.getByRole("button", { name: "JavaScript" }));
+    expect(snippet).toHaveTextContent("process.env.MARGINCE_PASSPORT");
+    expect(snippet).toHaveTextContent(`${API_BASE}/companies?limit=5`);
+
+    await user.click(screen.getByRole("button", { name: "Copy example" }));
+    await vi.waitFor(() => expect(clipboard.written).toHaveLength(1));
+    expect(clipboard.written[0]).toBe(snippet.textContent);
+    expect(clipboard.written[0]).toContain("fetch(");
+  });
+
+  it("copies the new passport, keeps it out of the live region and out of the example", async () => {
+    const user = userEvent.setup();
+    const clipboard = stubClipboard("accepts");
+    vi.stubGlobal("fetch", mintBackend());
+    const dialog = await openMintDialog(user);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Mint passport" }),
+    );
+    await within(dialog).findByText("mgp_live_0f3a91c4");
+
+    const status = within(dialog).getByRole("status");
+    expect(status).toHaveTextContent(/passport created/i);
+    expect(status.textContent).not.toContain("mgp_");
+
+    const snippet = await snippetOf(dialog);
+    expect(snippet.textContent).toContain("$MARGINCE_PASSPORT");
+    expect(snippet.textContent).not.toContain("mgp_");
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Copy passport" }),
+    );
+    await vi.waitFor(() =>
+      expect(clipboard.written).toEqual(["mgp_live_0f3a91c4"]),
+    );
+  });
+
+  it("downloads the skill from the dialog without closing it", async () => {
+    const user = userEvent.setup();
+    const backend = mintBackend();
+    vi.stubGlobal("fetch", backend);
+    const saved = captureDownloads();
+    const dialog = await openMintDialog(user);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Mint passport" }),
+    );
+    await within(dialog).findByText("mgp_live_0f3a91c4");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Download skill" }),
+    );
+    await vi.waitFor(() => expect(saved).toEqual(["margince-skill.zip"]));
+    expect(within(dialog).getByText("mgp_live_0f3a91c4")).toBeTruthy();
   });
 });

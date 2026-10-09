@@ -61,7 +61,7 @@ func TestTheBundleIsOneFolderOfFourFilesNamingTheBase(t *testing.T) {
 		if !strings.Contains(files[guide], testBase) {
 			t.Errorf("%s does not name the base URL %s", guide, testBase)
 		}
-		if strings.Contains(files[guide], "{{") {
+		if strings.Contains(files[guide], "{{.") {
 			t.Errorf("%s still carries template syntax", guide)
 		}
 	}
@@ -69,6 +69,19 @@ func TestTheBundleIsOneFolderOfFourFilesNamingTheBase(t *testing.T) {
 		if strings.Contains(body, "mgp_") {
 			t.Errorf("%s carries a passport-shaped token; the bundle holds no credential", name)
 		}
+	}
+}
+
+// Claude Code refuses a Bash command that expands a shell variable it cannot
+// check, so a skill telling the agent to write `$MARGINCE_PASSPORT` sends nothing.
+func TestTheSkillHasCurlReadThePassportItself(t *testing.T) {
+	skill := unzip(t)["margince/SKILL.md"]
+	want := "--variable %MARGINCE_PASSPORT \\\n  --expand-header 'Authorization: Bearer {{MARGINCE_PASSPORT}}'"
+	if !strings.Contains(skill, want) {
+		t.Errorf("SKILL.md does not show curl reading the passport from the environment:\n%s", skill)
+	}
+	if strings.Contains(skill, "$MARGINCE_PASSPORT") {
+		t.Error("SKILL.md tells the agent to expand $MARGINCE_PASSPORT in a command")
 	}
 }
 

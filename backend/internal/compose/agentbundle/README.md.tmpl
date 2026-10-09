@@ -36,6 +36,15 @@ of these places, under the name `MARGINCE_PASSPORT`:
   read -rs MARGINCE_PASSPORT && export MARGINCE_PASSPORT
   ```
 
+The AI tool reads the passport from `MARGINCE_PASSPORT` only, so set it in the shell
+you start the tool from. From the Keychain:
+
+```sh
+export MARGINCE_PASSPORT="$(security find-generic-password -s MARGINCE_PASSPORT -w)"
+```
+
+From 1Password: `export MARGINCE_PASSPORT="$(op read '<item reference>')"`.
+
 ## Install the skill
 
 Unzip `margince-skill.zip`. It holds one folder, `margince`.
@@ -51,10 +60,10 @@ Unzip `margince-skill.zip`. It holds one folder, `margince`.
 
 ## Try it
 
-With the passport in `MARGINCE_PASSPORT`, this asks Margince who the passport acts for:
+With the passport in `MARGINCE_PASSPORT`, this lists one company you can see:
 
 ```sh
-curl {{.BaseURL}}/me -H "Authorization: Bearer $MARGINCE_PASSPORT"
+curl '{{.BaseURL}}/companies?limit=1' -H "Authorization: Bearer $MARGINCE_PASSPORT"
 ```
 
 ## When a passport ends
