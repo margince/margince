@@ -188,12 +188,14 @@ describe("panel.css keeps the row's hover on its two variants", () => {
   // body-after-body seam at equal specificity and only sheet order decides.
   it("draws no seam between a group head and the body it names", () => {
     const rules = cssRules(panelCss());
-    const lastContent = (selector: string) =>
-      rules.findLastIndex(
-        (rule) =>
-          rule.selector === selector &&
-          declaredValue(rule.block, "content") !== undefined,
-      );
+    const lastContent = (selector: string): number =>
+      rules
+        .map(
+          (rule) =>
+            rule.selector === selector &&
+            declaredValue(rule.block, "content") !== undefined,
+        )
+        .lastIndexOf(true);
     const reset = lastContent(".panel-grouphead + .panel-body::before");
     expect(reset).toBeGreaterThanOrEqual(0);
     expect(declaredValue(rules[reset]?.block ?? "", "content")).toBe("none");

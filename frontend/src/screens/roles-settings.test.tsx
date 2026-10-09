@@ -75,6 +75,7 @@ function member(email: string, roles?: string[]): User {
     display_name: email,
     status: "active",
     is_agent: false,
+    timezone: "Europe/Berlin",
     ...(roles ? { roles } : {}),
   };
 }

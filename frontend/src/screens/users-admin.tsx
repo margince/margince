@@ -10,7 +10,7 @@ import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { CellStrip } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { formatDate, formatDateTime } from "../format/format";
+import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { formatRelativeTime } from "../format/relativetime";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -190,6 +190,7 @@ function MembersTable({
         {
           key: "verbs",
           header: t("table.actions"),
+          headerHidden: true,
           fold: "end",
           render: (u) => <MemberVerbs member={u} />,
         },
@@ -293,9 +294,9 @@ function MemberActivity({
     <CellStack>
       {management && <LastActive at={member.last_active_at} />}
       {added && (
-        <time className="t-caption" dateTime={added}>
+        <time className="t-caption users-nowrap" dateTime={added}>
           {t("users.addedOn", {
-            date: formatDate(added, locale, viewerZone()),
+            date: formatDateAbbrev(added, locale, viewerZone()),
           })}
         </time>
       )}

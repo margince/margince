@@ -38,10 +38,10 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
-  max-inline-size: 9rem;
+  max-inline-size: 13rem;
 }
 .users-role-select {
-  inline-size: 9rem;
+  inline-size: 13rem;
 }
 
 /* A capped strip truncates its badges instead of widening the table; a folded
