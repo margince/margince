@@ -31573,7 +31573,7 @@ components:
             rebound to another model drops the attempts of the one before it.
         failures:
           type: integer
-          description: How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached.
+          description: How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`), the provider's refusal of a malformed request (`request_rejected`), and the model outcomes `output_withheld` and `output_rejected` are not failures.
         last_sentinel:
           type: string
           description: |
@@ -31704,7 +31704,7 @@ components:
         task: { type: string }
         window: { type: string }
         total: { type: integer, format: int64, description: 'Logical calls in the window, cache hits excluded.' }
-        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt failed.' }
+        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt served the caller nothing: it failed, or its answer was withheld or refused.' }
         steps: { type: array, items: { $ref: '#/components/schemas/AiFlowStep' }, description: 'The decision model first, then each tier in ladder order.' }
     AiFlowStep:
       type: object
@@ -31715,7 +31715,7 @@ components:
         provider: { type: string }
         model: { type: string }
         attempts: { type: integer, format: int64 }
-        answered: { type: integer, format: int64, description: 'Logical calls this step answered.' }
+        answered: { type: integer, format: int64, description: 'Logical calls this step answered and served to the caller.' }
         p50_ms: { type: integer, format: int64 }
         gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
     AiDeferredWork:
@@ -31886,10 +31886,12 @@ components:
             turned the call away and said nothing about why, so the model was never reached and
             no claim is made about the cause.
 
-            Two codes are outcomes rather than failures: a model was reached and decided.
+            Three codes are not failures. Two are outcomes, where a model was reached and decided.
             `output_withheld` — the provider declined to deliver the answer: a refusal, a
-            safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request
-            malformed, which is a defect on the calling side.
+            safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the
+            task's own check refused the answer on every attempt, so the caller was served nothing.
+            The third, `request_rejected`, is the provider's refusal rather than a model outcome:
+            its own error code named the request malformed, which is a defect on the calling side.
 
             `timeout` — the attempt's deadline stopped it: the task's model call timeout on a
             ladder attempt, its decision model timeout on a decision attempt. A failure like
