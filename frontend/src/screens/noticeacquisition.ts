@@ -3,6 +3,10 @@
 
 import type { components } from "../api/schema";
 import { provenanceLabel } from "../design-system/provenance";
+import {
+  type AcquisitionKind,
+  isAcquisitionKind,
+} from "../format/acquisitionkinds";
 import { formatDate } from "../format/format";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -13,7 +17,7 @@ export type NoticeAcquisition = NonNullable<
   components["schemas"]["NoticeAcquisition"]
 >;
 
-const KIND_LABEL: Partial<Record<string, MessageKey>> = {
+const KIND_LABEL: Readonly<Record<AcquisitionKind, MessageKey>> = {
   subject_initiated: "notice.acq.subjectInitiated",
   customer_contract: "notice.acq.customerContract",
   requested_quote_or_meeting: "notice.acq.requested",
@@ -33,8 +37,7 @@ const RULE: Partial<Record<string, { label: MessageKey; hint: MessageKey }>> = {
 };
 
 export function acquisitionKindLabel(kind: string, t: Translator): string {
-  const key = KIND_LABEL[kind];
-  return key ? t(key) : humanizeToken(kind);
+  return isAcquisitionKind(kind) ? t(KIND_LABEL[kind]) : humanizeToken(kind);
 }
 
 export function noticeRuleLabel(rule: string, t: Translator): string {

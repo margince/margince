@@ -91,6 +91,12 @@ type Override = "release" | "pin";
 // or the record page, where the id is on screen.
 type OverrideTarget = Readonly<{ activityId: string }>;
 
+type OverrideDecision = Readonly<{
+  target: OverrideTarget | null;
+  kind: Override;
+  reason: string;
+}>;
+
 function OverrideModal({
   target,
   kind,
@@ -105,17 +111,18 @@ function OverrideModal({
   const [reason, setReason] = useState("");
 
   const decide = useMutation({
-    mutationFn: async (stated: string) => {
-      if (!target) {
-        return;
+    mutationFn: async (decision: OverrideDecision) => {
+      // A decision about nothing is a failure, never a success that closes the dialog.
+      if (!decision.target) {
+        throw new Error("no record chosen for this decision");
       }
       const path =
-        kind === "release"
+        decision.kind === "release"
           ? ("/retention/restrictions/{activityId}/release" as const)
           : ("/retention/restrictions/{activityId}/pin" as const);
       const { error } = await api.POST(path, {
-        params: { path: { activityId: target.activityId } },
-        body: { reason: stated },
+        params: { path: { activityId: decision.target.activityId } },
+        body: { reason: decision.reason },
       });
       if (error) {
         throwProblem(error);
@@ -142,7 +149,7 @@ function OverrideModal({
       confirmLabel={t(`restricted.${kind}.confirm`)}
       confirmVariant="danger"
       confirmDisabled={reason.trim() === ""}
-      onConfirm={() => decide.mutate(reason)}
+      onConfirm={() => decide.mutate({ target, kind, reason })}
       pending={decide.isPending}
       error={decide.error ? problemMessageOf(decide.error, t) : null}
     >
@@ -340,7 +347,10 @@ export function RestrictedRecordsCard() {
                     className="restricted-pin"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      setPinning({ activityId: pinId.trim() });
+                      // The disabled button is a hint; the submit itself refuses a malformed id.
+                      if (pinIdIsWellFormed) {
+                        setPinning({ activityId: pinId.trim() });
+                      }
                     }}
                   >
                     <TextInput

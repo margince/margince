@@ -390,18 +390,24 @@ function AuditTarget({ entry }: Readonly<{ entry: AuditLogEntry }>) {
   );
 }
 
-function ShortId({ id }: Readonly<{ id: string }>) {
+// The contract requires the id, but a server from another version may omit it.
+function ShortId({ id }: Readonly<{ id: string | null | undefined }>) {
   const t = useT();
-  const clip = useClipboardCopy(id, {
+  const full = id ?? "";
+  const clip = useClipboardCopy(full, {
     copy: t("settings.auditCopyId"),
     copied: t("settings.auditIdCopied"),
     remedy: t("settings.auditCopyRemedy"),
   });
+  const tail = idTail(full);
+  if (!tail) {
+    return <span className="t-caption">{t("settings.auditNoValue")}</span>;
+  }
   return (
     <>
       <span className="auditlog-shortid">
-        <code className="auditlog-id" title={id}>
-          {idTail(id)}
+        <code className="auditlog-id" title={full}>
+          {tail}
         </code>
         <IconAction
           inline

@@ -5963,7 +5963,7 @@ export const de = {
   "notice.due": "Fällig",
   "notice.owner": "Zuständig",
   "notice.unassigned": "Nicht zugewiesen",
-  "notice.contactHidden": "Kontakt für dich nicht sichtbar",
+  "notice.recordUnavailable": "Datensatz nicht verfügbar",
   "notice.dutyFor": "{rule} für {contact}",
   "notice.rowActions": "Aktionen für {duty}",
   "notice.noAcquisition": "Kein Herkunftsnachweis",
@@ -5987,7 +5987,7 @@ export const de = {
     "Fällig bei der Erhebung, weil die Daten vom Kontakt selbst stammen.",
   "notice.ruleHint.art14":
     "Fällig binnen eines Monats nach Erhalt, weil die Daten aus anderer Quelle stammen.",
-  "notice.state.open": "Offen",
+  "notice.state.open": "Ausstehend",
   "notice.state.assigned": "Zugewiesen",
   "notice.state.queued": "In Warteschlange",
   "notice.state.deliveryFailed": "Zustellung fehlgeschlagen",

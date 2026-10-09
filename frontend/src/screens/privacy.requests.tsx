@@ -44,19 +44,35 @@ type UpdateDataSubjectRequest =
   components["schemas"]["UpdateDataSubjectRequest"];
 type User = components["schemas"]["User"];
 
-// A contact id, as opposed to an external identifier typed in by hand.
+// A record id, as opposed to an external identifier typed in by hand.
 const SUBJECT_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// The label when the subject resolves; a contact id that does not resolve is
-// withheld, and an external identifier reads as it was written.
+// A record id that does not resolve may be hidden or erased, and the server
+// sends both the same, so the wording claims neither.
 export function subjectName(dsr: DataSubjectRequest, t: Translator): string {
   if (dsr.subject_label) {
     return dsr.subject_label;
   }
   return SUBJECT_UUID_RE.test(dsr.subject_ref)
-    ? t("notice.contactHidden")
+    ? t("notice.recordUnavailable")
     : dsr.subject_ref;
+}
+
+// Linked only to the record the label resolved to, so a lead never opens as a contact.
+function DsrSubject({ dsr }: Readonly<{ dsr: DataSubjectRequest }>) {
+  const t = useT();
+  if (dsr.subject_label && dsr.subject_kind) {
+    return (
+      <EntityRef
+        kind={dsr.subject_kind}
+        id={dsr.subject_ref}
+        name={dsr.subject_label}
+        newTab
+      />
+    );
+  }
+  return <span className="privacy-wrap">{subjectName(dsr, t)}</span>;
 }
 
 export function DsrTable({
@@ -320,16 +336,7 @@ function DsrFacts({
     {
       key: "subject",
       term: t("privacy.subject"),
-      value: SUBJECT_UUID_RE.test(dsr.subject_ref) ? (
-        <EntityRef
-          kind="contact"
-          id={dsr.subject_ref}
-          name={dsr.subject_label ?? t("notice.contactHidden")}
-          newTab
-        />
-      ) : (
-        <span className="privacy-wrap">{dsr.subject_ref}</span>
-      ),
+      value: <DsrSubject dsr={dsr} />,
     },
     {
       key: "kind",

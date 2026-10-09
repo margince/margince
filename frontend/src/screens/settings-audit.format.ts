@@ -156,6 +156,6 @@ export const ROW_SCOPE_WORDS: Readonly<Record<string, MessageKey>> = {
 
 // The tail, not the head: a uuidv7 leads with its timestamp. Every recent id
 // shares its first characters, and only the random end tells two apart.
-export function idTail(id: string): string {
-  return id.slice(-8);
+export function idTail(id: string | null | undefined): string {
+  return (id ?? "").slice(-8);
 }

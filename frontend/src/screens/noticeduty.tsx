@@ -12,7 +12,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import { useCan } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { type Fact, FactList } from "../design-system/factlist";
@@ -49,7 +49,7 @@ export function NoticeDuty({
   const { locale } = useLocale();
   const caseId = item.id;
   const queryClient = useQueryClient();
-  const mayWrite = useCan("contact", "update");
+  const mayWrite = useCanWrite("contact", "update");
   // The worklist row names whose queue it sits in, not who claimed the duty.
   // Only a reader of the privacy queue may ask the case itself.
   const canReadCase = useCan("privacy_request", "read");

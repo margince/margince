@@ -168,9 +168,8 @@ const meta: Meta<typeof AuditLogCard> = {
 export default meta;
 type Story = StoryObj<typeof AuditLogCard>;
 
-// An agent for a member, the viewer, a delete, a connector import and a system
-// expiry. They cover every actor kind, every action tone, and labelled and
-// unlabelled targets.
+// Every actor kind and action tone, labelled and unlabelled targets. Rows: an
+// agent for a member, the viewer, a delete, a connector import, a system expiry.
 export const Trail: Story = { render: story(page(ENTRIES)) };
 
 export const Expanded: Story = {

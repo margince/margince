@@ -71,7 +71,7 @@ export function NoticeCasesCard() {
 
   // `privacy_request:read`, which is what consent/noticeownership.go asks for.
   const canSee = useCan("privacy_request", "read");
-  const canWork = useCan("privacy_request", "update");
+  const canWork = useCanWrite("privacy_request", "update");
   // Sending writes the contact's consent record, a grant of its own.
   const canSend = useCanWrite("contact", "update");
   // The probe itself: capability predicates read false while /me is in flight.
@@ -280,7 +280,8 @@ function NoticeTable({
               name={row.contact_name}
             />
           ) : (
-            <span className="t-caption">{t("notice.contactHidden")}</span>
+            // A hidden contact and an erased one both arrive nameless.
+            <span className="t-caption">{t("notice.recordUnavailable")}</span>
           )}
           <span className="t-caption">
             {acquisitionCaption(row.acquisition, t, locale, tz)}

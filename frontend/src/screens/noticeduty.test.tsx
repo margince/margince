@@ -37,7 +37,7 @@ function dutyDay(duty = OWED) {
 
 // The server a writer meets: the queue with one duty, a /me that may update
 // contacts, and every write recorded.
-function stubDuty(duty = OWED) {
+function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
   const writes: string[] = [];
   vi.stubGlobal(
     "fetch",
@@ -64,6 +64,7 @@ function stubDuty(duty = OWED) {
       if (path.endsWith("/me")) {
         return jsonResponse(
           meFixture({
+            seat,
             allow: { contact: ["read", "update"], privacy_request: ["read"] },
           }),
         );
@@ -137,5 +138,19 @@ describe("a privacy-notice duty on the Focus card", () => {
 
     expect(await screen.findByText(en["notice.noAcquisition"])).toBeTruthy();
     expect(screen.queryByText(en["noticeDuty.obtainedOn"])).toBeNull();
+  });
+
+  it("offers a read seat no verb, even with the contact grant", async () => {
+    stubDuty(OWED, "read");
+    renderWorklist();
+
+    // The case read answers only once /me has, so the seat is known here.
+    expect(await screen.findByText(en["notice.unassigned"])).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["noticeDuty.sendNotice"] }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["noticeDuty.end"] }),
+    ).toBeNull();
   });
 });

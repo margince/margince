@@ -26,6 +26,7 @@ const ASSIGNED: DataSubjectRequest = {
   kind: "erasure",
   subject_ref: "00000000-0000-4000-8000-0000000000c1",
   subject_label: "Lena Hoffmann",
+  subject_kind: "contact",
   status: "in_progress",
   assignee_id: "u-1",
   due_at: "2026-08-01T00:00:00Z",
@@ -37,6 +38,7 @@ const EXTERNAL: DataSubjectRequest = {
   kind: "access",
   subject_ref: "partner-reference-0042@acme.test",
   subject_label: null,
+  subject_kind: null,
   status: "open",
   due_at: "2099-10-01T00:00:00Z",
   created_at: "2026-08-01T00:00:00Z",
@@ -47,6 +49,7 @@ const CLOSED: DataSubjectRequest = {
   kind: "rectify",
   subject_ref: "00000000-0000-4000-8000-0000000000c3",
   subject_label: null,
+  subject_kind: null,
   status: "fulfilled",
   resolution: "Corrected the postal address on 12 August",
   due_at: "2026-08-20T00:00:00Z",
@@ -121,6 +124,16 @@ export const RowsPhone: Story = {
 
 /** An overdue erasure in progress: its holder can be handed back to nobody. */
 export const Working: Story = { render: drawer(ASSIGNED) };
+
+/** A lead subject links to the lead, never to a contact of the same id. */
+export const LeadSubject: Story = {
+  render: drawer({
+    ...ASSIGNED,
+    subject_ref: "00000000-0000-4000-8000-0000000000d4",
+    subject_label: "Jonas Berg",
+    subject_kind: "lead",
+  }),
+};
 
 /** A request the reader may read but not work: facts only, no verbs. */
 export const ReadOnly: Story = {

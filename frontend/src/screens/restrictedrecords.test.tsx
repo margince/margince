@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -261,6 +262,34 @@ describe("RestrictedRecordsCard", () => {
     );
     expect(screen.getByRole("button", { name: /retry/i })).toBeVisible();
     expect(screen.queryByText(/No records held/)).not.toBeInTheDocument();
+  });
+
+  it("refuses to pin a malformed id even when the form is submitted", async () => {
+    const sent = backend({ retention_policy: ["read", "update"] }, []);
+    const user = userEvent.setup();
+    render(<RestrictedRecordsCard />);
+
+    const id = await screen.findByPlaceholderText("Record ID");
+    await user.type(id, "not-a-record");
+    const form = id.closest("form");
+    if (!(form instanceof HTMLFormElement)) throw new Error("no pin form");
+    fireEvent.submit(form);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.clear(id);
+    await user.type(id, HELD_ANGEBOT.activity_id);
+    fireEvent.submit(form);
+    await user.type(
+      await screen.findByRole("textbox", { name: /Why/ }),
+      "missed by the derivation",
+    );
+    await user.click(screen.getByRole("button", { name: "Pin and hold" }));
+    await waitFor(() =>
+      expect(sent.find((call) => call.key.endsWith("/pin"))).toEqual({
+        key: `POST /retention/restrictions/${HELD_ANGEBOT.activity_id}/pin`,
+        body: { reason: "missed by the derivation" },
+      }),
+    );
   });
 
   it("offers no decision to a role that may read the list but not decide", async () => {

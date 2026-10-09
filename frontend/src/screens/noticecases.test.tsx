@@ -214,14 +214,14 @@ describe("the disclosure-duty queue", () => {
     expect(within(row).queryByText(en["notice.state.open"])).toBeNull();
   });
 
-  it("says when a duty rests on no evidence and when its contact is withheld", async () => {
+  it("says when a duty rests on no evidence and when its contact is not available", async () => {
     stubRoutes({
       "GET /privacy/notice-cases": () =>
         queuePage([{ ...OWED, contact_name: null, acquisition: null }]),
     });
     render(<NoticeCasesCard />);
 
-    const row = await findDuty(en["notice.contactHidden"]);
+    const row = await findDuty(en["notice.recordUnavailable"]);
     expect(
       within(row).getByText(en["notice.noAcquisition"]),
     ).toBeInTheDocument();
@@ -430,6 +430,30 @@ describe("the disclosure-duty queue", () => {
       await screen.findByText(en["notice.readOnlyForPrivacy"]),
     ).toBeInTheDocument();
     expect(screen.queryByText("Lena Hoffmann")).not.toBeInTheDocument();
+  });
+
+  it("offers a read seat no verb, whatever its roles grant", async () => {
+    stubRoutes({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            seat: "read",
+            roles: ["admin"],
+            allow: {
+              privacy_request: ["read", "update"],
+              contact: ["read", "update"],
+            },
+          }),
+        ),
+    });
+    render(<NoticeCasesCard />);
+
+    const row = await findDuty("Lena Hoffmann");
+    expect(within(row).getByText(en["notice.unassigned"])).toBeInTheDocument();
+    expect(within(row).queryByRole("combobox")).toBeNull();
+    expect(
+      within(row).queryByRole("button", { name: /^Actions for/ }),
+    ).toBeNull();
   });
 
   it("reaches a duty the first page did not carry", async () => {

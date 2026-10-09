@@ -6122,7 +6122,7 @@ export const en = {
   "notice.due": "Due",
   "notice.owner": "Owner",
   "notice.unassigned": "Unassigned",
-  "notice.contactHidden": "Contact not visible to you",
+  "notice.recordUnavailable": "Record not available",
   "notice.dutyFor": "{rule} for {contact}",
   "notice.rowActions": "Actions for {duty}",
   "notice.noAcquisition": "No acquisition evidence",

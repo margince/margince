@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
+import { en } from "../i18n/en";
 import { steppedClock } from "../testing/steppedclock";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { auditEntry, jsonResponse, render } from "./settings.testkit";
@@ -373,6 +374,21 @@ describe("AuditLogCard", () => {
       expect(name.closest("td")).not.toHaveTextContent(VIEWER_ID);
     },
   );
+
+  it("says a target with no id has no value, and offers nothing to copy", async () => {
+    vi.stubGlobal(
+      "fetch",
+      auditLogBackend({ entries: [{ ...auditEntry, entity_id: undefined }] }),
+    );
+    render(<AuditLogCard />);
+
+    const none = await screen.findByText(en["settings.auditNoValue"]);
+    const cell = none.closest("td");
+    if (!(cell instanceof HTMLElement)) throw new Error("no target cell");
+    expect(
+      within(cell).queryByRole("button", { name: en["settings.auditCopyId"] }),
+    ).toBeNull();
+  });
 
   it("loads the next page under the first", async () => {
     const backend = auditLogBackend(
