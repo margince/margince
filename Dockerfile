@@ -9,7 +9,7 @@
 # Deployment-target-agnostic: no image bakes instance configuration. Every
 # setting comes from the runtime environment (the MARGINCE_* vars in
 # docs/reference/configuration.md); the api additionally reads a margince.yaml
-# mounted at MARGINCE_CONFIG for first-boot bootstrap. See docs/deployment.md.
+# mounted at MARGINCE_CONFIG for first-boot bootstrap. See docs/how-to/deploy-margince.md.
 #
 # EVERY BASE IMAGE IS PINNED BY DIGEST, tag and all. A tag is mutable:
 # `alpine:3.24` today and `alpine:3.24` next month can be different bytes, so a

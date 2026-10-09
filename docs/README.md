@@ -280,7 +280,10 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 ### Run it in production
 
-- [deployment.md](deployment.md): run Margince on your own servers.
+- [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
+  something fails.
+- [deployment.md](deployment.md): the old page, now a pointer to the two above.
 - [desktop-distribution.md](explanation/desktop-distribution.md): the one folder that runs Margince on
   macOS or Windows, with no Docker.
 

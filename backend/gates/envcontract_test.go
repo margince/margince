@@ -14,9 +14,10 @@ package gates
 //  2. every MARGINCE_* var .env.example names is still part of the product;
 //  3. every MARGINCE_* var configuration.md names is still part of the product;
 //  4. every MARGINCE_* var a deploy entrypoint hard-requires is named in
-//     .env.example — that file is the annotated template docs/deployment.md
-//     hands an operator, so a var the container refuses to boot without must
-//     not be discoverable only by reading the entrypoint script.
+//     .env.example — that file is the annotated template
+//     docs/how-to/deploy-margince.md hands an operator, so a var the container
+//     refuses to boot without must not be discoverable only by reading the
+//     entrypoint script.
 //
 // Unasserted, the three files drift apart: the template names credentials for a
 // process role that no longer exists, a secret an operator must provision goes
@@ -27,7 +28,7 @@ package gates
 // What these gates do NOT cover, stated rather than implied:
 //
 //   - Obligation 1 covers Go readers, in the licensed trees only. A var read
-//     solely by deploy shell or a workflow is documented in docs/deployment.md
+//     solely by deploy shell or a workflow is documented in configuration.md
 //     by hand, and this sweep walks the backend tree only.
 //     Obligations 2 and 3 do count those non-Go readers, because there the
 //     question is merely whether a name is still real.
@@ -82,12 +83,6 @@ var quotedEnvVarName = regexp.MustCompile(`"(MARGINCE_[A-Z0-9_]+)"`)
 const (
 	configurationDoc = "../docs/reference/configuration.md"
 	envExample       = "../.env.example"
-	// deploymentDoc is where a var read only by the deploy surface is
-	// documented. This file's own opening already names it as their home —
-	// "a var read solely by deploy shell or a workflow is documented in
-	// docs/deployment.md by hand" — and obligation 5 below is what turns "by
-	// hand" into an obligation.
-	deploymentDoc = "../docs/deployment.md"
 )
 
 // deploySurfaceRoots are the non-Go paths that configure a deployment: the
@@ -235,8 +230,8 @@ var entrypointRequired = regexp.MustCompile(`\$\{(MARGINCE_[A-Z0-9_]+):?\?`)
 
 // TestEntrypointRequiredVarsAreInTheEnvExample: a var the container refuses to
 // boot without belongs in the file an operator is handed, not only in the
-// script that rejects them. docs/deployment.md names .env.example as that
-// file, which is what makes this an obligation rather than a nicety.
+// script that rejects them. docs/how-to/deploy-margince.md names .env.example
+// as that file, which is what makes this an obligation rather than a nicety.
 func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 	t.Parallel()
 	offered := namesIn(t, envExample)
@@ -276,11 +271,11 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 // remembered, which is the failure mode obligation 1 removed for Go.
 // margince/margince#566.
 //
-// DEPLOYMENT.MD, not configuration.md, and the choice is this file's already
-// rather than one made here: configuration.md is "the table of record for the
-// binaries", and these vars are read by no binary. Splitting them across two
-// documents by which process happens to read them is how an operator ends up
-// checking the wrong one.
+// CONFIGURATION.MD, the table of record, in the section it gives the entrypoint
+// variables. Splitting variables across two documents by which process happens
+// to read them is how an operator ends up checking the wrong one. The section,
+// not the whole file, is read: `MARGINCE_DSN` is named in a dozen other rows, so
+// a whole-file match would pass with the entrypoint section deleted.
 //
 // It reuses obligation 4's `${VAR:?}` set rather than sweeping for mentions,
 // and inherits that set's stated limits exactly — the `:-default` form is not a
@@ -289,7 +284,7 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 // admit most of the deploy surface and leave the label meaningless.
 func TestEntrypointRequiredVarsAreDocumented(t *testing.T) {
 	t.Parallel()
-	documented := namesIn(t, deploymentDoc)
+	documented := namesInSection(t, configurationDoc, entrypointSection)
 
 	required := map[string]string{}
 	walkTextFiles(t, "../scripts/deploy", func(path, text string) {
@@ -315,8 +310,35 @@ func TestEntrypointRequiredVarsAreDocumented(t *testing.T) {
 	if len(missing) > 0 {
 		t.Errorf("%d var(s) a deploy entrypoint refuses to boot without, absent from %s — an operator "+
 			"provisioning this deployment has no way to learn they must supply them:\n\t%s",
-			len(missing), deploymentDoc, strings.Join(missing, "\n\t"))
+			len(missing), configurationDoc+" "+entrypointSection, strings.Join(missing, "\n\t"))
 	}
+}
+
+// entrypointSection is the configuration.md heading that owns the variables the
+// deploy entrypoints read before any binary starts.
+const entrypointSection = "## What the image entrypoint reads"
+
+// namesInSection is namesIn narrowed to one `## ` section: from the line that
+// starts with heading to the next `## ` line.
+func namesInSection(t *testing.T, path, heading string) map[string]bool {
+	t.Helper()
+	b, err := os.ReadFile(path) // #nosec G304 -- fixed path in the trusted source tree
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	_, after, found := strings.Cut(string(b), "\n"+heading)
+	if !found {
+		t.Fatalf("%s has no %q section — the entrypoint variables have no home an operator can find", path, heading)
+	}
+	section, _, _ := strings.Cut(after, "\n## ")
+	names := map[string]bool{}
+	for _, name := range envVarName.FindAllString(section, -1) {
+		names[name] = true
+	}
+	if len(names) == 0 {
+		t.Fatalf("%s %q names no MARGINCE_* var at all — a section that documents nothing cannot be the table of record", path, heading)
+	}
+	return names
 }
 
 func assertNamesOnlyLiveVars(t *testing.T, path string) {
