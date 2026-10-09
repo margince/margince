@@ -135,3 +135,20 @@ export async function pageOverflow(page: Page): Promise<string[]> {
       .map(({ name, overflow }) => `${name}: ${overflow}px past the viewport`);
   });
 }
+
+/**
+ * The tab a click opened, once its navigation has committed to `url`.
+ *
+ * A new tab loads the whole app from cold, which on a busy runner can take
+ * longer than an assertion's 5 seconds. Its URL reads "" until the navigation
+ * commits. Waiting for the commit, not the load, asks only whether
+ * the click opened the right place.
+ */
+export async function openedAt(
+  opened: Promise<Page>,
+  url: RegExp,
+): Promise<Page> {
+  const tab = await opened;
+  await tab.waitForURL(url, { waitUntil: "commit" });
+  return tab;
+}
