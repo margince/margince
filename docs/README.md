@@ -157,6 +157,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
   with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.
+- [ci-jobs.md](reference/ci-jobs.md): what each job of the merge check checks.
 - [ci-workflows.md](reference/ci-workflows.md): the GitHub workflows that run next to the merge check.
 - [platform-toolkit.md](reference/platform-toolkit.md): shared code for every module.
 - [gate-patterns.md](reference/gate-patterns.md): the kinds of check, and how each can miss things.
@@ -171,6 +172,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [vllm-self-hosting.md](reference/vllm-self-hosting.md): the same machine with vLLM.
 - [ai-thinking.md](reference/ai-thinking.md): how much a model thinks before it answers, and where you
   set it.
+- [ai-request-settings.md](reference/ai-request-settings.md): the time and thinking limits of each
+  task, and the call counts.
+- [ai-runtime-fields.md](reference/ai-runtime-fields.md): each field of the AI task contract, and of the
+  files that test a model.
 - [openrouter.md](reference/openrouter.md): how OpenRouter chooses a host, and the setting
   we ship.
 - [openrouter-routing-fields.md](reference/openrouter-routing-fields.md): each field of a `routing:`
@@ -243,8 +248,6 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 - [ai-runtime.md](explanation/ai-runtime.md): how an AI task chooses and calls its model.
 - [ai-provider-health.md](explanation/ai-provider-health.md): how we know a model provider is down.
-- [ai-request-settings.md](explanation/ai-request-settings.md): the time and thinking limits of each
-  task.
 - [agent-surface.md](explanation/agent-surface.md): how an agent works.
 - [ai-provenance-notice.md](explanation/ai-provenance-notice.md): the line on a draft from a model, and
   the EU AI Act rule it does not meet.

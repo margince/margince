@@ -128,7 +128,7 @@ func TestABrokerPresetInheritsTheDefaultAndCanOptOut(t *testing.T) {
 //
 // Nothing refuses it. The tier a ladder names is a capability class the
 // deployment binds, and `local_small` carries two jobs that pull apart:
-// docs/explanation/ai-runtime.md calls it "on-box, zero-egress", and degradeTo
+// docs/explanation/ai-runtime.md says it runs "on the same box", and degradeTo
 // makes it the floor every other rung falls to when a budget is spent. A
 // cloud-only deployment has no local model and still needs a floor, so it
 // binds the cheapest hosted one it has and the tier quietly stops meaning
