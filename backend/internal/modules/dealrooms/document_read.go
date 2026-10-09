@@ -64,10 +64,10 @@ const documentFrom = `deal_room_document d
 // without a principal because the buyer has none: the question is not whether
 // some reader is in the audience, it is whether the message is still open to
 // the workspace. A message narrowed, restricted or archived AFTER its file was
-// added drops out on the next read, which is the same re-check the rest of this
-// predicate already performs. The seller's own list does not carry the
-// predicate, so a seat that can remove a stale entry still sees it. It carries
-// sellerReadsTheCarrier instead.
+// added drops out on the next read. The rest of this predicate re-checks the
+// same way. The seller's own list does not carry the predicate, so a seat that
+// can remove a stale entry still sees it. It carries sellerReadsTheCarrier
+// instead.
 //
 // It needs the room aliased `r` and the attachment aliased `a`, and carries no
 // principal: the public download has none. The caller-bound half — may THIS
