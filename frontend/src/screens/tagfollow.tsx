@@ -6,7 +6,7 @@ import { useId, useState } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
+import { useCanWrite, useCanWriteRecord } from "../app/capability";
 import { Button, Checkbox, Modal, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
@@ -103,6 +103,12 @@ export function ContactsTagOffer({
   const t = useT();
   const [choosing, setChoosing] = useState(false);
   const [request, setRequest] = useState<BulkChangeRequest | null>(null);
+  // Tagging a contact writes to the contact. A reader without contact.update
+  // would only meet the bulk change's refusal, so the offer is not made.
+  const mayTagContacts = useCanWrite("contact", "update");
+  if (!mayTagContacts) {
+    return null;
+  }
   return (
     <>
       <Callout

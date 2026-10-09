@@ -188,10 +188,18 @@ describe("tagging a company offers the tag to its contacts", () => {
     },
   ];
 
-  function mountCompany() {
+  function mountCompany(contactGrant: string[] = ["update"]) {
     const sent: { path: string; body: unknown }[] = [];
+    const annaTagReads = { count: 0 };
     installFetchStub({
-      "GET /me": meRoute({ company: ["update"], contact: ["update"] } as never),
+      "GET /me": meRoute({
+        company: ["update"],
+        contact: contactGrant,
+      } as never),
+      "GET /records/contact/c-1/tags": () => {
+        annaTagReads.count += 1;
+        return jsonResponse({ data: [], withheld: false });
+      },
       "GET /tags": () => jsonResponse(VOCABULARY),
       [`GET /records/company/${COMPANY}/tags`]: () =>
         jsonResponse({ data: [], withheld: false }),
@@ -227,18 +235,21 @@ describe("tagging a company offers the tag to its contacts", () => {
       <StoryProviders>
         <ToastProvider>
           <TagsPanel entityType="company" entityID={COMPANY} canEdit />
+          {/* Anna's own panel, which the bulk change must refresh. */}
+          <TagsPanel entityType="contact" entityID="c-1" canEdit={false} />
           <ToastRegion />
         </ToastProvider>
       </StoryProviders>,
     );
-    return sent;
+    return { sent, annaTagReads };
   }
 
-  // Nine waits in sequence, one second each, so it states its own ceiling.
+  // Eleven waits in sequence, one second each, so it states its own ceiling.
   it("lists current contacts, marks who carries it, and tags the ticked ones in bulk", async () => {
     const user = userEvent.setup();
-    const sent = mountCompany();
+    const { sent, annaTagReads } = mountCompany();
     await applyProductX(user);
+    await waitFor(() => expect(annaTagReads.count).toBe(1));
 
     await user.click(
       await screen.findByRole("button", {
@@ -268,6 +279,8 @@ describe("tagging a company offers the tag to its contacts", () => {
     );
 
     await screen.findByText(/1 contact/);
+    // The tagged contact's own panel reads its tags again.
+    await waitFor(() => expect(annaTagReads.count).toBe(2));
     const items = [
       { id: "c-1", version: 3 },
       { id: "c-2", version: 7 },
@@ -293,11 +306,11 @@ describe("tagging a company offers the tag to its contacts", () => {
         },
       },
     ]);
-  }, 10_000);
+  }, 12_000);
 
   it("writes nothing to the contacts when the reader dismisses the offer", async () => {
     const user = userEvent.setup();
-    const sent = mountCompany();
+    const { sent } = mountCompany();
     await applyProductX(user);
 
     await user.click(
@@ -308,5 +321,23 @@ describe("tagging a company offers the tag to its contacts", () => {
       screen.queryByRole("button", { name: en["tags.offerContactsAccept"] }),
     ).toBeNull();
     expect(sent).toEqual([]);
+  });
+
+  // Tagging a contact is a write to the contact, which /bulk/preview refuses
+  // without contact.update, so the offer is not made.
+  it("offers nothing to a reader who may change the company but not contacts", async () => {
+    const user = userEvent.setup();
+    mountCompany(["read"]);
+    await applyProductX(user);
+
+    await screen.findByRole("button", { name: en["tags.add"] });
+    expect(
+      screen.queryByRole("button", { name: en["tags.offerContactsAccept"] }),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        en["tags.offerContactsTitle"].replace("{tag}", "Product X"),
+      ),
+    ).toBeNull();
   });
 });
