@@ -332,18 +332,12 @@ func digestLines(line writeLine) {
 		"Mở danh sách công việc:")
 }
 
-// confirmLines is the copy for messages addressed to a contact the installation
-// holds a record about, rather than to a colleague who works here.
-//
-// The English is the wording that shipped, unchanged: it is pinned by hash and
-// recorded on every consent proof, so moving a word here is a version bump, not
-// a translation. The order these are registered in is part of that — the
-// sections below run in sequence for the same reason.
-//
-// The German and Vietnamese use the formal address (Sie; quý khách or quý vị),
-// unlike the reset and invite copy above. Those speak to a colleague who works
-// here; these speak to a stranger the installation holds a record about, and
-// about their own rights.
+// confirmLines is the copy for a contact the installation holds a record about.
+// The English is pinned by hash on every consent proof, so moving a word or
+// reordering these registrations is a version bump, not a translation.
+// German and Vietnamese use the formal address (Sie; quý khách or quý vị). This
+// copy speaks to a stranger about their own rights, and the reset and invite
+// copy above to a colleague.
 func confirmLines(line writeLine) {
 	confirmAskLines(line)
 	recordNoticeLines(line)

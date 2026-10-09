@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 import { en } from "../../src/i18n/en";
 import { extensionLayers, filesMatching } from "./source-tree";
 
-// Derived from every catalog of a locale a bundler ships, core and extension: a
-// gate naming one file reads a smaller tree and still says PASS.
+// Derived from every shipped catalog of a locale, core and extension: a gate
+// that names one file reads a smaller tree and still passes.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..", "..", "..");

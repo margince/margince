@@ -38,12 +38,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "room.card.title",
   "tab.dealRoom",
   "buyer.eyebrow",
-  // Two sales nouns Vietnamese borrows rather than translates, on the
-  // drill-through's column headers. The vi catalog already carries both
-  // untranslated where they appear as words in a sentence — "Tên deal" on
-  // the partner and commission columns, "Pipeline" on the deal's own field —
-  // so translating them only here would give one screen a vocabulary the
-  // rest of the product does not use.
+  // Sales nouns Vietnamese borrows: vi writes "Tên deal" and "Pipeline" elsewhere,
+  // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
   "explain.col.pipeline",
   // The settings group heading. "AI" is the initialism Vietnamese uses too —

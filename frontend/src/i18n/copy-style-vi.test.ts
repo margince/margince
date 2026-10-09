@@ -149,7 +149,7 @@ function prose(value: string): string {
   return value.replace(/\{[^}]*\}/g, " ");
 }
 
-// A vendor's label quoted in “…” stays exactly as the English quotes it.
+// A vendor's label quoted in “…” stays as the English catalog quotes it.
 function unquoted(value: string): string {
   return prose(value).replace(/“[^“”]*”/g, " ");
 }
@@ -162,8 +162,8 @@ function escaped(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Owned by the Vocabulary table's Never column on the Vietnamese style page,
-// which sets each of these in code format; the last test holds the two equal.
+// Owned by the Never column of the Vietnamese style page's Vocabulary table, in
+// code format; the last test holds the two equal.
 const RETIRED_WORDS = [
   "thương vụ",
   "đầu mối",
@@ -242,7 +242,7 @@ const ORDINARY_COMPOUNDS = word(
   "giu",
 );
 
-// A file name or a URL is typed exactly as the reader must type it.
+// A file name or a URL keeps the spelling the reader must type.
 function withoutPaths(value: string): string {
   return unquoted(value).replace(
     /[^\s“”(),]*(?:\/|\.[a-z])[^\s“”(),]*/giu,
@@ -334,7 +334,7 @@ describe("vi copy style", () => {
   });
 
   // Edge whitespace is not checked: some values are fragments the code joins
-  // around markup, and their leading or trailing space is load-bearing.
+  // around markup, and they need their leading or trailing space.
   it("has no double space", () => {
     expect(matching(/ {2}/)).toEqual([]);
   });
