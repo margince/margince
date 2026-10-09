@@ -89,9 +89,8 @@ func carriesOperators(query string) bool {
 // exactly right — those are words the reader finished typing and the last is
 // the one still under the cursor.
 //
-// A fragment with no letter or digit ("%", "(") renders an empty tsquery, and
-// `:*` alone is a syntax error. Only Postgres knows which text lexes to
-// nothing, so the arm falls back to the empty tsquery, which `&&` drops.
+// `:*` alone is a syntax error, and "%" or "(" parse to nothing; `&&` drops
+// the empty tsquery the arm falls back to.
 func prefixArmSQL(tailPos int) string {
 	parsed := fmt.Sprintf(`plainto_tsquery('simple', f_unaccent($%d))`, tailPos)
 	return fmt.Sprintf(
