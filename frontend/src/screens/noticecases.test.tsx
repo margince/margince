@@ -43,6 +43,15 @@ function render(ui: ReactNode) {
 const OWED = {
   id: "case-1",
   contact_id: "contact-1",
+  contact_name: "Lena Hoffmann",
+  acquisition: {
+    kind: "purchased_or_imported",
+    occurred_at: "2025-11-30T10:00:00Z",
+    captured_at: "2025-12-01T09:00:00Z",
+    captured_by: "human:user-1",
+    captured_by_name: "Anna Weber",
+  },
+  allowed_routes: ["privacy_notice", "record_confirmation"],
   rule: "art14",
   due_at: "2026-01-01T00:00:00Z",
   state: "open",
@@ -53,6 +62,7 @@ const OWED = {
 const EXCUSED = {
   id: "case-2",
   contact_id: "contact-2",
+  contact_name: "Jonas Berg",
   rule: "art14",
   due_at: "2026-01-01T00:00:00Z",
   state: "exempt_with_reason",
@@ -125,6 +135,25 @@ function stubRoutes(
   return sent;
 }
 
+// A duty's row, found by the contact it names.
+async function findDuty(contact: string): Promise<HTMLElement> {
+  const row = (await screen.findByText(contact)).closest("tr");
+  if (!(row instanceof HTMLElement)) {
+    throw new Error(`no duty row names ${contact}`);
+  }
+  return row;
+}
+
+// The row's verbs sit behind its overflow menu, whose items portal to the body.
+async function pressVerb(
+  user: ReturnType<typeof userEvent.setup>,
+  row: HTMLElement,
+  verb: string,
+) {
+  await user.click(within(row).getByRole("button", { name: /^Actions for/ }));
+  await user.click(screen.getByRole("button", { name: verb }));
+}
+
 beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -139,7 +168,7 @@ describe("the disclosure-duty queue", () => {
     const sent = stubRoutes();
     render(<NoticeCasesCard />);
 
-    await screen.findByTestId("notice-case-case-1");
+    await findDuty("Lena Hoffmann");
     const listed = sent.find((s) => s.key === "GET /privacy/notice-cases");
     expect(listed?.url).toContain("state=open");
     expect(listed?.url).toContain("state=assigned");
@@ -154,27 +183,93 @@ describe("the disclosure-duty queue", () => {
     stubRoutes();
     render(<NoticeCasesCard />);
 
-    const row = await screen.findByTestId("notice-case-case-1");
+    const row = await findDuty("Lena Hoffmann");
     expect(within(row).getByText(en["notice.overdue"])).toBeInTheDocument();
   });
 
-  it("says a duty nobody has taken is unclaimed", async () => {
+  it("names the owner picker after the duty, and its empty face says unassigned", async () => {
     stubRoutes();
     render(<NoticeCasesCard />);
 
-    const row = await screen.findByTestId("notice-case-case-1");
-    expect(within(row).getByText(en["notice.unclaimed"])).toBeInTheDocument();
+    const row = await findDuty("Lena Hoffmann");
+    const picker = within(row).getByRole("combobox", {
+      name: "Owner of Art. 14 notice for Lena Hoffmann",
+    });
+    expect(picker).toHaveTextContent(en["notice.unassigned"]);
   });
 
-  it("names the owner picker after the duty it assigns", async () => {
+  it("says how the contact was obtained, by whom, and which rule set the deadline", async () => {
     stubRoutes();
     render(<NoticeCasesCard />);
 
-    const row = await screen.findByTestId("notice-case-case-1");
-    const picker = within(row).getByRole("combobox", {
-      name: "Owner of art14",
+    const row = await findDuty("Lena Hoffmann");
+    expect(
+      within(row).getByText("Purchased or imported on 30/11/2025 · Anna Weber"),
+    ).toBeInTheDocument();
+    expect(within(row).getByText("Art. 14 notice")).toHaveAttribute(
+      "title",
+      en["notice.ruleHint.art14"],
+    );
+    // An owed duty carries no state badge: the picker already says who has it.
+    expect(within(row).queryByText(en["notice.state.open"])).toBeNull();
+  });
+
+  it("says when a duty rests on no evidence and when its contact is withheld", async () => {
+    stubRoutes({
+      "GET /privacy/notice-cases": () =>
+        queuePage([{ ...OWED, contact_name: null, acquisition: null }]),
     });
-    expect(picker).toHaveAccessibleDescription(/^Due /);
+    render(<NoticeCasesCard />);
+
+    const row = await findDuty(en["notice.contactHidden"]);
+    expect(
+      within(row).getByText(en["notice.noAcquisition"]),
+    ).toBeInTheDocument();
+    expect(within(row).queryByText("contact-1")).toBeNull();
+    // A contact this reader cannot see is not one the send route would take.
+    const user = userEvent.setup();
+    await user.click(within(row).getByRole("button", { name: /^Actions for/ }));
+    expect(
+      screen.queryByRole("button", { name: en["noticeDuty.sendNotice"] }),
+    ).toBeNull();
+  });
+
+  it("sends the privacy notice to the duty's contact after a confirm", async () => {
+    const sent = stubRoutes({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["admin"],
+            allow: { privacy_request: ["read", "update"], contact: ["update"] },
+          }),
+        ),
+      "POST /contacts/contact-1/consent/privacy-notice": () =>
+        jsonResponse({
+          delivered_to: "lena@kps.test",
+          expires_at: "2026-02-01T00:00:00Z",
+          queued: true,
+          sendable: true,
+        }),
+    });
+    render(<NoticeCasesCard />);
+
+    const user = userEvent.setup();
+    await pressVerb(
+      user,
+      await findDuty("Lena Hoffmann"),
+      en["noticeDuty.sendNotice"],
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: en["notice.sendConfirm"] }),
+    );
+    await waitFor(() =>
+      expect(
+        sent.some(
+          (s) => s.key === "POST /contacts/contact-1/consent/privacy-notice",
+        ),
+      ).toBe(true),
+    );
   });
 
   it("offers no actions on a duty that has already ended", async () => {
@@ -184,10 +279,13 @@ describe("the disclosure-duty queue", () => {
     });
     render(<NoticeCasesCard />);
 
-    const row = await screen.findByTestId("notice-case-case-2");
+    const row = await findDuty("Jonas Berg");
     expect(
-      within(row).queryByRole("button", { name: en["notice.excuse"] }),
+      within(row).queryByRole("button", { name: /^Actions for/ }),
     ).not.toBeInTheDocument();
+    expect(
+      within(row).getByText(en["notice.state.exempt"]),
+    ).toBeInTheDocument();
     // And it still shows the ground, which is what an auditor opens it for.
     expect(within(row).getByText(/Told at the trade fair/)).toBeInTheDocument();
   });
@@ -199,11 +297,9 @@ describe("the disclosure-duty queue", () => {
     });
     render(<NoticeCasesCard />);
 
-    const row = await screen.findByTestId("notice-case-case-1");
+    const row = await findDuty("Lena Hoffmann");
     const user = userEvent.setup();
-    await user.click(
-      within(row).getByRole("button", { name: en["notice.excuse"] }),
-    );
+    await pressVerb(user, row, en["notice.excuse"]);
 
     const dialog = await screen.findByRole("dialog");
     await pickOption(
@@ -235,11 +331,9 @@ describe("the disclosure-duty queue", () => {
     stubRoutes();
     render(<NoticeCasesCard />);
 
-    const row = await screen.findByTestId("notice-case-case-1");
+    const row = await findDuty("Lena Hoffmann");
     const user = userEvent.setup();
-    await user.click(
-      within(row).getByRole("button", { name: en["notice.excuse"] }),
-    );
+    await pressVerb(user, row, en["notice.excuse"]);
 
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -255,7 +349,7 @@ describe("the disclosure-duty queue", () => {
     const sent = stubRoutes();
     render(<NoticeCasesCard />);
 
-    await screen.findByTestId("notice-case-case-1");
+    await findDuty("Lena Hoffmann");
     const user = userEvent.setup();
     await user.click(
       screen.getByRole("button", { name: en["notice.facetAll"] }),
@@ -280,17 +374,14 @@ describe("the disclosure-duty queue", () => {
     // filled in, one keystroke from confirming them.
     stubRoutes({
       "GET /privacy/notice-cases": () =>
-        queuePage([OWED, { ...OWED, id: "case-3" }]),
+        queuePage([OWED, { ...OWED, id: "case-3", contact_name: "Mia Klein" }]),
       "POST /privacy/notice-cases/case-1/excuse": () =>
         jsonResponse({ ...OWED, state: "exempt_with_reason" }),
     });
     render(<NoticeCasesCard />);
 
     const user = userEvent.setup();
-    const first = await screen.findByTestId("notice-case-case-1");
-    await user.click(
-      within(first).getByRole("button", { name: en["notice.excuse"] }),
-    );
+    await pressVerb(user, await findDuty("Lena Hoffmann"), en["notice.excuse"]);
     let dialog = await screen.findByRole("dialog");
     await pickOption(
       user,
@@ -305,10 +396,7 @@ describe("the disclosure-duty queue", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
 
-    const second = await screen.findByTestId("notice-case-case-3");
-    await user.click(
-      within(second).getByRole("button", { name: en["notice.excuse"] }),
-    );
+    await pressVerb(user, await findDuty("Mia Klein"), en["notice.excuse"]);
     dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("textbox")).toHaveValue("");
     // And the claim resets too, to the one a reader has not asserted anything
@@ -341,7 +429,7 @@ describe("the disclosure-duty queue", () => {
     expect(
       await screen.findByText(en["notice.readOnlyForPrivacy"]),
     ).toBeInTheDocument();
-    expect(screen.queryByTestId("notice-case-case-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lena Hoffmann")).not.toBeInTheDocument();
   });
 
   it("reaches a duty the first page did not carry", async () => {
@@ -354,6 +442,7 @@ describe("the disclosure-duty queue", () => {
       ...OWED,
       id: "case-9",
       contact_id: "contact-9",
+      contact_name: "Paul Roth",
       due_at: "2026-03-01T00:00:00Z",
     };
     const sent: Sent[] = [];
@@ -376,8 +465,8 @@ describe("the disclosure-duty queue", () => {
     );
     render(<NoticeCasesCard />);
 
-    await screen.findByTestId("notice-case-case-1");
-    expect(screen.queryByTestId("notice-case-case-9")).not.toBeInTheDocument();
+    await findDuty("Lena Hoffmann");
+    expect(screen.queryByText("Paul Roth")).not.toBeInTheDocument();
 
     await userEvent.click(
       await screen.findByRole("button", { name: en["list.loadMore"] }),
@@ -385,8 +474,8 @@ describe("the disclosure-duty queue", () => {
 
     // Both duties on screen at once: a walk, not a replacement. An officer
     // working down the queue must not lose the row they were reading.
-    await screen.findByTestId("notice-case-case-9");
-    expect(screen.getByTestId("notice-case-case-1")).toBeInTheDocument();
+    await findDuty("Paul Roth");
+    expect(screen.getByText("Lena Hoffmann")).toBeInTheDocument();
     // And the second request carried the cursor the first page handed back,
     // rather than re-asking for the same page forever.
     const asked = sent.filter((s) => s.key === "GET /privacy/notice-cases");

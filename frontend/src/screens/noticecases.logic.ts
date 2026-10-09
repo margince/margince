@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import type { MessageKey } from "../i18n/en";
 
 export type NoticeCase = components["schemas"]["NoticeCase"];
 export type NoticeCaseState = components["schemas"]["NoticeCaseState"];
@@ -25,6 +26,24 @@ export const NOTICE_STATES = [
   "blocked",
   "not_required",
 ] as const;
+
+export const NOTICE_STATE_LABEL: Record<NoticeCaseState, MessageKey> = {
+  open: "notice.state.open",
+  assigned: "notice.state.assigned",
+  queued: "notice.state.queued",
+  delivery_failed: "notice.state.deliveryFailed",
+  completed: "notice.state.completed",
+  provided_elsewhere: "notice.state.providedElsewhere",
+  exempt_with_reason: "notice.state.exempt",
+  blocked: "notice.state.blocked",
+  not_required: "notice.state.notRequired",
+};
+
+// Owed and nobody stopped: the owner picker already says whether it is claimed,
+// so a badge would repeat it on most rows.
+export function isDefaultNoticeState(state: NoticeCaseState): boolean {
+  return state === "open" || state === "assigned";
+}
 
 // The states that mean the duty is still owed. Derived from the terminal set
 // below rather than listed twice, for the same reason the backend derives it:

@@ -9,16 +9,28 @@
 // Settings → Privacy, and nothing named the rule. A duty nobody can act on from
 // the place it is raised is a duty nobody discharges.
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { useCan } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
+import { formatDate } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import { EntityRef } from "./entityref";
+import {
+  acquisitionKindLabel,
+  acquisitionRecorder,
+  noticeRuleHint,
+  noticeRuleLabel,
+} from "./noticeacquisition";
+import type { NoticeCase } from "./noticecases.logic";
 import { ExcuseModal, type ExcuseState } from "./noticeexcuse";
+import type { WorklistItem } from "./worklist.queries";
 
 // Every read that could still show the duty: the Home brief, the worklist the
 // Focus list draws from, the settings queue and the contact's consent panel.
@@ -30,12 +42,30 @@ const DUTY_READS = [
 ];
 
 export function NoticeDuty({
-  caseId,
+  item,
   contactId,
-}: Readonly<{ caseId: string; contactId: string }>) {
+}: Readonly<{ item: WorklistItem; contactId: string }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const caseId = item.id;
   const queryClient = useQueryClient();
   const mayWrite = useCan("contact", "update");
+  // The worklist row names whose queue it sits in, not who claimed the duty;
+  // only a reader of the privacy queue may ask the case itself.
+  const canReadCase = useCan("privacy_request", "read");
+  const duty = useQuery({
+    queryKey: ["notice-cases", "one", caseId],
+    enabled: canReadCase,
+    queryFn: async () => {
+      const { data, error } = await api.GET("/privacy/notice-cases/{id}", {
+        params: { path: { id: caseId } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
   const [excusing, setExcusing] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const settle = (sentence: string) => {
@@ -88,6 +118,10 @@ export function NoticeDuty({
     <Panel title={t("noticeDuty.title")}>
       <PanelBody>
         <p>{t("noticeDuty.what")}</p>
+        <FactList
+          className="notice-duty-facts"
+          facts={dutyFacts(item, duty.data, t, locale, viewerZone())}
+        />
         <p className="t-caption">{t("noticeDuty.how")}</p>
         {done ? (
           <p role="status">{done}</p>
@@ -124,4 +158,70 @@ export function NoticeDuty({
       </PanelBody>
     </Panel>
   );
+}
+
+// What the deadline rests on, so a precise date with no evidence behind it
+// never reads as authoritative.
+function dutyFacts(
+  item: WorklistItem,
+  duty: NoticeCase | undefined,
+  t: Translator,
+  locale: Locale,
+  tz: string,
+): Fact[] {
+  const date = (iso: string) => formatDate(iso, locale, tz);
+  const acquisition = item.acquisition;
+  const facts: Fact[] = acquisition
+    ? [
+        {
+          key: "kind",
+          term: t("noticeDuty.obtainedAs"),
+          value: acquisitionKindLabel(acquisition.kind, t),
+        },
+        {
+          key: "when",
+          term: t("noticeDuty.obtainedOn"),
+          value: acquisition.occurred_at
+            ? date(acquisition.occurred_at)
+            : t("noticeDuty.dateUnknown"),
+        },
+        {
+          key: "recorded",
+          term: t("noticeDuty.recorded"),
+          value: [
+            date(acquisition.captured_at),
+            acquisitionRecorder(acquisition, t),
+          ].join(" · "),
+        },
+      ]
+    : [
+        {
+          key: "kind",
+          term: t("noticeDuty.obtainedAs"),
+          value: t("notice.noAcquisition"),
+        },
+      ];
+  if (duty) {
+    facts.push({
+      key: "owner",
+      term: t("notice.owner"),
+      value: duty.owner_user_id ? (
+        <EntityRef kind="user" id={duty.owner_user_id} />
+      ) : (
+        t("notice.unassigned")
+      ),
+    });
+  }
+  if (item.kind) {
+    facts.push({
+      key: "rule",
+      term: t("noticeDuty.rule"),
+      value: noticeRuleLabel(item.kind, t),
+      note: noticeRuleHint(item.kind, t),
+    });
+  }
+  if (item.due_at) {
+    facts.push({ key: "due", term: t("notice.due"), value: date(item.due_at) });
+  }
+  return facts;
 }

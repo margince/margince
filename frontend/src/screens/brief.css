@@ -647,6 +647,11 @@
   margin: 0;
 }
 
+/* What the duty's deadline rests on, set apart from the sentence above it. */
+.notice-duty-facts {
+  margin-block: var(--space-3);
+}
+
 /* The three ways to discharge a privacy-notice duty, side by side. */
 .notice-duty-actions {
   display: flex;
