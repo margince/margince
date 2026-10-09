@@ -15625,8 +15625,10 @@ paths:
         Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
         review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
         the connector health strip. `404 no_digest_yet` before the first nightly run — the
-        client renders the honest empty state. v1 delivery is in-app; email is delivery-only
-        later, same object.
+        client renders the honest empty state. A `date` the nightly run has not reached
+        answers `404 no_digest_for_date`, which is a different state: digests exist, that day
+        has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
+        year one. v1 delivery is in-app; email is delivery-only later, same object.
       parameters:
         - { name: date, in: query, schema: { type: string, format: date }, description: 'A specific digest day; default: the latest generated.' }
       responses:
