@@ -6,7 +6,7 @@ import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
 import { copy } from "./copy";
 import { anna, mockApi } from "./seed";
-import { pageOverflow, textsOf } from "./waits";
+import { openedAt, pageOverflow, textsOf } from "./waits";
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -955,7 +955,7 @@ test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
   // card: the middle button in a new tab, a click in place.
   const tab = page.context().waitForEvent("page");
   await mark.click({ button: "middle" });
-  await expect(await tab).toHaveURL(/#\/deals\/d-fleet$/);
+  await (await openedAt(tab, /#\/deals\/d-fleet$/)).close();
   await mark.click();
   await expect(page).toHaveURL(/#\/deals\/d-fleet$/);
   await page.goto("/#/deals");

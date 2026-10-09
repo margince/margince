@@ -220,7 +220,6 @@ internal/compose/signalextractread.go#type settledThread.PrivateTo
 internal/compose/signalproposals.go#const signalKindContractEnded
 internal/compose/signalscan.go#const kindGhostedThread
 internal/compose/signalscan_project.go#const kindProjectGoneQuiet
-internal/compose/siteleadaccept.go#const siteLeadCapturedBy
 internal/compose/sitelogo.go#func siteReadLogoKey
 internal/compose/sitepagefacts_test.go#func TestOneRoleLabelServesEveryOfficerListedUnderIt
 internal/compose/sitereaddebugreport.go#type DebugExtraction.Dropped

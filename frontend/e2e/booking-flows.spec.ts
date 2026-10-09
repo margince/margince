@@ -9,6 +9,7 @@ import {
 } from "../src/screens/book.testkit";
 import { copy } from "./copy";
 import { mockApi } from "./seed";
+import { openedAt } from "./waits";
 
 test.beforeEach(async ({ page, context }) => {
   await mockApi(context);
@@ -69,8 +70,7 @@ test("reconnecting in another tab refreshes permissions without losing the draft
   await page.getByLabel(de["scheduling.agenda"]).fill("Keep this draft");
   const popupPromise = page.waitForEvent("popup");
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
-  const popup = await popupPromise;
-  await expect(popup).toHaveURL(/settings\/meetings/);
+  const popup = await openedAt(popupPromise, /settings\/meetings/);
   await expect(
     popup.getByText(de["scheduling.readOnlyCalendar"]),
   ).toBeVisible();
