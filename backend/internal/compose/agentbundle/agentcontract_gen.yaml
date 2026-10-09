@@ -15,7 +15,7 @@ security:
   - cookieAuth: []
 tags:
   - name: Webhooks
-    description: Outbound webhook subscriptions (E10/S-E10.6) — signed, retried delivery of published domain events to a tenant-owned HTTPS endpoint.
+    description: Outbound webhook subscriptions — signed, retried delivery of published domain events to a tenant-owned HTTPS endpoint.
   - name: Contacts
     description: Contact (contact) records, their emails and phones.
   - name: Companies
@@ -105,6 +105,7 @@ paths:
       tags: [Contacts]
       operationId: listContacts
       summary: List contacts (live by default; cursor-paginated).
+      description: Default view excludes archived rows. Leads never appear here.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -120,12 +121,22 @@ paths:
         - name: owner_team_id
           in: query
           schema: {type: string, format: uuid}
+          description: |-
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant.
         - name: unassigned
           in: query
           schema: {type: boolean}
+          description: |-
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope, so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: q
           in: query
           schema: {type: string}
+          description: >-
+            Full-text query over name/title, plus an exact match on the record's own identifier: a contact's email address, a company's domain. A query containing "@" also tries the part after it against the domain, so pasting a sender finds their company. Identifier matching is exact, never a prefix.
         - name: tag_id
           in: query
           schema:
@@ -145,8 +156,7 @@ paths:
           in: query
           schema: {type: string, format: uuid}
           description: |-
-            Contacts who work at this account, by their CURRENT PRIMARY employment edge
-            (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
+            Contacts who work at this account, by their CURRENT PRIMARY employment edge. A past employer does not match:
             "who works there" and "who has ever worked there" are different questions, and the
             list answers the first.
       responses:
@@ -192,7 +202,6 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: List contacts (live by default; cursor-paginated).
     post:
       tags: [Contacts]
       operationId: createContact
@@ -432,7 +441,7 @@ paths:
           description: |-
             Include this installation's own company. It is excluded by default because this list
             answers "which companies are we selling to", and the company running the CRM is not one
-            of them. Modeled on `include_archived` (API-LIST-4): a class of rows
+            of them. Modeled on `include_archived`: a class of rows
             almost never wanted, never silently unreachable. Surfaces whose subject IS the workspace
             — recording that a contact works here, own-company project work — set it.
         - $ref: '#/components/parameters/CapturedByKind'
@@ -456,18 +465,26 @@ paths:
         - name: owner_team_id
           in: query
           schema: {type: string, format: uuid}
+          description: |-
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant.
         - name: unassigned
           in: query
           schema: {type: boolean}
+          description: |-
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope, so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: industry
           in: query
           schema: {type: string}
           description: |-
-            Accounts in one industry, matched exactly (DM-VOCAB-2). The column is free text rather
+            Accounts in one industry, matched exactly. The column is free text rather
             than an enum, so this is the value as it was written.
         - name: size_band
           in: query
-          description: How many contacts work there (DM-VOCAB-2).
+          description: How many contacts work there.
           schema:
             type: string
             enum: ['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
@@ -1558,6 +1575,7 @@ paths:
         - name: q
           in: query
           schema: {type: string}
+          description: Name/key quick-find.
       responses:
         '200':
           description: A page of projects.
@@ -2975,10 +2993,6 @@ paths:
       tags: [Automations]
       operationId: listAutomationCatalog
       summary: The closed starter library of automation types the workspace can instantiate.
-      description: |-
-        Lists the available automation *types* — the left
-        rail of the EP09.15 editor. Each entry names its trigger, action, tier, and a JSON-schema for
-        its parameters. Closed set: the build does not invent types the catalog omits.
       responses:
         '200':
           description: Catalog entries.
@@ -2989,6 +3003,7 @@ paths:
                 required: [data]
                 properties:
                   data: {type: array, items: {$ref: '#/components/schemas/AutomationCatalogEntry'}}
+      description: The closed starter library of automation types the workspace can instantiate.
   /automations:
     get:
       tags: [Automations]
@@ -3051,9 +3066,17 @@ paths:
         - name: owner_team_id
           in: query
           schema: {type: string, format: uuid}
+          description: |-
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant. One dial for every owner-scoped list.
         - name: unassigned
           in: query
           schema: {type: boolean}
+          description: |-
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope, so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: source
           in: query
           schema: {type: string}
@@ -3893,11 +3916,11 @@ paths:
     get:
       tags: [Views]
       operationId: getFilterVocabulary
-      summary: Read what a new filter clause may name on one record type (LVS-EXT-8).
+      summary: Read what a new filter clause may name on one record type.
       description: |-
         The per-resource filter vocabulary: every field a dynamic list, saved view
         or filtered export may name for this record type, each with the operator
-        subset its type admits (LVS-PARAM-1).
+        subset its type admits.
       parameters:
         - name: resource
           in: query
@@ -5350,7 +5373,7 @@ paths:
       summary: Re-open a disposed pair.
       description: |-
         A dismissed pair re-opens (the suppression lifts). A merged pair needs the
-        merge verb's reversibility (PO-AC-M6) — `409 not_undoable` until the
+        merge verb's reversibility — `409 not_undoable` until the
         survivor-side restore exists or when the survivor mutated since. Re-opening
         changes both records the pair names, so it needs write authority over each,
         exactly as the disposition does — `403` otherwise.
@@ -5574,10 +5597,6 @@ paths:
       tags: [CustomFields]
       operationId: listCustomFields
       summary: List custom fields for an object (admin read; includes retired by default).
-      description: |-
-        CUSTOM-FIELDS-WIRE-1. Unlike a normal resource list, this admin view returns both
-        active and retired fields by default — `status` narrows to one lifecycle state.
-        Backs the custom-fields admin field table.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -5586,7 +5605,7 @@ paths:
           in: query
           required: true
           schema: {type: string, enum: [contact, company, deal, lead, project, contract]}
-          description: Target core object (CUSTOM-FIELDS-PARAM-2).
+          description: Target core object.
         - name: status
           in: query
           schema:
@@ -5603,25 +5622,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
+      description: List custom fields for an object (admin read; includes retired by default).
     post:
       tags: [CustomFields]
       operationId: createCustomField
       summary: Define a new custom field on an existing core object ( — a schema change).
-      description: |-
-        CUSTOM-FIELDS-WIRE-2. Runs the governed engine's single-transaction add: schema
-        change + catalog row + one audit entry land or roll back together. Always —
-        a schema change is never — so an agent caller must supply `X-Approval-Token`,
-        exactly like `advanceDeal`'s closed-won transition; a human's direct call is
-        itself the approval. `column_name` is server-derived and never client-supplied —
-        immutable once live. When the requested `label`/`type`/`object` combination is
-        judged structural — a new object, a relationship, or logic, never one of the six
-        closed types on one of the five closed objects — the request is refused with a
-        `structural_change_refused` 422 (see the example below) and nothing is written:
-        a structural change ships as a reviewed source change, not a runtime column.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -5742,6 +5747,12 @@ paths:
                     status: 501
                     code: not_implemented
                     detail: operation custom-field schema changes is specified but not yet implemented
+      description: |-
+        Define a new custom field on an existing core object ( — a schema change).
+
+        Needs the passport permission Change records.
+
+        Waits for a human to approve.
   /custom-fields/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5749,16 +5760,6 @@ paths:
       tags: [CustomFields]
       operationId: renameCustomField
       summary: Rename a custom field's display label ( — not a schema change).
-      description: |-
-        CUSTOM-FIELDS-WIRE-3. Audited catalog `label` update only; `column_name` never
-        moves — the physical column identity is stable across rename. Merge-PATCH:
-        `column_name`, `object`, and `type` are absent from the request schema entirely.
-        A retired field refuses rename with a 409 `conflict` — retirement is terminal,
-        so its label is frozen.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -5778,6 +5779,12 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Rename a custom field's display label ( — not a schema change).
+
+        Needs the passport permission Change records.
+
+        Runs at once.
   /custom-fields/{id}/lists:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5806,21 +5813,6 @@ paths:
       tags: [CustomFields]
       operationId: retireCustomField
       summary: Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
-      description: |-
-        CUSTOM-FIELDS-WIRE-4. Sets `status=retired`; hides the field from the API and
-        filtering while the column and every value in it are preserved — the engine never
-        drops a column as a side effect (CUSTOM-FIELDS-AC-13). (mirrors `archiveContact`'s
-        posture: an irreversible-feeling state change users must confirm) — an agent caller
-        must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
-        on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
-        refused because a Live List filters on the field: the list keeps evaluating on the kept
-        values and reports health `retired_field`. Which lists those are is read, for the
-        caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
-        replayed answer would otherwise repeat list names the caller may no longer find.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -5846,6 +5838,12 @@ paths:
                     code: approval_required
                     detail: Retiring a custom field is confirm-first; supply an approval token.
         '404': {$ref: '#/components/responses/NotFound'}
+      description: |-
+        Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
+
+        Needs the passport permission Change records.
+
+        Waits for a human to approve.
   /custom-fields/{id}/options:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5853,22 +5851,6 @@ paths:
       tags: [CustomFields]
       operationId: updateCustomFieldOptions
       summary: Edit a picklist custom field's allowed options ( — regenerates the column's CHECK).
-      description: |-
-        CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
-        otherwise). Replaces the catalog's `options` array and regenerates the physical
-        column's CHECK constraint from the new set via the governed engine (the same
-        one-transaction owner-ALTER shape as `createCustomField` — this is the
-        one DDL path rename/retire never touch). Removing every option is refused (422,
-        detail "A picklist needs at least one option") — a picklist always keeps at least
-        one allowed value. like `retireCustomField`: this mutates a schema-adjacent CHECK
-        constraint, so an agent caller must supply `X-Approval-Token`. A retired field
-        refuses the edit with a 409 `conflict` — retirement is terminal, so its options
-        are frozen; removing an option that stored values still use is also a 409
-        (`ADD CONSTRAINT` validates existing rows — migrate the values first).
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -5958,6 +5940,12 @@ paths:
                     status: 501
                     code: not_implemented
                     detail: operation custom-field schema changes is specified but not yet implemented
+      description: |-
+        Edit a picklist custom field's allowed options ( — regenerates the column's CHECK).
+
+        Needs the passport permission Change records.
+
+        Waits for a human to approve.
   /consent-purposes:
     get:
       tags: [Compliance]
@@ -6853,7 +6841,7 @@ paths:
     get:
       tags: [Signals]
       operationId: getSignalWarmth
-      summary: The warm/cold classification with the full "why warm" evidence (B-E08.3).
+      summary: The warm/cold classification with the full "why warm" evidence.
       responses:
         '200':
           description: The warm/cold branch with its evidence ids.
@@ -6866,14 +6854,14 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-      description: The warm/cold classification with the full "why warm" evidence (B-E08.3).
+      description: The warm/cold classification with the full "why warm" evidence.
   /signals/{id}/intro-path:
     parameters:
       - $ref: '#/components/parameters/Id'
     get:
       tags: [Signals]
       operationId: getSignalIntroPath
-      summary: The proposed warm-intro path for a warm signal (B-E08.4) — an actionable move, not a notification.
+      summary: The proposed warm-intro path for a warm signal — an actionable move, not a notification.
       description: |-
         Names the route-in contact (the strongest live relationship at the resolved
         company), the relationship we have, and a concrete suggested next move with a
@@ -7283,16 +7271,6 @@ paths:
       operationId: createImportRun
       security: [{cookieAuth: []}, {bearerAuth: []}]
       summary: Create an import run from an uploaded source and a column mapping, and dry-run it.
-      description: |-
-        IEM-WIRE-3. Takes the connector, the `source_ref` from
-        `uploadImportSource`, and the mapping the human settled on, and runs the
-        validation pass — which writes **no** domain rows (AC-M5). The run
-        arrives at `awaiting_approval` carrying the report
-        `getImportRunReport` reads.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
       requestBody:
         required: true
         content:
@@ -7308,6 +7286,12 @@ paths:
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Create an import run from an uploaded source and a column mapping, and dry-run it.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
   /imports/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -7316,10 +7300,6 @@ paths:
       operationId: getImportRun
       security: [{cookieAuth: []}, {bearerAuth: []}]
       summary: Read one import run's lifecycle state.
-      description: |-
-        IEM-WIRE-6. A run that stopped part-way reports `failed` **with its
-        checkpoint**, which is what makes it a resumable state rather than a
-        dead end — the distinction the chapter pins by name.
       responses:
         '200':
           description: OK
@@ -7329,6 +7309,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
+      description: Read one import run's lifecycle state.
   /imports/{id}/report:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -7337,11 +7318,6 @@ paths:
       operationId: getImportRunReport
       security: [{cookieAuth: []}, {bearerAuth: []}]
       summary: Read the run's report — what will happen, or what did.
-      description: |-
-        IEM-WIRE-4. Available from `awaiting_approval` onward, and it is the
-        same shape before and after approval: the dry run reports what the
-        commit will do, the finished run reports what it did. One shape means a
-        human comparing the two is comparing like with like.
       responses:
         '200':
           description: OK
@@ -7352,6 +7328,7 @@ paths:
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+      description: Read the run's report — what will happen, or what did.
   /imports/{id}/approve:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -7360,15 +7337,6 @@ paths:
       operationId: approveImportRun
       security: [{cookieAuth: []}, {bearerAuth: []}]
       summary: Approve a validated import run and commit it.
-      description: |-
-        IEM-WIRE-5, and one of the three audited gates. Valid **only** from
-        `awaiting_approval`: approving a run that is already running, complete
-        or failed is a conflict, not a no-op, because each of those means the
-        approver is looking at a state that is not the one they judged.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
       responses:
         '202':
           description: 'Approved; the commit is under way (or complete — the run record says which).'
@@ -7379,6 +7347,12 @@ paths:
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+      description: |-
+        Approve a validated import run and commit it.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
   /companies/{id}/profile-fields/{field}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7387,17 +7361,6 @@ paths:
       tags: [Companies]
       operationId: updateCompanyProfileField
       summary: State or correct a profile field — the canonical value changes, the machine's proposal survives.
-      description: |-
-        DOSS-WIRE-4 / PO-AC-N-1. Where the field maps to a column on `company`, THE COLUMN IS
-        WHAT CHANGES; the sidecar keeps the machine's proposal, excerpt, source URL and confidence in
-        history rather than overwriting them (PO-AC-N-2). A correction that changed only the sidecar
-        would be a lie about having been accepted. Provenance flips to `human` with the acting
-        principal and the timestamp; the whole thing commits as one mutation with its audit entry and
-        its outboxed event.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -7418,6 +7381,12 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/VersionConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        State or correct a profile field — the canonical value changes, the machine's proposal survives.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
   /companies/{id}/profile-fields/{field}/confirm:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7427,7 +7396,7 @@ paths:
       operationId: confirmCompanyProfileField
       summary: Confirm a profile field without changing its value.
       description: |-
-        The same act as a correction, minus the value change (PO-AC-N-3): `verified_at` and
+        The same act as a correction, minus the value change: `verified_at` and
         `verified_by` are stamped and the field moves from extracted to confirmed. Version-guarded
         like the correction, so two readers confirming a field one of them has since corrected do not
         silently overwrite each other.
@@ -7458,15 +7427,6 @@ paths:
       tags: [Companies]
       operationId: updateCompanyFact
       summary: Correct an extracted fact.
-      description: |-
-        DOSS-WIRE-4. The correction path the fact store never had — without it the page can render a
-        "confirmed" state nothing is able to produce. Same guarantees as the profile-field
-        correction: canonical value first, machine proposal preserved in history, provenance flipped
-        to `human`, one transaction carrying the row, the audit entry and the event.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -7487,6 +7447,12 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/VersionConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Correct an extracted fact.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
     delete:
       tags: [Companies]
       operationId: deleteCompanyFact
@@ -7520,8 +7486,7 @@ paths:
       operationId: confirmCompanyFact
       summary: Confirm an extracted fact without changing its value.
       description: |-
-        Stamps `verified_at` + `verified_by` and moves the fact from extracted to confirmed
-        (PO-AC-N-3). Version-guarded.
+        Stamps `verified_at` + `verified_by` and moves the fact from extracted to confirmed. Version-guarded.
 
         Needs the passport permission Change records.
 
@@ -7667,6 +7632,20 @@ components:
       name: Idempotency-Key
       in: header
       schema: {type: string, maxLength: 255}
+      description: |-
+        Client-supplied key making a mutation safe to retry — an update exactly as much as a
+        create. **Scope:** the key is unique within
+        `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+        returns the original status + body. Reusing the same key with a *different* request body
+        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+        **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+        answer lost": without it the blind retry answers `409 version_skew`, because the first
+        attempt already bumped the version.
+        **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+        retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key governs. The two never both create a row. **Declaring this parameter is
+        what makes an operation replay-safe** — an operation that omits it ignores the header rather
+        than half-honouring it, so read this contract, not the client, to know which calls are safe
+        to retry blind.
     ApprovalToken:
       name: X-Approval-Token
       in: header
@@ -7761,14 +7740,14 @@ components:
   schemas:
     UpdateCompanyProfileFieldRequest:
       type: object
-      description: 'A human correction. The canonical store changes; the machine''s proposal and its evidence survive in history (PO-AC-N-1/N-2).'
+      description: 'A human correction. The canonical store changes; the machine''s proposal and its evidence survive in history.'
       required: [value]
       properties:
         value:
           type: string
           minLength: 1
           description: >-
-            The corrected value. Where this field maps to a column on `company`, the COLUMN is what changes — a correction the header ignores is not a correction (PO-AC-N-1).
+            The corrected value. Where this field maps to a column on `company`, the COLUMN is what changes — a correction the header ignores is not a correction.
     UpdateCompanyFactRequest:
       type: object
       description: The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce.
@@ -7788,6 +7767,8 @@ components:
         value: {type: string, minLength: 1}
     WebhookSubscription:
       type: object
+      description: >-
+        An outbound webhook subscription: a tenant-configured target URL that receives signed HTTP POSTs for a chosen subset of the published event catalog. The signing secret is NEVER returned here — it is surfaced once, at create/rotate, in `WebhookSubscriptionCreated`.
       required: [id, owner_id, target_url, event_types, state, version]
       properties:
         id: {type: string, format: uuid}
@@ -7901,7 +7882,7 @@ components:
           format: int64
           description: |-
             The largest upload request this installation accepts, in bytes — set by whoever
-            operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
+            operates it, not compiled into the build. Read-only:
             it is a deployment fact, so PATCH does not carry it.
         oauth_access_token_ttl_minutes:
           type: integer
@@ -8242,14 +8223,13 @@ components:
           description: The activity's version, for the If-Match its own actions send.
     DedupeCandidate:
       type: object
-      description: 'One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).'
       required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide]
       properties:
         id: {type: string, format: uuid}
         entity_type: {type: string, enum: [contact, company, lead], description: 'A pair is always same-type: a lead is proposed as a duplicate of a lead or of nothing.'}
         left_id: {type: string, format: uuid, description: 'Canonical ordering: left is the lower id — {A,B} and {B,A} are one row.'}
         right_id: {type: string, format: uuid}
-        confidence: {type: number, minimum: 0, maximum: 1, description: 'The PO-F-1/PO-F-2 fuzzy score at detection.'}
+        confidence: {type: number, minimum: 0, maximum: 1}
         evidence:
           type: array
           description: 'Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows.'
@@ -8288,7 +8268,7 @@ components:
       type: object
       required: [connector, object, source_ref, mapping]
       properties:
-        connector: {type: string, enum: [csv], description: 'The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).'}
+        connector: {type: string, enum: [csv], description: 'The source kind. The Salesforce connector runs the same engine and arrives with its own ticket.'}
         object: {$ref: '#/components/schemas/ImportObject'}
         source_ref: {type: string, description: 'From `uploadImportSource`.'}
         mapping:
@@ -8302,8 +8282,8 @@ components:
           description: |-
             The source column holding the row's stable id. For a row this run
             CREATES it is written to the row's provenance, so a re-uploaded file
-            updates rather than duplicates (IEM-AC-9) and an undo can find what
-            the run created (S-E15.4c). A row that names an existing record by
+            updates rather than duplicates and an undo can find what
+            the run created. A row that names an existing record by
             `id` records nothing: the run did not create that company, and undo
             must not archive it.
         on_duplicate:
@@ -8412,23 +8392,16 @@ components:
           description: 'A dry run''s estimate for the commit. Null when the run has already finished and the real duration is on the run record.'
         undo:
           allOf: [{$ref: '#/components/schemas/ImportUndoReport'}]
-          description: 'Present once the run has been undone (`status: undone`, IEM-WIRE-9); absent otherwise.'
+          description: 'Present once the run has been undone; absent otherwise.'
     ImportRunStatus:
       type: string
       enum: [pending, validating, awaiting_approval, running, complete, failed, undoing, undone]
-      description: |-
-        IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-        carries the checkpoint it stopped at, and resuming continues from
-        there rather than re-reading the file from the top. `undoing`/`undone`
-        (IEM-WIRE-9) are the reversal's own states, reachable only from
-        `complete` and only for the `csv` connector.
     ImportUndoReport:
       type: object
       description: |-
-        The result of undoing a committed import run (IEM-WIRE-9; A93). Every
+        The result of undoing a committed import run. Every
         import-created row lands in exactly one of three buckets: reversed,
-        kept because a human edited it since (the "kept — you edited these"
-        list S-E15.4c requires, not a diff of what changed), or errored
+        kept because a human edited it since, or errored
         because it could not be reversed — a single irreversible row never
         aborts the rest of the run.
       required: [run_id, status, reversed_count, kept, errored]
@@ -8729,7 +8702,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
+            When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -8772,7 +8745,7 @@ components:
           items: {$ref: '#/components/schemas/ContactPhoneInput'}
         source: {type: string}
         source_system: {type: [string, 'null']}
-        source_author_id: {type: [string, 'null'], format: uuid}
+        source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
     ContactEmailInput:
@@ -8853,11 +8826,6 @@ components:
         archived_at: {type: [string, 'null'], format: date-time}
     ComputedField:
       type: object
-      description: |-
-        S-E15.8c formula-field display row (RD-AC-6/RD-AC-7/RD-AC-N-1) — a read-only,
-        database-computed value, never a runtime-authored expression. `computable: false` +
-        `reason` is the honest floor for a field with no backend data model yet — the row is
-        still returned, never omitted or fabricated.
       required: [key, label, kind, formula_sql, dependencies, computable]
       properties:
         key: {type: string}
@@ -8938,10 +8906,6 @@ components:
         computed_fields:
           type: array
           readOnly: true
-          description: |-
-            S-E15.8c formula-field display rows (RD-AC-6/RD-AC-7/RD-AC-N-1). Populated on
-            `getCompany` only; the key is absent entirely (not an empty array) when the
-            viewer's role lacks computed_field:read visibility (STATE-4).
           items: {$ref: '#/components/schemas/ComputedField'}
         domains:
           type: array
@@ -8974,13 +8938,13 @@ components:
           readOnly: true
           minimum: 0
           description: >-
-            How many live contacts THE CALLER MAY SEE list this account as their current primary employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+            How many live contacts THE CALLER MAY SEE list this account as their current primary employer. Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
         open_deal_count:
           type: integer
           readOnly: true
           minimum: 0
           description: >-
-            How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
+            How many open, live deals belong to this account, counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums. The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read`. Present on `listCompanies` and `getCompany`; write responses omit it.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         author:
@@ -8997,7 +8961,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+            When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -9027,7 +8991,7 @@ components:
           items: {$ref: '#/components/schemas/CompanyDomainInput'}
         source: {type: string}
         source_system: {type: [string, 'null']}
-        source_author_id: {type: [string, 'null'], format: uuid}
+        source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
     UpdateCompanyRequest:
@@ -9232,14 +9196,12 @@ components:
         net_invoiced:
           allOf: [{$ref: '#/components/schemas/Money'}]
           description: >-
-            Issued minus credited over the last 365 days (FIN-FORM-1). Named "net invoiced" rather than "revenue": the source supports issued amounts, not a ledger revenue figure, and calling one the other is the kind of small wrong label a reader plans against.
+            Issued minus credited over the last 365 days. Named "net invoiced" rather than "revenue": the source supports issued amounts, not a ledger revenue figure, and calling one the other is the kind of small wrong label a reader plans against.
         net_invoiced_lifetime:
           allOf: [{$ref: '#/components/schemas/Money'}]
-          description: >-
-            The same FIN-FORM-1 fold with no lower bound on the issue date: every invoice this connection has mirrored, issued minus credited. Named "net invoiced" for the same reason as the trailing figure, and never "revenue".
         open_balance:
           allOf: [{$ref: '#/components/schemas/Money'}]
-          description: What is still open across unpaid invoices (FIN-FORM-2).
+          description: What is still open across unpaid invoices.
         overdue:
           allOf: [{$ref: '#/components/schemas/Money'}]
           description: >-
@@ -9247,7 +9209,7 @@ components:
         median_days_after_due:
           type: [integer, 'null']
           description: >-
-            The median days between an invoice's DUE date and its settlement over the window (FIN-FORM-3) — how late they pay, not how long they take. Negative reads as early. Deliberately not issue-to-settlement: an invoice paid on the last day of 30-day terms is punctual, and a figure that called it "30 days to pay" would read as slow.
+            The median days between an invoice's DUE date and its settlement over the window — how late they pay, not how long they take. Negative reads as early. Deliberately not issue-to-settlement: an invoice paid on the last day of 30-day terms is punctual, and a figure that called it "30 days to pay" would read as slow.
         payment_behaviour:
           type: array
           description: >-
@@ -9256,7 +9218,7 @@ components:
         recent_invoices:
           type: array
           maxItems: 5
-          description: The five most recent invoices (FIN-LIM-4); `truncated` says whether there are more.
+          description: The five most recent invoices; `truncated` says whether there are more.
           items: {$ref: '#/components/schemas/FinanceInvoice'}
         truncated:
           type: boolean
@@ -9336,7 +9298,7 @@ components:
         relationship:
           allOf: [{$ref: '#/components/schemas/HealthDimension'}]
           description: >-
-            Whether we are in contact and both sides are talking. Read from the strength roll-up and the reply balance below (PO-AC-N-10).
+            Whether we are in contact and both sides are talking. Read from the strength roll-up and the reply balance below.
         commercial:
           allOf: [{$ref: '#/components/schemas/HealthDimension'}]
           description: Whether work is moving — open pipeline and whether it is stalling.
@@ -9370,7 +9332,7 @@ components:
     Company360StateStrip:
       type: object
       description: |-
-        The three readings a company page leads with (AC-company-13, PO-F-4). Each half is
+        The three readings a company page leads with. Each half is
         independently gated: a caller who may read the account but not its mail gets the account
         half and a null engagement, because a state inferred from data they were not allowed to see
         would be a conclusion the page has no basis for — and it is the one a rep would act on.
@@ -9394,8 +9356,6 @@ components:
             state:
               type: string
               enum: [never_contacted, active, waiting_on_them, waiting_on_us, dormant]
-              description: >-
-                PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
             last_inbound_at: {type: [string, 'null'], format: date-time}
             last_outbound_at: {type: [string, 'null'], format: date-time}
         commercial:
@@ -9437,7 +9397,7 @@ components:
             active_count:
               type: integer
               minimum: 0
-              description: How many agreements are under contract today (CONTRACT-FORM-1) — the derived reading, not a status count.
+              description: How many agreements are under contract today — the derived reading, not a status count.
             total_basis_value_minor_base:
               type: [integer, 'null']
               description: >-
@@ -9473,8 +9433,6 @@ components:
           properties:
             kind:
               type: string
-              description: >-
-                The signal's own kind, from the open vocabulary in SIG-DDL-1 — not re-narrowed here, because the strip states whatever the producers can raise.
             severity: {type: string, enum: [info, warn, urgent]}
             summary:
               type: string
@@ -9491,7 +9449,7 @@ components:
         provider_title:
           type: [string, 'null']
           description: >-
-            A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed.
+            A provider-sourced job title, populated ONLY where the canonical title is empty: a bought title fills a blank, never overwrites or seconds one a human typed.
         title_source:
           type: [string, 'null']
           enum: [canonical, provider, null]
@@ -9701,7 +9659,7 @@ components:
         title:
           type: [string, 'null']
           description: |-
-            What to do, in the RULE's own words — "Follow up: no reply in 24 days" (PO-AC-N-13).
+            What to do, in the RULE's own words — "Follow up: no reply in 24 days".
         due_at:
           type: [string, 'null']
           format: date-time
@@ -10441,7 +10399,6 @@ components:
           type: [integer, 'null']
           minimum: 0
           maximum: 100
-          description: 'PO-F-3b, computed at read; null when the band is `none`.'
         strength_bucket: {type: string, enum: [none, weak, moderate, strong]}
         interactions_90d: {type: integer, minimum: 0}
         last_at: {type: [string, 'null'], format: date-time}
@@ -10491,7 +10448,7 @@ components:
           description: |-
             Days since the deal's last captured touch, on `going_cold` only; null on every
             other kind. It carries the number rather than a second `kind`, so the 30-day and
-            60-day no-touch views (REPORT-PARAM-2) are the same finding filtered — a deal at
+            60-day no-touch views are the same finding filtered — a deal at
             61 days cannot appear on one surface and not the other.
     DealStatusCard:
       type: object
@@ -11138,7 +11095,7 @@ components:
         expected_close_date: {type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422.'}
         source: {type: string}
         source_system: {type: [string, 'null']}
-        source_author_id: {type: [string, 'null'], format: uuid}
+        source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
     UpdateDealRequest:
@@ -11339,7 +11296,7 @@ components:
         notice_period_days:
           type: [integer, 'null']
           minimum: 0
-          description: Drives the renewal warning, which fires against the notice deadline rather than the renewal date (CONTRACT-FORM-3).
+          description: Drives the renewal warning, which fires against the notice deadline rather than the renewal date.
         payment_term_days:
           type: [integer, 'null']
           minimum: 0
@@ -11368,7 +11325,7 @@ components:
           type: boolean
           readOnly: true
           description: |-
-            The DERIVED reading (CONTRACT-FORM-1): computed from the dates as of today,
+            The DERIVED reading: computed from the dates as of today,
             not read from `status`. The two may disagree, and a surface shows both — a
             contract whose dates have passed while its status change awaits approval is
             no longer under contract and still reports the status it was left in.
@@ -11681,7 +11638,7 @@ components:
         target_end_date: {type: [string, 'null'], format: date}
         source: {type: string}
         source_system: {type: [string, 'null']}
-        source_author_id: {type: [string, 'null'], format: uuid}
+        source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
     SetProjectCompanyRequest:
@@ -12396,7 +12353,7 @@ components:
             What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
         occurred_at: {type: string, format: date-time}
         due_at: {type: [string, 'null'], format: date-time, description: Task only.}
-        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.'}
+        remind_at: {type: [string, 'null'], format: date-time}
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
         is_done: {type: boolean, default: false, description: Task only.}
         done_at: {type: [string, 'null'], format: date-time}
@@ -12631,7 +12588,7 @@ components:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
         source_system: {type: [string, 'null']}
-        source_author_id: {type: [string, 'null'], format: uuid}
+        source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
         source_id: {type: [string, 'null']}
         links:
@@ -12695,7 +12652,7 @@ components:
         occurred_at: {type: string, format: date-time}
         due_at: {type: [string, 'null'], format: date-time}
         assignee_id: {type: [string, 'null'], format: uuid}
-        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.'}
+        remind_at: {type: [string, 'null'], format: date-time}
         is_done: {type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta.'}
         meeting_status:
           type: [string, 'null']
@@ -13294,7 +13251,7 @@ components:
       properties:
         full_name: {type: [string, 'null']}
         email: {type: [string, 'null'], format: email}
-        linkedin_url: {type: [string, 'null'], description: 'Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.'}
+        linkedin_url: {type: [string, 'null']}
         title: {type: [string, 'null']}
         company_name: {type: [string, 'null']}
         candidate_company_key: {type: [string, 'null']}
@@ -13307,7 +13264,7 @@ components:
         status: {type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.'}
         owner_id: {type: [string, 'null'], format: uuid}
         source_system: {type: [string, 'null']}
-        source_author_id: {type: [string, 'null'], format: uuid}
+        source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
         source_id: {type: [string, 'null']}
         source: {type: string}
@@ -13690,7 +13647,7 @@ components:
           enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other, contract_ended, new_opportunity, commitment_made, ghosted_thread, project_gone_quiet, funding, leadership_change, expansion, product_launch, technical_change]
           description: |-
             The first six are what a human files by hand. The rest are what the producers
-            raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
+            raise: `contract_ended`, `new_opportunity` and `commitment_made` are read
             out of a settled conversation by the `signal_extract` site, each citing the message
             it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
             interaction is ours, nobody answered it, and the account is one worth chasing;
@@ -14081,7 +14038,7 @@ components:
     FilterVocabulary:
       type: object
       description: |-
-        What a filter may say about one record type (LVS-EXT-8). Read from the
+        What a filter may say about one record type. Read from the
         engine that evaluates filters, so the set here and the set the engine
         accepts are the same set.
       required: [resource, fields]
@@ -14119,7 +14076,7 @@ components:
         operators:
           type: array
           description: |-
-            The operator subset this field's type admits (LVS-PARAM-1), in one
+            The operator subset this field's type admits, in one
             stable order. An operator absent here is one the engine refuses for
             this field, so a builder can disable it rather than discover it.
           items:
@@ -16106,7 +16063,7 @@ components:
       description: |-
         always (a schema change is never) — see `createCustomField`. `currency` is
         required when `type=currency` (pattern `^[A-Z]{3}$`); `options` is required
-        non-empty when `type=picklist` (CUSTOM-FIELDS-PARAM-5). Neither conditional
+        non-empty when `type=picklist`. Neither conditional
         requirement is expressed as an OpenAPI 3.1 `oneOf`/`if`-`then` here — a prose note
         plus a 422 on mismatch is sufficient, matching how Offer/Product money fields are
         documented elsewhere in this contract.
@@ -16130,8 +16087,6 @@ components:
         label: {type: string}
     UpdateCustomFieldOptionsRequest:
       type: object
-      description: >-
-        CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422).
       required: [options]
       properties:
         options:
@@ -16333,7 +16288,7 @@ components:
         field: {type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number]}
         value: {type: string}
         evidence_snippet: {type: string, minLength: 1, description: 'Verbatim source text (from the page, the pasted text, or the user''s own words) — non-empty or the field is absent.'}
-        source_kind: {type: string, enum: [url, text, self_description], description: 'Where evidence_snippet came from. For self_description the "evidence" is the user''s own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.'}
+        source_kind: {type: string, enum: [url, text, self_description], description: 'Where evidence_snippet came from. For self_description the "evidence" is the user''s own statement — a self-declared ICP is grounded in that statement, not fabricated.'}
         source_url: {type: [string, 'null'], format: uri, description: 'Present only when source_kind=url; null for text/self_description.'}
         evidence_offset: {type: [integer, 'null'], description: 'Optional char offset of evidence_snippet within the pasted text (source_kind=text), for highlight-back; null for url/self_description.'}
         confidence: {type: number, minimum: 0, maximum: 1}
@@ -16424,7 +16379,7 @@ components:
         data: {type: array, items: {$ref: '#/components/schemas/CompanyFact'}}
     CompanyProfileFieldListResponse:
       type: object
-      description: A company's confirmed profile fields. Items reuse CompanyProfileField — the table's field/source vocabulary is identical (migration 0099).
+      description: A company's confirmed profile fields. Items reuse CompanyProfileField — the table's field/source vocabulary is identical.
       required: [data]
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/CompanyProfileField'}}
@@ -16988,6 +16943,9 @@ components:
         page: {$ref: '#/components/schemas/PageInfo'}
     CaptureConsent:
       type: object
+      description: |-
+        The consent passthrough every capture surface (booking, public forms, imports) must carry. Names the purpose and the exact
+        wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
       required: [policy_version]
       properties:
         purpose_id:
@@ -17454,7 +17412,7 @@ components:
         gross_minor: {type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set.'}
         arr_minor: {type: integer, format: int64, readOnly: true, description: 'The annualized NET value of this offer''s recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.'}
         net_tcv_minor: {type: integer, format: int64, readOnly: true, description: 'The total the buyer commits to: one-off lines in full, plus each recurring line''s per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.'}
-        fx_rate_to_base: {type: [string, 'null'], readOnly: true, description: 'Native→base, frozen at send (RT-PR-C2). Decimal-as-string to avoid float rounding.'}
+        fx_rate_to_base: {type: [string, 'null'], readOnly: true, description: 'Native→base, frozen at send. Decimal-as-string to avoid float rounding.'}
         fx_rate_date: {type: [string, 'null'], format: date, readOnly: true}
         template_id: {type: [string, 'null'], format: uuid}
         pdf_asset_ref: {type: [string, 'null'], description: 'Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft''s buyer changes.'}

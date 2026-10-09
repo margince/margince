@@ -208,7 +208,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
-| `GET /filters/vocabulary` | getFilterVocabulary | Read what a new filter clause may name on one record type (LVS-EXT-8). | any | at once |
+| `GET /filters/vocabulary` | getFilterVocabulary | Read what a new filter clause may name on one record type. | any | at once |
 | `GET /views` | listSavedViews | List the caller's saved views (per-user; optionally scoped to one resource). | any | at once |
 | `POST /views` | createSavedView | Save a per-user view (columns, sort, filter state) for a resource. | Change records | at once |
 | `GET /views/{id}` | getSavedView | Get one of the caller's saved views by id. | any | at once |

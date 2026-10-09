@@ -32,29 +32,30 @@ var modelSentences = map[string]string{
 		"when no stored answer exists yet.",
 }
 
-// citation is a parenthetical citing a decision record or a specification
-// section, which a reader of the published contract cannot open.
-var citation = regexp.MustCompile(`\s*\([^()]*(\bADR-\d+|§)[^()]*\)`)
+// aside is one parenthetical, which clean drops when it holds a developer note.
+var aside = regexp.MustCompile(`\s*\([^()]*\)`)
 
 // developerMarkers are the forms of build notes the contract's prose carries
-// for its own developers: decision and story labels, specification paths, and
-// storage detail. A description holding one is not for an agent.
-var developerMarkers = regexp.MustCompile(`\bADR-\d+|features/|data-model|interfaces\.md|\bAAD-|` +
-	`\bIS (NOT )?NULL\b|\btsvector\b|\b(SELECT|INSERT|UPDATE|DELETE) .*\b(FROM|INTO|SET|WHERE)\b|§`)
+// for its own developers. They are decision, backlog and requirement labels,
+// specification paths and sections, migration numbers and storage detail. A
+// description holding one is not for an agent. The label forms are the ones
+// backend/gates/followablecitations_test.go refuses in a touched line.
+var developerMarkers = regexp.MustCompile(strings.Join([]string{
+	`\bADR-\d+`, `features/`, `data-model`, `interfaces\.md`, `(^|[^\w/.-])spec/`, `§`,
+	`\b(B-|S-)?EP?\d{2}(\.\d+[a-z]?)*\b`, `\bUAT-PLAN-\d\b`, `\bOP-\d{1,2}\b`,
+	`\b[A-Z]{2,}(-[A-Z]+)+-[A-Z]?\d+[a-z]?\b`, `\b[A-Z]{4,}-\d{1,2}\b`, `\bmigrations? \d{4}\b`, `founder decision`,
+	`\bIS (NOT )?NULL\b`, `\btsvector\b`, `\b(SELECT|INSERT|UPDATE|DELETE) .*\b(FROM|INTO|SET|WHERE)\b`,
+}, "|"))
 
 // prose cleans the contract's descriptions for an agent. tables are the
 // storage table names, which no wire description has reason to carry.
-type prose struct{ tables, tableAside *regexp.Regexp }
+type prose struct{ tables *regexp.Regexp }
 
 func newProse(tables []string) prose {
 	if len(tables) == 0 {
 		return prose{}
 	}
-	names := `(` + strings.Join(tables, "|") + `)`
-	return prose{
-		tables:     regexp.MustCompile(`\b` + names + `\b`),
-		tableAside: regexp.MustCompile(`\s*\(` + names + `\)`),
-	}
+	return prose{tables: regexp.MustCompile(`\b(` + strings.Join(tables, "|") + `)\b`)}
 }
 
 // tierMarks are the contract's shorthand for the two tiers, which an agent
@@ -65,8 +66,8 @@ func (p prose) isDeveloperNote(text string) bool {
 	return developerMarkers.MatchString(text) || (p.tables != nil && p.tables.MatchString(text))
 }
 
-// clean trims text to its first paragraph without decision citations, or
-// returns "" when what is left is a developer note.
+// clean trims text to its first paragraph without asides that are developer
+// notes. It returns "" when what is left is a developer note too.
 func (p prose) clean(node *yaml.Node) string {
 	text := strings.TrimSpace(node.Value)
 	breakAt := "\n\n"
@@ -74,10 +75,12 @@ func (p prose) clean(node *yaml.Node) string {
 		breakAt = "\n"
 	}
 	text, _, _ = strings.Cut(text, breakAt)
-	text = tierMarks.Replace(citation.ReplaceAllString(text, ""))
-	if p.tableAside != nil {
-		text = p.tableAside.ReplaceAllString(text, "")
-	}
+	text = aside.ReplaceAllStringFunc(tierMarks.Replace(text), func(parenthetical string) string {
+		if p.isDeveloperNote(parenthetical) {
+			return ""
+		}
+		return parenthetical
+	})
 	text = strings.TrimSpace(text)
 	if p.isDeveloperNote(text) {
 		return ""
