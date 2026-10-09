@@ -1,11 +1,5 @@
 /* Admin member management layout. Colour inherits from the design tokens so the
-   purity gate stays satisfied; only structure lives here.
-
-   The roster's own rhythm is NOT here any more: a member is one `SettingRow` in
-   one `SettingList`, so the gaps, the hairlines and the column at which every
-   answer sits all come from settingrow.css. What is left is the two places the
-   row language has nothing to say about — a refusal under the member it belongs
-   to, and the two boxes inside dialogs. */
+   purity gate stays satisfied; only structure lives here. */
 
 /* The team checkboxes inside the invite dialog. A bare <fieldset> draws the
    browser's 2px groove and its own padding, which is the one shape this tree
@@ -21,14 +15,51 @@
   min-width: 0;
 }
 
-/* The BOX a refused write sits in on a member's row, under that row and inside
-   its cell — so the hairline the list draws still separates one member from the
-   next, and the notice is not squeezed into the right column beside the control
-   that caused it. The interval is the box's, never the notice's: a callout owns
-   no layout, and the row above brings its own bottom padding, so this pays for
-   the interval below itself and nothing else does. */
-.users-member-error {
-  margin-bottom: var(--space-3);
+/* A long name or address wraps inside the cell instead of widening the table. */
+.users-member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 9rem;
+  overflow-wrap: anywhere;
+}
+.users-member-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* One width on every row, so the pickers line up whatever role each shows.
+   Inline, so a folded row's dot separator stays on the picker's line. */
+.users-role {
+  display: inline-flex;
+  vertical-align: middle;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  max-inline-size: 9rem;
+}
+.users-role-select {
+  inline-size: 9rem;
+}
+
+/* A capped strip truncates its badges instead of widening the table; a folded
+   row gives line two its whole width. */
+.users-teams {
+  display: inline-block;
+  vertical-align: middle;
+  max-inline-size: 8rem;
+}
+@container table-fold (width < 36rem) {
+  .users-teams {
+    max-inline-size: calc(100cqi - 2 * var(--padPanel));
+  }
+}
+
+/* A short date or a relative time reads on one line. */
+.users-nowrap {
+  white-space: nowrap;
 }
 
 /* The BOX a refusal sits in inside the set-password dialog. It sits in a

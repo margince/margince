@@ -162,7 +162,7 @@ async function openInvite(user: UserEvent) {
 // has to be asserted with the menu open too, or the assertion passes on a menu
 // nobody looked in.
 async function rowMenu(user: UserEvent, name: string) {
-  const row = screen.getByText(name).closest('[data-testid^="member-"]');
+  const row = screen.getByText(name).closest("tr");
   if (!(row instanceof HTMLElement)) {
     throw new Error(`no member row rendered for ${name}`);
   }

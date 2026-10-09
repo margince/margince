@@ -44,6 +44,9 @@ export const ROSTER: {
       is_agent: false,
       roles: ["admin"],
       allowed_actions: ["change_role", "issue_password_link", "deactivate"],
+      team_ids: ["t-dach", "t-nordics"],
+      last_active_at: "2026-10-08T09:00:00Z",
+      created_at: "2026-01-15T10:00:00Z",
     },
     {
       id: "u-off",
@@ -92,6 +95,11 @@ export const ROSTER: {
   page: { next_cursor: null, has_more: false },
 };
 
+export const TEAMS = [
+  { id: "t-dach", name: "DACH Sales" },
+  { id: "t-nordics", name: "Nordics" },
+];
+
 // Both helpers narrow by instance rather than asserting: a cast would let the
 // suite read `.disabled` off whatever the query happened to return, so a control
 // that stopped being the Select trigger would surface as a confusing undefined
@@ -113,11 +121,9 @@ export function roleShown(row: HTMLElement, name: string): string {
   return roleSelect(row, name).textContent ?? "";
 }
 
-// A member is one SettingRow inside a wrapper carrying the row's refusal and
-// the focus target its deactivate confirm hands back to. The wrapper's testid is
-// what identifies it: SettingRow is a <div>, so there is no <li> to climb to.
+// A member is one row of the roster table.
 export function rowFor(name: string) {
-  const row = screen.getByText(name).closest('[data-testid^="member-"]');
+  const row = screen.getByText(name).closest("tr");
   if (!(row instanceof HTMLElement)) {
     throw new Error(`no member row rendered for ${name}`);
   }
@@ -237,7 +243,7 @@ function readRoute(
   allow: Record<string, string[]>,
 ): Response | undefined {
   if (req.url.includes("/teams") && req.method === "GET") {
-    return jsonResponse({ data: [], page: { has_more: false } });
+    return jsonResponse({ data: TEAMS, page: { has_more: false } });
   }
   // The access preview is the server's own sentence about the role; this
   // suite is about the invite and the roster, so it answers a neutral rep.
@@ -284,7 +290,13 @@ function readRoute(
       data: ROSTER.data
         .filter((u) => u.status !== "deactivated")
         .map(
-          ({ roles: _withheld, allowed_actions: _computed, ...rest }) => rest,
+          ({
+            roles: _withheld,
+            allowed_actions: _computed,
+            team_ids: _teams,
+            last_active_at: _activity,
+            ...rest
+          }) => rest,
         ),
     });
   }
