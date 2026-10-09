@@ -6142,6 +6142,7 @@ public.retention_policy.object_type text NOT NULL gen=- def=-
 public.retention_policy.retain_days integer NOT NULL gen=- def=-
 public.retention_policy.retention_policy_action_check CHECK ((action = ANY (ARRAY['archive'::text, 'anonymize'::text, 'erase'::text])))
 public.retention_policy.retention_policy_pkey PRIMARY KEY (id)
+public.retention_policy.retention_policy_retain_days_check CHECK (((retain_days >= 1) AND (retain_days <= 36500)))
 public.retention_policy.retention_policy_unique UNIQUE NULLS NOT DISTINCT (object_type, category)
 public.retention_policy_pkey CREATE UNIQUE INDEX retention_policy_pkey ON public.retention_policy USING btree (id)
 public.retention_policy_unique CREATE UNIQUE INDEX retention_policy_unique ON public.retention_policy USING btree (object_type, category) NULLS NOT DISTINCT

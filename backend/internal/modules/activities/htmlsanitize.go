@@ -210,7 +210,7 @@ func safeStyle(node *html.Node) string {
 		if !strings.EqualFold(attr.Key, "style") {
 			continue
 		}
-		for _, decl := range strings.Split(attr.Val, ";") {
+		for decl := range strings.SplitSeq(attr.Val, ";") {
 			prop, value, ok := strings.Cut(decl, ":")
 			if !ok {
 				continue
