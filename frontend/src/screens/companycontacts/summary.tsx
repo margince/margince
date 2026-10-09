@@ -192,9 +192,8 @@ function WayIn({ coverage }: Readonly<{ coverage: Coverage }>) {
       />
     );
   }
-  // The card names one contact, so its door is that contact's page, whatever
-  // their engagement: the name sits under the door's stretched target, which
-  // makes it the same link.
+  // The card names one contact, so its door is that contact's page.
+  // The name sits under the door's stretched target, so it is the same link.
   return (
     <StatCard
       {...slot}

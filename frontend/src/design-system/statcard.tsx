@@ -130,8 +130,8 @@ export function StatCard({
   // ONE control and not two — the basis trigger layers above it and keeps its
   // own press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
-  // The same door as a LINK, for a reading that names one record: the card
-  // goes to that record's page, and a reader can open it in a new tab.
+  // The same door as a link, for a reading that names one record.
+  // The card goes to that record's page, which a reader can open in a new tab.
   // A card given both draws the link.
   href?: string;
   // How far along this reading is, as the two numbers it is made of. Drawn as
