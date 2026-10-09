@@ -44,6 +44,13 @@ func (e Evaluator) evaluateEdge(ctx context.Context, tx pgx.Tx, row AuditRow) (U
 	if answer, decided := edgeShapeRefusal(row.Action, facts); decided {
 		return answer, nil
 	}
+	before, err := edgeImage(row.Before)
+	if err != nil {
+		return Undoability{}, err
+	}
+	if held := contacts.EdgeFieldsNoPatchRestores(before); len(held) > 0 {
+		return refuse(ReasonNotRestorableByThisPath, strings.Join(held, ", ")), nil
+	}
 	// Asked before the link's own state, for the reason the record path asks it
 	// before supersession: an entry somebody has put back should SAY so. Putting
 	// a link back removes it, so "the link is gone" would otherwise answer first

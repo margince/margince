@@ -270,6 +270,9 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	// duplicate, not a (kind, company, deal) one, and this predicate would archive
 	// a source edge because the target pairs with ANYBODY.
 	// The role counts for the kinds keyed on it — see roleKeyedDuplicateSQL.
+	if err := foldFirstObservations(ctx, tx, "contact_id", sourceID.UUID, targetID.UUID); err != nil {
+		return 0, err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE relationship a SET archived_at = $3
 		WHERE a.contact_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL AND EXISTS (

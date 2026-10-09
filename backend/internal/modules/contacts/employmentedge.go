@@ -33,7 +33,7 @@ import (
 // A refusal attaches nothing, and neither does a company that has since been
 // archived: the ledger names a company, it does not promise one is still
 // there to join.
-func attachToSettledVerdict(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, prior DomainDisposition, res *EnsureCounterpartyResult) error {
+func attachToSettledVerdict(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, domain string, prior DomainDisposition, res *EnsureCounterpartyResult) error {
 	if prior.CompanyID == nil {
 		return nil
 	}
@@ -42,7 +42,7 @@ func attachToSettledVerdict(ctx context.Context, tx pgx.Tx, in EnsureCounterpart
 		return err
 	}
 	res.CompanyID = prior.CompanyID
-	return plantEmploymentEdge(ctx, tx, in, res.ContactID, *prior.CompanyID)
+	return plantEmploymentEdge(ctx, tx, in, domain, res.ContactID, *prior.CompanyID)
 }
 
 // companyIsLive reports whether a company is still one records may be
@@ -64,13 +64,15 @@ func companyIsLive(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (boo
 
 // plantEmploymentEdge attaches one contact to one company, and only when they
 // have no current primary employer: capture SUGGESTS an employer, it never
-// reassigns somebody's. TWO partial uniques are the structural guard — the
-// current-primary one and uq_rel_employment, which refuses a second live edge
-// for the same pair — and ON CONFLICT DO NOTHING is what makes either of them
-// a no-op here rather than a failure: capture has nothing to add to an
-// employment that already exists. The NOT EXISTS keeps a concurrent race with
-// the first from surfacing as a 500.
-func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, contactID ids.ContactID, companyID ids.CompanyID) error {
+// reassigns somebody's. TWO partial uniques are the structural guard: the
+// current-primary one, and uq_rel_employment, which refuses a second live edge
+// for the same pair. ON CONFLICT DO NOTHING makes either a no-op here rather
+// than a failure. The NOT EXISTS keeps a concurrent race with the first from
+// surfacing as a 500.
+//
+// domain is the employer's registrable domain, which dates the edge
+// (employmentFirstObservedSQL); an existing edge may still be dated earlier.
+func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, domain string, contactID ids.ContactID, companyID ids.CompanyID) error {
 	// The employment edge hangs off the contact, so an archive in flight must
 	// not be outrun — see lockContactForAttach.
 	if err := lockContactForAttach(ctx, tx, contactID); err != nil {
@@ -91,20 +93,19 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by)
-		SELECT 'employment', $1, $2, true, $3, $4
+		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by, first_observed_at)
+		SELECT 'employment', $1, $2, true, $3, $4, `+employmentFirstObservedSQL("$1", "$5", "$6", "$7")+`
 		WHERE NOT EXISTS (
 			SELECT 1 FROM relationship
 			WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
-		contactID, companyID, in.Source, in.CapturedBy).Scan(&edgeID)
+		contactID, companyID, in.Source, in.CapturedBy, domain, in.ActivityID, mailClockSkewAllowance).Scan(&edgeID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either guard skipped it: the contact already has a current primary
-		// employer, or this exact edge already exists. Nothing was written, so
-		// nothing is audited and nothing is published — a no-op must not mint
-		// history.
-		return nil
+		// employer, or this exact edge already exists. Only the second has
+		// anything left to learn from this message.
+		return observeEmployment(ctx, tx, in, domain, contactID, companyID)
 	}
 	if err != nil {
 		return fmt.Errorf("contacts: insert employment edge: %w", err)
@@ -163,7 +164,7 @@ func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCo
 		return err
 	}
 	if known && prior.Settled() {
-		return attachToSettledVerdict(ctx, tx, in, prior, res)
+		return attachToSettledVerdict(ctx, tx, in, base, prior, res)
 	}
 	if known {
 		// The question is open. Usually somebody already asked it and the crawl
