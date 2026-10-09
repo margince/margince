@@ -93,10 +93,9 @@ export function CaptureSettingsCard() {
                   testId="capture-auto-enrich-toggle"
                   label={t("captureSettings.autoEnrich.label")}
                   labelHidden
-                  // Two reasons, and only one of them is worth words: a
-                  // caller who may never change this needs to know why,
-                  // where a write already in flight explains itself by
-                  // finishing.
+                  // Only one of the two reasons is worth words. A caller
+                  // who may never change this needs to know why; a write
+                  // in flight explains itself by finishing.
                   reason={
                     canManage ? undefined : t("captureSettings.adminOnly")
                   }

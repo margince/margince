@@ -211,8 +211,8 @@ describe("SettingList bleed", () => {
     );
   });
 
-  // Keyed on standing straight in a Panel, so a bleed list left inside a
-  // PanelBody stays where it was instead of paying the pane's padding twice.
+  // Keyed on standing straight in a Panel. A bleed list left inside a PanelBody
+  // stays put instead of paying the pane's padding twice.
   it("pads a bleeding row to the pane, and hovers only a record row", () => {
     const css = settingRowCss().replace(/\/\*[\s\S]*?\*\//g, "");
     expect(css).toMatch(

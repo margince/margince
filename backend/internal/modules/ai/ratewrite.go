@@ -363,7 +363,7 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 // editor's "sheet head" view, distinct from RateFor's as-of-day effective
 // price (effective_date <= day). Admin/ops read gate.
 //
-// A row with no model id is left off: it prices a binding that names no model
+// A row with no model id is left off. It prices a binding that names no model
 // (the offline fake's seed row), and modelRateIdentity refuses to edit it.
 func (s *RateStore) ListLatestModelRates(ctx context.Context) ([]ModelRateRow, error) {
 	if err := auth.Require(ctx, "ai_model_rate", principal.ActionRead); err != nil {

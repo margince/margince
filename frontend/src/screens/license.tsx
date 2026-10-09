@@ -292,11 +292,9 @@ export function LicenseReading({
           control={
             <StatCard
               label={t("license.seats.title")}
-              // Used AGAINST granted in one value, because that is one fact.
-              // Two slots and a bar under them said it three times: a reader
-              // comparing them had to work out that the second figure was the
-              // first one's denominator and that the bar was both of them
-              // again.
+              // Used against granted in one value, because that is one fact.
+              // As two figures, a reader must work out which one is the
+              // other's denominator.
               value={
                 capped
                   ? t("license.seats.ofGranted", {
@@ -306,7 +304,7 @@ export function LicenseReading({
                   : formatNumber(entitlement.seats_used, locale)
               }
               detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
-              // Only where the reading HAS a denominator: an uncapped
+              // Only where the reading has a denominator. An uncapped
               // installation has nothing to be a share of, and a bar drawn
               // against an invented limit invents the limit.
               meter={

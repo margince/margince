@@ -272,8 +272,9 @@ export function PanelRow({
   // A row that merely CONTAINS a control is not this. Its control draws its
   // own hover, and a fill behind it claims a hit area the row does not have.
   interactive?: boolean;
-  // One row per THING in a list of them (a model tier, a member): the hairline
-  // runs edge to edge and the row takes a table row's hover, pressable or not.
+  // One row per thing in a list of them, such as a model tier or a member. The
+  // hairline runs edge to edge and the row hovers like a table row, pressable
+  // or not.
   record?: boolean;
   children: ReactNode;
   className?: string;

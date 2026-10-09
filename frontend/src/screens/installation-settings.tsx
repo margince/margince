@@ -391,8 +391,8 @@ function InstallationSettingsForm({
           label={t("installationSettings.forwardMeasure")}
           description={t("installationSettings.forwardMeasureHint")}
           // The measure's own sentence rather than the stored word: an admin
-          // is deciding what a projection MEANS, and "manager_call" does not
-          // say that the call replaces the projection instead of adding to it.
+          // is deciding what a projection means. "manager_call" does not say
+          // that the call replaces the projection instead of adding to it.
           value={t(
             `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
           )}
