@@ -108,7 +108,7 @@ func (e *InvalidSignalEntityTypeError) Error() string {
 	return "entity_type " + e.EntityType + " is not one of " + strings.Join(SignalEntityTables(), ", ")
 }
 
-// FieldFault names the allowed types and leaves the caller's value out: a long
+// FieldFault names the allowed types and leaves the caller's value out. A long
 // value would use up the wire's length cap and cut off the list to pick from.
 func (e *InvalidSignalEntityTypeError) FieldFault() (field, code, message string) {
 	return "entity_type", "invalid_entity_type", "entity_type must be one of " + strings.Join(SignalEntityTables(), ", ")
