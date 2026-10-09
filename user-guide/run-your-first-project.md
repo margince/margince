@@ -196,8 +196,8 @@ Delivery runs for months. The project page is where it is tracked:
   to it.
 - **Timeline** is the mail and activity filed under the project. The filter
   row above it (**Activity kind**, **Search this timeline**, **From**, **To**)
-  narrows it. The **Activities / Changes / All** switch shows the mail, the
-  project's own field and phase changes, or both.
+  narrows it. The **All / Changes** switch shows the mail and activity, or
+  the project's own field and phase changes.
 
 ### Nordwind brings in a partner
 

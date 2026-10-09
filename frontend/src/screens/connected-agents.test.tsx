@@ -257,7 +257,7 @@ describe("ConnectedAgentsCard", () => {
     vi.stubGlobal("fetch", backend({ passports: [MINTED] }));
     render(<ConnectedAgentsCard />);
     await waitFor(() =>
-      expect(screen.getByText("No agents connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No MCP clients connected yet.")).toBeTruthy(),
     );
   });
 
@@ -270,9 +270,9 @@ describe("ConnectedAgentsCard", () => {
     vi.stubGlobal("fetch", backend({ passports: [] }));
     render(<ConnectedAgentsCard />);
     await waitFor(() =>
-      expect(screen.getByText("No agents connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No MCP clients connected yet.")).toBeTruthy(),
     );
-    const guide = screen.getByText("Connect an agent").closest("details");
+    const guide = screen.getByText("Connect MCP client").closest("details");
     if (!(guide instanceof HTMLDetailsElement)) {
       throw new Error("the connect guide is not a disclosure");
     }
@@ -286,7 +286,7 @@ describe("ConnectedAgentsCard", () => {
     vi.stubGlobal("fetch", backend({}));
     render(<ConnectedAgentsCard />);
     await waitFor(() => expect(screen.getByText("Claude Code")).toBeTruthy());
-    const guide = screen.getByText("Connect an agent").closest("details");
+    const guide = screen.getByText("Connect MCP client").closest("details");
     if (!(guide instanceof HTMLDetailsElement)) {
       throw new Error("the connect guide is not a disclosure");
     }
@@ -431,7 +431,7 @@ describe("ConnectedAgentsCard", () => {
     // The DELETE firing is not the claim — the row leaving the list is. Without
     // this the test passes on a refetch that never happens.
     await waitFor(() =>
-      expect(screen.getByText("No agents connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No MCP clients connected yet.")).toBeTruthy(),
     );
     expect(document.querySelector('[data-testid^="connection-"]')).toBeNull();
   });
@@ -455,7 +455,7 @@ describe("ConnectedAgentsCard", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("No agents connected yet.")).toBeTruthy(),
+      expect(screen.getByText("No MCP clients connected yet.")).toBeTruthy(),
     );
     expect(opener.isConnected).toBe(false);
     // The region that held the row, which now reads back what is left — the
@@ -465,7 +465,7 @@ describe("ConnectedAgentsCard", () => {
       throw new Error("focus left the document entirely after the disconnect");
     }
     expect(landed).not.toBe(document.body);
-    expect(landed.textContent).toContain("No agents connected yet.");
+    expect(landed.textContent).toContain("No MCP clients connected yet.");
   });
 });
 
