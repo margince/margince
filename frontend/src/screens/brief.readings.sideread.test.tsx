@@ -68,8 +68,6 @@ describe("the urgent reading over a source that did not answer", () => {
 
   // An older server sends no flag, and the safe reading of silence is a lane.
   it("is a floor when the server does not say whether the source holds rows", () => {
-    expect(drawUrgent(4, [{ source: "meeting", reason: "failed" }])).toBe(
-      "4+",
-    );
+    expect(drawUrgent(4, [{ source: "meeting", reason: "failed" }])).toBe("4+");
   });
 });
