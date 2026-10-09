@@ -88,7 +88,7 @@ func stampDescriptionAuthor(ctx context.Context, tx pgx.Tx, companyID ids.Compan
 
 // provenanceCarriedOnMerge are the survivorship-filled fields whose author
 // follows the value onto the survivor.
-var provenanceCarriedOnMerge = []string{descriptionField, fieldLegalName, fieldIndustry, "linkedin_url"}
+var provenanceCarriedOnMerge = []string{descriptionField, fieldLegalName, fieldIndustry, linkedInField}
 
 // carryFieldAuthors moves the author of each field the survivor just inherited
 // from a merged-away company, so the value and the claim on it stay together.

@@ -29,7 +29,7 @@ func (e *dedupeEnv) grant(ctx context.Context, t *testing.T, recordID, subject i
 		VALUES ('company', $1, 'user', $2, $3, $4)`, recordID, subject, access, e.rep)
 }
 
-// A person who could read the retired company can open the survivor.
+// A reader who could open the retired company can open the survivor.
 func TestMergingACompanyCarriesTheAccessSharedOnIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
