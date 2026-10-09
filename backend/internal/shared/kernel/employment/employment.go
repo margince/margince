@@ -140,8 +140,12 @@ func CurrentPrimarySlotSQL(alias string) string {
 // An edge with neither is unbounded, which the trailing `at` in the coalesce
 // does. Reading NULL as "unknown" would cut every edge capture planted before
 // it dated any off from its whole history.
+//
+// The start date begins at UTC midnight. A bare ::timestamptz would use the
+// session's TimeZone, which no pool pins, and the date-only API binds dates at
+// UTC midnight too (storekit.AsDate).
 func InPlaceAtSQL(alias, at string) string {
-	return sqlf("coalesce(%[1]s.started_at::timestamptz, %[1]s.first_observed_at, %[2]s) <= %[2]s", alias, at)
+	return sqlf("coalesce(%[1]s.started_at::timestamp AT TIME ZONE 'UTC', %[1]s.first_observed_at, %[2]s) <= %[2]s", alias, at)
 }
 
 // sqlf renders a SQL fragment. Named rather than calling fmt.Sprintf inline,
