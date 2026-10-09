@@ -38,7 +38,7 @@ import {
   isVersionSkew,
   ProblemError,
   provenanceOf,
-  throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import { SendPermission } from "./sendpermission";
@@ -231,16 +231,14 @@ export function ApprovalRow({
         input.verdict === "approve"
           ? "/approvals/{id}/approve"
           : "/approvals/{id}/reject";
-      const { data, error } = await api.POST(path, {
-        params: { path: { id: approval.id } },
-        ...(input.verdict === "approve" && input.editedPayload
-          ? { body: { edited_payload: input.editedPayload } }
-          : {}),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST(path, {
+          params: { path: { id: approval.id } },
+          ...(input.verdict === "approve" && input.editedPayload
+            ? { body: { edited_payload: input.editedPayload } }
+            : {}),
+        }),
+      );
     },
     onSuccess: (_data, input) => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });

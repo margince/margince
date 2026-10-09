@@ -18,7 +18,7 @@ import {
   useT,
 } from "../i18n";
 import { callsHrefFor } from "./aicalls";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./ai-settings.css";
 
 // What a provider, a tier or a host actually did, read from the call record
@@ -40,11 +40,11 @@ export function useCallStats(query: StatsQuery, enabled: boolean) {
     queryKey: ["ai-call-stats", query],
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/call-stats", {
-        params: { query },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/ai/call-stats", {
+          params: { query },
+        }),
+      );
     },
   });
 }
@@ -54,11 +54,11 @@ export function useTaskFlow(task: string, window: Window, enabled: boolean) {
     queryKey: ["ai-task-flow", task, window],
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/call-stats/flow", {
-        params: { query: { task, window } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/ai/call-stats/flow", {
+          params: { query: { task, window } },
+        }),
+      );
     },
   });
 }

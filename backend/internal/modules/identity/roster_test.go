@@ -4,6 +4,7 @@
 package identity
 
 import (
+	"context"
 	"regexp"
 	"strconv"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // wireUser/wireTeam are pure mappings (no DB), so they carry their own
@@ -224,33 +226,57 @@ func TestWireTeam(t *testing.T) {
 	}
 }
 
-// Last-active follows ListUserSessions' reach. A non-admin delegate sees it on
-// a member they outrank, never on an admin. A request with no human caller
-// sees it on nobody.
+// Last-active follows ListUserSessions: user_admin read on a target the caller outranks.
+// A request with no human caller sees it on nobody.
 func TestLastActiveIsWithheldWhereTheCallerCouldNotListTheSessions(t *testing.T) {
 	seen := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
-	admin, rep := ids.NewV7(), ids.NewV7()
-	grants := map[ids.UUID]seatGrants{admin: {roles: []string{roleAdmin}}, rep: {roles: []string{"rep"}}}
-	delegate := &Identity{Roles: []string{"member_admin"}}
+	admin, narrower, wider := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	grants := map[ids.UUID]seatGrants{
+		admin:    {roles: []string{roleAdmin}},
+		narrower: {roles: []string{"rep"}, perms: principal.Permissions{RowScope: principal.RowScopeOwn}},
+		wider:    {roles: []string{"rep"}, perms: principal.Permissions{RowScope: principal.RowScopeAll}},
+	}
+	adminSeat := seatWithUserAdmin(roleAdmin, principal.ObjectGrant{Read: true}, principal.RowScopeAll)
+	delegate := seatWithUserAdmin("member_admin",
+		principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}, principal.RowScopeTeam)
+	deleter := seatWithUserAdmin("ops", principal.ObjectGrant{Delete: true}, principal.RowScopeTeam)
+	if callerOutranks(*deleter, grants[narrower], reachDenial) != nil {
+		t.Fatal("the write-only delegate does not outrank the rep, so its case proves nothing")
+	}
 	for _, c := range []struct {
 		name   string
 		caller *Identity
 		target ids.UUID
 		shown  bool
 	}{
-		{"an admin on an admin", &Identity{Roles: []string{roleAdmin}}, admin, true},
-		{"a delegate on a rep", delegate, rep, true},
+		{"an admin on an admin", adminSeat, admin, true},
+		{"a delegate on a rep it outranks", delegate, narrower, true},
+		{"a delegate on a rep with a wider row scope", delegate, wider, false},
 		{"a delegate on an admin", delegate, admin, false},
-		{"no human caller", nil, rep, false},
+		{"a delegate without user_admin read", deleter, narrower, false},
+		{"no human caller", nil, narrower, false},
 	} {
 		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			if c.caller != nil {
+				ctx = principal.WithActor(ctx, principal.Principal{
+					Type: principal.PrincipalHuman, Permissions: c.caller.Permissions,
+				})
+			}
 			rows := []userRow{{ID: c.target, LastActiveAt: &seen}}
-			withholdActivity(c.caller, rows, grants)
+			withholdActivity(ctx, c.caller, rows, grants)
 			if shown := rows[0].LastActiveAt != nil; shown != c.shown {
 				t.Errorf("last active shown = %v, want %v", shown, c.shown)
 			}
 		})
 	}
+}
+
+func seatWithUserAdmin(role string, grant principal.ObjectGrant, scope principal.RowScope) *Identity {
+	return &Identity{Roles: []string{role}, Permissions: principal.Permissions{
+		RoleKeys: []string{role}, RowScope: scope,
+		Objects: map[string]principal.ObjectGrant{objectUserAdmin: grant},
+	}}
 }
 
 func TestWireUserWithRolesCarriesLastActive(t *testing.T) {

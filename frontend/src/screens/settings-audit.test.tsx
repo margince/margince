@@ -10,6 +10,10 @@ import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { auditEntry, jsonResponse, render } from "./settings.testkit";
 import { AuditLogCard } from "./settings-audit";
 
+// The fixture entry's toggle, named by its action and entity.
+const EXPAND_UPDATE = "Show change detail: update on contact";
+const ANY_EXPAND = /^Show change detail: /;
+
 // No shared fetch stub: the backend a claim needs is installed beside the claim,
 // so what answered it is readable where it is asserted.
 beforeEach(() => {
@@ -77,7 +81,7 @@ function auditLogUrls(backend: ReturnType<typeof auditLogBackend>) {
 }
 
 async function openDetail(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Show change detail" }));
+  await user.click(screen.getByRole("button", { name: ANY_EXPAND }));
 }
 
 describe("AuditLogCard", () => {
@@ -152,6 +156,20 @@ describe("AuditLogCard", () => {
       screen.getByText("Could not load this view. Reload the page."),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Actor")).toBeInTheDocument();
+  });
+
+  it("names the row its toggle opens, and points at a region in the document", async () => {
+    vi.stubGlobal("fetch", auditLogBackend());
+    render(<AuditLogCard />);
+    const user = userEvent.setup();
+    const toggle = await screen.findByRole("button", { name: EXPAND_UPDATE });
+
+    for (const expanded of ["false", "true"]) {
+      expect(toggle).toHaveAttribute("aria-expanded", expanded);
+      const controls = toggle.getAttribute("aria-controls") ?? "";
+      expect(document.getElementById(controls)).not.toBeNull();
+      await user.click(toggle);
+    }
   });
 
   it("reads each entry under the column it belongs to", async () => {
@@ -233,7 +251,7 @@ describe("AuditLogCard", () => {
     const user = userEvent.setup();
     render(<AuditLogCard />);
     await screen.findByText("update");
-    const toggle = screen.getByRole("button", { name: "Show change detail" });
+    const toggle = screen.getByRole("button", { name: EXPAND_UPDATE });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("qualified")).toBeNull();
 
@@ -252,9 +270,7 @@ describe("AuditLogCard", () => {
     vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    const toggle = await screen.findByRole("button", {
-      name: "Show change detail",
-    });
+    const toggle = await screen.findByRole("button", { name: ANY_EXPAND });
 
     await user.click(screen.getByText("Anna Weber"));
     expect(toggle).toHaveAttribute("aria-expanded", "true");

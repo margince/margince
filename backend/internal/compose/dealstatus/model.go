@@ -30,6 +30,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -343,7 +344,7 @@ func excerpt(body string) string {
 		return trimmed
 	}
 	tail := maxExcerptLen / 3
-	return string(runes[:maxExcerptLen-tail-1]) + "…" + string(runes[len(runes)-tail:])
+	return textcut.Runes(trimmed, maxExcerptLen-tail-1) + "…" + string(runes[len(runes)-tail:])
 }
 
 // dealIn projects the deal's own fields.

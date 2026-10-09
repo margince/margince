@@ -43,6 +43,7 @@ import {
   QueryGate,
   type QueryLike,
   throwProblem,
+  unwrap,
   useMe,
   WriteRefused,
 } from "./common";
@@ -146,11 +147,7 @@ export function useCompanyContextCapabilities(enabled = true) {
     queryKey: companyContextCapabilitiesQueryKey,
     enabled,
     queryFn: async (): Promise<Capabilities> => {
-      const { data, error } = await api.GET("/company/context/capabilities");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/company/context/capabilities"));
     },
   });
 }
@@ -164,13 +161,11 @@ export function ManualCompanySetup() {
   const [form, setForm] = useState<CompanyInput>(EMPTY_COMPANY_INPUT);
   const save = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.PUT("/company", {
-        body: trimCompanyInput(form),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/company", {
+          body: trimCompanyInput(form),
+        }),
+      );
     },
     onSuccess: (profile) => {
       storeCompany(queryClient, profile);
@@ -358,11 +353,7 @@ export function CompanyContextCard() {
 
   const save = useMutation({
     mutationFn: async (body: CompanyInput) => {
-      const { data, error } = await api.PUT("/company", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.PUT("/company", { body }));
     },
     onSuccess: (profile) => {
       storeCompany(queryClient, profile);
@@ -395,14 +386,12 @@ export function CompanyContextCard() {
       if (!website) {
         throwProblem({ title: t("settings.companyWebsiteRequired") });
       }
-      const { data, error } = await api.POST("/company/site-reads", {
-        params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-        body: { url: absoluteWebsite(website) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/company/site-reads", {
+          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+          body: { url: absoluteWebsite(website) },
+        }),
+      );
     },
     onSuccess: (read) => {
       setReadID(read.id);
@@ -415,13 +404,11 @@ export function CompanyContextCard() {
     queryKey: ["company-context-refresh", readID],
     enabled: readID !== null,
     queryFn: async (): Promise<SiteRead> => {
-      const { data, error } = await api.GET("/company/site-reads/{readId}", {
-        params: { path: { readId: readID ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/company/site-reads/{readId}", {
+          params: { path: { readId: readID ?? "" } },
+        }),
+      );
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -674,7 +661,7 @@ function CompanyFactsCard({
         {readOnly && <p>{t("settings.companyReadOnly")}</p>}
         {/* The company's FACE, above the statements about it: the one thing
             here a reader recognises at a glance, and the sidebar's too. */}
-        {company.data && form && (
+        {company.data && !company.isError && form && (
           <CompanyMark profile={company.data} canEdit={canEdit} />
         )}
       </PanelBody>
@@ -697,12 +684,8 @@ function CompanyFactsCard({
                     onEdit={() => onEdit(field)}
                   />
                 ))}
-                {/* The elaborations, closed. Thirteen optional statements
-                    against the three the save DEMANDS, and open by default
-                    they buried the three that decide whether this profile is
-                    usable at all. A Disclosure inside the list is the
-                    settings page's own answer for a card's secondary half:
-                    its summary sits on the same beat as the labels above. */}
+                {/* Closed, so thirteen optional facts do not bury the three
+                    the save requires. */}
                 {ELABORATIONS.map((group) => (
                   <Disclosure key={group.title} summary={t(group.title)}>
                     <SettingList>
@@ -720,13 +703,13 @@ function CompanyFactsCard({
                   </Disclosure>
                 ))}
               </SettingList>
-              {/* The save landed and the dialog it landed in is gone, so the
-                  confirmation is left on the card that now shows the new
-                  values. A refusal stays in the dialog, beside the fields it
-                  refused. */}
+              {/* The dialog closes on save, so the confirmation lands here; a
+                  refusal stays in the dialog beside the fields it refused. */}
               {saved && (
                 <PanelBody>
-                  <SavedNotice />
+                  <div className="settings-panel-commit">
+                    <SavedNotice />
+                  </div>
                 </PanelBody>
               )}
             </>
@@ -813,10 +796,12 @@ function CompanySourceCard({
       </SettingList>
       {failure !== null && (
         <PanelBody>
-          <WriteRefused
-            titleKey="settings.companyRefreshFailed"
-            message={failure}
-          />
+          <div className="settings-panel-commit">
+            <WriteRefused
+              titleKey="settings.companyRefreshFailed"
+              message={failure}
+            />
+          </div>
         </PanelBody>
       )}
     </Panel>

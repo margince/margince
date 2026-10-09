@@ -343,36 +343,32 @@ func (s *Store) queueOne(ctx context.Context, tx pgx.Tx, desc provider.Descripto
 		return s.readRun(ctx, tx, runID)
 	}
 
-	// 6. The reservation: the whole worst case, up front, all pools or none.
-	skip, err := s.reserve(ctx, tx, desc, conn, runID, cats)
+	// 6. The per-category claim, before any credit is held: an overlapping
+	//    but different set passes the fingerprint index and stops here.
+	claimed, err := s.claimCategories(ctx, tx, runID, in, cats)
 	if err != nil {
 		return provider.Run{}, err
 	}
+	skip := provider.SkipCategoryInFlight
+	if claimed {
+		// 7. The reservation: the whole worst case, up front, all pools or none.
+		skip, err = s.reserve(ctx, tx, desc, conn, runID, cats)
+		if err != nil {
+			return provider.Run{}, err
+		}
+	}
+	fields := map[string]any{auditKeyProvider: in.Provider, "trigger": string(in.Trigger)}
 	if skip != "" {
 		if err := s.markSkipped(ctx, tx, runID, skip); err != nil {
 			return provider.Run{}, err
 		}
-		return s.readRun(ctx, tx, runID)
-	}
-
-	// 7. The durable hand-off, committed with the run. It is REQUIRED, not
-	//    optional: a queued run with no job is not a run. It would sit in the
-	//    live-run index forever, blocking every later attempt at the same
-	//    subject while nothing ever executed it — the failure capture's
-	//    StartBackfill documents for exactly the same shape. A missing
-	//    enqueue is a wiring bug, so it fails here rather than committing a
-	//    row that looks queued and is inert.
-	ws, err := s.db.Workspace(ctx)
-	if err != nil {
-		return provider.Run{}, fmt.Errorf("integrations: resolving the workspace for the submit job: %w", err)
-	}
-	if err := s.enqueueSubmit(ctx, tx, runID, ws.String()); err != nil {
-		return provider.Run{}, fmt.Errorf("integrations: scheduling the submission: %w", err)
+		fields["skip_reason"] = string(skip)
+	} else if err := s.handOff(ctx, tx, runID); err != nil {
+		return provider.Run{}, err
 	}
 	// "create", not "queue": the audit vocabulary is closed (0018), and
-	// queueing a run IS the creation of the run row.
-	if _, err := storekit.Audit(ctx, tx, "create", "provider_run", uuidOf(&runID),
-		nil, map[string]any{auditKeyProvider: in.Provider, "trigger": string(in.Trigger)}); err != nil {
+	// queueing a run is the creation of the run row, skipped or not.
+	if _, err := storekit.Audit(ctx, tx, "create", "provider_run", uuidOf(&runID), nil, fields); err != nil {
 		return provider.Run{}, err
 	}
 	return s.readRun(ctx, tx, runID)
@@ -466,12 +462,8 @@ func freezeSnapshot(c admittedConnection) provider.Snapshot {
 // repeat of the SAME request finds the run already in flight rather than
 // buying the same answer twice.
 //
-// It does not catch two runs whose category sets overlap without matching:
-// they hash differently, both pass the live-run index, and both buy the
-// category they share. Guarding that needs a per-category claim rather than a
-// whole-set hash, which is a schema change — tracked as its own work, and said
-// here rather than left for the next reader to discover from a duplicate
-// charge.
+// Overlapping but different sets hash differently; claimCategories refuses
+// the second of those.
 func fingerprintOf(id provider.ContactIdentifiers, cats []provider.Category) string {
 	names := make([]string, 0, len(cats))
 	for _, c := range cats {

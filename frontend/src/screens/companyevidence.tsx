@@ -13,7 +13,7 @@ import { Heading } from "../design-system/heading";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 type Receipt = components["schemas"]["ClaimEvidence"];
 type SourceKind = Receipt["source_kind"];
@@ -70,9 +70,8 @@ export function EvidenceModal({
   const receipt = useQuery({
     queryKey: ["claim-evidence", companyId, cited.entityType, cited.entityId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/companies/{id}/evidence/{entityType}/{entityId}",
-        {
+      return unwrap(
+        await api.GET("/companies/{id}/evidence/{entityType}/{entityId}", {
           params: {
             path: {
               id: companyId,
@@ -80,12 +79,8 @@ export function EvidenceModal({
               entityId: cited.entityId,
             },
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
   });
 

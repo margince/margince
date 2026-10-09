@@ -218,7 +218,7 @@ function renderBlock(block: Block): ReactNode {
     return <blockquote {...marked}>{renderBlocks(block.blocks)}</blockquote>;
   }
   if (block.kind === "list") {
-    return renderList(block.ordered, block.items, marked);
+    return renderList(block.ordered, block.start, block.items, marked);
   }
   return renderTable(block.header, block.rows, marked);
 }
@@ -238,12 +238,15 @@ function renderHeading(level: number, run: Run): ReactNode {
 
 function renderList(
   ordered: boolean,
+  start: number,
   items: readonly Run[],
   marked: MarkAttr,
 ): ReactNode {
   const rendered = sequence(items, (item) => <li>{renderRun(item)}</li>);
   return ordered ? (
-    <ol {...marked}>{rendered}</ol>
+    <ol start={start === 1 ? undefined : start} {...marked}>
+      {rendered}
+    </ol>
   ) : (
     <ul {...marked}>{rendered}</ul>
   );

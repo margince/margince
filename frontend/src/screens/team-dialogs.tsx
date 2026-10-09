@@ -21,7 +21,7 @@ import { useToast } from "../design-system/toast";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { RosterPartialNote } from "./roster";
 import "./users-access.css";
 
@@ -76,10 +76,11 @@ export function TeamMembersModal({
       member: boolean;
     }) => {
       const params = { params: { path: { id: teamId, userId } } };
-      const { error } = member
-        ? await api.PUT("/teams/{id}/members/{userId}", params)
-        : await api.DELETE("/teams/{id}/members/{userId}", params);
-      if (error) throwProblem(error);
+      unwrap(
+        member
+          ? await api.PUT("/teams/{id}/members/{userId}", params)
+          : await api.DELETE("/teams/{id}/members/{userId}", params),
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["users"] });
@@ -115,6 +116,10 @@ export function TeamMembersModal({
     const user = candidates.find((candidate) => candidate.id === value);
     if (!user) {
       setDraft(value);
+      return;
+    }
+    // The field stays enabled to keep focus, so this holds one write at a time.
+    if (setMember.isPending) {
       return;
     }
     setDraft("");
@@ -162,7 +167,12 @@ export function TeamMembersModal({
                       setMember.isPending &&
                       setMember.variables?.userId === member.id
                     }
-                    disabled={setMember.isPending}
+                    // The pressed verb stays enabled so it keeps focus and shows
+                    // its wait; only the other rows' verbs hold.
+                    disabled={
+                      setMember.isPending &&
+                      setMember.variables?.userId !== member.id
+                    }
                     onClick={() => {
                       refocusAt.current = index;
                       setMember.mutate({
@@ -188,7 +198,6 @@ export function TeamMembersModal({
                   value={draft}
                   onChange={pick}
                   placeholder={t("users.teamAddPlaceholder")}
-                  disabled={setMember.isPending}
                   suggestions={candidates.map((user) => ({
                     value: user.id,
                     label: user.display_name,
@@ -229,11 +238,12 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
   const [draft, setDraft] = useState(team.name);
   const rename = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { error } = await api.PATCH("/teams/{id}", {
-        params: { path: { id } },
-        body: { name },
-      });
-      if (error) throwProblem(error);
+      unwrap(
+        await api.PATCH("/teams/{id}", {
+          params: { path: { id } },
+          body: { name },
+        }),
+      );
     },
     onSuccess: (_renamed, { name }) => {
       setOpen(false);
@@ -347,9 +357,7 @@ export function NewTeamAction() {
   const [draft, setDraft] = useState("");
   const create = useMutation({
     mutationFn: async (name: string) => {
-      const { data, error } = await api.POST("/teams", { body: { name } });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.POST("/teams", { body: { name } }));
     },
     onSuccess: () => {
       setDraft("");
@@ -361,7 +369,14 @@ export function NewTeamAction() {
   return (
     <>
       {/* Named for what it opens; the dialog's submit reads "Create team". */}
-      <Button onClick={() => setOpen(true)}>{t("users.newTeamOpen")}</Button>
+      <Button
+        onClick={() => {
+          create.reset();
+          setOpen(true);
+        }}
+      >
+        {t("users.newTeamOpen")}
+      </Button>
       <TeamNameDialog
         open={open}
         onClose={() => setOpen(false)}

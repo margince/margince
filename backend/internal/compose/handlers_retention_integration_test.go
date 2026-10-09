@@ -21,6 +21,8 @@ import (
 	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -271,4 +273,99 @@ func readRetentionPosture(ctx context.Context, t *testing.T, h privacy.Handlers)
 		t.Fatalf("decode posture: %v", err)
 	}
 	return out.RetainOnly
+}
+
+// A null clears a nullable field, and cannot clear one the schema never allows
+// to be null.
+//
+// A decoded pointer reads a JSON null and an omitted key the same way, so the
+// handler read the raw body for explicit nulls. Without that, an admin clearing
+// a lawful basis was told the save worked while the old basis stood.
+func TestARetentionPolicyPatchTellsANullFromAnOmission(t *testing.T) {
+	e := integration.Setup(t)
+	h := privacy.NewHandlers(e.DB(), NewSettingsStore(e.Pool))
+	admin := retentionHumanCtx(e, principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true})
+
+	created := createRetentionPolicy(admin, t, h,
+		`{"scope":"deal/lost","retain_days":30,"action":"archive","lawful_basis":"contract"}`,
+		http.StatusCreated)
+	if created.LawfulBasis == nil || *created.LawfulBasis != "contract" {
+		t.Fatalf("the policy was created without the basis it named: %+v", created.LawfulBasis)
+	}
+
+	// Omitted leaves it standing, which is what sparse means.
+	kept := patchRetentionPolicy(admin, t, h, created.Id, `{"enabled":false}`, http.StatusOK)
+	if kept.LawfulBasis == nil || *kept.LawfulBasis != "contract" {
+		t.Errorf("an omitted lawful_basis was cleared: %+v", kept.LawfulBasis)
+	}
+
+	// An explicit null clears it, because the contract declares the field
+	// nullable and a 200 that keeps the old basis is a success nobody can trust.
+	cleared := patchRetentionPolicy(admin, t, h, created.Id, `{"lawful_basis":null}`, http.StatusOK)
+	if cleared.LawfulBasis != nil {
+		t.Errorf("lawful_basis = %q after a null, want it cleared", *cleared.LawfulBasis)
+	}
+
+	// retain_days is NOT NULL and the contract declares a plain integer, so a
+	// null names no window. Refused, rather than a 200 that changes nothing.
+	refused := httptest.NewRecorder()
+	h.UpdateRetentionPolicy(refused,
+		httptest.NewRequest(http.MethodPatch, "/v1/retention-policies/"+created.Id.String(),
+			strings.NewReader(`{"retain_days":null}`)).WithContext(admin),
+		crmcontracts.Id(created.Id))
+	if refused.Code != http.StatusUnprocessableEntity {
+		t.Errorf("a null retain_days answered %d, want 422 (body %s)", refused.Code, refused.Body)
+	}
+	after := retentionPolicyByID(admin, t, h, created.Id)
+	if after.RetainDays != 30 {
+		t.Errorf("the refused null changed retain_days to %d", after.RetainDays)
+	}
+}
+
+// patchRetentionPolicy sends one PATCH and decodes the policy it answers with.
+func patchRetentionPolicy(ctx context.Context, t *testing.T, h privacy.Handlers,
+	id openapi_types.UUID, body string, wantStatus int,
+) crmcontracts.RetentionPolicy {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/v1/retention-policies/"+id.String(),
+		strings.NewReader(body)).WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	h.UpdateRetentionPolicy(rec, req, crmcontracts.Id(id))
+	if rec.Code != wantStatus {
+		t.Fatalf("patch %s: status = %d, want %d (body %s)", body, rec.Code, wantStatus, rec.Body)
+	}
+	var out crmcontracts.RetentionPolicy
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode patch %s: %v", body, err)
+	}
+	return out
+}
+
+// retentionPolicyByID reads the stored row back through the list endpoint.
+// An assertion about what a refusal left alone has to read the database, not
+// the response it just refused.
+func retentionPolicyByID(ctx context.Context, t *testing.T, h privacy.Handlers,
+	id openapi_types.UUID,
+) crmcontracts.RetentionPolicy {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	h.ListRetentionPolicies(rec,
+		httptest.NewRequest(http.MethodGet, "/v1/retention-policies", nil).WithContext(ctx))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list: status = %d, want 200 (body %s)", rec.Code, rec.Body)
+	}
+	var page struct {
+		Data []crmcontracts.RetentionPolicy `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	for _, p := range page.Data {
+		if p.Id == id {
+			return p
+		}
+	}
+	t.Fatalf("the policy %s is not in the list", id)
+	return crmcontracts.RetentionPolicy{}
 }

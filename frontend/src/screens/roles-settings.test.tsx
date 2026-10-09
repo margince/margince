@@ -254,14 +254,14 @@ describe("RolesSettings", () => {
     render(<RolesSettings />);
 
     const row = await screen.findByRole("button", { name: "Field sales" });
-    expect(row.getAttribute("aria-pressed")).toBe("false");
+    expect(row.hasAttribute("aria-current")).toBe(false);
     row.focus();
     await user.keyboard("{Enter}");
 
     expect(
       await screen.findByRole("heading", { name: "Field sales" }),
     ).toBeTruthy();
-    expect(row.getAttribute("aria-pressed")).toBe("true");
+    expect(row.getAttribute("aria-current")).toBe("true");
   });
 
   it("makes a new role as a copy of the one picked, and opens it", async () => {

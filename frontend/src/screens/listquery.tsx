@@ -29,8 +29,7 @@ import {
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, useMe } from "./common";
-import { rosterReading, useRoster, useRosterPartial } from "./entityref";
+import { problemMessageOf } from "./common";
 import { withoutStrandedTagMode } from "./tagfilter";
 import { useTagVocabulary } from "./tags.queries";
 import "./listquery.css";
@@ -822,6 +821,11 @@ export function ListTable<Row>({
   // What this box last put on the wire, so a `q` that moved for any OTHER
   // reason can be told apart from this box's own debounce landing.
   const committed = useRef(query.q);
+  // The box's word as of the last write to it, ahead of any render. The timer
+  // reads this when it fires, not the word it was armed with. Back reaches this
+  // ref at `popstate`; the render that cancels the timer comes a task later,
+  // and a loaded browser can run the timer first.
+  const typed = useRef(query.q);
   // Which view tab is lit is READ from the query rather than remembered: a tab
   // is a claim about what the list is showing, and a reader who then edits a
   // filter or a sort is no longer looking at that preset. Stored, the highlight
@@ -858,12 +862,11 @@ export function ListTable<Row>({
   // `chips` cannot be the key — screens declare it as an inline array literal,
   // which is a fresh reference each render. The option values are what
   // chosenFor actually reads, and they are strings.
-  // EVERY chip on the surface, declared and data-driven alike. The owner dial
-  // is a dataChip because it names the viewer's teams at runtime, and code that
-  // asks "which chips are there" must see it: reading `chips` alone is what
-  // made picking Unassigned send `owner=unassigned:true` — the chip's key with
-  // the raw option value — instead of `unassigned=true`, so the server ignored
-  // an unknown parameter and answered the whole list.
+  // Every chip on the surface, declared and data-driven alike. The owner dial
+  // is a dataChip because it names colleagues at runtime, and code that asks
+  // which chips there are must see it. Reading `chips` alone once made picking
+  // Unassigned send `owner=unassigned:true` instead of `unassigned=true`, and
+  // the server answered the whole list.
   const allChips: readonly ListChip[] = [
     ...chips.map((chip) => translateChip(chip, t)),
     ...dataChips,
@@ -872,10 +875,10 @@ export function ListTable<Row>({
   // treats a new `chosen` identity as the reader narrowing the list and resets
   // to page 1, so this identity must change only when the answer changes.
   //
-  // Keying on the chip options made the roster do it: the owner dial names the
-  // viewer's teams, which arrive on their own query, so a chip gained an option
-  // seconds after the list rendered and threw the reader from page 2 back to
-  // page 1 — for a reason they could not see, having touched nothing.
+  // Keying on the chip options made the roster do it. The team dial names the
+  // workspace's teams, which arrive on their own query. A chip gained an
+  // option seconds after the list rendered and threw the reader from page 2
+  // back to page 1 with nothing touched.
   //
   // Keying on chosenFor's RESULT is not enough either, and the saved views are
   // why. A restored view sets `owner_team_id=t-9` before the roster answers, so
@@ -909,6 +912,7 @@ export function ListTable<Row>({
   useEffect(() => {
     if (query.q !== committed.current) {
       committed.current = query.q;
+      typed.current = query.q;
       setLocalSearch(query.q);
     }
   }, [query.q]);
@@ -927,6 +931,7 @@ export function ListTable<Row>({
     const abandonPendingSearch = () => {
       const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
       committed.current = live;
+      typed.current = live;
       setLocalSearch(live);
     };
     globalThis.addEventListener("popstate", abandonPendingSearch);
@@ -944,12 +949,14 @@ export function ListTable<Row>({
       return;
     }
     const timer = setTimeout(() => {
-      committed.current = localSearch;
+      const word = typed.current;
+      if (word === committed.current) {
+        return;
+      }
+      committed.current = word;
       // Functional, so a sort, filter or archive toggle set while the timer
       // waited survives instead of being reverted by a stale `query`.
-      setQuery((prev) =>
-        prev.q === localSearch ? prev : { ...prev, q: localSearch },
-      );
+      setQuery((prev) => (prev.q === word ? prev : { ...prev, q: word }));
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [localSearch, setQuery, searchable]);
@@ -982,6 +989,7 @@ export function ListTable<Row>({
     }
     // At once, so a word still settling cannot land on the tab just picked.
     committed.current = picked.q;
+    typed.current = picked.q;
     setLocalSearch(picked.q);
     setQuery((prev) => ({
       ...prev,
@@ -992,44 +1000,10 @@ export function ListTable<Row>({
   };
 
   const setFilter = (key: string, value: string) =>
-    setQuery((prev) => {
-      const filters = { ...prev.filters };
-      // A chip whose options each name a DIFFERENT query parameter carries the
-      // parameter in the value, as `param:value` (the owner dial: mine, my
-      // team's, unowned — one question the server answers three ways, and
-      // refuses if asked two at once). Clearing such a chip has to drop
-      // whichever parameter is currently set, not the chip's own key, which
-      // names no parameter at all.
-      // Only THIS chip's own parameters are cleared. A chip whose options each
-      // name a different query parameter (the owner dial: mine, my team's,
-      // unowned) has to drop whichever of its own it currently holds, because
-      // its key names no parameter at all. Clearing every composite parameter
-      // on the surface instead would make picking a lifecycle silently drop the
-      // owner filter — one dial reaching into another's answer.
-      const mine = allChips
-        .filter((chip) => chip.key === key)
-        .flatMap((chip) => chip.options.map((option) => option.value))
-        .filter((candidate) => candidate.includes(":"))
-        .map((candidate) => candidate.slice(0, candidate.indexOf(":")));
-      for (const param of mine) {
-        delete filters[param];
-      }
-      if (value) {
-        const split = value.indexOf(":");
-        if (split > 0 && mine.includes(value.slice(0, split))) {
-          filters[value.slice(0, split)] = value.slice(split + 1);
-        } else {
-          filters[key] = value;
-        }
-      } else {
-        delete filters[key];
-      }
-      // A mode with no tag left to combine goes with it. Nothing draws it and
-      // nothing sends it, so it would sit in the address as a dial the reader
-      // cannot see to clear and then narrow the list the next time they pick a
-      // word.
-      return { ...prev, filters: withoutStrandedTagMode(filters) };
-    });
+    setQuery((prev) => ({
+      ...prev,
+      filters: pickedFilters(allChips, prev.filters, key, value),
+    }));
 
   return (
     <ListSurface<Row>
@@ -1048,7 +1022,13 @@ export function ListTable<Row>({
       saveView={saveView}
       search={
         searchable
-          ? { value: localSearch, onChange: setLocalSearch }
+          ? {
+              value: localSearch,
+              onChange: (next) => {
+                typed.current = next;
+                setLocalSearch(next);
+              },
+            }
           : undefined
       }
       sort={{
@@ -1102,6 +1082,49 @@ export function ListTable<Row>({
 }
 
 type Translate = ReturnType<typeof useT>;
+
+/**
+ * The filters after the reader picks `value` on the chip `key` ("" clears it).
+ *
+ * A chip whose options name different query parameters carries the parameter
+ * in the value, as `param:value` (the owner dial). Its key names no parameter,
+ * so clearing it drops whichever of its own parameters is set. Clearing every
+ * composite parameter would let picking a lifecycle drop the owner filter.
+ */
+function pickedFilters(
+  chips: readonly ListChip[],
+  current: Readonly<Record<string, string>>,
+  key: string,
+  value: string,
+): Record<string, string> {
+  const filters = { ...current };
+  const owned = chips.filter((chip) => chip.key === key);
+  const mine = owned
+    .flatMap((chip) => chip.options.map((option) => option.value))
+    .filter((candidate) => candidate.includes(":"))
+    .map((candidate) => candidate.slice(0, candidate.indexOf(":")));
+  for (const param of mine) {
+    delete filters[param];
+  }
+  if (!value) {
+    delete filters[key];
+    return withoutStrandedTagMode(filters);
+  }
+  // A dial the server refuses beside this one gives way to it, so picking a
+  // team after an owner swaps the narrowing instead of answering 422.
+  for (const param of owned.flatMap((chip) => chip.excludes ?? [])) {
+    delete filters[param];
+  }
+  const split = value.indexOf(":");
+  if (split > 0 && mine.includes(value.slice(0, split))) {
+    filters[value.slice(0, split)] = value.slice(split + 1);
+  } else {
+    filters[key] = value;
+  }
+  // A mode with no tag left to combine goes with it. Nothing draws it, so it
+  // would sit in the address unseen and narrow the next tag the reader picks.
+  return withoutStrandedTagMode(filters);
+}
 
 function translateChip(chip: FilterSpec, t: Translate): ListChip {
   return {
@@ -1200,23 +1223,6 @@ function matchesView(
 }
 
 /**
- * The owner dials every record list offers: mine, my team's, and the unowned
- * queue.
- *
- * One chip rather than three, because they answer ONE question — whose rows —
- * and the server refuses two of them at once (they name different sets, so a
- * pair can only ever match nothing). A single-select chip makes that refusal
- * unreachable from the UI instead of something the reader discovers as a 422.
- *
- * Built only once /me has answered. A chip option whose value is still "" reads
- * as "clear this filter" to the table, so a half-built dial would quietly
- * narrow nothing while looking armed.
- *
- * The wire takes ONE team id, so a viewer on several teams gets one dial per
- * team rather than a guess about which of them was meant; `viewerTeamOptions`
- * builds those.
- */
-/**
  * The tag dial: which word narrows this list.
  *
  * ONE word, not several. This surface holds one value per filter key — a chip
@@ -1270,84 +1276,6 @@ export function useTagChips(): readonly ListChip[] {
       options: words.map((tag) => ({ value: tag.id, label: tag.name })),
     },
   ];
-}
-
-export function useOwnerChips(): readonly ListChip[] {
-  const t = useT();
-  const me = useMe();
-  const viewerId = me.data?.user.id;
-  const teams = useRoster("team", Boolean(viewerId));
-  const teamsPartial = useRosterPartial("team", Boolean(viewerId));
-  if (!viewerId) {
-    return [];
-  }
-  return [
-    {
-      key: "owner",
-      label: t("list.owner"),
-      allLabel: t("list.filterOwnerAll"),
-      options: [
-        { value: `owner_id:${viewerId}`, label: t("list.filterOwnerMe") },
-        ...viewerTeamOptions(me.data?.teams ?? [], teams, teamsPartial, t),
-        { value: "unassigned:true", label: t("list.filterOwnerUnassigned") },
-      ],
-    },
-  ];
-}
-
-/**
- * One dial per team the viewer belongs to, named off the roster.
- *
- * Named, not counted. The viewer may sit in several teams, and a dial that
- * withheld itself past the first one left everyone on two teams unable to ask a
- * question the API answers. Each team is its own option, so picking one is
- * picking a team rather than accepting a guess about which was meant.
- *
- * The IDS come from /me and only the LABELS come from the roster, so the two
- * reads can disagree about which teams there are. Filtering the roster BY the
- * membership made the label's absence decide the dial's: a team the walk never
- * reached yielded no option at all, and the viewer silently lost a filter the
- * API would still have answered. So every membership gets its option, and a name
- * the roster could not supply is reported as missing rather than taken as proof
- * the team is.
- */
-function viewerTeamOptions(
-  memberships: readonly string[],
-  roster: ReturnType<typeof useRoster>,
-  partial: boolean,
-  t: ReturnType<typeof useT>,
-): { value: string; label: string }[] {
-  const named = new Map(
-    (roster.data ?? []).map((entry) => [
-      entry.id,
-      // The team roster: every entry carries a name. The user roster is the
-      // other kind this hook serves, and it is never asked for here.
-      "display_name" in entry ? entry.display_name : entry.name,
-    ]),
-  );
-  const reading = rosterReading(roster, partial);
-  return memberships.flatMap((teamId) => {
-    const value = `owner_team_id:${teamId}`;
-    const name = named.get(teamId);
-    if (name) {
-      return [{ value, label: name }];
-    }
-    // A roster walked to the END has answered about this team: it is not one
-    // this reader may list — `/teams` excludes archived teams — and an option
-    // whose only honest label is a uuid is worse than one dial fewer. The other
-    // two readings have answered nothing about it, so the dial stays and says
-    // which of the two it is waiting on.
-    if (reading === "unnamed") {
-      return [];
-    }
-    return [
-      {
-        value,
-        label:
-          reading === "pending" ? t("common.loading") : t("ref.nameLoadFailed"),
-      },
-    ];
-  });
 }
 
 /**

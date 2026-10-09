@@ -50,7 +50,7 @@
   outline-offset: -2px;
 }
 
-.roles-row-press[aria-pressed="true"] {
+.roles-row-press[aria-current="true"] {
   background: var(--accentLight);
   box-shadow: inset 3px 0 var(--accentText);
 }

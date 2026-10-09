@@ -7,7 +7,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { leadWriteKeys } from "./leadkeys";
 import { useLeadDisqualifyReasons } from "./leadsources";
 
@@ -48,14 +48,13 @@ export function DisqualifyDialog({
       reasonId: string;
       note: string | null;
     }) => {
-      const { data, error } = await api.DELETE("/leads/{id}", {
-        params: { path: { id: closure.leadId } },
-        body: { reason_id: closure.reasonId, note: closure.note },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.DELETE("/leads/{id}", {
+          params: { path: { id: closure.leadId } },
+          body: { reason_id: closure.reasonId, note: closure.note },
+        }),
+        t,
+      );
     },
     onSuccess: (closed, closure) => {
       for (const key of leadWriteKeys(closure.leadId)) {

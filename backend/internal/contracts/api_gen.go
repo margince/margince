@@ -2127,6 +2127,7 @@ const (
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
 	AttentionItemSourceNoticeCase          AttentionItemSource = "notice_case"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
+	AttentionItemSourceTagSuggestion       AttentionItemSource = "tag_suggestion"
 	AttentionItemSourceTask                AttentionItemSource = "task"
 	AttentionItemSourceUndelivered         AttentionItemSource = "undelivered"
 )
@@ -2175,6 +2176,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceNoticeCase:
 		return true
 	case AttentionItemSourceRelationshipDecay:
+		return true
+	case AttentionItemSourceTagSuggestion:
 		return true
 	case AttentionItemSourceTask:
 		return true
@@ -12881,6 +12884,7 @@ func (e ProviderLocationListUnavailable) Valid() bool {
 const (
 	ProviderRunSkipReasonAlreadyFresh              ProviderRunSkipReason = "already_fresh"
 	ProviderRunSkipReasonBudgetExhausted           ProviderRunSkipReason = "budget_exhausted"
+	ProviderRunSkipReasonCategoryInFlight          ProviderRunSkipReason = "category_in_flight"
 	ProviderRunSkipReasonDuplicateSubjectCandidate ProviderRunSkipReason = "duplicate_subject_candidate"
 	ProviderRunSkipReasonLowBalance                ProviderRunSkipReason = "low_balance"
 	ProviderRunSkipReasonNoIdentifiers             ProviderRunSkipReason = "no_identifiers"
@@ -12895,6 +12899,8 @@ func (e ProviderRunSkipReason) Valid() bool {
 	case ProviderRunSkipReasonAlreadyFresh:
 		return true
 	case ProviderRunSkipReasonBudgetExhausted:
+		return true
+	case ProviderRunSkipReasonCategoryInFlight:
 		return true
 	case ProviderRunSkipReasonDuplicateSubjectCandidate:
 		return true
@@ -14128,6 +14134,27 @@ func (e ResolveInputCheckOutcome) Valid() bool {
 	case ResolveInputCheckOutcomeRemindLater:
 		return true
 	case ResolveInputCheckOutcomeValueCorrect:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RestoreDrillOutcome.
+const (
+	RestoreDrillOutcomeFailed  RestoreDrillOutcome = "failed"
+	RestoreDrillOutcomePassed  RestoreDrillOutcome = "passed"
+	RestoreDrillOutcomeRunning RestoreDrillOutcome = "running"
+)
+
+// Valid indicates whether the value is a known member of the RestoreDrillOutcome enum.
+func (e RestoreDrillOutcome) Valid() bool {
+	switch e {
+	case RestoreDrillOutcomeFailed:
+		return true
+	case RestoreDrillOutcomePassed:
+		return true
+	case RestoreDrillOutcomeRunning:
 		return true
 	default:
 		return false
@@ -15784,6 +15811,48 @@ func (e TagDetailColor) Valid() bool {
 	case TagDetailColorTeal:
 		return true
 	case TagDetailColorViolet:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TagSuggestionEntityType.
+const (
+	TagSuggestionEntityTypeCompany TagSuggestionEntityType = "company"
+	TagSuggestionEntityTypeContact TagSuggestionEntityType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the TagSuggestionEntityType enum.
+func (e TagSuggestionEntityType) Valid() bool {
+	switch e {
+	case TagSuggestionEntityTypeCompany:
+		return true
+	case TagSuggestionEntityTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TagSuggestionState.
+const (
+	TagSuggestionStateAccepted   TagSuggestionState = "accepted"
+	TagSuggestionStateDismissed  TagSuggestionState = "dismissed"
+	TagSuggestionStateOpen       TagSuggestionState = "open"
+	TagSuggestionStateSuperseded TagSuggestionState = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the TagSuggestionState enum.
+func (e TagSuggestionState) Valid() bool {
+	switch e {
+	case TagSuggestionStateAccepted:
+		return true
+	case TagSuggestionStateDismissed:
+		return true
+	case TagSuggestionStateOpen:
+		return true
+	case TagSuggestionStateSuperseded:
 		return true
 	default:
 		return false
@@ -18489,6 +18558,7 @@ const (
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceNoticeCase          WorklistItemSource = "notice_case"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
+	WorklistItemSourceTagSuggestion       WorklistItemSource = "tag_suggestion"
 	WorklistItemSourceTask                WorklistItemSource = "task"
 	WorklistItemSourceUndelivered         WorklistItemSource = "undelivered"
 	WorklistItemSourceWeeklyCommitment    WorklistItemSource = "weekly_commitment"
@@ -18544,6 +18614,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceNoticeCase:
 		return true
 	case WorklistItemSourceRelationshipDecay:
+		return true
+	case WorklistItemSourceTagSuggestion:
 		return true
 	case WorklistItemSourceTask:
 		return true
@@ -18633,6 +18705,7 @@ const (
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceNoticeCase          WorklistReachSource = "notice_case"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
+	WorklistReachSourceTagSuggestion       WorklistReachSource = "tag_suggestion"
 	WorklistReachSourceTask                WorklistReachSource = "task"
 	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 	WorklistReachSourceWeeklyCommitment    WorklistReachSource = "weekly_commitment"
@@ -18688,6 +18761,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceNoticeCase:
 		return true
 	case WorklistReachSourceRelationshipDecay:
+		return true
+	case WorklistReachSourceTagSuggestion:
 		return true
 	case WorklistReachSourceTask:
 		return true
@@ -22192,7 +22267,7 @@ type AiCall struct {
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
 	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
@@ -22342,7 +22417,7 @@ type AiCallSummary struct {
 
 	// ErrorSentinel Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
 	// The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-	// Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+	// Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
 	// `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
@@ -22522,7 +22597,7 @@ type AiFieldError struct {
 
 // AiFlowStep defines model for AiFlowStep.
 type AiFlowStep struct {
-	// Answered Logical calls this step answered.
+	// Answered Logical calls this step answered and served to the caller.
 	Answered int64 `json:"answered"`
 	Attempts int64 `json:"attempts"`
 	Decision bool  `json:"decision"`
@@ -23085,7 +23160,7 @@ type AiRungHealth struct {
 	// rebound to another model drops the attempts of the one before it.
 	Calls int `json:"calls"`
 
-	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached.
+	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`), the provider's refusal of a malformed request (`request_rejected`), and the model outcomes `output_withheld` and `output_rejected` are not failures.
 	Failures int `json:"failures"`
 
 	// Healthy The tier's latest attempt in the window answered. The latest, not a ratio: a tier
@@ -23131,7 +23206,7 @@ type AiTaskFlow struct {
 	// Total Logical calls in the window, cache hits excluded.
 	Total int64 `json:"total"`
 
-	// Unanswered Logical calls whose last attempt failed.
+	// Unanswered Logical calls whose last attempt served the caller nothing: it failed, or its answer was withheld or refused.
 	Unanswered int64  `json:"unanswered"`
 	Window     string `json:"window"`
 }
@@ -24380,6 +24455,9 @@ type AttentionCounts struct {
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
 	RelationshipDecay *int `json:"relationship_decay,omitempty"`
+
+	// TagSuggestionsOpen Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`.
+	TagSuggestionsOpen *int `json:"tag_suggestions_open,omitempty"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`
@@ -35350,6 +35428,12 @@ type ImportSourceProfile struct {
 // list S-E15.4c requires, not a diff of what changed), or errored
 // because it could not be reversed — a single irreversible row never
 // aborts the rest of the run.
+//
+// A row the run CORRECTED rather than created is in none of them: undo
+// archives what a run landed, and a correction to a record another run
+// landed has nothing to archive and no previous value to restore.
+// `updates_not_reversed` counts those rows, so a reader is not told a
+// correction was taken back while it stands.
 type ImportUndoReport struct {
 	// Errored Import-created rows the reversal could not archive (a business
 	// rule refused it, or the caller's row scope no longer covers it) —
@@ -35431,6 +35515,9 @@ type ImportUndoReport struct {
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
 	// `complete` and only for the `csv` connector.
 	Status ImportRunStatus `json:"status"`
+
+	// UpdatesNotReversed Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
+	UpdatesNotReversed *int `json:"updates_not_reversed,omitempty"`
 }
 
 // ImportUnresolvedLink defines model for ImportUnresolvedLink.
@@ -40172,6 +40259,10 @@ type ProviderRun struct {
 	// a company, so the provider has nothing to match on; an automatic trigger declines
 	// rather than spending a call that can only answer "no match". A human pressing the
 	// button on the contact is still allowed to try.
+	// `category_in_flight` means a live run for this contact and provider was already
+	// buying at least one of the categories asked for. The request is refused whole
+	// rather than narrowed, nothing was reserved, and asking again once that run has
+	// finished is admitted.
 	SkipReason *ProviderRunSkipReason `json:"skip_reason,omitempty"`
 	State      ProviderRunState       `json:"state"`
 
@@ -40199,6 +40290,10 @@ type ProviderRun struct {
 // a company, so the provider has nothing to match on; an automatic trigger declines
 // rather than spending a call that can only answer "no match". A human pressing the
 // button on the contact is still allowed to try.
+// `category_in_flight` means a live run for this contact and provider was already
+// buying at least one of the categories asked for. The request is refused whole
+// rather than narrowed, nothing was reserved, and asking again once that run has
+// finished is admitted.
 type ProviderRunSkipReason string
 
 // ProviderRunState defines model for ProviderRun.State.
@@ -40823,6 +40918,20 @@ type RecordedOverride struct {
 type RecoveryCodes struct {
 	// RecoveryCodes Each code works once, for signing in when the authenticator is unavailable.
 	RecoveryCodes []string `json:"recovery_codes"`
+}
+
+// RecoveryHealth The installation's restore-drill evidence, read against the published recovery
+// targets. Margince does not observe backups; this report carries none.
+type RecoveryHealth struct {
+	// DataLossTargetSeconds The published data-loss target, in seconds.
+	DataLossTargetSeconds int       `json:"data_loss_target_seconds"`
+	GeneratedAt           time.Time `json:"generated_at"`
+
+	// LastDrill The most recent drill, or null when none was ever recorded.
+	LastDrill *RestoreDrill `json:"last_drill"`
+
+	// RecoveryTargetSeconds The published recovery target, in seconds.
+	RecoveryTargetSeconds int `json:"recovery_target_seconds"`
 }
 
 // RefreshAccepted An async refresh was enqueued; proposals will appear in the approvals inbox.
@@ -41878,6 +41987,32 @@ type ResponseMetrics struct {
 	// To The end of the window, exclusive — so consecutive windows partition time and a message on a boundary is counted once.
 	To time.Time `json:"to"`
 }
+
+// RestoreDrill One rehearsal of the restore procedure, as the drill ledger holds it.
+type RestoreDrill struct {
+	// DataLossSeconds Started minus the restore point. The restore point is what the operator gave to drill-start, so this figure is only as true as that input.
+	DataLossSeconds int `json:"data_loss_seconds"`
+
+	// FinishedAt Null while the drill runs, and on a drill nobody closed.
+	FinishedAt *time.Time `json:"finished_at"`
+
+	// Notes What the drill checked, or why it failed.
+	Notes *string `json:"notes"`
+
+	// Operator Who ran the drill, as the operator named themselves on the command line.
+	Operator string              `json:"operator"`
+	Outcome  RestoreDrillOutcome `json:"outcome"`
+
+	// RecoverySeconds Finished minus started. Null until the drill finishes.
+	RecoverySeconds *int `json:"recovery_seconds"`
+
+	// RestoredTo The point in time the backup was restored to.
+	RestoredTo time.Time `json:"restored_to"`
+	StartedAt  time.Time `json:"started_at"`
+}
+
+// RestoreDrillOutcome defines model for RestoreDrill.Outcome.
+type RestoreDrillOutcome string
 
 // RestoreLeftBehind One thing a restore of an archive could not bring back with the record.
 type RestoreLeftBehind struct {
@@ -43864,8 +43999,13 @@ type Tag struct {
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
 	Name        string             `json:"name"`
-	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
-	Version     *int64             `json:"version,omitempty"`
+
+	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+	// carries a description of what interest looks like, and that description is what
+	// the suggestion is matched against. Only Admin and Ops set it.
+	Suggestible *bool      `json:"suggestible,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+	Version     *int64     `json:"version,omitempty"`
 }
 
 // TagColor defines model for Tag.Color.
@@ -43879,7 +44019,12 @@ type TagDetail struct {
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
 	Name        string             `json:"name"`
-	UpdatedAt   *time.Time         `json:"updated_at,omitempty"`
+
+	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+	// carries a description of what interest looks like, and that description is what
+	// the suggestion is matched against. Only Admin and Ops set it.
+	Suggestible *bool      `json:"suggestible,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 
 	// Usage How many records of each advertised type carry this tag, counted within what the
 	// reader may see. Project taggings are storage the product does not advertise and are
@@ -43895,6 +44040,43 @@ type TagDetailColor string
 type TagListResponse struct {
 	Data []Tag    `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// TagSuggestion A suggestible tag proposed on one contact or company from captured mail or meeting
+// notes, waiting for somebody to accept or dismiss it.
+type TagSuggestion struct {
+	CreatedAt  time.Time               `json:"created_at"`
+	EntityId   openapi_types.UUID      `json:"entity_id"`
+	EntityName string                  `json:"entity_name"`
+	EntityType TagSuggestionEntityType `json:"entity_type"`
+
+	// Evidence The activities the suggestion cites, newest first.
+	Evidence []TagSuggestionEvidence `json:"evidence"`
+	Id       openapi_types.UUID      `json:"id"`
+	State    TagSuggestionState      `json:"state"`
+
+	// Tag A tag as a list ROW carries it: the word and its colour, nothing else. The full
+	// assignment — who applied it, when — comes from the record's own tags read, because a
+	// page of fifty rows does not need fifty assignments to draw a chip.
+	Tag RowTag `json:"tag"`
+}
+
+// TagSuggestionEntityType defines model for TagSuggestion.EntityType.
+type TagSuggestionEntityType string
+
+// TagSuggestionState defines model for TagSuggestion.State.
+type TagSuggestionState string
+
+// TagSuggestionEvidence defines model for TagSuggestionEvidence.
+type TagSuggestionEvidence struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Kind The activity kind: email, meeting, note or call.
+	Kind       string    `json:"kind"`
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Subject Absent when the activity has none or it was redacted.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // TagUsage How many records of each advertised type carry this tag, counted within what the
@@ -45417,6 +45599,9 @@ type UpdateTagRequest struct {
 	Color       *UpdateTagRequestColor `json:"color,omitempty"`
 	Description *string                `json:"description,omitempty"`
 	Name        *string                `json:"name,omitempty"`
+
+	// Suggestible Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held.
+	Suggestible *bool `json:"suggestible,omitempty"`
 }
 
 // UpdateTagRequestColor defines model for UpdateTagRequest.Color.
@@ -50939,9 +51124,21 @@ type ListDealsParams struct {
 	PipelineId      *openapi_types.UUID `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
 
 	// StageId Read one Kanban column.
-	StageId   *openapi_types.UUID `form:"stage_id,omitempty" json:"stage_id,omitempty"`
-	OwnerId   *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
-	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+	StageId *openapi_types.UUID `form:"stage_id,omitempty" json:"stage_id,omitempty"`
+	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+
+	// OwnerTeamId Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+	// a team the caller cannot see returns their own visible rows filtered to nothing, not a
+	// wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+	// and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+	// (DM-VOCAB-OWN-1).
+	OwnerTeamId *openapi_types.UUID `form:"owner_team_id,omitempty" json:"owner_team_id,omitempty"`
+
+	// Unassigned `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+	// (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+	Unassigned *bool               `form:"unassigned,omitempty" json:"unassigned,omitempty"`
+	CompanyId  *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
 
 	// Q Full-text query over the deal's name and description, plus a substring match on the name.
 	Q      *string                `form:"q,omitempty" json:"q,omitempty"`
@@ -52394,6 +52591,18 @@ type ListProjectsParams struct {
 	// CompanyId The anchor company. A project has exactly one.
 	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
 	OwnerId   *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+
+	// OwnerTeamId Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+	// a team the caller cannot see returns their own visible rows filtered to nothing, not a
+	// wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+	// and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+	// (DM-VOCAB-OWN-1).
+	OwnerTeamId *openapi_types.UUID `form:"owner_team_id,omitempty" json:"owner_team_id,omitempty"`
+
+	// Unassigned `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+	// (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
 	// Phase Omit for all phases; `phase != closed` is the open-projects slice the link ladder probes.
 	Phase *ListProjectsParamsPhase `form:"phase,omitempty" json:"phase,omitempty"`
@@ -65723,6 +65932,9 @@ type ServerInterface interface {
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
+	// When the restore procedure was last rehearsed, and what it measured.
+	// (GET /admin/recovery-health)
+	GetRecoveryHealth(w http.ResponseWriter, r *http.Request)
 	// Durably pause every report schedule before rollout rollback.
 	// (POST /admin/reporting/pause)
 	PauseReportingSchedules(w http.ResponseWriter, r *http.Request)
@@ -67742,6 +67954,15 @@ type ServerInterface interface {
 	// Anonymous reachability probe for external uptime monitors.
 	// (GET /status)
 	GetStatus(w http.ResponseWriter, r *http.Request)
+	// One open tag suggestion the caller may see, with the mail and notes it cites.
+	// (GET /tag-suggestions/{id})
+	GetTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// Apply the suggested tag, as the caller.
+	// (POST /tag-suggestions/{id}/accept)
+	AcceptTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that the evidence does not earn the tag, for the whole workspace.
+	// (POST /tag-suggestions/{id}/dismiss)
+	DismissTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// List tags.
 	// (GET /tags)
 	ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams)
@@ -68204,6 +68425,12 @@ func (_ Unimplemented) GetExtensionIngestHealth(w http.ResponseWriter, r *http.R
 // What the background system is holding, and whose work failed.
 // (GET /admin/job-health)
 func (_ Unimplemented) GetJobHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// When the restore procedure was last rehearsed, and what it measured.
+// (GET /admin/recovery-health)
+func (_ Unimplemented) GetRecoveryHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72245,6 +72472,24 @@ func (_ Unimplemented) GetStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// One open tag suggestion the caller may see, with the mail and notes it cites.
+// (GET /tag-suggestions/{id})
+func (_ Unimplemented) GetTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply the suggested tag, as the caller.
+// (POST /tag-suggestions/{id}/accept)
+func (_ Unimplemented) AcceptTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that the evidence does not earn the tag, for the whole workspace.
+// (POST /tag-suggestions/{id}/dismiss)
+func (_ Unimplemented) DismissTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List tags.
 // (GET /tags)
 func (_ Unimplemented) ListTags(w http.ResponseWriter, r *http.Request, params ListTagsParams) {
@@ -74367,6 +74612,26 @@ func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetJobHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRecoveryHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetRecoveryHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRecoveryHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -89165,6 +89430,32 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "owner_team_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_team_id", r.URL.Query(), &params.OwnerTeamId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_team_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_team_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "unassigned" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "unassigned", r.URL.Query(), &params.Unassigned, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "unassigned"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unassigned", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "company_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -97448,6 +97739,32 @@ func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "owner_team_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_team_id", r.URL.Query(), &params.OwnerTeamId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_team_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_team_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "unassigned" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "unassigned", r.URL.Query(), &params.Unassigned, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "unassigned"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "unassigned", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "phase" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "phase", r.URL.Query(), &params.Phase, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -103071,6 +103388,102 @@ func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// GetTagSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) GetTagSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTagSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptTagSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AcceptTagSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptTagSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissTagSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) DismissTagSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissTagSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListTags operation middleware
 func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Request) {
 
@@ -106699,6 +107112,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/recovery-health", wrapper.GetRecoveryHealth)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/reporting/pause", wrapper.PauseReportingSchedules)
 	})
 	r.Group(func(r chi.Router) {
@@ -108716,6 +109132,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/status", wrapper.GetStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tag-suggestions/{id}", wrapper.GetTagSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tag-suggestions/{id}/accept", wrapper.AcceptTagSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tag-suggestions/{id}/dismiss", wrapper.DismissTagSuggestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tags", wrapper.ListTags)

@@ -165,8 +165,8 @@ function MembersTable({
     header: t("users.col.activity"),
     render: (u) => <MemberActivity member={u} management={management} />,
   };
-  // The roster omits roles, teams, activity and verbs for a reader without
-  // `user_admin:read`, so those columns would only ever be empty.
+  // Without `user_admin:read` the roster omits roles, teams, last activity and
+  // verbs, so that reader sees only who each member is and when they joined.
   const columns: DataTableColumn<User>[] = management
     ? [
         member,

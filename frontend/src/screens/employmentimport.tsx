@@ -12,7 +12,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
 import "./common.css";
@@ -37,12 +37,11 @@ export function ImportedEmploymentHistory({
     queryKey: key,
     enabled: hasEvidence,
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/contacts/{id}/employment-import",
-        { params: { path: { id } } },
+      return unwrap(
+        await api.GET("/contacts/{id}/employment-import", {
+          params: { path: { id } },
+        }),
       );
-      if (error) throwProblem(error);
-      return data;
     },
   });
   const [resolving, setResolving] = useState<Item | null>(null);
@@ -54,12 +53,12 @@ export function ImportedEmploymentHistory({
       contactId: string;
       body: Request;
     }) => {
-      const { data, error } = await api.POST(
-        "/contacts/{id}/employment-import",
-        { params: { path: { id: contactId } }, body },
+      return unwrap(
+        await api.POST("/contacts/{id}/employment-import", {
+          params: { path: { id: contactId } },
+          body,
+        }),
       );
-      if (error) throwProblem(error);
-      return data;
     },
     onSuccess: async (report) => {
       client.setQueryData(["employmentImport", report.contact_id], report);

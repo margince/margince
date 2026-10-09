@@ -54,7 +54,7 @@ func TestARetryStopsWhenTheSubjectLeavesTheOwnersSight(t *testing.T) {
 	we.narrowActivity(t, activity)
 
 	now = now.Add(64 * time.Second)
-	if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+	if err := deliverer.SweepOnce(context.Background()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 
@@ -143,7 +143,7 @@ func TestADeliveryWithNoRecordedSubjectIsRefused(t *testing.T) {
 		  WHERE subscription_id = $1`, we.subUUID(t, subID))
 
 	now = now.Add(64 * time.Second)
-	if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+	if err := deliverer.SweepOnce(context.Background()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if got := rcv.count.Load(); got != 1 {
@@ -172,7 +172,7 @@ func TestARetryStillShipsWhenTheSubjectIsStillVisible(t *testing.T) {
 
 	rcv.setStatus(http.StatusOK)
 	now = now.Add(64 * time.Second)
-	if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+	if err := deliverer.SweepOnce(context.Background()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if got := rcv.count.Load(); got != 2 {
@@ -210,7 +210,7 @@ func TestARevocationHoldsAgainstALaterSweepAndReplay(t *testing.T) {
 	}
 	we.narrowActivity(t, activity)
 	now = now.Add(64 * time.Second)
-	if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+	if err := deliverer.SweepOnce(context.Background()); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	assertDeliveryStatus(t, we, subID, "visibility_revoked", 1)
@@ -220,7 +220,7 @@ func TestARevocationHoldsAgainstALaterSweepAndReplay(t *testing.T) {
 	// deliver it — the revocation undone by a recovery nobody asked about.
 	rcv.setStatus(http.StatusOK)
 	now = now.Add(64 * time.Second)
-	if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+	if err := deliverer.SweepOnce(context.Background()); err != nil {
 		t.Fatalf("second sweep: %v", err)
 	}
 	assertDeliveryStatus(t, we, subID, "visibility_revoked", 1)

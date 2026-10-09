@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { tabOfViewResource, type ViewResource } from "./filtersaddress";
 import { decode, encode, type Node } from "./segmentpredicate";
 
@@ -34,12 +34,11 @@ export function useSavedViews(resource: ViewResource, fresh = false) {
   return useQuery({
     queryKey: savedViewsKey(resource),
     queryFn: async (): Promise<SavedView[]> => {
-      const { data, error } = await api.GET("/views", {
-        params: { query: { resource } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/views", {
+          params: { query: { resource } },
+        }),
+      );
       return data.data;
     },
     staleTime: 60_000,
@@ -56,13 +55,11 @@ export function useSavedView(id: string, enabled = true) {
     queryKey: [SAVED_VIEWS_KEY, "one", id],
     enabled,
     queryFn: async (): Promise<SavedView> => {
-      const { data, error } = await api.GET("/views/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/views/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -76,10 +73,7 @@ export function useAllSavedViews() {
   return useQuery({
     queryKey: [SAVED_VIEWS_KEY, "all"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/views");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/views"));
       return { views: data.data, truncated: data.page.has_more };
     },
   });
@@ -153,17 +147,15 @@ export function useSaveView() {
         query: Record<string, unknown>;
       }>,
     ) => {
-      const { data, error } = await api.POST("/views", {
-        body: {
-          resource: input.resource,
-          name: input.name,
-          query: input.query,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/views", {
+          body: {
+            resource: input.resource,
+            name: input.name,
+            query: input.query,
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -174,14 +166,12 @@ export function useSaveView() {
     mutationFn: async (
       input: Readonly<{ id: string; name: string; version: number }>,
     ) => {
-      const { data, error } = await api.PATCH("/views/{id}", {
-        params: { path: { id: input.id }, ...ifMatch(input.version) },
-        body: { name: input.name },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/views/{id}", {
+          params: { path: { id: input.id }, ...ifMatch(input.version) },
+          body: { name: input.name },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -196,26 +186,23 @@ export function useSaveView() {
         query: Record<string, unknown>;
       }>,
     ) => {
-      const { data, error } = await api.PATCH("/views/{id}", {
-        params: { path: { id: input.id }, ...ifMatch(input.version) },
-        body: { query: input.query },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/views/{id}", {
+          params: { path: { id: input.id }, ...ifMatch(input.version) },
+          body: { query: input.query },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/views/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/views/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: invalidate,
   });

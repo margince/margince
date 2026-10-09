@@ -33,7 +33,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authwaitparity_test.go` | H3 | How long an in-flight authentication may be held waiting on somebody else's server. |
 | `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled twice (once in Go, once as a CHECK constraint on communication\_decision), and the two must agree. |
 | `backfillwindow_test.go` | H3 | The capture backfill window set is the same in the contract's four enums, the Go validator and the capture\_backfill CHECK, derived from the tree rather than remembered here. |
-| `basevaluespelling_test.go` | H2 | One deal's base-currency value is computed in two packages that cannot import each other, and the two computations must agree. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the same variable whether to publish a record, and both answer only to the same value. |
 | `bookinginvite_test.go` | H2 | What booking a meeting claims to do and what it does, held against each other. |
 | `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
@@ -507,6 +506,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `subjectphotobytes_test.go` | H2 | A subject's photo may not be stored until erasure can destroy the bytes. |
 | `systemprovenance_test.go` | H2 | A scheduled pass binds its provenance through one helper. |
 | `technicaldomain_test.go` | H2 | The technical lookup reads the domain the record holds, and nothing else. |
+| `textcut_test.go` | H2 | Outside the waived files, no hand-written loop, rune slice or ToValidUTF8 cuts a string to a length; kernel/textcut does it. |
 | `trackedbinaries_test.go` | H2 | A compiled binary is never tracked. |
 | `transactionopeners_test.go` | H2 | One function in the database package turns a pool into a transaction, and every seam the package publishes routes through it. |
 | `triggertargetcolumns_test.go` | H2 | A touch trigger may only sit on a table that has every column it writes. |

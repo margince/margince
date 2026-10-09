@@ -13,7 +13,7 @@ import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
-  throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import { contactLeadKey, LEAD_LIST_KEY } from "./leadkeys";
@@ -38,12 +38,11 @@ export function WorkAsLeadAction({
   const worked = useQuery({
     queryKey: contactLeadKey(contactId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads", {
-        params: { query: { from_contact_id: contactId, limit: 1 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/leads", {
+          params: { query: { from_contact_id: contactId, limit: 1 } },
+        }),
+      );
       return data.data[0] ?? null;
     },
   });

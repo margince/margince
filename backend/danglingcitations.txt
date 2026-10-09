@@ -204,7 +204,6 @@ docs/explanation/company-context.md migration 0103
 docs/explanation/company-context.md migration 0105
 docs/how-to/add-an-extension.md migration 0003
 frontend/e2e/leads.spec.ts migration 0038
-frontend/e2e/seed.ts migration 0042
 frontend/src/design-system/recordtimeline.ts migration 0038
 frontend/src/screens/companyevidence.stories.tsx migration 0099
 frontend/src/screens/companyrail.test.tsx core 0019

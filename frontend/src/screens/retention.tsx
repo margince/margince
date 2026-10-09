@@ -28,7 +28,7 @@ import {
   problemMessageOf,
   QueryGate,
   QueryStates,
-  throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import {
@@ -89,14 +89,12 @@ function PolicyEditorBody({
 
   const patch = useMutation({
     mutationFn: async ({ body }: PolicyWrite) => {
-      const { data, error } = await api.PATCH("/retention-policies/{id}", {
-        params: { path: { id: policy.id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/retention-policies/{id}", {
+          params: { path: { id: policy.id } },
+          body,
+        }),
+      );
     },
     onSuccess: (_data, write) => {
       queryClient.invalidateQueries({ queryKey: RETENTION_POLICIES_KEY });
@@ -258,12 +256,11 @@ function DeletePolicyModal({
 
   const remove = useMutation({
     mutationFn: async (target: RetentionPolicy) => {
-      const { error } = await api.DELETE("/retention-policies/{id}", {
-        params: { path: { id: target.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/retention-policies/{id}", {
+          params: { path: { id: target.id } },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: RETENTION_POLICIES_KEY });
@@ -307,13 +304,11 @@ function PostureToggle({
 
   const update = useMutation({
     mutationFn: async (next: boolean) => {
-      const { data, error } = await api.PATCH("/retention/settings", {
-        body: { retain_only: next },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/retention/settings", {
+          body: { retain_only: next },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(RETENTION_SETTINGS_KEY, data);
@@ -355,11 +350,7 @@ export function RetentionCard() {
     queryKey: RETENTION_SETTINGS_KEY,
     enabled: canRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/retention/settings");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/retention/settings"));
     },
   });
 
@@ -367,11 +358,7 @@ export function RetentionCard() {
     queryKey: RETENTION_POLICIES_KEY,
     enabled: canRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/retention-policies");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/retention-policies"));
     },
   });
 

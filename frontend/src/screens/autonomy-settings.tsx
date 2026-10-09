@@ -9,7 +9,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // Which kinds of proposal answer themselves, for the reader and nobody else.
 //
@@ -54,11 +54,7 @@ function useUpdateAutonomy() {
     // the row that carries the switch is the row that names the kind, and a
     // handler reaching back for either could act on the previous render's.
     mutationFn: async (choice: { kind: string; auto: boolean }) => {
-      const { data, error } = await api.PATCH("/autonomy", { body: choice });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.PATCH("/autonomy", { body: choice }));
     },
     // The server answers with the whole set, so the cache takes its word rather
     // than patching one row locally: the decision counts beside the switch move
@@ -175,7 +171,7 @@ function kindHelp(kind: string, t: Translator): string {
 export function AutonomySettingsCard() {
   const t = useT();
   const query = useAutonomy();
-  const rows = query.data?.data ?? [];
+  const rows = query.isSuccess ? query.data.data : [];
 
   return (
     <Panel title={t("autonomy.title")}>
@@ -191,11 +187,8 @@ export function AutonomySettingsCard() {
           </Callout>
         )}
       </PanelBody>
-      {/* An empty list is its own answer, and it is not a blank card: this
-          installation routes this seat nothing of any kind, so there is no
-          switch to offer and no track record to be behind on. Saying so here
-          is also what keeps noneDecidedYet from having to speak for a set
-          that does not exist. */}
+      {/* An empty list means this seat is routed no kind at all, which is an
+          answer rather than a blank card. */}
       <QueryGate
         pendingLabel={t("autonomy.title")}
         query={query}

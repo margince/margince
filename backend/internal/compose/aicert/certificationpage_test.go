@@ -347,12 +347,11 @@ func writeAICertTotals(page *strings.Builder, totals aiCertTotals, doc aiCertDoc
 // first thing worth reading when a band has dropped.
 //
 // A record goes stale for one of three reasons, and they call for opposite
-// responses. Somebody rewrote a test: re-certify, the number was measuring a
-// different question. The PRODUCT now sends a different prompt: the band
-// describes the new prompt, so a drop is the cost of a change somebody made and
-// probably did not know they were making. How a run is graded moved — the
-// judge's request or the scoring rule: the band shifted with neither the test
-// nor the product touched, which reads as a model regression and is not one.
+// responses. A rewritten test: re-certify, because the number measured another
+// question. A new prompt: the band measured the old one. Once re-certified, a
+// drop is the cost of that change. A new grading rule: the band moved with
+// neither the test nor the product touched. That reads as a model regression
+// and is not one.
 //
 // Before this, the page said "scenario X — or the prompt this build now builds
 // from it — has changed", and the reader had to diff two 192-character stamps by
@@ -415,7 +414,8 @@ func writeStaleCauses(page *strings.Builder, doc aiCertDoc) {
 	fmt.Fprintf(page, "| the case | %d | The test case changed. Re-certify: the old result "+
 		"measured a different case. |\n", cases)
 	fmt.Fprintf(page, "| **the prompt this build sends** | %d | The product changed. The band "+
-		"describes the new prompt, so a drop is the cost of that change and not the model. |\n", prompts)
+		"measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is "+
+		"the cost of that change and not the model. |\n", prompts)
 	fmt.Fprintf(page, "| how a run is graded | %d | What the judge is asked, or the rule that turns "+
 		"its scores into a grade, changed. A band can shift with neither the test nor the product touched. |\n", graders)
 	if unknown > 0 {

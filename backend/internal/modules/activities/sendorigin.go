@@ -50,12 +50,20 @@ type SendOrigin struct {
 	//
 	// Ignored on an account origin, which names its whole set in links.
 	also []ActivityLinkInput
+
+	// reply records that the caller NAMED an anchor, which the anchor's value
+	// cannot say on its own.
+	//
+	// The all-zero id is a named anchor that does not exist. Read off the value,
+	// it looked like no anchor at all, so the send answered a composition defect
+	// where every other unknown id answers 404.
+	reply bool
 }
 
 // FromActivity is the reply origin: the anchor is read, its threading chain
 // is continued, and the new activity inherits its record links.
 func FromActivity(anchor ids.ActivityID) SendOrigin {
-	return SendOrigin{anchor: anchor}
+	return SendOrigin{anchor: anchor, reply: true}
 }
 
 // AlsoFiledUnder adds records to a reply beyond the ones its anchor carries.
@@ -78,7 +86,7 @@ func FromAccount(links []ActivityLinkInput) SendOrigin {
 }
 
 // isReply reports whether this origin continues an existing conversation.
-func (o SendOrigin) isReply() bool { return o.anchor.UUID != ids.UUID{} }
+func (o SendOrigin) isReply() bool { return o.reply }
 
 // NoSendOriginError refuses a send whose origin was never named. It is a
 // composition defect on any first-party transport — both handlers construct

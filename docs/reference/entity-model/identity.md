@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-25 columns · primary key `(id)` · referenced by 126 foreign keys
+25 columns · primary key `(id)` · referenced by 128 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -426,14 +426,19 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## record_grant
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `access` | `text` | yes | 'write' also satisfies 'read'. |
+| `company_id` | `uuid`, generated as `CASE WHEN (record_type = 'company'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
+| `contact_id` | `uuid`, generated as `CASE WHEN (record_type = 'contact'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
+| `deal_id` | `uuid`, generated as `CASE WHEN (record_type = 'deal'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
 | `expires_at` | `timestamp with time zone` |  | Optional TTL; an expired grant matches no rows. |
 | `granted_by` | `uuid` | yes | Points at `app_user.id`. |
+| `lead_id` | `uuid`, generated as `CASE WHEN (record_type = 'lead'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
+| `project_id` | `uuid`, generated as `CASE WHEN (record_type = 'project'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
 | `reason` | `text` |  | Accountability/lawful-basis note surfaced in the audit row. |
 | `record_id` | `uuid` | yes |  |
 | `record_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
@@ -446,11 +451,17 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `company_id` | `company` | deleting the parent deletes this row |
+| `contact_id` | `contact` | deleting the parent deletes this row |
+| `deal_id` | `deal` | deleting the parent deletes this row |
 | `granted_by` | `app_user` | the parent cannot be deleted while this row points at it |
+| `lead_id` | `lead` | deleting the parent deletes this row |
+| `project_id` | `project` | deleting the parent deletes this row |
 
 **Rules**
 
 - `record_grant_access_check`: `CHECK ((access = ANY (ARRAY['read', 'write'])))`
+- `record_grant_record_shape`: `CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = 1))`
 - `record_grant_record_type_check`: `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
 - `record_grant_subject_type_check`: `CHECK ((subject_type = ANY (ARRAY['user', 'team'])))`
 - `record_grant_unique`: `UNIQUE (record_type, record_id, subject_type, subject_id)`
@@ -458,6 +469,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `idx_record_grant_company`: `btree (company_id) WHERE (company_id IS NOT NULL)`
+- `idx_record_grant_contact`: `btree (contact_id) WHERE (contact_id IS NOT NULL)`
+- `idx_record_grant_deal`: `btree (deal_id) WHERE (deal_id IS NOT NULL)`
+- `idx_record_grant_lead`: `btree (lead_id) WHERE (lead_id IS NOT NULL)`
+- `idx_record_grant_project`: `btree (project_id) WHERE (project_id IS NOT NULL)`
 - `idx_record_grant_subject`: `btree (subject_type, subject_id)`
 - `record_grant_pkey`: `unique, btree (id)`
 - `record_grant_unique`: `unique, btree (record_type, record_id, subject_type, subject_id)`
@@ -582,7 +598,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 7 foreign keys
+6 columns · primary key `(id)` · referenced by 8 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

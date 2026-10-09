@@ -44,6 +44,7 @@ var mergePathFiles = []string{
 	"internal/modules/contacts/merge_company.go",
 	"internal/modules/contacts/merge.go",
 	"internal/modules/contacts/mergecompanyedges.go",
+	"internal/modules/contacts/mergekindid.go",
 	"internal/modules/contacts/company_relationship_types.go",
 }
 
@@ -58,7 +59,9 @@ var mergePathFiles = []string{
 // here cannot quietly outlive the column it was written for.
 var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"deal_suggestion.company_id":      "a suggestion is Deal Scout's reading of ONE company's evidence, fingerprinted over that company's id and held to one open suggestion per company, so a moved row could collide with the survivor's own and would hash differently from anything the survivor is offered. The merge archives the retired company instead, which the next scout pass reads as a suggestion that no longer stands (superseded); the evidence the merge relinks raises the survivor's own suggestion",
+	"tag_suggestion.company_id":       "a tag suggestion is the tag scout's reading of ONE record's evidence, held to one open suggestion per tag and record, so a moved row could collide with the survivor's own. The merge archives the retired company, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion",
 	"suggestion_dismissal.company_id": "a dismissal is keyed by a fingerprint computed over the company's OWN id, so a row moved onto the survivor would hash differently from anything the survivor is ever offered and could never match again. The merge retires them with the company instead of moving rows that cannot work; a reader may be offered the equivalent suggestion about the survivor once, and dismissing it again sticks. Re-deriving the fingerprints belongs to the suggestion engine that defines them",
+	"record_grant.company_id":         "a grant shares ONE record with one seat or team, and moving it onto the survivor would widen the grantee's access to everything the survivor holds, which nobody granted. The grant stays on the retired company, which the merge archives; whether a merge should carry grants across is a product decision this column does not make",
 })
 
 // sqlWriteTarget matches the table a statement writes.
@@ -75,7 +78,21 @@ var sqlWriteTarget = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+
 // its `DELETE FROM x WHERE company_id = $1` behind, and a census reading table
 // names alone reports that table covered while the merge destroys every row the
 // retired company held.
-var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*\$(?:2|%d)`)
+var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?\$(?:2|%d)`)
+
+// updateSetClause is the assignment list of an UPDATE: what follows `SET`, up
+// to its `WHERE`.
+var updateSetClause = regexp.MustCompile(`(?is)\bUPDATE\b.*?\bSET\b(.*?)(?:\bWHERE\b|$)`)
+
+// setClauseOf returns the text a statement assigns in, and nothing for a
+// DELETE. A DELETE compares columns to the survivor in its subquery, which is
+// a read. Counting it would certify a merge whose UPDATE had been removed.
+func setClauseOf(stmt string) string {
+	if m := updateSetClause.FindStringSubmatch(stmt); m != nil {
+		return m[1]
+	}
+	return ""
+}
 
 // carriesSurvivorIntoInsert matches the INSERT … SELECT $2 form, where the
 // survivor's id arrives positionally as the first selected value rather than as
@@ -186,7 +203,7 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 				continue
 			}
 			table := strings.ToLower(target[1])
-			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(stmt, -1) {
+			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(setClauseOf(stmt), -1) {
 				written[table+"."+strings.ToLower(moved[1])] = true
 			}
 			if insert := carriesSurvivorIntoInsert.FindStringSubmatch(stmt); insert != nil {

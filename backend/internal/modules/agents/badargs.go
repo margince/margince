@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -82,6 +83,9 @@ func decodeArgs[T any](in json.RawMessage, into *T) error {
 			Cause:    errors.New("trailing content after the first JSON value"),
 			Guidance: "send exactly one JSON object carrying this tool's arguments",
 		}
+	}
+	if outOfRange := datasource.RejectOutOfRangeTimes(into); outOfRange != nil {
+		return &BadArgsError{Cause: outOfRange, Field: outOfRange.Field}
 	}
 	return nil
 }
@@ -214,14 +218,7 @@ func (e *BadArgsError) FieldFaults() []apperrors.FieldRefusal {
 // output while writing instead, because a cut measured after escaping cannot
 // know where an escape began.
 func boundDetail(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	cut := n
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
+	return textcut.BytesMarked(s, n, "…")
 }
 
 // invalidByteAt says whether the byte at i is one UTF-8 cannot decode, as

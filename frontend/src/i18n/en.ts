@@ -892,6 +892,7 @@ export const en = {
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
   "systemJob.request_settlement": "Request settlement",
+  "systemJob.restore_drill": "Restore drill record",
   "systemJob.risk_verdict": "Deal risk check",
   "systemJob.routing_seed": "Routing setup",
   "systemJob.schedule_read": "Schedule read",
@@ -901,6 +902,7 @@ export const en = {
   "systemJob.stage_evidence_read": "Deal stage evidence read",
   "systemJob.stage_progression": "Deal stage progression",
   "systemJob.stage_progression_outcome": "Deal stage outcome",
+  "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
   "systemJob.technical_lookup": "Company technical lookup",
@@ -1680,6 +1682,9 @@ export const en = {
   "list.filterOwnerMe": "Owned by you",
   "list.filterOwnerAll": "Any owner",
   "list.filterOwnerUnassigned": "Unassigned",
+  "list.team": "Team",
+  "list.filterTeamAll": "Any team",
+  "list.teamUnavailable": "Unavailable team",
   "views.save": "Save view",
   "views.saveConfirm": "Save",
   "views.saveTitle": "Save this view",
@@ -2948,6 +2953,30 @@ export const en = {
   "tagAdmin.editTitle": "Edit tag",
   "tagAdmin.nameLabel": "Name",
   "tagAdmin.colorLabel": "Color",
+  "brief.coverage.source.tag_suggestion": "Suggested tags",
+  "worklist.untitled.tag_suggestion": "A tag the evidence suggests",
+  "tagSuggestion.agent": "Tag suggestions",
+  "tagSuggestion.citedHeading": "Suggested because of:",
+  "tagSuggestion.evidence": "{kind} · {subject} · {when}",
+  "tagSuggestion.noSubject": "No subject",
+  "tagSuggestion.kind.email": "Email",
+  "tagSuggestion.kind.meeting": "Meeting",
+  "tagSuggestion.kind.note": "Note",
+  "tagSuggestion.kind.call": "Call",
+  "tagSuggestion.accept": "Add tag",
+  "tagSuggestion.dismiss": "Not this tag",
+  "tagSuggestion.dismissed":
+    "Dismissed for everyone. It comes back only if newer mail or notes match.",
+  "tagSuggestion.accepted": "{tag} added to {record}.",
+  "tagSuggestion.decided":
+    "Someone already decided this suggestion. Reload to see where it stands.",
+  "tagSuggestion.unavailable":
+    "The suggestion could not be read. Try again later.",
+  "tagAdmin.descriptionLabel": "Words that show interest",
+  "tagAdmin.descriptionHint":
+    "Separate words or phrases with commas, for example: pricing for Product X, Product X demo.",
+  "tagAdmin.suggestibleLabel":
+    "Suggest this tag when mail or meeting notes use these words",
   "tagAdmin.colorNone": "No color",
   "tagAdmin.color.teal": "Teal",
   "tagAdmin.color.amber": "Amber",
@@ -3012,6 +3041,18 @@ export const en = {
     "Add lasting context such as an event, a relationship or a cohort.",
   "tags.pickerLabel": "Search tags",
   "tags.alreadyAdded": "Already added",
+  "tags.offerCompanyTitle": "Also tag {company} with {tag}?",
+  "tags.offerCompanyAccept": "Tag {company}",
+  "tags.offerCompanyDone": "{tag} added to {company}",
+  "tags.offerDismiss": "Not now",
+  "tags.offerContactsTitle": "Also tag contacts at this company with {tag}?",
+  "tags.offerContactsAccept": "Choose contacts",
+  "tags.contactsTitle": "Tag contacts with {tag}",
+  "tags.contactsLoading": "Loading contacts…",
+  "tags.contactsNone": "No contact you can see works at this company now.",
+  "tags.contactsAlready": "{name} (already tagged)",
+  "tags.contactsTruncated": "Only the first 200 contacts are listed.",
+  "tags.contactsContinue": "Continue",
   "tags.catalogTruncatedTitle": "List shortened",
   "tags.catalogTruncated":
     "A tag may be missing. Search by name before requesting a new one.",
@@ -3585,7 +3626,6 @@ export const en = {
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
-  "deals.filterOwnerMe": "My deals",
   // Both reasons say "loaded only" rather than naming the sum alone: with no
   // server aggregate the column's figure is the cards LOADED, and the board
   // pages on demand, so that number grows as the reader presses Load more.
@@ -3596,6 +3636,8 @@ export const en = {
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":
     "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
+  "deals.totalsNoTeamFilter":
+    "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Any partner",
   "deals.filterMotion": "Motion",
@@ -3610,7 +3652,6 @@ export const en = {
   "deals.filterStageAll": "All stages",
   "deals.filterCompanyAll": "All companies",
   "deals.filterStalledAll": "All deals",
-  "deals.filterOwnerAll": "All owners",
   "deals.filterPartnerAll": "All sources",
   "deals.unit": "deals",
   "deals.bulkStage": "Move to stage",
@@ -5970,6 +6011,36 @@ export const en = {
   "extIngest.noDetail":
     "Shows counts and the refusing check only, never the record, because the refused field can quote sender content. The connector log has the full reason for each.",
   "extIngest.generatedAt": "As of {time}",
+  "settings.recoveryHealth": "Restore drills",
+  "settings.recoveryHealthSub":
+    "When the restore from backup was last rehearsed, and how long it took.",
+  "recoveryHealth.adminOnly":
+    "Restore drills cover the whole installation and need a permission your role does not have.",
+  "recoveryHealth.lastDrill": "Last restore drill",
+  "recoveryHealth.lastDrillHint":
+    "Times come from the drill record itself. Whoever runs the drill records it from the command line.",
+  "recoveryHealth.never":
+    "No restore drill has been recorded. Until one is, nothing shows that a restore meets the recovery targets.",
+  "recoveryHealth.outcome": "Outcome",
+  "recoveryHealth.outcome.passed": "Passed",
+  "recoveryHealth.outcome.failed": "Failed",
+  "recoveryHealth.outcome.running": "Running",
+  "recoveryHealth.startedAt": "started {when}",
+  "recoveryHealth.recovery": "Time to recover",
+  "recoveryHealth.notFinished": "Not finished",
+  "recoveryHealth.dataLoss": "Data lost",
+  "recoveryHealth.restoredTo": "Restored to",
+  "recoveryHealth.operator": "Run by",
+  "recoveryHealth.notes": "Notes",
+  "recoveryHealth.window": "{hours} h {minutes} min",
+  "recoveryHealth.windowHours": "{hours} h",
+  "recoveryHealth.withinTarget": "within the {target} target",
+  "recoveryHealth.overTarget": "over the {target} target",
+  "recoveryHealth.lastBackup": "Last backup",
+  "recoveryHealth.lastBackupHint":
+    "Backups run outside Margince, so your backup tool is where to check them.",
+  "recoveryHealth.backupNotObserved": "Not observed by Margince",
+  "recoveryHealth.generatedAt": "As of {time}",
   "settings.captureHealth": "Mail capture checks",
   "settings.captureHealthSub":
     "Whether mail capture keeps up with the questions it has to answer.",
@@ -6045,7 +6116,7 @@ export const en = {
   "settings.auditAction": "Action",
   "settings.auditFrom": "From",
   "settings.auditTo": "To",
-  "settings.auditExpand": "Show change detail",
+  "settings.auditExpandEntry": "Show change detail: {action} on {entity}",
   "settings.auditLoading": "Loading recorded actions…",
   "settings.auditNoMatch": "No recorded actions match these filters.",
   "settings.auditColWhen": "When",
@@ -7074,7 +7145,7 @@ export const en = {
   "connectors.oauthMisconfigured":
     "This installation cannot complete the connection because the provider’s API is not enabled. An administrator must enable it; the server log names the API.",
   "connectors.oauthBadClient":
-    "The provider refused this installation’s app credentials. An administrator must check the client ID and secret in Settings under General; reconnecting does not fix this.",
+    "The provider refused this installation’s app credentials. An administrator must check the client ID and secret in Settings under Sign-in and apps; reconnecting does not fix this.",
   "connectors.dismissOutcome": "Dismiss",
   "connectors.oauthConnected": "Connected",
   "connectors.oauthNotConnected": "Nothing was connected",
@@ -9188,7 +9259,8 @@ export const en = {
   "users.col.activity": "Activity",
   "users.addedOn": "Added {date}",
   "users.lastActiveUnknown": "Not available",
-  "users.role.lastAdmin": "Only admin. Make another user admin first.",
+  "users.role.lastAdmin":
+    "This is the only admin. Make another member an admin first.",
   "users.role.own": "Another admin changes your role.",
   "users.role.outside": "This role is outside your access.",
   "users.role.withheld": "Your role cannot change user roles.",
@@ -9585,7 +9657,7 @@ export const en = {
   "groupRoles.role": "Granted role",
   "groupRoles.add": "Add group",
   "groupRoles.remove": "Remove this group mapping",
-  "groupRoles.removeNamed": "Remove {group}",
+  "groupRoles.removeNamed": "Remove the {group} mapping",
   "groupRoles.save": "Save group grants",
   "groupRoles.empty":
     "No groups are mapped. Corporate sign-in grants nothing beyond what each member already holds.",
@@ -9634,6 +9706,7 @@ export const en = {
   "oauthApp.redirectUri": "URI",
   "oauthApp.redirectCopyFailed": "Select the address and copy it manually.",
   "oauthApp.redirectCopy": "Copy {purpose} URI",
+  "oauthApp.redirectCopiedFor": "Copied {purpose} URI",
   "oauthApp.redirect.mailbox_connect": "Mailbox",
   "oauthApp.redirect.calendar_connect": "Calendar",
   "oauthApp.redirect.sign_in": "Sign-in",
@@ -10750,6 +10823,7 @@ export const en = {
   "contact.rail.channelNotDeliverable": "Not deliverable",
   "contact.drawer.close": "Close",
   "richtext.bold": "Bold",
+  "richtext.heading": "Heading",
   "richtext.italic": "Italic",
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",

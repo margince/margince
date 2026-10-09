@@ -14,7 +14,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { recordListsKey } from "./activitykeys";
-import { throwProblem, useMe } from "./common";
+import { throwProblem, unwrap, useMe } from "./common";
 import type { MutationOutcome } from "./undoableremoval";
 
 export type List = components["schemas"]["List"];
@@ -55,20 +55,18 @@ export function useLists(query: ListQuery, enabled = true, keepRows = false) {
     enabled,
     placeholderData: keepRows ? keepPreviousData : undefined,
     queryFn: async () => {
-      const { data, error } = await api.GET("/lists", {
-        params: {
-          query: {
-            entity_type: query.entityType,
-            list_type: query.listType,
-            q: query.q || undefined,
-            include_archived: query.includeArchived || undefined,
+      return unwrap(
+        await api.GET("/lists", {
+          params: {
+            query: {
+              entity_type: query.entityType,
+              list_type: query.listType,
+              q: query.q || undefined,
+              include_archived: query.includeArchived || undefined,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
   });
 }
@@ -78,13 +76,11 @@ export function useList(id: string, enabled = true) {
     enabled,
     queryKey: [LISTS_KEY, "one", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/lists/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/lists/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -93,13 +89,11 @@ export function useListHistory(id: string) {
   return useQuery({
     queryKey: [LISTS_KEY, "history", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/lists/{id}/history", {
-        params: { path: { id }, query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/lists/{id}/history", {
+          params: { path: { id }, query: { limit: 50 } },
+        }),
+      );
     },
   });
 }
@@ -113,13 +107,11 @@ export function useVisitList() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<ListVisit> => {
-      const { data, error } = await api.POST("/lists/{id}/visit", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/lists/{id}/visit", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: (_visit, id) =>
       Promise.all([
@@ -141,14 +133,11 @@ export function useExplanation(
   return useQuery({
     queryKey: [...recordListsKey(recordType, recordId), "why", listId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/lists/{id}/members/{recordId}/why",
-        { params: { path: { id: listId, recordId } } },
+      return unwrap(
+        await api.GET("/lists/{id}/members/{recordId}/why", {
+          params: { path: { id: listId, recordId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
   });
 }
@@ -165,12 +154,11 @@ export async function listMembersAmong(
   if (recordIds.length === 0) {
     return new Map();
   }
-  const { data, error } = await api.GET("/lists/{id}/members", {
-    params: { path: { id: listId }, query: { entity_id: [...recordIds] } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/lists/{id}/members", {
+      params: { path: { id: listId }, query: { entity_id: [...recordIds] } },
+    }),
+  );
   return new Map(data.data.map((member) => [member.entity_id, member]));
 }
 
@@ -182,14 +170,11 @@ export function useRecordLists(entityType: ListedRecordType, recordId: string) {
   return useQuery({
     queryKey: recordListsKey(entityType, recordId),
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/records/{entity_type}/{entity_id}/lists",
-        { params: { path: { entity_type: entityType, entity_id: recordId } } },
+      return unwrap(
+        await api.GET("/records/{entity_type}/{entity_id}/lists", {
+          params: { path: { entity_type: entityType, entity_id: recordId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
   });
 }
@@ -220,21 +205,19 @@ export function useCreateList() {
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (input: NewList) => {
-      const { data, error } = await api.POST("/lists", {
-        body: {
-          name: input.name,
-          entity_type: input.entityType,
-          list_type: input.listType,
-          definition: input.definition,
-          purpose: input.purpose || undefined,
-          sharing: input.sharing ?? "team",
-          team_id: input.teamId ?? undefined,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/lists", {
+          body: {
+            name: input.name,
+            entity_type: input.entityType,
+            list_type: input.listType,
+            definition: input.definition,
+            purpose: input.purpose || undefined,
+            sharing: input.sharing ?? "team",
+            team_id: input.teamId ?? undefined,
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -257,22 +240,20 @@ export function useUpdateList() {
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (edit: ListEdit) => {
-      const { data, error } = await api.PATCH("/lists/{id}", {
-        params: { path: { id: edit.id } },
-        body: {
-          version: edit.version,
-          name: edit.name,
-          purpose: edit.purpose,
-          sharing: edit.sharing,
-          team_id: edit.teamId,
-          steward_id: edit.stewardId,
-          definition: edit.definition,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/lists/{id}", {
+          params: { path: { id: edit.id } },
+          body: {
+            version: edit.version,
+            name: edit.name,
+            purpose: edit.purpose,
+            sharing: edit.sharing,
+            team_id: edit.teamId,
+            steward_id: edit.stewardId,
+            definition: edit.definition,
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -309,17 +290,16 @@ export function useChangeMember() {
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (input: MemberChange) => {
-      const { error } = await api.POST("/lists/{id}/members", {
-        params: { path: { id: input.listId } },
-        body: {
-          entity_type: input.entityType,
-          entity_id: input.entityId,
-          note: input.note || undefined,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/lists/{id}/members", {
+          params: { path: { id: input.listId } },
+          body: {
+            entity_type: input.entityType,
+            entity_id: input.entityId,
+            note: input.note || undefined,
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -340,13 +320,12 @@ export function useRemoveMember(
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (input: MemberChange): Promise<MemberRestore | null> => {
-      const { data, error } = await api.POST("/lists/{id}/members/remove", {
-        params: { path: { id: input.listId } },
-        body: { entity_type: input.entityType, entity_id: input.entityId },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.POST("/lists/{id}/members/remove", {
+          params: { path: { id: input.listId } },
+          body: { entity_type: input.entityType, entity_id: input.entityId },
+        }),
+      );
       return data ? { listId: input.listId, undo: data } : null;
     },
     onError: outcome.onError,
@@ -362,13 +341,12 @@ export function useRestoreMember(outcome: MutationOutcome<MemberRestore>) {
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (input: MemberRestore) => {
-      const { error } = await api.POST("/lists/{id}/members/restore", {
-        params: { path: { id: input.listId } },
-        body: input.undo,
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/lists/{id}/members/restore", {
+          params: { path: { id: input.listId } },
+          body: input.undo,
+        }),
+      );
     },
     onError: outcome.onError,
     onSuccess: async (_, input) => {

@@ -21,7 +21,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import { factsKey } from "./companyfactspanel";
 import "./companydeepread.css";
 import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
@@ -200,14 +200,11 @@ function SiteReadPanel({
   const reportQuery = useQuery({
     queryKey: ["site-read", companyId, readId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/companies/{id}/site-reads/{readId}",
-        { params: { path: { id: companyId, readId } } },
+      return unwrap(
+        await api.GET("/companies/{id}/site-reads/{readId}", {
+          params: { path: { id: companyId, readId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;

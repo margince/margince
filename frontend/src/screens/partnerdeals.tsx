@@ -7,7 +7,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { FieldGuard } from "../design-system/rbac";
 import { formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { dealStatusTone } from "./deals";
 import { EntityRef } from "./entityref";
 
@@ -38,12 +38,11 @@ async function fetchPartnerDeals(companyId: string): Promise<Deal[]> {
   const deals: Deal[] = [];
   let cursor: string | undefined;
   do {
-    const { data, error } = await api.GET("/deals", {
-      params: { query: { partner_company_id: companyId, limit: 50, cursor } },
-    });
-    if (error) {
-      throwProblem(error);
-    }
+    const data = unwrap(
+      await api.GET("/deals", {
+        params: { query: { partner_company_id: companyId, limit: 50, cursor } },
+      }),
+    );
     deals.push(...(data?.data ?? []));
     cursor = data?.page?.has_more
       ? (data.page.next_cursor ?? undefined)

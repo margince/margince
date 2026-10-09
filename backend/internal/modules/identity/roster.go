@@ -220,7 +220,7 @@ func (s *Service) GetUser(ctx context.Context, actor Identity, userID ids.UserID
 		if err != nil {
 			return err
 		}
-		withholdActivity(&actor, rows, grants)
+		withholdActivity(ctx, &actor, rows, grants)
 		u = rows[0]
 		return nil
 	})
@@ -261,7 +261,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 		cursorKey: func(u userRow) (time.Time, ids.UUID) { return u.CreatedAt, u.ID },
 	})
 	if err != nil || !mayManage || in.Actor == nil {
-		withholdActivity(nil, rows, nil)
+		withholdActivity(ctx, nil, rows, nil)
 		return RosterPage{Users: rows, Page: page, Management: mayManage}, err
 	}
 	var actions map[ids.UUID][]memberAction
@@ -270,18 +270,19 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 		if err != nil {
 			return err
 		}
-		withholdActivity(in.Actor, rows, grants)
+		withholdActivity(ctx, in.Actor, rows, grants)
 		actions, err = s.allowedMemberActions(ctx, tx, *in.Actor, rows, grants)
 		return err
 	})
 	return RosterPage{Users: rows, Page: page, Management: true, Actions: actions}, err
 }
 
-// withholdActivity clears last-active wherever the caller could not list the
-// member's sessions: no human caller, or a target beyond ListUserSessions' ceiling.
-func withholdActivity(actor *Identity, rows []userRow, grants map[ids.UUID]seatGrants) {
+// withholdActivity clears last-active wherever the caller could not list the member's sessions:
+// no human caller, no user_admin read, or a target beyond ListUserSessions' ceiling.
+func withholdActivity(ctx context.Context, actor *Identity, rows []userRow, grants map[ids.UUID]seatGrants) {
+	mayList := actor != nil && auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
 	for i := range rows {
-		if actor == nil || callerOutranks(*actor, grants[rows[i].ID], reachDenial) != nil {
+		if !mayList || callerOutranks(*actor, grants[rows[i].ID], reachDenial) != nil {
 			rows[i].LastActiveAt = nil
 		}
 	}

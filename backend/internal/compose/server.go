@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/continuity"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
@@ -194,6 +195,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{
 			pool: pool, now: func() time.Time { return time.Now().UTC() },
+		},
+		recoveryHealthHandlers: recoveryHealthHandlers{
+			ledger: continuity.NewStore(InstallationDB(pool)),
+			now:    func() time.Time { return time.Now().UTC() },
 		},
 		consentHandlers:     newConsentHandlers(pool),
 		collectionsHandlers: newCollectionsHandlers(pool),

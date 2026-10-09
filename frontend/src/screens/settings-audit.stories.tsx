@@ -156,7 +156,7 @@ function story(auditLog: Answer, allow: GrantSpec = ADMIN) {
 const openFirst = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const canvas = within(canvasElement);
   const [toggle] = await canvas.findAllByRole("button", {
-    name: "Show change detail",
+    name: /^Show change detail: /,
   });
   await userEvent.click(toggle);
 };

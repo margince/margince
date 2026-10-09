@@ -20,7 +20,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import {
   acquisitionKindLabel,
@@ -57,13 +57,11 @@ export function NoticeDuty({
     queryKey: ["notice-cases", "one", caseId],
     enabled: canReadCase,
     queryFn: async () => {
-      const { data, error } = await api.GET("/privacy/notice-cases/{id}", {
-        params: { path: { id: caseId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/privacy/notice-cases/{id}", {
+          params: { path: { id: caseId } },
+        }),
+      );
     },
   });
   const [excusing, setExcusing] = useState(false);
@@ -77,18 +75,15 @@ export function NoticeDuty({
 
   const send = useMutation({
     mutationFn: async (route: "privacy-notice" | "confirm-request") => {
-      const { data, error } =
+      return unwrap(
         route === "privacy-notice"
           ? await api.POST("/contacts/{id}/consent/privacy-notice", {
               params: { path: { id: contactId } },
             })
           : await api.POST("/contacts/{id}/consent/confirm-request", {
               params: { path: { id: contactId } },
-            });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+            }),
+      );
     },
     onSuccess: (issued) =>
       settle(
@@ -100,13 +95,12 @@ export function NoticeDuty({
 
   const excuse = useMutation({
     mutationFn: async (vars: { state: ExcuseState; note: string }) => {
-      const { error } = await api.POST("/privacy/notice-cases/{id}/excuse", {
-        params: { path: { id: caseId } },
-        body: { state: vars.state, resolution_note: vars.note },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/privacy/notice-cases/{id}/excuse", {
+          params: { path: { id: caseId } },
+          body: { state: vars.state, resolution_note: vars.note },
+        }),
+      );
     },
     onSuccess: () => {
       setExcusing(false);

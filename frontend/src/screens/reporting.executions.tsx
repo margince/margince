@@ -8,7 +8,7 @@ import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { useReportingPages } from "./reporting.pagination";
 
 export function ReportingExecutions({
@@ -64,12 +64,11 @@ export function ReportingExecutions({
   }, [published, client, reportId]);
   const retry = useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await api.POST(
-        "/analytics/executions/{id}/retry",
-        { params: { path: { id } } },
+      return unwrap(
+        await api.POST("/analytics/executions/{id}/retry", {
+          params: { path: { id } },
+        }),
       );
-      if (error) throwProblem(error);
-      return data;
     },
     onSuccess: async () => {
       await client.invalidateQueries({
@@ -156,9 +155,9 @@ export function ReportingExecutions({
 }
 
 async function executionPage(reportId: string, cursor?: string) {
-  const { data, error } = await api.GET("/analytics/reports/{id}/executions", {
-    params: { path: { id: reportId }, query: { cursor, limit: 5 } },
-  });
-  if (error) throwProblem(error);
-  return data;
+  return unwrap(
+    await api.GET("/analytics/reports/{id}/executions", {
+      params: { path: { id: reportId }, query: { cursor, limit: 5 } },
+    }),
+  );
 }

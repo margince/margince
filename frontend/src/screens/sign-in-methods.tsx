@@ -13,7 +13,7 @@ import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import {
   type AssignableRole,
   roleLabel,
@@ -51,12 +51,11 @@ function useSetEnabledProviders() {
     // off. The caller passes it as a variable rather than closing over render
     // state, so a click cannot submit a list older than the row it came from.
     mutationFn: async (keys: string[]) => {
-      const { error } = await api.PATCH("/installation/settings", {
-        body: { enabled_oidc_providers: keys },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/installation/settings", {
+          body: { enabled_oidc_providers: keys },
+        }),
+      );
     },
     onSuccess: async () => {
       // BOTH caches. The write goes through the installation PATCH, so the
@@ -109,12 +108,11 @@ function useSetGroupRoleMap() {
     // The caller passes the map as a variable rather than closing over render
     // state, so a click cannot submit rows older than the ones on screen.
     mutationFn: async (map: Record<string, string>) => {
-      const { error } = await api.PATCH("/installation/settings", {
-        body: { oidc_group_role_map: map },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/installation/settings", {
+          body: { oidc_group_role_map: map },
+        }),
+      );
     },
     onSuccess: async () => {
       // Both caches, for the reason useSetEnabledProviders gives: the write
@@ -360,7 +358,7 @@ export function SignInMethodsCard() {
       <Panel title={t("signInMethods.title")}>
         <PanelBody>
           <PanelIntro>{t("signInMethods.sub")}</PanelIntro>
-          {save.error && (
+          {settings.isSuccess && save.error && (
             <Callout
               tone="danger"
               kind="outcome"

@@ -13,7 +13,7 @@ import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { QueryStates, throwProblem } from "./common";
+import { QueryStates, unwrap } from "./common";
 import { FactRow } from "./companyfactrow";
 import { isTechnicalFact } from "./companytechnical";
 import {
@@ -106,12 +106,11 @@ export function CompanyFactsPanel({
   const factsQuery = useQuery({
     queryKey: factsKey(companyId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/facts", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies/{id}/facts", {
+          params: { path: { id: companyId } },
+        }),
+      );
       return data.data ?? [];
     },
   });
@@ -253,17 +252,16 @@ function AddFactForm({
   const add = useMutation({
     mutationFn: async (stated: { field: string; value: string }) => {
       const [category, name] = stated.field.split(":");
-      const { error } = await api.POST("/companies/{id}/facts", {
-        params: { path: { id: companyId } },
-        body: {
-          category: category as FactCategory,
-          field: name,
-          value: stated.value.trim(),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/companies/{id}/facts", {
+          params: { path: { id: companyId } },
+          body: {
+            category: category as FactCategory,
+            field: name,
+            value: stated.value.trim(),
+          },
+        }),
+      );
     },
     onSuccess: async () => {
       await settleFacts(queryClient, companyId);

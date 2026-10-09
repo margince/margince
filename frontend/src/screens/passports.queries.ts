@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 type PassportSummary = components["schemas"]["PassportSummary"];
 
@@ -15,11 +15,7 @@ export function usePassports() {
   return useQuery({
     queryKey: ["passports"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/passports"));
     },
   });
 }

@@ -5,7 +5,7 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import {
   memberAnchorId,
   memberMutationKey,
@@ -33,13 +33,12 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
 
   const reactivate = useMutation({
     mutationKey: memberMutationKey(member.id, "reactivate"),
-    mutationFn: async () => {
-      const { error } = await api.POST("/users/{id}/reactivate", {
-        params: { path: { id: member.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+    mutationFn: async (id: string) => {
+      unwrap(
+        await api.POST("/users/{id}/reactivate", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: async () => {
       await refresh();
@@ -53,13 +52,12 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
 
   const deactivate = useMutation({
     mutationKey: memberMutationKey(member.id, "deactivate"),
-    mutationFn: async () => {
-      const { error } = await api.POST("/users/{id}/deactivate", {
-        params: { path: { id: member.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+    mutationFn: async (id: string) => {
+      unwrap(
+        await api.POST("/users/{id}/deactivate", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: async () => {
       // The roster first: closing the dialog hands focus back to the row, which
@@ -67,7 +65,9 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
       await refresh();
       setConfirmOff(false);
       toast.show(t("users.deactivated", { name: member.email }), {
-        action: undoAction(t("common.undo"), () => reactivate.mutate()),
+        action: undoAction(t("common.undo"), () =>
+          reactivate.mutate(member.id),
+        ),
       });
     },
   });
@@ -96,7 +96,10 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
           </Button>
         )}
         {canReactivate && (
-          <Button disabled={pending} onClick={() => reactivate.mutate()}>
+          <Button
+            disabled={pending}
+            onClick={() => reactivate.mutate(member.id)}
+          >
             {t("users.reactivate")}
           </Button>
         )}
@@ -109,7 +112,7 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
         confirmVariant="danger"
         pending={deactivate.isPending}
         error={deactivate.error ? problemMessageOf(deactivate.error, t) : null}
-        onConfirm={() => deactivate.mutate()}
+        onConfirm={() => deactivate.mutate(member.id)}
         // The Deactivate item is gone once it worked; the member's own cell stays.
         returnFocusTo={() => document.getElementById(memberAnchorId(member.id))}
       >

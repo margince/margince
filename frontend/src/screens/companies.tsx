@@ -51,6 +51,7 @@ import {
   problemMessageOf,
   QueryGate,
   throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import { ThreadFold } from "./company/glance";
@@ -119,11 +120,11 @@ import {
   ListTable,
   listFetchLimit,
   useListQuery,
-  useOwnerChips,
   useTagChips,
 } from "./listquery";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
+import { useOwnerChips } from "./ownerdials";
 import { PartnerTab } from "./partners";
 import {
   type OpenReceipt,
@@ -191,21 +192,20 @@ async function fetchCompaniesPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Company>> {
-  const { data, error } = await api.GET("/companies", {
-    params: {
-      query: {
-        q: query.q || undefined,
-        sort: query.sort || undefined,
-        include_archived: query.includeArchived || undefined,
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        ...listQueryParams(query.filters),
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: {
+        query: {
+          q: query.q || undefined,
+          sort: query.sort || undefined,
+          include_archived: query.includeArchived || undefined,
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          ...listQueryParams(query.filters),
+        },
       },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {
@@ -726,13 +726,11 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   const companyQuery = useQuery({
     queryKey: ["company", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 

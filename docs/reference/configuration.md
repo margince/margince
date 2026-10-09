@@ -32,7 +32,7 @@ The api and the worker follow the same rules, and each reads only the values it 
 | Setting an admin changes | value saved in the database → default | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
 | Seed in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | Used when the company is created, and again by a data reset. |
 | AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
-| SMTP password | `email.smtp.password` reference → the copy sealed in the vault | The relay is used with no password. |
+| SMTP password | `email.smtp.password` reference → the copy sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
 | License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
 
 **Posture.** `MARGINCE_ENV` picks the overlay; how the two files merge is in
@@ -912,12 +912,33 @@ read. A `${env:…}` that is unset is a named source that gave nothing, which is
 Remove the whole `license:` block, or the `password:` line from `email.smtp`. Then the variable or
 the file can go too.
 
-**There is no unseal.** You can change a credential, but not remove it. To delete
-`email.smtp.password` does not switch the installation to a relay with no password. The sealed copy
-keeps answering, because "declared nothing" and "declared that it needs nothing" are the same input
-to the resolver. Nothing in the product deletes either ref today. If you need a relay that takes no
-credential, say so on [issue #2162](https://github.com/margince/margince/issues/2162), which tracks
-the supported way to do it.
+**Remove the relay password with `${none}`.** To delete the `password:` line does not switch the
+installation to a relay with no password: the sealed copy keeps answering. Write the line as
+`password: ${none}` instead. That is the case for a relay that takes no credential, and for a relay
+password that is no longer secret. On the next boot, the api and the worker each do three things:
+
+- They delete the sealed copy from the vault, and then the record of where it was. This happens
+  even when `email.enabled` is false.
+- With mail on, they send with no login, even if `username:` is still set.
+- They log this line once, on the boot that removed it:
+
+```
+removed a sealed deployment credential on this boot; the deployment declares it absent
+  credential_name="the outbound-mail password" declared_at=email.smtp.password
+```
+
+Keep `${none}` in the file for as long as the relay takes no password. A later boot that finds
+nothing sealed does nothing and logs nothing. If the delete fails, the boot logs an error, sends
+without a password anyway, and tries again on the next boot.
+
+`${none}` is not a password. Each secret field refuses a literal value, so it cannot be one.
+`email.smtp.password` is the only field that takes it. `license.token` and
+`bootstrap_admin.password` refuse it at boot, and so does `email.smtp.password` next to
+`password_file`. A variable or file that holds the text `${none}` is refused as well, so that a
+removal is always written in `margince.yaml` itself.
+
+Copies sealed before a change of password are not deleted by `${none}`. Margince keeps them on
+purpose (see below), and nothing points to them.
 
 This does not matter for the license. An installation that removes its license has stopped paying,
 and a production boot refuses a missing license in any case.
@@ -1001,6 +1022,8 @@ migrate <up|down> --dsn <owner-dsn> [--steps n]
 migrate reset-password --dsn <owner-dsn> --email <user-email>
 migrate <recreate-db|drop-db|db-exists> --dsn <owner-maintenance-dsn> --name <db> [--template <db>]
 migrate workspace-exists --dsn <owner-dsn>
+migrate drill-start --dsn <owner-dsn> --by <name> --restored-to <time> [--note <text>]
+migrate drill-finish --dsn <owner-dsn> --drill <id> --outcome <passed|failed> [--note <text>]
 ```
 
 `workspace-exists` prints `true` or `false`: whether this installation already holds a live
@@ -1024,6 +1047,11 @@ longer written. Use `migrate reset-password` to change the password of a user wh
 | `--email` | (none) | (none) | user email (`reset-password` only): the way in for the operator when all else fails. It sets the password of that user right in the database, and reads the new password from **stdin** (never argv). It is the way back in when the admin is locked out and no outbound email is set up. It covers a locked-out admin, and recovery the operator leads. Normal onboarding happens in Settings → Users & roles. There, an installation with no outbound email offers a "Get set-password link" per member, to hand over by another route |
 | `--name` | (none) | (none) | database name (`recreate-db`, `drop-db`, `db-exists` only): the admin step of the integration lane that copies a database per package. Drop if it exists and create, drop if it exists, or print `true`/`false`. The drops are `WITH (FORCE)`, so a session that is still open is ended, and does not make the clean-up fail some of the time. It runs on the same owner DSN the migrations and tests use. So the lane needs no host psql, and a changed `MARGINCE_TEST_DSN` points at one cluster the whole way. A name (or template) over the name limit of the server (63 bytes by default) is refused, never cut short into the name of another database |
 | `--template` | (none) | (none) | template database to copy (`recreate-db` only): `CREATE DATABASE … TEMPLATE`, a fast file copy |
+| `--by` | (none) | (none) | who runs the restore test (`drill-start` only), kept as the `operator` of the `restore_drill` row |
+| `--restored-to` | (none) | (none) | the point in time the backup restores to, as RFC 3339 (`drill-start` only). A time in the future is refused |
+| `--drill` | (none) | (none) | the id `drill-start` printed (`drill-finish` only) |
+| `--outcome` | (none) | (none) | `passed` or `failed` (`drill-finish` only). A test closes once; a second `drill-finish` on it fails |
+| `--note` | (none) | (none) | what the test checked, or why it failed (`drill-start`, `drill-finish`) |
 
 ## What the image entrypoint reads (api and worker)
 

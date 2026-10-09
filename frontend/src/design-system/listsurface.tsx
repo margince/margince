@@ -33,9 +33,9 @@ import { useTruncationTooltip } from "./tooltip";
 // The list surface's shell: the header (view tabs, count, primary action),
 // the caption and the toolbar (search, filter chips, an archived toggle and
 // whatever presentation dials the caller owns). It knows nothing about
-// columns, density, paging or rows — those stay in listtable.tsx, and the
-// pipeline board reuses this same shell for the same reason a contact list
-// and a lead list do: the dials belong to the surface, not to what fills it.
+// columns, density, paging or rows, which belong to ListTable. The pipeline
+// board reuses this same shell, as a contact list and a lead list do. The
+// dials belong to the surface, not to what fills it.
 //
 // A view tab reports only its index. What a view MEANS — a sort, a set of
 // filters, a stage — is the caller's to decide, which is what lets the board

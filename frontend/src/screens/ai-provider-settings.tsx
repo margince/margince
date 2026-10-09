@@ -19,7 +19,7 @@ import {
 import { invalidateProviderHealth } from "./ai-provider-health";
 import { isOpenRouter } from "./ai-provider-links";
 import { ROUTING_KEY } from "./ai-routing-query";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { VERTEX_PROVIDER, VertexLocationField } from "./vertex-location";
 
 // Where a provider is reached. Set once here; every lane that binds the
@@ -267,13 +267,12 @@ export function useSetProviderSettings() {
       provider: string;
       settings: ProviderSettings;
     }) => {
-      const { error } = await api.PUT("/ai/provider-settings/{provider}", {
-        params: { path: { provider: vars.provider } },
-        body: vars.settings,
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/ai/provider-settings/{provider}", {
+          params: { path: { provider: vars.provider } },
+          body: vars.settings,
+        }),
+      );
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ROUTING_KEY });

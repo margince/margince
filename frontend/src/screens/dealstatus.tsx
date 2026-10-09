@@ -8,7 +8,7 @@ import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryStates, throwProblem } from "./common";
+import { QueryStates, unwrap } from "./common";
 import { useDealSignals } from "./dealsignals";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
@@ -85,13 +85,12 @@ export function useDealStatusCard(dealId: string) {
   return useQuery({
     queryKey: ["deal-status", dealId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/status", {
-        params: { path: { id: dealId }, query: { facts_only: true } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/status", {
+          params: { path: { id: dealId }, query: { facts_only: true } },
+        }),
+        t,
+      );
     },
   });
 }
@@ -124,13 +123,12 @@ export function DealStatusCardPanel({
   const rewrite = useMutation({
     mutationKey: ["deal-status-refresh", dealId],
     mutationFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/status", {
-        params: { path: { id: dealId }, query: { refresh: true } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/status", {
+          params: { path: { id: dealId }, query: { refresh: true } },
+        }),
+        t,
+      );
     },
     onSuccess: (data) =>
       queryClient.setQueryData(["deal-status", dealId], data),

@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export type AccountScan = components["schemas"]["CompanyScan"];
 
@@ -56,13 +56,11 @@ export function useAccountScan(
     queryKey: accountScanKey(companyId),
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/scan", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}/scan", {
+          params: { path: { id: companyId } },
+        }),
+      );
     },
     refetchInterval: (query) =>
       scanIsLive(query.state.data) ? POLL_LIVE_MS : false,
@@ -70,13 +68,11 @@ export function useAccountScan(
   const ensure = useMutation({
     mutationKey: accountScanKey(companyId),
     mutationFn: async (id: string) => {
-      const { data, error } = await api.POST("/companies/{id}/scan", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/companies/{id}/scan", {
+          params: { path: { id } },
+        }),
+      );
     },
     // The ensure's answer IS the scan as it now stands, so the query takes it
     // rather than re-reading what the server just said. The open's own read

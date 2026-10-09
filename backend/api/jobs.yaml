@@ -1215,6 +1215,22 @@ kinds:
       minutes.
 
 
+  suppression_journal_export:
+    role: worker
+    fleet: true
+    go_type: SuppressionJournalArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    registration: {when: [Blobstore], absent: registers_nothing}
+    reason: >-
+      Hourly, and the cadence answers how much of the journal a restore may
+      lose rather than how long the export takes: an erasure recorded after the
+      last export is one a restored database has no entry to refuse. The pass
+      itself is one indexed read of the suppression list and one Put per entry,
+      all of it idempotent, so a re-run costs writes and changes nothing.
+
   stored_object_reap:
     role: worker
     fleet: true
@@ -1439,6 +1455,22 @@ kinds:
       tomorrow. The pass is a few indexed reads and at most two hundred
       writes per workspace and calls no model, so five minutes is a ceiling
       it does not approach.
+
+
+  tag_scout:
+    role: worker
+    fleet: true
+    go_type: TagScoutArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Hourly, like deal_scout: a mail asking about a product this morning
+      should be a suggestion by lunch. The pass is one phrase-matching read
+      over thirty days of captured activity and at most two hundred writes per
+      workspace, and calls no model, so five minutes is a ceiling it does not
+      approach.
 
 
   site_deep_read:

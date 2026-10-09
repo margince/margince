@@ -912,6 +912,7 @@ export const de = {
   "systemJob.release_version": "Versionsprüfung",
   "systemJob.report_schedule": "Geplante Auswertungen",
   "systemJob.request_settlement": "Abschluss von Anfragen",
+  "systemJob.restore_drill": "Eintrag einer Wiederherstellungsprobe",
   "systemJob.risk_verdict": "Prüfung des Deal-Risikos",
   "systemJob.routing_seed": "Einrichtung der Zuweisung",
   "systemJob.schedule_read": "Lesen des Zeitplans",
@@ -921,6 +922,7 @@ export const de = {
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
   "systemJob.stage_progression": "Phasenfortschritt",
   "systemJob.stage_progression_outcome": "Ergebnis des Phasenwechsels",
+  "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
   "systemJob.technical_lookup": "Technische Abfrage für Unternehmen",
@@ -1653,6 +1655,9 @@ export const de = {
   "list.filterOwnerMe": "In deiner Zuständigkeit",
   "list.filterOwnerAll": "Alle Zuständigen",
   "list.filterOwnerUnassigned": "Nicht zugewiesen",
+  "list.team": "Team",
+  "list.filterTeamAll": "Alle Teams",
+  "list.teamUnavailable": "Nicht verfügbares Team",
   "views.save": "Ansicht speichern",
   "views.saveConfirm": "Speichern",
   "views.saveTitle": "Diese Ansicht speichern",
@@ -2889,6 +2894,30 @@ export const de = {
   "tagAdmin.editTitle": "Tag bearbeiten",
   "tagAdmin.nameLabel": "Name",
   "tagAdmin.colorLabel": "Farbe",
+  "brief.coverage.source.tag_suggestion": "Vorgeschlagene Tags",
+  "worklist.untitled.tag_suggestion": "Ein Tag, auf den die Hinweise deuten",
+  "tagSuggestion.agent": "Tag-Vorschläge",
+  "tagSuggestion.citedHeading": "Vorgeschlagen wegen:",
+  "tagSuggestion.evidence": "{kind} · {subject} · {when}",
+  "tagSuggestion.noSubject": "Kein Betreff",
+  "tagSuggestion.kind.email": "E-Mail",
+  "tagSuggestion.kind.meeting": "Termin",
+  "tagSuggestion.kind.note": "Notiz",
+  "tagSuggestion.kind.call": "Anruf",
+  "tagSuggestion.accept": "Tag hinzufügen",
+  "tagSuggestion.dismiss": "Nicht dieser Tag",
+  "tagSuggestion.dismissed":
+    "Für alle verworfen. Der Vorschlag kommt nur wieder, wenn neuere Mails oder Notizen passen.",
+  "tagSuggestion.accepted": "{tag} zu {record} hinzugefügt.",
+  "tagSuggestion.decided":
+    "Über diesen Vorschlag wurde schon entschieden. Lade neu, um den Stand zu sehen.",
+  "tagSuggestion.unavailable":
+    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
+  "tagAdmin.descriptionLabel": "Wörter, die Interesse zeigen",
+  "tagAdmin.descriptionHint":
+    "Trenne Wörter oder Wendungen mit Kommas, zum Beispiel: Preise für Produkt X, Demo von Produkt X.",
+  "tagAdmin.suggestibleLabel":
+    "Diesen Tag vorschlagen, wenn Mails oder Terminnotizen diese Wörter enthalten",
   "tagAdmin.colorNone": "Keine Farbe",
   "tagAdmin.color.teal": "Petrol",
   "tagAdmin.color.amber": "Bernstein",
@@ -2954,6 +2983,20 @@ export const de = {
     "Füge dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tags suchen",
   "tags.alreadyAdded": "Bereits hinzugefügt",
+  "tags.offerCompanyTitle": "{company} auch mit {tag} taggen?",
+  "tags.offerCompanyAccept": "{company} taggen",
+  "tags.offerCompanyDone": "{tag} zu {company} hinzugefügt",
+  "tags.offerDismiss": "Nicht jetzt",
+  "tags.offerContactsTitle":
+    "Kontakte dieses Unternehmens auch mit {tag} taggen?",
+  "tags.offerContactsAccept": "Kontakte auswählen",
+  "tags.contactsTitle": "Kontakte mit {tag} taggen",
+  "tags.contactsLoading": "Kontakte werden geladen…",
+  "tags.contactsNone":
+    "Kein Kontakt, den du sehen kannst, arbeitet derzeit bei diesem Unternehmen.",
+  "tags.contactsAlready": "{name} (bereits getaggt)",
+  "tags.contactsTruncated": "Nur die ersten 200 Kontakte werden angezeigt.",
+  "tags.contactsContinue": "Weiter",
   "tags.catalogTruncatedTitle": "Liste gekürzt",
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
@@ -3534,13 +3577,14 @@ export const de = {
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
-  "deals.filterOwnerMe": "Meine Deals",
   "deals.totalsOwnerNotMeasurable":
     "Nur geladene Deals. Die Summen der zuständigen Person darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":
     "Nur geladene Deals. Die Phasensummen kennen keine Suche, daher wird keine gezeigt.",
+  "deals.totalsNoTeamFilter":
+    "Nur geladene Deals. Die Summen je Phase lassen sich nicht nach Team oder auf nicht zugewiesene Deals eingrenzen, darum steht hier keine.",
   "deals.filterPartner": "Partner",
   "deals.filterPartnerAnyOne": "Beliebiger Partner",
   "deals.filterMotion": "Geschäftsart",
@@ -3555,7 +3599,6 @@ export const de = {
   "deals.filterStageAll": "Alle Phasen",
   "deals.filterCompanyAll": "Alle Unternehmen",
   "deals.filterStalledAll": "Alle Deals",
-  "deals.filterOwnerAll": "Alle Zuständigen",
   "deals.filterPartnerAll": "Alle Quellen",
   "deals.unit": "Deals",
   "deals.bulkStage": "In Phase verschieben",
@@ -5811,6 +5854,36 @@ export const de = {
   "extIngest.noDetail":
     "Zeigt nur Anzahlen und die abweisende Prüfung, nie den Datensatz, weil das abgewiesene Feld Inhalte des Absenders zitieren kann. Das Connector-Protokoll enthält den vollständigen Grund für jeden Fall.",
   "extIngest.generatedAt": "Stand: {time}",
+  "settings.recoveryHealth": "Wiederherstellungsproben",
+  "settings.recoveryHealthSub":
+    "Wann die Wiederherstellung aus dem Backup zuletzt geprobt wurde und wie lange sie gedauert hat.",
+  "recoveryHealth.adminOnly":
+    "Wiederherstellungsproben betreffen die ganze Installation und brauchen eine Berechtigung, die deine Rolle nicht hat.",
+  "recoveryHealth.lastDrill": "Letzte Wiederherstellungsprobe",
+  "recoveryHealth.lastDrillHint":
+    "Die Zeiten stammen aus dem Eintrag der Probe selbst. Wer die Probe durchführt, trägt sie über die Kommandozeile ein.",
+  "recoveryHealth.never":
+    "Es ist noch keine Wiederherstellungsprobe eingetragen. Bis dahin zeigt nichts, dass eine Wiederherstellung die Ziele einhält.",
+  "recoveryHealth.outcome": "Ergebnis",
+  "recoveryHealth.outcome.passed": "Bestanden",
+  "recoveryHealth.outcome.failed": "Fehlgeschlagen",
+  "recoveryHealth.outcome.running": "Läuft",
+  "recoveryHealth.startedAt": "begonnen {when}",
+  "recoveryHealth.recovery": "Dauer der Wiederherstellung",
+  "recoveryHealth.notFinished": "Nicht abgeschlossen",
+  "recoveryHealth.dataLoss": "Verlorene Daten",
+  "recoveryHealth.restoredTo": "Wiederhergestellt auf",
+  "recoveryHealth.operator": "Durchgeführt von",
+  "recoveryHealth.notes": "Notizen",
+  "recoveryHealth.window": "{hours} Std. {minutes} Min.",
+  "recoveryHealth.windowHours": "{hours} Std.",
+  "recoveryHealth.withinTarget": "innerhalb des Ziels von {target}",
+  "recoveryHealth.overTarget": "über dem Ziel von {target}",
+  "recoveryHealth.lastBackup": "Letztes Backup",
+  "recoveryHealth.lastBackupHint":
+    "Backups laufen außerhalb von Margince. Prüfe sie in deinem Backup-Werkzeug.",
+  "recoveryHealth.backupNotObserved": "Von Margince nicht erfasst",
+  "recoveryHealth.generatedAt": "Stand {time}",
   "settings.captureHealth": "Prüfungen der Mailerfassung",
   "settings.captureHealthSub":
     "Ob die Mailerfassung mit den Fragen Schritt hält, die sie beantworten muss.",
@@ -5886,7 +5959,8 @@ export const de = {
   "settings.auditAction": "Aktion",
   "settings.auditFrom": "Von",
   "settings.auditTo": "Bis",
-  "settings.auditExpand": "Änderungsdetails anzeigen",
+  "settings.auditExpandEntry":
+    "Änderungsdetails anzeigen: {action} an {entity}",
   "settings.auditLoading": "Aufgezeichnete Aktionen werden geladen…",
   "settings.auditNoMatch":
     "Keine aufgezeichneten Aktionen passen zu diesen Filtern.",
@@ -6933,7 +7007,7 @@ export const de = {
   "connectors.oauthMisconfigured":
     "Diese Installation kann die Verbindung nicht abschließen, weil die API des Anbieters nicht aktiviert ist. Ein Admin muss sie aktivieren; das Server-Log nennt die API.",
   "connectors.oauthBadClient":
-    "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Admin muss Client-ID und Clientschlüssel in den Einstellungen unter Allgemein prüfen; erneutes Verbinden behebt das nicht.",
+    "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Admin muss Client-ID und Clientschlüssel in den Einstellungen unter Anmeldung und Apps prüfen; erneutes Verbinden behebt das nicht.",
   "connectors.dismissOutcome": "Schließen",
   "connectors.oauthConnected": "Verbunden",
   "connectors.oauthNotConnected": "Nichts verbunden",
@@ -8968,7 +9042,7 @@ export const de = {
   "extAccess.versionSkew":
     "Jemand anderes hat diese Rolle geändert, während du sie angesehen hast, daher wurde deine Änderung nicht übernommen. Die Berechtigungen oben sind aktuell. Nimm die Änderung bei Bedarf erneut vor.",
   "extAccess.systemRole": "Vorgegebene Rolle",
-  "extAccess.customRole": "Eigene Rolle",
+  "extAccess.customRole": "Angepasste Rolle",
   "extAccess.readOnlyTitle": "Nur Lesezugriff für deine Rolle",
   "extAccess.nobodyReadsTitle": "Keine Rolle kann diese Erweiterung lesen",
   "extAccess.grantFailed": "Berechtigung nicht geändert",
@@ -9046,7 +9120,7 @@ export const de = {
   "users.addedOn": "Hinzugefügt am {date}",
   "users.lastActiveUnknown": "Nicht verfügbar",
   "users.role.lastAdmin":
-    "Einziger Admin. Mach zuerst ein anderes Mitglied zum Admin.",
+    "Das ist der einzige Admin. Mach zuerst ein anderes Mitglied zum Admin.",
   "users.role.own": "Deine Rolle ändert ein anderer Admin.",
   "users.role.outside": "Diese Rolle liegt außerhalb deines Zugriffs.",
   "users.role.withheld": "Deine Rolle darf keine Rollen ändern.",
@@ -9454,7 +9528,7 @@ export const de = {
   "groupRoles.role": "Vergebene Rolle",
   "groupRoles.add": "Gruppe hinzufügen",
   "groupRoles.remove": "Diese Gruppenzuordnung entfernen",
-  "groupRoles.removeNamed": "{group} entfernen",
+  "groupRoles.removeNamed": "Zuordnung für {group} entfernen",
   "groupRoles.save": "Gruppenzuordnungen speichern",
   "groupRoles.empty":
     "Keine Gruppen zugeordnet. Die Unternehmensanmeldung vergibt nichts über das hinaus, was ein Mitglied bereits hält.",
@@ -9504,6 +9578,7 @@ export const de = {
   "oauthApp.redirectCopyFailed":
     "Markiere die Adresse und kopiere sie von Hand.",
   "oauthApp.redirectCopy": "URI für {purpose} kopieren",
+  "oauthApp.redirectCopiedFor": "URI für {purpose} kopiert",
   "oauthApp.redirect.mailbox_connect": "Postfach",
   "oauthApp.redirect.calendar_connect": "Kalender",
   "oauthApp.redirect.sign_in": "Anmeldung",
@@ -10628,6 +10703,7 @@ export const de = {
   "contact.rail.channelNotDeliverable": "Nicht zustellbar",
   "contact.drawer.close": "Schließen",
   "richtext.bold": "Fett",
+  "richtext.heading": "Überschrift",
   "richtext.italic": "Kursiv",
   "richtext.bulletList": "Aufzählung",
   "richtext.numberList": "Nummerierte Liste",

@@ -163,6 +163,10 @@ func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }
 
+func (stubs) GetRecoveryHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetRecoveryHealth")
+}
+
 func (stubs) PauseReportingSchedules(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PauseReportingSchedules")
 }
@@ -2853,6 +2857,18 @@ func (stubs) UpdateStageExitCriterion(w nethttp.ResponseWriter, r *nethttp.Reque
 
 func (stubs) GetStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetStatus")
+}
+
+func (stubs) GetTagSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetTagSuggestion")
+}
+
+func (stubs) AcceptTagSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AcceptTagSuggestion")
+}
+
+func (stubs) DismissTagSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DismissTagSuggestion")
 }
 
 func (stubs) ListTags(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListTagsParams) {

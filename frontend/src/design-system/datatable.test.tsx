@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { TableScroll } from "./atoms";
 import { DataTable, type DataTableColumn } from "./datatable";
+import { Heading } from "./heading";
 
 afterEach(() => {
   cleanup();
@@ -124,6 +125,29 @@ it("hands bleed to the scroll box that holds the table", () => {
   const box = container.querySelector(".table-scroll");
   expect(box?.classList.contains("table-scroll-bleed")).toBe(true);
   expect(box?.firstElementChild?.classList.contains("table")).toBe(true);
+});
+
+it("names an overflowing box by a heading already on the page, without a copy", () => {
+  stubBoxWidths(930, 654);
+  render(
+    <>
+      <Heading size="small" as="h3" id="grants-head">
+        Grants
+      </Heading>
+      <TableScroll label={{ labelledBy: "grants-head" }}>
+        <table className="table" aria-labelledby="grants-head">
+          <tbody>
+            <tr>
+              <td>Admin</td>
+            </tr>
+          </tbody>
+        </table>
+      </TableScroll>
+    </>,
+  );
+  const box = screen.getByRole("region", { name: "Grants" });
+  expect(box.getAttribute("aria-labelledby")).toBe("grants-head");
+  expect(box.hasAttribute("aria-label")).toBe(false);
 });
 
 it("lets a hand-drawn table bleed through the same box", () => {

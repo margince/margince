@@ -292,8 +292,7 @@ function GrantSection({
             readOnlyReason={t("roles.readOnly")}
             turnOnReason={canWiden ? undefined : t("roles.turnOnAdminOnly")}
             busy={busy}
-            labelledBy={control["aria-labelledby"]}
-            scrollLabel={title}
+            name={{ labelledBy: control["aria-labelledby"] }}
           />
         </div>
       )}

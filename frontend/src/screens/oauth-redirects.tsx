@@ -64,7 +64,9 @@ function RedirectCopy({
     <div className="cell-actions">
       <Button
         aria-label={
-          copied ? undefined : t("oauthApp.redirectCopy", { purpose })
+          copied
+            ? t("oauthApp.redirectCopiedFor", { purpose })
+            : t("oauthApp.redirectCopy", { purpose })
         }
         onClick={() => {
           onPress();

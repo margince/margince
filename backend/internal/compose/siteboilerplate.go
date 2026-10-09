@@ -28,6 +28,8 @@ package compose
 import (
 	"strings"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 const (
@@ -279,7 +281,7 @@ func chromeStarts(text string) []int {
 	// clamped to the text: a broken byte re-encodes as the three-byte
 	// U+FFFD, so the measured window can run past the end of the page it
 	// came from, and indexing on it panicked the deep read.
-	limit := min(len(headRunes(text, chromeSearchRunes)), len(text))
+	limit := min(len(textcut.Runes(text, chromeSearchRunes)), len(text))
 	for i := 1; i < limit; i++ {
 		if text[i-1] == ' ' && text[i] != ' ' {
 			starts = append(starts, i)
@@ -312,11 +314,11 @@ func longestSharedRun(head, other string) string {
 // UTF-8 when headValid is set. The answer is the same either way; the flag only
 // spares re-validating it.
 func longestSharedRunOf(head, other string, headValid bool) string {
-	anchor := headRunes(head, chromeAnchorRunes)
+	anchor := textcut.Runes(head, chromeAnchorRunes)
 	if strings.TrimSpace(anchor) == "" {
 		return ""
 	}
-	limit := len(headRunes(other, chromeSearchRunes))
+	limit := len(textcut.Runes(other, chromeSearchRunes))
 	at := strings.Index(other[:min(limit+len(anchor), len(other))], anchor)
 	if at < 0 {
 		return ""
@@ -400,13 +402,9 @@ func commonPrefixOf(a, b string, aValid bool) string {
 	end := firstDifference(a[:limit], b[:limit])
 	var shared string
 	if aValid {
-		// a is valid, so a[:end] can only be broken by a cut inside a rune:
-		// back up to that rune's first byte. That is what re-validating the
-		// whole run and trimming would find, in at most three steps.
-		for end > 0 && end < len(a) && !utf8.RuneStart(a[end]) {
-			end--
-		}
-		shared = a[:end]
+		// a is valid, so a[:end] can only be broken by a cut inside a rune.
+		// Backing up to that rune's first byte is what re-validating finds.
+		shared = textcut.Bytes(a, end)
 	} else {
 		// The cut may have landed inside a multi-byte rune, or a itself may
 		// carry broken bytes; keep only what decodes.

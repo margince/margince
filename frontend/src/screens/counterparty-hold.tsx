@@ -7,7 +7,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 
 // "My mail with this party is nobody else's."
 //
@@ -73,12 +73,11 @@ function usePlaceHold() {
     // Kind and value both arrive as variables: the row a reader pressed belongs
     // to the committed render (frontend/AGENTS.md, mutation-variable-coverage).
     mutationFn: async (vars: { kind: "address" | "domain"; value: string }) => {
-      const { error } = await api.POST("/capture/counterparty-holds", {
-        body: { kind: vars.kind, value: vars.value },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/capture/counterparty-holds", {
+          body: { kind: vars.kind, value: vars.value },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -95,12 +94,11 @@ function useLiftHold() {
   const t = useT();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/capture/counterparty-holds/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/capture/counterparty-holds/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

@@ -7,7 +7,7 @@
 
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import type { Refusal } from "./compose";
+import type { Refusal } from "./composesend";
 import { DirectSendAction } from "./directsendaction";
 import type { SendReview } from "./sendreview";
 import { ReviewReference, SendReviewActions } from "./sendreviewaction";

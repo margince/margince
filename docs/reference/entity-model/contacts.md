@@ -6,7 +6,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-43 columns · primary key `(id)` · referenced by 40 foreign keys
+43 columns · primary key `(id)` · referenced by 42 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -431,7 +431,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-32 columns · primary key `(id)` · referenced by 43 foreign keys
+32 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -978,7 +978,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-37 columns · primary key `(id)` · referenced by 14 foreign keys
+37 columns · primary key `(id)` · referenced by 15 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1322,6 +1322,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `partner_cert_status_check`: `CHECK ((cert_status = ANY (ARRAY['applied', 'certified', 'suspended'])))`
+- `partner_certified_staff_check`: `CHECK ((certified_staff >= 0))`
 - `partner_company_id_key`: `UNIQUE (company_id)`
 - `partner_margin_tier_check`: `CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15', 'tier2_20', 'tier3_25']))))`
 - `partner_partner_fit_override_reason_check`: `CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0)))`
@@ -1420,7 +1421,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## relationship
 
-21 columns · primary key `(id)` · referenced by 1 foreign key
+22 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1433,6 +1434,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `employment_status` | `text` |  | Employment assertion. |
 | `ended_at` | `date` |  | Missing date; employment_status distinguishes former and unknown from ongoing. |
 | `ended_precision` | `text` |  | One of `day`, `month`. |
+| `first_observed_at` | `timestamp with time zone` |  |  |
 | `is_current_primary` | `boolean`, default `false` | yes | Employment; the one current primary employer (≤1 per contact). |
 | `kind` | `text` | yes | One of `employment`, `deal_stakeholder`, `partner_of`, `referred_by`, `co_sell_with`, `project_stakeholder` and 3 more. |
 | `project_id` | `uuid` |  | The project on a project_stakeholder or project_company edge. |

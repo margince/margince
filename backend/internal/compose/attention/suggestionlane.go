@@ -34,42 +34,71 @@ func (s *Service) WithDealSuggestions(d DealSuggestions) *Service {
 	return s
 }
 
-// openSuggestionItems renders up to depth suggestions and answers their total.
-//
-// A reader who may not read suggestions is shown none and no total, rather than
-// losing the whole lane: the approvals and pairs beside them are theirs to
-// answer whatever they may read about deals. A read that FAILS is shown the
-// same way and named as a failed source, because the suggestion visibility
-// clause is the heaviest statement on the page and a stall in it must cost the
-// reader their suggestions, not their day.
+// suggestionLanes reads both suggestion producers and adds their totals and
+// failures to count.
+func (s *Service) suggestionLanes(ctx context.Context, depth int, count *laneCount) (deal, tag []crmcontracts.AttentionItem) {
+	var failed, tagFailed *crmcontracts.WorklistSourceUnavailable
+	deal, count.suggestions, failed = s.openSuggestionItems(ctx, depth)
+	tag, count.tagSuggestions, tagFailed = s.openTagSuggestionItems(ctx, depth)
+	for _, one := range []*crmcontracts.WorklistSourceUnavailable{failed, tagFailed} {
+		if one != nil {
+			count.failed = append(count.failed, one)
+		}
+	}
+	for _, open := range []*int{count.suggestions, count.tagSuggestions} {
+		if open != nil {
+			count.items += *open
+		}
+	}
+	return deal, tag
+}
+
+// openSuggestionItems renders up to depth deal suggestions and answers their total.
 func (s *Service) openSuggestionItems(
 	ctx context.Context, depth int,
 ) ([]crmcontracts.AttentionItem, *int, *crmcontracts.WorklistSourceUnavailable) {
 	if s.suggestions == nil {
 		return nil, nil, nil
 	}
-	var list []crmcontracts.DealSuggestion
+	return readSuggestionLane(ctx, s, sourceDealSuggestion,
+		func(ctx context.Context) ([]crmcontracts.DealSuggestion, error) {
+			return s.suggestions.OpenSuggestions(ctx, depth)
+		}, s.suggestions.CountOpen, suggestionItem)
+}
+
+// readSuggestionLane reads one suggestion producer's page and total.
+//
+// A reader who may not read suggestions is shown none and no total; the rest of
+// the lane stays. A failed read is shown the same way and named as a failed
+// source. A suggestion visibility clause is among the heaviest statements on the
+// page, and a stall in it must cost the reader only their suggestions.
+func readSuggestionLane[T any](
+	ctx context.Context, s *Service, source string,
+	list func(context.Context) ([]T, error), count func(context.Context) (int, error),
+	render func(T) crmcontracts.AttentionItem,
+) ([]crmcontracts.AttentionItem, *int, *crmcontracts.WorklistSourceUnavailable) {
+	var page []T
 	var open int
 	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
-		if list, err = s.suggestions.OpenSuggestions(ctx, depth); err != nil {
+		if page, err = list(ctx); err != nil {
 			return err
 		}
-		open, err = s.suggestions.CountOpen(ctx)
+		open, err = count(ctx)
 		return err
 	})
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return nil, nil, nil
 	case err != nil:
-		slog.ErrorContext(ctx, "the deal-suggestion read failed", "error", err)
+		slog.ErrorContext(ctx, "a suggestion read failed", "source", source, "error", err)
 		return nil, nil, &crmcontracts.WorklistSourceUnavailable{
-			Source: sourceDealSuggestion, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
+			Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
 	}
-	items := make([]crmcontracts.AttentionItem, 0, len(list))
-	for _, suggestion := range list {
-		items = append(items, suggestionItem(suggestion))
+	items := make([]crmcontracts.AttentionItem, 0, len(page))
+	for _, one := range page {
+		items = append(items, render(one))
 	}
 	return items, &open, nil
 }

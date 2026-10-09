@@ -74,6 +74,7 @@ import {
   QueryGate,
   resetToSignedOut,
   throwProblem,
+  unwrap,
   useLogout,
   useMe,
   WriteRefused,
@@ -652,10 +653,6 @@ function AccountCard() {
         </QueryGate>
       </PanelBody>
       <SettingList bleed="settings">
-        {/* The credential first, because it is the one row that decides
-            whether the other two are reachable at all. The row and its
-            three-field form live in passwordcard.tsx, exported as a ROW
-            precisely so this page can place it among its own. */}
         <DisplayNameSettingRow toast={toast} />
         <GreetingNameSettingRow toast={toast} />
         <PasswordSettingRow />
@@ -732,10 +729,7 @@ function LanguageSettingRow() {
   // dropped request than letting the next sign-in re-ask the server.
   const remember = useMutation({
     mutationFn: async (next: Locale) => {
-      const { error } = await api.PUT("/me/locale", { body: { locale: next } });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(await api.PUT("/me/locale", { body: { locale: next } }), t);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["me"] });
@@ -861,12 +855,11 @@ function PassportCard() {
   // agent's credential.
   const revoke = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/passports/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/passports/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: async () => {
       // Refetch BEFORE closing, so the row focus returns to is already carrying
@@ -1201,11 +1194,7 @@ function AgentToolsCard() {
   const tools = useQuery({
     queryKey: ["agent-tools"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/agent-tools");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/agent-tools"));
     },
   });
   const passports = usePassports();
@@ -1415,13 +1404,11 @@ function ResetDataCard() {
       // clearing here means a retry's error can never leave a previous
       // success sitting on screen, and an in-flight retry shows no summary.
       setSummary(null);
-      const { data, error } = await api.POST("/admin/reset-data", {
-        body: { confirmation: typed },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/admin/reset-data", {
+          body: { confirmation: typed },
+        }),
+      );
     },
     onSuccess: (data) => {
       setOpen(false);
@@ -1529,13 +1516,13 @@ function AutonomyCard() {
       <PanelBody>
         <PanelIntro>{t("settings.autonomySub")}</PanelIntro>
       </PanelBody>
-      {/* Sending is green: a contact's grant of the `send` scope is the
-          approval, so a funded send does not stage a second. */}
       <SettingList bleed="settings">
         <SettingRow
           label={t("settings.tierRead")}
           control={<AutonomyDot tier="auto" withLabel />}
         />
+        {/* Sending is green: a contact's grant of the `send` scope is the
+            approval, so a funded send does not stage a second. */}
         <SettingRow
           label={t("settings.tierSend")}
           control={<AutonomyDot tier="auto" withLabel />}

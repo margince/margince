@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export type Tag = components["schemas"]["Tag"];
 /** The palette, from the contract rather than restated beside it. */
@@ -40,13 +40,11 @@ export function useTagCatalog(enabled = true) {
     // of the tag ones, and the request could only answer 403.
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/tags", {
-        params: { query: { include_archived: true } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/tags", {
+          params: { query: { include_archived: true } },
+        }),
+      );
     },
   });
 }
@@ -63,13 +61,11 @@ export function useTagDetail(tagID: string | undefined) {
     queryKey: ["tag", tagID],
     enabled: Boolean(tagID),
     queryFn: async () => {
-      const { data, error } = await api.GET("/tags/{id}", {
-        params: { path: { id: tagID as string } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/tags/{id}", {
+          params: { path: { id: tagID as string } },
+        }),
+      );
     },
   });
 }
@@ -107,11 +103,7 @@ export function useCreateTag() {
   const invalidate = useVocabularyInvalidation();
   return useMutation({
     mutationFn: async (body: { name: string; color?: TagColor }) => {
-      const { data, error } = await api.POST("/tags", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/tags", { body }));
     },
     onSuccess: invalidate,
   });
@@ -135,6 +127,7 @@ export function useUpdateTag() {
       name?: string;
       color?: TagColorEdit;
       description?: string;
+      suggestible?: boolean;
     }) => {
       const { id, version, ...body } = input;
       // Inside the mutation, not at the call site: a throw here becomes this
@@ -143,14 +136,12 @@ export function useUpdateTag() {
       // down. The refusal itself is not optional — an unpinned PATCH is
       // last-write-wins, landing on top of an edit it never saw and reporting
       // success to both editors.
-      const { data, error } = await api.PATCH("/tags/{id}", {
-        params: { path: { id }, ...ifMatch(requireVersion(version)) },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/tags/{id}", {
+          params: { path: { id }, ...ifMatch(requireVersion(version)) },
+          body,
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -161,12 +152,11 @@ export function useArchiveTag() {
   const invalidate = useVocabularyInvalidation();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/tags/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/tags/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -176,12 +166,11 @@ export function useRestoreTag() {
   const invalidate = useVocabularyInvalidation();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.POST("/tags/{id}/restore", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/tags/{id}/restore", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -192,14 +181,12 @@ export function useMergeTags() {
   const invalidate = useVocabularyInvalidation();
   return useMutation({
     mutationFn: async (input: { id: string; intoTagID: string }) => {
-      const { data, error } = await api.POST("/tags/{id}/merge", {
-        params: { path: { id: input.id } },
-        body: { into_tag_id: input.intoTagID },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/tags/{id}/merge", {
+          params: { path: { id: input.id } },
+          body: { into_tag_id: input.intoTagID },
+        }),
+      );
     },
     onSuccess: invalidate,
   });

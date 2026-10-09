@@ -21,7 +21,7 @@ import { FieldGuard } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { SUBMIT_COPY, type SubmitIntent } from "./create";
 import { EntityRef } from "./entityref";
 import {
@@ -191,19 +191,17 @@ function PartnerForm({
     // to pin, while a replacement always pins the one the form was filled from
     // and refuses rather than upserting over an edit it never saw.
     mutationFn: async (prior: Partner | undefined) => {
-      const { data, error } = await api.PUT("/companies/{id}/partner", {
-        params: {
-          path: { id: companyId },
-          ...(prior === undefined
-            ? {}
-            : ifMatch(requireVersion(prior.version))),
-        },
-        body: buildUpsertBody(values),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/companies/{id}/partner", {
+          params: {
+            path: { id: companyId },
+            ...(prior === undefined
+              ? {}
+              : ifMatch(requireVersion(prior.version))),
+          },
+          body: buildUpsertBody(values),
+        }),
+      );
     },
     onSuccess: onSaved,
   });
@@ -516,19 +514,18 @@ async function fetchPartnersPage(
 ): Promise<ListPage<Partner>> {
   const role = query.filters.partner_role ?? "";
   const cert = query.filters.cert_status ?? "";
-  const { data, error } = await api.GET("/partners", {
-    params: {
-      query: {
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        partner_role: isOption(role, PARTNER_ROLES) ? role : undefined,
-        cert_status: isOption(cert, CERT_STATUSES) ? cert : undefined,
+  const data = unwrap(
+    await api.GET("/partners", {
+      params: {
+        query: {
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          partner_role: isOption(role, PARTNER_ROLES) ? role : undefined,
+          cert_status: isOption(cert, CERT_STATUSES) ? cert : undefined,
+        },
       },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {

@@ -38,7 +38,7 @@ import {
   problemFieldErrorsOf,
   problemMessageOf,
   QueryGate,
-  throwProblem,
+  unwrap,
 } from "./common";
 import {
   RegionalSettingsFields,
@@ -83,19 +83,14 @@ export function useUpdateInstallationSettings(onSaved: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (patch: Patch) => {
-      const { data, error } = await api.PATCH("/installation/settings", {
-        body: patch,
-      });
-      if (error) {
-        // `throwProblem`, not `new Error(problemMessage(...))`. The wrapped form
-        // flattened the server's answer to one sentence, which discarded
-        // `details.errors[]` — so the per-field assertions the API already sends
-        // on a 422 were unreachable, and every refusal on this three-field form
-        // arrived as one paragraph at the bottom that named no field. It also
-        // stopped being a ProblemError, which is what the global failure sink
-        // uses to tell a server refusal from a bug worth logging.
-        throwProblem(error, t);
-      }
+      // Thrown as a ProblemError, so a 422's `details.errors[]` lands on the field
+      // it names and the failure sink does not log a refusal as a bug.
+      const data = unwrap(
+        await api.PATCH("/installation/settings", {
+          body: patch,
+        }),
+        t,
+      );
       return data;
     },
     onSuccess: (data) => {
@@ -391,8 +386,7 @@ function InstallationSettingsForm({
           label={t("installationSettings.forwardMeasure")}
           description={t("installationSettings.forwardMeasureHint")}
           // The measure's own sentence rather than the stored word: an admin
-          // is deciding what a projection means. "manager_call" does not say
-          // that the call replaces the projection instead of adding to it.
+          // is deciding what a projection means.
           value={t(
             `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
           )}

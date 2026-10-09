@@ -9,7 +9,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // The company capture-settings card (CAP-WIRE-7, ADR-0072): the
 // captured-company auto-enrich toggle. Every role reads it; only admin/ops
@@ -44,13 +44,11 @@ function useUpdateCaptureSettings() {
     // settings, and a mutation that could only send one would have to grow a
     // second copy of itself the moment a third arrives.
     mutationFn: async (patch: CaptureSettingsPatch) => {
-      const { data, error } = await api.PATCH("/capture/settings", {
-        body: patch,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/capture/settings", {
+          body: patch,
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["capture-settings"], data);
@@ -93,9 +91,8 @@ export function CaptureSettingsCard() {
                   testId="capture-auto-enrich-toggle"
                   label={t("captureSettings.autoEnrich.label")}
                   labelHidden
-                  // Only one of the two reasons is worth words. A caller
-                  // who may never change this needs to know why; a write
-                  // in flight explains itself by finishing.
+                  // A write in flight explains itself by finishing; only a
+                  // caller who may never change this needs words.
                   reason={
                     canManage ? undefined : t("captureSettings.adminOnly")
                   }
@@ -105,10 +102,8 @@ export function CaptureSettingsCard() {
                 />
               }
             />
-            {/* The workspace DEFAULT, and the description says so: a mailbox
-                that set its own switch keeps it, so this row is not the whole
-                answer for every connection and must not read as though it
-                were. */}
+            {/* The workspace default: a mailbox that set its own switch
+                keeps it, which the description says. */}
             <SettingRow
               label={t("captureSettings.signatureEnrich.label")}
               description={t("captureSettings.signatureEnrich.help")}

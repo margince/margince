@@ -3,7 +3,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Info, KeyRound, Route, Timer } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useId } from "react";
 import type { components } from "../api/schema";
 import { useCan, useCanMutate } from "../app/capability";
 import {
@@ -450,8 +450,7 @@ function BringsRow({
   );
 }
 
-// One object's role × CRUD matrix, named by the group head above it and
-// standing straight in the unit's pane.
+// One object's role × CRUD matrix, named by the group head above it.
 function ObjectMatrix({
   object,
   label,
@@ -466,6 +465,7 @@ function ObjectMatrix({
   canManage: boolean;
 }>) {
   const t = useT();
+  const headId = useId();
   const setGrant = useSetRoleGrant();
   // Only a ProblemError carries a server code, so a rejected fetch can never be
   // mistaken for a concurrent edit.
@@ -502,13 +502,13 @@ function ObjectMatrix({
 
   return (
     <>
-      <PanelGroupHead title={label} level="h3" />
+      <PanelGroupHead title={label} level="h3" id={headId} />
       <GrantMatrix
         rowHeader={t("extAccess.roleColumn")}
         rows={rows}
         canManage={canManage}
         readOnlyReason={t("extAccess.readOnly")}
-        scrollLabel={label}
+        name={{ labelledBy: headId }}
         bleed
       />
       {setGrant.isError ? (

@@ -18,7 +18,7 @@ import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { NewProjectAction } from "./companyactions";
 import { PhaseBadge } from "./projects";
 import type { ProjectPhase } from "./projects.form";
@@ -91,28 +91,23 @@ export function CompanyProjects({
       projectId: string;
       role: string;
     }) => {
-      const { error } = await api.PUT("/projects/{id}/companies", {
-        params: { path: { id: projectId } },
-        body: { company_id: companyId, role },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/projects/{id}/companies", {
+          params: { path: { id: projectId } },
+          body: { company_id: companyId, role },
+        }),
+      );
     },
     onSuccess: settled,
   });
 
   const detach = useMutation({
     mutationFn: async (projectId: string) => {
-      const { error } = await api.DELETE(
-        "/projects/{id}/companies/{company_id}",
-        {
+      unwrap(
+        await api.DELETE("/projects/{id}/companies/{company_id}", {
           params: { path: { id: projectId, company_id: companyId } },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: settled,
   });
@@ -229,12 +224,11 @@ export function CompanyProjectsPanel({
 export async function searchProjects(
   query: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/projects", {
-    params: { query: { q: query, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/projects", {
+      params: { query: { q: query, limit: 10 } },
+    }),
+  );
   // The key rides in the NAME because a candidate carries no second line: a
   // reader picking between two "Rollout" projects needs the handle that tells
   // them apart, and dropping it would make the list ambiguous exactly when it

@@ -29,7 +29,7 @@ import {
   LoadMoreButton,
   problemMessageOf,
   QueryStates,
-  throwProblem,
+  unwrap,
 } from "./common";
 import { correctableFieldLabel } from "./confirmfields";
 import { EntityRef } from "./entityref";
@@ -53,13 +53,13 @@ export function ConfirmSubmissionsPanel() {
     queryKey: ["confirm-submissions"],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/confirm-submissions", {
-        params: { query: { resolved: false, cursor: pageParam ?? undefined } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/confirm-submissions", {
+          params: {
+            query: { resolved: false, cursor: pageParam ?? undefined },
+          },
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
@@ -70,20 +70,15 @@ export function ConfirmSubmissionsPanel() {
       resolution: Resolution;
       note: string;
     }) => {
-      const { data, error } = await api.POST(
-        "/confirm-submissions/{id}/resolve",
-        {
+      return unwrap(
+        await api.POST("/confirm-submissions/{id}/resolve", {
           params: { path: { id: command.id } },
           body: {
             resolution: command.resolution,
             note: command.note || undefined,
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: async () => {
       setDeciding(null);

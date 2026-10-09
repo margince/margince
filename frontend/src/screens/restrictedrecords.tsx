@@ -26,7 +26,7 @@ import {
   problemMessageOf,
   QueryGate,
   QueryStates,
-  throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import "./retention.css";
@@ -120,13 +120,12 @@ function OverrideModal({
         decision.kind === "release"
           ? ("/retention/restrictions/{activityId}/release" as const)
           : ("/retention/restrictions/{activityId}/pin" as const);
-      const { error } = await api.POST(path, {
-        params: { path: { activityId: decision.target.activityId } },
-        body: { reason: decision.reason },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST(path, {
+          params: { path: { activityId: decision.target.activityId } },
+          body: { reason: decision.reason },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: RESTRICTED_RECORDS_KEY });
@@ -193,11 +192,7 @@ export function RestrictedRecordsCard() {
     queryKey: RESTRICTED_RECORDS_KEY,
     enabled: canRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/retention/restrictions");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/retention/restrictions"));
     },
   });
 

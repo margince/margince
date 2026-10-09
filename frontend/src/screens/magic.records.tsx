@@ -22,7 +22,7 @@ import { Modal } from "../design-system/modal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";
@@ -41,16 +41,14 @@ function useLineRecords(lineId: string, since: string, open: boolean) {
     enabled: open,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/magic/lines/{id}/records", {
-        params: {
-          path: { id: lineId },
-          query: { since, ...(pageParam ? { cursor: pageParam } : {}) },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/magic/lines/{id}/records", {
+          params: {
+            path: { id: lineId },
+            query: { since, ...(pageParam ? { cursor: pageParam } : {}) },
+          },
+        }),
+      );
     },
     getNextPageParam: (last) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,

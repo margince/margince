@@ -36,7 +36,7 @@ import {
   problemMessageOf,
   QueryGate,
   QueryStates,
-  throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import { useLinkedCase } from "./privacy.caselink";
@@ -71,12 +71,11 @@ const DSR_KINDS: readonly DsrKind[] = ["access", "rectify", "erasure"];
 async function searchContactCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/contacts", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((contact) => ({
     id: contact.id,
     name: contact.full_name,
@@ -115,13 +114,11 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         subject_ref: request.subjectRef.trim(),
         due_at: endOfDayInZone(request.dueAt, tz),
       };
-      const { data, error } = await api.POST("/data-subject-requests", {
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/data-subject-requests", {
+          body,
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["dsrs"] });
@@ -258,14 +255,12 @@ function FulfilErasureModal({
       if (fulfilment.resolution.trim()) {
         body.resolution = fulfilment.resolution.trim();
       }
-      const { data, error } = await api.PATCH("/data-subject-requests/{id}", {
-        params: { path: { id: fulfilment.request.id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/data-subject-requests/{id}", {
+          params: { path: { id: fulfilment.request.id } },
+          body,
+        }),
+      );
     },
     onSuccess: async () => {
       // The queue first, so focus lands on a drawer that already reads fulfilled.
@@ -355,19 +350,17 @@ export function PrivacyInboxCard() {
     enabled: canSee,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/data-subject-requests", {
-        params: {
-          query: {
-            limit: 20,
-            ...(facet !== "all" ? { status: facet } : {}),
-            ...(pageParam ? { cursor: pageParam } : {}),
+      return unwrap(
+        await api.GET("/data-subject-requests", {
+          params: {
+            query: {
+              limit: 20,
+              ...(facet !== "all" ? { status: facet } : {}),
+              ...(pageParam ? { cursor: pageParam } : {}),
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });

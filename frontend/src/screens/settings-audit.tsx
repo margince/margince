@@ -29,7 +29,7 @@ import { useNow } from "../format/now";
 import { formatRelativeTime } from "../format/relativetime";
 import { useLocale, useT } from "../i18n";
 import { ACTOR_ICON, actorAttribution, humanizeToken } from "./audit";
-import { LoadMoreButton, QueryStates, throwProblem, useMe } from "./common";
+import { LoadMoreButton, QueryStates, unwrap, useMe } from "./common";
 import { EntityRef } from "./entityref";
 import { AuditDetail } from "./settings-audit.detail";
 import {
@@ -118,13 +118,11 @@ function AuditLogEntries({
     enabled: canSee,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/audit-log", {
-        params: { query: auditLogQueryParams(filters, pageParam) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/audit-log", {
+          params: { query: auditLogQueryParams(filters, pageParam) },
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
@@ -262,20 +260,22 @@ function AuditLogRow({
         </td>
         <td className="auditlog-toggle" role={ROLE.cell}>
           <IconAction
-            label={t("settings.auditExpand")}
+            label={t("settings.auditExpandEntry", {
+              action: entry.action,
+              entity: entry.entity_type,
+            })}
             icon={<ChevronDown aria-hidden className="expander-chevron" />}
             disclosure={{ expanded, controls: detailId }}
             onClick={toggle}
           />
         </td>
       </tr>
-      {expanded && (
-        <tr className="auditlog-detail-row" role={ROLE.row}>
-          <td colSpan={COLUMN_COUNT} id={detailId} role={ROLE.cell}>
-            <AuditDetail entry={entry} />
-          </td>
-        </tr>
-      )}
+      {/* Mounted while closed so the toggle's aria-controls always resolves. */}
+      <tr className="auditlog-detail-row" role={ROLE.row} hidden={!expanded}>
+        <td colSpan={COLUMN_COUNT} id={detailId} role={ROLE.cell}>
+          {expanded && <AuditDetail entry={entry} />}
+        </td>
+      </tr>
     </tbody>
   );
 }

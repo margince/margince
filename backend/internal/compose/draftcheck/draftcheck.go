@@ -29,6 +29,7 @@ import (
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -338,11 +339,7 @@ const openingRunes = 240
 
 // opening is the first part of the body, cut on a rune boundary.
 func opening(body string) string {
-	runes := []rune(body)
-	if len(runes) <= openingRunes {
-		return body
-	}
-	return string(runes[:openingRunes])
+	return textcut.Runes(body, openingRunes)
 }
 
 // contains reports whether text holds phrase as whole words.

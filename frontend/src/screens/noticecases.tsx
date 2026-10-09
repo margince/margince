@@ -29,7 +29,7 @@ import {
   problemMessageOf,
   QueryGate,
   QueryStates,
-  throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import { EntityRef, rosterOwnerName, useRoster } from "./entityref";
@@ -213,14 +213,11 @@ function SendNoticeModal({
   const toast = useToast();
   const send = useMutation({
     mutationFn: async (contactId: string) => {
-      const { data, error } = await api.POST(
-        "/contacts/{id}/consent/privacy-notice",
-        { params: { path: { id: contactId } } },
+      return unwrap(
+        await api.POST("/contacts/{id}/consent/privacy-notice", {
+          params: { path: { id: contactId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: (issued) => {
       onSent();

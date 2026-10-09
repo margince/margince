@@ -69,6 +69,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "company_id", Type: "string"},
 		{Name: "forecast_category", Type: "string", Enum: []string{"commit", "best_case", "pipeline", "omitted"}},
 		{Name: "owner_id", Type: "string"},
+		{Name: "owner_team_id", Type: "string"},
 		{Name: "partner_attribution", Type: "string", Enum: []string{"sourced", "influenced"}},
 		{Name: "partner_company_id", Type: "string"},
 		{Name: "partner_sourced", Type: "boolean"},
@@ -80,6 +81,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "status", Type: "string", Enum: []string{"open", "won", "lost"}},
 		{Name: "tag_id", Type: "array"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
+		{Name: "unassigned", Type: "boolean"},
 	},
 	"lead": {
 		{Name: "from_contact_id", Type: "string"},
@@ -97,6 +99,8 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "company_id", Type: "string"},
 		{Name: "key", Type: "string"},
 		{Name: "owner_id", Type: "string"},
+		{Name: "owner_team_id", Type: "string"},
 		{Name: "phase", Type: "string", Enum: []string{"initiative", "pursuing", "delivering", "closed"}},
+		{Name: "unassigned", Type: "boolean"},
 	},
 }

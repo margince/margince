@@ -22,7 +22,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
-import { QueryStates, throwProblem, useMe } from "./common";
+import { QueryStates, unwrap, useMe } from "./common";
 import "./privacy.css";
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
@@ -45,17 +45,15 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
 
   const create = useMutation({
     mutationFn: async (purpose: PurposeDraft) => {
-      const { data, error } = await api.POST("/consent-purposes", {
-        body: {
-          key: purpose.key.trim(),
-          label: purpose.label.trim(),
-          requires_double_opt_in: purpose.requiresDoi,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/consent-purposes", {
+          body: {
+            key: purpose.key.trim(),
+            label: purpose.label.trim(),
+            requires_double_opt_in: purpose.requiresDoi,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["consent-purposes"] });
@@ -133,11 +131,7 @@ export function ConsentPurposesCard() {
   const query = useQuery({
     queryKey: ["consent-purposes"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/consent-purposes");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/consent-purposes"));
     },
   });
   const purposes = query.data?.data ?? [];

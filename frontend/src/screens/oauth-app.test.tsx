@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -77,6 +78,7 @@ function mount(
   provider: "google" | "microsoft" = "google",
 ) {
   const calls: { method: string; url: string; body?: unknown }[] = [];
+  let readsFail = false;
   const fetchMock = vi.fn(async (request: Request) => {
     const url = new URL(request.url).pathname;
     if (request.method === "GET") {
@@ -88,7 +90,9 @@ function mount(
           meFixture({ allow: { capture_settings: ["read", "update"] } }),
         );
       }
-      return jsonResponse(app);
+      return readsFail
+        ? jsonResponse({ title: "down" }, 503)
+        : jsonResponse(app);
     }
     calls.push({
       method: request.method,
@@ -105,7 +109,11 @@ function mount(
     </QueryClientProvider>
   );
   render(<OAuthAppCard provider={provider} />, { wrapper: Wrap });
-  return { calls };
+  const failRefetch = () => {
+    readsFail = true;
+    return qc.refetchQueries({ queryKey: ["installation-oauth-app"] });
+  };
+  return { calls, failRefetch };
 }
 
 describe("the Google app card", () => {
@@ -196,17 +204,34 @@ describe("the Google app card", () => {
     const clipboard = stubClipboard("accepts");
 
     await user.click(screen.getByRole("button", { name: /Copy Sign-in URI/i }));
-    await screen.findByRole("button", { name: "Copied" });
+    await screen.findByRole("button", { name: "Copied Sign-in URI" });
     await user.click(screen.getByRole("button", { name: /Copy Mailbox URI/i }));
 
     // Exactly one, and it is the row that was copied last.
     await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Copied" })).toHaveLength(1),
+      expect(screen.getAllByRole("button", { name: /^Copied/ })).toHaveLength(
+        1,
+      ),
     );
+    const copied = screen.getByRole("button", { name: "Copied Mailbox URI" });
+    expect(copied.textContent).toBe("Copied");
     expect(
       screen.getByRole("button", { name: /Copy Sign-in URI/i }),
     ).toBeTruthy();
     expect(clipboard.written).toEqual([SIGN_IN_URI, CONNECT_URI]);
+  });
+
+  // The gate shows the failure and Retry; addresses and credential fields
+  // drawn under it from the stale answer would contradict it.
+  it("withdraws the addresses and the credential form when a refetch fails", async () => {
+    const { failRefetch } = mount(stored());
+    await screen.findByText(SIGN_IN_URI);
+
+    await act(failRefetch);
+
+    expect(await screen.findByRole("button", { name: "Retry" })).toBeTruthy();
+    expect(screen.queryByText(SIGN_IN_URI)).toBeNull();
+    expect(screen.queryByLabelText("Client ID")).toBeNull();
   });
 
   it("does not advertise a redirect URI for a flow this deployment does not serve", async () => {

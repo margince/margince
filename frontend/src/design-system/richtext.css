@@ -174,3 +174,30 @@
   background: var(--bgInset);
   cursor: not-allowed;
 }
+
+/* A growing surface: `rows` is its floor, and it takes whatever height its
+   host's column hands the frame, then grows past it with the text. The host
+   scrolls, so nothing here clips. */
+.richtext.is-growing {
+  display: flex;
+  flex-direction: column;
+}
+.richtext.is-growing > .richtext-input {
+  flex: 1 0 auto;
+  overflow-y: visible;
+}
+
+/* A heading in a markdown body: one step above the text, never a page title. */
+.richtext-input :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0 0 8px;
+  font: var(--fontHeadingXSmall);
+}
+
+.richtext-input code,
+.richtext-input pre {
+  font-family: var(--fontFamilyMono);
+}
+.richtext-input pre {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}

@@ -18,7 +18,7 @@ import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ProblemError, problemMessageOf, throwProblem } from "./common";
+import { ProblemError, problemMessageOf, unwrap } from "./common";
 import {
   EntityRef,
   RosterPartialNote,
@@ -223,14 +223,12 @@ export function DsrDetail({
       id: string;
       body: UpdateDataSubjectRequest;
     }) => {
-      const { data, error } = await api.PATCH("/data-subject-requests/{id}", {
-        params: { path: { id: vars.id } },
-        body: vars.body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/data-subject-requests/{id}", {
+          params: { path: { id: vars.id } },
+          body: vars.body,
+        }),
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dsrs"] }),
     // Only the moved-on race re-reads; a 403 or a 500 stays explained.

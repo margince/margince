@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // SiteReadActivitySource names this carrier to the projection. Identity, not
@@ -197,7 +198,7 @@ func (sr SiteRead) activityDegradeReason() string {
 	case siteReadStatusCancelled:
 		said = siteReadCancelledSaid
 	}
-	return boundedRunes(said, siteReadDegradeReasonBound)
+	return textcut.Runes(said, siteReadDegradeReasonBound)
 }
 
 // activitySettledAt is when this attempt stopped being live. finished_at is stamped by
@@ -294,14 +295,4 @@ func logSiteReadActivity(ctx context.Context, tx pgx.Tx, sr SiteRead, lease time
 		return fmt.Errorf("log website read state change: %w", err)
 	}
 	return emitSiteReadActivity(ctx, tx, ledgerID, sr, lease)
-}
-
-// boundedRunes cuts a sentence to the contract's cap without splitting a
-// character, the way the read side's left() would.
-func boundedRunes(s string, bound int) string {
-	runes := []rune(s)
-	if len(runes) <= bound {
-		return s
-	}
-	return string(runes[:bound])
 }

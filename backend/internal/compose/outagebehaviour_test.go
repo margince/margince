@@ -8,10 +8,13 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -37,7 +40,8 @@ func TestEachTaskIsDeclaredForWhatItsWriterDoesWithoutAModel(t *testing.T) {
 			return err == nil && by == crmcontracts.WrittenByDeterministic
 		}},
 		"company fit (growth_fit)": {ai.TaskGrowthFit, func() bool {
-			_, by, laneFailed := companydossier.WriteGrowthFit(ctx, blockedLane{}, companydossier.Input{}, false, func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) }, "en")
+			now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+			_, by, laneFailed := companydossier.WriteGrowthFit(ctx, blockedLane{}, judgeableCompany(now), false, func() time.Time { return now }, "en")
 			return by == crmcontracts.WrittenByDeterministic && laneFailed
 		}},
 	} {
@@ -48,4 +52,22 @@ func TestEachTaskIsDeclaredForWhatItsWriterDoesWithoutAModel(t *testing.T) {
 			}
 		})
 	}
+}
+
+// judgeableCompany holds enough required inputs for a fit to be judged, so the
+// writer asks its lane. Below the floor it abstains without asking.
+func judgeableCompany(now time.Time) companydossier.Input {
+	read := now.Add(-24 * time.Hour)
+	var fields []crmcontracts.CompanyProfileField
+	for _, field := range []crmcontracts.CompanyProfileFieldField{
+		crmcontracts.CompanyProfileFieldFieldOfferSummary, crmcontracts.CompanyProfileFieldFieldIcp,
+		crmcontracts.CompanyProfileFieldFieldIndustry, crmcontracts.CompanyProfileFieldFieldBuyingCenter,
+	} {
+		id := openapi_types.UUID(ids.NewV7())
+		fields = append(fields, crmcontracts.CompanyProfileField{
+			Id: &id, Field: field, Value: "recorded",
+			Source: crmcontracts.CompanyProfileFieldSourceSiteRead, RetrievedAt: &read, UpdatedAt: read,
+		})
+	}
+	return companydossier.Input{CompanyID: ids.NewV7().String(), ProfileFields: fields}
 }

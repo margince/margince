@@ -5,7 +5,14 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
-import { PANEL_TONES, Panel, PanelBody, PanelIntro, PanelRow } from "./panel";
+import {
+  PANEL_TONES,
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+  PanelRow,
+} from "./panel";
 
 afterEach(cleanup);
 
@@ -90,6 +97,15 @@ describe("a titled panel is a region named by its title", () => {
 // reader is meant to READ told them all five were pressable. The default is
 // therefore inert, and a caller opts in only when the whole row is one press
 // target.
+describe("PanelGroupHead", () => {
+  it("puts its id on the heading, so a table in the group can be named by it", () => {
+    render(<PanelGroupHead title="Notes" level="h3" id="group-notes" />);
+    expect(screen.getByRole("heading", { name: "Notes", level: 3 }).id).toBe(
+      "group-notes",
+    );
+  });
+});
+
 describe("PanelRow separates the hairline from the press", () => {
   it("draws an inert row by default", () => {
     const { container } = render(<PanelRow>Renewal date</PanelRow>);
@@ -730,6 +746,7 @@ describe("the pane insets the state arm it has no body to wrap", () => {
     expect([...inset.map((rule) => rule.selector)].sort()).toEqual([
       ".panel > .empty",
       ".panel > .pending",
+      '.panel > [role="alert"] > .empty',
     ]);
     // WHICH inset, read off the body rather than restated here: the arm stands
     // in for the rows that will replace it, so a pane retuned to a different
@@ -740,6 +757,27 @@ describe("the pane insets the state arm it has no body to wrap", () => {
     expect(pane).toBeDefined();
     for (const rule of inset) {
       expect(declaredValue(rule.block, "padding")).toBe(pane);
+    }
+  });
+
+  it("reads the arm's sentence as a body's: no ground, from the left", () => {
+    const rules = cssRules(panelCss());
+    const declared = (selector: string, property: string) =>
+      rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => declaredValue(rule.block, property))
+        .filter((value) => value !== undefined)
+        .at(-1);
+    for (const arm of [
+      ".panel > .empty:not(.empty-plate)",
+      '.panel > [role="alert"] > .empty',
+    ]) {
+      for (const property of ["background", "text-align"]) {
+        expect(declared(arm, property)).toBeDefined();
+        expect(declared(arm, property)).toBe(
+          declared(".panel-body > .empty", property),
+        );
+      }
     }
   });
 

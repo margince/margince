@@ -113,7 +113,7 @@ func sideEffectFault(err error) (Fault, bool) {
 	}
 	return Fault{
 		Status:     http.StatusInternalServerError,
-		Code:       "internal",
+		Code:       codeInternal,
 		InfraCause: err,
 	}, true
 }

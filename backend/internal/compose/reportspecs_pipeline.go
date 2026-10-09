@@ -18,6 +18,7 @@ package compose
 // reader can see on it.
 
 import (
+	"github.com/margince/margince/backend/internal/compose/dealvalue"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -102,11 +103,10 @@ const (
 
 // pipelineBaseValueExpr is one deal's money in the base currency.
 //
-// It is BaseValueSQL, rendered for the report engine's alias and against the
-// frame's own as-of, so this report and the forecast price a deal identically.
-// Spelling the CASE again here would be a third copy of the rule the parity
-// gate exists to hold at two.
-var pipelineBaseValueExpr = BaseValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t")
+// It is dealvalue.BaseValueSQL, rendered for the report engine's alias and
+// against the frame's own as-of, so this report and the forecast price a deal
+// identically.
+var pipelineBaseValueExpr = dealvalue.BaseValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t")
 
 // pipelineWeightedBaseExpr weights that base value by the deal's stage
 // probability, rounded PER DEAL.

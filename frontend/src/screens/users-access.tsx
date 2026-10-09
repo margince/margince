@@ -14,7 +14,7 @@ import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 import {
   membersOf,
@@ -52,11 +52,11 @@ function useAccessPreview(role: Role, teamIds: string[]) {
     // set of teams has to spell the same key wherever it is read.
     queryKey: ["access-preview", role, [...teamIds].sort(stable).join(",")],
     queryFn: async (): Promise<AccessPreview> => {
-      const { data, error } = await api.GET("/users/access-preview", {
-        params: { query: { role, team_ids: teamIds } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/users/access-preview", {
+          params: { query: { role, team_ids: teamIds } },
+        }),
+      );
     },
   });
 }
@@ -156,15 +156,16 @@ export function TeamsCard() {
   const users = useRoster("user", canSeeMembership);
   const usersPartial = useRosterPartial("user", canSeeMembership);
   const [openTeamId, setOpenTeamId] = useState<string | null>(null);
-  // It takes the name as well as the id. The archive invalidated ["teams"], so
-  // by the time Undo is pressed the row may be gone and a lookup would miss.
+  // The archive invalidated ["teams"], so by the time Undo is pressed the row
+  // may be gone and a lookup of its name would miss.
   const restore = useMutation({
     mutationFn: async ({ id }: { id: string; name: string }) => {
-      const { error } = await api.PATCH("/teams/{id}", {
-        params: { path: { id } },
-        body: { archived: false },
-      });
-      if (error) throwProblem(error);
+      unwrap(
+        await api.PATCH("/teams/{id}", {
+          params: { path: { id } },
+          body: { archived: false },
+        }),
+      );
     },
     // Sticky: the Undo it came from is consumed by the press, so a quiet
     // refusal would read as the team having come back.
@@ -178,11 +179,12 @@ export function TeamsCard() {
   });
   const archive = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.PATCH("/teams/{id}", {
-        params: { path: { id } },
-        body: { archived: true },
-      });
-      if (error) throwProblem(error);
+      unwrap(
+        await api.PATCH("/teams/{id}", {
+          params: { path: { id } },
+          body: { archived: true },
+        }),
+      );
     },
     onSuccess: (_archived, id) => {
       // Read before the refetch lands, which takes the named row away.

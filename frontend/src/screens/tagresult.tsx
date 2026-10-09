@@ -14,7 +14,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { isTagTone } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./tagresult.css";
 
 /**
@@ -40,13 +40,11 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
     queryKey: ["tag", tagID],
     enabled: Boolean(tagID),
     queryFn: async () => {
-      const { data, error } = await api.GET("/tags/{id}", {
-        params: { path: { id: tagID as string } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/tags/{id}", {
+          params: { path: { id: tagID as string } },
+        }),
+      );
     },
   });
 
@@ -192,12 +190,11 @@ function ResultGroup({
     // called it conditionally would change the hook order as counts arrive.
     enabled: count > 0,
     queryFn: async () => {
-      const { data, error } = await api.GET(group.path, {
-        params: { query: { tag_id: [tagID], limit: PREVIEW_ROWS } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET(group.path, {
+          params: { query: { tag_id: [tagID], limit: PREVIEW_ROWS } },
+        }),
+      );
       return data.data ?? [];
     },
   });

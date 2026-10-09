@@ -116,6 +116,7 @@ export function ContactDetails({
                 entityType="contact"
                 entityID={contact.id}
                 canEdit={canEdit}
+                employer={contact.employer}
                 bare
               />
             </FieldRow>

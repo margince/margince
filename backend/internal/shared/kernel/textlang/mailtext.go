@@ -17,6 +17,8 @@ package textlang
 import (
 	"strings"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // mailHeaders are the envelope lines the capture path stores above a body.
@@ -77,9 +79,8 @@ func MessageOpening(body string, maxRunes int) string {
 		return ""
 	}
 	text := strings.TrimSpace(authoredText(stripMailHeaders(body)))
-	runes := []rune(text)
-	if len(runes) > maxRunes {
-		return strings.TrimSpace(string(runes[:maxRunes]))
+	if cut := textcut.Runes(text, maxRunes); cut != text {
+		return strings.TrimSpace(cut)
 	}
 	return text
 }

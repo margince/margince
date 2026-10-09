@@ -4,7 +4,7 @@
 import { useIsMutating, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export type User = components["schemas"]["User"];
 type MemberAction = NonNullable<User["allowed_actions"]>[number];
@@ -17,12 +17,11 @@ export function useMembers() {
   return useQuery({
     queryKey: MEMBERS_KEY,
     queryFn: async (): Promise<User[]> => {
-      const { data, error } = await api.GET("/users", {
-        params: { query: { include_inactive: true } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/users", {
+          params: { query: { include_inactive: true } },
+        }),
+      );
       return data.data;
     },
   });

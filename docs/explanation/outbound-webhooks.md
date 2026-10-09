@@ -282,8 +282,9 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   each time, `1s, 2s, 4s, 8s, 16s`, with a cap of `32s`. The cap never binds within the budget; it
   guards a budget that grows later. Times come from an **injected clock**, so the schedule is the
   same on every test run (no sleeps).
-- **The sweep** (`SweepOnce`): one pass over one workspace, taking its tenant from the context its
-  caller set. It claims at most 128 `retrying` rows at a time, whose `next_retry_at` has passed
+- **The sweep** (`SweepOnce`): one pass over one workspace. It binds that workspace into the
+  context itself, from its own database handle, because the job worker calls it with the bare queue
+  context. It claims at most 128 `retrying` rows at a time, whose `next_retry_at` has passed
   **and whose subscription is still `active`**. The retries of a paused subscription wait until it
   resumes.
 
@@ -388,6 +389,12 @@ when it joined the queue). They refuse a delivery whose record the owner can no 
 A refused delivery goes to a status of its own, `visibility_revoked`. It is an end status, and
 separate from `dead_lettered`, which is the store an operator replays *from*. A row with no recorded
 subject cannot be checked again, so it is refused instead of sent.
+
+If the check itself fails (the owner's grants cannot be read), the sweep sends nothing and counts
+the pass as a failed attempt. The row backs off as for any other failure, and its `last_error` says
+the access could not be checked again. A check that keeps failing ends in `dead_lettered`, where a
+replay can send the delivery again once the fault is gone. A replay whose check fails returns the error
+to the caller.
 
 The check runs before the attempt, not while it runs. So a change that narrows access, and commits
 while the outbound POST runs, still ships that one delivery. Ending that window would mean holding a

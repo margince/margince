@@ -12,7 +12,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { SectionSummary } from "./companyrailshared";
 import "./companytriage.css";
 
@@ -40,12 +40,11 @@ export function CompanyTriageSection({
   const query = useQuery({
     queryKey: ["company-capture-triage", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/capture-triage", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies/{id}/capture-triage", {
+          params: { path: { id: companyId } },
+        }),
+      );
       // Rejected rather than defaulted. `?? []` would draw the empty state,
       // which says no domain was ever checked into this company — a claim
       // about how the record came to exist that this response never made.

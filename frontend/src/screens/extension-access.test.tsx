@@ -355,10 +355,15 @@ describe("ExtensionAccessCard", () => {
     // NAMED by the row that holds it: the object is what a reader landing on a
     // tick in the middle of one has to be able to trace back to.
     expect(within(unit).getAllByRole("table").length).toBe(2);
-    expect(within(unit).getByRole("table", { name: "Note" })).toBeTruthy();
+    const note = within(unit).getByRole("table", { name: "Note" });
     expect(
       within(unit).getByRole("table", { name: "Signing key" }),
     ).toBeTruthy();
+    // Named by the group head itself, so the name is said once, not copied.
+    expect(note.hasAttribute("aria-label")).toBe(false);
+    expect(
+      document.getElementById(note.getAttribute("aria-labelledby") ?? ""),
+    ).toBe(within(unit).getByRole("heading", { name: "Note", level: 3 }));
   });
 
   it("links to the page of a unit the SPA registry resolves, naming the unit in the link", async () => {

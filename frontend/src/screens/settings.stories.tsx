@@ -268,7 +268,7 @@ const mintedRoutes = {
       created_at: "2026-10-01T08:00:00Z",
       expires_at: "2026-10-31T08:00:00Z",
       revoked_at: null,
-      token: "mgp_7Hq2vXkP9rLw4Tn8sYc1Zb6Ud3Fe0Ga5Jm",
+      token: "mgp_example_passport",
     }),
 };
 

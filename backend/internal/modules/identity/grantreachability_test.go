@@ -74,7 +74,11 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // and cannot be a literal here. The declarations it reads are held instead —
 // agents/recordlessreplay_test.go pins each vocabulary tool to the grant its
 // handler checks, which is the same claim this scan makes for a literal.
-const dynamicObjectCeiling = 107
+//
+// 108 since settings.Store.DeleteRawTx: like SetRawTxReceipt beside it, it
+// gates on the object the setting's own declaration names, which the registry
+// resolves at run time.
+const dynamicObjectCeiling = 108
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as
