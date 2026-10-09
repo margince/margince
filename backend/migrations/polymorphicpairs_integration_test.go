@@ -12,12 +12,13 @@ package migrations_test
 // nothing stops the id outliving its row: a reader gets an empty result and no error,
 // and an erased contact leaves rows behind in every table that names it this way.
 //
-// Three answers end a pair, and all three take it OUT of this corpus, which is why the
-// corpus is derived rather than listed. SHAPE replaces the id with one nullable foreign
-// key per branch — activity_link, dedupe_candidate and provider_run already did it, and
-// none of them appears here. SPLIT gives each branch its own table, taking the
-// discriminator with it. A pair that OUTLIVES its record on purpose stays, and owes a
-// reason instead.
+// Three answers end a pair, and all three take it OUT of this corpus. That is why the
+// corpus is derived rather than listed. SHAPE gives each branch a foreign key column of
+// its own. activity_link, dedupe_candidate and provider_run replaced the id with them.
+// record_grant and others keep the id and derive the keys from it as stored generated
+// columns. A validated CHECK holds them to one key per row. SPLIT gives each branch its
+// own table, taking the discriminator with it. A pair that OUTLIVES its record by
+// design stays, and owes a reason instead.
 //
 // What this holds meanwhile is that the set cannot grow unnoticed. It found
 // list_live_member.entity_id, which arrived after the thirty-six were counted.
@@ -25,6 +26,8 @@ package migrations_test
 import (
 	"context"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -53,14 +56,14 @@ fk AS (
      -- share a constraint name today; this is for the first pair that does.
      AND kcu.table_name = tc.table_name
    WHERE tc.table_schema = 'public' AND tc.constraint_type = 'FOREIGN KEY')
-SELECT i.table_name || '.' || i.column_name || ' (' || d.column_name || ')'
+SELECT i.table_name, i.column_name, d.column_name
   FROM (SELECT c.table_name, c.column_name, regexp_replace(c.column_name, '_id$', '') AS stem
           FROM cols c LEFT JOIN fk ON fk.table_name = c.table_name
                                   AND fk.column_name = c.column_name
          WHERE fk.column_name IS NULL AND c.column_name ~ '_id$') i
   JOIN cols d ON d.table_name = i.table_name
              AND d.column_name IN (i.stem || '_type', i.stem || '_kind')
- ORDER BY 1`
+ ORDER BY 1, 2`
 
 // TestEveryPolymorphicPairAnswersForItsRecord holds the register against the schema,
 // in both directions: a pair nobody classified is a finding, and a line whose pair has
@@ -76,16 +79,23 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 		t.Fatalf("reading the polymorphic pairs: %v", err)
 	}
 	defer rows.Close()
-	var found []string
+	var candidates []polymorphicPair
 	for rows.Next() {
-		var one string
-		if err := rows.Scan(&one); err != nil {
+		var pair polymorphicPair
+		if err := rows.Scan(&pair.table, &pair.id, &pair.discriminator); err != nil {
 			t.Fatalf("scanning: %v", err)
 		}
-		found = append(found, one)
+		candidates = append(candidates, pair)
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatalf("reading the polymorphic pairs: %v", err)
+	}
+	var found []string
+	for _, pair := range candidates {
+		if shapeAnswers(readShapeFacts(ctx, t, conn, pair)) {
+			continue
+		}
+		found = append(found, pair.table+"."+pair.id+" ("+pair.discriminator+")")
 	}
 
 	// NO COUNT FLOOR, and the reason is worth stating because the sibling gates in this
@@ -95,9 +105,8 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 	// pairs fixed and the gate would report that the census had stopped reading.
 	//
 	// The collapse it would have guarded is already covered. gatekit reports an entry
-	// that stops matching, so a query returning nothing leaves all 37 register entries
-	// stale and fails loudly — and that same report is the second direction, which is
-	// what stops a pair that gains its ending from leaving its line behind.
+	// that stops matching, so a query returning nothing leaves every register entry
+	// stale. That same report stops a resolved pair from leaving its line behind.
 	defer pairResolution.AssertAllMatched(t)
 	for _, pair := range found {
 		if pairResolution.Waived(t, pair) {
@@ -125,22 +134,21 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 // no ending can be picked. OUTLIVES is the one that stays, and its reason is the whole
 // entry.
 var pairResolution = gatekit.Waive(map[string]string{
+	"deal_stage_evidence.source_id (source_type)":                        "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
+	"assurance_task_item.subject_id (subject_kind)":                      "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"activity_audience_member.subject_id (subject_type)":                 "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
 	"ai_call.subject_id (subject_type)":                                  "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
 	"ai_feedback.subject_id (subject_type)":                              "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"ai_task_run.subject_id (subject_type)":                              "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
-	"analytics_share.scope_id (scope_kind)":                              "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"approval.co_target_entity_id (co_target_entity_type)":               "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
 	"approval.target_entity_id (target_entity_type)":                     "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
 	"assurance_exception.subject_id (subject_kind)":                      "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
-	"assurance_task_item.subject_id (subject_kind)":                      "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"attachment.entity_id (entity_type)":                                 "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"audit_log.actor_id (actor_type)":                                    "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
 	"audit_log.entity_id (entity_type)":                                  "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
 	"communication_decision.subject_id (subject_kind)":                   "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"consent_qualifying_event.source_entity_id (source_entity_type)":     "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
 	"contact_acquisition_evidence.source_entity_id (source_entity_type)": "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
-	"deal_stage_evidence.source_id (source_type)":                        "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"embedding.entity_id (entity_type)":                                  "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"field_provenance.object_id (object_type)":                           "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"forecast_call.scope_id (scope_kind)":                                "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
@@ -150,7 +158,6 @@ var pairResolution = gatekit.Waive(map[string]string{
 	"list_member_event.entity_id (entity_type)":                          "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"mail_draft.anchor_id (anchor_type)":                                 "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"notice.target_id (target_type)":                                     "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
-	"record_grant.record_id (record_type)":                               "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"record_grant.subject_id (subject_type)":                             "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
 	"report_edition_contribution.source_id (source_type)":                "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
 	"sales_target.scope_id (scope_kind)":                                 "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
@@ -163,3 +170,42 @@ var pairResolution = gatekit.Waive(map[string]string{
 	"weekly_plan_commitment.linked_record_id (linked_record_type)":       "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"weekly_review_learning_citation.subject_id (subject_type)":          "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
 })
+
+// readShapeFacts reads what shapeAnswers judges, off the catalog: the table's
+// validated CHECKs, and the stored generated columns built from the pair's id.
+func readShapeFacts(ctx context.Context, t *testing.T, conn *pgx.Conn, pair polymorphicPair) shapeFacts {
+	t.Helper()
+	facts := shapeFacts{pair: pair}
+	checks, err := conn.Query(ctx, `
+		SELECT pg_get_constraintdef(c.oid) FROM pg_constraint c
+		 WHERE c.conrelid = $1::regclass AND c.contype = 'c' AND c.convalidated`, pair.table)
+	if err != nil {
+		t.Fatalf("reading the CHECKs of %s: %v", pair.table, err)
+	}
+	facts.checks, err = pgx.CollectRows(checks, pgx.RowTo[string])
+	if err != nil {
+		t.Fatalf("reading the CHECKs of %s: %v", pair.table, err)
+	}
+	keys, err := conn.Query(ctx, `
+		SELECT gen.attname, pg_get_expr(ad.adbin, ad.adrelid),
+		       EXISTS (SELECT 1 FROM pg_constraint fk WHERE fk.conrelid = gen.attrelid
+		                  AND fk.contype = 'f' AND fk.conkey = ARRAY[gen.attnum])
+		  FROM pg_attribute gen
+		  JOIN pg_attrdef ad ON ad.adrelid = gen.attrelid AND ad.adnum = gen.attnum
+		  JOIN pg_attribute src ON src.attrelid = gen.attrelid AND src.attname = $2
+		  JOIN pg_depend dep ON dep.classid = 'pg_attrdef'::regclass AND dep.objid = ad.oid
+		                    AND dep.refobjid = gen.attrelid AND dep.refobjsubid = src.attnum
+		 WHERE gen.attrelid = $1::regclass AND gen.attgenerated = 's'`, pair.table, pair.id)
+	if err != nil {
+		t.Fatalf("reading the generated keys of %s: %v", pair.table, err)
+	}
+	facts.keys, err = pgx.CollectRows(keys, func(row pgx.CollectableRow) (branchKey, error) {
+		var key branchKey
+		err := row.Scan(&key.column, &key.expression, &key.keyed)
+		return key, err
+	})
+	if err != nil {
+		t.Fatalf("reading the generated keys of %s: %v", pair.table, err)
+	}
+	return facts
+}
