@@ -358,7 +358,7 @@ func iconFrom(tokenizer *html.Tokenizer, base *url.URL) (IconRef, bool) {
 // "shortcut icon" is an icon. rel="mask-icon" is deliberately not a kind: it
 // is a monochrome stencil for Safari's pinned tabs, never the company's mark.
 func iconRel(rel string) string {
-	for _, token := range strings.Fields(strings.ToLower(rel)) {
+	for token := range strings.FieldsSeq(strings.ToLower(rel)) {
 		switch token {
 		case RelAppleTouchIcon, "apple-touch-icon-precomposed":
 			return RelAppleTouchIcon

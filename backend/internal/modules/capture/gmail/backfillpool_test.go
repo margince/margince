@@ -108,7 +108,7 @@ func (h *headerAPI) GetRaw(ctx context.Context, access, id string) (Message, err
 }
 
 func pageOf(ids ...string) *headerAPI {
-	api := &headerAPI{pagedAPI: pagedAPI{pages: map[string][]string{"": ids}}}
+	api := &headerAPI{pages: map[string][]string{"": ids}}
 	api.raws = map[string][]byte{}
 	return api
 }

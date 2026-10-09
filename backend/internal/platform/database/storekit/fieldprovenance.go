@@ -12,6 +12,7 @@ package storekit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -42,7 +43,7 @@ func StampFields(ctx context.Context, tx pgx.Tx, objectType string, objectID ids
 	// than a row problem and is worth naming here instead of surfacing as a
 	// constraint violation somewhere downstream.
 	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return fmt.Errorf("storekit: field provenance outside workspace context")
+		return errors.New("storekit: field provenance outside workspace context")
 	}
 	for _, s := range stamps {
 		if _, err := tx.Exec(ctx,

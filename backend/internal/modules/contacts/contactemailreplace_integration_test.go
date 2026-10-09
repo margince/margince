@@ -130,8 +130,7 @@ func TestReplacingWithAnAddressAnotherContactHoldsIsRefused(t *testing.T) {
 		Emails: []ContactEmailInput{{Email: "katherine@nasa.example", EmailType: "work", IsPrimary: true, Position: 1}},
 		Source: "test",
 	})
-	var dup *DuplicateEmailError
-	if !errors.As(err, &dup) {
+	if _, ok := errors.AsType[*DuplicateEmailError](err); !ok {
 		t.Fatalf("replace with a claimed address → %v, want DuplicateEmailError", err)
 	}
 

@@ -1024,6 +1024,7 @@ export const vi = {
   "shell.license.refused": "Giấy phép bị từ chối",
   "shell.signOutAria": "Đăng xuất",
   "shell.signOutErr": "Không thể đăng xuất",
+  "shell.version": "Phiên bản {version}",
   "shell.collapse": "Thu gọn thanh bên",
   "shell.expand": "Mở rộng thanh bên",
   "shell.accountAria": "Tài khoản",
@@ -4157,6 +4158,7 @@ export const vi = {
   "evidence.correctedValue": "Giá trị đã sửa",
   "evidence.confirmedAt": "Xác nhận thủ công lúc {when}",
   "evidence.humanSet": "Do một người nhập",
+  "evidence.agentSet": "Do trợ lý AI nhập",
   "acctCoverage.open": "So sánh độ bao phủ",
   "acctCoverage.title": "Độ bao phủ công ty",
   "acctCoverage.contact": "Liên hệ",
@@ -5071,6 +5073,19 @@ export const vi = {
   "settings.removedItem": "Đã gỡ “{name}”",
   "settings.removed": "Đã gỡ",
   "settings.saved": "Đã lưu",
+  "settings.signatureFromTemplate": "Mẫu của công ty",
+  "settings.signatureTemplateHint":
+    "Thư gửi đi dùng mẫu chữ ký của công ty. Mẫu tự điền tên, chức danh và số điện thoại.",
+  "settings.signatureTitle": "Chức danh",
+  "settings.signaturePhone": "Điện thoại",
+  "settings.signaturePreview": "Xem trước chữ ký",
+  "signatureTemplate.title": "Mẫu chữ ký email",
+  "signatureTemplate.sub":
+    "Một bố cục chữ ký chung cho mọi thành viên. Thư của mỗi thành viên tự điền tên, chức danh và số điện thoại riêng.",
+  "signatureTemplate.label": "Mẫu (HTML)",
+  "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
+  "signatureTemplate.hint":
+    "Dùng {name}, {title}, {phone} và {logo} (logo công ty nhúng trong thư). Mẫu giữ nguyên đoạn văn, ngắt dòng, chữ đậm, chữ nghiêng, gạch chân, liên kết, cùng màu chữ và cỡ chữ theo pixel trên span. Để trống sẽ tắt mẫu.",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",

@@ -14,6 +14,7 @@ package privacy
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -305,9 +306,7 @@ func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	if err := tx.QueryRow(ctx, query, contactID).Scan(dests...); err != nil {
 		return err
 	}
-	for name, value := range storekit.ExtractValues(columns, dests) {
-		subject[name] = value
-	}
+	maps.Copy(subject, storekit.ExtractValues(columns, dests))
 	return nil
 }
 

@@ -351,8 +351,7 @@ func TestForgettingThePartnerWhileNamingItsClaimIsRefused(t *testing.T) {
 
 	err := applyPartnerAttributionPatch(t.Context(), nil, dealNamingPartner(attributionInfluenced), in, p, true, unreachablePartnerCheck(t))
 
-	var unpaired *PartnerAttributionUnpairedError
-	if !errors.As(err, &unpaired) {
+	if _, ok := errors.AsType[*PartnerAttributionUnpairedError](err); !ok {
 		t.Fatalf("error = %v, want PartnerAttributionUnpairedError — the request forgets the partner the claim describes", err)
 	}
 	if len(p.After()) != 0 {

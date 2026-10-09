@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -173,7 +174,7 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 	// transit, not a complete answer.
 	finish, terminal := geminiTerminal(out)
 	if !terminal {
-		return model.Response{}, fmt.Errorf("ai: gemini: response carries no terminal STOP or MAX_TOKENS")
+		return model.Response{}, errors.New("ai: gemini: response carries no terminal STOP or MAX_TOKENS")
 	}
 	var text strings.Builder
 	var signatures []string

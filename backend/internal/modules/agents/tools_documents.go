@@ -166,8 +166,7 @@ var errFileKindRefused = errors.New("this kind of file is not accepted")
 const unsupportedFileTypeCode = "unsupported_file_type"
 
 func refusedKind(err error) error {
-	var fault apperrors.FieldFault
-	if errors.As(err, &fault) {
+	if fault, ok := errors.AsType[apperrors.FieldFault](err); ok {
 		if _, code, _ := fault.FieldFault(); code == unsupportedFileTypeCode {
 			return fmt.Errorf("%w: %w", errFileKindRefused, err)
 		}

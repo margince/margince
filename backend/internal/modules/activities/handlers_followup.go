@@ -4,7 +4,7 @@
 package activities
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -31,7 +31,7 @@ func (h Handlers) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if h.settings == nil {
-		writeStoreErr(w, r, fmt.Errorf("activities: the follow-up window is not wired; the installation cannot change it"))
+		writeStoreErr(w, r, errors.New("activities: the follow-up window is not wired; the installation cannot change it"))
 		return
 	}
 	if err := settings.Set(r.Context(), h.settings, FollowUpAfterDays, req.FollowUpAfterDays); err != nil {
@@ -45,7 +45,7 @@ func (h Handlers) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 
 func (h Handlers) writeFollowUpSettings(w http.ResponseWriter, r *http.Request) {
 	if h.settings == nil {
-		writeStoreErr(w, r, fmt.Errorf("activities: the follow-up window is not wired; the installation cannot read it"))
+		writeStoreErr(w, r, errors.New("activities: the follow-up window is not wired; the installation cannot read it"))
 		return
 	}
 	days, err := settings.Get(r.Context(), h.settings, FollowUpAfterDays)

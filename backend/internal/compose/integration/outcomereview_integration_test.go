@@ -155,8 +155,7 @@ func TestAReviewOfAClosingTheDealHasLeftIsRefused(t *testing.T) {
 		SubmissionId:        openapi_types.UUID(ids.NewV7()),
 		Answers:             map[string]string{"why_we_won": "Written about the first close"},
 	})
-	var stale *deals.StaleClosingError
-	if !errors.As(err, &stale) {
+	if _, ok := errors.AsType[*deals.StaleClosingError](err); !ok {
 		t.Fatalf("reviewing a closing the deal has left → %v, want deals.StaleClosingError", err)
 	}
 	// It reads as a conflict, so the caller reloads rather than rewording.

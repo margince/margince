@@ -147,8 +147,8 @@ func routerWithEmbedder(t *testing.T, embedder model.Client) *Router {
 	t.Helper()
 	cfg := FakeRoutingConfig()
 	cfg.Embeddings = EmbeddingsConfig{
-		ProviderConfig: ProviderConfig{Provider: ProviderFake, Model: "spy"},
-		Dimensions:     4,
+		Provider: ProviderFake, Model: "spy",
+		Dimensions: 4,
 	}
 	router, err := NewRouter(cfg, nil, nil, nil, false, nil)
 	if err != nil {

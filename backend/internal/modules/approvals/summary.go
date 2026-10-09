@@ -21,6 +21,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // maxSummaryLen bounds the sentence an inbox row shows. Long enough for an
@@ -50,7 +52,7 @@ func sanitizeSummary(s string) string {
 				b.WriteByte(' ')
 				lastWasSpace = true
 			}
-		case unicode.IsControl(r), unicode.Is(unicode.Cf, r):
+		case values.IsInvisibleRune(r):
 			// Cf covers the bidirectional overrides and isolates
 			// (U+202A-E, U+2066-9), the directional marks (U+200E/F,
 			// U+061C) and the zero-width joiners a homograph relies on.
@@ -72,10 +74,7 @@ func boundRunes(s string, n int) string {
 		return s
 	}
 	const ellipsis = "…"
-	cut := n - len(ellipsis)
-	if cut < 0 {
-		cut = 0
-	}
+	cut := max(n-len(ellipsis), 0)
 	for cut > 0 && !utf8.RuneStart(s[cut]) {
 		cut--
 	}

@@ -87,9 +87,9 @@ func TestAConsentLinkRefusesWithoutAPurpose(t *testing.T) {
 // than in somebody's inbox.
 func TestAConsentLinkReadServesOnlyTheSubscriptionQuestion(t *testing.T) {
 	got := map[string]bool{}
-	ct := reflect.TypeOf(SubscriptionCard{})
-	for i := range ct.NumField() {
-		got[ct.Field(i).Name] = true
+	ct := reflect.TypeFor[SubscriptionCard]()
+	for field := range ct.Fields() {
+		got[field.Name] = true
 	}
 	want := map[string]bool{"PurposeKey": true, "PurposeLabel": true, "State": true}
 
@@ -108,8 +108,8 @@ func TestAConsentLinkReadServesOnlyTheSubscriptionQuestion(t *testing.T) {
 // And the record card is the thing it must not be: if these two ever converge,
 // the gate above has stopped meaning anything.
 func TestTheSubscriptionCardIsNotTheRecordCard(t *testing.T) {
-	consent := reflect.TypeOf(SubscriptionCard{})
-	record := reflect.TypeOf(ConfirmCard{})
+	consent := reflect.TypeFor[SubscriptionCard]()
+	record := reflect.TypeFor[ConfirmCard]()
 	if consent.NumField() >= record.NumField() {
 		t.Errorf("SubscriptionCard has %d fields and ConfirmCard %d — the consent view must stay the narrower one",
 			consent.NumField(), record.NumField())

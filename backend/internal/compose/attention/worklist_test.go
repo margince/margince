@@ -455,7 +455,7 @@ func TestTheSummaryCountsTheDayAndNotThePage(t *testing.T) {
 // has something to order by. Enough rows that a page can cut it.
 func summaryScopeDay(n int) crmcontracts.Attention {
 	tasks := make([]crmcontracts.AttentionItem, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		tasks = append(tasks, item(string(rune('a'+i)), "task", withDue(rankInstant.Add(time.Duration(i)*time.Hour))))
 	}
 	return crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
@@ -662,7 +662,7 @@ func dealItemOwned(deal, owner ids.UUID) crmcontracts.AttentionItem {
 // scroll past them to reach the next thing.
 func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
 	staged := []crmcontracts.AttentionItem{}
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		staged = append(staged, item(
 			"c"+string(rune('a'+i%26))+string(rune('0'+i/26)),
 			"approval", withKind("capture_counterparty")))
@@ -684,7 +684,7 @@ func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
 // marker itself proves nothing about the code that writes it in production.
 func TestContactDecisionsSplitByWhatTheyAreAbout(t *testing.T) {
 	staged := []crmcontracts.Approval{}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		staged = append(staged,
 			captureApproval("noreply@vendor.example"),
 			captureApproval("anna.weber@customer.example"))
@@ -744,7 +744,7 @@ func captureApproval(email string) crmcontracts.Approval {
 // are: each holds up somebody different, and the reader has to see each one.
 func TestADecisionThatBlocksACustomerIsNeverFolded(t *testing.T) {
 	staged := []crmcontracts.AttentionItem{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		staged = append(staged, item("s"+string(rune('a'+i)), "approval", withKind("send_email")))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
@@ -777,7 +777,7 @@ func TestTwoAlikeDecisionsStayThemselves(t *testing.T) {
 // The group names a few members, so a reader can check it before answering it.
 func TestABatchNamesSomeOfWhatItHolds(t *testing.T) {
 	staged := []crmcontracts.AttentionItem{}
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		row := item("d"+string(rune('a'+i)), "approval", withKind("capture_counterparty"))
 		title := "Is address " + string(rune('a'+i)) + " a contact?"
 		row.Title = &title
@@ -802,7 +802,7 @@ func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 	// this page: crowding, staleness and unproven engagement. A fixture that
 	// left any of the other two firing would pass this test while proving one
 	// of them instead.
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		waiting = append(waiting, WaitingCustomer{
 			ActivityID: ids.NewV7(),
 			Subject:    "Thread " + string(rune('a'+i%26)) + string(rune('0'+i/26)),

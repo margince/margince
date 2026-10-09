@@ -96,9 +96,9 @@ func (s *Service) Run(ctx context.Context, contactID ids.ContactID) (crmcontract
 		return crmcontracts.ContactResearchRun{}, fmt.Errorf("run contact research: %w", err)
 	}
 	out.State = crmcontracts.ContactResearchRunStateReady
-	out.SourcesRead = ptr(result.SourcesRead)
+	out.SourcesRead = new(result.SourcesRead)
 	out.Claims = wireClaims(result.Claims)
-	out.ProviderName = ptr(s.provider.ProviderName())
+	out.ProviderName = new(s.provider.ProviderName())
 	return out, nil
 }
 
@@ -139,7 +139,7 @@ func wireClaims(claims []contactdata.Claim) []crmcontracts.ContactResearchClaim 
 			sources = append(sources, crmcontracts.ContactResearchSource{
 				Label: source.Label,
 				Url:   source.URL,
-				Quote: ptr(source.Quote),
+				Quote: new(source.Quote),
 			})
 		}
 		if len(sources) == 0 {
@@ -208,5 +208,3 @@ func webURL(raw string) bool {
 	}
 	return parsed.Scheme == "https" || parsed.Scheme == "http"
 }
-
-func ptr[T any](v T) *T { return &v }

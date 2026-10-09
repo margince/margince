@@ -64,8 +64,8 @@ func normalisedSubject(subject string) string {
 	for trimmed := true; trimmed; {
 		trimmed = false
 		for _, prefix := range replyPrefixes {
-			if strings.HasPrefix(out, prefix) {
-				out = strings.TrimSpace(strings.TrimPrefix(out, prefix))
+			if after, ok := strings.CutPrefix(out, prefix); ok {
+				out = strings.TrimSpace(after)
 				trimmed = true
 			}
 		}

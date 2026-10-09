@@ -32,11 +32,13 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -77,7 +79,7 @@ func cut(src []byte, names []string) ([]byte, error) {
 	}
 	schemas := mapping(mapping(root(&doc), "components"), "schemas")
 	if schemas == nil {
-		return nil, fmt.Errorf("the source declares no components.schemas")
+		return nil, errors.New("the source declares no components.schemas")
 	}
 
 	kept := map[string]*yaml.Node{}
@@ -91,7 +93,7 @@ func cut(src []byte, names []string) ([]byte, error) {
 		}
 	}
 	if len(kept) == 0 {
-		return nil, fmt.Errorf("no schema was named, so the subset would generate an empty package")
+		return nil, errors.New("no schema was named, so the subset would generate an empty package")
 	}
 	return marshalSubset(kept)
 }
@@ -136,11 +138,8 @@ func rewriteFormats(node *yaml.Node) {
 		format := scalar(node, "format")
 		_, isString := lookup(node, "x-go-type")
 		if format != "" && !isString {
-			for _, f := range nonStdlibFormats {
-				if format == f {
-					setScalar(node, "x-go-type", "string")
-					break
-				}
+			if slices.Contains(nonStdlibFormats, format) {
+				setScalar(node, "x-go-type", "string")
 			}
 		}
 	}

@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -61,18 +62,22 @@ func TestDeclaredLogosAreBoundedAndDeduplicated(t *testing.T) {
 	// A page that repeats its mark on every card offers it once, and a page
 	// with a strip of partner logos offers the first few and not the fortieth.
 	var page string
+	var pageSb64 strings.Builder
 	for i := range 40 {
-		page += fmt.Sprintf(`<img src="/logo-%d.png" alt="partner logo">`, i%2)
-		page += `<img src="/logo-0.png" alt="partner logo">`
+		fmt.Fprintf(&pageSb64, `<img src="/logo-%d.png" alt="partner logo">`, i%2)
+		pageSb64.WriteString(`<img src="/logo-0.png" alt="partner logo">`)
 	}
+	page += pageSb64.String()
 	got := declaredLogos(page, acmeBase(t))
 	if len(got) != 2 {
 		t.Fatalf("two distinct logos declared, got %v", got)
 	}
 	var unbounded string
+	var unboundedSb73 strings.Builder
 	for i := range 40 {
-		unbounded += fmt.Sprintf(`<img src="/logo-%d.png" alt="logo">`, i)
+		fmt.Fprintf(&unboundedSb73, `<img src="/logo-%d.png" alt="logo">`, i)
 	}
+	unbounded += unboundedSb73.String()
 	if got := declaredLogos(unbounded, acmeBase(t)); len(got) != maxDeclaredLogos {
 		t.Fatalf("forty distinct logos declared, want the bound of %d, got %d", maxDeclaredLogos, len(got))
 	}

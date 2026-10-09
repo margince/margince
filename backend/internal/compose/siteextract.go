@@ -112,14 +112,12 @@ func crawlAndExtract(ctx context.Context, crawler *siteCrawler, x evidenceExtrac
 			profileMu.Lock()
 			profiledPages = len(snapshot)
 			profileMu.Unlock()
-			profileWg.Add(1)
-			go func() {
-				defer profileWg.Done()
+			profileWg.Go(func() {
 				fields, err := safeExtractProfile(ctx, x, snapshot)
 				profileMu.Lock()
 				out.fields, profileErr = fields, err
 				profileMu.Unlock()
-			}()
+			})
 		})
 	}
 
@@ -406,11 +404,9 @@ func extractSite(ctx context.Context, x evidenceExtractor, pages []crawlPage, on
 	}
 
 	var profileErr error
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		out.fields, profileErr = safeExtractProfile(ctx, x, pages)
-	}()
+	})
 	wg.Wait()
 
 	var failed []error

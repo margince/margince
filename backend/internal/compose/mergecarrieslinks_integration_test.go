@@ -421,8 +421,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenALinkWouldBeStranded(t *testing.T) {
 	c.withdrawalLink(t, consent.WithdrawalMintInput{Address: "holder@carry.test", ContactID: holder})
 
 	_, err := unwired.MergeContact(c.admin, holder, holderInto, nil)
-	var notWired *contacts.SatelliteCarrierNotWiredError
-	if !errors.As(err, &notWired) {
+	if _, ok := errors.AsType[*contacts.SatelliteCarrierNotWiredError](err); !ok {
 		t.Fatalf("the merge answered %v, want SatelliteCarrierNotWiredError", err)
 	}
 	if n := c.count(t, `SELECT count(*) FROM withdrawal_credential WHERE contact_id = $1`, holder); n != 1 {

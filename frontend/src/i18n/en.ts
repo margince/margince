@@ -1039,6 +1039,7 @@ export const en = {
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
   "shell.signOutErr": "Sign-out failed",
+  "shell.version": "Version {version}",
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
@@ -4349,6 +4350,7 @@ export const en = {
   "evidence.correctedValue": "Corrected value",
   "evidence.confirmedAt": "Confirmed by a person {when}",
   "evidence.humanSet": "Set by a person",
+  "evidence.agentSet": "Set by an agent",
   "acctCoverage.open": "Compare coverage",
   "acctCoverage.title": "Company coverage",
   "acctCoverage.contact": "Contact",
@@ -5279,6 +5281,19 @@ export const en = {
   "settings.removedItem": "“{name}” removed",
   "settings.removed": "Removed",
   "settings.saved": "Saved",
+  "settings.signatureFromTemplate": "Company template",
+  "settings.signatureTemplateHint":
+    "Your company’s signature template signs your mail. It fills in your name, title and phone.",
+  "settings.signatureTitle": "Title",
+  "settings.signaturePhone": "Phone",
+  "settings.signaturePreview": "Signature preview",
+  "signatureTemplate.title": "Email signature template",
+  "signatureTemplate.sub":
+    "One signature layout for everyone. Each member’s mail fills in their own name, title and phone.",
+  "signatureTemplate.label": "Template (HTML)",
+  "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
+  "signatureTemplate.hint":
+    "Use {name}, {title}, {phone} and {logo}, the company logo embedded in the mail. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",

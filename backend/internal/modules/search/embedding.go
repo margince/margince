@@ -93,7 +93,7 @@ func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID
 		return false, fmt.Errorf("search: embedder returned %d vectors of width %d, need 1×%d", len(res.Vectors), res.Dims, dims)
 	}
 	if isZero(res.Vectors[0]) {
-		return false, fmt.Errorf("search: embedder returned a zero vector (cosine NaN)")
+		return false, errors.New("search: embedder returned a zero vector (cosine NaN)")
 	}
 	return s.writeEmbedding(ctx, entityType, entityID, stored, next, res.Vectors[0])
 }

@@ -174,7 +174,7 @@ func (e *closeDateEnv) addAddressParticipant(t *testing.T, dealID ids.UUID, addr
 func TestQuietReviewNamesTheContactWhoIsWaitingForAReply(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, new("commit"), new(30), 90)
 	e.seedDealEmail(t, id, "outbound", "Boris Klein", 120)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 
@@ -199,7 +199,7 @@ func TestQuietReviewNamesTheContactWhoIsWaitingForAReply(t *testing.T) {
 func TestQuietReviewSaysWeGotNoReplyWhenWeWroteLast(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
-	id := e.seedSweepDeal(t, "No reply", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "No reply", e.late, new("commit"), new(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 120)
 	e.seedDealEmail(t, id, "outbound", "Anna Weber", 90)
 
@@ -221,7 +221,7 @@ func TestQuietReviewSaysSoWhenThereIsNoCorrespondence(t *testing.T) {
 	// read and fall back, which is a DIFFERENT sentence with its own test. This
 	// one is about a deal that genuinely has no correspondence.
 	e.grantOwnerRealPermissions(t, e.Rep1)
-	id := e.seedSweepDeal(t, "Never contacted", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Never contacted", e.late, new("commit"), new(30), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -240,7 +240,7 @@ func TestQuietReviewSaysSoWhenThereIsNoCorrespondence(t *testing.T) {
 // any name in the workspace into a payload other contacts later read.
 func TestQuietReviewOnAnUnownedDealNamesNobody(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Orphaned", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Orphaned", e.late, new("commit"), new(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE deal SET owner_id = NULL WHERE id = $1`, id); err != nil {
@@ -267,7 +267,7 @@ func TestQuietReviewOnAnUnownedDealNamesNobody(t *testing.T) {
 func TestQuietReviewNamesNobodyOnGroupCorrespondence(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
-	id := e.seedSweepDeal(t, "Group thread", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Group thread", e.late, new("commit"), new(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 	e.addParticipant(t, id, "Boris Klein", "from")
 
@@ -294,7 +294,7 @@ func TestQuietReviewNamesNobodyOnGroupCorrespondence(t *testing.T) {
 func TestQuietReviewCountsUnmatchedAddressesAsParticipants(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
-	id := e.seedSweepDeal(t, "Mixed thread", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Mixed thread", e.late, new("commit"), new(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 	e.addAddressParticipant(t, id, "someone@unmatched.test", "from")
 
@@ -322,7 +322,7 @@ func TestQuietReviewCountsUnmatchedAddressesAsParticipants(t *testing.T) {
 func TestQuietReviewWithoutContactReadGivesDatesButNoName(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerWithoutContacts(t, e.Rep1)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, new("commit"), new(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 
 	if err := e.sweep(); err != nil {
@@ -346,7 +346,7 @@ func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerRole(t, e.Rep1, `{"objects":{"deal":{"read":true,"update":true},
 		   "contact":{"read":true},"company":{"read":true}},"row_scope":"all"}`)
-	id := e.seedSweepDeal(t, "No activity grant", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "No activity grant", e.late, new("commit"), new(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 
 	if err := e.sweep(); err != nil {
@@ -364,7 +364,7 @@ func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 func TestQuietReviewRedatesAwayFromTheDateTheDealCarried(t *testing.T) {
 	e := setupCloseDate(t)
 	originalDate := today().AddDate(0, 0, -30)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(-30), 90)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, new("commit"), new(-30), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -390,7 +390,7 @@ func TestQuietReviewRedatesAwayFromTheDateTheDealCarried(t *testing.T) {
 // from them.
 func TestAQuietRedateIsMarkedProvisional(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(-30), 90)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, new("commit"), new(-30), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -412,7 +412,7 @@ func TestAQuietRedateIsMarkedProvisional(t *testing.T) {
 func TestAReceiptOnAnInheritedDealWithholdsTheReasonItWasComposedFor(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
-	id := e.seedSweepDeal(t, "Handed over", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Handed over", e.late, new("commit"), new(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 
 	if err := e.sweep(); err != nil {

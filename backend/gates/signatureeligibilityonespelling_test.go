@@ -77,8 +77,8 @@ func withoutFragmentDeclaration(text string) string {
 		return text
 	}
 	rest := text[start:]
-	if end := strings.Index(rest, "\n}\n"); end >= 0 {
-		return text[:start] + rest[end+len("\n}\n"):]
+	if _, after, ok := strings.Cut(rest, "\n}\n"); ok {
+		return text[:start] + after
 	}
 	return text[:start]
 }

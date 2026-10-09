@@ -95,7 +95,7 @@ func ignoredTrees(t *testing.T) map[string]bool {
 		// every branch that ever mentioned the control.
 		"../.git": true,
 	}
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		if !strings.HasSuffix(line, "/") {
 			continue
 		}

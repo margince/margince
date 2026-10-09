@@ -39,6 +39,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -98,7 +99,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 	// The lifecycle, tag, import and enrich families, which the walk below
 	// registers alongside the core and comms sets.
 	company, tagA, tagB, importRun, project := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
-	for name, in := range map[string]string{
+	maps.Copy(reads, map[string]string{
 		"relink_activity": fmt.Sprintf(
 			`{"activity_id":%q,"entity_type":"deal","entity_id":%q}`, activity, deal),
 		"relink_thread": fmt.Sprintf(
@@ -111,9 +112,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 		"merge_tags":            fmt.Sprintf(`{"tag_id":%q,"into_tag_id":%q}`, tagA, tagB),
 		"commit_import":         fmt.Sprintf(`{"run_id":%q}`, importRun),
 		"enrich":                fmt.Sprintf(`{"company_id":%q}`, company),
-	} {
-		reads[name] = in
-	}
+	})
 
 	creates = map[string]string{
 		"create_record": `{"record_type":"contact","fields":{"full_name":"Fresh"}}`,
@@ -385,7 +384,7 @@ func assertRefusesToStage(t *testing.T, name string, stageable stageableTool, in
 type stagingTags struct{ Tags }
 
 func (stagingTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
-	return TagDetail{Tag: Tag{TagID: tagID, Name: "Strategic Account"}}, nil
+	return TagDetail{TagID: tagID, Name: "Strategic Account"}, nil
 }
 
 // RecordTagTypes is read at registration, not at staging: the tag registrar

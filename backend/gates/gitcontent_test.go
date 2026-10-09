@@ -106,7 +106,7 @@ func gitPaths(t testing.TB, root string, args ...string) []string {
 			"cannot tell a clean tree from an unreadable one", strings.Join(args, " "), root, err)
 	}
 	var paths []string
-	for _, entry := range strings.Split(string(out), "\x00") {
+	for entry := range strings.SplitSeq(string(out), "\x00") {
 		if entry != "" {
 			paths = append(paths, entry)
 		}

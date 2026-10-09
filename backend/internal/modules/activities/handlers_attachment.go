@@ -183,8 +183,8 @@ func (h Handlers) DownloadAttachment(w http.ResponseWriter, r *http.Request, id 
 		size = *meta.ByteSize
 	}
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: contentType, Filename: meta.Filename, Size: size},
-		Body:     rc,
+		ContentType: contentType, Filename: meta.Filename, Size: size,
+		Body: rc,
 	}, "attachment "+id.String())
 }
 

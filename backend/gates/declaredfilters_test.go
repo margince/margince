@@ -392,11 +392,11 @@ func narrowingFields(structType *ast.StructType) []declaredFilter {
 // about.
 func formTagName(tag string) string {
 	const marker = `form:"`
-	start := strings.Index(tag, marker)
-	if start < 0 {
+	_, after, ok := strings.Cut(tag, marker)
+	if !ok {
 		return ""
 	}
-	rest := tag[start+len(marker):]
+	rest := after
 	end := strings.IndexAny(rest, `",`)
 	if end <= 0 {
 		return ""

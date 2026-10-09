@@ -39,6 +39,22 @@ export const SixSlots: Story = {
   ),
 };
 
+// Seven slots is more than a full row holds. The row stays six across and the
+// seventh takes the whole row under it, as a fold's last slot does.
+export const MoreThanAFullRow: Story = {
+  render: () => (
+    <StatStrip>
+      <StatCard label="Leads in" value="14" />
+      <StatCard label="Answered" value="11" />
+      <StatCard label="Meetings" value="6" />
+      <StatCard label="Deals opened" value="3" />
+      <StatCard label="Won" value="€42k" tone="success" />
+      <StatCard label="Lost" value="€8k" />
+      <StatCard label="Held" value="Not recorded" />
+    </StatStrip>
+  ),
+};
+
 // Four slots, because this record has four readings — not six with two blank.
 // The plate ends where the row ends rather than reserving grey cells.
 export const FewerSlots: Story = {

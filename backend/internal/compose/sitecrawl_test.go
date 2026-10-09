@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -675,7 +676,7 @@ func TestCrawlFrontierWavesAreDeterministicAcrossRuns(t *testing.T) {
 		return crawl
 	}
 	first := crawlOnce()
-	for run := 0; run < 4; run++ {
+	for range 4 {
 		if again := crawlOnce(); !reflect.DeepEqual(first, again) {
 			t.Fatalf("frontier crawl diverged between runs:\n%v\n%v", first, again)
 		}
@@ -921,12 +922,7 @@ func indexOfFetch(fetched []string, url string) int {
 }
 
 func slicesContains(haystack []string, needle string) bool {
-	for _, s := range haystack {
-		if s == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 func TestCrawlStopsTheLadderWhenAFallbackSpellingRefuses(t *testing.T) {

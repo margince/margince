@@ -70,8 +70,7 @@ func TestUnknownRoleNeverClaimsAMissingMember(t *testing.T) {
 	if got := unknownRoleRefusal(apperrors.ErrNotFound); !errors.Is(got, apperrors.ErrNotFound) {
 		t.Errorf("a missing member was rendered as %v, want the untouched 404", got)
 	}
-	var relabelled *httperr.DetailedError
-	if errors.As(unknownRoleRefusal(apperrors.ErrNotFound), &relabelled) {
+	if relabelled, ok := errors.AsType[*httperr.DetailedError](unknownRoleRefusal(apperrors.ErrNotFound)); ok {
 		t.Errorf("a missing member was relabelled %q; only a real unknown role may be", relabelled.Code)
 	}
 

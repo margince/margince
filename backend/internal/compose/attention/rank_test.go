@@ -9,6 +9,7 @@ package attention
 // fourteen panels. Every test here is one ordering a rep would call wrong.
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -90,7 +91,7 @@ func assertOrder(t *testing.T, got []crmcontracts.WorklistItem, want ...string) 
 // buyer on a six-figure deal.
 func TestAPileOfHygieneNeverOutranksACustomerWaiting(t *testing.T) {
 	rows := []ranked{}
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		rows = append(rows, candidate(string(rune('a'+i%26))+string(rune('0'+i/26)), levelRoutine))
 	}
 	rows = append(rows, candidate("buyer", levelWaiting))
@@ -449,8 +450,8 @@ func TestTheRankedOrderIsTheSameWhateverOrderTheRowsArriveIn(t *testing.T) {
 		}
 	}
 	reversed := make([]ranked, 0, len(rows))
-	for i := len(rows) - 1; i >= 0; i-- {
-		reversed = append(reversed, rows[i])
+	for _, row := range slices.Backward(rows) {
+		reversed = append(reversed, row)
 	}
 	if got := idsOf(rankAll(reversed)); !sameOrder(got, want) {
 		t.Fatalf("reversing the input changed the page:\n got %v\nwant %v", got, want)

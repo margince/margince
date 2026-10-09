@@ -14,6 +14,11 @@ runs daily on `main` (`scheduled.yml`), not on your PR, because the calendar bre
 a diff. A test file you add today can turn that lane red many days from now. Run it on your machine
 when a test you touch reads a date.
 
+Biome holds the size of a function in product code: 300 lines, blank lines not counted
+(`noExcessiveLinesPerFunction`), and a score of 15 (`noExcessiveCognitiveComplexity`). Test code has
+no such limit. A `biome-ignore` for either rule in product
+code names the issue that splits the function, and `scripts/complexity-waivers.test.ts` checks it.
+
 ## Read the design system before you build something a user can see
 
 Read [`src/design-system/README.md`](src/design-system/README.md) before you build a control, every

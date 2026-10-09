@@ -41,8 +41,8 @@ func isGenerated(path, text string) bool {
 		return true
 	}
 	head := text
-	if i := strings.Index(text, "\npackage "); i >= 0 {
-		head = text[:i]
+	if before, _, ok := strings.Cut(text, "\npackage "); ok {
+		head = before
 	}
 	return generatedMarker.MatchString(head)
 }

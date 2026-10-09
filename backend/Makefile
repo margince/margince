@@ -761,12 +761,13 @@ vuln: ## Scan dependencies for known vulnerabilities (govulncheck)
 # runs from an install rather than a pinned `go run`; the lint target
 # resolves it out of GOPATH/bin itself (see GOLANGCI_LINT above), so no
 # PATH entry is required. This version must stay identical to the pin in
-# .tool-versions and the golangci-lint-action version in ci.yml — bump all
-# three together. arch-lint and vuln already run their tools via pinned
+# .tool-versions; bump both together. Bump them with the Go toolchain too:
+# a golangci-lint older than the toolchain cannot read its export data.
+# arch-lint and vuln already run their tools via pinned
 # `go run`, so those installs just pre-warm the module cache (and give the
 # binaries a PATH home for direct use). Installs are unconditional: a cached
 # binary at a different version must be overwritten, or the pin doesn't bind.
-GOLANGCI_LINT_VERSION ?= v2.13.0
+GOLANGCI_LINT_VERSION ?= v2.14.0
 # The contract-breaking gate (scripts/check-contract-breaking.sh) runs oasdiff
 # via pinned `go run`, so this install is a convenience binary for direct use —
 # keep the version identical to the pin in that script; bump both together.

@@ -57,8 +57,7 @@ func TestAFileOutsideTheTableIsRefused(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			got, err := resolveAttachmentType(tc.declared, tc.filename, tc.filename)
-			var refusal *UnsupportedFileTypeError
-			if !errors.As(err, &refusal) {
+			if _, ok := errors.AsType[*UnsupportedFileTypeError](err); !ok {
 				t.Fatalf("resolveAttachmentType(%q, %q) = (%q, %v), want an UnsupportedFileTypeError", tc.declared, tc.filename, got, err)
 			}
 		})

@@ -58,7 +58,7 @@ func amountMask(condition principal.MaskCondition) principal.FieldMask {
 func (b *briefEnv) seedColleagueDealWithMyTask(t *testing.T) ids.UUID {
 	t.Helper()
 	owner := integration.OwnerConn(t)
-	deal := b.seedBriefDeal(t, owner, "Theirs", b.stageA, int64Ptr(60_000_00), closeOn(briefClock, 5), &b.Rep3)
+	deal := b.seedBriefDeal(t, owner, "Theirs", b.stageA, new(int64(60_000_00)), closeOn(briefClock, 5), &b.Rep3)
 	task := integration.SeedIDRow(t, owner, `INSERT INTO activity
 		(id, kind, subject, occurred_at, source, captured_by, assignee_id, is_done)
 		VALUES ($1, 'task', 'Send the offer', '2026-06-03T09:00:00Z', 'manual', 'human:x', $2, false)`, b.Rep1)
@@ -119,7 +119,7 @@ func TestTheRevenueNormIsTakenOverAmountsTheReaderMayRead(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	for i := range 12 {
 		b.seedBriefDeal(t, owner, fmt.Sprintf("Colleague %d", i), b.stageA,
-			int64Ptr(int64(200_000_00+i)), closeOn(briefClock, 30), &b.Rep3)
+			new(int64(200_000_00+i)), closeOn(briefClock, 30), &b.Rep3)
 	}
 
 	unmasked, err := b.engine.Rank(b.As(b.Rep1, []ids.UUID{b.Team1}, maskedBriefRep()), briefClock)

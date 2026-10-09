@@ -56,7 +56,16 @@ const documentFrom = `deal_room_document d
 // carried by a message linked to the deal — and it is not hidden from that
 // deal. A file archived, unlinked or hidden after it was added drops out of
 // the next release and out of the buyer's download, rather than riding on the
-// strength of a check that was true when it was added. The seller's own list
+// strength of a check that was true when it was added.
+//
+// A LIMITED message's file is not in a room at all. The company narrowed who
+// may read that correspondence; a room exists to hand its documents to an
+// outsider, so the two cannot both be honoured and the narrowing wins. Stated
+// without a principal because the buyer has none: the question is not whether
+// some reader is in the audience, it is whether the message is still open to
+// the workspace. A message narrowed, restricted or archived AFTER its file was
+// added drops out on the next read, which is the same re-check the rest of this
+// predicate already performs. The seller's own list
 // does not carry the predicate, so the stale entry stays visible to the one
 // contact who can remove it.
 //
@@ -75,7 +84,11 @@ const inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	  OR (a.entity_type = 'activity' AND EXISTS (
 	        SELECT 1 FROM activity_link l
 	         WHERE l.activity_id = a.entity_id AND l.entity_type = 'deal' AND l.deal_id = r.deal_id)
-	      AND NOT (a.content_type LIKE 'image/%' AND COALESCE(a.byte_size, 0) < 65536)))
+	      AND NOT (a.content_type LIKE 'image/%' AND COALESCE(a.byte_size, 0) < 65536)
+	      AND EXISTS (
+	        SELECT 1 FROM activity m
+	         WHERE m.id = a.entity_id AND m.archived_at IS NULL
+	           AND m.restricted_at IS NULL AND m.audience = 'workspace')))
 	AND NOT EXISTS (SELECT 1 FROM deal_document_hide h WHERE h.deal_id = r.deal_id AND h.attachment_id = a.id)`
 
 // ListDocuments returns a room's documents in group-then-position order.

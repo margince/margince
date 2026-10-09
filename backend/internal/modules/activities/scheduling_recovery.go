@@ -98,7 +98,13 @@ func (s *Store) deliverInvitation(ctx context.Context, row invitationRow, in con
 	if err != nil {
 		return nil, err
 	}
-	in.Description += "\n\nReschedule or cancel: " + link
+	// A public booking carries no description, so the link stands alone rather
+	// than behind two blank lines.
+	footer := "Reschedule or cancel: " + link
+	if in.Description != "" {
+		footer = in.Description + "\n\n" + footer
+	}
+	in.Description = footer
 	receipt, err := s.calendar.Save(ctx, row.Host, row.Provider, in)
 	if err != nil {
 		return nil, err

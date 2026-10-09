@@ -146,8 +146,7 @@ func TestACursorIsRefusedWhenTheQuestionChanged(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := decodeCursor(minted, tc.scope, tc.filter, tc.owner)
-			var mismatch *storekit.CursorSortMismatchError
-			if !errors.As(err, &mismatch) {
+			if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); !ok {
 				t.Errorf("continuing into %s was allowed (err=%v); it must be refused", tc.name, err)
 			}
 		})
@@ -468,8 +467,7 @@ func TestACursorNamingAPositionThisEndpointNeverMintsIsRefused(t *testing.T) {
 			if err == nil {
 				t.Fatalf("%s was accepted as %+v; %s", tc.name, cursor, tc.why)
 			}
-			var malformed *storekit.MalformedCursorError
-			if !errors.As(err, &malformed) {
+			if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 				t.Errorf("%s answered %v; it is the caller's mistake and must be "+
 					"malformed_cursor", tc.name, err)
 			}
@@ -652,8 +650,7 @@ func TestACursorWithNoFingerprintIsRefused(t *testing.T) {
 			t.Errorf("%s was accepted as a cursor; it names no question and must be refused", raw)
 			continue
 		}
-		var malformed *storekit.MalformedCursorError
-		if !errors.As(err, &malformed) {
+		if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 			t.Errorf("%s answered %v; a token nobody minted is malformed_cursor", raw, err)
 		}
 	}

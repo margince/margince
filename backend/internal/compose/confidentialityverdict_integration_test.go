@@ -651,7 +651,7 @@ func TestAThirdSenderCohortIsHeldRatherThanLeftUndecided(t *testing.T) {
 	// Two passes: each answers one cohort and re-opens for the next. The
 	// re-open is due a minute out, so the row is aged between them the way a
 	// later tick would find it.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		runConfidentiality(t, e, threadID, confidentialityOrdinary, 0.95)
 		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(), `

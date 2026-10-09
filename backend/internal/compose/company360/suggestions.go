@@ -289,8 +289,8 @@ func staleThread(
 		// need no such grant: that we spoke, and when, is the rule's own fact.
 		Name:   nonEmpty(newest.Subject),
 		Quote:  nonEmpty(newest.Excerpt),
-		At:     ptrTime(newest.At),
-		Origin: ptrString(sentOrigin(newest.Kind)),
+		At:     new(newest.At),
+		Origin: new(sentOrigin(newest.Kind)),
 	}}
 	out := &crmcontracts.Company360Suggestion{
 		Kind: suggestNoReply,
@@ -302,8 +302,8 @@ func staleThread(
 	}
 	// The rule's own words, and the date the EVIDENCE carries — when the thread
 	// went quiet. Neither reaches the fingerprint above (PO-AC-N-14).
-	out.Title = ptrString(fmt.Sprintf("Follow up: no reply in %d days", waitedDays))
-	out.DueAt = ptrTime(newest.At)
+	out.Title = new(fmt.Sprintf("Follow up: no reply in %d days", waitedDays))
+	out.DueAt = new(newest.At)
 	setDraftReply(out, newest.ID)
 	return out
 }
@@ -318,11 +318,11 @@ func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Company360Sugg
 		evidence := []crmcontracts.CompanyBriefEvidence{{
 			EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeDeal,
 			EntityId:   openapi_types.UUID(deal.ID),
-			Name:       ptrString(deal.Name),
-			Origin:     ptrString(originStalledDeal),
+			Name:       new(deal.Name),
+			Origin:     new(originStalledDeal),
 		}}
 		if !deal.IdleSince.IsZero() {
-			evidence[0].At = ptrTime(deal.IdleSince)
+			evidence[0].At = new(deal.IdleSince)
 		}
 		subjectType := crmcontracts.Company360SuggestionSubjectTypeDeal
 		subjectID := openapi_types.UUID(deal.ID)
@@ -336,10 +336,10 @@ func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Company360Sugg
 			SubjectType: &subjectType,
 			SubjectId:   &subjectID,
 			Evidence:    evidence,
-			Title:       ptrString(fmt.Sprintf("Move %q — stalled", deal.Name)),
+			Title:       new(fmt.Sprintf("Move %q — stalled", deal.Name)),
 		})
 		if !deal.IdleSince.IsZero() {
-			out[len(out)-1].DueAt = ptrTime(deal.IdleSince)
+			out[len(out)-1].DueAt = new(deal.IdleSince)
 		}
 		setOpenDeal(&out[len(out)-1], deal.ID)
 	}
@@ -371,10 +371,10 @@ func lifecycleConflict(
 		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeCompany,
 		EntityId:   openapi_types.UUID(companyID.UUID),
 		Quote:      nonEmpty(in.contractEndedSaid),
-		Origin:     ptrString(originContractEnded),
+		Origin:     new(originContractEnded),
 	}}
 	if !in.contractEndedAt.IsZero() {
-		evidence[0].At = ptrTime(in.contractEndedAt)
+		evidence[0].At = new(in.contractEndedAt)
 	}
 	return &crmcontracts.Company360Suggestion{
 		Kind: suggestConflict,
@@ -388,7 +388,7 @@ func lifecycleConflict(
 		Evidence:    evidence,
 		// The conflict is named, not resolved — which of the two is wrong is the
 		// reader's judgment, so the title asks rather than instructs.
-		Title: ptrString("Check the stage against what they wrote"),
+		Title: new("Check the stage against what they wrote"),
 	}
 }
 

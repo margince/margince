@@ -93,8 +93,7 @@ func SeatCanHoldAutomaticWork(ctx context.Context, tx pgx.Tx, seat ids.UserID) (
 		// error for a caller who is deciding rather than asserting.
 		return false, nil
 	}
-	var agent *AgentAssigneeError
-	if errors.As(err, &agent) {
+	if _, ok := errors.AsType[*AgentAssigneeError](err); ok {
 		return false, nil
 	}
 	return false, err

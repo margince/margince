@@ -76,7 +76,7 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 	observed := task.OccurredAt
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:       crmcontracts.ContactMomentEvidenceTypeTask,
-		Id:         ptr(task.Id),
+		Id:         new(task.Id),
 		Label:      subject,
 		ObservedAt: &observed,
 	}}
@@ -90,7 +90,7 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 	return crmcontracts.ContactMoment{
 		ClaimKey:            openTaskKey,
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence) + heldMarker(ctx, task),
 		Headline:            openPromiseHeadline(ctx, task, subject),
 		WhyNow:              openPromiseWhyNow(now, task),
@@ -107,7 +107,7 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": subject}),
+				Prefill: new(map[string]string{prefillIntent: deliverCommitmentIntent, prefillSubject: subject}),
 			},
 		},
 	}
@@ -283,7 +283,7 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 	return crmcontracts.ContactMoment{
 		ClaimKey:            claimMomentKey(overdueClaimRung, claim),
 		Rule:                crmcontracts.ContactMomentRuleOverduePromise,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
 		WhyNow:              whyNow,
@@ -296,7 +296,7 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": claim.Body}),
+				Prefill: new(map[string]string{prefillIntent: deliverCommitmentIntent, prefillSubject: claim.Body}),
 			},
 		},
 	}
@@ -338,7 +338,7 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 	return crmcontracts.ContactMoment{
 		ClaimKey:            claimMomentKey(openClaimRung, claim),
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
 		WhyNow:              openClaimWhyNow(now, claim),
@@ -351,7 +351,7 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": claim.Body}),
+				Prefill: new(map[string]string{prefillIntent: deliverCommitmentIntent, prefillSubject: claim.Body}),
 			},
 		},
 	}

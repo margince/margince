@@ -162,8 +162,8 @@ func CallsAny(node ast.Node, names []string) bool {
 // forty-line query into the test log.
 func FirstLineOf(sql string) string {
 	trimmed := strings.TrimSpace(strings.Trim(sql, "`\""))
-	if idx := strings.IndexByte(trimmed, '\n'); idx >= 0 {
-		return trimmed[:idx] + " …"
+	if before, _, ok := strings.Cut(trimmed, "\n"); ok {
+		return before + " …"
 	}
 	return trimmed
 }

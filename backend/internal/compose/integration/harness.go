@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"os"
 	"testing"
 	"time"
@@ -374,9 +375,7 @@ func AgentWithCompanyRead(e *Env) context.Context {
 	// how a negative test starts passing without testing anything.
 	perms := AccountRepPerms
 	perms.Objects = make(map[string]principal.ObjectGrant, len(AccountRepPerms.Objects))
-	for object, grant := range AccountRepPerms.Objects {
-		perms.Objects[object] = grant
-	}
+	maps.Copy(perms.Objects, AccountRepPerms.Objects)
 	perms.RowScope = principal.RowScopeAll
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -432,9 +431,7 @@ func ApplyRiverSchema(t *testing.T) {
 func withFullSignalGrant(base principal.Permissions) principal.Permissions {
 	out := base
 	out.Objects = make(map[string]principal.ObjectGrant, len(base.Objects)+1)
-	for object, grant := range base.Objects {
-		out.Objects[object] = grant
-	}
+	maps.Copy(out.Objects, base.Objects)
 	out.Objects["signal"] = principal.ObjectGrant{
 		Create: true, Read: true, Update: true, Delete: true,
 	}

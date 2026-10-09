@@ -81,7 +81,7 @@ func TestValidateRefusesAScopeThatIsNotANarrowing(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := aitasks.NewRegistry()
 			r.Register(loop)
-			r.BindCase(loop, scopedStubCase{stubCase: stubCase{site: loop}, scope: tc.scope})
+			r.BindCase(loop, scopedStubCase{site: loop, scope: tc.scope})
 
 			err := r.Validate()
 			if err == nil {

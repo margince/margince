@@ -6,8 +6,10 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -185,7 +187,7 @@ func validateCompanyReadReplyShape(reply companyReadModelReply) error {
 		return fmt.Errorf("compose: company read answer has unsupported response kind %q", clampToken(reply.Kind))
 	}
 	if strings.TrimSpace(reply.Message) == "" {
-		return fmt.Errorf("compose: company read answer is empty")
+		return errors.New("compose: company read answer is empty")
 	}
 	if len(reply.ProposedChanges) > companyReadChangeLimit {
 		return fmt.Errorf("compose: company read answer proposes more than %d changes", companyReadChangeLimit)
@@ -202,7 +204,7 @@ func validateCompanyReadChanges(replyKind string, changes []companyReadProposedC
 			return fmt.Errorf("compose: company read answer proposes unsupported field %q", clampToken(change.Field))
 		}
 		if strings.TrimSpace(change.Value) == "" || strings.TrimSpace(change.Reason) == "" {
-			return fmt.Errorf("compose: company read answer proposes an incomplete change")
+			return errors.New("compose: company read answer proposes an incomplete change")
 		}
 		if !authorization.allows(change) {
 			return fmt.Errorf("compose: company read answer proposes %q without an administrator change request", clampToken(change.Field))
@@ -213,7 +215,7 @@ func validateCompanyReadChanges(replyKind string, changes []companyReadProposedC
 		}
 		if len(changeSources) == 0 {
 			if !textContainsValue(administratorStatements, change.Value) {
-				return fmt.Errorf("compose: uncited company read change is not present in an administrator statement")
+				return errors.New("compose: uncited company read change is not present in an administrator statement")
 			}
 			continue
 		}
@@ -222,7 +224,7 @@ func validateCompanyReadChanges(replyKind string, changes []companyReadProposedC
 			return err
 		}
 		if !supported && !companyRecommendationSupportsSynthesis(replyKind, change.Field, changeSources, known) {
-			return fmt.Errorf("compose: company read change value is not supported by its cited evidence")
+			return errors.New("compose: company read change value is not supported by its cited evidence")
 		}
 	}
 	return nil
@@ -252,9 +254,9 @@ type companyChangeAuthorization struct {
 
 func newCompanyChangeAuthorization(message string, history []model.Message, directField string) companyChangeAuthorization {
 	authorization := companyChangeAuthorization{currentMessage: message, directField: directField}
-	for i := len(history) - 1; i >= 0; i-- {
-		if history[i].Role == chatRoleUser {
-			authorization.previousRequest = history[i].Content
+	for _, h := range slices.Backward(history) {
+		if h.Role == chatRoleUser {
+			authorization.previousRequest = h.Content
 			break
 		}
 	}

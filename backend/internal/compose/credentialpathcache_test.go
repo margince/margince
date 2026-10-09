@@ -122,8 +122,8 @@ func TestTheHeaderIsWiredAboveTheSessionMiddleware(t *testing.T) {
 	}
 	wiring := string(raw)
 
-	wrapper := strings.Index(wiring, "noStoreOnCredentialPaths(mux)")
-	if wrapper < 0 {
+	found := strings.Contains(wiring, "noStoreOnCredentialPaths(mux)")
+	if !found {
 		t.Fatal("server.go no longer wraps the mux in noStoreOnCredentialPaths. If the header " +
 			"moved, it must still sit above every layer that can answer on a credential path — " +
 			"the session middleware and the mux's own canonicalization redirect included")

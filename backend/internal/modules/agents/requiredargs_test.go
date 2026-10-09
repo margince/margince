@@ -41,8 +41,7 @@ func TestACallMissingARequiredArgumentIsRefusedAtTheChokepoint(t *testing.T) {
 	ctx := scopedAgentCtx(principal.ScopeRead)
 	_, err := r.Invoke(ctx, "requires_things",
 		json.RawMessage(`{"kind":"note","anchor_id":"0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e11"}`))
-	var badArgs *BadArgsError
-	if !errors.As(err, &badArgs) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("err = %v, want *BadArgsError", err)
 	}
 	if !strings.Contains(err.Error(), "`q`") {
@@ -215,8 +214,7 @@ func TestARealFailureIsNotDroppedInFavourOfAnArgumentRefusal(t *testing.T) {
 			if !errors.Is(joined, realFailure) {
 				t.Errorf("joined = %v, want the real failure rather than the argument refusal", joined)
 			}
-			var badArgs *BadArgsError
-			if errors.As(joined, &badArgs) {
+			if _, ok := errors.AsType[*BadArgsError](joined); ok {
 				t.Error("a real failure was reported as a caller's argument mistake")
 			}
 		})

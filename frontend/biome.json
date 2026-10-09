@@ -27,6 +27,13 @@
           "options": {
             "maxAllowedComplexity": 15
           }
+        },
+        "noExcessiveLinesPerFunction": {
+          "level": "error",
+          "options": {
+            "maxLines": 300,
+            "skipBlankLines": true
+          }
         }
       },
       "a11y": {
@@ -64,7 +71,15 @@
         "noNonNullAssertion": "error",
         "noParameterAssign": "error",
         "noUselessElse": "error",
-        "useImportType": "error"
+        "useImportType": "error",
+        "useCollapsedElseIf": "error",
+        "useShorthandAssign": "error",
+        "useConsistentObjectDefinitions": {
+          "level": "error",
+          "options": {
+            "syntax": "shorthand"
+          }
+        }
       },
       "nursery": {
         "noFloatingPromises": "error"
@@ -87,7 +102,8 @@
       "linter": {
         "rules": {
           "complexity": {
-            "noExcessiveCognitiveComplexity": "off"
+            "noExcessiveCognitiveComplexity": "off",
+            "noExcessiveLinesPerFunction": "off"
           },
           "suspicious": {
             "noConsole": "off"

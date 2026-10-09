@@ -25,6 +25,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -83,9 +84,7 @@ func parityCases(t *testing.T, e *Env) []parityCase {
 	// carries its own copy rather than reaching for a shared one.
 	companyWriterPerms := AccountRepPerms
 	companyWriterPerms.Objects = map[string]principal.ObjectGrant{}
-	for object, grant := range AccountRepPerms.Objects {
-		companyWriterPerms.Objects[object] = grant
-	}
+	maps.Copy(companyWriterPerms.Objects, AccountRepPerms.Objects)
 	companyWriterPerms.Objects[objCompany] = principal.ObjectGrant{Create: true, Read: true, Update: true}
 
 	return []parityCase{

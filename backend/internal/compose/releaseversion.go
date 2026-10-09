@@ -284,7 +284,7 @@ func AssertInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 // re-pull an image is wrong for anyone who did not pull one. What is true of every
 // installation is the fact and the correction: the roles disagree, and every role
 // has to be at one release. How the release arrives is the deployment's business,
-// and docs/deployment.md is where that belongs.
+// and docs/how-to/deploy-margince.md is where that belongs.
 func refuseMixedRelease(mine, installation string) error {
 	if !buildinfo.SkewBetween(mine, installation) {
 		return nil

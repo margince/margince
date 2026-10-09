@@ -35,6 +35,7 @@ package activities
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -73,6 +74,23 @@ var droppedWholesale = map[atom.Atom]bool{
 // in the output was written by this function from a value that passed the
 // allowlist, so a construct that survives did so deliberately.
 func SanitizeOutboundHTML(markup string) (string, error) {
+	return sanitizeHTML(markup, bodyPolicy)
+}
+
+// sanitizePolicy is what one kind of outbound markup may carry beyond the
+// shared element list.
+type sanitizePolicy struct {
+	// styledSpans admits <span> with a colour and a size, which a signature
+	// template is styled with and a message body is not.
+	styledSpans bool
+}
+
+var (
+	bodyPolicy      = sanitizePolicy{}
+	signaturePolicy = sanitizePolicy{styledSpans: true}
+)
+
+func sanitizeHTML(markup string, policy sanitizePolicy) (string, error) {
 	if strings.TrimSpace(markup) == "" {
 		return "", nil
 	}
@@ -85,13 +103,13 @@ func SanitizeOutboundHTML(markup string) (string, error) {
 	}
 	var out strings.Builder
 	for _, node := range nodes {
-		writeSanitized(&out, node)
+		writeSanitized(&out, node, policy)
 	}
 	return out.String(), nil
 }
 
 // writeSanitized renders one node and its children under the allowlist.
-func writeSanitized(out *strings.Builder, node *html.Node) {
+func writeSanitized(out *strings.Builder, node *html.Node, policy sanitizePolicy) {
 	switch node.Type {
 	case html.TextNode:
 		// Escaped on the way out, so text that looked like markup in the input
@@ -99,7 +117,7 @@ func writeSanitized(out *strings.Builder, node *html.Node) {
 		out.WriteString(html.EscapeString(node.Data))
 		return
 	case html.ElementNode:
-		writeSanitizedElement(out, node)
+		writeSanitizedElement(out, node, policy)
 		return
 	default:
 		// Comments, doctypes and the rest carry nothing a recipient reads, and
@@ -109,13 +127,22 @@ func writeSanitized(out *strings.Builder, node *html.Node) {
 	}
 }
 
-func writeSanitizedElement(out *strings.Builder, node *html.Node) {
+func writeSanitizedElement(out *strings.Builder, node *html.Node, policy sanitizePolicy) {
 	if droppedWholesale[node.DataAtom] {
 		return
 	}
-	if !allowedElements[node.DataAtom] {
+	styled := policy.styledSpans && node.DataAtom == atom.Span
+	if policy.styledSpans && node.DataAtom == atom.Img {
+		// The one image a signature may show is the embedded logo. Any other
+		// image, a remote one above all, is dropped with nothing to unwrap.
+		if embeddedLogo(node) {
+			out.WriteString(signatureLogoTag)
+		}
+		return
+	}
+	if !allowedElements[node.DataAtom] && !styled {
 		// Unwrap: keep what it said, drop what it was.
-		writeChildren(out, node)
+		writeChildren(out, node, policy)
 		return
 	}
 	tag := node.Data
@@ -123,16 +150,19 @@ func writeSanitizedElement(out *strings.Builder, node *html.Node) {
 	if href, ok := safeHref(node); ok {
 		out.WriteString(` href="` + html.EscapeString(href) + `"`)
 	}
+	if style := safeStyle(node); styled && style != "" {
+		out.WriteString(` style="` + html.EscapeString(style) + `"`)
+	}
 	out.WriteString(">")
 	if !voidElement[node.DataAtom] {
-		writeChildren(out, node)
+		writeChildren(out, node, policy)
 		out.WriteString("</" + tag + ">")
 	}
 }
 
-func writeChildren(out *strings.Builder, node *html.Node) {
+func writeChildren(out *strings.Builder, node *html.Node, policy sanitizePolicy) {
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		writeSanitized(out, child)
+		writeSanitized(out, child, policy)
 	}
 }
 
@@ -164,4 +194,44 @@ func safeHref(node *html.Node) (string, bool) {
 		return "", false
 	}
 	return "", false
+}
+
+// styleColor and styleSize are the only declarations a styled span keeps: a
+// colour as hex or a plain name, and a size in pixels. Anything else in a
+// style attribute, url() included, is dropped.
+var (
+	styleColor = regexp.MustCompile(`^#[0-9a-fA-F]{3,6}$|^[a-zA-Z]{3,20}$`)
+	styleSize  = regexp.MustCompile(`^([89]|[12][0-9]|3[0-2])px$`)
+)
+
+func safeStyle(node *html.Node) string {
+	var kept []string
+	for _, attr := range node.Attr {
+		if !strings.EqualFold(attr.Key, "style") {
+			continue
+		}
+		for decl := range strings.SplitSeq(attr.Val, ";") {
+			prop, value, ok := strings.Cut(decl, ":")
+			if !ok {
+				continue
+			}
+			prop, value = strings.ToLower(strings.TrimSpace(prop)), strings.TrimSpace(value)
+			switch {
+			case prop == "color" && styleColor.MatchString(value):
+				kept = append(kept, "color:"+value)
+			case prop == "font-size" && styleSize.MatchString(value):
+				kept = append(kept, "font-size:"+value)
+			}
+		}
+	}
+	return strings.Join(kept, ";")
+}
+
+func embeddedLogo(node *html.Node) bool {
+	for _, attr := range node.Attr {
+		if strings.EqualFold(attr.Key, "src") && attr.Val == signatureLogoSrc {
+			return true
+		}
+	}
+	return false
 }

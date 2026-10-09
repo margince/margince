@@ -217,7 +217,7 @@ func dmarcPolicy(dmarcTXT []string) (dmarcLevel, bool) {
 		if !strings.HasPrefix(strings.ToLower(trimmed), "v=dmarc1") {
 			continue
 		}
-		for _, tag := range strings.Split(trimmed, ";") {
+		for tag := range strings.SplitSeq(trimmed, ";") {
 			name, value, found := strings.Cut(strings.TrimSpace(tag), "=")
 			if !found || !strings.EqualFold(strings.TrimSpace(name), "p") {
 				continue

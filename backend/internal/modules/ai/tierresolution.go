@@ -12,6 +12,8 @@ package ai
 // resolve a task to the model that would actually serve it, and neither should
 // re-derive a ladder this package owns.
 
+import "slices"
+
 // LeadingTier is the rung a task is served on when nothing has gone wrong: the
 // first entry of its ladder. Zero value for a task with no ladder, which
 // TaskLadder's callers already treat as "not a routable task".
@@ -71,10 +73,5 @@ func ServableTiers(task Task) []Tier {
 }
 
 func containsTier(tiers []Tier, want Tier) bool {
-	for _, tier := range tiers {
-		if tier == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(tiers, want)
 }

@@ -64,7 +64,7 @@ func TestNobodyClearsAnEmailSummaryByHand(t *testing.T) {
 	// lives, so it is the one place allowed to say this.
 	byHand := regexp.MustCompile(`\.EmailSummary\s*=\s*nil`)
 	for _, pkg := range cachingWriters {
-		for _, line := range strings.Split(sourcesOf(t, pkg), "\n") {
+		for line := range strings.SplitSeq(sourcesOf(t, pkg), "\n") {
 			if byHand.MatchString(line) {
 				t.Errorf("%s clears an email summary by hand (%q) — call "+
 					"briefevidence.Strip, which is derived from the same collectors that "+

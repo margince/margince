@@ -72,8 +72,7 @@ func faultsOf(errs ...error) routingFaults {
 		if err == nil {
 			continue
 		}
-		var faults routingFaults
-		if errors.As(err, &faults) {
+		if faults, ok := errors.AsType[routingFaults](err); ok {
 			out = append(out, faults...)
 			continue
 		}

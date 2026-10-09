@@ -369,7 +369,7 @@ func activityLinkEntityTypes(t *testing.T) []string {
 			"the declaration this gate derives from has moved")
 	}
 	var out []string
-	for _, quoted := range strings.Split(latest, ",") {
+	for quoted := range strings.SplitSeq(latest, ",") {
 		out = append(out, strings.Trim(strings.TrimSpace(quoted), "'"))
 	}
 	return out

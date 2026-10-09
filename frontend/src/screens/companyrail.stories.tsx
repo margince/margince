@@ -61,7 +61,7 @@ const company: Company = {
 const populated: View = {
   ...company360,
   as_of: "2026-06-01T09:00:00Z",
-  company: company,
+  company,
   sections_omitted: [],
   contacts: {
     data: [

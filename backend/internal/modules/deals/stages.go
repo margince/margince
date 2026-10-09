@@ -19,11 +19,19 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// cleanLadderName is the one rule for a pipeline's or stage's name. Zero-width
+// runes are dropped before the name is judged, so "\u200bAlpha" cannot sit beside
+// "Alpha" and read as a free name.
+func cleanLadderName(field, raw string) (string, error) {
+	return httperr.RequireNonBlank(field, values.WithoutZeroWidth(raw))
+}
 
 type UpdatePipelineInput struct {
 	Name      *string
@@ -35,6 +43,13 @@ type UpdatePipelineInput struct {
 func (s *Store) UpdatePipeline(ctx context.Context, id ids.PipelineID, in UpdatePipelineInput) (crmcontracts.Pipeline, error) {
 	if err := auth.Require(ctx, "pipeline", principal.ActionUpdate); err != nil {
 		return crmcontracts.Pipeline{}, err
+	}
+	if in.Name != nil {
+		name, err := cleanLadderName("name", *in.Name)
+		if err != nil {
+			return crmcontracts.Pipeline{}, err
+		}
+		in.Name = &name
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
@@ -87,6 +102,9 @@ func writePipelineUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 		}
 	}
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
+		if storekit.IsUniqueViolation(err) {
+			return apperrors.ErrConflict
+		}
 		return fmt.Errorf("update pipeline: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "pipeline", id.UUID, patch.Before(), patch.After())
@@ -122,9 +140,14 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 	if err := checkStagePosition(in.Position); err != nil {
 		return crmcontracts.Stage{}, err
 	}
+	name, err := cleanLadderName("name", in.Name)
+	if err != nil {
+		return crmcontracts.Stage{}, err
+	}
+	in.Name = name
 	probability := stageProbability(in.Semantic, in.WinProbability)
 	var out crmcontracts.Stage
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		// The pipeline row before the insert, as every ladder write takes it: a
 		// reorder holding it would otherwise wait on this insert's position
 		// while this insert waited on the pipeline.
@@ -256,6 +279,13 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		if err := checkStagePosition(*in.Position); err != nil {
 			return crmcontracts.Stage{}, err
 		}
+	}
+	if in.Name != nil {
+		name, err := cleanLadderName("name", *in.Name)
+		if err != nil {
+			return crmcontracts.Stage{}, err
+		}
+		in.Name = &name
 	}
 	var out crmcontracts.Stage
 	err := s.Tx(ctx, func(tx pgx.Tx) error {

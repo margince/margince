@@ -44,49 +44,21 @@ func (s *Store) queryMeetingFollowUps(
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	instant := arg(asOf)
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
-	if err != nil {
-		return nil, err
-	}
-	laterContent, err := auth.ActivityContentClause(ctx, "later", arg)
-	if err != nil {
-		return nil, err
-	}
-	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
-	if err != nil {
-		return nil, err
-	}
-	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
-	if err != nil {
-		return nil, err
-	}
-	if linkVisible == "" {
-		linkVisible = scopeUnbounded
-	}
-	customer, err := customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	g, err := followUpGatesFor(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
 	at := fmt.Sprintf("$%d", instant)
 	rows, err := tx.Query(ctx, fmt.Sprintf(meetingFollowUpsSQL,
-		instant, content, linkVisible, arg(windowDays), AwaitingReplyLookbackDays,
-		laterContent, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
-		messageSnoozeLiftedSQL(at, backContent), customer, AwaitingReplyScanCap,
+		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
+		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
+		messageSnoozeLiftedSQL(at, g.back), g.customer, AwaitingReplyScanCap,
 		relstrength.MeetingTookPlaceSQL("a", at),
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading meetings the reader owes a follow-up: %w", err)
 	}
-	defer rows.Close()
-	var out []AwaitingReply
-	for rows.Next() {
-		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID); err != nil {
-			return nil, fmt.Errorf("activities: reading a meeting the reader owes a follow-up: %w", err)
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+	return scanFollowUps(rows, "a meeting the reader owes a follow-up")
 }
 
 // meetingEndSQL is when the meeting under alias a ended.

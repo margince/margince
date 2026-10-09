@@ -53,19 +53,19 @@ func mergeContract(base []byte, frags []contractFragment) ([]byte, error) {
 	var doc yaml.Node
 	if err := dec.Decode(&doc); err != nil {
 		if errors.Is(err, io.EOF) {
-			return nil, fmt.Errorf("the base contract is empty, so it is not a YAML mapping to extend")
+			return nil, errors.New("the base contract is empty, so it is not a YAML mapping to extend")
 		}
 		return nil, fmt.Errorf("parsing the base contract: %w", err)
 	}
 	var second yaml.Node
 	switch err := dec.Decode(&second); {
 	case err == nil:
-		return nil, fmt.Errorf("the base contract is a multi-document YAML stream — this merge applies fragments to ONE document, and would publish only the first while the rest vanished from the composed contract")
+		return nil, errors.New("the base contract is a multi-document YAML stream — this merge applies fragments to ONE document, and would publish only the first while the rest vanished from the composed contract")
 	case !errors.Is(err, io.EOF):
 		return nil, fmt.Errorf("parsing the base contract: %w", err)
 	}
 	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("the base contract is not a YAML mapping")
+		return nil, errors.New("the base contract is not a YAML mapping")
 	}
 	root := doc.Content[0]
 	// claimed maps a target to the fragment that already took it, refusing two

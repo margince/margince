@@ -165,7 +165,7 @@ func TestEveryMacOSBuildScriptPinsTheDeploymentTarget(t *testing.T) {
 // The column-one anchor in sourcesFloor does the rest; pinsFloorCases covers
 // the near misses.
 func pinsFloor(body string) bool {
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "#") {
 			continue
 		}

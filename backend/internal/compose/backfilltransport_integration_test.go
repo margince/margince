@@ -375,8 +375,7 @@ func driveBackfillToTerminal(t *testing.T, w *captureBackfillWorker, args Captur
 		err := w.Work(context.Background(), &river.Job[CaptureBackfillArgs]{
 			JobRow: &rivertype.JobRow{}, Args: args,
 		})
-		var snooze *river.JobSnoozeError
-		if errors.As(err, &snooze) {
+		if _, ok := errors.AsType[*river.JobSnoozeError](err); ok {
 			continue
 		}
 		if err != nil {

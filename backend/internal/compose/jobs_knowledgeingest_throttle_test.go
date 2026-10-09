@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -42,7 +43,7 @@ func TestAThrottledIngestWaitsOutTheProviderForABoundedTime(t *testing.T) {
 	if _, snooze := throttleSnooze(throttled, now.Add(-2*knowledgeIngestThrottleWindow), now); snooze {
 		t.Error("an ingest throttled past the window was still snoozed, so it would wait forever")
 	}
-	if _, snooze := throttleSnooze(fmt.Errorf("a database blip"), now, now); snooze {
+	if _, snooze := throttleSnooze(errors.New("a database blip"), now, now); snooze {
 		t.Error("a failure that is not a throttle was snoozed")
 	}
 }

@@ -351,7 +351,7 @@ func TestAWithdrawnConnectionExhaustsThePendingHandoffRatherThanLoopingForever(t
 
 	// Five due passes. Each is one spent attempt whether or not it could
 	// lease, so the ladder reaches its cap and the run stops being due.
-	for i := 0; i < claimAttemptCap; i++ {
+	for range claimAttemptCap {
 		if _, err := e.owner.Exec(context.Background(),
 			`UPDATE provider_run SET next_attempt_at = now() - interval '1 minute' WHERE id = $1`,
 			run.ID); err != nil {

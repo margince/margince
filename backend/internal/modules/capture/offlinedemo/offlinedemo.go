@@ -32,6 +32,7 @@ package offlinedemo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -223,7 +224,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	// not exist.
 	payload := readAuth(auth)
 	if payload.UserID == "" {
-		return cursor, fmt.Errorf("offline demo sync has no seat to generate for")
+		return cursor, errors.New("offline demo sync has no seat to generate for")
 	}
 	userID := payload.UserID
 

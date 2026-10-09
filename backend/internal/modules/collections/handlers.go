@@ -270,8 +270,7 @@ func (h Handlers) ArchiveSavedView(w http.ResponseWriter, r *http.Request, id cr
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	// A rejected dynamic-segment / saved-view filter surfaces the offending
 	// field and machine-readable code (data-model §13.5 → 422).
-	var pred *storekit.PredicateError
-	if errors.As(err, &pred) {
+	if pred, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		httperr.Write(w, r, httperr.Validation(pred.Field, pred.Code, pred.Message))
 		return
 	}

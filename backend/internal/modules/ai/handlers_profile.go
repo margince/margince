@@ -5,7 +5,7 @@ package ai
 
 import (
 	"net/http"
-	"sort"
+	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -57,7 +57,7 @@ func publicConfiguredModels(cfg RoutingConfig) []crmcontracts.AssistantConfigure
 	for tier := range cfg.Tiers {
 		tiers = append(tiers, tier)
 	}
-	sort.Slice(tiers, func(i, j int) bool { return tiers[i] < tiers[j] })
+	slices.Sort(tiers)
 	models := make([]crmcontracts.AssistantConfiguredModel, 0, len(tiers))
 	for _, tier := range tiers {
 		binding := cfg.Tiers[tier]
@@ -92,7 +92,7 @@ func publicProviders(cfg RoutingConfig) []crmcontracts.AssistantProfileProviders
 	for provider := range set {
 		providers = append(providers, provider)
 	}
-	sort.Slice(providers, func(i, j int) bool { return providers[i] < providers[j] })
+	slices.Sort(providers)
 	return providers
 }
 

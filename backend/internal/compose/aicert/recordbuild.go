@@ -6,7 +6,6 @@ package aicert
 import (
 	"math"
 	"slices"
-	"sort"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -43,7 +42,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 	judgeP50, judgeMin, _ := judgeMedianAndMin(results)
 
 	sortedLatencies := append([]int64(nil), acc.latencies...)
-	sort.Slice(sortedLatencies, func(i, j int) bool { return sortedLatencies[i] < sortedLatencies[j] })
+	slices.Sort(sortedLatencies)
 
 	n := len(results)
 	reliability := 0.0
@@ -191,10 +190,7 @@ func percentile(sorted []int64, p float64) int64 {
 	if n == 0 {
 		return 0
 	}
-	idx := int(math.Ceil(p*float64(n))) - 1
-	if idx < 0 {
-		idx = 0
-	}
+	idx := max(int(math.Ceil(p*float64(n)))-1, 0)
 	if idx >= n {
 		idx = n - 1
 	}

@@ -17,6 +17,8 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // Markup with placeholders, which is the same in every language.
+  "signatureTemplate.placeholder",
   // Latency percentiles and OpenRouter's own name read the same in every
   // language, as does a raw key = value line the summary falls back to.
   "aiFigures.col.p50",

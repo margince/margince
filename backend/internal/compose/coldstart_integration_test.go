@@ -257,9 +257,8 @@ func TestColdStartPreviewRefusesWhatItCannotQuote(t *testing.T) {
 		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`)
 	engine := &coldStartEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, approvals: approvals.NewService(e.DB()), pool: e.Pool}
 
-	var unreadable *unreadableError
 	_, err := engine.Readback(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), fromURL("https://acme.example"))
-	if !errors.As(err, &unreadable) {
+	if _, ok := errors.AsType[*unreadableError](err); !ok {
 		t.Fatalf("all-hallucinated preview → %v, want unreadable (the transport's honest 422)", err)
 	}
 }

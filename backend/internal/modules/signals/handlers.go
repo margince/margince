@@ -176,18 +176,15 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 // writeStoreErr maps this module's typed store errors onto the wire
 // codes, then falls through to the sentinel registry.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	var missing *RequiredFieldError
-	if errors.As(err, &missing) {
+	if missing, ok := errors.AsType[*RequiredFieldError](err); ok {
 		httperr.Write(w, r, httperr.Validation(missing.Field, "required", missing.Error()))
 		return
 	}
-	var notResolvable *NotResolvableError
-	if errors.As(err, &notResolvable) {
+	if notResolvable, ok := errors.AsType[*NotResolvableError](err); ok {
 		httperr.Write(w, r, httperr.Validation("resolution_state", "not_resolvable", notResolvable.Error()))
 		return
 	}
-	var noWarmth *NoWarmthError
-	if errors.As(err, &noWarmth) {
+	if noWarmth, ok := errors.AsType[*NoWarmthError](err); ok {
 		httperr.Write(w, r, httperr.Validation("resolution_state", "no_warmth", noWarmth.Error()))
 		return
 	}

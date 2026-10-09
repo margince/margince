@@ -112,30 +112,30 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		result := crmcontracts.SearchResult{
 			Id:    openapi_types.UUID(hit.ID),
 			Type:  crmcontracts.SearchResultType(hit.Type),
-			Score: ptr(float32(hit.Score)),
+			Score: new(float32(hit.Score)),
 			// Unconditionally, on every hit: this search reads the store the
 			// record lives in, so a hit is never a copy of somebody else's
 			// and there is no case here that could be anything but
 			// authoritative. Leaving it nil would say UNKNOWN, which is a
 			// different and weaker statement than the one we can make.
-			TrustTier: ptr(crmcontracts.SearchResultTrustTierSearchResultTrustTierAuthoritative),
+			TrustTier: new(crmcontracts.SearchResultTrustTierSearchResultTrustTierAuthoritative),
 		}
 		if hit.Title != "" {
-			result.Title = ptr(hit.Title)
+			result.Title = new(hit.Title)
 		}
 		if hit.Snippet != "" {
-			result.Snippet = ptr(hit.Snippet)
+			result.Snippet = new(hit.Snippet)
 		}
 		// Copied by VALUE, so the response owns what it carries and shares no
 		// pointee with the page it was rendered from.
 		if hit.CarriedBy != nil {
-			result.CarriedBy = ptr(*hit.CarriedBy)
+			result.CarriedBy = new(*hit.CarriedBy)
 		}
 		if hit.EmailSummary != nil {
-			result.EmailSummary = ptr(*hit.EmailSummary)
+			result.EmailSummary = new(*hit.EmailSummary)
 		}
 		if hit.IsPartner != nil {
-			result.IsPartner = ptr(*hit.IsPartner)
+			result.IsPartner = new(*hit.IsPartner)
 		}
 		if hit.WorksAt != nil {
 			result.WorksAt = &crmcontracts.SearchHitEmployer{
@@ -143,11 +143,9 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 			}
 		}
 		if hit.LogoURL != nil {
-			result.LogoUrl = ptr(*hit.LogoURL)
+			result.LogoUrl = new(*hit.LogoURL)
 		}
 		data = append(data, result)
 	}
 	return data
 }
-
-func ptr[T any](v T) *T { return &v }

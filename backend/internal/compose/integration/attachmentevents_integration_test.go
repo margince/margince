@@ -185,7 +185,7 @@ func TestACapturedFileEmitsNoAttachmentEventOfItsOwn(t *testing.T) {
 
 	subject := "Re: MSA"
 	logged, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Direction: StrPtr("inbound"),
+		Kind: "email", Subject: &subject, Direction: new("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

@@ -23,6 +23,7 @@ package capture
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -64,12 +65,7 @@ func contactsFiledUnder(t *testing.T, e *integration.SearchEnv, sourceID string)
 
 // filedUnder reports whether the filing names this contact.
 func filedUnder(filed []ids.UUID, want ids.UUID) bool {
-	for _, p := range filed {
-		if p == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(filed, want)
 }
 
 // A contact on the Cc line is filed under, the way the To party always was.

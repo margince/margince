@@ -41,7 +41,7 @@ func trackedBinaries(t *testing.T) []string {
 	}
 	var binaries []string
 	var read int
-	for _, rel := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
+	for rel := range strings.SplitSeq(strings.TrimRight(string(out), "\x00"), "\x00") {
 		if rel == "" {
 			continue
 		}
@@ -85,7 +85,7 @@ func sonarExclusions(t *testing.T) []string {
 	}
 	joined := strings.ReplaceAll(string(raw), "\\\n", "")
 	var value string
-	for _, line := range strings.Split(joined, "\n") {
+	for line := range strings.SplitSeq(joined, "\n") {
 		if after, ok := strings.CutPrefix(line, property); ok {
 			value = after
 			break
@@ -95,7 +95,7 @@ func sonarExclusions(t *testing.T) []string {
 		t.Fatalf("no %s in sonar-project.properties — the gate found nothing to hold", property)
 	}
 	var patterns []string
-	for _, pattern := range strings.Split(value, ",") {
+	for pattern := range strings.SplitSeq(value, ",") {
 		if trimmed := strings.TrimSpace(pattern); trimmed != "" {
 			patterns = append(patterns, trimmed)
 		}

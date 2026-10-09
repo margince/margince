@@ -358,10 +358,11 @@ lists:
 # The contact belongs to whoever OPERATES this installation, the party a finder
 # should tell about a hole in it, so nothing is compiled in. With the block absent,
 # /.well-known/security.txt is a 404. With it set, the api serves the file, so
-# the ingress must route that exact path to the api (docs/deployment.md,
-# Routing). Every contact is a mailto:, https: or tel: URI; expires is required,
-# in RFC 3339. The api warns at boot when expires has passed or is more than a
-# year out, and keeps serving the file either way.
+# the ingress must route that exact path to the api ("Route one host to two
+# services" in docs/how-to/deploy-margince.md). Every contact is a mailto:,
+# https: or tel: URI; expires is required, in RFC 3339. The api warns at boot
+# when expires has passed or is more than a year out, and keeps serving the file
+# either way.
 # web:
 #   security_txt:
 #     contact:

@@ -26,15 +26,13 @@ func emailRow(id ids.UUID) *crmcontracts.EmailSummary {
 		ActivityId:    openapi_types.UUID(id),
 		OccurredAt:    rankInstant.Add(-2 * 24 * time.Hour),
 		Version:       4,
-		Subject:       ptrTo("Re: the renewal quote"),
-		Preview:       ptrTo("Can you hold the price until Friday?"),
-		Counterparty:  ptrTo("Dana Buyer"),
+		Subject:       new("Re: the renewal quote"),
+		Preview:       new("Can you hold the price until Friday?"),
+		Counterparty:  new("Dana Buyer"),
 		DisplayStatus: crmcontracts.EmailAccessStatusTeam,
 		Move:          crmcontracts.EmailSummaryMoveNone,
 	}
 }
-
-func ptrTo[T any](v T) *T { return &v }
 
 // An email wait carries the canonical row, so the queue shows the same message
 // the timeline shows rather than a bare sentence about it.

@@ -24,7 +24,7 @@ import (
 // and the next meeting, so a kept draft can re-prove each one.
 func TestTheGroundingNamesEveryRecordTheInputHolds(t *testing.T) {
 	deal, project, meeting := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	exchange := activity(true, "Scope", strPtr("Can you send the scope?"))
+	exchange := activity(true, "Scope", new("Can you send the scope?"))
 	said := claim(crmcontracts.ConversationClaimKindOpenQuestion, "send the scope", crmcontracts.ConversationClaimStatusOpen, nil)
 	claims := []crmcontracts.ConversationClaim{said}
 	view := crmcontracts.Contact360{

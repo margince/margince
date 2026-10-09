@@ -13,7 +13,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -128,7 +128,7 @@ func coldstartAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 		// provenance the 360 renders as "read from your site".
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: coldstart effect without a deciding principal")
+			return errors.New("compose: coldstart effect without a deciding principal")
 		}
 		execCtx := principal.WithActor(ctx, principal.Principal{
 			Type:       principal.PrincipalSystem,

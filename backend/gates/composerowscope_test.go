@@ -456,9 +456,7 @@ type rowScopePkg map[string]map[string]*rowScopeFnInfo
 
 func (p rowScopePkg) visibleTo(recv string) map[string]*rowScopeFnInfo {
 	fns := make(map[string]*rowScopeFnInfo, len(p[""])+len(p[recv]))
-	for name, info := range p[""] {
-		fns[name] = info
-	}
+	maps.Copy(fns, p[""])
 	for name, info := range p[recv] {
 		if pkgLevel, both := fns[name]; both {
 			// Two same-named functions the index cannot tell apart at a call

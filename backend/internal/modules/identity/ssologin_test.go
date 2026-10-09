@@ -75,10 +75,8 @@ func (unverifiedEmailVerifier) Verify(context.Context, string) (OIDCClaims, erro
 	return OIDCClaims{Email: "carol@example.com", Subject: "sub-carol"}, nil
 }
 
-func oidcStrPtr(s string) *string { return &s }
-
 func callbackParams(code, state string) crmcontracts.OidcSignInCallbackParams {
-	return crmcontracts.OidcSignInCallbackParams{Code: oidcStrPtr(code), State: oidcStrPtr(state)}
+	return crmcontracts.OidcSignInCallbackParams{Code: new(code), State: new(state)}
 }
 
 func TestStartOidcSignInUnknownProviderIs404(t *testing.T) {
@@ -177,7 +175,7 @@ func TestOidcSignInCallbackProviderDenialIsRefusedEvenWhenEverythingElseWouldSuc
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
-		State: oidcStrPtr("y"), Error: oidcStrPtr("access_denied"),
+		State: new("y"), Error: new("access_denied"),
 	})
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
@@ -213,7 +211,7 @@ func TestOidcSignInCallbackProviderErrorWithNoCookieNeverClearsOneEither(t *test
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
-		State: oidcStrPtr("y"), Error: oidcStrPtr("access_denied"),
+		State: new("y"), Error: new("access_denied"),
 	})
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
@@ -517,7 +515,7 @@ func TestOidcSignInCallbackRefusesAClientChangedMidFlow(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
-		State: oidcStrPtr("n"), Code: oidcStrPtr("c"),
+		State: new("n"), Code: new("c"),
 	})
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
@@ -566,7 +564,7 @@ func TestOidcSignInCallbackAdmitsTheClientTheFlowStartedOn(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
-		State: oidcStrPtr("n"), Code: oidcStrPtr("c"),
+		State: new("n"), Code: new("c"),
 	})
 
 	// The exchange itself fails here (there is no token endpoint), so this

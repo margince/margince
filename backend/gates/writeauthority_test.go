@@ -69,6 +69,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"maps"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -412,9 +413,7 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 		if dirConsts[dir] == nil {
 			dirConsts[dir] = map[string]string{}
 		}
-		for name, value := range packageStringConsts(src) {
-			dirConsts[dir][name] = value
-		}
+		maps.Copy(dirConsts[dir], packageStringConsts(src))
 	}
 	// The statements each package holds in its package-level vars and consts,
 	// read once per package. A statement hoisted out of a function body is
@@ -756,8 +755,8 @@ func endsAtVerb(text string, at int) bool {
 // name a statement this pass could not read.
 func firstLineFrom(text string, at int) string {
 	rest := text[at:]
-	if nl := strings.IndexByte(rest, '\n'); nl >= 0 {
-		return rest[:nl]
+	if before, _, ok := strings.Cut(rest, "\n"); ok {
+		return before
 	}
 	return rest
 }
@@ -768,9 +767,7 @@ func firstLineFrom(text string, at int) string {
 // it cannot tell which was meant and must not drop either's edges.
 func visibleWriteAuthorityFns(byReceiver map[string]map[string]*writeAuthorityFn, recv string) map[string]*writeAuthorityFn {
 	fns := make(map[string]*writeAuthorityFn, len(byReceiver[""])+len(byReceiver[recv]))
-	for name, info := range byReceiver[""] {
-		fns[name] = info
-	}
+	maps.Copy(fns, byReceiver[""])
 	for name, info := range byReceiver[recv] {
 		pkgLevel, both := fns[name]
 		if !both {

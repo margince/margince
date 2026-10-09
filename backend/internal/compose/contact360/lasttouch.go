@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // LastTouch is when they last wrote to us and when we last wrote to them. Nil
@@ -83,11 +84,12 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		auth.AudienceWorkspaceOnly("a"))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id,
-		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'inbound' AND %[2]s),
-		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'outbound')
+		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'inbound' AND %[2]s AND %[5]s),
+		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'outbound' AND %[5]s)
 		FROM contact c
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, contacts.SenderPredicate("c.id", "a"), wantedPos, visible), args...)
+		reached, contacts.SenderPredicate("c.id", "a"), wantedPos, visible,
+		relstrength.NotCalledOffSQL("a")), args...)
 	if err != nil {
 		return nil, err
 	}

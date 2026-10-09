@@ -44,7 +44,7 @@ func recurringOffer(t *testing.T, e *Env, deal ids.UUID) ids.OfferID {
 		LineItems: []deals.OfferLineInputRow{{
 			Description: &description, Quantity: "1",
 			UnitPriceMinor: &perPeriodMinor, TaxRate: &taxRate,
-			BillingModel:          StrPtr(deals.BillingRecurring),
+			BillingModel:          new(deals.BillingRecurring),
 			BillingIntervalMonths: &months,
 			IntervalCount:         &count,
 		}},
@@ -166,8 +166,7 @@ func TestAnUnclassifiedOfferStillRefusesToRedenominateAHumansFigure(t *testing.T
 	}
 
 	_, err = e.Deals.AcceptOffer(ctx, offer, nil)
-	var conflict *deals.ArrCurrencyConflictError
-	if !errors.As(err, &conflict) {
+	if _, ok := errors.AsType[*deals.ArrCurrencyConflictError](err); !ok {
 		t.Fatalf("an unclassified USD offer over a EUR ARR → %v, want deals.ArrCurrencyConflictError", err)
 	}
 }
@@ -186,7 +185,7 @@ func TestSendingRefusesARecurringLineWithNoSettledTerm(t *testing.T) {
 		Currency: "EUR", Source: "manual",
 		LineItems: []deals.OfferLineInputRow{{
 			Description: &description, Quantity: "1", UnitPriceMinor: &price, TaxRate: &taxRate,
-			BillingModel: StrPtr(deals.BillingRecurring), BillingIntervalMonths: &months,
+			BillingModel: new(deals.BillingRecurring), BillingIntervalMonths: &months,
 		}},
 	})
 	if err != nil {
@@ -232,8 +231,7 @@ func TestAnOfferDerivedFigureCannotBeRedenominatedByRestatingIt(t *testing.T) {
 	_, err := e.Deals.UpdateDeal(admin, ids.From[ids.DealKind](deal), deals.UpdateDealInput{
 		Currency: &usd, AmountMinor: &sameAmount, ExpectedArrMinor: &sameArr,
 	})
-	var locked *deals.ArrFromOfferError
-	if !errors.As(err, &locked) {
+	if _, ok := errors.AsType[*deals.ArrFromOfferError](err); !ok {
 		t.Fatalf("re-denominating an offer-derived ARR → %v, want deals.ArrFromOfferError", err)
 	}
 

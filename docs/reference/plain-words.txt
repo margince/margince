@@ -132,7 +132,6 @@ become
 been
 before
 begin
-behavior
 behind
 belong
 below
@@ -207,7 +206,6 @@ capital
 capitalize
 capture
 card
-care
 carry
 case
 catalog
@@ -235,7 +233,6 @@ checkable
 checkout
 checksum
 child
-chip
 choice
 chokepoint
 choose
@@ -379,6 +376,7 @@ default
 defect
 defective
 defer
+deferral
 defines
 definition
 degrade
@@ -433,6 +431,7 @@ document
 documentation
 domain
 done
+dot
 dots
 double
 doubt
@@ -441,6 +440,7 @@ download
 downstream
 draft
 drain
+draws
 drift
 drive
 driven
@@ -449,7 +449,6 @@ dry
 due
 dump
 duplicate
-during
 duty
 dynamic
 e
@@ -494,6 +493,7 @@ entirely
 entry
 enumerate
 env
+envelope
 environment
 ephemeral
 equivalent
@@ -562,6 +562,7 @@ fetch
 few
 fewer
 field
+figures
 file
 filer
 fill
@@ -571,6 +572,7 @@ find
 finding
 finds
 fine
+fingerprint
 finish
 first
 fit
@@ -663,6 +665,7 @@ hairpin
 half
 halves
 hand
+handbook
 handle
 handshake
 happen
@@ -712,7 +715,6 @@ http
 https
 human
 humor
-hundred
 hygiene
 hyphen
 icon
@@ -809,7 +811,7 @@ lands
 lane
 language
 laptop
-largest
+large
 last
 latency
 later
@@ -877,7 +879,6 @@ main
 maintain
 maintenance
 make
-maker
 manager
 manifest
 manual
@@ -891,6 +892,7 @@ markup
 mascot
 match
 materialize
+math
 matter
 max
 may
@@ -900,7 +902,6 @@ measurement
 mechanical
 mechanics
 media
-median
 meet
 meeting
 member
@@ -920,6 +921,7 @@ migration
 milestone
 mint
 minute
+mirrored
 miss
 misspell
 mixed
@@ -1036,6 +1038,7 @@ over
 overlap
 overlay
 overridable
+overridden
 override
 overwrite
 owe
@@ -1050,7 +1053,6 @@ pair
 panel
 panic
 panicked
-paragraph
 parallel
 parameter
 parent
@@ -1098,7 +1100,6 @@ plain
 plan
 plant
 platform
-plugin
 plural
 plus
 png
@@ -1108,18 +1109,18 @@ point
 policy
 poll
 pool
+popover
 port
 positive
 possible
 post
 postgres
 posture
-power
 practice
 pre
 prebuilt
 precedes
-prefer
+predicate
 preference
 prefix
 premium
@@ -1183,7 +1184,6 @@ qc
 qualifier
 quality
 quantile
-quantization
 quantized
 quarantine
 query
@@ -1195,7 +1195,6 @@ quote
 race
 raise
 ran
-random
 range
 rank
 ratchet
@@ -1218,6 +1217,7 @@ reason
 rebuild
 rebuilt
 receiver
+receives
 recent
 recipe
 recipient
@@ -1227,6 +1227,7 @@ reconcile
 record
 recovery
 recreates
+redaction
 redeems
 redials
 redirect
@@ -1374,9 +1375,9 @@ seeded
 seeds
 segment
 sek
+selects
 self
 send
-sense
 sent
 sentence
 sentinel
@@ -1394,7 +1395,6 @@ session
 set
 settings
 setup
-seven
 several
 severity
 shape
@@ -1458,6 +1458,7 @@ speed
 spell
 spellings
 spend
+spent
 spine
 split
 spread
@@ -1497,6 +1498,7 @@ structure
 stub
 stylesheet
 subdirectory
+subdomain
 subject
 subscriber
 subscription
@@ -1591,10 +1593,10 @@ to
 today
 together
 token
+told
 tolerate
 tone
 too
-took
 tool
 toolchain
 toolkit
@@ -1669,7 +1671,6 @@ upstream
 uptime
 urls
 us
-usable
 use
 user
 user's
@@ -1690,9 +1691,7 @@ verbose
 verdict
 verify
 version
-very
 via
-video
 view
 visible
 vocabulary
@@ -1719,7 +1718,6 @@ webhook
 webp
 week
 well
-went
 were
 what
 whatever

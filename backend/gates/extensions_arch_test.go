@@ -59,7 +59,7 @@ func extensionModulePaths(t *testing.T, trees map[string]string) map[string]stri
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, line := range strings.Split(string(raw), "\n") {
+		for line := range strings.SplitSeq(string(raw), "\n") {
 			if rest, ok := strings.CutPrefix(strings.TrimSpace(line), "module "); ok {
 				paths[dir] = strings.TrimSpace(rest)
 				break
@@ -122,7 +122,7 @@ func allowlistedSurface(t *testing.T) map[string]bool {
 		if err != nil {
 			return err
 		}
-		for _, line := range strings.Split(string(src), "\n") {
+		for line := range strings.SplitSeq(string(src), "\n") {
 			if strings.TrimSpace(line) == extensionSurfaceMarker {
 				marked[modulePath+"/"+filepath.ToSlash(filepath.Dir(path))] = true
 				break

@@ -29,11 +29,6 @@ var vocabulary = []Field{
 	{Name: "cf_unpriced", Type: "currency", Operators: []string{"gt"}, Custom: true},
 }
 
-func text(s string) *string     { return &s }
-func number(n float64) *float64 { return &n }
-func flag(b bool) *bool         { return &b }
-func days(n int) *int           { return &n }
-
 func leafOf(t *testing.T, tree *storekit.Predicate) storekit.Predicate {
 	t.Helper()
 	if tree == nil || len(tree.And) != 1 {
@@ -52,28 +47,28 @@ func TestAClauseTheVocabularyCannotExpressIsNamedBackAndTheRestSurvive(t *testin
 		code   string
 	}{
 		"a field the caller cannot filter on": {
-			Clause{Phrase: "who are likely to buy", Field: "purchase_intent", Op: "eq", Text: text("high")}, CodeUnknownField,
+			Clause{Phrase: "who are likely to buy", Field: "purchase_intent", Op: "eq", Text: new("high")}, CodeUnknownField,
 		},
 		"an operator the vocabulary leaves out although the type admits it": {
-			Clause{Phrase: "tagged with vip", Field: "tag", Op: "contains", Text: text("vip")}, CodeOperatorNotAllowed,
+			Clause{Phrase: "tagged with vip", Field: "tag", Op: "contains", Text: new("vip")}, CodeOperatorNotAllowed,
 		},
 		"a picklist value outside its options": {
-			Clause{Phrase: "hot prospects", Field: "lifecycle", Op: "eq", Text: text("hot prospect")}, CodeValueNotAllowed,
+			Clause{Phrase: "hot prospects", Field: "lifecycle", Op: "eq", Text: new("hot prospect")}, CodeValueNotAllowed,
 		},
 		"a value of the wrong type": {
-			Clause{Phrase: "score above high", Field: "score", Op: "gt", Text: text("high")}, CodeValueNotAllowed,
+			Clause{Phrase: "score above high", Field: "score", Op: "gt", Text: new("high")}, CodeValueNotAllowed,
 		},
 		"a date the compiler cannot read": {
-			Clause{Phrase: "active since yesterday-ish", Field: "last_activity_at", Op: "gte", Text: text("recently")}, CodeValueNotAllowed,
+			Clause{Phrase: "active since yesterday-ish", Field: "last_activity_at", Op: "gte", Text: new("recently")}, CodeValueNotAllowed,
 		},
 		"an amount in a currency nobody named": {
-			Clause{Phrase: "budget over 10", Field: "cf_unpriced", Op: "gt", Number: number(10)}, CodeValueNotAllowed,
+			Clause{Phrase: "budget over 10", Field: "cf_unpriced", Op: "gt", Number: new(float64(10))}, CodeValueNotAllowed,
 		},
 		"exists with no flag": {
 			Clause{Phrase: "has a country", Field: "country", Op: "exists"}, CodeValueNotAllowed,
 		},
 	}
-	kept := Clause{Phrase: "in Germany", Field: "country", Op: "eq", Text: text("DE")}
+	kept := Clause{Phrase: "in Germany", Field: "country", Op: "eq", Text: new("DE")}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			got := Gate(Answer{Join: joinAnd, Groups: []Group{{Join: joinAnd, Clauses: []Clause{kept, tc.clause}}}}, vocabulary)
@@ -105,19 +100,19 @@ func TestOperandsBecomeTheEngineOwnShapes(t *testing.T) {
 		want   storekit.Predicate
 	}{
 		"a relative date": {
-			Clause{Field: "last_activity_at", Op: "lt", DaysAgo: days(45)},
+			Clause{Field: "last_activity_at", Op: "lt", DaysAgo: new(45)},
 			storekit.Predicate{Field: "last_activity_at", Op: "lt", Value: map[string]any{"days_ago": 45.0}},
 		},
 		"a fixed date": {
-			Clause{Field: "last_activity_at", Op: "gte", Text: text("2026-09-01")},
+			Clause{Field: "last_activity_at", Op: "gte", Text: new("2026-09-01")},
 			storekit.Predicate{Field: "last_activity_at", Op: "gte", Value: "2026-09-01"},
 		},
 		"euros in major units": {
-			Clause{Field: "amount", Op: "gt", Number: number(50000)},
+			Clause{Field: "amount", Op: "gt", Number: new(float64(50000))},
 			storekit.Predicate{Field: "amount", Op: "gt", Value: 5000000.0},
 		},
 		"yen, which have no minor unit": {
-			Clause{Field: "cf_budget_jpy", Op: "gt", Number: number(50000)},
+			Clause{Field: "cf_budget_jpy", Op: "gt", Number: new(float64(50000))},
 			storekit.Predicate{Field: "cf_budget_jpy", Op: "gt", Value: 50000.0},
 		},
 		"a numeric in list": {
@@ -125,7 +120,7 @@ func TestOperandsBecomeTheEngineOwnShapes(t *testing.T) {
 			storekit.Predicate{Field: "score", Op: "in", Value: []any{10.0, 20.0}},
 		},
 		"an empty-field question": {
-			Clause{Field: "last_activity_at", Op: "exists", Flag: flag(false)},
+			Clause{Field: "last_activity_at", Op: "exists", Flag: new(false)},
 			storekit.Predicate{Field: "last_activity_at", Op: "exists", Value: false},
 		},
 	}
@@ -158,9 +153,9 @@ func TestThePhrasesTheModelCouldNotUseAreKeptAsItsOwn(t *testing.T) {
 }
 
 func TestTheTreeHasAGroupAtItsRootAndCompiles(t *testing.T) {
-	germany := Clause{Field: "country", Op: "eq", Text: text("DE")}
-	austria := Clause{Field: "country", Op: "eq", Text: text("AT")}
-	quiet := Clause{Field: "last_activity_at", Op: "lt", DaysAgo: days(45)}
+	germany := Clause{Field: "country", Op: "eq", Text: new("DE")}
+	austria := Clause{Field: "country", Op: "eq", Text: new("AT")}
+	quiet := Clause{Field: "last_activity_at", Op: "lt", DaysAgo: new(45)}
 	answer := Answer{Join: joinAnd, Groups: []Group{
 		{Join: joinOr, Clauses: []Clause{germany, austria}},
 		{Join: joinAnd, Clauses: []Clause{quiet}},
@@ -196,7 +191,7 @@ func TestTheTreeHasAGroupAtItsRootAndCompiles(t *testing.T) {
 func TestAClausePastTheEngineLimitIsNamedRatherThanFailingTheTree(t *testing.T) {
 	clauses := make([]Clause, storekit.PredicateMaxLeaves+1)
 	for i := range clauses {
-		clauses[i] = Clause{Field: "score", Op: "gt", Number: number(float64(i))}
+		clauses[i] = Clause{Field: "score", Op: "gt", Number: new(float64(i))}
 	}
 	got := Gate(Answer{Join: joinAnd, Groups: []Group{{Join: joinAnd, Clauses: clauses}}}, vocabulary)
 	if len(got.Unsupported) != 1 || got.Unsupported[0].Code != CodeTooManyConditions {
@@ -223,7 +218,7 @@ func TestAPicklistValueMatchesExactlyBeforeItFoldsCase(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			got := Gate(oneClause(Clause{Field: "cf_region", Op: "eq", Text: text(tc.value)}), regions)
+			got := Gate(oneClause(Clause{Field: "cf_region", Op: "eq", Text: new(tc.value)}), regions)
 			if tc.code != "" {
 				if len(got.Unsupported) != 1 || got.Unsupported[0].Code != tc.code {
 					t.Fatalf("want one %s, got %+v", tc.code, got.Unsupported)
@@ -243,7 +238,7 @@ func TestAPicklistValueMatchesExactlyBeforeItFoldsCase(t *testing.T) {
 func TestAPicklistValueWhoseOptionsAreWithheldIsDeclined(t *testing.T) {
 	withheld := []Field{{Name: "cf_tier", Type: "picklist", Operators: []string{"eq", "in", "exists"}, Custom: true}}
 	for name, clause := range map[string]Clause{
-		"eq": {Phrase: "gold tier", Field: "cf_tier", Op: "eq", Text: text("gold")},
+		"eq": {Phrase: "gold tier", Field: "cf_tier", Op: "eq", Text: new("gold")},
 		"in": {Phrase: "gold or silver", Field: "cf_tier", Op: "in", List: []string{"gold", "silver"}},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -254,7 +249,7 @@ func TestAPicklistValueWhoseOptionsAreWithheldIsDeclined(t *testing.T) {
 		})
 	}
 	// exists asks nothing of the options, so it still stands.
-	got := Gate(oneClause(Clause{Field: "cf_tier", Op: "exists", Flag: flag(true)}), withheld)
+	got := Gate(oneClause(Clause{Field: "cf_tier", Op: "exists", Flag: new(true)}), withheld)
 	if got.Tree == nil || len(got.Unsupported) != 0 {
 		t.Errorf("an exists clause on a withheld picklist was refused: %+v", got.Unsupported)
 	}
@@ -262,15 +257,15 @@ func TestAPicklistValueWhoseOptionsAreWithheldIsDeclined(t *testing.T) {
 
 func TestARelativeDateIsTakenOnlyAsABoundCountingBack(t *testing.T) {
 	for _, op := range []string{"gt", "gte", "lt", "lte"} {
-		got := Gate(oneClause(Clause{Field: "last_activity_at", Op: op, DaysAgo: days(0)}), vocabulary)
+		got := Gate(oneClause(Clause{Field: "last_activity_at", Op: op, DaysAgo: new(0)}), vocabulary)
 		if len(got.Unsupported) != 0 {
 			t.Errorf("%s days_ago 0 was refused: %+v", op, got.Unsupported)
 		}
 	}
 	cases := map[string]Clause{
-		"eq":       {Phrase: "exactly 45 days ago", Field: "last_activity_at", Op: "eq", DaysAgo: days(45)},
-		"neq":      {Phrase: "not 45 days ago", Field: "last_activity_at", Op: "neq", DaysAgo: days(45)},
-		"negative": {Phrase: "in 3 days", Field: "last_activity_at", Op: "lt", DaysAgo: days(-3)},
+		"eq":       {Phrase: "exactly 45 days ago", Field: "last_activity_at", Op: "eq", DaysAgo: new(45)},
+		"neq":      {Phrase: "not 45 days ago", Field: "last_activity_at", Op: "neq", DaysAgo: new(45)},
+		"negative": {Phrase: "in 3 days", Field: "last_activity_at", Op: "lt", DaysAgo: new(-3)},
 	}
 	for name, clause := range cases {
 		t.Run(name, func(t *testing.T) {

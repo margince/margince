@@ -11,6 +11,7 @@ package main
 // posture, a task nobody can name.
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -24,14 +25,14 @@ import (
 // company-context policy must be internally coherent.
 func (c contract) validate() error {
 	if len(c.Tiers) == 0 {
-		return fmt.Errorf("contract declares no tiers")
+		return errors.New("contract declares no tiers")
 	}
 	tierSet := make(map[string]bool, len(c.Tiers))
 	for _, t := range c.Tiers {
 		tierSet[t] = true
 	}
 	if len(c.Tasks) == 0 {
-		return fmt.Errorf("contract declares no tasks")
+		return errors.New("contract declares no tasks")
 	}
 	for name, def := range c.Tasks {
 		if err := validateTask(name, def, tierSet); err != nil {
@@ -129,10 +130,7 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 	if err := validateDecision(name, def); err != nil {
 		return err
 	}
-	if err := def.CompanyContext.validate(name); err != nil {
-		return err
-	}
-	return nil
+	return def.CompanyContext.validate(name)
 }
 
 // validateDecision refuses a decision form on a task that cannot carry one.

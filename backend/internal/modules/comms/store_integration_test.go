@@ -182,6 +182,7 @@ func (e *storeEnv) baseInput(activity ids.ActivityID, messageID string) StageInp
 func TestStageThenLoadRoundTripsEveryFieldAndCountsTheAttempt(t *testing.T) {
 	e := setupStore(t)
 	in := e.baseInput(e.activity, "msg-roundtrip@example.com")
+	in.HTMLBody, in.InlineLogoKey = "<p>Hello</p>", "logos/a.png"
 	id := e.stage(t, in)
 
 	got, err := e.store.Load(e.ctx, id)
@@ -193,6 +194,9 @@ func TestStageThenLoadRoundTripsEveryFieldAndCountsTheAttempt(t *testing.T) {
 	}
 	if got.Provider != in.Provider || got.MessageID != in.MessageID || got.Subject != in.Subject || got.Body != in.Body {
 		t.Fatalf("scalar fields = %+v, want %+v", got, in)
+	}
+	if got.HTMLBody != in.HTMLBody || got.InlineLogoKey != in.InlineLogoKey {
+		t.Fatalf("markup fields = %q, %q, want %q, %q", got.HTMLBody, got.InlineLogoKey, in.HTMLBody, in.InlineLogoKey)
 	}
 	if got.ConsentPurpose != in.ConsentPurpose || got.InReplyTo != in.InReplyTo || got.ListUnsubscribe != in.ListUnsubscribe {
 		t.Fatalf("consent/threading fields = %+v", got)

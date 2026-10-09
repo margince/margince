@@ -325,15 +325,13 @@ func TestABurstOfCallersSharesOneExchange(t *testing.T) {
 	tokens := make(chan string, callers)
 	var wg sync.WaitGroup
 	for range callers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			token, err := source.accessToken(context.Background())
 			if err != nil {
 				t.Errorf("a caller failed: %v", err)
 			}
 			tokens <- token
-		}()
+		})
 	}
 	<-arrived
 	close(release)
@@ -413,8 +411,7 @@ func TestATokenExchangeErrorCarriesNoCredential(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), tc.names) {
 				t.Fatalf("want an error naming %q, got %v", tc.names, err)
 			}
-			var urlErr *url.Error
-			if errors.As(err, &urlErr) {
+			if _, ok := errors.AsType[*url.Error](err); ok {
 				t.Errorf("the error wraps a *url.Error, which renders the request it failed on: %v", err)
 			}
 			for _, secret := range []string{assertion, "BEGIN PRIVATE KEY", "crm@x", "Invalid JWT"} {

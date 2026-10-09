@@ -37,6 +37,20 @@
       content="Margince — The sovereign AI business platform for the Mittelstand."
     />
     <meta name="twitter:card" content="summary_large_image" />
+    <!-- The page ground before the app's own CSS and theme have loaded, so the
+      first paint is not white in dark mode. It steps aside once the app sets
+      data-theme. The values are --bgPage, and prepaint.test.ts holds them. -->
+    <style>
+      html:not([data-theme]) {
+        background: #f1f5f2;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme]) {
+          background: #0c1311;
+          color-scheme: dark;
+        }
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

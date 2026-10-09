@@ -30,10 +30,10 @@ func TestSystemOfRecordProviderV1MethodSetIsFrozen(t *testing.T) {
 		"Update",
 	}
 
-	typ := reflect.TypeOf((*SystemOfRecordProvider)(nil)).Elem()
+	typ := reflect.TypeFor[SystemOfRecordProvider]()
 	var got []string
-	for i := 0; i < typ.NumMethod(); i++ {
-		got = append(got, typ.Method(i).Name) // reflect lists methods sorted
+	for method := range typ.Methods() {
+		got = append(got, method.Name) // reflect lists methods sorted
 	}
 	if !reflect.DeepEqual(got, frozen) {
 		t.Fatalf("SystemOfRecordProvider method set drifted.\n got: %v\nwant: %v\nThe v1 seam is frozen — add post-v1 verbs on SystemOfRecordProviderV2 with a capability probe, never here.", got, frozen)

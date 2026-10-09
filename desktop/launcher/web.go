@@ -169,7 +169,11 @@ func spaHandler(root string) http.Handler {
 // A bool alone cannot: it collapses "no such file", which is the SPA-route case,
 // into "cannot be examined", which is a broken installation. The caller needs
 // those apart, so the error is returned rather than folded into false.
+//
+// path arrives confined to the web root: its caller cleans the URL path first,
+// and path.Clean of an absolute path drops the ".." segments that climb out.
 func regularFileExists(path string) (bool, error) {
+	//nolint:gosec // G703 cannot see that cleaning; this only asks whether the file is there
 	info, err := os.Stat(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

@@ -290,7 +290,7 @@ var errNotYours = fmt.Errorf("record not found: %w", apperrors.ErrNotFound)
 
 // A fault, not a refusal: the port queries, so it can fail for reasons that
 // have nothing to do with who is asking.
-var errPortFailed = fmt.Errorf("connection reset")
+var errPortFailed = errors.New("connection reset")
 
 // A restore button is drawn from a check that may not have run. Reporting a
 // database fault as "you may not change this record" tells the contact a retry

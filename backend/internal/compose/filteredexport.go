@@ -455,18 +455,15 @@ func (h filteredExportHandlers) resolveSource(ctx context.Context, req filteredE
 // BadInputError) all become a 422 naming the offending field; everything
 // else rides the sentinels (403 object denial, 404 existence-hiding, 5xx).
 func writeFilteredExportError(w http.ResponseWriter, r *http.Request, err error) {
-	var bad *exportBadRequest
-	if errors.As(err, &bad) {
+	if bad, ok := errors.AsType[*exportBadRequest](err); ok {
 		httperr.Write(w, r, httperr.Validation(bad.field, codeInvalid, bad.reason))
 		return
 	}
-	var pred *storekit.PredicateError
-	if errors.As(err, &pred) {
+	if pred, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		httperr.Write(w, r, httperr.Validation(pred.Field, pred.Code, pred.Message))
 		return
 	}
-	var source *collections.BadInputError
-	if errors.As(err, &source) {
+	if source, ok := errors.AsType[*collections.BadInputError](err); ok {
 		httperr.Write(w, r, httperr.Validation(source.Field, codeInvalid, source.Reason))
 		return
 	}

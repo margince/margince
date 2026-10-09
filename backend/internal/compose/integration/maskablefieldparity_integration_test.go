@@ -120,7 +120,7 @@ func maskableFixtureLines(t *testing.T) []string {
 		t.Fatalf("reading the maskable-field fixture: %v", err)
 	}
 	var lines []string
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue

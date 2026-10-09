@@ -37,7 +37,7 @@ import (
 // (report_dealsbystage_integration_test.go).
 func TestPipelineCurrentCountsAnUnownedDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Unowned", 60, nil, int64p(10000), stringp("commit"))
+	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)), new("commit"))
 
 	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(manager, t, "pipeline-current", pipelineCurrentPlan)

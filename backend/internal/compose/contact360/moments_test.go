@@ -42,7 +42,7 @@ func meeting(startsAt time.Time) *crmcontracts.Contact360NextMeeting {
 	return &crmcontracts.Contact360NextMeeting{
 		ActivityId: openapi_types.UUID{},
 		StartsAt:   startsAt,
-		Subject:    ptr("Expansion review"),
+		Subject:    new("Expansion review"),
 	}
 }
 
@@ -55,12 +55,12 @@ func TestTheLadderSelectsExactlyOneMoment(t *testing.T) {
 	page := &crmcontracts.Contact360{
 		NextMeeting:    meeting(ahead(24)),
 		LastInboundAt:  &replied,
-		LastOutboundAt: ptr(at(40)),
+		LastOutboundAt: new(at(40)),
 		Claims: &[]crmcontracts.ConversationClaim{{
 			Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 			Status:           crmcontracts.ConversationClaimStatusOpen,
 			Body:             "Send the revised ROI model",
-			DueAt:            ptr(at(5)),
+			DueAt:            new(at(5)),
 			SourceActivityId: openapi_types.UUID{},
 			SourceQuote:      "I'll get you the model by Friday",
 		}},
@@ -78,7 +78,7 @@ func TestAMeetingBeyondSeventyTwoHoursDoesNotWin(t *testing.T) {
 	page := &crmcontracts.Contact360{
 		NextMeeting:    meeting(ahead(96)),
 		LastInboundAt:  &replied,
-		LastOutboundAt: ptr(at(40)),
+		LastOutboundAt: new(at(40)),
 	}
 	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleReEngaged {
@@ -90,8 +90,8 @@ func TestAMeetingBeyondSeventyTwoHoursDoesNotWin(t *testing.T) {
 // rather than "last touch", because last touch cannot tell the two apart.
 func TestAnAnsweredConversationIsNotGoneQuiet(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: ptr(at(30)),
-		LastInboundAt:  ptr(at(2)),
+		LastOutboundAt: new(at(30)),
+		LastInboundAt:  new(at(2)),
 		Activities:     timelineOf(),
 		Network: &struct {
 			Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
@@ -108,8 +108,8 @@ func TestAnAnsweredConversationIsNotGoneQuiet(t *testing.T) {
 // a verdict has to be able to see what produced it.
 func TestGoneQuietNamesTheRuleItFiredOn(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: ptr(at(9)),
-		LastInboundAt:  ptr(at(16)),
+		LastOutboundAt: new(at(9)),
+		LastInboundAt:  new(at(16)),
 	}
 	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleGoneQuiet {
@@ -141,7 +141,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 	// One page per rung, each built to make that rung fire.
 	pages := map[string]*crmcontracts.Contact360{
 		"meeting prep": {NextMeeting: &crmcontracts.Contact360NextMeeting{StartsAt: ahead(24)}},
-		"gone quiet":   {LastOutboundAt: ptr(at(9)), LastInboundAt: ptr(at(16))},
+		"gone quiet":   {LastOutboundAt: new(at(9)), LastInboundAt: new(at(16))},
 		"thin relationship": {
 			Activities: timelineOf(),
 			Network: &struct {
@@ -173,8 +173,8 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 		},
 		// Rung 2 wants inbound that arrived after a long silence of ours.
 		"re-engaged": {
-			LastOutboundAt: ptr(at(40)),
-			LastInboundAt:  ptr(at(3)),
+			LastOutboundAt: new(at(40)),
+			LastInboundAt:  new(at(3)),
 		},
 		// Rung 4 wants an open commitment OF OURS whose date has passed.
 		"overdue promise": {
@@ -184,7 +184,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 				Body:             "Send the revised dispatch quote",
 				SourceQuote:      "Ich schicke dir das Angebot bis Freitag.",
 				SourceActivityId: openapi_types.UUID(ids.NewV7()),
-				DueAt:            ptr(at(6)),
+				DueAt:            new(at(6)),
 			}},
 		},
 		// Rung 5b wants an open task filed against them, and it must fire with
@@ -195,7 +195,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 				Page crmcontracts.PageInfo   `json:"page"`
 			}{Data: []crmcontracts.Activity{{
 				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-				Subject: ptr("Send the MCP whitepaper"), OccurredAt: at(1),
+				Subject: new("Send the MCP whitepaper"), OccurredAt: at(1),
 			}}},
 		},
 		// The overdue rung reads BOTH sources; this page reaches it through the
@@ -206,7 +206,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 				Page crmcontracts.PageInfo   `json:"page"`
 			}{Data: []crmcontracts.Activity{{
 				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-				Subject: ptr("Send the signed contract"), OccurredAt: at(72), DueAt: ptr(at(30)),
+				Subject: new("Send the signed contract"), OccurredAt: at(72), DueAt: new(at(30)),
 			}}},
 		},
 		"nothing needed": {},
@@ -356,10 +356,10 @@ func TestAnEmptyRelationshipDoesNotInventEvidence(t *testing.T) {
 // the very thing that just changed.
 func TestTheFingerprintChangesWhenTheEvidenceMoves(t *testing.T) {
 	first := fingerprintOf([]crmcontracts.ContactMomentEvidence{{
-		Type: crmcontracts.ContactMomentEvidenceTypeActivity, ObservedAt: ptr(at(9)),
+		Type: crmcontracts.ContactMomentEvidenceTypeActivity, ObservedAt: new(at(9)),
 	}})
 	later := fingerprintOf([]crmcontracts.ContactMomentEvidence{{
-		Type: crmcontracts.ContactMomentEvidenceTypeActivity, ObservedAt: ptr(at(2)),
+		Type: crmcontracts.ContactMomentEvidenceTypeActivity, ObservedAt: new(at(2)),
 	}})
 	if first == later {
 		t.Fatal("a newer message must re-arm a dismissed moment")
@@ -477,8 +477,8 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 			Data []crmcontracts.Activity `json:"data"`
 			Page crmcontracts.PageInfo   `json:"page"`
 		}{Data: []crmcontracts.Activity{
-			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: ptr("Send the MCP whitepaper"), OccurredAt: filed},
-			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: ptr("Book the workshop room"), OccurredAt: now.Add(-2 * time.Hour)},
+			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: new("Send the MCP whitepaper"), OccurredAt: filed},
+			{Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: new("Book the workshop room"), OccurredAt: now.Add(-2 * time.Hour)},
 		}},
 	}
 
@@ -501,14 +501,14 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 
 	// A task somebody specific holds is owed by that desk, not by whoever is
 	// reading the card.
-	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
+	page.NextSteps.Data[0].AssigneeId = new(openapi_types.UUID(ids.NewV7()))
 	if got := deriveMoment(readerCtx(), now, page).Headline; got != "Your team owes them: Send the MCP whitepaper" {
 		t.Errorf("headline for an assigned task = %q, want it attributed to its holder", got)
 	}
 	page.NextSteps.Data[0].AssigneeId = nil
 
 	// A task due later today reads as due today rather than counting zero days.
-	page.NextSteps.Data[0].DueAt = ptr(now.Add(2 * time.Hour))
+	page.NextSteps.Data[0].DueAt = new(now.Add(2 * time.Hour))
 	if got := deriveMoment(readerCtx(), now, page).WhyNow; got != "Due today." {
 		t.Errorf("why_now for a task due later today = %q, want \"Due today.\"", got)
 	}
@@ -529,14 +529,14 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 func TestAnOverdueTaskOutranksASilence(t *testing.T) {
 	quiet := func() *crmcontracts.Contact360 {
 		return &crmcontracts.Contact360{
-			LastOutboundAt: ptr(now.Add(-9 * 24 * time.Hour)),
-			LastInboundAt:  ptr(now.Add(-16 * 24 * time.Hour)),
+			LastOutboundAt: new(now.Add(-9 * 24 * time.Hour)),
+			LastInboundAt:  new(now.Add(-16 * 24 * time.Hour)),
 		}
 	}
 	task := func(due time.Time) []crmcontracts.Activity {
 		return []crmcontracts.Activity{{
 			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-			Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour), DueAt: ptr(due),
+			Subject: new("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour), DueAt: new(due),
 		}}
 	}
 
@@ -589,7 +589,7 @@ func readerCtx() context.Context {
 func TestReassigningAPromiseRearmsItsDismissal(t *testing.T) {
 	task := crmcontracts.Activity{
 		Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-		Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-24 * time.Hour),
+		Subject: new("Send the signed contract"), OccurredAt: now.Add(-24 * time.Hour),
 	}
 	page := &crmcontracts.Contact360{
 		NextSteps: &struct {
@@ -600,7 +600,7 @@ func TestReassigningAPromiseRearmsItsDismissal(t *testing.T) {
 
 	ours := deriveMoment(readerCtx(), now, page)
 
-	page.NextSteps.Data[0].AssigneeId = ptr(openapi_types.UUID(ids.NewV7()))
+	page.NextSteps.Data[0].AssigneeId = new(openapi_types.UUID(ids.NewV7()))
 	theirs := deriveMoment(readerCtx(), now, page)
 
 	if theirs.Headline == ours.Headline {
@@ -633,7 +633,7 @@ func TestTheLatestOverduePromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 				Page crmcontracts.PageInfo   `json:"page"`
 			}{Data: []crmcontracts.Activity{{
 				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-				Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour),
+				Subject: new("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour),
 				DueAt: &taskDue,
 			}}},
 		}
@@ -688,7 +688,7 @@ func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
 			Page crmcontracts.PageInfo   `json:"page"`
 		}{Data: []crmcontracts.Activity{{
 			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-			Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour),
+			Subject: new("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour),
 			DueAt: &taskDue,
 		}}},
 	}
@@ -703,7 +703,7 @@ func TestTheRungLooksPastTheOldestOverduePromise(t *testing.T) {
 	recent := now.Add(-2 * time.Hour)
 	page.NextSteps.Data = append(page.NextSteps.Data, crmcontracts.Activity{
 		Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-		Subject: ptr("Send this morning's file"), OccurredAt: now.Add(-24 * time.Hour),
+		Subject: new("Send this morning's file"), OccurredAt: now.Add(-24 * time.Hour),
 		DueAt: &recent,
 	})
 	if got := deriveMoment(readerCtx(), now, page).Headline; got != "You owe them: Send this morning's file" {
@@ -722,7 +722,7 @@ func TestTheLateTaskCardKeepsItsDismissalKey(t *testing.T) {
 			Page crmcontracts.PageInfo   `json:"page"`
 		}{Data: []crmcontracts.Activity{{
 			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-			Subject: ptr("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour), DueAt: &due,
+			Subject: new("Send the signed contract"), OccurredAt: now.Add(-72 * time.Hour), DueAt: &due,
 		}}},
 	}
 
@@ -796,7 +796,7 @@ func TestTheNearestUpcomingPromiseWinsWhicheverSourceHoldsIt(t *testing.T) {
 				Page crmcontracts.PageInfo   `json:"page"`
 			}{Data: []crmcontracts.Activity{{
 				Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
-				Subject: ptr("Book the workshop"), OccurredAt: said, DueAt: &taskDue,
+				Subject: new("Book the workshop"), OccurredAt: said, DueAt: &taskDue,
 			}}},
 		}
 	}
@@ -928,8 +928,8 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 // reason the old sentence could not be true.
 func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: ptr(at(60)),
-		LastInboundAt:  ptr(at(1)),
+		LastOutboundAt: new(at(60)),
+		LastInboundAt:  new(at(1)),
 	}
 
 	got := deriveMoment(readerCtx(), now, page)

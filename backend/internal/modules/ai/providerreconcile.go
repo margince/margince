@@ -188,16 +188,13 @@ func decisionHostMissing(provider, host string) bool {
 // key by its path when the refusal names them, no_host when the cause is an
 // unhosted provider, the generic code otherwise.
 func (cfg RoutingConfig) routingRefusal(err error) error {
-	var invalid settings.InvalidValue
-	if errors.As(err, &invalid) {
+	if invalid, ok := errors.AsType[settings.InvalidValue](err); ok {
 		return invalid
 	}
-	var faults routingFaults
-	if errors.As(err, &faults) {
+	if faults, ok := errors.AsType[routingFaults](err); ok {
 		return faults
 	}
-	var missing missingHostError
-	if errors.As(err, &missing) {
+	if missing, ok := errors.AsType[missingHostError](err); ok {
 		return settings.InvalidValue{
 			Setting: RoutingKey, Code: CodeNoHost,
 			Reason: fmt.Sprintf("%s is bound by %s; give it a host or rebind those lanes first",

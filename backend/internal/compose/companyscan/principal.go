@@ -12,6 +12,7 @@ package companyscan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,7 +31,7 @@ type Authority interface {
 func WorkerContext(ctx context.Context, authority Authority, viewer ids.UserID, scanID ids.UUID) (context.Context, error) {
 	workspace, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		return nil, fmt.Errorf("companyscan: the job context carries no workspace")
+		return nil, errors.New("companyscan: the job context carries no workspace")
 	}
 	rbac, seat, err := authority.EffectiveAuthority(ctx, workspace, viewer.UUID)
 	if err != nil {

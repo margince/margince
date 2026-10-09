@@ -296,8 +296,7 @@ func TestDemoteTellsAStrangerNothingAboutALeadTheyCannotSee(t *testing.T) {
 		if err == nil {
 			t.Fatalf("a caller outside the row scope demoted a %s lead", lead.what)
 		}
-		var notPromoted *NotPromotedError
-		if errors.As(err, &notPromoted) {
+		if _, ok := errors.AsType[*NotPromotedError](err); ok {
 			t.Errorf("demoting a %s lead outside the caller's scope answered %v — the read that names the "+
 				"contact ran ahead of the row-scope probe, so the refusal reports the lead's state to "+
 				"somebody who may not see the lead", lead.what, err)
@@ -508,8 +507,7 @@ func TestDemoteOfALeadWhoseEmailALiveLeadNowHoldsIsADuplicate(t *testing.T) {
 
 	_, err := e.store.DemoteLead(e.ctx, lead, "promoted the wrong prospect")
 
-	var duplicate *DuplicateLeadError
-	if !errors.As(err, &duplicate) {
+	if _, ok := errors.AsType[*DuplicateLeadError](err); !ok {
 		t.Fatalf("demote answered %v, want a duplicate-email conflict", err)
 	}
 }

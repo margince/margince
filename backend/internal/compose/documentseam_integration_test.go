@@ -343,8 +343,7 @@ func TestAnSVGAndAnOversizeFileAreRefusedAndNothingIsStored(t *testing.T) {
 	}
 	oversize := make([]byte, documentAgentLimit+1)
 	_, err = h.attach(t, attachArgs("company", company, "big.pdf", "application/pdf", oversize))
-	var badArgs *agents.BadArgsError
-	if !errors.As(err, &badArgs) {
+	if _, ok := errors.AsType[*agents.BadArgsError](err); !ok {
 		t.Errorf("attaching a file over the operator's limit = %v, want an argument refusal", err)
 	}
 	if n := h.attachmentRows(t, company); n != 0 {

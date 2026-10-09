@@ -123,7 +123,7 @@ func heldKeys(t *testing.T, l *Limiter) int {
 func TestSweepDropsAbandonedKeys(t *testing.T) {
 	clock := newFakeClock()
 	l := NewWithClock("test/expiry", FailClosed, 1, time.Minute, clock.Now)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		l.Allow(string(rune('a' + i%26)))
 	}
 	clock.advance(time.Minute + time.Second)

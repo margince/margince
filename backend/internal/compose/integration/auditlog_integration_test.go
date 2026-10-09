@@ -365,7 +365,7 @@ func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience(t *testin
 	subject := "Q3 renewal terms"
 	body := "confidential pricing"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("outbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: new("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -417,7 +417,7 @@ func TestAuditLogKeepsTheImageForAReaderInsideTheAudience(t *testing.T) {
 
 	subject := "Q3 renewal terms"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Direction: StrPtr("outbound"),
+		Kind: "email", Subject: &subject, Direction: new("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

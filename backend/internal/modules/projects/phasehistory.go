@@ -99,12 +99,10 @@ func FoldPhaseDurations(history []PhaseTransition, now time.Time) []PhaseDuratio
 		if i+1 < len(history) {
 			end = history[i+1].OccurredAt
 		}
-		seconds := int64(end.Sub(t.OccurredAt) / time.Second)
-		if seconds < 0 {
+		seconds := max(int64(end.Sub(t.OccurredAt)/time.Second),
 			// A clock that ran backwards between two writes, or a now older
 			// than the last transition: a negative stay is not a duration.
-			seconds = 0
-		}
+			0)
 		at, seen := index[t.ToPhase]
 		if !seen {
 			index[t.ToPhase] = len(out)

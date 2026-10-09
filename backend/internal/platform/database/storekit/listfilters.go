@@ -110,7 +110,7 @@ func FilterID[K ids.EntityKind, I any](set func(*I, *ids.ID[K])) FilterBinding[I
 func FilterIDList[K ids.EntityKind, I any](set func(*I, []ids.UUID)) FilterBinding[I] {
 	return func(in *I, value string) error {
 		var out []ids.UUID
-		for _, raw := range strings.Split(value, ",") {
+		for raw := range strings.SplitSeq(value, ",") {
 			raw = strings.TrimSpace(raw)
 			if raw == "" {
 				continue

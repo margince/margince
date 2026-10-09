@@ -195,8 +195,7 @@ func TestALimitOutsideTheServedRangeIsRefusedByName(t *testing.T) {
 	tool := reviewCommitments{list: commitmentSweepOf(CommitmentSweep{AsOf: sweptAt()})}
 	for _, limit := range []string{"-1", "51"} {
 		_, err := tool.Handle(context.Background(), json.RawMessage(`{"limit":`+limit+`}`))
-		var badArgs *BadArgsError
-		if !errors.As(err, &badArgs) {
+		if _, ok := errors.AsType[*BadArgsError](err); !ok {
 			t.Errorf("limit %s → %v, want a BadArgsError naming the bound", limit, err)
 		}
 	}

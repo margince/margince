@@ -42,6 +42,7 @@ import (
 	"io/fs"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -187,12 +188,7 @@ var promotedTxMethods = map[string]bool{"Begin": true}
 // embedsTx reports whether this body's receiver embeds the transaction rather
 // than naming a field for it.
 func (b txBorrowing) embedsTx() bool {
-	for _, field := range b.heldTx {
-		if field == promotedTx {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(b.heldTx, promotedTx)
 }
 
 // txBorrowingBodies answers every tx-borrowing body in one file, outermost
@@ -535,12 +531,7 @@ func (b txBorrowing) isHeldTxField(sel *ast.SelectorExpr) bool {
 	if !ok || b.recv == "" || base.Name != b.recv {
 		return false
 	}
-	for _, field := range b.heldTx {
-		if sel.Sel.Name == field {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(b.heldTx, sel.Sel.Name)
 }
 
 // Guarding the gate: the walk above is only as good as its ability to see a

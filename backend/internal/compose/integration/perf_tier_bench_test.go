@@ -30,6 +30,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -235,7 +236,7 @@ func benchFTSQuery(t *testing.T, store *search.Store, actx context.Context, spec
 			return err
 		}
 		if len(page.Hits) == 0 {
-			return fmt.Errorf("fts benchmark query matched nothing — the fixture is wrong")
+			return errors.New("fts benchmark query matched nothing — the fixture is wrong")
 		}
 		return nil
 	})

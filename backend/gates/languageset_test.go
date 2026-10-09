@@ -105,7 +105,7 @@ func languageEnumOf(body string) ([]string, bool) {
 		return nil, false
 	}
 	var out []string
-	for _, value := range strings.Split(enum[1], ",") {
+	for value := range strings.SplitSeq(enum[1], ",") {
 		// `null` on a nullable enum says the value may be absent, which is a
 		// different claim from naming a language. Dropped here so a nullable
 		// property is compared against the shipped set like any other.

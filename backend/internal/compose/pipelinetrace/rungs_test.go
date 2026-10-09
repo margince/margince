@@ -15,6 +15,7 @@ package pipelinetrace
 // and the caller's standing. That is why it can be exhaustive here.
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -244,12 +245,7 @@ func TestEveryReasonARungProducesIsOneItsStageDeclared(t *testing.T) {
 }
 
 func declares(r trace.Registration, reason trace.Reason) bool {
-	for _, declared := range r.Reasons {
-		if declared == reason {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Reasons, reason)
 }
 
 // The conversation rung, over every shape the extractor's rule produces. Each
