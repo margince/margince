@@ -46,15 +46,15 @@ Also called: remove a contact, hard delete, purge, wipe.
 
 ### How do I handle a GDPR erasure request?
 To erase a contact on request, an admin opens **Settings → Privacy and retention**, goes to **Privacy requests** and chooses **New request**.
-1. Set **Kind** to **erasure** and pick the **Contact** (required).
+1. Set **Kind** to **Erasure** and pick the **Contact** (required).
 2. Set **Due**, then choose **Open request**.
-3. On the request, write the **Resolution** and choose **Fulfill**.
+3. Choose the request in the list to open it, write the **Resolution** and choose **Fulfill**.
 4. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
 ### How do I answer a data access request?
-To log a GDPR access request, an admin opens **Settings → Privacy and retention → Privacy requests** and chooses **New request**. Set **Kind** to **access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution** and choose **Fulfill**.
+To log a GDPR access request, an admin opens **Settings → Privacy and retention → Privacy requests** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution** and choose **Fulfill**.
 
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
@@ -184,11 +184,11 @@ Only an **Admin** or **Ops** user can change retention. Everyone else cannot eve
 
 The list of privacy requests, **Settings → Privacy and retention → Privacy requests**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
 
-A request has a kind (access, rectify or erasure), a subject, an assignee, a due date, and a resolution. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Once set, an assignee cannot be cleared.
+A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." To give a request back, set **Assignee** to **Unassigned**.
 
 **A closed request never opens again.** "Closed. A closed request cannot be reopened; a new concern needs a new request."
 
-If two colleagues open the same request, the second sees "Someone else decided this request first. Review the current state below."
+If two colleagues open the same request, the second sees "Someone else decided this request first. Review its current state."
 
 ### Access requests
 

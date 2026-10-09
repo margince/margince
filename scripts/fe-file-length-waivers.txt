@@ -25,10 +25,9 @@
 1106 frontend/src/design-system/conformance.test.ts
 1178 frontend/src/screens/onboarding-conversation/company-act.test.tsx
 1015 frontend/src/screens/contactpage.tsx
-1200 frontend/src/screens/privacy.test.tsx
+1195 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx
 1001 frontend/src/screens/worklist.row.tsx
-1222 frontend/src/screens/privacy.tsx
 971 frontend/src/screens/connectors.tsx
 1125 frontend/src/screens/analytics.test.tsx
 1312 frontend/src/screens/company-context.tsx
