@@ -88,6 +88,28 @@ would read a different snapshot. More is in [rbac-roles-and-teams.md](rbac-roles
 row scope (own, team or all) and teams decide which rows. It also covers how a share per record adds
 visibility on top.
 
+### Capture privacy, and the one actor it does not hold a row back from
+
+A contact or a company can be kept by the colleague who captured it.
+`visibility = 'owner'` answers the row to its `owner_id` alone, and no row scope
+lifts that. An admin who reads every row still does not read a colleague's
+private list.
+
+Two kinds of actor do read past it, and both have **no human behind them**: the
+system principal, and a connector with no `OnBehalfOf`. A provider run is one.
+They act for the installation rather than for a seat.
+
+The reason is what the other way costs. A provider run finds its subject, pays
+the vendor, and then writes what it got back. Keeping the row from the run
+helps nobody. The run still pays, and the write it was for
+lands on no row. The record then looks as if no one ever looked it up, the bill
+tells a different story, and no screen explains either.
+
+The rule is spelled once, in `platform/auth` (`actsForTheInstallation`). It
+covers capture-privacy row scope and nothing else. A connector still answers to
+the object RBAC and the grants in its passport. That is why a provider run
+declares the grant set it needs, rather than reading past every gate.
+
 ## Autonomy tiers — how agent actions are governed (🟢 / 🟡)
 
 An action's autonomy tier is declared once in the contract (`x-mcp-tool: { tier: … }`). It is checked

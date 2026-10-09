@@ -42,11 +42,46 @@ const connectorActorPrefix = "connector:"
 // RBAC-gated write is never attempted with no actor at all; it cannot name a
 // vendor, and this is the first point in the run where one is known.
 func actingForProvider(ctx context.Context, name string) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: connectorActorPrefix + name,
-	})
+	ctx = principal.WithActor(ctx, providerRunPrincipal(name))
 	if _, stamped := principal.CorrelationID(ctx); stamped {
 		return ctx
 	}
 	return principal.WithCorrelationID(ctx, ids.NewV7())
+}
+
+// providerRunPrincipal is who a run acts as.
+//
+// PrincipalConnector and not PrincipalSystem, so actor_type and actor_id
+// agree. storekit stamps one from each. A system type beside a `connector:` id
+// writes an audit row that contradicts itself.
+//
+// It carries permissions because that type costs it the system exemption.
+// auth.Require admits a PrincipalSystem unconditionally, and every other type
+// falls through to Permissions.Allows. A zero Permissions denies.
+//
+// Each grant answers a denial the run took:
+//
+//   - relationship and company read. The identifiers are resolved again at
+//     submit, and a caller without the employer edge gets a name-only answer.
+//     The run then skips as `no_identifiers`.
+//   - contact read and update, for the fold through the row probe.
+//   - RowScopeAll, because a run buys for the installation, not for a seat.
+//     Capture privacy is lifted in platform/auth, since row scope alone does
+//     not reach an owner-private row.
+//
+// A function rather than a literal so a test can assert the real thing.
+func providerRunPrincipal(name string) principal.Principal {
+	return principal.Principal{
+		Type: principal.PrincipalConnector,
+		ID:   connectorActorPrefix + name,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"connector"},
+			Objects: map[string]principal.ObjectGrant{
+				"relationship": {Read: true},
+				"company":      {Read: true},
+				"contact":      {Read: true, Update: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	}
 }
