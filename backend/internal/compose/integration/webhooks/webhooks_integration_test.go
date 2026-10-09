@@ -717,7 +717,7 @@ func TestWebhookRetryThenDeadLetterThenReplay(t *testing.T) {
 	// spent and the delivery is dead-lettered.
 	for range 8 {
 		now = now.Add(64 * time.Second) // beyond the largest backoff gap
-		if err := deliverer.SweepOnce(webhookSweepCtx(we.wsID)); err != nil {
+		if err := deliverer.SweepOnce(context.Background()); err != nil {
 			t.Fatalf("sweep: %v", err)
 		}
 	}
