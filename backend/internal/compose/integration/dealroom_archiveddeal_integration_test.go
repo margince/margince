@@ -5,11 +5,11 @@
 
 package integration
 
-// Archiving a deal shuts its room's outside door: a room is a place to work ONE
+// Archiving a deal shuts its room's outside door: a room is a place to work one
 // deal, so an archived deal has no room.
 //
-// Through the real stack and the public buyer routes, because the whole question
-// is which rows one SQL read admits: a unit test over the store would have to
+// This runs through the real stack and the public buyer routes. The question is
+// which rows one SQL read admits, and a unit test over the store would have to
 // state the answer it is checking.
 
 import (
@@ -42,7 +42,7 @@ func TestArchivingADealShutsItsRoomToTheBuyer(t *testing.T) {
 	}
 	token, _ := session["session_token"].(string)
 
-	// The buyer is in, the room answers and the file downloads — otherwise the
+	// The buyer is in, the room answers and the file downloads. Otherwise the
 	// refusals below would prove nothing about the archive.
 	var before AnyMap
 	if status := publicCall(t, e, "GET", "/v1/public/rooms/me", nil, bearer(token), &before); status != http.StatusOK || before["access"] != "live" {

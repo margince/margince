@@ -35,10 +35,10 @@ const (
 // for access, the steward's name for the contact line, and the wording the
 // buyer reads at the top of the page.
 //
-// It answers for the DEAL as well as the room: a room is a place to work one
-// deal, so an archived deal has no room. Every buyer path reaches this one
-// read, the writes through liveRoomForBuyerWrite, so the deal's state binds all
-// of them here rather than once per route.
+// It answers for the deal as well as the room. A room is a place to work one
+// deal, so an archived deal has no room. Every buyer path reaches this read,
+// the writes through liveRoomForBuyerWrite. The deal's state binds them all
+// here rather than once per route.
 //
 // It reads the ROOM, not a frozen copy of it. A Deal Room is a place two sides
 // work in, not a document that goes to press: what the seller changes, the
