@@ -12,10 +12,9 @@
 // seconds of work.
 //
 // What is actually wrong is arithmetic between two budgets that were never
-// compared. Testing Library's `asyncUtilTimeout` and `vi.waitFor`'s timeout both
-// default to one second, and this repo overrides neither — so a test built from
-// N sequential waits may legitimately spend N seconds waiting without any single
-// wait failing. `company-act.test.tsx`'s "re-arms Continue once a skew refetch
+// compared. A test built from N sequential waits may legitimately spend N times
+// the per-waiter budget (ASYNC_UTIL_TIMEOUT_MS below) without any single wait
+// failing. `company-act.test.tsx`'s "re-arms Continue once a skew refetch
 // actually lands a NEW hash" chains six of them. Against a five-second ceiling
 // that test can fail while every assertion in it is passing, and the failure
 // names the test rather than the wait that was slow.
@@ -37,30 +36,30 @@
 // cases are exempted by name in scripts/test-budget.test.ts so they stay
 // fast-red.
 //
-// Two of its OTHER cases state no ceiling of their own, so they sit in the
-// population this ceiling is measured over and are what set its width at
-// 10000ms. That is a real cost and it is recorded rather than smoothed over:
-// the whole suite's ceiling is being driven by one file's local waiter
-// override, and until issue 613 is settled and that file can be edited, the
-// right fix — giving those two cases their own ceiling, as
-// integrations-provider.test.tsx does — is not available. Issue 1717 carries
-// it. Do not read the ceiling below as "smaller than anything company-context
-// waits for": it is larger, and what keeps issue 613 fast-red is the exemption,
-// not this number.
-//
 // So the ceiling has to clear the longest chain the suite legitimately composes,
 // plus the render and act work sitting between those waits.
 
-/** Testing Library's `asyncUtilTimeout` and `vi.waitFor`'s default, neither overridden. */
-export const ASYNC_UTIL_TIMEOUT_MS = 1_000;
+/**
+ * The per-waiter budget: Testing Library's `asyncUtilTimeout` and
+ * `vi.waitFor`'s default timeout, both set from this in vitest.setup.ts.
+ *
+ * Measured over every waiter that states no timeout (15,625 of them), with the
+ * default lifted. The slowest, `App.test.tsx`'s "opens the message a search
+ * address names", settled in 971ms under 48 spin loops on 18 cores and in 339ms
+ * with no added load. The library default of 1000ms left it 29ms, and a CI
+ * runner busier than that has expired it. That load multiplied the waiter
+ * 2.86x, so this leaves room for a runner that much busier again:
+ * 971 × 971 / 339 = 2782ms. A waiter that is slow by design (a poll, a settle
+ * it must outlast) still states its own timeout.
+ */
+export const ASYNC_UTIL_TIMEOUT_MS = 2_782;
 
 /**
  * The largest budget any test spends waiting, among the tests that run under
- * THIS ceiling — 10000ms, in `company-context.test.tsx`'s two write-posture
- * cases, whose render helper waits once at that file's own `SETTLE_MS`. They
- * state no ceiling of their own, so they belong to this population and set its
- * width; that file's two `clickRefresh` cases are a different matter and are
- * exempted by name in scripts/test-budget.test.ts.
+ * this ceiling: seven default waiters in sequence, in `import.test.tsx`,
+ * `company360.test.tsx` and `ai-provider-sheet.test.tsx`. The two `clickRefresh`
+ * cases in `company-context.test.tsx` spend more and are exempted by name in
+ * scripts/test-budget.test.ts.
  *
  * Measured from the syntax tree by `scripts/test-budget.ts` rather than counted
  * by hand: a hand count over this tree read one 688-line file as a single test
@@ -76,7 +75,7 @@ export const ASYNC_UTIL_TIMEOUT_MS = 1_000;
  * ceiling that test actually runs under, so a suite cannot quietly join this one
  * while spending like the other.
  */
-export const MAX_DEFAULT_WAITER_BUDGET_MS = 7_000;
+export const MAX_DEFAULT_WAITER_BUDGET_MS = ASYNC_UTIL_TIMEOUT_MS * 7;
 
 /**
  * The slowest single test measured under deliberate load, in milliseconds —
