@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the current authenticated principal (user or agent). */
+        /** Get the signed-in human's own profile, roles and settings. */
         get: operations["getCurrentPrincipal"];
         put?: never;
         post?: never;
@@ -443,6 +443,35 @@ export interface paths {
          *     kill switch belongs to the granting human, never to the agent it bounds.
          */
         delete: operations["revokePassport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the Margince skill for an AI tool, as a ZIP.
+         * @description The skill an AI tool (Claude, Codex, Gemini) installs to call this API with a passport. The
+         *     ZIP holds one folder, `margince/`, with `README.md` (how to save a passport and install the
+         *     skill), `SKILL.md` (the rules an agent follows), `INDEX.md` (one row per operation a passport
+         *     can call) and `openapi.yaml` (those operations in full, generated from this contract).
+         *     `servers` in `openapi.yaml` and the base URL in both guides are this install's API address,
+         *     the same value `GET /passports` answers as `api_base_url`.
+         *
+         *     It carries no credential. The passport is saved apart from the skill, so one download serves
+         *     every passport and a revoked passport leaves nothing to delete. Human-only: the bundle is how a
+         *     human hands an agent the API, and an agent that can call the API already has it.
+         */
+        get: operations["downloadAgentSkillBundle"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7958,6 +7987,85 @@ export interface paths {
         put?: never;
         /** Replay a parked (dead-lettered) delivery. */
         post: operations["replayWebhookDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tag-suggestions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One open tag suggestion the caller may see, with the mail and notes it cites.
+         * @description A suggestion proposes a suggestible tag on a contact or company because captured
+         *     mail or a meeting note filed under that record matched the tag's description. It
+         *     is shown only to a reader who may read the record and EVERY activity it cites, so
+         *     a suggestion built from mail only its owner can read is shown to that owner alone.
+         *     Nothing is applied until somebody accepts it. `404` for a suggestion the caller
+         *     may not see, that was decided, or that no longer stands.
+         */
+        get: operations["getTagSuggestion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tag-suggestions/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply the suggested tag, as the caller.
+         * @description Applies the tag exactly as `applyTag` would, with the caller as the one who
+         *     applied it, and records the decision. The tag's audit row names the suggestion.
+         *     Needs write authority over the record. `409 suggestion_decided` when the
+         *     suggestion was already decided.
+         */
+        post: operations["acceptTagSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tag-suggestions/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the evidence does not earn the tag, for the whole workspace.
+         * @description Audited. The tag is suggested on this record again only on evidence newer than
+         *     the dismissal. Needs write authority over the record, like accepting does.
+         *     `409 suggestion_decided` when the suggestion was already decided.
+         */
+        post: operations["dismissTagSuggestion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22496,6 +22604,12 @@ export interface components {
          *     list S-E15.4c requires, not a diff of what changed), or errored
          *     because it could not be reversed — a single irreversible row never
          *     aborts the rest of the run.
+         *
+         *     A row the run CORRECTED rather than created is in none of them: undo
+         *     archives what a run landed, and a correction to a record another run
+         *     landed has nothing to archive and no previous value to restore.
+         *     `updates_not_reversed` counts those rows, so a reader is not told a
+         *     correction was taken back while it stands.
          */
         ImportUndoReport: {
             /** Format: uuid */
@@ -22503,6 +22617,8 @@ export interface components {
             status: components["schemas"]["ImportRunStatus"];
             /** @description Import-created rows that were untouched since and have been reversed (archived). */
             reversed_count: number;
+            /** @description Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`. */
+            updates_not_reversed?: number;
             /** @description Import-created rows a human edited since import, therefore left in place (A93). */
             kept: {
                 object: components["schemas"]["ImportObject"];
@@ -32649,6 +32765,12 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
+            /**
+             * @description Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+             *     carries a description of what interest looks like, and that description is what
+             *     the suggestion is matched against. Only Admin and Ops set it.
+             */
+            suggestible?: boolean;
             /** Format: int64 */
             version?: number;
             /** Format: date-time */
@@ -32714,6 +32836,12 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
+            /**
+             * @description Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+             *     carries a description of what interest looks like, and that description is what
+             *     the suggestion is matched against. Only Admin and Ops set it.
+             */
+            suggestible?: boolean;
             /** Format: int64 */
             version?: number;
             /** Format: date-time */
@@ -32723,6 +32851,36 @@ export interface components {
             /** Format: date-time */
             archived_at?: string | null;
             usage: components["schemas"]["TagUsage"];
+        };
+        /**
+         * @description A suggestible tag proposed on one contact or company from captured mail or meeting
+         *     notes, waiting for somebody to accept or dismiss it.
+         */
+        TagSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            state: "open" | "accepted" | "dismissed" | "superseded";
+            tag: components["schemas"]["RowTag"];
+            /** @enum {string} */
+            entity_type: "contact" | "company";
+            /** Format: uuid */
+            entity_id: string;
+            entity_name: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The activities the suggestion cites, newest first. */
+            evidence: components["schemas"]["TagSuggestionEvidence"][];
+        };
+        TagSuggestionEvidence: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @description The activity kind: email, meeting, note or call. */
+            kind: string;
+            /** @description Absent when the activity has none or it was redacted. */
+            subject?: string | null;
+            /** Format: date-time */
+            occurred_at: string;
         };
         /**
          * @description How many records of each advertised type carry this tag, counted within what the
@@ -32750,6 +32908,8 @@ export interface components {
             /** @enum {string} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | "none";
             description?: string;
+            /** @description Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held. */
+            suggestible?: boolean;
         };
         MergeTagsRequest: {
             /**
@@ -40549,6 +40709,8 @@ export interface components {
             duplicates_open?: number;
             /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`. */
             deal_suggestions_open?: number;
+            /** @description Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`. */
+            tag_suggestions_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
             /** @description How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
@@ -40615,7 +40777,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -41159,7 +41321,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -42045,7 +42207,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -43905,6 +44067,11 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PassportSummary"][];
+                        /**
+                         * Format: uri
+                         * @description The address a passport calls this API at, `/v1` included: the configured API base URL, else the public base URL, else the origin this request arrived on. The skill bundle's `openapi.yaml` names the same address.
+                         */
+                        api_base_url: string;
                     };
                 };
             };
@@ -43967,6 +44134,28 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    downloadAgentSkillBundle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The skill as a downloadable ZIP attachment, `margince-skill.zip`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getConsentRequest: {
@@ -56951,6 +57140,86 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    acceptTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The accepted suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    dismissTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dismissed suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listTags: {

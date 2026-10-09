@@ -247,8 +247,8 @@ Also called: delete a company, remove a company, delete a contact, remove perman
 Margince has no notes of their own: a note is an activity. The kinds of activity are **email, call, meeting, note, task, message.**
 
 ### Where can I see everything that happened with a customer?
-To see everything that happened with a contact or company in Margince, open the record's **History** tab. It is one timeline of emails, meetings, calls, notes, tasks, messages and field changes.
-1. Under **Timeline filter**, pick **All**, **Threads** (email conversations), **Activities** or **Changes**.
+To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
+1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
 2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
 A company's History also holds what reached it through its deals and the contacts who work there.
 Also called: timeline, activity log, customer history, interaction history.
@@ -353,7 +353,9 @@ Every tag has its own page that lists the records with it, grouped by type.
 ### How do I tag a record?
 To tag a contact, company or deal in Margince, open the record, find its **Tags** panel and choose **Add tag**.
 1. Type in **Search tags** and pick a tag. A tag the record already has shows **Already added**.
-2. To take one off, choose **Remove {name}** on the tag. It comes off at once. The toast "{name} removed from this record" offers **Undo**. **Undo** puts the tag back with the same name and date under **Added by**. A retired tag comes off with no **Undo**.
+2. After you tag a contact, Margince may ask "Also tag {company} with {tag}?". It asks when you may change their current company and the company has no such tag yet. **Tag {company}** adds it there too. **Not now** changes nothing.
+3. After you tag a company, Margince asks "Also tag contacts at this company with {tag}?". **Choose contacts** lists who works there now, each with a box to tick. A contact who already has the tag shows "(already tagged)". **Continue** previews the change like any bulk change. The preview names each contact you may not change, and the result offers **Undo**.
+4. To take one off, choose **Remove {name}** on the tag. It comes off at once. The toast "{name} removed from this record" offers **Undo**. **Undo** puts the tag back with the same name and date under **Added by**. A retired tag comes off with no **Undo**.
 
 To see who put a tag on a record and when, point at the tag or move to it with the keyboard.
 
@@ -372,6 +374,19 @@ Two admin actions are worth knowing:
   "{moved} records moved to the surviving tag. {collapsed} already carried both,
   so their duplicate was dropped". An agent may not merge tags on its own; it
   can only suggest a merge for a human to approve.
+
+### Can Margince suggest a tag from mail and meeting notes?
+Yes, for tags an admin marks as suggested. Margince never adds such a tag by itself: you accept or dismiss each suggestion.
+
+1. In **Settings → Tags**, choose **Edit** on the tag.
+2. Fill in **Words that show interest**, separated by commas, for example "pricing for Product X, Product X demo".
+3. Tick "Suggest this tag when mail or meeting notes use these words" and save.
+
+Once an hour Margince reads the last 30 days of captured mail, meetings, notes and calls. When one of them uses the listed words, it suggests the tag on the contact or company that item is filed under. Each entry in the list needs at least three characters, and case does not matter.
+
+A suggestion waits in your Worklist with the other decisions. It names the tag and lists each mail or note it came from. **Add tag** puts the tag on the record as you, and then offers it to the company or its contacts as above. **Not this tag** dismisses it for everyone. The same tag comes back on that record only when newer mail or notes use the words.
+
+You see a suggestion only when you may read the record and every item it lists. A suggestion that came from mail only its owner can read is shown to that owner alone.
 
 ## Money
 

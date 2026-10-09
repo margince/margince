@@ -181,7 +181,7 @@ describe("AuditLogCard", () => {
     // Hidden by default — the diff values never render before the toggle.
     expect(screen.queryByText("new")).toBeNull();
     expect(screen.queryByText("qualified")).toBeNull();
-    expect(screen.queryByText("pp-9")).toBeNull();
+    expect(screen.queryByText("An agent")).toBeNull();
 
     await user.click(
       screen.getByRole("button", { name: "Show change detail" }),
@@ -189,7 +189,10 @@ describe("AuditLogCard", () => {
 
     expect(await screen.findByText("new")).toBeTruthy();
     expect(screen.getByText("qualified")).toBeTruthy();
-    expect(screen.getByText("pp-9")).toBeTruthy();
+    // The passport is not among the reader's own, so it is named as an agent
+    // and its id stays off the screen.
+    expect(screen.getByText("An agent")).toBeTruthy();
+    expect(screen.queryByText("pp-9")).toBeNull();
   });
 
   it("renders from/to date filters alongside the existing text filters", async () => {

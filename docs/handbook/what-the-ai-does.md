@@ -106,11 +106,14 @@ Where Margince can say who put a value there, it does. The trust marks are:
   name
 - "Automated by {agent}", or "Automated by an agent" when the passport has no
   name to show
-- "System task {job}", or plain "System task" when the job has no name to show.
+- "System task: {job}", naming the job in words such as "Mail participant
+  fill-in", or plain "System task" when the job has no name to show.
   This is the installation's own work, such as a planned sweep or a run that
   makes up for lost time. It has a different name from an agent, so you know whether a model
   decided something or Margince did routine work.
 - "Via {connector}": it came from a connected mailbox
+- On a field change an agent made, the name of your own agent passport. A
+  colleague's passport reads "An agent".
 - "Source not recorded": when nobody knows where it came from
 
 ## Seeing work in progress

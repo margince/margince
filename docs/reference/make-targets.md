@@ -67,7 +67,7 @@ These target names are a stable interface: external tooling and its UAT guides c
 | `test-integration-serial` | Escape hatch: the sequential lane on the shared `margince_test` DB (for debugging a parallel-isolation issue) |
 | `lint` | `golangci-lint run` (depguard, gosec, misspell, revive, gofmt), through the `scripts/run-golangci.sh` wrapper `lint-modules` also uses. See `test-golangci-guard` for what the wrapper guards against |
 | `arch-lint` | `go-arch-lint` over `.go-arch-lint.yml`: a hard gate on the import DAG |
-| `gen` | Regenerate everything derived from `api/crm.yaml` (contract types, 501 stubs, agent-policy table) and the extension composition |
+| `gen` | Regenerate everything derived from `api/crm.yaml` (contract types, 501 stubs, agent-policy table, the agent contract and operation index of the Margince skill) and the extension composition |
 | `drift` | `gen`, then fail if any generated file changed: the contract drift gate |
 | `composition` | Materialize `build/composition/` from the enabled set under `extensions/`. Every build/test lane depends on it and runs under `GOWORK=build/composition/go.work`, so an enabled extension is compiled in and a stale composition is never built. A default checkout composes `{de}` (the first-party pack ships enabled). Removing every directory under `extensions/` composes the empty set, whose wiring is byte-identical to the committed `composition/` stub |
 | `check-composition` | `composition`, then `gen-composition -verify`: a clean regeneration must reproduce the recorded input digests and output hashes of `composition.json` byte for byte (the drift gate for ignored composition output) |

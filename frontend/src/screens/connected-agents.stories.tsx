@@ -76,7 +76,7 @@ function story(passports: Record<string, unknown>[], connectorEnabled = true) {
 }
 
 const meta: Meta<typeof ConnectedAgentsCard> = {
-  title: "Settings/You/Agents/Connected agents",
+  title: "Settings/You/Agents/Connected MCP clients",
   component: ConnectedAgentsCard,
 };
 export default meta;

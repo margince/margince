@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The vocabulary's own verbs — read one word with its weight, rename it,
@@ -231,6 +232,28 @@ type TagUpdate struct {
 	Name        *string
 	Color       **string
 	Description **string
+	Suggestible *bool
+}
+
+// errUndescribedSuggestion refuses a suggestible tag with no description: the
+// description is what the scout matches captured text against.
+var errUndescribedSuggestion = &BadInputError{
+	Field:  "suggestible",
+	Reason: "a suggested tag needs a description of what interest looks like",
+}
+
+// suggestibleAfter answers whether the tag would be suggestible with no
+// description once the update lands.
+func suggestibleAfter(before tagRow, in TagUpdate) bool {
+	suggestible := before.Suggestible
+	if in.Suggestible != nil {
+		suggestible = *in.Suggestible
+	}
+	description := before.Description
+	if in.Description != nil {
+		description = *in.Description
+	}
+	return suggestible && (description == nil || !values.HasVisibleText(*description))
 }
 
 // UpdateTag renames, recolours or describes a tag.
@@ -270,16 +293,20 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 		if expectedVersion != 0 && before.Version != expectedVersion {
 			return apperrors.ErrVersionSkew
 		}
+		if suggestibleAfter(before, in) {
+			return errUndescribedSuggestion
+		}
 		row := tx.QueryRow(ctx, `
 			UPDATE tag
 			   SET name        = COALESCE($2, name),
 			       color       = CASE WHEN $3::boolean THEN $4 ELSE color END,
-			       description = CASE WHEN $5::boolean THEN $6 ELSE description END
+			       description = CASE WHEN $5::boolean THEN $6 ELSE description END,
+			       suggestible = COALESCE($7, suggestible)
 			 WHERE id = $1
 			RETURNING `+tagColumns,
 			id, name,
 			in.Color != nil, derefOrNil(in.Color),
-			in.Description != nil, derefOrNil(in.Description))
+			in.Description != nil, derefOrNil(in.Description), in.Suggestible)
 		if out, err = scanTag(row); err != nil {
 			if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
 				return fmt.Errorf("a tag already holds that name: %w", apperrors.ErrConflict)
@@ -287,12 +314,15 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "update", "tag", id.UUID,
-			map[string]any{nameField: before.Name},
-			map[string]any{nameField: out.Name})
+			map[string]any{nameField: before.Name, suggestibleField: before.Suggestible},
+			map[string]any{nameField: out.Name, suggestibleField: out.Suggestible})
 		return err
 	})
 	return out, err
 }
+
+// suggestibleField is the audited name of the suggestion switch.
+const suggestibleField = "suggestible"
 
 // derefOrNil unwraps the outer pointer of a clearable field. The two levels
 // are the difference between "leave it" and "clear it", which one level cannot

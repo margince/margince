@@ -17,6 +17,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import "./connected-agents.css";
+import { usePassports } from "./passports.queries";
 
 // The other half of the passport story, and the half nothing on this screen
 // used to tell. A human mints a passport; a client that connects over MCP is
@@ -428,16 +429,7 @@ export function ConnectedAgentsCard() {
   // nearest thing that survives is the region the row was in.
   const listRegion = useRef<HTMLDivElement | null>(null);
 
-  const list = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  const list = usePassports();
 
   const disconnect = useMutation({
     mutationFn: async (id: string) => {
