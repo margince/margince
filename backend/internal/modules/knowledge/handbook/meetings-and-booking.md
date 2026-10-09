@@ -77,6 +77,8 @@ The Margince booking page shows your name from **Settings → Account**, and you
 
 Every calendar invitation carries a private link that lets the guest move or cancel the meeting. Anyone who can read the full invitation, such as a colleague who manages your calendar, can use that link too. Think about who can read your calendar.
 
+What a guest writes in **What would you like to discuss?** on your booking page stays in Margince. It shows on the meeting in the contact's **History** tab, and not on the meeting page. The calendar invitation leaves it out. It holds your **Meeting title** and **Location or meeting link**, any video link, and the guest's private link.
+
 A guest gives consent to the meeting separately from any marketing consent, and does not have to give marketing consent to book.
 
 ## When the calendar adds no video call
