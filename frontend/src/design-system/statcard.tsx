@@ -115,6 +115,7 @@ export function StatCard({
   source,
   alert,
   onOpen,
+  href,
   meter,
   narrow,
 }: Readonly<{
@@ -129,6 +130,10 @@ export function StatCard({
   // ONE control and not two — the basis trigger layers above it and keeps its
   // own press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
+  // The same door as a LINK, for a reading that names one record: the card
+  // goes to that record's page, and a reader can open it in a new tab.
+  // A card given both draws the link.
+  href?: string;
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
   // three signals) and as one filled track when there are not (two of ten
@@ -224,27 +229,52 @@ export function StatCard({
       {/* THE CARD'S FOOT: the way out, at the end of the card a reader
           finishes on rather than up beside the reading's name, where it
           competed with the label for the first glance. */}
-      {onOpen && (
+      {(href || onOpen) && (
         <span className="stat-card-foot">
           {/* THE DOOR SAYS "Open", ALWAYS. One word for one control: a caller
               naming its own destination gave the product several spellings of
               the same door, and the reading a door belongs to is already said
               beside it. Which reading it opens reaches a screen reader as this
-              button's DESCRIPTION — folded into the NAME it read "Open Open
+              door's DESCRIPTION — folded into the NAME it read "Open Open
               pipeline", so it is `aria-describedby` and never the word. */}
-          <button
-            type="button"
-            className="stat-card-open"
-            onClick={onOpen}
-            aria-describedby={labelId}
-          >
+          <Door href={href} onOpen={onOpen} describedBy={labelId}>
             {t("stat.open")}
             <span className="stat-card-arrow" aria-hidden="true">
               {"\u2192"}
             </span>
-          </button>
+          </Door>
         </span>
       )}
     </section>
+  );
+}
+
+function Door({
+  href,
+  onOpen,
+  describedBy,
+  children,
+}: Readonly<{
+  href?: string;
+  onOpen?: () => void;
+  describedBy: string;
+  children: ReactNode;
+}>) {
+  if (href) {
+    return (
+      <a className="stat-card-open" href={href} aria-describedby={describedBy}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="stat-card-open"
+      onClick={onOpen}
+      aria-describedby={describedBy}
+    >
+      {children}
+    </button>
   );
 }

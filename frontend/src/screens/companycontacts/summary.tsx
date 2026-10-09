@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
-import { navigate } from "../../app/router";
+import { ENTITY } from "../../app/entity";
+import { navigate, routeHash } from "../../app/router";
 import { useUrlParams } from "../../app/urlstate";
 import {
   Badge,
@@ -97,8 +98,8 @@ export function CoverageBand({
 }: Readonly<{
   companyId: string;
   accountName: string;
-  /** Each statement is a door: it narrows the list below to what it describes. */
-  onNarrow: (status: "waiting" | "answered" | "untried" | null) => void;
+  /** The Coverage reading's door: it narrows the list below to the untried. */
+  onNarrow: (status: "untried") => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -139,7 +140,7 @@ export function CoverageBand({
           (statstrip.css), and a strip where only some carry it draws a
           bordered box among a column of borderless rows. */}
       <StatStrip testId="coverage-band">
-        <WayIn coverage={coverage} onNarrow={onNarrow} />
+        <WayIn coverage={coverage} />
         <CommitteeReading coverage={coverage} />
         <StatCard
           narrow="row"
@@ -178,13 +179,7 @@ export function CoverageBand({
  * rather than naming the least cold contact: a fourth follow-up dressed as an
  * opening is what this reading must not do.
  */
-function WayIn({
-  coverage,
-  onNarrow,
-}: Readonly<{
-  coverage: Coverage;
-  onNarrow: (status: "waiting" | "answered" | "untried" | null) => void;
-}>) {
+function WayIn({ coverage }: Readonly<{ coverage: Coverage }>) {
   const t = useT();
   const way = coverage.best_way_in;
   const slot = { label: t("co.contacts.band.wayIn"), narrow: "row" } as const;
@@ -197,14 +192,9 @@ function WayIn({
       />
     );
   }
-  const stateLabel = ENGAGEMENT_LABELS[way.engagement];
-  // The label names what the press DOES: a door for a conversational state
-  // narrows to that state, and a way in nobody has approached narrows to
-  // nothing in particular, so its door says "show everyone" instead.
-  const door: "waiting" | "answered" | null =
-    way.engagement === "waiting" || way.engagement === "answered"
-      ? way.engagement
-      : null;
+  // The card names one person, so its door is that person's page, whatever
+  // their engagement: the name sits under the door's stretched target, which
+  // makes it the same link.
   return (
     <StatCard
       {...slot}
@@ -212,10 +202,10 @@ function WayIn({
       detail={
         <span>
           {way.title ? `${way.title} · ` : ""}
-          {t(stateLabel)}
+          {t(ENGAGEMENT_LABELS[way.engagement])}
         </span>
       }
-      onOpen={() => onNarrow(door)}
+      href={routeHash(ENTITY.contact.route(way.contact_id))}
     />
   );
 }

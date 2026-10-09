@@ -254,8 +254,8 @@ test("does not name a gap when seats are hidden", async () => {
   expect(screen.queryByText(/No champion/)).toBeNull();
 });
 
-test("each door narrows the list to what it describes", async () => {
-  const narrowed: (string | null)[] = [];
+test("the Coverage door narrows the list to the untried", async () => {
+  const narrowed: string[] = [];
   stub({
     best_way_in: {
       contact_id: "p-1",
@@ -327,35 +327,38 @@ test("does not claim a complete committee when seats are hidden", async () => {
   expect(screen.queryByText("Complete")).toBeNull();
 });
 
-// Every door on the plate says the same word, so the press is the only thing
-// that can tell them apart in behaviour. A way in who has not answered belongs
-// to no conversational state: its press clears the filter rather than promising
-// a list of contacts who answered, which would narrow to somebody else entirely.
-test("a way-in nobody has answered narrows to nothing in particular", async () => {
-  const narrowed: (string | null)[] = [];
-  stub({
-    best_way_in: {
-      contact_id: "p-1",
-      full_name: "Philipp Koenigs",
-      engagement: "untried",
-    },
-  });
-  render(
-    <CoverageBand
-      companyId="o-1"
-      accountName="Brandt GmbH"
-      onNarrow={(s) => narrowed.push(s)}
-    />,
-  );
+// The Best route card names one person, so its door opens that person's page
+// whatever their engagement.
+test.each(["untried", "answered"] as const)(
+  "the way-in door of an %s contact opens that contact",
+  async (engagement) => {
+    stub({
+      best_way_in: {
+        contact_id: "p-1",
+        full_name: "Philipp Koenigs",
+        engagement,
+      },
+    });
+    render(
+      <CoverageBand
+        companyId="o-1"
+        accountName="Brandt GmbH"
+        onNarrow={() => {}}
+      />,
+    );
 
-  (
-    await screen.findByRole("button", {
+    const door = await screen.findByRole("link", {
       name: "Open",
       description: "Best route",
-    })
-  ).click();
-  expect(narrowed).toEqual([null]);
-});
+    });
+    expect(door.getAttribute("href")).toBe("#/contacts/p-1");
+    // The name is inside the card the door's stretched target covers, so a
+    // press on it is a press on this link.
+    const card = door.closest(".stat-card");
+    expect(card?.textContent).toContain("Philipp Koenigs");
+    expect(card?.querySelectorAll("a, button")).toHaveLength(1);
+  },
+);
 
 // A seat carrying a role this board has no column for is still a contact the
 // summary counted. Dropping it silently sends a reader looking for somebody
