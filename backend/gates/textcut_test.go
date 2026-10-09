@@ -5,10 +5,12 @@
 
 package gates_test
 
-// A string is cut to a length only through kernel/textcut.
+// Outside the waived files, no hand-written loop, rune slice or ToValidUTF8 cuts
+// a string to a length; kernel/textcut does it.
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -77,6 +79,27 @@ func TestEveryStringCutGoesThroughTextcut(t *testing.T) {
 	handCutWaivers.AssertAllMatched(t)
 }
 
+func TestARuneSliceNameBindsOnlyInItsOwnFunction(t *testing.T) {
+	const source = `package p
+
+func runes(s string) string {
+	buf := []rune(s)
+	return string(buf[:3])
+}
+
+func bytes(buf []byte) string {
+	return string(buf[:3])
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "p.go", source, 0)
+	if err != nil {
+		t.Fatalf("parsing the planted source: %v", err)
+	}
+	if got := len(handCuts(file)); got != 1 {
+		t.Errorf("found %d cuts, want 1: only the []rune cut counts, not the byte slice that shares its name", got)
+	}
+}
+
 // skipNestedModule leaves out testdata and any directory that is its own Go
 // module, since code there cannot import the helper.
 func skipNestedModule(dir string) error {
@@ -94,9 +117,19 @@ func skipNestedModule(dir string) error {
 
 // handCuts returns the position of every hand-written cut in file.
 func handCuts(file *ast.File) []token.Pos {
-	runeSlices := runeSliceNames(file)
 	var found []token.Pos
-	ast.Inspect(file, func(node ast.Node) bool {
+	for _, decl := range file.Decls {
+		found = append(found, handCutsIn(decl)...)
+	}
+	return found
+}
+
+// handCutsIn reads rune-slice names from decl alone, so a same-named byte
+// slice in another function is not taken for one.
+func handCutsIn(decl ast.Decl) []token.Pos {
+	runeSlices := runeSliceNames(decl)
+	var found []token.Pos
+	ast.Inspect(decl, func(node ast.Node) bool {
 		switch node := node.(type) {
 		case *ast.ForStmt:
 			if node.Cond != nil && callsUTF8Check(node.Cond) {
@@ -152,10 +185,10 @@ func isValidUTF8OfSlice(call *ast.CallExpr) bool {
 	return ok && slice.Low == nil && slice.High != nil
 }
 
-// runeSliceNames returns the names in file assigned from a []rune conversion.
-func runeSliceNames(file *ast.File) map[string]bool {
+// runeSliceNames returns the names in decl assigned from a []rune conversion.
+func runeSliceNames(decl ast.Decl) map[string]bool {
 	names := map[string]bool{}
-	ast.Inspect(file, func(node ast.Node) bool {
+	ast.Inspect(decl, func(node ast.Node) bool {
 		assign, ok := node.(*ast.AssignStmt)
 		if !ok || len(assign.Lhs) != len(assign.Rhs) {
 			return true
