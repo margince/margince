@@ -310,13 +310,19 @@ func toContractUndoReport(id migration.RunID, status string, rep migration.UndoR
 			Reason string                    `json:"reason"`
 		}{Id: openapi_types.UUID(e.ID), Object: crmcontracts.ImportObject(e.Object), Reason: e.Reason})
 	}
-	return &crmcontracts.ImportUndoReport{
+	out := &crmcontracts.ImportUndoReport{
 		RunId:         openapi_types.UUID(id),
 		Status:        crmcontracts.ImportRunStatus(status),
 		ReversedCount: rep.ReversedCount,
 		Kept:          kept,
 		Errored:       errored,
 	}
+	// Omitted when the run created everything it touched, which is what an
+	// absent count means on the wire.
+	if rep.UpdatesNotReversed > 0 {
+		out.UpdatesNotReversed = &rep.UpdatesNotReversed
+	}
+	return out
 }
 
 // readImportUpload takes the multipart body apart under the deployment's import

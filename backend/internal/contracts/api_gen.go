@@ -35301,6 +35301,12 @@ type ImportSourceProfile struct {
 // list S-E15.4c requires, not a diff of what changed), or errored
 // because it could not be reversed — a single irreversible row never
 // aborts the rest of the run.
+//
+// A row the run CORRECTED rather than created is in none of them: undo
+// archives what a run landed, and a correction to a record another run
+// landed has nothing to archive and no previous value to restore.
+// `updates_not_reversed` counts those rows, so a reader is not told a
+// correction was taken back while it stands.
 type ImportUndoReport struct {
 	// Errored Import-created rows the reversal could not archive (a business
 	// rule refused it, or the caller's row scope no longer covers it) —
@@ -35382,6 +35388,9 @@ type ImportUndoReport struct {
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
 	// `complete` and only for the `csv` connector.
 	Status ImportRunStatus `json:"status"`
+
+	// UpdatesNotReversed Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
+	UpdatesNotReversed *int `json:"updates_not_reversed,omitempty"`
 }
 
 // ImportUnresolvedLink defines model for ImportUnresolvedLink.
