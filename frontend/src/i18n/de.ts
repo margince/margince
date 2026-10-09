@@ -2867,6 +2867,20 @@ export const de = {
     "Füge dauerhaften Kontext hinzu, etwa eine Veranstaltung, eine Beziehung oder eine Kohorte.",
   "tags.pickerLabel": "Tags suchen",
   "tags.alreadyAdded": "Bereits hinzugefügt",
+  "tags.offerCompanyTitle": "{company} auch mit {tag} taggen?",
+  "tags.offerCompanyAccept": "{company} taggen",
+  "tags.offerCompanyDone": "{tag} zu {company} hinzugefügt",
+  "tags.offerDismiss": "Nicht jetzt",
+  "tags.offerContactsTitle":
+    "Kontakte dieses Unternehmens auch mit {tag} taggen?",
+  "tags.offerContactsAccept": "Kontakte auswählen",
+  "tags.contactsTitle": "Kontakte mit {tag} taggen",
+  "tags.contactsLoading": "Kontakte werden geladen…",
+  "tags.contactsNone":
+    "Kein Kontakt, den du sehen kannst, arbeitet derzeit bei diesem Unternehmen.",
+  "tags.contactsAlready": "{name} (bereits getaggt)",
+  "tags.contactsTruncated": "Nur die ersten 200 Kontakte werden angezeigt.",
+  "tags.contactsContinue": "Weiter",
   "tags.catalogTruncatedTitle": "Liste gekürzt",
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
