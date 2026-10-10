@@ -1,32 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarClock, ChevronRight, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  OverflowMenu,
-} from "../design-system/atoms";
+import { EmptyState } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { Switch } from "../design-system/switch";
-import { AutonomyDot } from "../design-system/trust";
-import { useT } from "../i18n";
-import { AutomationInspectors } from "./automationdetail";
-import { DeleteAutomationAction } from "./automations.delete";
-import { AutomationDialog } from "./automations.form";
-import { RulePausedReason } from "./automations.lists";
-import { scalarText } from "./automations.params";
+import { IconAction } from "../design-system/iconaction";
 import {
-  problemMessageOf,
-  QueryGate,
-  type QueryLike,
-  unwrap,
-  useMe,
-} from "./common";
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
+import { Chip } from "../design-system/readings";
+import { useTruncationTooltip } from "../design-system/tooltip";
+import { type Translator, useT } from "../i18n";
+import { AutomationDialog } from "./automations.form";
+import { ConfiguredAutomations, shut } from "./automations.instances";
+import { triggerLabel } from "./automations.recipe";
+import { type QueryLike, QueryStates, unwrap, useMe } from "./common";
 import "./automations.css";
 
 // The automations editor (B-EP09.15): a management UI over the CLOSED
@@ -34,322 +29,14 @@ import "./automations.css";
 // construction — every form field derives from the catalog entry's
 // params_schema plus the instance name; there is no free-form rule body and
 // no user-defined trigger anywhere on this surface, and a test pins that.
-// Instances render from the Automation wire schema alone, so an
-// agent-authored instance is indistinguishable from a catalog-authored one.
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
+type Automation = components["schemas"]["Automation"];
 // A template staged for the create dialog. It OUTLIVES the close — hence `open`
 // as a field, and `seq`, which re-keys the form so every open re-seeds it.
 type StagedTemplate = { entry: CatalogEntry; seq: number; open: boolean };
-// The one spelling of putting either dialog away, so the places that do it
-// cannot come to disagree about what closing leaves behind.
-function shut<T extends { open: boolean }>(prior: T | null): T | null {
-  return prior === null ? null : { ...prior, open: false };
-}
-type Automation = components["schemas"]["Automation"];
 
-// One instance row, rendered from the Automation wire schema alone — no
-// origin field exists on the wire, so authorship cannot change the render.
-// The two inspector toggles, lifted out of the row so the row stays under the
-// cognitive-complexity gate. They travel together: both are reads of the same
-// automation, admitted by the same grant.
-function InspectorToggles({
-  runsOpen,
-  previewOpen,
-  onToggleRuns,
-  onTogglePreview,
-}: Readonly<{
-  runsOpen: boolean;
-  previewOpen: boolean;
-  onToggleRuns: () => void;
-  onTogglePreview: () => void;
-}>) {
-  const t = useT();
-  return (
-    <>
-      <Button
-        variant={runsOpen ? "primary" : "ghost"}
-        aria-expanded={runsOpen}
-        onClick={onToggleRuns}
-      >
-        {t("auto.runs.open")}
-      </Button>
-      <Button
-        variant={previewOpen ? "primary" : "ghost"}
-        aria-expanded={previewOpen}
-        onClick={onTogglePreview}
-      >
-        {t("auto.preview.open")}
-      </Button>
-    </>
-  );
-}
-
-// Four affordances over three grants. The runs and preview inspectors are
-// READS — automations_runs.go gates on automation:read — so they are not hidden
-// behind the write grant the old role proxy happened to imply.
-//
-// Preview carries one gate this cannot anticipate: after resolving the instance
-// through Get, it also demands read on the TARGET TABLE the recipe names, which
-// varies per automation and is not something the /me snapshot describes. A
-// reader without that table can still open the panel and be refused; the panel
-// reports it. Predicting it here would mean encoding the catalog's table
-// mapping in the client, which is the kind of server knowledge this change
-// exists to stop duplicating.
-// What a row PATCHes: the automation's definition, or just its on/off status.
-type AutomationPatchBody = {
-  name?: string;
-  params?: Record<string, unknown>;
-  status?: "enabled" | "paused";
-};
-
-// The whole write, row identity included. The `mutationFn` used to close over
-// `automation.id` and `automation.version` instead, which is the pattern this
-// tree has a rule against: the click handler belongs to the committed render,
-// so anything it PASSES cannot be older than the control the reader pressed,
-// while anything it CLOSES OVER can be. Here the stale value would be the
-// `If-Match` version, and a write carrying one is refused as a concurrent edit
-// — the reader is told someone else changed the automation when nobody did.
-type AutomationPatch = {
-  id: string;
-  version: number | undefined;
-  body: AutomationPatchBody;
-};
-
-// Which of a row's two writes a body describes. The request body is what tells
-// them apart — only a status flip carries `status` — and one mutation serves
-// both the enable switch and the edit dialog, so this is what keeps each of
-// them from speaking for the other: a switch reporting a flip nobody made
-// while the reader was pressing Save, or a refusal reported behind the dialog
-// that is covering it.
-function writeTarget(
-  write: AutomationPatch | undefined,
-): "status" | "definition" {
-  return write?.body.status === undefined ? "definition" : "status";
-}
-
-// Which of a row's two writes is in flight, or neither.
-function rowWriteInFlight(
-  isPending: boolean,
-  write: AutomationPatch | undefined,
-): "none" | "status" | "definition" {
-  if (!isPending) {
-    return "none";
-  }
-  return writeTarget(write);
-}
-
-// Whether the automation is on, in the one place the row's answers sit.
-//
-// A Switch, because flipping it IS the write: the old pair was a button whose
-// label named the NEXT state beside a badge naming the current one, so the row
-// said "Pause" and "enabled" and left the reader to work out which of the two
-// their click would produce. Without the update grant there is nothing to flip
-// and the badge comes back — the state is a read this row still owes, and the
-// card says once, above the list, why the control is not here.
-function AutomationStatus({
-  automation,
-  canEdit,
-  pending,
-  onChange,
-}: Readonly<{
-  automation: Automation;
-  canEdit: boolean;
-  pending: boolean;
-  onChange: (next: boolean) => void;
-}>) {
-  const t = useT();
-  const enabled = automation.status === "enabled";
-  if (!canEdit) {
-    return (
-      <Badge tone={enabled ? "success" : "warning"}>
-        {enabled ? t("auto.statusEnabled") : t("auto.statusPaused")}
-      </Badge>
-    );
-  }
-  return (
-    <Switch
-      // Named for the automation it governs, like the row's menu beside it:
-      // twenty switches all announcing "Enabled" tell a reader which control
-      // they are on and nothing about which rule it belongs to. labelHidden
-      // because the row already prints the name in view — the words are for the
-      // announcement, not a second copy on screen.
-      label={t("auto.enabledFor", { name: automation.name })}
-      labelHidden
-      checked={enabled}
-      pending={pending}
-      onChange={onChange}
-    />
-  );
-}
-
-export function AutomationRow({
-  automation,
-  entry,
-  canViewRuns,
-  canEdit,
-  canDelete,
-}: Readonly<{
-  automation: Automation;
-  entry?: CatalogEntry;
-  canViewRuns: boolean;
-  canEdit: boolean;
-  canDelete: boolean;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  // The edit dialog outlives its close the way the create dialog does, and
-  // `seq` keys the form so each open re-seeds it from the automation as it now
-  // stands rather than reviving a draft typed before somebody else changed it.
-  const [editing, setEditing] = useState<{ open: boolean; seq: number } | null>(
-    null,
-  );
-  // An open edit form whose grant was revoked would keep offering Save, and
-  // every submission would be a guaranteed 403. Close it with the permission.
-  useEffect(() => {
-    if (!canEdit) {
-      setEditing(shut);
-    }
-  }, [canEdit]);
-  // Two independent panels (run history + dry-run preview): each mounts lazily
-  // only while open, and opening one never closes the other.
-  const [runsOpen, setRunsOpen] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-
-  const patch = useMutation({
-    mutationFn: async ({ id, version, body }: AutomationPatch) => {
-      return unwrap(
-        await api.PATCH("/automations/{id}", {
-          params: {
-            path: { id },
-            header:
-              version === undefined ? {} : { "If-Match": String(version) },
-          },
-          body,
-        }),
-      );
-    },
-    onSuccess: () => {
-      setEditing(shut);
-      queryClient.invalidateQueries({ queryKey: ["automations"] });
-    },
-  });
-
-  const writeInFlight = rowWriteInFlight(patch.isPending, patch.variables);
-  // A refusal is reported where the reader still is. The dialog covers the row,
-  // so the definition's refusal belongs inside it and only the switch's lands
-  // underneath.
-  const refused = patch.isError ? writeTarget(patch.variables) : "none";
-  const refusal = patch.isError ? problemMessageOf(patch.error, t) : null;
-  // The row offers at least one verb worth folding away. With none of the three
-  // grants there is nothing behind the control, and a menu that opens on an
-  // empty panel is worse than no menu.
-  const hasVerbs = (canEdit && entry !== undefined) || canViewRuns || canDelete;
-
-  return (
-    <li data-automation={automation.id}>
-      <div className="auto-row-head">
-        {entry?.tier && (
-          <AutonomyDot
-            tier={entry.tier === "auto_execute" ? "auto" : "confirm"}
-          />
-        )}
-        <strong>{automation.name}</strong>
-        <span className="t-caption">{automation.key}</span>
-        <span className="t-caption">
-          {Object.entries(automation.params)
-            .map(([key, value]) => `${key}=${scalarText(value)}`)
-            .join(" ")}
-        </span>
-        <span className="auto-row-fill" />
-        <AutomationTierBadge tier={entry?.tier} />
-        <AutomationStatus
-          automation={automation}
-          canEdit={canEdit}
-          pending={writeInFlight === "status"}
-          onChange={(next) =>
-            patch.mutate({
-              id: automation.id,
-              version: automation.version,
-              body: { status: next ? "enabled" : "paused" },
-            })
-          }
-        />
-        {/* Four verbs of equal visual weight, one of them irreversible, used to
-            sit in a row separated from the rest only by a flex spacer. The menu
-            is what the design system offers for exactly that: the row carries
-            what the automation IS and whether it is on, and the things a reader
-            occasionally does to it live one click away. */}
-        {hasVerbs && (
-          <OverflowMenu label={t("auto.rowActions", { name: automation.name })}>
-            {canEdit && entry && (
-              <Button
-                onClick={() => {
-                  // Only a refused SAVE is stale on reopen. A refused FLIP is
-                  // the row's own report and the only one it gets, so opening
-                  // the editor must not clear it.
-                  if (refused === "definition") patch.reset();
-                  setEditing((was) => ({
-                    open: true,
-                    seq: (was?.seq ?? 0) + 1,
-                  }));
-                }}
-              >
-                {t("trust.edit")}
-              </Button>
-            )}
-            {canViewRuns && (
-              <InspectorToggles
-                runsOpen={runsOpen}
-                previewOpen={previewOpen}
-                onToggleRuns={() => setRunsOpen((open) => !open)}
-                onTogglePreview={() => setPreviewOpen((open) => !open)}
-              />
-            )}
-            {canDelete && <DeleteAutomationAction automation={automation} />}
-          </OverflowMenu>
-        )}
-      </div>
-      <RulePausedReason automation={automation} />
-      <AutomationInspectors
-        automationId={automation.id}
-        runsOpen={runsOpen}
-        previewOpen={previewOpen}
-        canConfigure={canViewRuns}
-      />
-      {editing !== null && entry && (
-        <AutomationDialog
-          key={editing.seq}
-          entry={entry}
-          open={editing.open}
-          initialName={automation.name}
-          initialParams={automation.params}
-          submitLabel={t("trust.save")}
-          pending={writeInFlight === "definition"}
-          refusal={refused === "definition" && <ErrorLine>{refusal}</ErrorLine>}
-          onSubmit={(name, params) =>
-            patch.mutate({
-              id: automation.id,
-              version: automation.version,
-              body: { name, params },
-            })
-          }
-          onClose={() => setEditing(shut)}
-        />
-      )}
-      {/* A refused flip moves nothing on screen — so this line is the only
-          report that it did not land, and it has to be spoken. The edit
-          dialog's own refusal stays inside it, and so does the delete's. */}
-      {refused === "status" && <ErrorLine>{refusal}</ErrorLine>}
-    </li>
-  );
-}
-
-// Set-and-forget configuration, so it lives inside Settings → AI rather than
-// on a nav destination of its own: this renders as one SECTION of that page.
-// The page owns the `.wrap` reading column and the h1 naming the tab, so this
-// contributes neither — a second `.wrap` would double the page padding and a
-// second h1 would give the document two page titles.
+// One section of Settings → AI: the page owns the reading column and the h1.
 export function AutomationsAdmin() {
   const t = useT();
   const queryClient = useQueryClient();
@@ -369,6 +56,7 @@ export function AutomationsAdmin() {
     }
   }, [canCreate]);
 
+  // Not gated: ListAutomationCatalog asks for no object grant.
   const catalog = useQuery({
     queryKey: ["automation-catalog"],
     queryFn: async () => {
@@ -376,12 +64,8 @@ export function AutomationsAdmin() {
     },
   });
 
-  // Gated on the grant the SERVER demands: AutomationStore.List calls
-  // auth.Require(automation, read), so without it this query could only 403 —
-  // a settled denial rendered as a failure with a Retry that cannot succeed.
-  // The catalog above is deliberately NOT gated: ListAutomationCatalog reaches
-  // no store and requires no object grant, so the starter library is readable
-  // by anyone the session admits.
+  // Gated on the grant the server demands (AutomationStore.List requires
+  // automation:read), so a seat without it is not shown a Retry that cannot work.
   const instances = useQuery({
     queryKey: ["automations"],
     enabled: canViewRuns,
@@ -412,10 +96,7 @@ export function AutomationsAdmin() {
     },
   });
 
-  // Reset on OPEN, not on close: the dialog outlives its own close, so a reader
-  // can still read why the save was refused while it leaves — and the next
-  // opening must not arrive with that refusal already printed under it. `seq`
-  // re-seeds the form; nothing re-seeds the mutation.
+  // Reset on OPEN, not on close: the closing dialog still shows its refusal.
   const stage = (entry: CatalogEntry) => {
     create.reset();
     setStaged((prior) => ({ entry, seq: (prior?.seq ?? 0) + 1, open: true }));
@@ -425,55 +106,32 @@ export function AutomationsAdmin() {
     catalog.data?.data.find((entry) => entry.key === key);
 
   return (
-    // ONE panel, and its body is the settings page's row language: two
-    // decisions, each of which IS a list rather than an answer to a question
-    // that would fit beside it, so both take the full width below their naming.
-    // The old shape put them side by side in two columns with hard 240px/280px
-    // floors — the tightest in settings — against about 308px of card interior
-    // on a phone, and gave each a heading of its own on top of the panel's.
-    //
-    // `data-automations-admin` still marks the one addressable region, so a
-    // reader — and the acceptance suite — can say "the automations surface"
-    // rather than "the whole settings page".
-    <Panel title={t("nav.automations")}>
-      <PanelBody>
-        <PanelIntro>{t("auto.sub")}</PanelIntro>
-        {/* Bound to the grant the CONTROL asks for. It read "no create AND no
-            edit AND no delete" while the row swaps its Switch for a Badge on
-            `update` alone — so a seat holding create but not update lost the
-            toggle with nothing on the page saying why, which is the one thing
-            this line exists to prevent. */}
-        {me.isSuccess && !canEdit && (
-          <p className="auto-readonly">{t("auto.readOnly")}</p>
-        )}
-        <div data-automations-admin>
-          <SettingList>
-            {/* What is running comes first: the library below it is only ever
-                read in order to add to this. */}
-            <ConfiguredAutomationsRow
-              instances={instances}
-              me={me}
-              entryFor={entryFor}
-              canViewRuns={canViewRuns}
-              canEdit={canEdit}
-              canDelete={canDelete}
-            />
-            <StarterLibraryRow
-              catalog={catalog}
-              canCreate={canCreate}
-              onUse={stage}
-            />
-          </SettingList>
-        </div>
-        {/* The outcome lands on the CARD, because by the time it is true the
-            dialog that produced it is gone. */}
+    <div data-automations-admin>
+      <Panel title={t("nav.automations")}>
+        <PanelBody>
+          <PanelIntro>{t("auto.sub")}</PanelIntro>
+          {/* Bound to `update`, the grant the row's Switch asks for. */}
+          {me.isSuccess && !canEdit && (
+            <PanelIntro>{t("auto.readOnly")}</PanelIntro>
+          )}
+        </PanelBody>
+        <PanelGroupHead title={t("auto.instances")} level="h3" />
+        <InstancesSection
+          instances={instances}
+          me={me}
+          entryFor={entryFor}
+          canViewRuns={canViewRuns}
+          canEdit={canEdit}
+          canDelete={canDelete}
+        />
+        <PanelGroupHead title={t("auto.catalog")} level="h3" />
+        <StarterLibrary catalog={catalog} canCreate={canCreate} onUse={stage} />
+        {/* On the card: by the time it is true the dialog is gone. */}
         {create.isSuccess && (
-          <p className="auto-outcome" role="status">
-            {t("auto.createdPaused")}
-          </p>
+          <PanelBody>
+            <p role="status">{t("auto.createdPaused")}</p>
+          </PanelBody>
         )}
-        {/* Name and parameters are one form submitted together, so they live
-            behind the library's verb rather than unfolding under it. */}
         {staged && (
           <AutomationDialog
             key={staged.seq}
@@ -489,41 +147,14 @@ export function AutomationsAdmin() {
             onClose={() => setStaged(shut)}
           />
         )}
-      </PanelBody>
-    </Panel>
+      </Panel>
+    </div>
   );
 }
 
-// What the autonomy dot MEANS, in words.
-//
-// The colour is the glance and this is the reading: a mark is what a screen
-// reader cannot see and a colour-blind reader may not distinguish, and the
-// difference it carries here is whether the rule acts on the workspace by itself
-// or waits for a contact. Its own component because the row it sits in is already
-// at the complexity ceiling, and a branch about one badge is not what a reader
-// of that row is there for.
-function AutomationTierBadge({ tier }: Readonly<{ tier?: string }>) {
-  const t = useT();
-  if (!tier) {
-    return null;
-  }
-  const runs = tier === "auto_execute";
-  return (
-    <Badge tone={runs ? "success" : "warning"}>
-      {runs ? t("auto.tier.runs") : t("auto.tier.approval")}
-    </Badge>
-  );
-}
-
-// What is running, as the subject of one stacked row: a list of rules at the
-// card's full width, never squeezed into the column an answer would sit in.
-//
-// Without the read grant the row keeps its place and says it is WITHHELD — not
-// absent, and not empty: an empty instance list says this installation runs no
-// automations, which is a claim about the workspace rather than about who may
-// read it. Behind the /me probe, so it states a settled denial rather than the
-// absence of an answer.
-function ConfiguredAutomationsRow({
+// Without the read grant the section says it is WITHHELD: an empty list would
+// claim the workspace runs no automations. Behind /me, so it is a settled denial.
+function InstancesSection({
   instances,
   me,
   entryFor,
@@ -539,49 +170,34 @@ function ConfiguredAutomationsRow({
   canDelete: boolean;
 }>) {
   const t = useT();
+  const rows = instances.data?.data;
+  if (canViewRuns && rows !== undefined && rows.length > 0) {
+    return (
+      <ConfiguredAutomations
+        automations={rows}
+        entryFor={entryFor}
+        canViewRuns={canViewRuns}
+        canEdit={canEdit}
+        canDelete={canDelete}
+      />
+    );
+  }
   return (
-    <SettingRow
-      label={t("auto.instances")}
-      layout="stack"
-      control={
-        canViewRuns ? (
-          <QueryGate
-            query={instances}
-            empty={(page) => page.data.length === 0}
-            pendingLabel={t("auto.instances")}
-          >
-            {(page) => (
-              <ul className="auto-instances">
-                {page.data.map((automation) => (
-                  <AutomationRow
-                    key={automation.id}
-                    automation={automation}
-                    entry={entryFor(automation.key)}
-                    canViewRuns={canViewRuns}
-                    canEdit={canEdit}
-                    canDelete={canDelete}
-                  />
-                ))}
-              </ul>
-            )}
-          </QueryGate>
-        ) : (
-          <QueryGate query={me} pendingLabel={t("auto.instances")}>
-            {() => <EmptyState>{t("auto.withheld")}</EmptyState>}
-          </QueryGate>
-        )
-      }
-    />
+    <PanelBody>
+      <QueryStates
+        query={canViewRuns ? instances : me}
+        pendingLabel={t("auto.instances")}
+      >
+        <EmptyState>
+          {canViewRuns ? t("common.empty") : t("auto.withheld")}
+        </EmptyState>
+      </QueryStates>
+    </PanelBody>
   );
 }
 
-// The closed catalog, as the subject of the card's other stacked row.
-//
-// It is a LIST and stays in the card: every seat may read it —
-// ListAutomationCatalog reaches no store and asks for no object grant — so it
-// is the per-entry verb that answers to the create grant, never the list.
-// Authoring is what that verb opens.
-function StarterLibraryRow({
+// Every seat may read the catalog; only the create grant makes a row open.
+function StarterLibrary({
   catalog,
   canCreate,
   onUse,
@@ -591,85 +207,90 @@ function StarterLibraryRow({
   onUse: (entry: CatalogEntry) => void;
 }>) {
   const t = useT();
+  const entries = catalog.data?.data;
+  if (entries === undefined || entries.length === 0) {
+    return (
+      <PanelBody>
+        <QueryStates query={catalog} pendingLabel={t("auto.catalog")}>
+          <EmptyState>{t("common.empty")}</EmptyState>
+        </QueryStates>
+      </PanelBody>
+    );
+  }
   return (
-    <SettingRow
+    <DataTable
+      bleed
+      fold
       label={t("auto.catalog")}
-      description={t("auto.catalogSub")}
-      layout="stack"
-      control={
-        <QueryGate
-          query={catalog}
-          empty={(page) => page.data.length === 0}
-          pendingLabel={t("auto.catalog")}
-        >
-          {(page) => (
-            // A nested SettingList, so the interval between two entries and the
-            // hairline that separates them are the row language's own. As a bare
-            // `<ul>` each entry ran three text lines together with no rule
-            // anywhere and no interval between the lines — a wall of names,
-            // sentences and identifiers with a verb floating at the right.
-            <SettingList testId="auto-catalog">
-              {page.data.map((entry) => (
-                <CatalogEntryItem
-                  key={entry.key}
-                  entry={entry}
-                  canCreate={canCreate}
-                  onUse={() => onUse(entry)}
-                />
-              ))}
-            </SettingList>
-          )}
-        </QueryGate>
-      }
+      columns={libraryColumns(t, canCreate ? onUse : undefined)}
+      rows={entries}
+      rowKey={(entry) => entry.key}
+      rowTestId={(entry) => `template-${entry.key}`}
+      onRowClick={canCreate ? onUse : undefined}
     />
   );
 }
 
-// One entry of the closed catalog as ONE row: what it is on the left — the name,
-// what it does, and the trigger/action pair in the wire's own words — and, for a
-// seat holding create, the verb that turns it into a configured automation at
-// the x every answer on this page sits at.
-//
-// The recipe joins the DESCRIPTION rather than standing as a third line of its
-// own: it is what the entry does, said in identifiers instead of prose, so the
-// two together are the naming and the row has one naming column and one answer.
-function CatalogEntryItem({
-  entry,
-  canCreate,
-  onUse,
-}: Readonly<{
-  entry: CatalogEntry;
-  canCreate: boolean;
-  onUse: () => void;
-}>) {
-  const t = useT();
+function libraryColumns(
+  t: Translator,
+  onUse: ((entry: CatalogEntry) => void) | undefined,
+): DataTableColumn<CatalogEntry>[] {
+  const columns: DataTableColumn<CatalogEntry>[] = [
+    {
+      key: "name",
+      header: t("auto.name"),
+      fold: "title",
+      grow: true,
+      render: (entry) => (
+        <CellStack>
+          <span>{entry.name}</span>
+          {entry.description && <OneLine text={entry.description} />}
+        </CellStack>
+      ),
+    },
+    {
+      key: "trigger",
+      header: t("auto.runs.why"),
+      render: (entry) => (
+        <Chip
+          dense
+          icon={entry.trigger.startsWith("clock:") ? CalendarClock : Zap}
+        >
+          {triggerLabel(entry.trigger, t)}
+        </Chip>
+      ),
+    },
+  ];
+  if (onUse === undefined) {
+    return columns;
+  }
+  return [
+    ...columns,
+    {
+      key: "use",
+      header: t("auto.use"),
+      headerHidden: true,
+      align: "end",
+      fold: "end",
+      render: (entry) => (
+        <IconAction
+          variant="ghost"
+          icon={<ChevronRight aria-hidden />}
+          label={t("auto.use")}
+          onClick={() => onUse(entry)}
+        />
+      ),
+    },
+  ];
+}
+
+// One line, cut short; the whole text on hover and focus.
+function OneLine({ text }: Readonly<{ text: string }>) {
+  const tip = useTruncationTooltip<HTMLSpanElement>(text);
   return (
-    <SettingRow
-      label={
-        <span className="auto-catalog-name">
-          {entry.tier && (
-            <AutonomyDot
-              tier={entry.tier === "auto_execute" ? "auto" : "confirm"}
-            />
-          )}
-          {entry.name}
-        </span>
-      }
-      description={
-        <>
-          {entry.description}
-          <span className="auto-catalog-recipe">
-            {entry.trigger} {"->"} {entry.action}
-          </span>
-        </>
-      }
-      control={
-        canCreate ? (
-          <Button variant="ghost" onClick={onUse}>
-            {t("auto.use")}
-          </Button>
-        ) : null
-      }
-    />
+    <span className="t-caption auto-oneline" ref={tip.ref} {...tip.trigger}>
+      {text}
+      {tip.tip}
+    </span>
   );
 }
