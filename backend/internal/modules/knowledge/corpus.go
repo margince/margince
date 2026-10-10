@@ -37,6 +37,7 @@ const defaultAskColumn = "default_ask"
 // names do not read as a record changing; they read as two records.
 const (
 	filenameKey      = "filename"
+	checksumKey      = "checksum"
 	contentTypeKey   = "content_type"
 	managedSourceKey = "managed_source"
 	byteSizeKey      = "byte_size"
