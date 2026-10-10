@@ -49,6 +49,19 @@ func TestAThrottledIngestWaitsOutTheProviderForABoundedTime(t *testing.T) {
 	}
 }
 
+// After the wait, a shipped page that stays failed must not tell an admin to
+// upload a file nobody uploaded.
+func TestAFailedHandbookPageDoesNotAskForAnUpload(t *testing.T) {
+	detail := ingestDetail(fmt.Errorf("%q: %w", "meetings-and-booking.md", knowledge.ErrHandbookPageGone))
+
+	if strings.Contains(strings.ToLower(detail), "upload") {
+		t.Errorf("%q asks for an upload of a page that ships with the release", detail)
+	}
+	if !strings.Contains(detail, "release") {
+		t.Errorf("%q does not say the release is the cause", detail)
+	}
+}
+
 // A rollout can hand a page the new release added to a worker that lacks it.
 // That clears when a newer worker takes the job. It waits for a bounded time
 // and spends none of the attempts that mark a document failed.

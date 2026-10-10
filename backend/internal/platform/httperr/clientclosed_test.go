@@ -39,6 +39,25 @@ func TestACallerWhoLeftIsNotAServerFaultWhateverTheErrorSays(t *testing.T) {
 	}
 }
 
+// The line a caller-left request leaves keeps the error, so a real fault that
+// happened beside the cancel can still be found.
+func TestACallerLeftLineKeepsTheCause(t *testing.T) {
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequest(http.MethodGet, "/v1/worklist", nil).WithContext(ctx)
+	cancel()
+
+	Write(httptest.NewRecorder(), req, errors.New("conn closed"))
+
+	if !bytes.Contains(logged.Bytes(), []byte("conn closed")) {
+		t.Errorf("the caller-left line dropped the error: %s", logged.String())
+	}
+}
+
 // The server's own deadline ends the request context with DeadlineExceeded:
 // that is its failure to finish, not a caller leaving.
 func TestARequestThatTimedOutIsStillAServerFault(t *testing.T) {
