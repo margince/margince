@@ -43,20 +43,17 @@ func seedPromise(
 	subject := "Rückfragen zum Angebot"
 	occurred := laneClock.AddDate(0, 0, -7)
 	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, OccurredAt: &occurred, Source: "manual",
+		Kind: "email", Subject: &subject, OccurredAt: &occurred, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 	})
 	if err != nil {
 		t.Fatalf("logging the message the promise was made in: %v", err)
 	}
-	claim, err := contacts.NewStore(e.DB()).RecordConversationClaim(e.Admin(), contacts.ClaimInput{
+	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
 		ContactID: ids.From[ids.ContactKind](contactID), Kind: "commitment_ours",
 		Body: body, ActivityID: ids.UUID(message.Id), Quote: body, DueAt: due,
 		Source: "manual",
 	})
-	if err != nil {
-		t.Fatalf("recording the promise: %v", err)
-	}
 	return ids.UUID(claim.Id)
 }
 

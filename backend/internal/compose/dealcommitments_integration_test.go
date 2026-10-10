@@ -139,14 +139,11 @@ func TestADealWatchSaysWhenMoreAreOwed(t *testing.T) {
 	}
 	for i := range dealCommitmentsLimit {
 		quote := fmt.Sprintf("We will do thing %d.", i)
-		w.WsExec(t, `UPDATE activity SET body = COALESCE(body, '') || ' ' || $2::text WHERE id = $1`, message, quote)
-		if _, err := w.Contacts.RecordConversationClaim(w.Admin(), contacts.ClaimInput{
+		w.RecordClaim(w.Admin(), t, contacts.ClaimInput{
 			ContactID: ids.From[ids.ContactKind](w.contact), Kind: claimKindTheirs,
 			Body: fmt.Sprintf("Commitment %d", i), ActivityID: message,
 			Quote: quote, Source: "extraction",
-		}); err != nil {
-			t.Fatalf("filing commitment %d: %v", i, err)
-		}
+		})
 	}
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
 	got, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal))
