@@ -79,14 +79,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
 		return err
 	}
-	if handled, err := runDatabaseSubcommand(ctx, pool, args, stdout); handled {
-		return err
-	}
-
-	// And again on a tick, because the boot check answers once.
-	ctx, stopForReleaseSkew, releaseSkewErr := watchReleaseSkew(ctx, pool, logger)
-	defer stopForReleaseSkew()
-
 	// Before this role does any work, so an operator mistake never leaves a
 	// worker running on a license the api refuses to boot on. The RUNNING
 	// posture is the api's to watch: it is the role that serves it, and two
@@ -113,6 +105,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if handled, err := runDatabaseSubcommand(ctx, pool, vault, args, stdout); handled {
+		return err
+	}
+	// And again on a tick, because the boot check answers once.
+	ctx, stopForReleaseSkew, releaseSkewErr := watchReleaseSkew(ctx, pool, logger)
+	defer stopForReleaseSkew()
 	if err := admitBoot(ctx, logger, pool, vault, cfg, deployCfg); err != nil {
 		return err
 	}

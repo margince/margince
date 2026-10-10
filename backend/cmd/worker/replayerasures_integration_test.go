@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"strings"
 	"testing"
@@ -31,7 +30,8 @@ const restoredAddress = "geloescht@betroffene.example"
 // the entry. Only the journal in the object store still names the address.
 func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
 	e := integration.Setup(t)
-	journalDir := configureReplayEnvironment(t)
+	journalDir := configureObjectStore(t)
+	vault := newTestVault(t, e)
 
 	// Before the backup: the contact was erased and the journal exported, both
 	// through the eraser the api uses.
@@ -55,7 +55,7 @@ func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
 	restored := seedContactWithAddress(t, e, "Die Betroffene", restoredAddress)
 
 	var out bytes.Buffer
-	handled, err := runDatabaseSubcommand(t.Context(), e.Pool, []string{"replay-erasures"}, &out)
+	handled, err := runDatabaseSubcommand(t.Context(), e.Pool, vault, []string{"replay-erasures"}, &out)
 	if !handled {
 		t.Fatal("the worker does not know the replay-erasures command")
 	}
@@ -76,27 +76,34 @@ func TestReplayErasuresRefusesToRunWithoutTheObjectStore(t *testing.T) {
 	e := integration.Setup(t)
 	t.Setenv(blobstore.EnvEndpoint, "")
 	t.Setenv(blobstore.EnvPath, "")
-	t.Setenv(keyvault.EnvRootKey, "")
 
-	_, err := runDatabaseSubcommand(t.Context(), e.Pool, []string{"replay-erasures"}, &bytes.Buffer{})
+	_, err := runDatabaseSubcommand(t.Context(), e.Pool, newTestVault(t, e), []string{"replay-erasures"}, &bytes.Buffer{})
 	if !errors.Is(err, compose.ErrReplayNeedsObjectStore) {
 		t.Fatalf("err = %v, want the replay refused for want of the journal", err)
 	}
 }
 
-// configureReplayEnvironment gives the command the object store and key vault
-// an installation's roles read, and returns where the store keeps its objects.
-func configureReplayEnvironment(t *testing.T) string {
+// configureObjectStore points the command at a filesystem object store, as an
+// installation's roles read it, and returns where the store keeps its objects.
+func configureObjectStore(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
+	t.Setenv(blobstore.EnvEndpoint, "")
+	t.Setenv(blobstore.EnvPath, dir)
+	return dir
+}
+
+func newTestVault(t *testing.T, e *integration.Env) keyvault.Vault {
+	t.Helper()
 	rootKey := make([]byte, 32)
 	if _, err := rand.Read(rootKey); err != nil {
 		t.Fatalf("making a root key: %v", err)
 	}
-	t.Setenv(blobstore.EnvEndpoint, "")
-	t.Setenv(blobstore.EnvPath, dir)
-	t.Setenv(keyvault.EnvRootKey, base64.StdEncoding.EncodeToString(rootKey))
-	return dir
+	vault, err := keyvault.New(keyvault.Config{RootKey: rootKey, Pool: e.Pool})
+	if err != nil {
+		t.Fatalf("building the key vault: %v", err)
+	}
+	return vault
 }
 
 func seedContactWithAddress(t *testing.T, e *integration.Env, name, email string) ids.UUID {

@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -107,7 +108,7 @@ func writeDisagreements(stdout io.Writer, report []consent.Disagreement) error {
 // these read or write the installation's own rows and must run after the role
 // and release assertions — a report against a schema this binary does not agree
 // with is a report about something else, and a write against one corrupts it.
-func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, args []string, stdout io.Writer) (bool, error) {
+func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, args []string, stdout io.Writer) (bool, error) {
 	if len(args) == 0 {
 		return false, nil
 	}
@@ -117,7 +118,7 @@ func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, args []strin
 	case "deal-key-names":
 		return true, runDealKeyNames(ctx, pool, args[1:], stdout)
 	case "replay-erasures":
-		return true, runReplayErasures(ctx, pool, config.FromOS, args[1:], stdout)
+		return true, runReplayErasures(ctx, pool, vault, config.FromOS, args[1:], stdout)
 	}
 	if args[0] == "reopen-parked" {
 		return true, runReopenParked(ctx, pool, args[1:], stdout)
