@@ -8,6 +8,7 @@
 
 import type { components } from "../api/schema";
 import type { FieldControl } from "../design-system/atoms";
+import { Popover } from "../design-system/popover";
 import { Select, type SelectOption } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -98,6 +99,17 @@ const PAUSED_REASON: Record<
   burst: "auto.pausedReason.burst",
 };
 
+/** The same reason, short enough to sit under the rule's switch. */
+const PAUSED_SHORT: Record<
+  NonNullable<Automation["paused_reason"]>,
+  MessageKey
+> = {
+  list_archived: "auto.pausedShort.listArchived",
+  list_invalid: "auto.pausedShort.listInvalid",
+  list_unavailable: "auto.pausedShort.listUnavailable",
+  burst: "auto.pausedShort.burst",
+};
+
 /** The reason a paused rule stopped itself; nothing for a rule paused by hand. */
 export function RulePausedReason({
   automation,
@@ -107,6 +119,12 @@ export function RulePausedReason({
     return null;
   }
   return (
-    <p className="t-caption">{t(PAUSED_REASON[automation.paused_reason])}</p>
+    <Popover
+      onHover
+      className="t-caption"
+      label={t(PAUSED_SHORT[automation.paused_reason])}
+    >
+      <p>{t(PAUSED_REASON[automation.paused_reason])}</p>
+    </Popover>
   );
 }

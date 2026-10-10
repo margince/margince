@@ -3,10 +3,17 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Card } from "../design-system/atoms";
-import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
+import { KeyedName } from "../design-system/keyedname";
 import { formatDecimal, formatNumber, ordinalNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import { attemptReasonLabel, tierLabel } from "./ai-decision-labels";
+import { type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import {
+  attemptReasonLabel,
+  callCodeName,
+  tierLabel,
+} from "./ai-decision-labels";
+import { providerName } from "./ai-provider-names";
 import { ExportScenarioDialog } from "./aiexport";
 import { QueryStates, unwrap } from "./common";
 
@@ -16,14 +23,30 @@ function payloadText(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
 
-// One attempt's binding as `provider/model`, the spelling the call row uses. A
-// row with no provider still names its model rather than a stray slash.
+// One attempt's model and its vendor's name, the pair the call row shows.
 function attemptBinding(
   attempt: components["schemas"]["AiCallAttempt"],
+  t: Translator,
 ): string {
-  return attempt.provider
-    ? `${attempt.provider}/${attempt.model_id}`
-    : (attempt.model_id ?? "");
+  return [
+    attempt.model_id,
+    attempt.provider && providerName(attempt.provider, t),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+const IDENTITY_SOURCE: Readonly<Record<string, MessageKey>> = {
+  response: "aicalls.detail.source.response",
+  echo: "aicalls.detail.source.echo",
+  configured: "aicalls.detail.source.configured",
+};
+
+// How far to trust the served model named above. A source this screen does
+// not know yet is shown as sent.
+function identitySource(source: string, t: Translator): string {
+  const key = IDENTITY_SOURCE[source];
+  return key ? t(key) : t("aicalls.detail.source", { source });
 }
 
 export function CallDetailPanel({
@@ -51,19 +74,15 @@ export function CallDetailPanel({
             {query.data.model_id
               ? t("aicalls.detail.identity", {
                   served: query.data.served_model,
-                  provider: query.data.provider,
+                  provider: providerName(query.data.provider, t),
                   configured: query.data.model_id,
                 })
               : t("aicalls.detail.identityNoModel", {
                   served: query.data.served_model,
-                  provider: query.data.provider,
+                  provider: providerName(query.data.provider, t),
                 })}
           </p>
-          <p>
-            {t("aicalls.detail.source", {
-              source: query.data.served_identity_source,
-            })}
-          </p>
+          <p>{identitySource(query.data.served_identity_source, t)}</p>
           <p>
             {query.data.context_scopes.length > 0
               ? t("aicalls.detail.context", {
@@ -71,11 +90,9 @@ export function CallDetailPanel({
                 })
               : t("aicalls.detail.contextNone")}
           </p>
-          {/* A bare h3 carries no class, and preflight leaves it at body size
-              and body weight — a heading only the document tree can see. The
-              eyebrow is the one spelling of a label over a block, and `as="h3"`
-              is what keeps it a real heading inside the card's own h2. */}
-          <Eyebrow as="h3">{t("aicalls.detail.attempts")}</Eyebrow>
+          <Heading size="xsmall" as="h4">
+            {t("aicalls.detail.attempts")}
+          </Heading>
           <ol>
             {query.data.attempts.map((attempt) => (
               <li key={attempt.attempt}>
@@ -84,14 +101,12 @@ export function CallDetailPanel({
                   <Badge>{t("aicalls.badge.decision")}</Badge>
                 )}{" "}
                 {/* Which rung this attempt ran on, then why it ran. A reason
-                    names what went wrong BEFORE it, so read beside the tier it
+                    names what went wrong before it, so read beside the tier it
                     says where the walk went next. */}
                 {attempt.tier ? `${tierLabel(attempt.tier, t)} · ` : ""}
-                {/* The binding THIS attempt asked, spelled as the row above
-                    spells the call's. The call's own binding is the terminal
-                    rung, so a decision attempt that fell through names a model
-                    nothing else on the page does. */}
-                {attempt.model_id ? `${attemptBinding(attempt)} · ` : ""}
+                {/* The binding this attempt asked. The call's own is the
+                    terminal rung's, so a decision attempt names a model the row does not. */}
+                {attempt.model_id ? `${attemptBinding(attempt, t)} · ` : ""}
                 {attempt.served_provider
                   ? `${t("aicalls.detail.servedBy", { host: attempt.served_provider })} · `
                   : ""}
@@ -118,7 +133,10 @@ export function CallDetailPanel({
                     ),
                   })}`}
                 {attempt.error_sentinel && (
-                  <Badge tone="danger">{attempt.error_sentinel}</Badge>
+                  <KeyedName
+                    name={callCodeName(attempt.error_sentinel, t)}
+                    code={attempt.error_sentinel}
+                  />
                 )}
               </li>
             ))}

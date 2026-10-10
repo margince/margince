@@ -185,25 +185,56 @@ async function open(
   await user.click(
     within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
       "button",
-      { name: /^Edit/ },
+      { name: /^(Edit|Open) / },
     ),
   );
   return screen.findByRole("dialog");
 }
 
 describe("the Providers list", () => {
-  it("reads each vendor as active, ready, needing a key or not active", async () => {
+  it("names what each vendor serves, and badges only a state other than in use", async () => {
     mount();
-    const state = async (provider: string) =>
-      (await screen.findByTestId(`ai-provider-row-${provider}`)).textContent;
-    await vi.waitFor(async () =>
-      expect(await state("gemini")).toContain("cheap_cloud, embeddings"),
-    );
-    expect(await state("gemini")).toContain("Active");
-    expect(await state("anthropic")).toContain("Ready");
-    expect(await state("anthropic")).toContain("Not used");
-    expect(await state("jev")).toContain("Needs key");
-    expect(await state("openai")).toContain("Not active");
+    const row = (provider: string) =>
+      screen.findByTestId(`ai-provider-row-${provider}`);
+    const gemini = await row("gemini");
+    await within(gemini).findByText("Everyday cloud");
+    expect(within(gemini).getByText("Embedding model")).toBeTruthy();
+    expect(within(gemini).getByText("gemini")).toBeTruthy();
+    expect(within(gemini).queryByText("Active")).toBeNull();
+    expect((await row("anthropic")).textContent).toContain("Ready");
+    expect((await row("anthropic")).textContent).not.toContain("Not used");
+    expect((await row("jev")).textContent).toContain("Needs key");
+    expect((await row("openai")).textContent).toContain("Not active");
+  });
+
+  it("puts the vendor that needs a hand first, then the ones in use", async () => {
+    mount();
+    await within(
+      await screen.findByTestId("ai-provider-row-gemini"),
+    ).findByText("Everyday cloud");
+    const order = screen
+      .getAllByTestId(/^ai-provider-row-/)
+      .map((row) => row.dataset.testid?.replace("ai-provider-row-", ""));
+    expect(order.slice(0, 2)).toEqual(["jev", "gemini"]);
+  });
+
+  it("opens a vendor's sheet from anywhere on its row", async () => {
+    const user = userEvent.setup();
+    mount();
+    const gemini = await screen.findByTestId("ai-provider-row-gemini");
+    await user.click(await within(gemini).findByText("Everyday cloud"));
+    expect(
+      await screen.findByRole("dialog", { name: "Google Gemini" }),
+    ).toBeTruthy();
+  });
+
+  it("offers Open, not Edit, to a seat that may not change providers", async () => {
+    mount({ ai_routing: ["read"], ai_model_rate: ["read"] });
+    const gemini = await screen.findByTestId("ai-provider-row-gemini");
+    expect(
+      await within(gemini).findByRole("button", { name: "Open Google Gemini" }),
+    ).toBeTruthy();
+    expect(within(gemini).queryByRole("button", { name: /^Edit/ })).toBeNull();
   });
 });
 

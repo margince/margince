@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Callout } from "../design-system/callout";
+import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -9,6 +10,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { humanizeToken } from "./audit";
 import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 // Which kinds of proposal answer themselves, for the reader and nobody else.
@@ -153,11 +155,14 @@ const KIND_COPY: Readonly<
   },
 };
 
-// kindLabel is what the row calls this kind — its own words where the catalog
-// has them, and the contract's spelling where it does not.
+// A kind the catalog has no words for reads as its key made readable.
 function kindLabel(kind: string, t: Translator): string {
   const copy = KIND_COPY[kind];
-  return copy ? t(copy.label) : kind;
+  if (copy) {
+    return t(copy.label);
+  }
+  const words = humanizeToken(kind);
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 // kindHelp is the sentence under the label, or nothing for a kind this catalog
@@ -212,7 +217,13 @@ function AutonomyChoices({
         {rows.map((row) => (
           <SettingRow
             key={row.kind}
-            label={kindLabel(row.kind, t)}
+            label={
+              KIND_COPY[row.kind] ? (
+                kindLabel(row.kind, t)
+              ) : (
+                <KeyedName name={kindLabel(row.kind, t)} code={row.kind} />
+              )
+            }
             description={[kindHelp(row.kind, t), decidedSoFar(row, t, locale)]
               .filter(Boolean)
               .join(" ")}

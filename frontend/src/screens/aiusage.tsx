@@ -4,23 +4,20 @@ import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import { Button, Disclosure, EmptyState } from "../design-system/atoms";
-import { DataTable } from "../design-system/datatable";
+import { Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatMoney, formatNumber, monthAndYear } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
-import { tierLabel } from "./ai-decision-labels";
+import { useLocale, useT } from "../i18n";
 import { useRouting } from "./ai-routing-query";
-import { DecisionSummaryRow } from "./aiusage-decisions";
-import { QueryGate, unwrap, useMe } from "./common";
+import { DecisionSummary } from "./aiusage-decisions";
+import { aggregate, CallsByDay, SpendByTask, spendRows } from "./aiusage-spend";
+import { QueryGate, QueryStates, unwrap, useMe } from "./common";
 import "./aiusage.css";
 import { calendarMonth } from "../format/calendarday";
 import { viewerZone } from "../format/timezone";
-import { TaskName } from "./ai-task-name";
 
 type AiUsage = components["schemas"]["AiUsage"];
-type UsageTask = AiUsage["days"][number]["tasks"][number];
 export type Month = { from: string; to: string };
 
 export function bandTone(band: string): "warning" | "danger" | undefined {
@@ -76,98 +73,6 @@ function isCurrentMonth(month: Month): boolean {
   return month.from.slice(0, 7) >= calendarMonth(new Date(), viewerZone());
 }
 
-function aggregate(days: AiUsage["days"]): UsageTask[] {
-  const rows = new Map<string, UsageTask>();
-  for (const day of days) {
-    for (const task of day.tasks) {
-      const key = `${task.task}\u0000${task.tier}`;
-      const current = rows.get(key);
-      if (!current) {
-        rows.set(key, { ...task });
-        continue;
-      }
-      current.calls += task.calls;
-      current.cached_hits =
-        (current.cached_hits ?? 0) + (task.cached_hits ?? 0);
-      current.tokens_in += task.tokens_in;
-      current.tokens_out += task.tokens_out;
-      current.unpriced_calls =
-        (current.unpriced_calls ?? 0) + (task.unpriced_calls ?? 0);
-      if (task.cost_est_minor !== undefined) {
-        current.cost_est_minor =
-          (current.cost_est_minor ?? 0) + task.cost_est_minor;
-      }
-    }
-  }
-  return [...rows.values()];
-}
-
-// The spend table's columns, built once per render of the body rather than
-// inline in the JSX: the cost column exists only when the server priced at
-// least one call, and a column list is data — DataTable owns the .table-scroll
-// wrapper that keeps seven columns inside the card on a phone instead of
-// running 630px wide inside 324px of it.
-function usageColumns(
-  showCost: boolean,
-  currency: string,
-  locale: Locale,
-  t: ReturnType<typeof useT>,
-) {
-  const columns = [
-    {
-      key: "task",
-      header: t("aiusage.col.task"),
-      render: (r: UsageTask) => (
-        <TaskName
-          name={r.task_display_name ?? r.task}
-          summary={r.task_summary}
-        />
-      ),
-    },
-    {
-      key: "tier",
-      header: t("aiusage.col.tier"),
-      render: (r: UsageTask) => tierLabel(r.tier, t),
-    },
-    {
-      key: "calls",
-      header: t("aiusage.col.calls"),
-      render: (r: UsageTask) => formatNumber(r.calls, locale),
-    },
-    {
-      key: "cached",
-      header: t("aiusage.col.cached"),
-      render: (r: UsageTask) => formatNumber(r.cached_hits ?? 0, locale),
-    },
-    {
-      key: "tokensIn",
-      header: t("aiusage.col.tokensIn"),
-      render: (r: UsageTask) => formatNumber(r.tokens_in, locale),
-    },
-    {
-      key: "tokensOut",
-      header: t("aiusage.col.tokensOut"),
-      render: (r: UsageTask) => formatNumber(r.tokens_out, locale),
-    },
-  ];
-  if (!showCost) {
-    return columns;
-  }
-  return [
-    ...columns,
-    {
-      key: "cost",
-      header: t("aiusage.col.cost"),
-      // A row the server did not price is not a row that cost nothing — the
-      // marker says we do not know, where a zero would state a figure.
-      render: (r: UsageTask) =>
-        r.cost_est_minor === undefined
-          ? "—"
-          : formatMoney(r.cost_est_minor, currency, locale),
-    },
-  ];
-}
-
 // The body is its own component so the per-task rollup can be a useMemo. Inside
 // QueryGate's render prop it was an O(days × tasks) fold re-run on every render
 // of the card — including the ones a sibling's 60-second clock causes.
@@ -184,132 +89,90 @@ function AiUsageBody({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const rows = useMemo(() => aggregate(data.days), [data.days]);
-  const showCost = useMemo(
-    () =>
-      data.days.some((day) =>
-        day.tasks.some((task) => task.cost_est_minor !== undefined),
-      ),
-    [data.days],
-  );
+  const lines = useMemo(() => aggregate(data.days), [data.days]);
+  const rows = useMemo(() => spendRows(lines), [lines]);
+  const showCost = lines.some((line) => line.cost_est_minor !== undefined);
   const currency = data.budget.currency ?? "USD";
-  const totalCost = useMemo(
-    () => rows.reduce((sum, row) => sum + (row.cost_est_minor ?? 0), 0),
-    [rows],
+  const totalCost = lines.reduce(
+    (sum, line) => sum + (line.cost_est_minor ?? 0),
+    0,
   );
   // Calls that carried usage and no rate. Their spend is in the token columns
   // and not in the total beside them, so the total is SHORT — and a money
   // number that is short without saying so is the one a reader acts on: it is
   // always the smaller figure, and nobody investigates a bill that looks
   // cheaper than expected until it does not.
+  const unpricedCalls = lines.reduce(
+    (sum, line) => sum + (line.unpriced_calls ?? 0),
+    0,
+  );
   const taskNames = useMemo(
-    () => new Map(rows.map((row) => [row.task, row.task_display_name])),
-    [rows],
+    () => new Map(lines.map((line) => [line.task, line.task_display_name])),
+    [lines],
   );
   const taskSummaries = useMemo(
-    () => new Map(rows.map((row) => [row.task, row.task_summary])),
-    [rows],
+    () => new Map(lines.map((line) => [line.task, line.task_summary])),
+    [lines],
   );
-  const unpricedCalls = useMemo(
-    () => rows.reduce((sum, row) => sum + (row.unpriced_calls ?? 0), 0),
-    [rows],
-  );
+  // Absent when the server priced nothing: a total of zero would state a figure
+  // this window has none of.
+  const costNote = showCost
+    ? [
+        `${t("aiusage.costNote")} ${formatMoney(totalCost, currency, locale)}`,
+        unpricedCalls > 0
+          ? t("aiusage.costPartial", {
+              calls: formatNumber(unpricedCalls, locale),
+            })
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : undefined;
 
   return (
-    <SettingList>
-      <SettingRow
-        label={t("aiusage.monthLabel")}
-        value={monthAndYear(new Date(`${month.from}T00:00`), locale)}
-        control={
-          // The two arrows keep their own names. An icon announces as nothing,
-          // and the row's label names the decision, not which way each moves.
-          <>
-            <Button
-              iconOnly
-              aria-label={t("aiusage.prevMonth")}
-              onClick={() => onMonth(adjacentMonth(month, -1))}
-            >
-              <ChevronLeft aria-hidden="true" />
-            </Button>
-            <Button
-              iconOnly
-              aria-label={t("aiusage.nextMonth")}
-              disabled={isCurrentMonth(month)}
-              onClick={() => onMonth(adjacentMonth(month, 1))}
-            >
-              <ChevronRight aria-hidden="true" />
-            </Button>
-          </>
-        }
-      />
-      <SettingRow
-        layout="stack"
-        label={t("aiusage.spendLabel")}
-        // The caveat and the total are what the table says taken together, so
-        // they belong to the row's NAMING rather than standing under the table
-        // as a caption of their own — a sentence in a control column reads as
-        // that control's answer. Absent entirely when the server priced
-        // nothing: a total of zero would state a figure this window has none of.
-        description={
-          showCost ? (
+    <>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("aiusage.monthLabel")}
+          value={monthAndYear(new Date(`${month.from}T00:00`), locale)}
+          control={
+            // The two arrows keep their own names. An icon announces as nothing,
+            // and the row's label names the decision, not which way each moves.
             <>
-              {t("aiusage.costNote")} {formatMoney(totalCost, currency, locale)}
-              {unpricedCalls > 0 ? (
-                <>
-                  {" "}
-                  {t("aiusage.costPartial", {
-                    calls: formatNumber(unpricedCalls, locale),
-                  })}
-                </>
-              ) : null}
+              <Button
+                iconOnly
+                aria-label={t("aiusage.prevMonth")}
+                onClick={() => onMonth(adjacentMonth(month, -1))}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </Button>
+              <Button
+                iconOnly
+                aria-label={t("aiusage.nextMonth")}
+                disabled={isCurrentMonth(month)}
+                onClick={() => onMonth(adjacentMonth(month, 1))}
+              >
+                <ChevronRight aria-hidden="true" />
+              </Button>
             </>
-          ) : undefined
-        }
-        control={
-          <div className="settingrow-measure">
-            {rows.length === 0 ? (
-              <EmptyState>{t("aiusage.empty")}</EmptyState>
-            ) : (
-              // Seven columns do not fit a phone, and nothing here can be
-              // dropped — a spend row is only reconcilable whole. DataTable is
-              // what scrolls the TABLE sideways inside the card rather than the
-              // page; a hand-rolled <table className="table"> borrowed the look
-              // and left the wrapper out.
-              <DataTable
-                label={t("aiusage.spendLabel")}
-                columns={usageColumns(showCost, currency, locale, t)}
-                rows={rows}
-                rowKey={(row) => `${row.task}-${row.tier}`}
-              />
-            )}
-          </div>
-        }
+          }
+        />
+      </SettingList>
+      <SpendByTask
+        rows={rows}
+        showCost={showCost}
+        currency={currency}
+        note={costNote}
       />
       {decisionsBound && (
-        <DecisionSummaryRow
+        <DecisionSummary
           decisions={data.decisions ?? []}
           taskName={(task) => taskNames.get(task) ?? task}
           taskSummary={(task) => taskSummaries.get(task)}
         />
       )}
-      {/* The per-day breakdown is diagnostic — a reader reconciling one day's
-          calls asks for it, and it is noise to everyone else — so it stands in
-          the list as its own closed section rather than as a fourth row. */}
-      {data.days.length > 0 && (
-        <Disclosure summary={t("aiusage.days.show")}>
-          {data.days.map((day) => (
-            <p key={day.date} className="t-num">
-              {day.date} ·{" "}
-              {formatNumber(
-                day.tasks.reduce((sum, task) => sum + task.calls, 0),
-                locale,
-              )}{" "}
-              {t("aiusage.col.calls")}
-            </p>
-          ))}
-        </Disclosure>
-      )}
-    </SettingList>
+      {data.days.length > 0 && <CallsByDay days={data.days} />}
+    </>
   );
 }
 
@@ -383,17 +246,20 @@ export function AiUsageCard() {
     <Panel title={t("aiusage.title")}>
       <PanelBody>
         <PanelIntro>{t("aiusage.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("aiusage.title")}>
-          {(data) => (
-            <AiUsageBody
-              data={data}
-              month={month}
-              onMonth={setMonth}
-              decisionsBound={decisionsBound}
-            />
-          )}
-        </QueryGate>
+        {query.data === undefined && (
+          <QueryStates query={query} pendingLabel={t("aiusage.title")}>
+            {null}
+          </QueryStates>
+        )}
       </PanelBody>
+      {query.data !== undefined && (
+        <AiUsageBody
+          data={query.data}
+          month={month}
+          onMonth={setMonth}
+          decisionsBound={decisionsBound}
+        />
+      )}
     </Panel>
   );
 }

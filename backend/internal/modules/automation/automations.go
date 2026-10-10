@@ -90,6 +90,8 @@ type Automation struct {
 	// PausedReason says why a rule paused itself; nil for a rule paused by
 	// hand or running.
 	PausedReason *string
+	// Runs is how the rule has been running; only List reads it.
+	Runs *RunSummary
 }
 
 // CreateAutomationInput instantiates a catalog key. Created PAUSED per
@@ -117,42 +119,52 @@ type AutomationPage struct {
 
 const automationColumns = `id, key, name, enabled, params, version, created_at, updated_at, paused_reason`
 
-func scanAutomation(row pgx.Row) (Automation, error) {
+// scanAutomation reads automationColumns, then any extra columns the
+// statement selects after them.
+func scanAutomation(row pgx.Row, extra ...any) (Automation, error) {
 	var a Automation
-	err := row.Scan(&a.ID, &a.Key, &a.Name, &a.Enabled, &a.Params, &a.Version, &a.CreatedAt, &a.UpdatedAt, &a.PausedReason)
+	dest := append([]any{&a.ID, &a.Key, &a.Name, &a.Enabled, &a.Params, &a.Version, &a.CreatedAt, &a.UpdatedAt, &a.PausedReason}, extra...)
+	err := row.Scan(dest...)
 	return a, err
 }
 
-// List pages the workspace's live instances.
+// List pages the workspace's live instances, each with its run summary.
 func (s *AutomationStore) List(ctx context.Context, cursor *string, limit *int) (AutomationPage, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return AutomationPage{}, err
 	}
 	n := storekit.ClampLimit(limit)
+	args := []any{s.now().Add(-recentRunsWindow)}
+	joins := storekit.SQLf(runSummaryJoins, len(args))
 	where := "archived_at IS NULL"
-	args := []any{}
 	if cursor != nil && *cursor != "" {
 		c, err := storekit.DecodeCursor(*cursor)
 		if err != nil {
 			return AutomationPage{}, err
 		}
-		where += " AND (created_at, id) < ($1, $2)"
 		args = append(args, c.CreatedAt, c.ID)
+		where += storekit.SQLf(" AND (created_at, id) < ($%d, $%d)", len(args)-1, len(args))
 	}
 	var page AutomationPage
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, storekit.SQLf(
-			`SELECT %s FROM automation WHERE %s ORDER BY created_at DESC, id DESC LIMIT %d`,
-			automationColumns, where, n+1), args...)
+		// The page is cut before the joins, so only its own rows read their runs.
+		rows, err := tx.Query(ctx, storekit.SQLf(`
+			SELECT %[1]s, %[2]s FROM (
+				SELECT %[1]s FROM automation WHERE %[3]s ORDER BY created_at DESC, id DESC LIMIT %[4]d
+			) a %[5]s
+			ORDER BY created_at DESC, id DESC`,
+			automationColumns, runSummaryColumns, where, n+1, joins), args...)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
-			a, err := scanAutomation(rows)
+			var runs RunSummary
+			a, err := scanAutomation(rows, &runs.LastRunAt, &runs.LastRunStatus, &runs.RecentRuns)
 			if err != nil {
 				return err
 			}
+			a.Runs = &runs
 			page.Items = append(page.Items, a)
 		}
 		return rows.Err()

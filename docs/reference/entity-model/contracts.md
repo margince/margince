@@ -6,7 +6,7 @@ The 1 table owned by `contracts`, as the migrations build them. [Back to the ent
 
 ## contract
 
-29 columns · primary key `(id)` · referenced by 2 foreign keys
+29 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

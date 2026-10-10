@@ -18306,7 +18306,7 @@ components:
     RecordGrant:
       type: object
       description: A manual per-record share — widens own/team/all base scope for one record.
-      required: [id, record_type, record_id, subject_type, subject_id, access, granted_by, created_at]
+      required: [id, record_type, record_id, subject_type, subject_id, access, granted_by, created_at, version]
       properties:
         id: {type: string, format: uuid}
         record_type: {type: string, enum: [deal, contact, company, lead, project]}
@@ -18521,6 +18521,21 @@ components:
         version: {type: integer}
         created_at: {type: string, format: date-time}
         updated_at: {type: [string, 'null'], format: date-time}
+        last_run_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the rule last ran: fired, queued for approval, failed or was blocked. A skipped firing never counts. Only GET /automations carries it, to every caller who may read automations; a single read, a create and an update leave it out. Absent on a list item whose rule has never run.
+        last_run_outcome:
+          type: [string, 'null']
+          enum: [fired, queued_for_approval, failed, blocked, null]
+          description: >-
+            How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
+        runs_last_30_days:
+          type: integer
+          minimum: 0
+          description: >-
+            Runs other than skipped ones in the 30 days before the server read the list. Every GET /automations item carries it, 0 for a rule that has not run; a single read, a create and an update leave it out.
     Product:
       type: object
       description: A rate-card entry. Mirrors the `product` table — data an offer line snapshots from, never a configurator.

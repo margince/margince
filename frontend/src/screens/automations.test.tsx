@@ -15,7 +15,8 @@ import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { AutomationRow, AutomationsAdmin } from "./automations";
+import { AutomationsAdmin } from "./automations";
+import { ConfiguredAutomations } from "./automations.instances";
 import { paramFields } from "./automations.params";
 
 // B-EP09.15 acceptance: the editor is catalog-driven end to end — the
@@ -123,7 +124,7 @@ async function openRowMenu(name = "Nudge stalled fleet deals") {
 // to it — the card behind it still carries the library the verb came from.
 async function openCreateDialog(index = 0): Promise<HTMLElement> {
   await userEvent.click(
-    screen.getAllByRole("button", { name: "Use template" })[index],
+    screen.getAllByRole("button", { name: /^Use template/ })[index],
   );
   return screen.getByRole("dialog");
 }
@@ -278,17 +279,14 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
         screen.getByText("Created paused. Nothing runs until it is enabled."),
       ).toBeTruthy(),
     );
-    const row = document.querySelector('[data-automation="au-1"]');
-    expect(row).not.toBeNull();
-    if (row instanceof HTMLElement) {
-      // The state is the switch's own, announced rather than restated beside it
-      // in a second vocabulary: a created automation arrives OFF.
-      expect(
-        within(row)
-          .getByRole("switch", { name: /is enabled$/ })
-          .getAttribute("aria-checked"),
-      ).toBe("false");
-    }
+    const row = await screen.findByTestId("automation-au-1");
+    // The state is the switch's own, announced rather than restated beside it
+    // in a second vocabulary: a created automation arrives off.
+    expect(
+      within(row)
+        .getByRole("switch", { name: /is enabled$/ })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
     await userEvent.click(
       screen.getByRole("switch", { name: "Stalled-deal nudge is enabled" }),
     );
@@ -297,7 +295,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(calls[1].ifMatch).toBe("1");
   });
 
-  it("each row wears its catalog autonomy tier through AutonomyDot", async () => {
+  it("each row names its catalog autonomy mode in a word", async () => {
     const automations = [
       instance({
         id: "au-1",
@@ -316,22 +314,16 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     await waitFor(() =>
       expect(screen.getByText("Confirmation-required one")).toBeTruthy(),
     );
-    const confirmationRequired = screen
-      .getByText("Confirmation-required one")
-      .closest("li");
-    const autoExecute = screen.getByText("Auto-execute one").closest("li");
-    expect(confirmationRequired).not.toBeNull();
-    expect(autoExecute).not.toBeNull();
-    if (confirmationRequired && autoExecute) {
-      expect(
-        within(confirmationRequired).getByRole("img", {
-          name: "Approval first",
-        }),
-      ).toBeTruthy();
-      expect(
-        within(autoExecute).getByRole("img", { name: "Automatic" }),
-      ).toBeTruthy();
-    }
+    const confirmationRequired = screen.getByTestId("automation-au-1");
+    const autoExecute = screen.getByTestId("automation-au-2");
+    expect(
+      within(confirmationRequired).getByText("Needs approval"),
+    ).toBeTruthy();
+    expect(within(autoExecute).getByText("Runs on its own").className).toBe(
+      "sr-only",
+    );
+    // A colour alone says nothing to a reader who cannot see it apart.
+    expect(within(autoExecute).queryByRole("img")).toBeNull();
   });
 
   it("renders an instance from the wire schema alone — authorship cannot change the row", async () => {
@@ -341,28 +333,24 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     vi.stubGlobal("fetch", automationsBackend([], []));
     const fields = instance({});
     const first = render(
-      <ul>
-        <AutomationRow
-          automation={{ ...fields }}
-          entry={catalog[0]}
-          canViewRuns
-          canEdit
-          canDelete
-        />
-      </ul>,
+      <ConfiguredAutomations
+        automations={[{ ...fields }]}
+        entryFor={() => catalog[0]}
+        canViewRuns
+        canEdit
+        canDelete
+      />,
     );
     const firstHtml = withoutGeneratedIds(first.container.innerHTML);
     cleanup();
     const second = render(
-      <ul>
-        <AutomationRow
-          automation={{ ...fields }}
-          entry={catalog[0]}
-          canViewRuns
-          canEdit
-          canDelete
-        />
-      </ul>,
+      <ConfiguredAutomations
+        automations={[{ ...fields }]}
+        entryFor={() => catalog[0]}
+        canViewRuns
+        canEdit
+        canDelete
+      />,
     );
     expect(withoutGeneratedIds(second.container.innerHTML)).toBe(firstHtml);
   });
@@ -385,7 +373,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
         "Read-only: you do not have permission to change automations.",
       ),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Use template" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use template/ })).toBeNull();
     // No switch to flip, and the badge in its place so the state is still a
     // read this row answers.
     expect(screen.queryByRole("switch")).toBeNull();
@@ -420,7 +408,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     // no delete grant -> the destructive control is withheld
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
     // no create grant -> the catalog cannot be instantiated
-    expect(screen.queryByRole("button", { name: "Use template" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use template/ })).toBeNull();
   });
 
   it("offers deletion only with the delete grant, and nothing else with it", async () => {
@@ -437,7 +425,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(screen.getAllByRole("button", { name: "Delete" }).length).toBe(1);
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Use template" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use template/ })).toBeNull();
   });
 
   it("deleting asks first — the confirm is what writes, not the menu item", async () => {
@@ -483,58 +471,35 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
   });
 
-  // The row language: this card holds two decisions, and each of them IS a list
-  // rather than an answer that would fit beside its naming — so each takes the
-  // full width below it, and neither carries a heading of its own on top of the
-  // panel's.
-  it("lays both lists out as stacked settings rows under one heading", async () => {
-    const automations = [instance({})];
-    vi.stubGlobal("fetch", automationsBackend(automations, []));
+  // One pane, and each list is a group of it. An h3 under the panel's own h2
+  // names each, so neither reads as a second card.
+  it("names both lists as groups of one panel", async () => {
+    vi.stubGlobal("fetch", automationsBackend([instance({})], []));
     render(<AutomationsAdmin />);
-    await waitFor(() =>
-      expect(screen.getByText("Nudge stalled fleet deals")).toBeTruthy(),
-    );
-    for (const label of ["Configured automations", "Starter library"]) {
-      const row = screen.getByText(label).closest(".settingrow");
-      expect(row).not.toBeNull();
-      if (row instanceof HTMLElement) {
-        expect(row.className).toContain("settingrow-stack");
-      }
-    }
-    // One heading, the panel's own.
+    await screen.findByText("Nudge stalled fleet deals");
     expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
-    expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+    ).toEqual(["Configured automations", "Starter library"]);
   });
 
-  // Every library entry is one ROW of the same language, so the hairlines do the
-  // separating. As a bare `<ul>` an entry ran a name, a sentence and a
-  // trigger/action pair together with no interval between the lines and no rule
-  // between entries, and its verb floated at the right of the first line.
-  it("gives every library entry a row, its recipe, and its verb in the answer column", async () => {
+  // Every template is one row: its name, what it does, and what sets it off in
+  // words. The wire's own identifiers never reach the screen.
+  it("gives every library entry a row with its trigger in words", async () => {
     vi.stubGlobal("fetch", automationsBackend([], []));
     render(<AutomationsAdmin />);
-
-    const list = await screen.findByTestId("auto-catalog");
-    const rows = list.querySelectorAll(":scope > .settingrow");
-    expect(rows).toHaveLength(catalog.length);
-
-    const stalled = screen
-      .getByText("Stalled-deal nudge")
-      .closest(".settingrow");
-    expect(stalled).not.toBeNull();
-    if (stalled instanceof HTMLElement) {
-      // The recipe is part of the naming, not a third line under the row.
-      const recipe = within(stalled).getByText(
-        /deal\.stalled\s*->\s*send_email/,
-      );
-      expect(recipe.closest(".settingrow-naming")).not.toBeNull();
-      // The verb sits at the one x every answer on this page sits at.
-      expect(
-        within(stalled)
-          .getByRole("button", { name: "Use template" })
-          .closest(".settingrow-control"),
-      ).not.toBeNull();
-    }
+    const stalled = await screen.findByTestId("template-stalled_deal_nudge");
+    expect(screen.getByTestId("template-task_on_stage_entry")).toBeTruthy();
+    expect(within(stalled).getByText("Stalled-deal nudge")).toBeTruthy();
+    expect(
+      within(stalled).getByText("Stages a follow-up when a deal stalls."),
+    ).toBeTruthy();
+    expect(stalled).not.toHaveTextContent(/send_email|->/);
+    expect(
+      within(screen.getByTestId("template-task_on_stage_entry")).getByText(
+        "Deal stage changed",
+      ),
+    ).toBeTruthy();
   });
 
   it("opens a configured automation's definition in a dialog, not under the row", async () => {
@@ -619,7 +584,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     ).toBeNull();
     await waitFor(() =>
       expect(
-        screen.getAllByRole("button", { name: "Use template" }).length,
+        screen.getAllByRole("button", { name: /^Use template/ }).length,
       ).toBeGreaterThan(0),
     );
     expect(screen.getByRole("switch", { name: /is enabled$/ })).toBeTruthy();
@@ -631,7 +596,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
 // The two ops behind these toggles are human-only and gated on the same
 // automation:update grant as pause and edit; the panels mount lazily and
 // independently (opening one never closes the other).
-describe("AutomationRow — Runs/Preview toggles", () => {
+describe("ConfiguredAutomations — Runs/Preview toggles", () => {
   const previewTitle = "Dry-run impact";
   // A benign stub for the lazily-mounted panels' first fetch: these tests are
   // about mount and independence, so runs answer empty and preview zero.
@@ -654,15 +619,13 @@ describe("AutomationRow — Runs/Preview toggles", () => {
   it("shows the Runs/Preview toggles on the READ grant, not the write one", async () => {
     vi.stubGlobal("fetch", panelBackend());
     const view = render(
-      <ul>
-        <AutomationRow
-          automation={instance({})}
-          entry={catalog[0]}
-          canViewRuns
-          canEdit
-          canDelete
-        />
-      </ul>,
+      <ConfiguredAutomations
+        automations={[instance({})]}
+        entryFor={() => catalog[0]}
+        canViewRuns
+        canEdit
+        canDelete
+      />,
     );
     await openRowMenu();
     expect(screen.getByRole("button", { name: "Runs" })).toBeTruthy();
@@ -673,15 +636,13 @@ describe("AutomationRow — Runs/Preview toggles", () => {
     // automation:read. Hiding them behind the write grant — as the old role
     // proxy did — withheld a surface a reader is entitled to.
     const readOnly = render(
-      <ul>
-        <AutomationRow
-          automation={instance({})}
-          entry={catalog[0]}
-          canViewRuns
-          canEdit={false}
-          canDelete={false}
-        />
-      </ul>,
+      <ConfiguredAutomations
+        automations={[instance({})]}
+        entryFor={() => catalog[0]}
+        canViewRuns
+        canEdit={false}
+        canDelete={false}
+      />,
     );
     await openRowMenu();
     expect(screen.getByRole("button", { name: "Runs" })).toBeTruthy();
@@ -692,15 +653,13 @@ describe("AutomationRow — Runs/Preview toggles", () => {
     // caller's other two grants — so the assertion is about the items, not
     // about the control that holds them.
     render(
-      <ul>
-        <AutomationRow
-          automation={instance({})}
-          entry={catalog[0]}
-          canViewRuns={false}
-          canEdit
-          canDelete
-        />
-      </ul>,
+      <ConfiguredAutomations
+        automations={[instance({})]}
+        entryFor={() => catalog[0]}
+        canViewRuns={false}
+        canEdit
+        canDelete
+      />,
     );
     await openRowMenu();
     expect(screen.queryByRole("button", { name: "Runs" })).toBeNull();
@@ -710,15 +669,13 @@ describe("AutomationRow — Runs/Preview toggles", () => {
   it("mounts the runs panel on click without mounting preview", async () => {
     vi.stubGlobal("fetch", panelBackend());
     render(
-      <ul>
-        <AutomationRow
-          automation={instance({})}
-          entry={catalog[0]}
-          canViewRuns
-          canEdit
-          canDelete
-        />
-      </ul>,
+      <ConfiguredAutomations
+        automations={[instance({})]}
+        entryFor={() => catalog[0]}
+        canViewRuns
+        canEdit
+        canDelete
+      />,
     );
     expect(screen.queryByRole("heading", { name: "Run history" })).toBeNull();
     await openRowMenu();
@@ -730,15 +687,13 @@ describe("AutomationRow — Runs/Preview toggles", () => {
   it("keeps both panels open independently", async () => {
     vi.stubGlobal("fetch", panelBackend());
     render(
-      <ul>
-        <AutomationRow
-          automation={instance({})}
-          entry={catalog[0]}
-          canViewRuns
-          canEdit
-          canDelete
-        />
-      </ul>,
+      <ConfiguredAutomations
+        automations={[instance({})]}
+        entryFor={() => catalog[0]}
+        canViewRuns
+        canEdit
+        canDelete
+      />,
     );
     await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Runs" }));

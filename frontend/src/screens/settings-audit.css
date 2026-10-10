@@ -1,41 +1,6 @@
-/* The audit trail: one tbody per entry, so the row and its detail are a unit. */
-
-.auditlog-scroll {
-  container: auditlog / inline-size;
-}
-
-.auditlog > tbody + tbody > tr:first-child > td {
-  border-top: 1px solid var(--borderSubtle);
-}
-.auditlog-main:not(:last-child) > td {
-  border-bottom: 0;
-}
-.table tbody tr.auditlog-main {
-  cursor: pointer;
-}
-.auditlog > tbody:hover > tr > td {
-  background: var(--bgHover);
-}
-.auditlog > * > tr > :is(th, td) {
-  vertical-align: middle;
-}
-
-.auditlog-when,
-.auditlog-action {
-  white-space: nowrap;
-}
 .auditlog-time {
   font-variant-numeric: tabular-nums;
-}
-.auditlog-actor {
-  min-inline-size: 10rem;
-}
-.auditlog-target {
-  inline-size: 45%;
-}
-.auditlog-toggle {
-  inline-size: var(--controlHeight);
-  text-align: end;
+  white-space: nowrap;
 }
 
 .auditlog-who {
@@ -73,6 +38,11 @@
   block-size: 15px;
 }
 
+/* What the entry touched takes the spare width, so a name and its id tail
+   share one line beside the actor's caption. */
+.table td:has(> .auditlog-target-cell) {
+  inline-size: 45%;
+}
 .auditlog-target-cell {
   display: flex;
   flex-wrap: wrap;
@@ -91,9 +61,6 @@
   gap: var(--space-1);
 }
 
-.auditlog-detail-row > td {
-  padding-block: 0 var(--space-4);
-}
 .auditlog-detail-body {
   display: flex;
   flex-direction: column;
@@ -112,68 +79,4 @@
 
 .auditlog-more {
   padding: var(--space-3) var(--padPanel) var(--padPanel);
-}
-
-/* Under 36rem of its own width an entry folds: what it touched and its toggle
-   on line one, when, who and the verb under them. */
-@container auditlog (width < 36rem) {
-  .auditlog,
-  .auditlog > tbody {
-    display: block;
-  }
-  .auditlog > thead {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .panel > .table-scroll-bleed > .auditlog > tbody > .auditlog-main {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    column-gap: var(--space-3);
-    padding: var(--space-3) var(--padPanel);
-  }
-  .auditlog > tbody + tbody {
-    border-top: 1px solid var(--borderSubtle);
-  }
-  .auditlog > tbody + tbody > tr:first-child > td {
-    border-top: 0;
-  }
-  .panel > .table-scroll-bleed > .auditlog > tbody > .auditlog-main > td {
-    padding: 0;
-    border-bottom: 0;
-    inline-size: auto;
-    min-inline-size: 0;
-  }
-  .auditlog-target {
-    flex: 1 1 0%;
-  }
-  .auditlog-toggle {
-    flex: none;
-    order: 1;
-  }
-  .auditlog-main::after {
-    content: "";
-    flex-basis: 100%;
-    order: 2;
-  }
-  /* Not row-gap: it falls on both sides of the break, doubling the space. */
-  .auditlog-when,
-  .auditlog-actor,
-  .auditlog-action {
-    order: 3;
-    margin-block-start: var(--space-1);
-    font: var(--fontBodySmall);
-    color: var(--textSecondary);
-  }
-  .auditlog > tbody > .auditlog-detail-row {
-    display: block;
-  }
-  .panel > .table-scroll-bleed > .auditlog > tbody > .auditlog-detail-row > td {
-    display: block;
-    padding: 0 var(--padPanel) var(--space-4);
-  }
 }

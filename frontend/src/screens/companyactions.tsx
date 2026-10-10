@@ -6,6 +6,7 @@ import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
 import { unwrap } from "./common";
 import { CreateAction, type CreateField } from "./create";
+import { currencyBeside } from "./dealcurrency";
 import { useProjectCreateForm } from "./projects.create";
 
 // What a rep can START from the company page.
@@ -103,6 +104,7 @@ export function NewDealAction({
     idempotencyKey: string,
   ) => {
     const amount = values.amount?.trim();
+    const currency = values.currency || "EUR";
     return unwrap(
       await api.POST("/deals", {
         params: { header: { "Idempotency-Key": idempotencyKey } },
@@ -111,14 +113,8 @@ export function NewDealAction({
           pipeline_id: pipeline.id,
           stage_id: values.stage_id,
           // The form takes major units; the wire is minor units.
-          //
-          // Amount and currency travel together or not at all. The server refuses a
-          // half pair (amount_currency_pair), so a currency beside an empty amount
-          // would 422 a field the form shows as optional.
-          amount_minor: amount
-            ? toMinorUnits(Number(amount), values.currency || "EUR")
-            : null,
-          currency: amount ? values.currency || "EUR" : null,
+          amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
+          currency: currencyBeside(currency, amount),
           company_id: companyId,
           project_id: projectId ?? null,
           expected_close_date: values.expected_close_date || null,

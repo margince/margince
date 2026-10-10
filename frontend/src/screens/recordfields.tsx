@@ -20,7 +20,7 @@ import { InlineChoice } from "../design-system/inlinechoice";
 import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { derivedRecordKeys } from "./activitykeys";
 import {
   ProblemError,
@@ -292,6 +292,7 @@ function GroupReading({
   onEdit: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const key = props.fields[0].key;
   const rendered = props.renderValues?.[key];
   if (rendered)
@@ -304,6 +305,7 @@ function GroupReading({
       props.fields,
       props.record,
       t,
+      locale,
       props.maskedFields,
       props.readOnlyFields,
     );

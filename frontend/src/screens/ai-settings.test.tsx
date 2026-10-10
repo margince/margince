@@ -161,6 +161,7 @@ function backendFor(
         data: reads.calls ?? [],
         page: { next_cursor: null, has_more: false },
         tasks: [],
+        task_options: [],
         payload_capture_enabled: false,
       });
     }

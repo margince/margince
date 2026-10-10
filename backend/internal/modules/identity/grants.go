@@ -13,6 +13,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -31,7 +34,7 @@ var shareableRecordTypes = map[string]bool{
 	"contact": true, "company": true, "deal": true, "lead": true, "project": true,
 }
 
-const grantColumns = `id, record_type, record_id, subject_type, subject_id, access, granted_by, reason, expires_at, created_at`
+const grantColumns = `id, record_type, record_id, subject_type, subject_id, access, granted_by, reason, expires_at, created_at, version`
 
 type grantRow struct {
 	ID          ids.UUID
@@ -44,12 +47,13 @@ type grantRow struct {
 	Reason      *string
 	ExpiresAt   *time.Time
 	CreatedAt   time.Time
+	Version     int64
 }
 
 func scanGrant(r pgx.Row) (grantRow, error) {
 	var g grantRow
 	err := r.Scan(&g.ID, &g.RecordType, &g.RecordID, &g.SubjectType, &g.SubjectID,
-		&g.Access, &g.GrantedBy, &g.Reason, &g.ExpiresAt, &g.CreatedAt)
+		&g.Access, &g.GrantedBy, &g.Reason, &g.ExpiresAt, &g.CreatedAt, &g.Version)
 	return g, err
 }
 
@@ -102,6 +106,23 @@ func refuseAnExpiryAlreadyPast(expiresAt *time.Time, now time.Time) error {
 			"To end an existing share now, revoke it")
 }
 
+// refuseUnknownGrantVocabulary names the enum field the caller got wrong. The
+// table's CHECK constraints would refuse the same values, but only after the
+// row-scope and subject reads, and with no field named.
+func refuseUnknownGrantVocabulary(in CreateGrantInput) error {
+	if !shareableRecordTypes[in.RecordType] {
+		return httperr.Validation("record_type", "invalid",
+			"record_type must be one of "+strings.Join(slices.Sorted(maps.Keys(shareableRecordTypes)), ", "))
+	}
+	if !crmcontracts.CreateRecordGrantRequestSubjectType(in.SubjectType).Valid() {
+		return httperr.Validation("subject_type", "invalid", "subject_type must be user or team")
+	}
+	if !crmcontracts.CreateRecordGrantRequestAccess(in.Access).Valid() {
+		return httperr.Validation("access", "invalid", "access must be read or write")
+	}
+	return nil
+}
+
 func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (grantRow, error) {
 	// Both ids, and both before anything else: a grant is a triple of record,
 	// subject and access, and each id is required by the contract — a claim only
@@ -115,8 +136,8 @@ func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (g
 	if err := httperr.RequireBodyID("subject_id", in.SubjectID); err != nil {
 		return grantRow{}, err
 	}
-	if !shareableRecordTypes[in.RecordType] {
-		return grantRow{}, &InvalidScopeError{Scope: "record_type " + in.RecordType}
+	if err := refuseUnknownGrantVocabulary(in); err != nil {
+		return grantRow{}, err
 	}
 	if err := refuseAnExpiryAlreadyPast(in.ExpiresAt, s.now()); err != nil {
 		return grantRow{}, err
@@ -350,7 +371,9 @@ func mayRevoke(ctx context.Context, tx pgx.Tx, actor principal.Principal, grant 
 	return auth.EnsureRetractable(ctx, tx, grant.RecordType, grant.RecordID)
 }
 
-func (s *Service) RevokeRecordGrant(ctx context.Context, id ids.UUID) error {
+// RevokeRecordGrant deletes one share. A nil ifVersion revokes whatever the
+// grant now says; a stale one refuses, since a re-assert may have changed it.
+func (s *Service) RevokeRecordGrant(ctx context.Context, id ids.UUID, ifVersion *int64) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return errors.New("crmauth: only a human revokes shares directly; agents stage through the approval gate")
@@ -370,6 +393,9 @@ func (s *Service) RevokeRecordGrant(ctx context.Context, id ids.UUID) error {
 		}
 		if err := mayRevoke(ctx, tx, actor, grant); err != nil {
 			return err
+		}
+		if ifVersion != nil && *ifVersion != grant.Version {
+			return apperrors.ErrVersionSkew
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM record_grant WHERE id = $1`, id); err != nil {
 			return err
@@ -395,6 +421,7 @@ func wireGrant(g grantRow) crmcontracts.RecordGrant {
 		Reason:      g.Reason,
 		ExpiresAt:   g.ExpiresAt,
 		CreatedAt:   g.CreatedAt,
+		Version:     g.Version,
 	}
 	return out
 }

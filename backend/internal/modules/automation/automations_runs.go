@@ -46,6 +46,50 @@ var runOutcomeByStatus = map[string]string{
 	"requires_approval": "queued_for_approval",
 }
 
+// recentRunsWindow is how far back a run summary's count reaches.
+const recentRunsWindow = 30 * 24 * time.Hour
+
+// RunSummary is how a rule has been running, as the automations list shows
+// it. A skipped firing never counts: a rule whose trigger arrives often and
+// rarely matches would otherwise read as busy while doing nothing.
+type RunSummary struct {
+	LastRunAt     *time.Time
+	LastRunStatus *string
+	RecentRuns    int
+}
+
+// LastOutcome renders the last run's status in the contract vocabulary; nil
+// for a rule that never ran.
+func (r RunSummary) LastOutcome() *string {
+	if r.LastRunStatus == nil {
+		return nil
+	}
+	outcome := runOutcomeByStatus[*r.LastRunStatus]
+	return &outcome
+}
+
+// runAutomationIDSQL is the automation id runKey ends a run's key with, the
+// expression workflow_run_by_automation indexes.
+const runAutomationIDSQL = `right(idempotency_key, 36)`
+
+// runOfAutomationSQL matches a workflow_run row to the automation aliased `a`.
+const runOfAutomationSQL = `handler = a.key AND ` + runAutomationIDSQL + ` = a.id::text`
+
+// runSummaryColumns and runSummaryJoins attach a RunSummary to each row of a
+// list over `automation a`; the joins take the window start's placeholder.
+const (
+	runSummaryColumns = `last_run.ran_at, last_run.ran_status, recent.runs`
+	runSummaryJoins   = `
+	LEFT JOIN LATERAL (
+		SELECT r.created_at AS ran_at, r.status AS ran_status FROM workflow_run r
+		 WHERE ` + runOfAutomationSQL + ` AND r.status <> 'skipped'
+		 ORDER BY r.created_at DESC, r.id DESC LIMIT 1) last_run ON true
+	LEFT JOIN LATERAL (
+		SELECT count(*) AS runs FROM workflow_run r
+		 WHERE ` + runOfAutomationSQL + ` AND r.status <> 'skipped'
+		   AND r.created_at >= $%d) recent ON true`
+)
+
 // AutomationRunRecord is one firing of one automation instance, as the
 // engine recorded it.
 type AutomationRunRecord struct {
@@ -101,9 +145,7 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 			return err
 		}
 
-		// runKey suffixes "@<automation id>" and a UUID carries no LIKE
-		// metacharacters, so the pattern matches exactly this instance.
-		where := "handler = $1 AND idempotency_key LIKE '%@' || $2"
+		where := "handler = $1 AND " + runAutomationIDSQL + " = $2"
 		args := []any{key, id.String()}
 		if statusFilter != nil {
 			args = append(args, *statusFilter)

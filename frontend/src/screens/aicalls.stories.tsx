@@ -99,6 +99,51 @@ const brokered = [
   },
 ];
 
+// One row per outcome the column draws: none for a first-time answer, a
+// warning for a call that limped, danger for no answer.
+const outcomes = [
+  {
+    ...summary,
+    id: "call-ok",
+    task: "weekly_review",
+    task_display_name: "Weekly review narrative",
+    tier: "premium",
+    calls_attempted: 1,
+    degraded: false,
+    error_sentinel: null,
+    cache_hit: true,
+  },
+  {
+    ...summary,
+    id: "call-retried",
+    task_display_name: "Message classification",
+    degraded: false,
+    error_sentinel: null,
+  },
+  { ...summary, id: "call-degraded", error_sentinel: null },
+  {
+    ...summary,
+    id: "call-rejected",
+    task: "owed_verdict",
+    task_display_name: "Unanswered-message triage",
+    calls_attempted: 3,
+    degraded: false,
+    error_sentinel: "output_rejected",
+  },
+  {
+    ...summary,
+    id: "call-decided",
+    kind: "decision",
+    tier: "decide",
+    provider: "jev_compatible",
+    served_model: "typesafe/jev-1.13",
+    calls_attempted: 1,
+    degraded: false,
+    error_sentinel: null,
+    decision_attempted: true,
+  },
+];
+
 function list(
   data: unknown[],
   capture = true,
@@ -114,6 +159,12 @@ function list(
           page: { has_more: false },
           payload_capture_enabled: capture,
           tasks: ["capture_classify"],
+          task_options: [
+            {
+              task: "capture_classify",
+              display_name: "Message classification",
+            },
+          ],
         }),
       "GET /ai/calls/call-1": () => jsonResponse(trace),
     });
@@ -132,6 +183,16 @@ const meta: Meta<typeof AiCallsCard> = {
 export default meta;
 type Story = StoryObj<typeof AiCallsCard>;
 export const List: Story = { render: list([summary]) };
+export const Outcomes: Story = { render: list(outcomes) };
+export const OutcomesDark: Story = {
+  globals: { theme: "dark" },
+  render: list(outcomes),
+};
+export const OutcomesPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: list(outcomes),
+};
 export const Empty: Story = { render: list([]) };
 
 // No ai_diagnostics grant: the trace keeps its place and says it is withheld. An
@@ -152,6 +213,12 @@ export const ListPaged: Story = {
           page: { has_more: true, next_cursor: "page-2" },
           payload_capture_enabled: true,
           tasks: ["capture_classify"],
+          task_options: [
+            {
+              task: "capture_classify",
+              display_name: "Message classification",
+            },
+          ],
         }),
       "GET /ai/calls/call-1": () => jsonResponse(detail),
     });
@@ -198,11 +265,29 @@ const openAttemptTrail: NonNullable<Story["play"]> = async ({
     name: /Show attempts for capture_classify/,
   });
   await userEvent.click(disclosure);
-  await canvas.findByText("Attempts");
+  await canvas.findByRole("heading", { name: "Attempts" });
 };
 
 // The detail panel IN the table, which is the only place a reader meets it.
 export const RowExpanded: Story = {
+  render: list([summary]),
+  play: openAttemptTrail,
+};
+
+// A press anywhere on the row opens it as the chevron does.
+export const RowPressed: Story = {
+  render: list([summary]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: /Show attempts/ });
+    await userEvent.click(canvas.getByText("capture_classify"));
+    await canvas.findByRole("heading", { name: "Attempts" });
+  },
+};
+
+export const RowExpandedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
   render: list([summary]),
   play: openAttemptTrail,
 };
@@ -229,10 +314,8 @@ export const RowExpandedDark: Story = {
   play: openAttemptTrail,
 };
 
-// Six columns of trace at 390px. None of them is droppable — a call is only
-// diagnosable with its model, tokens and latency side by side — so the card is
-// meant to scroll sideways inside itself (`.table-scroll`). This is the story
-// that says whether it does, or whether the latency column just leaves.
+// At 390px the trace folds each call onto two lines. The task, its outcome and
+// its toggle come first; the moment, model, tokens and latency sit under them.
 export const ListPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -263,7 +346,6 @@ export const BrokerModelsAtSettingsWidth: Story = {
   },
 };
 
-// The same fixture at 390px, where three columns still have to fit.
 export const BrokerModelsPhone: Story = {
   ...BrokerModelsAtSettingsWidth,
   globals: { viewport: { value: "phone" } },

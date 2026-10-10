@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
@@ -22,23 +22,32 @@ type Automation = components["schemas"]["Automation"];
 // that reported it underneath would report it behind the thing covering it.
 export function DeleteAutomationAction({
   automation,
-}: Readonly<{ automation: Automation }>) {
+  focusAfterDelete,
+}: Readonly<{
+  automation: Automation;
+  /** Where focus lands once the row it was opened from is gone. */
+  focusAfterDelete?: () => HTMLElement | null;
+}>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState(false);
+  const deleted = useRef(false);
 
+  // The contract's DELETE takes no If-Match, so the id is all the write carries.
   const remove = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (id: string) => {
       unwrap(
         await api.DELETE("/automations/{id}", {
-          params: { path: { id: automation.id } },
+          params: { path: { id } },
         }),
       );
     },
     onSuccess: () => {
+      deleted.current = true;
       setAsking(false);
-      queryClient.invalidateQueries({ queryKey: ["automations"] });
     },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["automations"] }),
   });
 
   return (
@@ -52,6 +61,9 @@ export function DeleteAutomationAction({
       </Button>
       <ConfirmModal
         open={asking}
+        returnFocusTo={() =>
+          deleted.current ? (focusAfterDelete?.() ?? null) : null
+        }
         onClose={() => {
           setAsking(false);
           remove.reset();
@@ -61,7 +73,7 @@ export function DeleteAutomationAction({
         confirmVariant="danger"
         pending={remove.isPending}
         error={remove.isError ? problemMessageOf(remove.error, t) : null}
-        onConfirm={() => remove.mutate()}
+        onConfirm={() => remove.mutate(automation.id)}
       >
         <p>{t("auto.deleteBody", { name: automation.name })}</p>
       </ConfirmModal>

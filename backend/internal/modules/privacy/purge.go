@@ -167,22 +167,48 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 // reason PurgeActivities shares its own: two ways to anonymise a contact is one
 // way too many, and the one that gets less use is the one that quietly stops
 // covering a column.
-func (s *RetentionService) AnonymiseContacts(ctx context.Context, contacts []ids.UUID, reason PurgeReason) (int, error) {
+//
+// The caller chose the contacts in an earlier transaction, and somebody may
+// have worked on one since. stillPurgeable asks again inside each contact's own
+// transaction, under its row lock, and a contact it refuses is skipped. The
+// count is the contacts actually anonymised.
+func (s *RetentionService) AnonymiseContacts(
+	ctx context.Context, contacts []ids.UUID, reason PurgeReason, stillPurgeable ContactStillPurgeable,
+) (int, error) {
 	if err := requireContactAnonymise(ctx); err != nil {
 		return 0, err
 	}
 	done := 0
 	for _, id := range contacts {
-		if err := s.anonymiseOneContact(ctx, id, reason); err != nil {
+		anonymised, err := s.anonymiseOneContact(ctx, id, reason, stillPurgeable)
+		if err != nil {
 			return done, fmt.Errorf("privacy: anonymising a purged contact: %w", err)
 		}
-		done++
+		if anonymised {
+			done++
+		}
 	}
 	return done, nil
 }
 
-func (s *RetentionService) anonymiseOneContact(ctx context.Context, id ids.UUID, reason PurgeReason) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+// ContactStillPurgeable answers, inside the anonymisation's transaction, whether
+// a contact chosen earlier may still be anonymised.
+type ContactStillPurgeable func(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error)
+
+func (s *RetentionService) anonymiseOneContact(
+	ctx context.Context, id ids.UUID, reason PurgeReason, stillPurgeable ContactStillPurgeable,
+) (bool, error) {
+	anonymised := false
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The lock first, so an edit cannot land between the answer and the scrub.
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR UPDATE`, id); err != nil {
+			return err
+		}
+		ok, err := stillPurgeable(ctx, tx, id)
+		if err != nil || !ok {
+			return err
+		}
+		anonymised = true
 		if err := anonymizeContactRecord(ctx, tx, id, s.eraser.payloads); err != nil {
 			return err
 		}
@@ -199,6 +225,7 @@ func (s *RetentionService) anonymiseOneContact(ctx context.Context, id ids.UUID,
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "contact", id,
 			retentionAppliedPayload(crmcontracts.RetentionAppliedAnonymize, nil, nil))
 	})
+	return anonymised && err == nil, err
 }
 
 // StatutoryFloorClause is the shield every destructive activity path applies,

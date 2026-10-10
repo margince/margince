@@ -2566,6 +2566,30 @@ func (e AuthorizationSeatType) Valid() bool {
 	}
 }
 
+// Defines values for AutomationLastRunOutcome.
+const (
+	AutomationLastRunOutcomeBlocked           AutomationLastRunOutcome = "blocked"
+	AutomationLastRunOutcomeFailed            AutomationLastRunOutcome = "failed"
+	AutomationLastRunOutcomeFired             AutomationLastRunOutcome = "fired"
+	AutomationLastRunOutcomeQueuedForApproval AutomationLastRunOutcome = "queued_for_approval"
+)
+
+// Valid indicates whether the value is a known member of the AutomationLastRunOutcome enum.
+func (e AutomationLastRunOutcome) Valid() bool {
+	switch e {
+	case AutomationLastRunOutcomeBlocked:
+		return true
+	case AutomationLastRunOutcomeFailed:
+		return true
+	case AutomationLastRunOutcomeFired:
+		return true
+	case AutomationLastRunOutcomeQueuedForApproval:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationPausedReason.
 const (
 	AutomationPausedReasonBurst           AutomationPausedReason = "burst"
@@ -22670,6 +22694,9 @@ type AiCall struct {
 	ServedModel string `json:"served_model"`
 	Task        string `json:"task"`
 
+	// TaskDisplayName What a screen calls the task, the same name the usage lines carry. Absent for a task with no name, which a screen shows by its key.
+	TaskDisplayName *string `json:"task_display_name,omitempty"`
+
 	// Tier Empty when the call failed before routing.
 	Tier      string `json:"tier"`
 	TokensIn  int    `json:"tokens_in"`
@@ -22735,6 +22762,9 @@ type AiCallListResponse struct {
 
 	// PayloadCaptureEnabled The deployment's ai.capture_payloads posture.
 	PayloadCaptureEnabled bool `json:"payload_capture_enabled"`
+
+	// TaskOptions The same tasks in the same order, each with the name a screen shows for it.
+	TaskOptions []AiCallTaskOption `json:"task_options"`
 
 	// Tasks Every task with at least one terminal call, sorted — the complete filter option set (matches the terminal-only list), independent of the current page.
 	Tasks []string `json:"tasks"`
@@ -22804,10 +22834,22 @@ type AiCallSummary struct {
 	ServedModel string `json:"served_model"`
 	Task        string `json:"task"`
 
+	// TaskDisplayName What a screen calls the task, the same name the usage lines carry. Absent for a task with no name, which a screen shows by its key.
+	TaskDisplayName *string `json:"task_display_name,omitempty"`
+
 	// Tier Empty when the call failed before routing.
 	Tier      string `json:"tier"`
 	TokensIn  int    `json:"tokens_in"`
 	TokensOut int    `json:"tokens_out"`
+}
+
+// AiCallTaskOption One task the call log can be filtered to.
+type AiCallTaskOption struct {
+	// DisplayName What a screen calls the task, as task_display_name on a call. Absent for a task with no name, which a screen shows by its key.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// Task The key the task filter takes.
+	Task string `json:"task"`
 }
 
 // AiDecisionSummary One task's decision-model pass and fallback counts over the usage window.
@@ -25521,16 +25563,28 @@ type Automation struct {
 	Id        openapi_types.UUID `json:"id"`
 
 	// Key The catalog type this instance is built from.
-	Key    string                 `json:"key"`
-	Name   string                 `json:"name"`
-	Params map[string]interface{} `json:"params"`
+	Key string `json:"key"`
+
+	// LastRunAt When the rule last ran: fired, queued for approval, failed or was blocked. A skipped firing never counts. Only GET /automations carries it, to every caller who may read automations; a single read, a create and an update leave it out. Absent on a list item whose rule has never run.
+	LastRunAt *time.Time `json:"last_run_at,omitempty"`
+
+	// LastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
+	LastRunOutcome *AutomationLastRunOutcome `json:"last_run_outcome,omitempty"`
+	Name           string                    `json:"name"`
+	Params         map[string]interface{}    `json:"params"`
 
 	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
 	PausedReason *AutomationPausedReason `json:"paused_reason,omitempty"`
-	Status       AutomationStatus        `json:"status"`
-	UpdatedAt    *time.Time              `json:"updated_at,omitempty"`
-	Version      *int                    `json:"version,omitempty"`
+
+	// RunsLast30Days Runs other than skipped ones in the 30 days before the server read the list. Every GET /automations item carries it, 0 for a rule that has not run; a single read, a create and an update leave it out.
+	RunsLast30Days *int             `json:"runs_last_30_days,omitempty"`
+	Status         AutomationStatus `json:"status"`
+	UpdatedAt      *time.Time       `json:"updated_at,omitempty"`
+	Version        *int             `json:"version,omitempty"`
 }
+
+// AutomationLastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
+type AutomationLastRunOutcome string
 
 // AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
 type AutomationPausedReason string
@@ -41413,7 +41467,7 @@ type RecordGrant struct {
 	// SubjectId app_user(id) or team(id) per subject_type.
 	SubjectId   openapi_types.UUID     `json:"subject_id"`
 	SubjectType RecordGrantSubjectType `json:"subject_type"`
-	Version     *int64                 `json:"version,omitempty"`
+	Version     int64                  `json:"version"`
 }
 
 // RecordGrantAccess 'write' also satisfies 'read'.

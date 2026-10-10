@@ -92,16 +92,16 @@ describe("ProviderCallsLine", () => {
     ).toBeTruthy();
   });
 
-  it("says nothing failed, and names a provider with no calls", async () => {
+  it("says nothing failed, and draws nothing for a provider with no calls", async () => {
     statsServer(() => [row("gemini", { failed: 0, timeouts: 0, calls: 1 })]);
-    render(
+    const { container } = render(
       <>
         <ProviderCallsLine provider="gemini" />
         <ProviderCallsLine provider="anthropic" />
       </>,
     );
     expect(await screen.findByText("7 d: 1 call · 0 failed")).toBeTruthy();
-    expect(screen.getByText("No calls in the last 7 days")).toBeTruthy();
+    expect(container.textContent).toBe("7 d: 1 call · 0 failed");
   });
 
   it("draws nothing for a reader who may not see the call record", async () => {

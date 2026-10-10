@@ -45,6 +45,7 @@ func (h Handlers) ListAiCalls(
 		Page:                  crmcontracts.PageInfo{HasMore: page.HasMore},
 		PayloadCaptureEnabled: h.capturePayloads,
 		Tasks:                 page.Tasks,
+		TaskOptions:           wireAiCallTaskOptions(page.Tasks),
 	}
 	if page.NextCursor != "" {
 		response.Page.NextCursor = &page.NextCursor
@@ -73,13 +74,22 @@ func wireAiCallSummary(summary CallSummary) crmcontracts.AiCallSummary {
 		CacheHit: summary.CacheHit, Degraded: summary.Degraded,
 		ErrorSentinel: summary.ErrorSentinel, HasPayload: summary.HasPayload,
 		DecisionAttempted: summary.DecisionAttempted,
+		TaskDisplayName:   taskDisplayName(Task(summary.Task)),
 	}
+}
+
+func wireAiCallTaskOptions(tasks []string) []crmcontracts.AiCallTaskOption {
+	options := make([]crmcontracts.AiCallTaskOption, 0, len(tasks))
+	for _, task := range tasks {
+		options = append(options, crmcontracts.AiCallTaskOption{Task: task, DisplayName: taskDisplayName(Task(task))})
+	}
+	return options
 }
 
 func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 	summary := wireAiCallSummary(detail.CallSummary)
 	out := crmcontracts.AiCall{
-		Id: summary.Id, OccurredAt: summary.OccurredAt, Task: summary.Task,
+		Id: summary.Id, OccurredAt: summary.OccurredAt, Task: summary.Task, TaskDisplayName: summary.TaskDisplayName,
 		Kind: summary.Kind, Tier: summary.Tier, Provider: summary.Provider, ModelId: summary.ModelId,
 		ServedModel: summary.ServedModel, CallsAttempted: summary.CallsAttempted,
 		TokensIn: summary.TokensIn, TokensOut: summary.TokensOut,

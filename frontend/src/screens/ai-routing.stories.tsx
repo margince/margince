@@ -149,6 +149,7 @@ function story(
   allow: GrantSpec = MANAGER,
   vendors: Record<string, unknown> = VENDOR_LIST,
   aiStatus: unknown = status,
+  health: components["schemas"]["AiHealth"] = HEALTH,
 ) {
   return () => {
     installFetchStub({
@@ -159,7 +160,7 @@ function story(
         return response;
       },
       "GET /ai/status": () => jsonResponse(aiStatus),
-      "GET /ai/health": () => jsonResponse(HEALTH),
+      "GET /ai/health": () => jsonResponse(health),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
       "GET /ai/provider-locations/gemini_vertex": () =>
         jsonResponse(VERTEX_LOCATIONS),
@@ -272,23 +273,58 @@ export const BoundDark: Story = {
   render: story(BOUND),
 };
 
-// On a phone each lane stacks, and its verbs stay inside the row.
 export const BoundPhone: Story = {
+  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(BOUND),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findAllByRole("button", { name: /^edit$/i });
+    const canvas = within(canvasElement);
+    await canvas.findAllByRole("button", { name: /^edit\b/i });
+    const table = canvas.getByRole("table");
+    const box = table.parentElement?.getBoundingClientRect();
+    if (!box) throw new Error("the tiers table has no scroll box");
     let measured = 0;
-    for (const line of canvasElement.querySelectorAll(".ai-tier-line")) {
-      const row = line.getBoundingClientRect();
-      for (const verb of line.querySelectorAll(".ai-tier-actions > *")) {
-        const box = verb.getBoundingClientRect();
-        expect(box.left).toBeGreaterThanOrEqual(row.left);
-        expect(box.right).toBeLessThanOrEqual(row.right);
-        measured++;
-      }
+    for (const verb of within(table).getAllByRole("button")) {
+      const edge = verb.getBoundingClientRect();
+      expect(edge.left).toBeGreaterThanOrEqual(box.left);
+      expect(edge.right).toBeLessThanOrEqual(box.right);
+      measured++;
     }
     expect(measured).toBeGreaterThan(0);
+  },
+};
+
+export const UnkeyedAndFailing: Story = {
+  render: story(
+    {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        frontier: { provider: "anthropic", model: "claude-opus-4-1" },
+        local_large: { provider: "anthropic", model: "claude-opus-4-1" },
+      },
+    },
+    MANAGER,
+    VENDOR_LIST,
+    status,
+    {
+      ...HEALTH,
+      rungs: HEALTH.rungs.map((rung) =>
+        rung.tier === "premium"
+          ? {
+              ...rung,
+              healthy: false,
+              failures: 7,
+              last_sentinel: "provider_quota",
+            }
+          : rung,
+      ),
+    },
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table");
+    await canvas.findByText("Some tiers cannot answer");
   },
 };
 
@@ -299,7 +335,7 @@ export const EditingATier: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      (await canvas.findAllByRole("button", { name: /^edit$/i }))[0],
+      (await canvas.findAllByRole("button", { name: /^edit\b/i }))[0],
     );
   },
 };

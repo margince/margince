@@ -121,6 +121,33 @@ function ratesBackend(allow: GrantSpec, seat: "full" | "read", urls: string[]) {
             cache_write_per_mtok: "6.25",
             effective_date: "2026-07-23",
           },
+          {
+            provider: "openai",
+            model_id: "gpt-5.2-mini",
+            input_per_mtok: "0.25",
+            output_per_mtok: "2",
+            cache_read_per_mtok: "0.025",
+            cache_write_per_mtok: "0",
+            effective_date: "2026-07-01",
+          },
+          {
+            provider: "anthropic",
+            model_id: "claude-haiku-4-5",
+            input_per_mtok: "1",
+            output_per_mtok: "5",
+            cache_read_per_mtok: "0.1",
+            cache_write_per_mtok: "1.25",
+            effective_date: "2026-07-23",
+          },
+          {
+            provider: "fake",
+            model_id: "",
+            input_per_mtok: "0",
+            output_per_mtok: "0",
+            cache_read_per_mtok: "0",
+            cache_write_per_mtok: "0",
+            effective_date: "2026-07-01",
+          },
         ],
       });
     }
@@ -173,16 +200,51 @@ describe("the rate sheets", () => {
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     expect(screen.getByText("0.92")).toBeTruthy();
     expect(screen.getByText("claude-opus-4-8")).toBeTruthy();
-    expect(screen.getByText("6.25")).toBeTruthy();
+    expect(screen.getByText(/\$6\.25$/)).toBeTruthy();
 
     // Each sheet is a stacked settings row, and the row is what says WHICH
     // rates these are — the table's own headers name columns, not the sheet.
     expect(
       within(rateCard("Currency rates")).getByText("Rates in force"),
     ).toBeTruthy();
+  });
+
+  it("groups the model prices under each vendor's name, leaving the test adapter out", async () => {
+    mount(RATE_READER);
+    await screen.findByText("claude-opus-4-8");
+    const card = rateCard("AI model costs");
+    const anthropic = within(card).getByRole("heading", { name: "Anthropic" });
+    const openai = within(card).getByRole("heading", { name: "OpenAI" });
+    expect(anthropic.compareDocumentPosition(openai)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    const anthropicTable = within(card)
+      .getByTestId("price-anthropic-claude-opus-4-8-2026-07-23")
+      .closest("table");
     expect(
-      within(rateCard("AI model costs")).getByText("Prices in force"),
-    ).toBeTruthy();
+      anthropicTable?.contains(
+        within(card).getByTestId("price-anthropic-claude-haiku-4-5-2026-07-23"),
+      ),
+    ).toBe(true);
+    expect(
+      anthropicTable?.contains(
+        within(card).getByTestId("price-openai-gpt-5.2-mini-2026-07-01"),
+      ),
+    ).toBe(false);
+    expect(within(card).queryByText(/Built-in test provider/)).toBeNull();
+    expect(within(card).queryByTestId(/^price-fake/)).toBeNull();
+  });
+
+  it("sets the four prices against the end and dates each row in words", async () => {
+    mount(RATE_READER);
+    const row = await screen.findByTestId(
+      "price-anthropic-claude-opus-4-8-2026-07-23",
+    );
+    for (const price of [/\$5\.00$/, /\$25\.00$/, /\$0\.50$/, /\$6\.25$/]) {
+      expect(within(row).getByText(price).className).toContain("datatable-end");
+    }
+    expect(within(row).getByText("claude-opus-4-8").tagName).toBe("CODE");
+    expect(row.textContent).not.toContain("2026-07-23");
   });
 
   // The dialogs are where a rate is authored, and every box in them is named by

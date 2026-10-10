@@ -55,8 +55,8 @@ If the page says "The MCP connector is off for this installation.", an administr
 Also called: MCP server, Claude Desktop, AI assistant integration.
 
 ### How do I revoke an agent's access?
-To stop an agent, open **Settings → Agents**. For a passport, choose **Revoke** on it: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
-For an MCP client, choose **Disconnect** under **Connected MCP clients**, which ends the whole connection. Turning off a user revokes all their passports at once.
+To stop an agent, open **Settings → Agents**. For a passport, open the **…** menu on its row and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
+For an MCP client, open the **…** menu on its row under **Connected MCP clients** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
 Also called: kill switch, remove an agent, disconnect, delete an API key.
 
 ### How do I let Margince work overnight for me?

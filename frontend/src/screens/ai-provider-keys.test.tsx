@@ -91,7 +91,7 @@ async function openSheet(
   await user.click(
     within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
       "button",
-      { name: /^Edit/ },
+      { name: /^(Edit|Open) / },
     ),
   );
   return screen.findByTestId(`ai-provider-key-${provider}`);
@@ -343,7 +343,7 @@ describe("AiProviderKeysCard", () => {
     expect(backend.deletes).toHaveLength(0);
 
     const dialog = await screen.findByRole("dialog", {
-      name: /remove gemini key/i,
+      name: /remove google gemini key/i,
     });
     await user.click(within(dialog).getByRole("button", { name: /remove/i }));
     await waitFor(() => expect(backend.deletes).toHaveLength(1));
@@ -366,7 +366,7 @@ describe("AiProviderKeysCard", () => {
     await openKey(user, "gemini");
     await user.click(screen.getByRole("button", { name: /remove/i }));
     const dialog = await screen.findByRole("dialog", {
-      name: /remove gemini key/i,
+      name: /remove google gemini key/i,
     });
     await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
 
@@ -429,7 +429,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Edit/ },
+      { name: /^(Edit|Open) / },
     );
 
     // Refused, not hidden: an operator who must ask somebody else to rotate a

@@ -233,7 +233,7 @@ func TestAShareOnAnArchivedRecordCanStillBeRevoked(t *testing.T) {
 		t.Error("sharing an archived record succeeded")
 	}
 	// Never frozen: clearing the share that is already standing.
-	if err := shares.RevokeRecordGrant(ctx, grant.ID); err != nil {
+	if err := shares.RevokeRecordGrant(ctx, grant.ID, nil); err != nil {
 		t.Fatalf("revoking a share on an archived record: %v", err)
 	}
 	var left int
