@@ -97,7 +97,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// admitted. Every check below still applies: the seat, the re-derived
 	// RBAC and the volume bounds are not waived by knowing whose seat it is.
 	if !spec.SelfDescribing && !p.Scopes.Has(spec.RequiredScope) {
-		return ctx, fmt.Errorf("gate: %s needs scope %q: %w", spec.Name, spec.RequiredScope, apperrors.ErrScopeExceeded)
+		return ctx, &ScopeRequiredError{Tool: spec.Name, Scope: spec.RequiredScope}
 	}
 
 	// Re-derive the granting human's authority through the seam — never

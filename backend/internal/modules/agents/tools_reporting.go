@@ -68,6 +68,9 @@ func (t readReporting) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	if err := decodeArgs(in, &request); err != nil {
 		return nil, err
 	}
+	if err := requireReportingArgs(request); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	answer, err := t.read(ctx, request)
 	if err != nil {

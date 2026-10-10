@@ -45,7 +45,9 @@ paste the passport into the chat. This form needs curl 8.3 or later.
 - A record you cannot see answers `404`, the same as one that does not exist. Do not
   tell the user a record is missing when it may only be hidden from them.
 - `403` with code `scope_exceeds_grantor` means the passport lacks the permission the
-  call needs; the message names the scope. Ask the user to make a passport with it.
+  call needs; the message names the scope (`read`, `draft`, `write`, `send` or `enrich`).
+  The Permission column of `index.md` gives the card's name for each. Every read needs
+  Read records. Ask the user to make a passport with the one you lack.
 - `403` with code `permission_denied` means the user's own role does not allow the
   call, or that a human must make it in the app. Tell the user; do not retry.
 - `429` with code `rate_limited` means the passport has spent one of its allowances

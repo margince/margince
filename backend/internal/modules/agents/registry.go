@@ -45,6 +45,10 @@ type Registry struct {
 	// supplied value to it, so `minimum`/`maximum` bind the surface instead of
 	// describing an intention.
 	numArgs map[string][]numBound
+	// enumArgs[tool] is the closed vocabulary its schema declares for each text
+	// argument, read off the schema once at registration. Invoke holds a
+	// supplied word to it, so `enum` binds the surface as `minimum` does.
+	enumArgs map[string][]enumArg
 	// requiredArgs[tool] is what that tool's schema says it cannot run without,
 	// read off the schema once at registration. Invoke holds a call to it, so
 	// `required` binds the surface rather than describing an intention that
@@ -98,6 +102,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		specs:        map[string]mcp.ToolSpec{},
 		idArgs:       map[string]idArgSpec{},
 		numArgs:      map[string][]numBound{},
+		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,

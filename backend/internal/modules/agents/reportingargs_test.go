@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package agents
+
+import (
+	"encoding/json"
+	"errors"
+	"reflect"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// A read_reporting call that gets one argument wrong is told which one and what
+// would have worked, not "invalid argument".
+func TestAReadReportingMistakeNamesTheArgumentAndTheFix(t *testing.T) {
+	registry := idProbeDispatcher(t).registry
+	ctx := scopedAgentCtx(principal.ScopeRead)
+
+	for _, tc := range []struct {
+		name, args, field, says string
+	}{
+		{"a mode that is not one", `{"mode":"get"}`, "mode", "catalog, evaluate, reports"},
+		{"no mode at all", `{}`, "", "`mode` is missing"},
+		{"a report read with no id", `{"mode":"report"}`, "id", "required in mode report"},
+		{"editions with no report id", `{"mode":"editions"}`, "id", "required in mode editions"},
+		{"a comparison with one side", `{"mode":"compare","id":"0192a5c0-0000-7000-8000-000000000001"}`, "right_id", "required in mode compare"},
+		{"a page size above the ceiling", `{"mode":"catalog","limit":101}`, "limit", "1 to 100"},
+		{"a negative page size", `{"mode":"catalog","limit":-1}`, "limit", "1 to 100"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := registry.Invoke(ctx, "read_reporting", json.RawMessage(tc.args))
+
+			var badArgs *BadArgsError
+			if !errors.As(err, &badArgs) {
+				t.Fatalf("answered %T (%v), want *BadArgsError", err, err)
+			}
+			if badArgs.Field != tc.field || !strings.Contains(badArgs.Error(), tc.says) {
+				t.Errorf("refusal names field %q with %q, want field %q saying %q",
+					badArgs.Field, badArgs.Error(), tc.field, tc.says)
+			}
+		})
+	}
+}
+
+// The words the schema advertises are the words the handler accepts: an enum
+// tag nothing reads, or a mode the handler would refuse, is a promise that
+// breaks on first use.
+func TestTheAdvertisedReportingModesAreTheAcceptedOnes(t *testing.T) {
+	field, ok := reflect.TypeFor[ReportingRead]().FieldByName("Mode")
+	if !ok {
+		t.Fatal("ReportingRead has no Mode field")
+	}
+	if tagged := strings.Split(field.Tag.Get("enum"), ","); !slices.Equal(tagged, reportingModes) {
+		t.Errorf("the enum tag reads %v, the handler accepts %v", tagged, reportingModes)
+	}
+
+	var advertised struct {
+		Properties struct {
+			Mode struct {
+				Enum []string `json:"enum"`
+			} `json:"mode"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(reportingReadInput, &advertised); err != nil {
+		t.Fatalf("read_reporting input schema does not parse: %v", err)
+	}
+	if !slices.Equal(advertised.Properties.Mode.Enum, reportingModes) {
+		t.Errorf("tools/list advertises modes %v, the handler accepts %v", advertised.Properties.Mode.Enum, reportingModes)
+	}
+}

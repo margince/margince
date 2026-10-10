@@ -12,6 +12,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -260,8 +261,29 @@ func (t runReport) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 	if err := decodeReportArgs(in, &args.Report, &args.Rest); err != nil {
 		return nil, err
 	}
+	if err := t.requireServedReport(args.Report); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.run(ctx, args.Report, args.Rest)
+}
+
+// requireServedReport refuses a key outside the catalog as the argument it is.
+// The engine's own refusal wraps not-found because the key is a path parameter
+// over REST, and the tool surface would read that as a missing record.
+func (t runReport) requireServedReport(report string) error {
+	if len(t.catalog) == 0 || slices.ContainsFunc(t.catalog, func(e ReportCatalogEntry) bool { return e.Report == report }) {
+		return nil
+	}
+	keys := make([]string, 0, len(t.catalog))
+	for _, entry := range t.catalog {
+		keys = append(keys, entry.Report)
+	}
+	return &BadArgsError{
+		Cause:    fmt.Errorf("report %q is not a report this installation serves", report),
+		Field:    "report",
+		Guidance: "the prebuilt reports are: " + strings.Join(keys, ", "),
+	}
 }
 
 // decodeReportArgs pops the report key and forwards the remaining plan

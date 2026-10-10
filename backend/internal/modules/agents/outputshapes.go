@@ -120,6 +120,8 @@ type jsonSchema struct {
 	// Format carries the semantic a caller needs and Go's type does not have:
 	// a uuid is a string, and a caller told only "string" will invent one.
 	Format string `json:"format,omitempty"`
+	// Enum is a closed vocabulary a struct field declares in its `enum` tag.
+	Enum []string `json:"enum,omitempty"`
 	// Description is carried only where a field's own type cannot say it.
 	Description string                 `json:"description,omitempty"`
 	Properties  map[string]*jsonSchema `json:"properties,omitempty"`
@@ -277,6 +279,9 @@ func describeStruct(t reflect.Type) (*jsonSchema, error) {
 		schema, err := describeType(field.Type)
 		if err != nil {
 			return fmt.Errorf("%s.%s: %w", t.Name(), field.Name, err)
+		}
+		if words, ok := field.Tag.Lookup("enum"); ok {
+			schema.Enum = strings.Split(words, ",")
 		}
 		out.Properties[name] = schema
 		if !optional {

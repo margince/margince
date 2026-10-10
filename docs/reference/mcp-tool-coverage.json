@@ -2658,7 +2658,7 @@
     },
     {
       "name": "read_reporting",
-      "tokens": 506,
+      "tokens": 529,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"

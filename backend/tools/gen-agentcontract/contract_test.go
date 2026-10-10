@@ -292,7 +292,7 @@ func TestTheIndexListsEveryKeptOperationOnce(t *testing.T) {
 	}
 	text := string(index)
 	for _, row := range []string{
-		"| `GET /contacts` | listContacts |  | any | at once |",
+		"| `GET /contacts` | listContacts |  | Read records | at once |",
 		"| `POST /contacts/{id}/merge` | mergeContact | Merge a contact into a target. | Change records | waits for approval |",
 		"| `GET /contacts/{id}` | getContact |",
 	} {
@@ -303,6 +303,23 @@ func TestTheIndexListsEveryKeptOperationOnce(t *testing.T) {
 	for _, dropped := range []string{"issuePassport", "getDigest", "openEndpoint"} {
 		if strings.Contains(text, dropped) {
 			t.Errorf("the index lists %s, which a passport cannot call", dropped)
+		}
+	}
+}
+
+// The gate refuses every read of a passport made without Read records, so no
+// row may tell a script author a call needs no permission.
+func TestNoRowInTheIndexSaysACallNeedsNoPermission(t *testing.T) {
+	_, index, _, err := agentContract([]byte(fixture), tables)
+	if err != nil {
+		t.Fatalf("agentContract: %v", err)
+	}
+	for line := range strings.SplitSeq(string(index), "\n") {
+		if strings.HasPrefix(line, "| `") && strings.Contains(line, "| any |") {
+			t.Errorf("a row claims no permission is needed: %s", line)
+		}
+		if strings.HasPrefix(line, "| `GET ") && !strings.Contains(line, "| Read records |") {
+			t.Errorf("a read row does not name Read records: %s", line)
 		}
 	}
 }
