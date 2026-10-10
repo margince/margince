@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -376,8 +377,9 @@ func validateSchedule(sched SendSchedule, now time.Time) error {
 	}
 	// A zone NAME, resolved against the IANA database — never a numeric offset,
 	// which would be frozen against the DST rules of the day it was written
-	// (AC-DS-TZ4).
-	if _, err := time.LoadLocation(sched.TZ); err != nil {
+	// (AC-DS-TZ4). ParseTimezone also refuses "Local", the server's own zone,
+	// and the name is stored as sent, so it must equal the parsed one.
+	if zone, err := values.ParseTimezone(sched.TZ); err != nil || zone.String() != sched.TZ {
 		return &InvalidScheduleError{Field: FieldScheduledTZ, Reason: "is not an IANA time zone name"}
 	}
 	if sched.At.Sub(now) > scheduleCeiling {

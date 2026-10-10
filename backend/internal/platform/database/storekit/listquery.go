@@ -338,8 +338,9 @@ func parsesAsKind(kind, value string) bool {
 		_, err := strconv.ParseInt(value, 10, 64)
 		return err == nil
 	case fieldcatalog.TypeDate:
-		_, err := time.Parse("2006-01-02", value)
-		return err == nil
+		day, err := time.Parse("2006-01-02", value)
+		// Go reads year 0000, which Postgres has no date for.
+		return err == nil && day.Year() >= 1
 	case fieldcatalog.TypeBoolean:
 		return value == "true" || value == "false"
 	case KindTimestamp:
