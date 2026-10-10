@@ -3,12 +3,8 @@
 
 package agents
 
-// The closed vocabulary a tool's schema declares for a text argument, held at
-// the same chokepoint as numargs.go. An `enum` is the only list of words a
-// caller has. A word outside it is refused by name, not read as "nothing
-// matches" and not taken for an absent argument.
-//
-// Top-level string properties and arrays of strings are covered.
+// A text argument's declared `enum`, held at the chokepoint numargs.go uses.
+// A word outside it is refused by name, whatever the property's `type` says.
 
 import (
 	"encoding/json"
@@ -31,25 +27,23 @@ type enumArg struct {
 func declaredEnumArgs(inputSchema json.RawMessage) []enumArg {
 	var schema struct {
 		Properties map[string]struct {
-			Type  string   `json:"type"`
-			Enum  []string `json:"enum"`
+			Enum  []json.RawMessage `json:"enum"`
 			Items *struct {
-				Enum []string `json:"enum"`
+				Enum []json.RawMessage `json:"enum"`
 			} `json:"items"`
 		} `json:"properties"`
 	}
-	// An unreadable vocabulary (not all text) leaves that tool unenforced rather
-	// than failing boot: numeric and mixed enums are outside this claim.
 	if json.Unmarshal(inputSchema, &schema) != nil {
 		return nil
 	}
 	var out []enumArg
 	for name, prop := range schema.Properties {
-		switch {
-		case prop.Type == schemaString && len(prop.Enum) > 0:
-			out = append(out, enumArg{name: name, words: prop.Enum})
-		case prop.Type == schemaArray && prop.Items != nil && len(prop.Items.Enum) > 0:
-			out = append(out, enumArg{name: name, words: prop.Items.Enum, list: true})
+		if words, ok := textWords(prop.Enum); ok {
+			out = append(out, enumArg{name: name, words: words})
+		} else if prop.Items != nil {
+			if words, ok := textWords(prop.Items.Enum); ok {
+				out = append(out, enumArg{name: name, words: words, list: true})
+			}
 		}
 	}
 	// Sorted, so a call breaking two vocabularies is refused in the same words
@@ -58,11 +52,22 @@ func declaredEnumArgs(inputSchema json.RawMessage) []enumArg {
 	return out
 }
 
-// requireDeclaredEnums holds every supplied word to the vocabulary its tool
-// advertises for it.
-//
-// An absent argument and an explicit null are legal, as for the bounds. An empty
-// string is a word that is not declared, so it is refused.
+// textWords reads an enum whose members are all strings; any other enum is not
+// a text vocabulary and stays unenforced.
+func textWords(members []json.RawMessage) ([]string, bool) {
+	words := make([]string, 0, len(members))
+	for _, member := range members {
+		var word string
+		if json.Unmarshal(member, &word) != nil {
+			return nil, false
+		}
+		words = append(words, word)
+	}
+	return words, len(words) > 0
+}
+
+// requireDeclaredEnums refuses a word outside the declared vocabulary. An empty
+// string is a word, so it is refused; absent and null are legal.
 func (r *Registry) requireDeclaredEnums(name string, args json.RawMessage) error {
 	r.mu.RLock()
 	enums := r.enumArgs[name]

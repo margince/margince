@@ -11,8 +11,7 @@ import (
 )
 
 // ScopeRequiredError refuses an agent whose passport lacks the scope a call
-// needs. It names the scope, because the bare sentinel's "scope exceeds
-// grantor" leaves a caller guessing which permission to ask the user for.
+// needs, and names the scope.
 type ScopeRequiredError struct {
 	// Tool names the tool that asked, empty where the refusal is for a route.
 	Tool  string
@@ -29,8 +28,7 @@ func (e *ScopeRequiredError) Error() string {
 // Unwrap keeps the refusal on the sentinel table's 403 row.
 func (e *ScopeRequiredError) Unwrap() error { return apperrors.ErrScopeExceeded }
 
-// MessageFault answers with the sentinel's own code and a message that says
-// which permission is missing and who can grant it.
+// MessageFault keeps the sentinel's code and names the missing permission.
 func (e *ScopeRequiredError) MessageFault() (code, message string) {
 	return "scope_exceeds_grantor", fmt.Sprintf(
 		"this passport lacks the %q permission this call needs; ask the user to make a passport that includes it", e.Scope)

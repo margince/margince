@@ -12,9 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A passport refused for lacking a scope is told which one. The bare sentinel
-// answered "scope exceeds grantor", which names no permission to ask the user
-// for.
+// A passport refused for lacking a scope is told which scope it lacks.
 func TestAMissingScopeIsNamedInTheRefusal(t *testing.T) {
 	for _, scope := range []principal.Scope{principal.ScopeRead, principal.ScopeDraft, principal.ScopeWrite} {
 		fault, ok := Classify(&auth.ScopeRequiredError{Scope: scope})

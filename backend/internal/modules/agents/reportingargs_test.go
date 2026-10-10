@@ -6,8 +6,6 @@ package agents
 import (
 	"encoding/json"
 	"errors"
-	"reflect"
-	"slices"
 	"strings"
 	"testing"
 
@@ -28,8 +26,8 @@ func TestAReadReportingMistakeNamesTheArgumentAndTheFix(t *testing.T) {
 		{"a report read with no id", `{"mode":"report"}`, "id", "required in mode report"},
 		{"editions with no report id", `{"mode":"editions"}`, "id", "required in mode editions"},
 		{"a comparison with one side", `{"mode":"compare","id":"0192a5c0-0000-7000-8000-000000000001"}`, "right_id", "required in mode compare"},
-		{"a page size above the ceiling", `{"mode":"catalog","limit":101}`, "limit", "1 to 100"},
-		{"a negative page size", `{"mode":"catalog","limit":-1}`, "limit", "1 to 100"},
+		{"a page size above the ceiling", `{"mode":"catalog","limit":101}`, "", "above its declared maximum of 100"},
+		{"a negative page size", `{"mode":"catalog","limit":-1}`, "", "below its declared minimum of 1"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := registry.Invoke(ctx, "read_reporting", json.RawMessage(tc.args))
@@ -43,30 +41,5 @@ func TestAReadReportingMistakeNamesTheArgumentAndTheFix(t *testing.T) {
 					badArgs.Field, badArgs.Error(), tc.field, tc.says)
 			}
 		})
-	}
-}
-
-// The modes the schema advertises are the modes the handler accepts.
-func TestTheAdvertisedReportingModesAreTheAcceptedOnes(t *testing.T) {
-	field, ok := reflect.TypeFor[ReportingRead]().FieldByName("Mode")
-	if !ok {
-		t.Fatal("ReportingRead has no Mode field")
-	}
-	if tagged := strings.Split(field.Tag.Get("enum"), ","); !slices.Equal(tagged, reportingModes) {
-		t.Errorf("the enum tag reads %v, the handler accepts %v", tagged, reportingModes)
-	}
-
-	var advertised struct {
-		Properties struct {
-			Mode struct {
-				Enum []string `json:"enum"`
-			} `json:"mode"`
-		} `json:"properties"`
-	}
-	if err := json.Unmarshal(reportingReadInput, &advertised); err != nil {
-		t.Fatalf("read_reporting input schema does not parse: %v", err)
-	}
-	if !slices.Equal(advertised.Properties.Mode.Enum, reportingModes) {
-		t.Errorf("tools/list advertises modes %v, the handler accepts %v", advertised.Properties.Mode.Enum, reportingModes)
 	}
 }

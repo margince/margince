@@ -111,9 +111,8 @@ func TestAMalformedOperandIsRefusedWithoutEchoingIt(t *testing.T) {
 	}
 }
 
-// A surface that never runs a module's HTTP mapper reads the verdict off the
-// error itself. A plain error here was classed as an internal fault, and the
-// agent that mistyped the filter was told to retry.
+// A filter refusal declares the filter as the field to fix, so a surface with
+// no module HTTP mapper reads the verdict off the error.
 func TestAFilterRefusalDeclaresTheFilterAsTheFieldToFix(t *testing.T) {
 	var in listInput
 	for _, filters := range []map[string]string{

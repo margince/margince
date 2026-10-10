@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 257.9 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66910 |
+| Approx. wire tokens | 66917 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -14177,6 +14177,8 @@ schedules in Analytics. (Governance: runs immediately; requires passport scope "
       "type": "string"
     },
     "limit": {
+      "maximum": 100,
+      "minimum": 1,
       "type": "integer"
     },
     "mode": {

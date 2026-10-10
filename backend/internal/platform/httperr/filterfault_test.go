@@ -14,7 +14,6 @@ import (
 type filterProbeInput struct{ Owner *ids.UserID }
 
 // A list filter of the wrong shape is the caller's mistake on every surface.
-// The tool door classed it as an internal fault and told the agent to retry.
 func TestAMalformedListFilterIsAValidationRefusal(t *testing.T) {
 	set := storekit.FilterSet[filterProbeInput]{
 		"owner_id": storekit.FilterID(func(in *filterProbeInput, id *ids.UserID) { in.Owner = id }),

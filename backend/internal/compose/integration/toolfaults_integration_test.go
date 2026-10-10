@@ -20,6 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// Every record type with an id, flag or number filter. Partner takes only
+// words, so it has no operand that can be malformed.
 func TestAMistypedListFilterIsTheCallersMistakeOnEveryRecordType(t *testing.T) {
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -30,6 +32,7 @@ func TestAMistypedListFilterIsTheCallersMistakeOnEveryRecordType(t *testing.T) {
 		`{"record_type":"contact","filters":{"tag_id":"not-a-uuid"}}`,
 		`{"record_type":"deal","filters":{"stalled":"maybe"}}`,
 		`{"record_type":"lead","filters":{"min_score":"high"}}`,
+		`{"record_type":"project","filters":{"company_id":"not-a-uuid"}}`,
 	} {
 		_, err := registry.Invoke(ctx, "list_records", json.RawMessage(call))
 

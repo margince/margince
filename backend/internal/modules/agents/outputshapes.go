@@ -35,6 +35,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -120,8 +121,11 @@ type jsonSchema struct {
 	// Format carries the semantic a caller needs and Go's type does not have:
 	// a uuid is a string, and a caller told only "string" will invent one.
 	Format string `json:"format,omitempty"`
-	// Enum is a closed vocabulary a struct field declares in its `enum` tag.
-	Enum []string `json:"enum,omitempty"`
+	// Enum, Minimum and Maximum come from a field's `enum`, `minimum` and
+	// `maximum` tags, which Invoke then holds a call to.
+	Enum    []string `json:"enum,omitempty"`
+	Minimum *float64 `json:"minimum,omitempty"`
+	Maximum *float64 `json:"maximum,omitempty"`
 	// Description is carried only where a field's own type cannot say it.
 	Description string                 `json:"description,omitempty"`
 	Properties  map[string]*jsonSchema `json:"properties,omitempty"`
@@ -283,6 +287,13 @@ func describeStruct(t reflect.Type) (*jsonSchema, error) {
 		if words, ok := field.Tag.Lookup("enum"); ok {
 			schema.Enum = strings.Split(words, ",")
 		}
+		var boundErr error
+		if schema.Minimum, boundErr = tagBound(field, "minimum"); boundErr != nil {
+			return boundErr
+		}
+		if schema.Maximum, boundErr = tagBound(field, "maximum"); boundErr != nil {
+			return boundErr
+		}
 		out.Properties[name] = schema
 		if !optional {
 			required = append(required, name)
@@ -297,6 +308,19 @@ func describeStruct(t reflect.Type) (*jsonSchema, error) {
 	sort.Strings(required)
 	out.Required = required
 	return out, nil
+}
+
+// tagBound reads a numeric `minimum` or `maximum` tag, nil when absent.
+func tagBound(field reflect.StructField, tag string) (*float64, error) {
+	raw, ok := field.Tag.Lookup(tag)
+	if !ok {
+		return nil, nil
+	}
+	bound, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return nil, fmt.Errorf("%s: the %s tag %q is not a number", field.Name, tag, raw)
+	}
+	return &bound, nil
 }
 
 // eachWireField visits the fields a struct puts on the wire, flattening

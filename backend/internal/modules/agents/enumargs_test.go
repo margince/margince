@@ -6,36 +6,46 @@ package agents
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// declaredEnums reads the closed vocabularies a tool's own schema states,
-// without asking the registry what it enforces.
-func declaredEnums(t *testing.T, tool string, inputSchema json.RawMessage) []enumArg {
+// carriedEnum is a property carrying an `enum` of any kind. It is read with no
+// `type` filter, so the walk sees what the registry may skip.
+type carriedEnum struct {
+	name string
+	// words is nil when the enum is not all text.
+	words []string
+	list  bool
+}
+
+func carriedEnums(t *testing.T, tool string, inputSchema json.RawMessage) []carriedEnum {
 	t.Helper()
 	var schema struct {
 		Properties map[string]struct {
-			Type  string   `json:"type"`
-			Enum  []string `json:"enum"`
+			Enum  []json.RawMessage `json:"enum"`
 			Items *struct {
-				Enum []string `json:"enum"`
+				Enum []json.RawMessage `json:"enum"`
 			} `json:"items"`
 		} `json:"properties"`
 	}
 	if err := json.Unmarshal(inputSchema, &schema); err != nil {
 		t.Fatalf("%s: inputSchema does not parse: %v", tool, err)
 	}
-	var out []enumArg
+	var out []carriedEnum
 	for name, prop := range schema.Properties {
-		switch {
-		case prop.Type == "string" && len(prop.Enum) > 0:
-			out = append(out, enumArg{name: name, words: prop.Enum})
-		case prop.Type == "array" && prop.Items != nil && len(prop.Items.Enum) > 0:
-			out = append(out, enumArg{name: name, words: prop.Items.Enum, list: true})
+		members, list := prop.Enum, false
+		if len(members) == 0 && prop.Items != nil {
+			members, list = prop.Items.Enum, true
 		}
+		if len(members) == 0 {
+			continue
+		}
+		words, _ := textWords(members)
+		out = append(out, carriedEnum{name: name, words: words, list: list})
 	}
 	return out
 }
@@ -49,7 +59,15 @@ func TestEveryDeclaredVocabularyBindsTheToolThatDeclaresIt(t *testing.T) {
 
 	probed := 0
 	for name, tool := range registry.tools {
-		for _, enum := range declaredEnums(t, name, tool.Spec().InputSchema) {
+		for _, enum := range carriedEnums(t, name, tool.Spec().InputSchema) {
+			if enum.words == nil {
+				continue
+			}
+			held := slices.ContainsFunc(registry.enumArgs[name], func(e enumArg) bool { return e.name == enum.name })
+			if !held {
+				t.Errorf("%s declares a vocabulary for %q that the registry does not hold", name, enum.name)
+				continue
+			}
 			for _, word := range []string{"zz_not_a_word", ""} {
 				probed++
 				var args map[string]any
@@ -82,5 +100,29 @@ func TestEveryDeclaredVocabularyBindsTheToolThatDeclaresIt(t *testing.T) {
 	}
 	if probed == 0 {
 		t.Fatal("no tool declares a vocabulary, so the walk proved nothing")
+	}
+}
+
+// A vocabulary declared without a `type` is held like any other.
+func TestAnUnknownScopeKindIsRefusedByName(t *testing.T) {
+	registry := idProbeDispatcher(t).registry
+	ctx := scopedAgentCtx(principal.ScopeRead)
+
+	var args map[string]any
+	base := absentIDArgs(t, "run_analytics_query", registry.tools["run_analytics_query"].Spec().InputSchema, "scope_kind")
+	if err := json.Unmarshal(base, &args); err != nil {
+		t.Fatalf("probe arguments do not parse: %v", err)
+	}
+	args["scope_kind"] = "galaxy"
+	encoded, err := json.Marshal(args)
+	if err != nil {
+		t.Fatalf("marshal probe: %v", err)
+	}
+
+	_, err = registry.Invoke(ctx, "run_analytics_query", encoded)
+
+	var badArgs *BadArgsError
+	if !errors.As(err, &badArgs) || badArgs.Field != "scope_kind" || !strings.Contains(badArgs.Error(), "workspace") {
+		t.Errorf("an unknown scope_kind answered %T (%v), want a refusal naming scope_kind and its words", err, err)
 	}
 }
