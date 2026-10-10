@@ -68,22 +68,26 @@ func (r RunSummary) LastOutcome() *string {
 	return &outcome
 }
 
+// runAutomationIDSQL is the automation id runKey ends a run's key with, the
+// expression workflow_run_by_automation indexes.
+const runAutomationIDSQL = `right(idempotency_key, 36)`
+
+// runOfAutomationSQL matches a workflow_run row to the automation aliased `a`.
+const runOfAutomationSQL = `handler = a.key AND ` + runAutomationIDSQL + ` = a.id::text`
+
 // runSummaryColumns and runSummaryJoins attach a RunSummary to each row of a
-// list over `automation a`; the joins take the window start's placeholder
-// number. The suffix is spelled right(idempotency_key, 36), not ListRuns'
-// LIKE, because workflow_run_by_automation indexes that expression.
+// list over `automation a`; the joins take the window start's placeholder.
 const (
 	runSummaryColumns = `last_run.ran_at, last_run.ran_status, recent.runs`
 	runSummaryJoins   = `
 	LEFT JOIN LATERAL (
 		SELECT r.created_at AS ran_at, r.status AS ran_status FROM workflow_run r
-		 WHERE r.handler = a.key AND right(r.idempotency_key, 36) = a.id::text
-		   AND r.status <> 'skipped'
+		 WHERE ` + runOfAutomationSQL + ` AND r.status <> 'skipped'
 		 ORDER BY r.created_at DESC, r.id DESC LIMIT 1) last_run ON true
 	LEFT JOIN LATERAL (
 		SELECT count(*) AS runs FROM workflow_run r
-		 WHERE r.handler = a.key AND right(r.idempotency_key, 36) = a.id::text
-		   AND r.status <> 'skipped' AND r.created_at >= $%d) recent ON true`
+		 WHERE ` + runOfAutomationSQL + ` AND r.status <> 'skipped'
+		   AND r.created_at >= $%d) recent ON true`
 )
 
 // AutomationRunRecord is one firing of one automation instance, as the
@@ -141,9 +145,7 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 			return err
 		}
 
-		// runKey suffixes "@<automation id>" and a UUID carries no LIKE
-		// metacharacters, so the pattern matches exactly this instance.
-		where := "handler = $1 AND idempotency_key LIKE '%@' || $2"
+		where := "handler = $1 AND " + runAutomationIDSQL + " = $2"
 		args := []any{key, id.String()}
 		if statusFilter != nil {
 			args = append(args, *statusFilter)

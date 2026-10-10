@@ -24,20 +24,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// runKey scopes the idempotency claim to one automation instance, so each
-// instance applies once per event. A clock handler keys on its anchor, never
-// ev.ID, which is why runOne records no clock non-match. ListRuns and
-// runSummaryJoins (automations_runs.go), troubledRunsSQL (troubledruns.go) and
-// the workflow_run_by_automation index over the last 36 characters all read
-// the "@<automation id>" suffix. Change the four together.
+// runKey claims one run per handler, event and automation instance. The
+// automation id stays last: every reader takes it from runAutomationIDSQL.
 func runKey(h workflow.Handler, ev workflow.Event) string {
 	return retryPrefix(ev) + h.IdempotencyKey(ev) + "@" + ev.AutomationID.String()
 }
 
-// retryPrefix marks a re-driven firing so its run claims its own row instead
-// of colliding with the failed run it retries. It prefixes because every
-// reader runKey names anchors the automation id at the end of the key. A
-// suffix would silently drop retried runs from the health lane that offered them.
+// retryPrefix gives a re-driven firing its own claim beside the failed run's.
+// It prefixes, because readers take the automation id from the key's end.
 func retryPrefix(ev workflow.Event) string {
 	if ev.RetryAttempt == 0 {
 		return ""

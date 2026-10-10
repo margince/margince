@@ -5,9 +5,8 @@
 
 package automation
 
-// The automations list's run summary over a real migrated Postgres. Every run
-// is written by the engine itself, a retry included, so the summary is proven
-// against the key shape runKey actually writes.
+// The automations list's run summary over real Postgres, with every run written
+// by the engine itself, so it is proven against the key runKey writes.
 
 import (
 	"context"

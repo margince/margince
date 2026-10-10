@@ -37,18 +37,13 @@ type TroubledAutomationRun struct {
 	CreatedAt    time.Time
 }
 
-// troubledRunsSQL joins each failed or blocked run to its live, enabled rule
-// by runKey's linkage; a UUID suffix holds no LIKE metacharacters. A paused
-// rule's failures raise nothing, because a card would nag its owner about
-// their own decision. An archived rule's history stays history: nobody can
-// open its card. Each reader spells the match for its own binding, and
-// runKey's doc (engine_run.go) names them all.
+// troubledRunsSQL reads recent failed and blocked runs of live, enabled rules.
+// A paused rule raises nothing: its owner chose to stop it.
 const troubledRunsSQL = `
 SELECT r.id, a.id, a.name, r.status, r.detail, r.created_at
   FROM workflow_run r
   JOIN automation a ON a.archived_at IS NULL AND a.enabled
-   AND r.handler = a.key
-   AND r.idempotency_key LIKE '%@' || a.id
+   AND ` + runOfAutomationSQL + `
  WHERE r.status IN ('failed', 'blocked')
    AND r.created_at >= $1
  ORDER BY r.created_at DESC, r.id DESC

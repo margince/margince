@@ -52,10 +52,8 @@ func (h Handlers) WithLists(lists Lists) Handlers {
 	return h
 }
 
-// WithFieldCatalog wires the workspace custom-field catalog into the
-// transport's store (see AutomationStore.WithFieldCatalog); compose
-// injects modules/customfields' Service here, the same edge
-// deals.Handlers/contacts.Handlers already wire.
+// WithFieldCatalog wires the workspace custom-field catalog into the store;
+// compose injects modules/customfields' Service here.
 func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
 	h.automations = h.automations.WithFieldCatalog(catalog)
 	return h
