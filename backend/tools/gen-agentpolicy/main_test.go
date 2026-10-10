@@ -51,15 +51,15 @@ func TestServedByReachesTheTableOnlyWhereDeclared(t *testing.T) {
 }
 
 // A served_by value the contract does not declare fails generation, like every
-// other annotation value. A misspelling must not leave the gate admitting a
+// other annotation value. An unknown value must not leave the gate admitting a
 // call the registry admits again.
 func TestAnUndeclaredServedByFailsGeneration(t *testing.T) {
-	policies, _ := policiesOf(t, strings.ReplaceAll(slippingPaths, "%s", "registery"))
+	policies, _ := policiesOf(t, strings.ReplaceAll(slippingPaths, "%s", "handler"))
 	vocab := vocabulary{
 		access: []string{"tool"}, tier: []string{"auto_execute"}, scope: []string{"read"}, servedBy: []string{"registry"},
 	}
 	defects := vocab.violations(policies)
-	if len(defects) != 1 || !strings.Contains(defects[0], `x-mcp-tool.served_by = "registery"`) {
+	if len(defects) != 1 || !strings.Contains(defects[0], `x-mcp-tool.served_by = "handler"`) {
 		t.Errorf("defects = %v, want one naming the undeclared served_by", defects)
 	}
 }
