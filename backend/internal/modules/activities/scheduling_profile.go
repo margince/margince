@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -157,6 +158,9 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	}
 	if p.BlockingCalendars != nil && len(*p.BlockingCalendars) > 10 {
 		return &SchedulingArgumentError{Field: "blocking_calendars", Code: "too_many", Message: "Choose at most ten calendars"}
+	}
+	if p.BlockingCalendars != nil && slices.ContainsFunc(*p.BlockingCalendars, func(id string) bool { return !values.HasVisibleText(id) }) {
+		return &SchedulingArgumentError{Field: "blocking_calendars", Code: "invalid", Message: "Remove the empty calendar entry"}
 	}
 	return nil
 }

@@ -6,10 +6,10 @@
 package gates
 
 // A nullable body field promises that null clears it. A decoded pointer reads
-// null and "not sent" alike. So a PATCH or PUT with a nullable body field must
-// read the explicit nulls (httperr.ClearedFields or PresentField) in its
-// handler, or sit in nullIgnoredByHandler. A waiver for a handler that now
-// reads them fails, so the list can only shrink.
+// null and "not sent" alike. So the handler of a PATCH or PUT with a nullable
+// body field must read explicit nulls (httperr.ClearedFields or PresentField)
+// somewhere, or sit in nullIgnoredByHandler. This proves the handler asks, not
+// that every field is cleared. A waiver for a handler that now asks fails.
 
 import (
 	"os"
@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	typedPointers    = "typed pointers: a null is read as absent, so the field cannot be cleared"
 	patchUnconfirmed = "the handler reads no explicit null and no test sends one; unconfirmed whether the store honours it"
 	putUnconfirmed   = "a replace: the store may take every column from the body; no test sends a null"
 )
@@ -31,11 +32,11 @@ const (
 // A null-clears test, or a read of the nulls in the handler, removes the entry.
 var nullIgnoredByHandler = gatekit.Waive(map[string]string{
 	"UpdateAutomation":                patchUnconfirmed,
-	"UpdateContract":                  patchUnconfirmed,
+	"UpdateContract":                  typedPointers,
 	"UpdateDealRoom":                  patchUnconfirmed,
-	"UpdateOffer":                     patchUnconfirmed,
+	"UpdateOffer":                     typedPointers,
 	"UpdateOfferLineItem":             patchUnconfirmed,
-	"UpdateProduct":                   patchUnconfirmed,
+	"UpdateProduct":                   typedPointers,
 	"UpdateSignal":                    patchUnconfirmed,
 	"EditWeeklyPlanCommitment":        patchUnconfirmed,
 	"PutAnchorCompany":                putUnconfirmed,
@@ -49,15 +50,22 @@ var nullIgnoredByHandler = gatekit.Waive(map[string]string{
 	"SetWeeklyPlanContract":           putUnconfirmed,
 })
 
-func TestEveryNullableBodyFieldIsReadByItsHandler(t *testing.T) {
+func TestEveryHandlerOfANullableBodyReadsExplicitNullsSomewhere(t *testing.T) {
 	t.Parallel()
 	defer nullIgnoredByHandler.AssertAllMatched(t)
 	doc := loadContractDocument(t)
 	schemas := descendContract(t, doc, "components", "schemas")
 	ops := nullableBodyOperations(t, doc, schemas)
-	for _, known := range []string{"UpdateRelationship", "UpsertPartner", "UpdateRetentionPolicy", "UpdateContact"} {
-		if !slices.ContainsFunc(ops, func(op nullableOperation) bool { return op.handler == known }) {
-			t.Fatalf("the census found %d operation(s) and not %s, which has nullable body fields; the walk lost its subjects", len(ops), known)
+	// One subject per spelling of "nullable": a type list, an enum holding
+	// null, and the OpenAPI 3.0 flag.
+	known := map[string]string{
+		"UpdateRelationship": "role", "UpdateRetentionPolicy": "lawful_basis", "EditWeeklyPlanCommitment": "linked_record",
+	}
+	for handler, field := range known {
+		if !slices.ContainsFunc(ops, func(op nullableOperation) bool {
+			return op.handler == handler && slices.Contains(op.fields, field)
+		}) {
+			t.Fatalf("the census found %d operation(s) and not %s with %s; the walk lost its subjects", len(ops), handler, field)
 		}
 	}
 	handlers := handlerSources(t)
@@ -177,6 +185,9 @@ func bodyProperties(schemas, schema map[string]any) map[string]map[string]any {
 func bodyPropertyAdmitsNull(schemas, prop map[string]any) bool {
 	node := resolveSchema(schemas, prop)
 	if types, ok := node["type"].([]any); ok && slices.Contains(types, any("null")) {
+		return true
+	}
+	if flag, _ := node["nullable"].(bool); flag {
 		return true
 	}
 	enum, _ := node["enum"].([]any)
