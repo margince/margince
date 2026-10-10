@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
@@ -157,6 +163,12 @@ function mount(
             page: { has_more: false },
             payload_capture_enabled: captureEnabled,
             tasks: [summary.task],
+            task_options: [
+              {
+                task: summary.task,
+                display_name: trace.call.task_display_name,
+              },
+            ],
           };
       return new Response(JSON.stringify(body), {
         headers: { "Content-Type": "application/json" },
@@ -230,6 +242,7 @@ function tracePage(rows: unknown[]) {
         data: rows,
         page: { has_more: false },
         tasks: [],
+        task_options: [],
         payload_capture_enabled: false,
       }),
       { headers: { "Content-Type": "application/json" } },
@@ -294,26 +307,28 @@ it("says never called only when the trace answered and held no row", async () =>
   expect(await screen.findByText("never")).toBeTruthy();
 });
 
-it("renders call badges and expands the attempt and payload detail", async () => {
+it("marks a failed call with one outcome badge and expands the attempt and payload detail", async () => {
   mount();
-  expect(await screen.findByText("provider_unavailable")).toBeTruthy();
-  expect(screen.getByText("Retry ×2")).toBeTruthy();
-  // One element, not the second of two: the task name used to appear in the
-  // filter's option list as well as in the row, and the row is what expands.
-  // The disclosure is a real button now, not the row: a `<tr onClick>`
-  // could only ever be reached by pointer.
+  // A code this build has no words for reads as some failure, its code under it.
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(
+    within(row).getByText("Failed").closest(".badge")?.className,
+  ).toContain("badge-danger");
+  expect(within(row).queryByText("Retried")).toBeNull();
+  expect(within(row).getByText("provider_unavailable").tagName).toBe("CODE");
   const toggle = screen.getByRole("button", {
     name: /show attempts/i,
   });
-  // The chevron is turned by this attribute (aicalls.css), so what the reader
-  // sees and what a screen reader hears are one fact rather than two that can
-  // disagree. It is also why this stays a button and not a `Disclosure`: what
-  // opens is the NEXT table row, which no element can contain from inside a
-  // cell of the row above it.
   expect(toggle.getAttribute("aria-expanded")).toBe("false");
   await userEvent.click(toggle);
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
   expect(await screen.findByText(/retry_on_5xx/)).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { level: 4, name: "Attempts" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText("The provider named this model in its reply."),
+  ).toBeTruthy();
   expect(screen.getByText("Request payload")).toBeTruthy();
   expect(screen.getByText("Export certification scenario")).toBeTruthy();
 });
@@ -356,6 +371,94 @@ it("narrows the trace to the task the address names, and writes a new pick back"
   globalThis.location.hash = "";
 });
 
+it("opens a call from a press anywhere on its row, and from the keyboard", async () => {
+  const user = userEvent.setup();
+  mount();
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  const toggle = within(row).getByRole("button", { name: /show attempts/i });
+  await user.click(within(row).getByText("capture_classify"));
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(await screen.findByText(/retry_on_5xx/)).toBeTruthy();
+  await user.click(within(row).getByText("capture_classify"));
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+  toggle.focus();
+  await user.keyboard("{Enter}");
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  await user.keyboard(" ");
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+});
+
+it("names each task from the server's options, with its key under the name", async () => {
+  const user = userEvent.setup();
+  mount(true, true, OPERATOR, {
+    call: { ...summary, task_display_name: "Message classification" },
+    attempts: RETRIED.attempts,
+  });
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(within(row).getByText("Message classification")).toBeTruthy();
+  expect(within(row).getByText("capture_classify").tagName).toBe("CODE");
+  await user.click(screen.getByRole("combobox", { name: "Task" }));
+  expect(
+    await screen.findByRole("option", { name: "Message classification" }),
+  ).toBeTruthy();
+});
+
+it("draws no outcome badge on a call that answered first time", async () => {
+  mount(true, true, OPERATOR, {
+    call: {
+      ...summary,
+      calls_attempted: 1,
+      degraded: false,
+      error_sentinel: null,
+    },
+    attempts: RETRIED.attempts.slice(1),
+  });
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.querySelector(".badge")).toBeNull();
+});
+
+it("marks a call that answered after a failed attempt as a warning", async () => {
+  mount(true, true, OPERATOR, {
+    call: { ...summary, degraded: false, error_sentinel: null },
+    attempts: RETRIED.attempts,
+  });
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(
+    within(row).getByText("Retried").closest(".badge")?.className,
+  ).toContain("badge-warning");
+});
+
+it("warns rather than fails on a call that was served but not metered", async () => {
+  mount(true, true, OPERATOR, {
+    call: { ...summary, degraded: false, error_sentinel: "metering_failed" },
+    attempts: RETRIED.attempts,
+  });
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(
+    within(row).getByText("Answered, usage not recorded").closest(".badge")
+      ?.className,
+  ).toContain("badge-warning");
+});
+
+it("names a failure code on the row and keeps the code for the attempt that hit it", async () => {
+  const user = userEvent.setup();
+  mount(true, true, OPERATOR, {
+    call: { ...summary, degraded: false, error_sentinel: "output_rejected" },
+    attempts: [
+      { ...RETRIED.attempts[0] },
+      { ...RETRIED.attempts[1], error_sentinel: "output_rejected" },
+    ],
+  });
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(within(row).getByText("Answer rejected")).toBeTruthy();
+  expect(within(row).queryByText("output_rejected")).toBeNull();
+  await user.click(within(row).getByRole("button", { name: /show attempts/i }));
+  const second = (await screen.findByText("#2")).closest("li");
+  expect(second?.textContent).toContain("Answer rejected");
+  expect(second?.querySelector("code")?.textContent).toBe("output_rejected");
+});
+
 it("narrows the trace to where a figure's calls ended, and lets the reader clear it", async () => {
   const user = userEvent.setup();
   globalThis.location.hash =
@@ -363,7 +466,7 @@ it("narrows the trace to where a figure's calls ended, and lets the reader clear
   mount();
   expect(
     await screen.findByText(
-      "Showing calls that ended on provider: openai_compatible · served_provider: Cerebras.",
+      "Showing calls that ended on Provider: OpenAI-compatible · Served by: Cerebras.",
     ),
   ).toBeTruthy();
   const asked = vi
@@ -419,11 +522,8 @@ it("marks a decision call, and names the tier it ran on", async () => {
   mount(true, true, OPERATOR, DECIDED);
 
   expect(
-    await screen.findByText("Decision model · jev_compatible/served"),
+    await screen.findByText("Decision model · Jev-compatible"),
   ).toBeTruthy();
-  // The badge on the row is the kind, in words; the tier column above is the
-  // same fact spelled as the lane, and both say it rather than "decide".
-  expect(screen.getAllByText("Decision model").length).toBeGreaterThan(0);
   expect(screen.queryByText(/\bdecide\b/)).toBeNull();
 });
 
@@ -433,19 +533,15 @@ it("marks a decision call, and names the tier it ran on", async () => {
 it("marks a call the decision model fell back from on its row, before it is opened", async () => {
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
 
-  const task = await screen.findByText("capture_classify", {
-    selector: "td",
-  });
-  expect(task.textContent).toContain("Decision model");
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.textContent).toContain("Decision model, then Everyday cloud");
 });
 
 it("leaves the decision mark off a call that never asked a decision model", async () => {
   mount();
 
-  const task = await screen.findByText("capture_classify", {
-    selector: "td",
-  });
-  expect(task.textContent).not.toContain("Decision model");
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.textContent).not.toContain("Decision model");
 });
 
 it("says why the ladder answered after the decision model, and where it went", async () => {
@@ -458,7 +554,7 @@ it("says why the ladder answered after the decision model, and where it went", a
   // wire code, and no number: the floor is not stored on the call.
   expect(
     await screen.findByText(
-      /cheap_cloud · Decision model below its confidence floor/,
+      /Everyday cloud · Decision model below its confidence floor/,
     ),
   ).toBeTruthy();
   expect(screen.queryByText(/decision_below_floor/)).toBeNull();
@@ -466,7 +562,8 @@ it("says why the ladder answered after the decision model, and where it went", a
   // asked: the terminal row's binding is the rung that answered after it.
   const first = screen.getByText("#1").closest("li");
   expect(first?.textContent).toContain("Decision model");
-  expect(first?.textContent).toContain("jev_compatible/jev-classify");
+  expect(first?.textContent).toContain("jev-classify · Jev-compatible");
+  expect(first?.textContent).not.toContain("jev_compatible");
 });
 
 // The answer that did not stand is the one a floor is tuned from, so the
@@ -489,11 +586,9 @@ it("says what the decision model answered, and at what confidence", async () => 
 it("does not count the fall back from a decision model as a retry", async () => {
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
 
-  const task = await screen.findByText("capture_classify", {
-    selector: "td",
-  });
-  expect(task.textContent).toContain("Decision model");
-  expect(task.textContent).not.toContain("Retry");
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.textContent).toContain("Decision model");
+  expect(row.textContent).not.toContain("Retried");
 });
 
 it("counts the ladder's own retries after a decision model fell back", async () => {
@@ -502,10 +597,8 @@ it("counts the ladder's own retries after a decision model fell back", async () 
     call: { ...DECIDED_THEN_FELL_BACK.call, calls_attempted: 3 },
   });
 
-  const task = await screen.findByText("capture_classify", {
-    selector: "td",
-  });
-  expect(task.textContent).toContain("Retry ×2");
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(within(row).getByText("Retried")).toBeTruthy();
 });
 
 // An ordinary first attempt and a decision that stood have no reason to run,
@@ -517,7 +610,9 @@ it("leaves the reason out of an attempt that had none", async () => {
   );
 
   const first = (await screen.findByText("#1")).closest("li");
-  expect(first?.textContent).toContain("jev_compatible/jev-classify · 600 ms");
+  expect(first?.textContent).toContain(
+    "jev-classify · Jev-compatible · 600 ms",
+  );
   expect(first?.textContent).not.toContain("—");
 });
 
@@ -558,8 +653,8 @@ it("leaves the configured model out of the served line when the binding named no
   await userEvent.click(
     await screen.findByRole("button", { name: /show attempts/i }),
   );
-  const identity = await screen.findByText(/^Served fake via fake/);
+  const identity = await screen.findByText(/^Served fake via/);
   expect(identity.textContent).toBe(
-    "Served fake via fake (no model configured)",
+    "Served fake via Built-in test provider (no model configured)",
   );
 });

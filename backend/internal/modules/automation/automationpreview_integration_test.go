@@ -161,6 +161,15 @@ func TestPreviewDraftOverrideAndValidation(t *testing.T) {
 	if _, err := store.Preview(ctx, autoID, AutomationPreviewInput{WindowDays: &badWindow}); err == nil {
 		t.Fatal("window_days=0 must be a validation error")
 	}
+	widest := 90
+	if _, err := store.Preview(ctx, autoID, AutomationPreviewInput{WindowDays: &widest}); err != nil {
+		t.Fatalf("window_days=90 is the contract's maximum and must be accepted: %v", err)
+	}
+	pastContract := 91
+	var windowErr *ParamError
+	if _, err := store.Preview(ctx, autoID, AutomationPreviewInput{WindowDays: &pastContract}); !errors.As(err, &windowErr) || windowErr.Field != "window_days" {
+		t.Fatalf("window_days=91 → %v, want a window_days ParamError (422)", err)
+	}
 	if _, err := store.Preview(ctx, ids.New[ids.AutomationKind](), AutomationPreviewInput{}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("absent automation preview → %v, want ErrNotFound", err)
 	}

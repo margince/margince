@@ -12,7 +12,6 @@
 967 frontend/src/screens/webhooks.tsx
 982 frontend/src/app/shell.tsx
 991 frontend/src/App.tsx
-1034 frontend/src/screens/automations.test.tsx
 952 frontend/src/screens/installation-setup.tsx
 921 frontend/src/screens/auth.tsx
 1088 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
@@ -50,7 +49,7 @@
 2302 frontend/src/screens/companies.tsx
 2420 frontend/src/screens/deals.test.tsx
 1082 frontend/src/screens/compose.tsx
-1557 frontend/src/screens/settings.tsx
+902 frontend/src/screens/settings.tsx
 2727 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
 3168 frontend/src/screens/deals.tsx
@@ -60,7 +59,6 @@
 510 frontend/src/screens/importflow.ts
 509 frontend/src/screens/voice-versions.tsx
 532 frontend/src/screens/leadpresentation.tsx
-536 frontend/src/screens/connected-agents.tsx
 535 frontend/src/screens/scheduledsends.tsx
 517 frontend/src/screens/worklist.queries.ts
 571 frontend/src/screens/capture-activity.tsx
@@ -98,7 +96,6 @@
 865 frontend/src/screens/customfields.tsx
 922 frontend/src/screens/contactprovider.tsx
 887 frontend/src/screens/share.tsx
-675 frontend/src/screens/automations.tsx
 848 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
 855 frontend/src/screens/create.tsx

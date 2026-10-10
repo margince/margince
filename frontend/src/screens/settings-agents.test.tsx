@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -117,79 +118,84 @@ function agentToolsBackend() {
   });
 }
 
-describe("AgentToolsCard (IT-1)", () => {
-  it("renders the governed tool inventory with the egress badge on send_email", async () => {
+describe("AgentToolsCard", () => {
+  it("shows the egress badge only on the tool that reaches outside the workspace", async () => {
     vi.stubGlobal("fetch", agentToolsBackend());
     render(<SettingsScreen route={settingsAddress("agents")} />);
 
-    await waitFor(() =>
-      expect(screen.getAllByText("search_records").length).toBe(1),
-    );
-    expect(screen.getAllByText("send_email").length).toBe(1);
-
-    const searchRow = document.querySelector<HTMLElement>(
-      '[data-tool="search_records"]',
-    );
-    const sendRow = document.querySelector<HTMLElement>(
-      '[data-tool="send_email"]',
-    );
-    expect(searchRow).toBeTruthy();
-    expect(sendRow).toBeTruthy();
-    // The egress "reaches out" badge shows only on the tool that reaches
-    // outside the workspace (send_email), never on the pure-read tool.
-    expect(
-      sendRow && within(sendRow).getByText("External access"),
-    ).toBeTruthy();
-    expect(
-      searchRow && within(searchRow).queryByText("External access"),
-    ).toBeNull();
+    const sendRow = await screen.findByTestId("tool-send_email");
+    const searchRow = screen.getByTestId("tool-search_records");
+    expect(within(sendRow).getByText("External access")).toBeTruthy();
+    expect(within(searchRow).queryByText("External access")).toBeNull();
   });
 
-  // The console's own promise is that it shows the surface an MCP client sees,
-  // and a verb with an autonomy dot beside it is not that: what an agent
-  // selects on is the written description the server serves, so the row has to
-  // show it rather than leave an operator to guess what their agents are told.
-  it("shows each tool's written display name and the text an agent selects it by", async () => {
+  // What an agent selects on is the served description, governance clause
+  // included, so the row carries all of it: one line until it is opened.
+  it("names each tool by its title, with its key and the text an agent selects it by", async () => {
     vi.stubGlobal("fetch", agentToolsBackend());
     render(<SettingsScreen route={settingsAddress("agents")} />);
 
-    await waitFor(() =>
-      expect(screen.getAllByText("search_records").length).toBe(1),
-    );
-    const searchRow = document.querySelector<HTMLElement>(
-      '[data-tool="search_records"]',
-    );
-    expect(searchRow).toBeTruthy();
+    const sendRow = await screen.findByTestId("tool-send_email");
+    expect(within(sendRow).getByText("Send email")).toBeTruthy();
+    expect(within(sendRow).getByText("send_email").tagName).toBe("CODE");
     expect(
-      searchRow && within(searchRow).getByText("Search records"),
+      within(sendRow).getByText(/Governance: a human approves every call/),
     ).toBeTruthy();
-    expect(
-      searchRow &&
-        within(searchRow).getByText(/Find contacts, companies, deals/),
-    ).toBeTruthy();
-    // Governance travels with it, because the server appends it to the same
-    // string — the console must not show a shortened reading of what an agent
-    // was actually told.
-    expect(
-      searchRow && within(searchRow).getByText(/Governance: runs immediately/),
-    ).toBeTruthy();
+    // The scope reads as the permission a human granted, never its wire token.
+    expect(within(sendRow).getByText("Send messages")).toBeTruthy();
+    expect(within(sendRow).queryByText("send")).toBeNull();
+  });
 
-    // The confirm-first row too, and not only the 🟢 one: a regression that
-    // dropped the title or the description from the row an operator most needs
-    // to read — the one that leaves the workspace — would otherwise pass here.
-    const sendRow = document.querySelector<HTMLElement>(
-      '[data-tool="send_email"]',
-    );
-    expect(sendRow).toBeTruthy();
-    expect(sendRow && within(sendRow).getByText("Send email")).toBeTruthy();
-    expect(
-      sendRow && within(sendRow).getByText(/Put a mail on the wire/),
-    ).toBeTruthy();
-    expect(
-      sendRow &&
-        within(sendRow).getByText(/Governance: a human approves every call/),
-    ).toBeTruthy();
-    expect(sendRow && within(sendRow).getByText("send")).toBeTruthy();
+  it("opens a tool's full description from its row and from its chevron", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", agentToolsBackend());
+    render(<SettingsScreen route={settingsAddress("agents")} />);
+
+    const sendRow = await screen.findByTestId("tool-send_email");
+    const chevron = within(sendRow).getByRole("button", {
+      name: "Full description of Send email",
+    });
+    const description = within(sendRow).getByText(/Put a mail on the wire/);
+    expect(chevron).toHaveAttribute("aria-expanded", "false");
+    expect(chevron).toHaveAttribute("aria-controls", description.id);
+    expect(description).toHaveClass("tools-description-clamped");
+
+    await user.click(within(sendRow).getByText("Send email"));
+    expect(chevron).toHaveAttribute("aria-expanded", "true");
+    expect(description).not.toHaveClass("tools-description-clamped");
+
+    await user.click(chevron);
+    expect(chevron).toHaveAttribute("aria-expanded", "false");
+    expect(description).toHaveClass("tools-description-clamped");
+  });
+
+  it("searches titles, keys and descriptions, and says when nothing matches", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", agentToolsBackend());
+    render(<SettingsScreen route={settingsAddress("agents")} />);
+    const search = await screen.findByRole("searchbox", {
+      name: "Search tools",
+    });
+    const shown = () =>
+      ["search_records", "send_email"].filter((name) =>
+        screen.queryByTestId(`tool-${name}`),
+      );
+
+    await user.type(search, "Send");
+    expect(shown()).toEqual(["send_email"]);
+
+    await user.clear(search);
+    await user.type(search, "search_rec");
+    expect(shown()).toEqual(["search_records"]);
+
+    await user.clear(search);
+    await user.type(search, "real recipient");
+    expect(shown()).toEqual(["send_email"]);
+
+    await user.clear(search);
+    await user.type(search, "invoice");
+    expect(shown()).toEqual([]);
+    expect(screen.getByText("No tools match this search.")).toBeTruthy();
   });
 });
 
@@ -266,7 +272,7 @@ describe("AgentToolsCard passport scoping", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsWithPassportsBackend());
     render(<SettingsScreen route={settingsAddress("agents")} />);
-    await screen.findByText("list_pipelines");
+    await screen.findByTestId("tool-list_pipelines");
 
     // The options only exist while the popup is open — the control renders no
     // listbox when closed — so reading what it offers means opening it first.
@@ -282,39 +288,25 @@ describe("AgentToolsCard passport scoping", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsWithPassportsBackend());
     render(<SettingsScreen route={settingsAddress("agents")} />);
-    await screen.findByText("list_pipelines");
+    const freeRow = await screen.findByTestId("tool-list_pipelines");
 
     const select = screen.getByLabelText("All passports");
     await pickOption(user, select, "Reachable by Scout");
 
-    const freeRow = document.querySelector<HTMLElement>(
-      '[data-tool="list_pipelines"]',
-    );
-    expect(freeRow).toBeTruthy();
+    expect(within(freeRow).queryByText("Scope not granted")).toBeNull();
+    const scopedRow = screen.getByTestId("tool-send_email");
+    expect(within(scopedRow).getByText("Scope not granted")).toBeTruthy();
     expect(
-      freeRow && within(freeRow).queryByText("Scope not granted"),
-    ).toBeNull();
-
-    const scopedRow = document.querySelector<HTMLElement>(
-      '[data-tool="send_email"]',
-    );
-    expect(scopedRow).toBeTruthy();
-    expect(
-      scopedRow && within(scopedRow).getByText("Scope not granted"),
+      within(scopedRow).getByText("Send email").closest(".agents-ended"),
     ).toBeTruthy();
   });
 
-  // A sentence is never a control. The row's right column answers the question
-  // the row asks — here the tier dot and the governance badges — and prose that
-  // explains the row belongs with the naming on the left. This explanation used
-  // to sit among the badges, which left the three tool rows answering at three
-  // different widths while the words that matter most to a reader were the ones
-  // pushed to the far edge.
-  it("explains an unreachable tool beside its name, not in the answer column", async () => {
+  // The reason sits with the permission it is about, not on the tool's name.
+  it("says an unreachable tool's scope is not granted, in its permission cell", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", agentToolsWithPassportsBackend());
     render(<SettingsScreen route={settingsAddress("agents")} />);
-    await screen.findByText("list_pipelines");
+    const scopedRow = await screen.findByTestId("tool-send_email");
 
     await pickOption(
       user,
@@ -322,22 +314,10 @@ describe("AgentToolsCard passport scoping", () => {
       "Reachable by Scout",
     );
 
-    const scopedRow = document.querySelector<HTMLElement>(
-      '[data-tool="send_email"]',
+    const reason = within(scopedRow).getByText("Scope not granted");
+    expect(reason.closest("td")).toBe(
+      within(scopedRow).getByText("Send messages").closest("td"),
     );
-    const naming = scopedRow?.querySelector<HTMLElement>(".settingrow-naming");
-    const answer = scopedRow?.querySelector<HTMLElement>(".settingrow-control");
-    expect(naming).toBeTruthy();
-    expect(answer).toBeTruthy();
-    expect(
-      naming && within(naming).getByText("Scope not granted"),
-    ).toBeTruthy();
-    expect(
-      answer && within(answer).queryByText("Scope not granted"),
-    ).toBeNull();
-    // And the answer column still carries the governance it is there for.
-    expect(answer && within(answer).getByText("send")).toBeTruthy();
-    expect(answer && within(answer).getByText("External access")).toBeTruthy();
   });
 
   // A human who only ever connected an agent through the OAuth consent screen
@@ -401,7 +381,7 @@ describe("AgentToolsCard passport scoping", () => {
       }),
     );
     render(<SettingsScreen route={settingsAddress("agents")} />);
-    await screen.findByText("list_pipelines");
+    await screen.findByTestId("tool-list_pipelines");
 
     expect(screen.queryByLabelText("All passports")).toBeNull();
   });
@@ -410,7 +390,7 @@ describe("AgentToolsCard passport scoping", () => {
 // The tool console and the passport list share the ["passports"] read, so a
 // revoke on one card refetches the other's options. This backend answers the
 // second read honestly: the revoked passport comes back marked revoked.
-function revocablePassportsBackend() {
+function revocablePassportsBackend(onDelete?: (id: string) => void) {
   const revoked = new Set<string>();
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -423,7 +403,9 @@ function revocablePassportsBackend() {
       });
     }
     if (/\/passports\/[^/]+$/.test(url) && method === "DELETE") {
-      revoked.add(url.split("/passports/")[1]);
+      const id = url.split("/passports/")[1];
+      onDelete?.(id);
+      revoked.add(id);
       return new Response(null, { status: 204 });
     }
     if (url.includes("/passports")) {
@@ -463,92 +445,88 @@ function revocablePassportsBackend() {
   });
 }
 
-describe("PassportCard revoke (AS-2)", () => {
-  // Revoking the passport the console was filtered by leaves the selector
-  // showing "All passports". The inventory has to say the same thing: a row
-  // dimmed by a credential the human can no longer choose is a filter with no
-  // control, and no way to undo it.
-  it("stops scoping the tool console to a passport revoked while it was selected", async () => {
+async function openRevoke(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  await user.click(
+    await screen.findByRole("button", { name: `Actions for ${name}` }),
+  );
+  await user.click(screen.getByRole("button", { name: `Revoke ${name}` }));
+  return screen.findByRole("dialog");
+}
+
+describe("PassportCard revoke", () => {
+  // Revoking the passport the tools were filtered by leaves the selector on
+  // "All passports", so the inventory must read unfiltered too.
+  it("stops scoping the tool table to a passport revoked while it was selected", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", revocablePassportsBackend());
     render(<SettingsScreen route={settingsAddress("agents")} />);
-    await screen.findByText("send_email");
+    const scopedRow = await screen.findByTestId("tool-send_email");
 
     const select = screen.getByLabelText("All passports");
     await pickOption(user, select, "Reachable by Scout");
-    const scopedRow = document.querySelector<HTMLElement>(
-      '[data-tool="send_email"]',
-    );
-    expect(scopedRow).toBeTruthy();
-    // Scout grants "read" only, so the send tool reads as out of scope while
-    // Scout is the filter.
-    expect(
-      scopedRow && within(scopedRow).getByText("Scope not granted"),
-    ).toBeTruthy();
+    expect(within(scopedRow).getByText("Scope not granted")).toBeTruthy();
 
-    const scoutRow = screen
-      .getByText("Scout")
-      .closest<HTMLElement>("[data-passport]");
-    if (scoutRow === null) {
-      throw new Error("the live passport row is not rendered");
-    }
-    await user.click(within(scoutRow).getByRole("button", { name: "Revoke" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await openRevoke(user, "Scout");
     await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
 
-    // The revoked passport leaves the selector, which is left offering the
-    // "all passports" choice and nothing else. That list only exists while the
-    // popup is open, so reopen it: it stays mounted and re-renders as the
-    // refetched passports arrive, which is what this waitFor waits for...
+    // The options exist only while the popup is open, and it re-renders as the
+    // refetched passports arrive.
     await user.click(select);
     await waitFor(() =>
       expect(
         screen.getAllByRole("option").map((option) => option.textContent),
       ).toEqual(["All passports"]),
     );
-    // ...and the inventory reads unfiltered again, matching what it shows.
+    expect(within(scopedRow).queryByText("Scope not granted")).toBeNull();
+  });
+
+  it("revokes through a confirm, fires the DELETE with its id, and lands focus on the struck row", async () => {
+    const user = userEvent.setup();
+    const deleted: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      revocablePassportsBackend((id) => deleted.push(id)),
+    );
+    render(<SettingsScreen route={settingsAddress("agents")} />);
+
+    const dialog = await openRevoke(user, "Scout");
+    expect(deleted).toEqual([]);
+    await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
+
+    await waitFor(() => expect(deleted).toEqual(["pp-1"]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const anchor = document.querySelector('[data-passport="pp-1"]');
+    expect(anchor).toHaveFocus();
+    expect(within(anchor as HTMLElement).getByText("Revoked")).toBeTruthy();
     expect(
-      scopedRow && within(scopedRow).queryByText("Scope not granted"),
+      screen.queryByRole("button", { name: "Actions for Scout" }),
     ).toBeNull();
   });
 
-  it("revokes a non-revoked passport: click Revoke, confirm, DELETE fires with its id and the list refetches", async () => {
+  it("offers no verb on a passport already revoked", async () => {
+    vi.stubGlobal("fetch", passportsBackend({}));
+    render(<SettingsScreen route={settingsAddress("agents")} />);
+    await screen.findByRole("button", { name: "Actions for Scout" });
+    expect(
+      screen.queryByRole("button", { name: "Actions for Retired" }),
+    ).toBeNull();
+  });
+
+  it("cancelling the confirm deletes nothing", async () => {
     const user = userEvent.setup();
     const deleted: string[] = [];
-    const fetchMock = passportsBackend({ onDelete: (id) => deleted.push(id) });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<SettingsScreen route={settingsAddress("agents")} />);
-    await screen.findByText("Scout");
-
-    // The already-revoked row shows no Revoke control at all.
-    const retiredRow = screen.getByText("Retired").closest("[data-passport]");
-    expect(retiredRow).toBeTruthy();
-    expect(
-      retiredRow && Array.from(retiredRow.querySelectorAll("button")).length,
-    ).toBe(0);
-
-    const scoutRow = screen
-      .getByText("Scout")
-      .closest<HTMLElement>("[data-passport]");
-    if (scoutRow === null) {
-      throw new Error("the live passport row is not rendered");
-    }
-    await user.click(within(scoutRow).getByRole("button", { name: "Revoke" }));
-
-    const dialog = await screen.findByRole("dialog");
-    const confirmButton = within(dialog).getByRole("button", {
-      name: "Revoke",
-    });
-    const callsBeforeConfirm = fetchMock.mock.calls.length;
-    await user.click(confirmButton);
-
-    await waitFor(() => expect(deleted).toEqual(["pp-1"]));
-    // The list refetches after a successful revoke — more fetch calls landed
-    // after confirm than just the single DELETE (the refetch GET /passports).
-    await waitFor(() =>
-      expect(fetchMock.mock.calls.length).toBeGreaterThan(
-        callsBeforeConfirm + 1,
-      ),
+    vi.stubGlobal(
+      "fetch",
+      passportsBackend({ onDelete: (id) => deleted.push(id) }),
     );
+    render(<SettingsScreen route={settingsAddress("agents")} />);
+
+    const dialog = await openRevoke(user, "Scout");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(deleted).toEqual([]);
   });
 });

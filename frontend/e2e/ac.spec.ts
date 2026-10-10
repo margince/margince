@@ -1063,7 +1063,7 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   await expect(
     page.getByText("Pausiert angelegt. Nichts läuft, bis sie aktiviert ist."),
   ).toBeVisible();
-  const row = page.locator('[data-automation="au-2"]');
+  const row = page.getByTestId("automation-au-2");
   // The row states its status on the control that changes it, rather than on a
   // badge beside a button whose label named the OTHER state. So the criterion
   // reads the switch: arrives off, one deliberate flip turns it on.

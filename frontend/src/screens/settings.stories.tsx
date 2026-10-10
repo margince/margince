@@ -230,16 +230,19 @@ export const AgentsConnectorOff: Story = {
   }),
 };
 
-// AS-2 kill-switch: PassportCard revoke is a hard DELETE behind a ConfirmModal.
-// Mirrors share.stories' revoke play() — render the card with a live
-// (non-revoked) passport, click Revoke, leave the confirm modal open so the
-// guarded state is what the render gate captures.
+// The row's menu opens the revoke confirm, left open here so the guarded
+// state is what the render gate captures.
 export const PassportRevokeConfirm: Story = {
   render: tab("agents", agentsTabRoutes),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const revokeButton = await canvas.findByRole("button", { name: "Revoke" });
-    await userEvent.click(revokeButton);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Scout" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Revoke Scout" }),
+    );
   },
 };
 
@@ -316,14 +319,10 @@ export const PassportMintDialogDark: Story = {
   },
 };
 
-// The governed tool console renders the inventory unfiltered by default,
-// then strikes the send_email row once the read-only "Scout" passport (whose
-// only granted scope is "read") is selected — its required "send" scope
-// is absent from that grant.
+// The tool table unfiltered, then scoped to the read-only "Scout" passport: the
+// send_email row is struck, because "send" is not in that grant.
 const toolConsoleRoutes = agentsTabRoutes;
 
-// Selects the read-only passport, so the send_email row is dimmed. Shared with
-// the dark variant below, which is about that dimming and nothing else.
 const selectScoutPassport = async ({
   canvasElement,
 }: {
@@ -345,12 +344,6 @@ export const AgentToolConsole: Story = {
   play: selectScoutPassport,
 };
 
-// The unreachable row is dimmed, and dimming is the one signal that does not
-// survive a theme swap by construction: on a light ground it reads as "faded
-// toward the paper", on a dark one the same reduction moves the text toward the
-// background it is meant to stay legible against. This is the story that says
-// whether the dim row is still readable text or has become a grey smear — and
-// whether the tier/egress badges beside it still separate from each other.
 export const AgentToolConsoleDark: Story = {
   globals: { theme: "dark" },
   render: tab("agents", toolConsoleRoutes),

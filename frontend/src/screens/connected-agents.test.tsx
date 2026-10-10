@@ -121,6 +121,7 @@ function backend(opts: {
   passports?: unknown[];
   connectorEnabled?: boolean;
   onDelete?: (id: string) => void;
+  keepRevoked?: boolean;
 }) {
   const passports = [...(opts.passports ?? [MINTED, CONNECTED])];
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -145,7 +146,12 @@ function backend(opts: {
       // fixture has to as well. A mock that kept serving the deleted row would
       // let a broken refetch — or a row that never leaves the list — pass.
       const at = passports.findIndex((p) => (p as { id: string }).id === id);
-      if (at !== -1) {
+      if (at !== -1 && opts.keepRevoked) {
+        passports[at] = {
+          ...(passports[at] as object),
+          revoked_at: "2026-08-03T09:00:00Z",
+        };
+      } else if (at !== -1) {
         passports.splice(at, 1);
       }
       return new Response(null, { status: 204 });
@@ -191,6 +197,13 @@ function renderConnectedAgents(opts: { scopes: string[] }) {
   render(<ConnectedAgentsCard />);
 }
 
+// Each row's verb sits in its menu, which mounts its items on first open.
+async function openActions(client: string) {
+  await userEvent.click(
+    await screen.findByRole("button", { name: `Actions for ${client}` }),
+  );
+}
+
 describe("ConnectedAgentsCard", () => {
   it("names each scope the way the consent screen named it", async () => {
     renderConnectedAgents({ scopes: ["read", "enrich"] });
@@ -208,7 +221,7 @@ describe("ConnectedAgentsCard", () => {
     expect(screen.queryByText(CONNECTED.label)).toBeNull();
     // The grant's age, not the current credential's: the passport was minted
     // on the 20th, the connection made on the 2nd.
-    expect(screen.getByText(/connected 02\/07\/2026/)).toBeTruthy();
+    expect(screen.getByText(/Connected 02\/07\/2026/)).toBeTruthy();
   });
 
   it("dates the grant on the record's calendar and the deadline on the viewer's", async () => {
@@ -237,13 +250,32 @@ describe("ConnectedAgentsCard", () => {
     render(<ConnectedAgentsCard />);
     // When the grant was made is a record fact — every colleague reading this
     // installation must be able to quote the same day for it.
-    expect(await screen.findByText(/connected 02\/07\/2026/)).toBeTruthy();
-    expect(screen.queryByText(/connected 01\/07\/2026/)).toBeNull();
+    expect(await screen.findByText(/Connected 02\/07\/2026/)).toBeTruthy();
+    expect(screen.queryByText(/Connected 01\/07\/2026/)).toBeNull();
     // When the credential runs out is this human's deadline, on this human's
     // calendar: a fixed zone would promise them a day that, where they are,
     // has not arrived.
-    expect(screen.getByText(/credential renews by 30\/12\/2026/)).toBeTruthy();
-    expect(screen.queryByText(/credential renews by 31\/12\/2026/)).toBeNull();
+    expect(screen.getByText(/Expires 30\/12\/2026/)).toBeTruthy();
+    expect(screen.queryByText(/Expires 31\/12\/2026/)).toBeNull();
+  });
+
+  // A renewable connection outlives its credential: its date is a renewal.
+  it("reads a live renewable connection's date as when it renews, not when it expires", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend({
+        passports: [
+          {
+            ...CONNECTED,
+            connection: { ...CONNECTED.connection, renewable: true },
+          },
+        ],
+      }),
+    );
+    render(<ConnectedAgentsCard />);
+    expect(await screen.findByText("Renews by 20/08/2036")).toBeTruthy();
+    expect(screen.getByText(/· Renews by 20\/08\/2036/)).toBeTruthy();
+    expect(screen.queryByText(/Expires 20\/08\/2036/)).toBeNull();
   });
 
   it("leaves a minted passport out, however its label is spelled", async () => {
@@ -339,7 +371,6 @@ describe("ConnectedAgentsCard", () => {
     // The clock is pinned rather than read: "expired" is a comparison against
     // now, and a test that let the real clock decide it would pass today and
     // fail on the fixture's own expiry date.
-    vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
     try {
       vi.stubGlobal("fetch", backend({ passports: [LAPSED] }));
@@ -352,7 +383,11 @@ describe("ConnectedAgentsCard", () => {
         ).toBeTruthy(),
       );
       expect(screen.getByText("Credential expired")).toBeTruthy();
-      expect(screen.getByText(/credential expired 30\/07\/2026/)).toBeTruthy();
+      // The column and the folded caption both say it is over, never "Expires".
+      expect(screen.getAllByText(/^Expired 30\/07\/2026$/)).toHaveLength(1);
+      expect(screen.getByText(/· Expired 30\/07\/2026/)).toBeTruthy();
+      expect(screen.queryByText(/Expires 30\/07\/2026/)).toBeNull();
+      await openActions("Claude Code");
       // No Disconnect: it would aim at a credential that is already gone. The
       // grant beneath it is still live, so the way to end that for good stays.
       expect(screen.queryByRole("button", { name: /^Disconnect/ })).toBeNull();
@@ -371,7 +406,6 @@ describe("ConnectedAgentsCard", () => {
   // an ending — treating every expiry as terminal reports live connectors as
   // dead and takes away the control that ends them.
   it("reports an expired but renewable connection as renewing, and keeps it actionable", async () => {
-    vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
     try {
       vi.stubGlobal("fetch", backend({ passports: [RENEWING] }));
@@ -386,9 +420,10 @@ describe("ConnectedAgentsCard", () => {
       // exact-match query would miss "credential expired 30/07/2026" and pass
       // against the very contradiction this asserts is gone. A renewing row
       // says nothing about the expiry at all — the badge is the whole state.
-      expect(screen.queryByText(/credential expired/)).toBeNull();
-      expect(screen.queryByText(/credential renews by/)).toBeNull();
-      // Still the human's to end, and still by the primary control.
+      expect(screen.queryByText(/Expired \d/)).toBeNull();
+      expect(screen.queryByText(/Expires \d/)).toBeNull();
+      // Still the human's to end, and still by Disconnect.
+      await openActions("Claude Code");
       expect(
         screen.getByRole("button", { name: "Disconnect Claude Code" }),
       ).toBeTruthy();
@@ -401,6 +436,7 @@ describe("ConnectedAgentsCard", () => {
     vi.stubGlobal("fetch", backend({}));
     render(<ConnectedAgentsCard />);
     await waitFor(() => expect(screen.getByText("Claude Code")).toBeTruthy());
+    await openActions("Claude Code");
     expect(
       screen.getByRole("button", { name: "Disconnect Claude Code" }),
     ).toBeTruthy();
@@ -416,6 +452,7 @@ describe("ConnectedAgentsCard", () => {
     // the dialog names the act alone. Two buttons reading "Disconnect" one
     // dialog apart are ambiguous for a reader and for a name-based query, so
     // the query below is the one that proves they are still separable.
+    await openActions("Claude Code");
     const opener = screen.getByRole("button", {
       name: "Disconnect Claude Code",
     });
@@ -444,6 +481,7 @@ describe("ConnectedAgentsCard", () => {
     render(<ConnectedAgentsCard />);
     await waitFor(() => expect(screen.getByText("Claude Code")).toBeTruthy());
 
+    await openActions("Claude Code");
     const opener = screen.getByRole("button", {
       name: "Disconnect Claude Code",
     });
@@ -484,5 +522,34 @@ describe("the two passport cards on Your agents", () => {
     expect(
       document.querySelector('[data-testid="connection-pp-connection"]'),
     ).toBeTruthy();
+  });
+});
+
+describe("ConnectedAgentsCard focus after a disconnect", () => {
+  it("hands focus back to the ended connection's own row while it stays listed", async () => {
+    const second = {
+      ...CONNECTED,
+      id: "pp-second",
+      connection: { ...CONNECTED.connection, client_name: "Gemini CLI" },
+    };
+    vi.stubGlobal(
+      "fetch",
+      backend({ passports: [CONNECTED, second], keepRevoked: true }),
+    );
+    render(<ConnectedAgentsCard />);
+    await openActions("Gemini CLI");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Disconnect Gemini CLI" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-connection="pp-second"]'),
+    );
+    expect(screen.getByText("Disconnected")).toBeTruthy();
   });
 });

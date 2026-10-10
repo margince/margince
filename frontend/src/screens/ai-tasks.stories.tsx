@@ -2,13 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { within } from "storybook/test";
 import { meFixture } from "../app/mefixture";
 import { feature, status } from "./ai-admin.testkit";
 import { AiTasksCard } from "./ai-tasks";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
-
-// What each AI task runs on now, read-only, with how the lane it starts on is
-// answering. The decision-first tasks lead and read top to bottom.
 
 const decisionFirst = {
   ...feature,
@@ -21,6 +19,21 @@ const decisionFirst = {
     model: "typesafe/jev-1.13",
     processing: "cloud_provider" as const,
   },
+};
+
+const premium = {
+  ...feature,
+  task: "draft_reply",
+  display_name: "Draft a reply to an inbound thread with the account history",
+  leading_tier: "premium",
+};
+
+const embeddings = {
+  ...feature,
+  task: "embeddings",
+  display_name: "Search and retrieval",
+  leading_tier: "embeddings",
+  defaults: undefined,
 };
 
 function story() {
@@ -37,7 +50,10 @@ function story() {
           }),
         ),
       "GET /ai/status": () =>
-        jsonResponse({ ...status, features: [decisionFirst, feature] }),
+        jsonResponse({
+          ...status,
+          features: [embeddings, premium, decisionFirst, feature],
+        }),
       "GET /ai/health": () =>
         jsonResponse({
           window_hours: 1,
@@ -70,3 +86,12 @@ type Story = StoryObj<typeof AiTasksCard>;
 
 export const Default: Story = { render: story() };
 export const Dark: Story = { render: story(), globals: { theme: "dark" } };
+
+export const Phone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("table");
+  },
+};

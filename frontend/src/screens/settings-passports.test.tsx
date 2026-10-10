@@ -5,6 +5,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -337,6 +338,29 @@ describe("PassportCard — minting", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
+  it("keeps the token on screen through Escape, the backdrop and the X; Done is the way out", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", mintBackend());
+    const dialog = await openMintDialog(user);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Mint passport" }),
+    );
+    await within(dialog).findByText("mgp_live_0f3a91c4");
+
+    await user.keyboard("{Escape}");
+    const overlay = dialog.closest(".overlay");
+    if (overlay instanceof HTMLElement) {
+      await user.click(overlay);
+    }
+    expect(
+      within(dialog).getByRole("button", { name: "Close" }),
+    ).toBeDisabled();
+    expect(screen.getByText("mgp_live_0f3a91c4")).toBeTruthy();
+
+    await user.click(within(dialog).getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("starts clean on re-open rather than showing the last mint's token", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
@@ -496,5 +520,101 @@ describe("PassportCard — using a passport", () => {
     );
     await vi.waitFor(() => expect(saved).toEqual(["margince-skill.zip"]));
     expect(within(dialog).getByText("mgp_live_0f3a91c4")).toBeTruthy();
+  });
+});
+
+function listBackend(passports: readonly Record<string, unknown>[]) {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/v1/me")) {
+      return jsonResponse({
+        user: { email: "ada@acme.test" },
+        roles: ["admin"],
+        teams: [],
+      });
+    }
+    if (url.includes("/passports")) {
+      return jsonResponse({
+        data: passports,
+        api_base_url: API_BASE,
+        page: { next_cursor: null, has_more: false },
+      });
+    }
+    return jsonResponse({
+      data: [],
+      page: { next_cursor: null, has_more: false },
+    });
+  });
+}
+
+const USED = {
+  id: "pp-used",
+  label: "Scout",
+  scopes: ["read", "send"],
+  created_at: "2026-07-01T08:00:00Z",
+  last_used_at: "2026-09-28T14:10:00Z",
+  expires_at: "2026-10-31T08:00:00Z",
+  revoked_at: null,
+};
+
+const UNUSED = {
+  id: "pp-unused",
+  label: "Night runner",
+  scopes: ["read"],
+  created_at: "2026-07-01T08:00:00Z",
+  last_used_at: null,
+  expires_at: null,
+  revoked_at: null,
+};
+
+function cellOf(row: HTMLElement, column: string): HTMLElement {
+  const headers = within(row.closest("table") as HTMLElement).getAllByRole(
+    "columnheader",
+  );
+  const at = headers.findIndex((header) => header.textContent === column);
+  return within(row).getAllByRole("cell")[at];
+}
+
+describe("PassportCard: the list", () => {
+  it("shows when each passport was last used, and says Never for one no agent has used", async () => {
+    vi.stubGlobal("fetch", listBackend([USED, UNUSED]));
+    render("agents");
+    const used = (await screen.findByText("Scout")).closest("tr");
+    const unused = screen.getByText("Night runner").closest("tr");
+    if (!(used && unused)) {
+      throw new Error("the passport rows are not rendered");
+    }
+    expect(cellOf(used, "Last used")).toHaveTextContent("28/09/2026");
+    expect(cellOf(unused, "Last used")).toHaveTextContent("Never");
+    expect(cellOf(used, "Expires")).toHaveTextContent("31/10/2026");
+    expect(cellOf(unused, "Expires")).toHaveTextContent("No expiry");
+    expect(cellOf(used, "Permissions")).toHaveTextContent(
+      "Read recordsSend messages",
+    );
+    expect(screen.queryByText("Credential")).toBeNull();
+  });
+
+  // The fold is a container query no DOM test paints. Held here: the dates
+  // leave sight but stay read, and their caption under the name is not read.
+  it("folds the dates under the name, read once by their own headings", async () => {
+    vi.stubGlobal("fetch", listBackend([USED]));
+    render("agents");
+    const row = (await screen.findByText("Scout")).closest("tr");
+    if (!row) {
+      throw new Error("the passport row is not rendered");
+    }
+    expect(cellOf(row, "Name")).toHaveAttribute("data-fold", "title");
+    expect(cellOf(row, "Last used")).toHaveAttribute("data-fold", "hide");
+    expect(cellOf(row, "Expires")).toHaveAttribute("data-fold", "hide");
+    const caption = within(cellOf(row, "Name")).getByText(
+      "Last used 28/09/2026 · Expires 31/10/2026",
+    );
+    expect(caption).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("keeps the full name on a name too long for its column", async () => {
+    vi.stubGlobal("fetch", listBackend([USED]));
+    render("agents");
+    expect(await screen.findByText("Scout")).toHaveAttribute("title", "Scout");
   });
 });

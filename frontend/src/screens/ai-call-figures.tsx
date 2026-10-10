@@ -83,7 +83,7 @@ export function useWindowLabels(): Record<Window, string> {
   };
 }
 
-/** The seven-day line under a provider on the Providers card. */
+/** The seven-day line under a provider; one with no calls draws nothing. */
 export function ProviderCallsLine({
   provider,
 }: Readonly<{ provider: string }>) {
@@ -94,8 +94,7 @@ export function ProviderCallsLine({
   const stats = useCallStats({ window: "7d", group: "provider" }, canSee);
   if (!canSee || !stats.data) return null;
   const row = stats.data.rows.find((r) => r.key === provider);
-  if (!row)
-    return <span className="t-caption">{t("aiFigures.line.none")}</span>;
+  if (!row) return null;
   return (
     <span className="t-caption">
       {t("aiFigures.line.prefix", {

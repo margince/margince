@@ -48,40 +48,6 @@
   flex-wrap: wrap;
 }
 
-/* One vendor in the Providers list, as columns so every row's pill and verb land
- * where the row above put them: who, what routing uses it for, its state, the
- * way into its sheet. The caption gives way first (an ellipsis) because a
- * long list of tiers is the one cell that varies; below the phone breakpoint the
- * columns stack and the verb takes the row's end. */
-.ai-provider-line {
-  display: grid;
-  grid-template-columns: 14rem minmax(0, 1fr) 7rem auto;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-/* The pill is a grid item, which stretches; it is a label, not a column. */
-.ai-provider-line > .badge {
-  justify-self: start;
-}
-
-.ai-provider-line .ai-provider-used {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 720px) {
-  .ai-provider-line {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .ai-provider-line .ai-provider-used {
-    grid-column: 1 / -1;
-    white-space: normal;
-  }
-}
-
 /* A provider's sheet is a stack of sections, each under a rule, so Connection
  * and Prices read as two things rather than one run of controls. */
 .ai-sheet-section {
@@ -237,53 +203,45 @@
   padding-bottom: var(--space-1);
 }
 
-/* One lane in the Model tiers list: health dot, the lane, the binding, the way
- * to change it. The lane and the model are the reading; the line under the
- * model (price, host, tasks — or the failure) is small and muted, so the eye
- * lands on WHICH model runs WHAT and reads the rest only if it wants to. */
-.ai-tier-line {
-  display: grid;
-  grid-template-columns: 1.25rem 11rem minmax(0, 1fr) 13rem;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.ai-tier-line-plain {
-  grid-template-columns: 11rem minmax(0, 1fr) 13rem;
-}
-
+/* The gloss wraps at a reading width rather than widening a column the table
+ * keeps on one line. */
 .ai-tier-who {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 
-/* Two lines, always: the provider's mark and the model id on the first, the
- * price under them on the second. Neither wraps — a long id gives way with an
- * ellipsis (its full text is the tooltip), so every lane is the same height and
- * the list reads as a column rather than as rows of different sizes. */
+.ai-tier-gloss {
+  display: block;
+  min-inline-size: 12rem;
+  max-inline-size: 18rem;
+  white-space: normal;
+}
+
+/* Long ids and prices wrap rather than truncate: the whole id stays on screen. */
 .ai-tier-binding {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-1);
-  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.ai-tier-modelline > .badge {
-  flex: none;
+.ai-tier-modelline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
 }
 
-.ai-tier-secondary,
 .ai-tier-model {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-inline-size: 0;
 }
 
-.ai-tier-name {
-  font-weight: var(--fontWeightMedium);
+.ai-tier-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
 }
 
 .ai-health-dot {
@@ -306,27 +264,6 @@
   background: color-mix(in srgb, var(--textSecondary) 40%, transparent);
 }
 
-/* Asked of the row, not the viewport: beside the settings rail, an 800px window
- * leaves the row too narrow for four tracks. */
-.ai-tier-row {
-  container-type: inline-size;
-}
-
-@container (max-width: 40rem) {
-  .ai-tier-line {
-    grid-template-columns: 1.25rem minmax(0, 1fr);
-  }
-
-  .ai-tier-line-plain {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .ai-tier-binding,
-  .ai-tier-actions {
-    grid-column: 1 / -1;
-  }
-}
-
 /* The Provider -> Tier -> Task strip: three marked words, each with its gloss,
  * on one wrapping line. */
 .ai-term-legend {
@@ -336,52 +273,32 @@
   gap: var(--space-2);
 }
 
-.ai-tier-modelline {
-  display: flex;
-  flex-wrap: nowrap;
-  min-width: 0;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.ai-tier-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--gapActions);
-}
-
 .ai-panel-title {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-/* The task table reads as the rows of the cards above it: no header row on
- * screen (a screen reader still has it), and its first and last cells sit on
- * the card's edges, so every Edit on the page ends on one line. */
-.ai-task-table thead {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.ai-task-table :is(th, td):first-child {
-  padding-inline-start: 0;
-}
-
-.ai-task-table :is(th, td):last-child {
-  padding-inline-end: 0;
-}
-
-/* A task row is its name and nothing under it; the rest opens from the name. */
+/* Sized to its cell rather than its text, so a long name ends in an ellipsis
+ * (its whole text is the title) instead of widening the table. */
 .ai-task-name {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-2);
+  inline-size: 0;
+  min-inline-size: 100%;
+}
+
+.ai-task-name > .ai-health-dot {
+  flex: none;
+}
+
+.ai-task-name .evmark-trigger,
+.ai-task-name > span:not(.ai-health-dot, .badge) {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ai-task-details {
@@ -657,6 +574,12 @@
 
 .ai-task-facts dd {
   margin: 0;
+}
+
+.ai-provider-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
 }
 
 /* A provider's health: the badge above the two lines that explain it. */

@@ -22191,6 +22191,8 @@ export interface components {
              */
             kind: "completion" | "embedding" | "decision";
             task: string;
+            /** @description What a screen calls the task, the same name the usage lines carry. Absent for a task with no name, which a screen shows by its key. */
+            task_display_name?: string | null;
             /** @description Empty when the call failed before routing. */
             tier: string;
             provider: string;
@@ -22317,6 +22319,15 @@ export interface components {
             payload_capture_enabled: boolean;
             /** @description Every task with at least one terminal call, sorted — the complete filter option set (matches the terminal-only list), independent of the current page. */
             tasks: string[];
+            /** @description The same tasks in the same order, each with the name a screen shows for it. */
+            task_options: components["schemas"]["AiCallTaskOption"][];
+        };
+        /** @description One task the call log can be filtered to. */
+        AiCallTaskOption: {
+            /** @description The key the task filter takes. */
+            task: string;
+            /** @description What a screen calls the task, as task_display_name on a call. Absent for a task with no name, which a screen shows by its key. */
+            display_name?: string | null;
         };
         /** @description One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds. */
         ChannelConnection: {
@@ -38187,6 +38198,18 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the rule last ran: fired, queued for approval, failed or was blocked. A skipped firing never counts. Only GET /automations carries it, to every caller who may read automations; a single read, a create and an update leave it out. Absent on a list item whose rule has never run.
+             */
+            last_run_at?: string | null;
+            /**
+             * @description How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
+             * @enum {string|null}
+             */
+            last_run_outcome?: "fired" | "queued_for_approval" | "failed" | "blocked" | null;
+            /** @description Runs other than skipped ones in the 30 days before the server read the list. Every GET /automations item carries it, 0 for a rule that has not run; a single read, a create and an update leave it out. */
+            runs_last_30_days?: number;
         };
         CreateAutomationRequest: {
             key: string;

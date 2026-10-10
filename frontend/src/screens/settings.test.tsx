@@ -465,10 +465,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     }
   });
 
-  it("the passport row's token reads as withheld — masked, never re-disclosed — on the Agents tab", async () => {
+  it("never re-discloses a passport's token on the Agents tab", async () => {
     render(<SettingsScreen route={settingsHref("agents")} />);
     await waitFor(() => expect(screen.getByText("Scout")).toBeTruthy());
-    expect(screen.getByRole("img", { name: "Masked value" })).toBeTruthy();
     expect(screen.queryByText(/mgp_/)).toBeNull();
   });
 

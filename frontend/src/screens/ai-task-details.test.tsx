@@ -177,6 +177,23 @@ describe("a task's details", () => {
     ).toHaveTextContent("A blocked provider is skipped");
   });
 
+  it("names the decision model's provider rather than its adapter key", async () => {
+    const user = userEvent.setup({ delay: null });
+    const deciding: Feature = {
+      ...ladder,
+      decision_first: true,
+      decision_candidate: {
+        ...lead,
+        tier: "decide",
+        provider: "jev_compatible",
+      },
+    };
+    show(deciding);
+    const details = await openTaskDetails(user, deciding.display_name);
+    expect(details).toHaveTextContent("Jev-compatible");
+    expect(details).not.toHaveTextContent("jev_compatible");
+  });
+
   it("says search indexing is refused rather than waiting", async () => {
     const user = userEvent.setup({ delay: null });
     const embed = { ...feature, execution_mode: "embedding" };
@@ -207,7 +224,7 @@ it("keeps a greyed Edit on a row with nothing to tune, saying where its model is
   };
   render(
     <LocaleProvider initial="en">
-      <AiFeatureTable rows={[embed]} onEdit={() => {}} />
+      <AiFeatureTable rows={[embed]} canManage onEdit={() => {}} />
     </LocaleProvider>,
   );
   const edit = screen.getByRole("button", {
@@ -215,7 +232,7 @@ it("keeps a greyed Edit on a row with nothing to tune, saying where its model is
   });
   expect(edit).toBeDisabled();
   expect(edit).toHaveAccessibleDescription(
-    /on the embeddings row under Model tiers/,
+    /on the Embedding model row under Model tiers/,
   );
   await user.hover(edit.parentElement ?? edit);
   expect(await screen.findByRole("tooltip")).toHaveTextContent(

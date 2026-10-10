@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
-import { expect, waitFor } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Badge, Button, EmptyState, SectionHeader, TableScroll } from "./atoms";
 import { DataTable, type DataTableColumn } from "./datatable";
 import { Panel, PanelBody, PanelIntro } from "./panel";
@@ -517,4 +517,69 @@ export const PinnedFirstColumn: Story = {
     );
     await expect(getComputedStyle(first).backgroundImage).not.toBe("none");
   },
+};
+
+type DemoRun = { id: string; rule: string; when: string; result: string };
+const RUNS: DemoRun[] = [
+  {
+    id: "r1",
+    rule: "Welcome new leads",
+    when: "Today, 09:12",
+    result: "Sent 3 emails",
+  },
+  {
+    id: "r2",
+    rule: "Nudge a quiet deal",
+    when: "Yesterday, 17:40",
+    result: "Skipped: deal was won",
+  },
+  {
+    id: "r3",
+    rule: "Tag inbound replies",
+    when: "Yesterday, 08:05",
+    result: "Tagged 12 messages",
+  },
+];
+
+function RunsPanel() {
+  return (
+    <Panel title="Rule runs">
+      <DataTable<DemoRun>
+        bleed
+        fold
+        label="Rule runs"
+        rows={RUNS}
+        rowKey={(run) => run.id}
+        columns={[
+          { key: "rule", header: "Rule", render: (run) => run.rule },
+          { key: "when", header: "When", render: (run) => run.when },
+        ]}
+        detail={{
+          header: "Detail",
+          toggleLabel: (run) => `Show the run of ${run.rule}`,
+          render: (run) => <p>{run.result}</p>,
+        }}
+      />
+    </Panel>
+  );
+}
+
+export const RowDetail: Story = {
+  render: () => <RunsPanel />,
+  play: async ({ canvasElement }) => {
+    const toggle = await within(canvasElement).findByRole("button", {
+      name: "Show the run of Welcome new leads",
+    });
+    await userEvent.click(toggle);
+    await expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  },
+};
+export const RowDetailDark: Story = {
+  ...RowDetail,
+  globals: { theme: "dark" },
+};
+export const RowDetailPhone: Story = {
+  ...RowDetail,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

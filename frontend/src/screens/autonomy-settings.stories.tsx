@@ -81,10 +81,6 @@ export const EarnedOnOne: Story = {
   ]),
 };
 
-// A kind whose copy this catalog does not name, which is what a reader sees if
-// the server starts offering a fourth before the strings land. The row is
-// unpolished on purpose rather than hidden — a choice the reader now has is
-// worth showing badly.
 export const AKindTheCopyDoesNotKnow: Story = {
   render: story([
     row("close_date_correction", "auto", [14, 1, 0]),

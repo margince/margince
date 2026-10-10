@@ -9,7 +9,7 @@ which work in another place, under **Model tiers**.
 
 ### Where do I set up an AI provider?
 To set up an AI provider in Margince, open **Settings**, then **AI models**, and
-choose **Edit** on the provider's row under **Providers**.
+open the provider's row under **Providers**.
 The provider's sheet opens on the right. **Connection** holds its key and, for
 the providers that need them, where it is reached; **Prices** holds what its
 models cost.
@@ -138,19 +138,19 @@ of their own. Open that provider's sheet under **Providers**, pick its
 To read the model calls of your installation, open **Settings**, then **AI models**.
 You need **AI diagnostics read** to see the figures.
 - **Providers**: each row reads like "7 d: 98 calls · 11 failed (4 timeouts)".
-  **Edit** opens the sheet, and **Recent calls** there splits the calls **By host**, **By model** or **By tier**.
+  The row opens the sheet, and **Recent calls** there splits the calls **By host**, **By model** or **By tier**.
 - **Recent calls** covers **24 h**, **7 d** or **30 d**, with **p50**, **p95** and **Cost**.
   Open a row to see only the calls that ended there.
 - **Model tiers**: the mark next to a tier opens its health for the last 7 days.
   It counts only the calls of the model the tier has now.
-- **AI tasks**: **Edit** opens the task's sheet. **Recent calls** there shows "How calls got an answer", step by step.
+- **AI tasks**: the row opens the task's sheet. **Recent calls** there shows "How calls got an answer", step by step.
   It also says why a step passed a call on, such as "timed out", "failed" or "not sure enough".
   Under "How long calls take, against the timeout", **p50** and **p95** sit beside the timeout that stops a call.
 
 Also called: AI call log, model latency, AI cost per task, failed AI calls.
 
 ### How do I choose which OpenRouter hosts serve a model tier?
-To choose how OpenRouter picks a host, open **Model tiers**, choose **Edit** on the tier, and fill **Serving**.
+To choose how OpenRouter picks a host, open **Model tiers**, open the tier's row, and fill **Serving**.
 Host routing applies only when the tier's provider is **OpenAI-compatible** and its **Service** is OpenRouter.
 - Leave **Serving JSON** empty for the shipped default: sort by throughput, fp16 or bf16, require parameters.
 - Write `{}` to let OpenRouter route on its own.
@@ -176,7 +176,7 @@ Settings in your OpenRouter account also apply, and this sheet does not show the
 Also called: OpenRouter privacy, data retention, ZDR, data collection.
 
 ### How do I set a task's thinking level and timeouts?
-To change how one AI task calls its model, open **AI tasks** under **Settings**, then **AI models**, and choose **Edit** on the task.
+To change how one AI task calls its model, open **AI tasks** under **Settings**, then **AI models**, and open the task's row.
 The same users who may change a provider may change these.
 - **Thinking level** is sent to every provider through its own thinking setting.
   A model with no thinking control ignores it. **Default (the binding and each prompt decide)** sends nothing of its own.
