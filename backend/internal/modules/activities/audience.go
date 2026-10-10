@@ -256,10 +256,9 @@ func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion 
 // team of this workspace: the table carries no FK for its polymorphic subject,
 // so the check is here, and a guessed id answers like a malformed one.
 //
-// LIVE is both halves. Deactivating an account sets `status` and leaves
-// `archived_at` NULL, so the archived-only test admitted a colleague who has
-// left — this comment said "live" while the query asked something weaker, and
-// an audience is a list of contacts expected to read the thing.
+// Live means both halves. Deactivating an account sets `status` and leaves
+// `archived_at` NULL, so an archived-only test admits a colleague who has left.
+// An audience is a list of people expected to read the thing.
 func ensureAudienceSubjectsExist(ctx context.Context, tx pgx.Tx, members []AudienceMember) error {
 	for _, m := range members {
 		var exists bool

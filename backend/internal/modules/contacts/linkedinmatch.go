@@ -454,10 +454,9 @@ func CompanyLinkedInReach(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 		return nil, err
 	}
-	// Both halves of "still works here", not just archived_at. A reach count is
-	// an offer to ask a colleague for an intro, and a deactivated account is as
-	// unreachable as an archived one — filtering on archived_at alone answers
-	// "ask Lars" about someone who cannot be asked.
+	// Both halves of "still works here", not just archived_at. A reach count
+	// offers to ask a colleague for an intro, and a deactivated account is as
+	// unreachable as an archived one.
 	rows, err := tx.Query(ctx, `
 		SELECT g.owner_user_id, count(*)
 		  FROM linkedin_connection g

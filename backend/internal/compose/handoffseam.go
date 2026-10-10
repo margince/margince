@@ -4,9 +4,8 @@
 package compose
 
 // The seam behind prepare_handoff. It reads the project page's own service
-// (compose/project360) for the deals, the stakeholder seats and the open tasks,
-// so the handoff and GET /projects/{id}/360 show one project from one
-// transaction, cut at the same row, under the same grants.
+// (compose/project360). The handoff and GET /projects/{id}/360 therefore show
+// one project from one transaction, cut at the same row, under the same grants.
 
 import (
 	"context"
@@ -32,10 +31,9 @@ var handoffSections = []crmcontracts.Project360Section{
 // handoffReader assembles one project's handover material.
 //
 // A list the caller holds no grant for is left out and named in
-// SectionsOmitted, as on the page, and the project read is mandatory: its
-// refusal is returned unchanged, so a project outside the caller's scope
-// answers not-found exactly as reading it directly would. A contact the caller
-// may not read is a seat with no name, not a failed handoff.
+// SectionsOmitted, as on the page. The project read is mandatory, and its
+// refusal is returned unchanged. A contact the caller may not read is a seat
+// with no name, not a failed handoff.
 func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 	page := newProject360Service(pool)
 	seats := identity.NewService(pool)
@@ -50,9 +48,8 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 			return agents.HandoffFacts{}, err
 		}
 		facts := handoffFacts(res)
-		// The receiving side, named. "Who owns this work now" answered as a
-		// UUID restates the question — and unlike a stakeholder, the owner is a
-		// SEAT rather than a record, so it is named through identity's own read.
+		// The receiving side, named: an id restates the question. The owner is a
+		// seat and not a record, so identity names it.
 		if facts.Project.OwnerID != nil {
 			named, err := seats.SeatNames(ctx, []ids.UserID{ids.From[ids.UserKind](*facts.Project.OwnerID)})
 			if err != nil {
@@ -65,9 +62,8 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 }
 
 // handoffFacts carries one page read across the seam. Every deal is carried,
-// won or not: which of them counts as sold is the tool's judgement, and a
-// filter here would hide the open ones from a reader who has to know a
-// pursuit is still running.
+// won or not. Which one counts as sold is the tool's judgement, and a filter
+// here would hide an open pursuit from the reader.
 func handoffFacts(res project360.Result) agents.HandoffFacts {
 	page := res.Page
 	facts := agents.HandoffFacts{AsOf: page.AsOf, Project: handoffProject(page.Project)}

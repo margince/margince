@@ -55,9 +55,9 @@ func (r Reading) wants(section crmcontracts.Project360Section) bool {
 	return len(r.Only) == 0 || slices.Contains(r.Only, section)
 }
 
-// Result is one read of the page: the wire shape, and the open tasks behind
-// its commitments section for a reader that carries more of each than the page
-// does.
+// Result is one read of the page. Page is the wire shape. Tasks are the open
+// tasks its commitments section was cut from, for a reader that carries more of
+// each task than the page does.
 type Result struct {
 	Page  crmcontracts.Project360
 	Tasks []activities.OpenTask

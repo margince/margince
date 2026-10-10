@@ -3,11 +3,10 @@
 
 package company360
 
-// Placing the read rows as nodes and edges: the deterministic order each
-// group is drawn in, the caps and what they report, the direction every edge
-// runs, and which contact the warm-signal route marks. No SQL here — every rule
-// below is provable from already-read rows (graph_test.go), which is why the
-// caps and the edge orientation are testable without a database.
+// Placing the read rows as nodes and edges. The order each group is drawn in,
+// the caps and what they report, and the direction every edge runs are decided
+// here. So is the contact the signal route marks. There is no SQL: every rule
+// is provable from already-read rows (graph_test.go).
 
 import (
 	"sort"

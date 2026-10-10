@@ -359,9 +359,8 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 // liveness condition here is a second lock on a door that is already shut, and
 // it is spelled correctly so that it stays one if that ever changes.
 //
-// The liveness predicate is the shared definition of a seat that has not left,
-// which names both halves: either alone would go on offering a departed
-// colleague's address.
+// The liveness predicate is the shared one and names both halves. Either alone
+// offers a departed colleague's address.
 func seatLoginAddressTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (string, error) {
 	var email string
 	if err := tx.QueryRow(ctx, `

@@ -57,9 +57,9 @@ const (
 	// is the one way this census must not break — it would read a smaller tree,
 	// report PASS, and leave no failing assertion to notice.
 	activatableMemberHelper = "ActivatableMemberSQL"
-	// liveMemberOwner holds the one literal spelling. identity's own livemember.go
-	// delegates to it so its callers keep one name, and passes its alias through,
-	// which is the single call the literal-alias test must not judge.
+	// liveMemberOwner holds the one literal spelling. identity's livemember.go
+	// delegates to it and passes its alias through. That is the single call the
+	// literal-alias test must not judge.
 	liveMemberOwner    = "internal/shared/kernel/workforce/livemember.go"
 	liveMemberDelegate = "internal/modules/identity/livemember.go"
 	identityPath       = "github.com/margince/margince/backend/internal/modules/identity"

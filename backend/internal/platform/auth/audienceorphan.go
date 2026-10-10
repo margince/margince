@@ -59,7 +59,7 @@ import (
 // sitting in captured_by counts as a reader here, exactly as it does in the read
 // clause, and that seat cannot sign in to use it. Filtering it only here would
 // make the refusal stricter than the gate it mirrors, with no fitness function
-// behind the difference — and `status = 'active' AND archived_at IS NULL` has an
+// behind the difference. `status = 'active' AND archived_at IS NULL` has an
 // owner already (workforce.LiveMemberSQL), so a second spelling would be the
 // duplication this file exists to argue against.
 // Whether a departed seat's provenance should keep admitting a row at all is one

@@ -6,11 +6,11 @@ package compose
 // The seam behind review_commitments, and the row carries prepare_handoff
 // shares with it (handoffseam.go reads the rest).
 //
-// It is assembled HERE because it crosses modules: an open promise is an
-// activity row or a claim read off a conversation — and a module never
-// imports a sibling (ADR-0054 §9). Every read below is a module's own gated
-// store path, so object RBAC and row scope apply exactly as they do on the
-// HTTP surface; there is no raw SQL here and no second spelling of a filter.
+// It is assembled here because it crosses modules. An open promise is an
+// activity row or a claim read off a conversation, and a module never imports
+// a sibling (ADR-0054). Every read below is a module's own gated store
+// path, so object RBAC and row scope apply as they do on the HTTP surface.
+// There is no raw SQL here and no second spelling of a filter.
 //
 // THE CLOCK LIVES ON THIS SIDE OF THE SEAM. The tools judge a promise as
 // overdue or upcoming, and that judgement is a pure function of the due date

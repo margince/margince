@@ -5,7 +5,7 @@ package agents
 
 import "testing"
 
-// A list the caller may not read is not an empty list: the answer names it and
+// A list the caller may not read is not an empty list. The answer names it and
 // withholds the absence claim, as it does for a list cut at its bound.
 func TestAListTheCallerMayNotReadIsNamedAndSupportsNoAbsenceClaim(t *testing.T) {
 	for _, tc := range []struct {

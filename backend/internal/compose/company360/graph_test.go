@@ -3,9 +3,9 @@
 
 package company360
 
-// The graph's placement rules over already-read inputs, so each one is
-// provable without a database: node order, the caps and what they report,
-// edge orientation, and when the signal route may speak.
+// The graph's placement rules over already-read inputs, provable without a
+// database. They cover node order, the caps and what they report, edge
+// orientation, and when the signal route may speak.
 //
 // What the graph READS — the per-group grants, the row-scope prune, and the
 // HTTP shape — needs a real database and lives in
@@ -431,10 +431,9 @@ func TestNoSignalRouteWithoutAnActiveSignal(t *testing.T) {
 	}
 }
 
-// TestNoSignalRouteWhenTheRouteInIsNotDrawn is the rule that keeps the card and
-// the warm room from naming different contacts: the route-in contact's only seat
-// is on a deal this card did not draw, so the card says nothing rather than
-// promoting the next contact it happens to have.
+// TestNoSignalRouteWhenTheRouteInIsNotDrawn keeps the card and the warm room
+// from naming different contacts. The route-in contact's only seat is on a deal
+// this card did not draw, so the card says nothing and promotes no one else.
 func TestNoSignalRouteWhenTheRouteInIsNotDrawn(t *testing.T) {
 	g, _ := newGraph(t)
 	drawn := g.employee(t, "Drawn", 20)

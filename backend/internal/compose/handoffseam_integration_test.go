@@ -5,10 +5,10 @@
 
 package compose
 
-// The handoff reads the project through the page's own service, so on one
-// seeded project it shows what GET /projects/{id}/360 shows: the same deals,
-// the same seats, the same open tasks, cut at the same row — apart from the
-// one stated rule, that the clock's own reminders are not a promise anyone made.
+// The handoff reads the project through the page's own service. On one seeded
+// project it shows what GET /projects/{id}/360 shows: the same deals, seats and
+// open tasks, cut at the same row. The one stated difference is that the
+// clock's own reminders are not a promise anyone made.
 
 import (
 	"context"
@@ -139,7 +139,7 @@ func TestTheHandoffCutsEachListWhereThePageDoes(t *testing.T) {
 }
 
 // A caller who may read the project and not its contacts gets the seat without
-// a name, as the page gives it: the role is what a handover is judged on.
+// a name, as the page gives it. The role is what a handover is judged on.
 func TestAHandoffWithoutTheContactGrantNamesNoSeatAndStillAnswers(t *testing.T) {
 	e := integration.Setup(t)
 	scene := seedHandoffScene(t, e, 1)

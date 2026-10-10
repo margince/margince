@@ -33,9 +33,10 @@ import (
 const sessionObject = "deal_room_session"
 
 // exchangeablePredicate is the rule for "this credential admits its bearer
-// right now", which peek and exchange both apply. The
-// room's state is deliberately NOT part of it beyond `archived`: a paused or
-// closed room still exchanges, and the session then reports the state to the
+// right now", which peek and exchange both apply.
+//
+// The room's state is not part of it beyond `archived`. A paused
+// or closed room still exchanges, and the session then reports the state to the
 // authenticated buyer. Refusing here instead would make the anonymous edge an
 // oracle for whether a room is paused.
 var exchangeablePredicate = `i.token_hash = $1

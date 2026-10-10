@@ -56,9 +56,9 @@ type HandoffFacts struct {
 	StakeholdersTruncated bool
 	OpenCommitments       []OpenCommitment
 	CommitmentsTruncated  bool
-	// SectionsOmitted names the lists this caller holds no grant to read. A
-	// list left out for that reason is not an empty one, so the absence claims
-	// below are withheld for it exactly as they are for a truncated read.
+	// SectionsOmitted names the lists this caller holds no grant to read. Such
+	// a list is not an empty one, so the absence claims below are withheld for
+	// it, as for a truncated read.
 	SectionsOmitted []string
 }
 
@@ -232,9 +232,8 @@ func handoffGaps(h PreparedHandoff, facts HandoffFacts) []HandoffGap {
 }
 
 // stakeholderGaps judges the seats. `bounded` reports a read that stopped at
-// its cap or was left out for want of a grant: an empty page of either says
-// nothing about whether a contact exists, so the absence claim is withheld
-// rather than asserted.
+// its cap or was left out for want of a grant. An empty page of either says
+// nothing about whether a contact exists, so the absence claim is withheld.
 func stakeholderGaps(stakeholders []HandoffStakeholder, bounded bool) []HandoffGap {
 	if len(stakeholders) == 0 {
 		if bounded {
