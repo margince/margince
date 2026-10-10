@@ -89,17 +89,17 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Changed
 
-- **The company graph names its signal route, not an introduction path.** In
-  `GET /companies/{id}/graph`, `intro_path` is now `signal_route` (the contact the
-  account's most recent open signal proposes), a node's `intro_path` flag is
-  `on_signal_route`, and `groups_omitted` names `signal_route`. Who should
-  introduce us is still answered by `GET /companies/{id}/intro-paths`.
-- **`prepare_handoff` and `GET /projects/{id}/handoff` read the project as its page
-  does.** Deals, stakeholders and open tasks come from the project page's own read, cut
-  at the page's 25 rows, and a list the caller may not read is named in the new
-  `sections_omitted` instead of failing the handoff or counting as empty. A caller
-  without the contact grant gets the stakeholder seats with no names. The clock's own
-  reminders stay out of the handoff's open commitments.
+- **The company graph names its signal route.** In `GET /companies/{id}/graph`,
+  `intro_path` is now `signal_route`. It is the contact the account's most recent
+  open signal proposes. A node's `intro_path` flag is now `on_signal_route`, and
+  `groups_omitted` names `signal_route`. Who should introduce us is still answered
+  by `GET /companies/{id}/intro-paths`.
+- **The handoff reads the project page.** `prepare_handoff` and
+  `GET /projects/{id}/handoff` take deals, stakeholders and open tasks from the
+  project page's own read, cut at the page's 25 rows. A list the caller may not
+  read is named in the new `sections_omitted`. It no longer fails the handoff or
+  counts as empty. A caller without the contact grant gets the stakeholder seats
+  with no names. The clock's own reminders stay out of the open commitments.
 - Analytics uses one reporting implementation across the web, API, MCP and workers.
   The old performance screen and rollout switch are removed. Existing
   `analytics.performance_enabled` configuration is accepted but ignored.
