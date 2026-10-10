@@ -8419,6 +8419,21 @@ func (e DealCoverageRiskKind) Valid() bool {
 	}
 }
 
+// Defines values for DealFollowUpDraftRequestSegment.
+const (
+	DealFollowUpDraftRequestSegmentSlipping DealFollowUpDraftRequestSegment = "slipping"
+)
+
+// Valid indicates whether the value is a known member of the DealFollowUpDraftRequestSegment enum.
+func (e DealFollowUpDraftRequestSegment) Valid() bool {
+	switch e {
+	case DealFollowUpDraftRequestSegmentSlipping:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealLastEmailDirection.
 const (
 	DealLastEmailDirectionInbound  DealLastEmailDirection = "inbound"
@@ -12628,6 +12643,33 @@ func (e ProductBillingModel) Valid() bool {
 	case ProductBillingModelOneTime:
 		return true
 	case ProductBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProgressDealRequestWonWithoutContractReason.
+const (
+	ProgressDealRequestWonWithoutContractReasonImported       ProgressDealRequestWonWithoutContractReason = "imported"
+	ProgressDealRequestWonWithoutContractReasonOther          ProgressDealRequestWonWithoutContractReason = "other"
+	ProgressDealRequestWonWithoutContractReasonPurchaseOrder  ProgressDealRequestWonWithoutContractReason = "purchase_order"
+	ProgressDealRequestWonWithoutContractReasonRenewalByEmail ProgressDealRequestWonWithoutContractReason = "renewal_by_email"
+	ProgressDealRequestWonWithoutContractReasonVerbal         ProgressDealRequestWonWithoutContractReason = "verbal"
+)
+
+// Valid indicates whether the value is a known member of the ProgressDealRequestWonWithoutContractReason enum.
+func (e ProgressDealRequestWonWithoutContractReason) Valid() bool {
+	switch e {
+	case ProgressDealRequestWonWithoutContractReasonImported:
+		return true
+	case ProgressDealRequestWonWithoutContractReasonOther:
+		return true
+	case ProgressDealRequestWonWithoutContractReasonPurchaseOrder:
+		return true
+	case ProgressDealRequestWonWithoutContractReasonRenewalByEmail:
+		return true
+	case ProgressDealRequestWonWithoutContractReasonVerbal:
 		return true
 	default:
 		return false
@@ -33105,6 +33147,35 @@ type DealDocumentOrigin struct {
 	Subject    *string   `json:"subject,omitempty"`
 }
 
+// DealFollowUpDraft One drafted follow-up, the activity it was saved as, and why the deal is on the list.
+type DealFollowUpDraft struct {
+	DealId          openapi_types.UUID `json:"deal_id"`
+	DraftActivityId openapi_types.UUID `json:"draft_activity_id"`
+	Evidence        []AgentExcerpt     `json:"evidence"`
+	Summary         string             `json:"summary"`
+}
+
+// DealFollowUpDraftRequest What `draft_follow_ups_for` takes.
+type DealFollowUpDraftRequest struct {
+	// IdempotencyKey Same key, same result. A key reused with other arguments is refused.
+	IdempotencyKey *string `json:"idempotency_key,omitempty"`
+
+	// Limit How many of the worst deals to draft for. Omit it for 25, the most one call writes.
+	Limit *int `json:"limit,omitempty"`
+
+	// Segment The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+	Segment DealFollowUpDraftRequestSegment `json:"segment"`
+}
+
+// DealFollowUpDraftRequestSegment The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+type DealFollowUpDraftRequestSegment string
+
+// DealFollowUpDrafts What `draft_follow_ups_for` answers.
+type DealFollowUpDrafts struct {
+	Drafts  []DealFollowUpDraft `json:"drafts"`
+	Segment string              `json:"segment"`
+}
+
 // DealLastEmail The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
 type DealLastEmail struct {
 	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
@@ -36917,6 +36988,18 @@ type LeadManualSignalListResponse struct {
 	Data []LeadManualSignal `json:"data"`
 }
 
+// LeadQualification What `qualify_lead` answers.
+type LeadQualification struct {
+	// Filled The fields this call filled, by name.
+	Filled map[string]LeadQualifiedField `json:"filled"`
+
+	// Gaps The qualification fields still empty, for a human to fill.
+	Gaps []string `json:"gaps"`
+
+	// RecordId The lead.
+	RecordId openapi_types.UUID `json:"record_id"`
+}
+
 // LeadQualificationEvidence The strongest genuine-engagement signal captured against this lead, derived from its
 // linked activities at read time: a held meeting over a booked one over an inbound reply.
 // What the qualify dialog shows as the reason and sends back as `trigger`; null when the
@@ -36929,6 +37012,12 @@ type LeadQualificationEvidence struct {
 
 // LeadQualificationEvidenceTrigger defines model for LeadQualificationEvidence.Trigger.
 type LeadQualificationEvidenceTrigger string
+
+// LeadQualifiedField The value a field was filled with and what it was read from.
+type LeadQualifiedField struct {
+	Evidence []AgentExcerpt `json:"evidence"`
+	Value    string         `json:"value"`
+}
 
 // LeadScoreEntry One point in the retained series — what the score was, and why.
 type LeadScoreEntry struct {
@@ -40006,6 +40095,45 @@ type ProductListResponse struct {
 	Page PageInfo  `json:"page"`
 }
 
+// ProgressDealRequest What `progress_deal` takes besides the deal, which the path names.
+type ProgressDealRequest struct {
+	// ApprovalId The approval a human gave this exact call, on its retry.
+	ApprovalId *openapi_types.UUID `json:"approval_id,omitempty"`
+
+	// IdempotencyKey Same key, same result. A key reused with other arguments is refused.
+	IdempotencyKey *string `json:"idempotency_key,omitempty"`
+
+	// IfVersion The deal's version the move was decided on. A deal that has changed since is refused.
+	IfVersion *int `json:"if_version,omitempty"`
+
+	// LostReason Required when the stage closes the deal as lost.
+	LostReason *string `json:"lost_reason,omitempty"`
+
+	// Note Logged as a note on the deal's timeline after the move.
+	Note *string `json:"note,omitempty"`
+
+	// ToStageId The stage to move to. Its semantic decides whether the move is confirm-first.
+	ToStageId openapi_types.UUID `json:"to_stage_id"`
+
+	// WonWithoutContractDetail What the reason was, required when it is `other`.
+	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
+
+	// WonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+	WonWithoutContractReason *ProgressDealRequestWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
+}
+
+// ProgressDealRequestWonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+type ProgressDealRequestWonWithoutContractReason string
+
+// ProgressDealResult What `progress_deal` answers.
+type ProgressDealResult struct {
+	// Deal A record as the agent tool surface hands it over: its type, id, version and readable fields.
+	Deal AgentRecord `json:"deal"`
+
+	// NoteActivityId The note logged on the deal, absent when the call carried none.
+	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
+}
+
 // Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
 type Project struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -40890,6 +41018,12 @@ type QualifyDealRequest struct {
 	Name       *string             `json:"name,omitempty"`
 	PipelineId *openapi_types.UUID `json:"pipeline_id,omitempty"`
 	StageId    *openapi_types.UUID `json:"stage_id,omitempty"`
+}
+
+// QualifyLeadRequest What `qualify_lead` takes besides the lead, which the path names.
+type QualifyLeadRequest struct {
+	// IdempotencyKey Same key, same result. A key reused with other arguments is refused.
+	IdempotencyKey *string `json:"idempotency_key,omitempty"`
 }
 
 // QualifyingEventRecord A recorded exchange, as it now stands on the contact.
@@ -52033,6 +52167,18 @@ type CreateOfferParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ProgressDealParams defines parameters for ProgressDeal.
+type ProgressDealParams struct {
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
 // RevertStageProgressionParams defines parameters for RevertStageProgression.
 type RevertStageProgressionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -55550,6 +55696,9 @@ type AcceptDealSuggestionJSONRequestBody = AcceptDealSuggestionRequest
 // CreateDealJSONRequestBody defines body for CreateDeal for application/json ContentType.
 type CreateDealJSONRequestBody = CreateDealRequest
 
+// DraftDealFollowUpsJSONRequestBody defines body for DraftDealFollowUps for application/json ContentType.
+type DraftDealFollowUpsJSONRequestBody = DealFollowUpDraftRequest
+
 // UpdateDealJSONRequestBody defines body for UpdateDeal for application/json ContentType.
 type UpdateDealJSONRequestBody = UpdateDealRequest
 
@@ -55561,6 +55710,9 @@ type CreateOfferJSONRequestBody = CreateOfferRequest
 
 // CreateDealOutcomeReviewJSONRequestBody defines body for CreateDealOutcomeReview for application/json ContentType.
 type CreateDealOutcomeReviewJSONRequestBody = CreateOutcomeReviewRequest
+
+// ProgressDealJSONRequestBody defines body for ProgressDeal for application/json ContentType.
+type ProgressDealJSONRequestBody = ProgressDealRequest
 
 // DisposeDedupeCandidateJSONRequestBody defines body for DisposeDedupeCandidate for application/json ContentType.
 type DisposeDedupeCandidateJSONRequestBody = DedupeDispositionRequest
@@ -55681,6 +55833,9 @@ type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 
 // PromoteLeadJSONRequestBody defines body for PromoteLead for application/json ContentType.
 type PromoteLeadJSONRequestBody = PromoteLeadRequest
+
+// QualifyLeadJSONRequestBody defines body for QualifyLead for application/json ContentType.
+type QualifyLeadJSONRequestBody = QualifyLeadRequest
 
 // CreateListJSONRequestBody defines body for CreateList for application/json ContentType.
 type CreateListJSONRequestBody = CreateListRequest
@@ -67706,6 +67861,9 @@ type ServerInterface interface {
 	// The open deals whose relationships are going cold, and why.
 	// (GET /deals/at-risk)
 	ListAtRiskRelationships(w http.ResponseWriter, r *http.Request)
+	// Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+	// (POST /deals/follow-up-drafts)
+	DraftDealFollowUps(w http.ResponseWriter, r *http.Request)
 	// The open deals going quiet or past their expected close date, worst first.
 	// (GET /deals/slipping)
 	ListSlippingDeals(w http.ResponseWriter, r *http.Request, params ListSlippingDealsParams)
@@ -67751,6 +67909,9 @@ type ServerInterface interface {
 	// Write a review of how this deal's current closing went.
 	// (POST /deals/{id}/outcome-reviews)
 	CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request, id Id)
+	// Move a deal to a stage and note why, in one call.
+	// (POST /deals/{id}/progress)
+	ProgressDeal(w http.ResponseWriter, r *http.Request, id Id, params ProgressDealParams)
 	// Read the buying roles out of what this deal's contacts have written.
 	// (POST /deals/{id}/role-proposals)
 	ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id)
@@ -68042,6 +68203,9 @@ type ServerInterface interface {
 	// What promoting this lead would do — merge into an existing contact, or create one.
 	// (GET /leads/{id}/promote-preview)
 	PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id)
+	// Fill a lead's empty qualification fields that its own data settles, and name the rest.
+	// (POST /leads/{id}/qualify)
+	QualifyLead(w http.ResponseWriter, r *http.Request, id Id)
 	// Put a disqualified lead back on the open ladder.
 	// (POST /leads/{id}/reopen)
 	ReopenLead(w http.ResponseWriter, r *http.Request, id Id, params ReopenLeadParams)
@@ -71327,6 +71491,12 @@ func (_ Unimplemented) ListAtRiskRelationships(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+// (POST /deals/follow-up-drafts)
+func (_ Unimplemented) DraftDealFollowUps(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The open deals going quiet or past their expected close date, worst first.
 // (GET /deals/slipping)
 func (_ Unimplemented) ListSlippingDeals(w http.ResponseWriter, r *http.Request, params ListSlippingDealsParams) {
@@ -71414,6 +71584,12 @@ func (_ Unimplemented) ListDealOutcomeReviews(w http.ResponseWriter, r *http.Req
 // Write a review of how this deal's current closing went.
 // (POST /deals/{id}/outcome-reviews)
 func (_ Unimplemented) CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move a deal to a stage and note why, in one call.
+// (POST /deals/{id}/progress)
+func (_ Unimplemented) ProgressDeal(w http.ResponseWriter, r *http.Request, id Id, params ProgressDealParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71996,6 +72172,12 @@ func (_ Unimplemented) PromoteLead(w http.ResponseWriter, r *http.Request, id Id
 // What promoting this lead would do — merge into an existing contact, or create one.
 // (GET /leads/{id}/promote-preview)
 func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Fill a lead's empty qualification fields that its own data settles, and name the rest.
+// (POST /leads/{id}/qualify)
+func (_ Unimplemented) QualifyLead(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -90940,6 +91122,28 @@ func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// DraftDealFollowUps operation middleware
+func (siw *ServerInterfaceWrapper) DraftDealFollowUps(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DraftDealFollowUps(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSlippingDeals operation middleware
 func (siw *ServerInterfaceWrapper) ListSlippingDeals(w http.ResponseWriter, r *http.Request) {
 
@@ -91758,6 +91962,64 @@ func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateDealOutcomeReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProgressDeal operation middleware
+func (siw *ServerInterfaceWrapper) ProgressDeal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ProgressDealParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProgressDeal(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -95240,6 +95502,40 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewLeadPromotion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// QualifyLead operation middleware
+func (siw *ServerInterfaceWrapper) QualifyLead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.QualifyLead(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -109721,6 +110017,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/deals/at-risk", wrapper.ListAtRiskRelationships)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/follow-up-drafts", wrapper.DraftDealFollowUps)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/slipping", wrapper.ListSlippingDeals)
 	})
 	r.Group(func(r chi.Router) {
@@ -109764,6 +110063,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/outcome-reviews", wrapper.CreateDealOutcomeReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/progress", wrapper.ProgressDeal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/role-proposals", wrapper.ProposeDealRoles)
@@ -110055,6 +110357,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/promote-preview", wrapper.PreviewLeadPromotion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/qualify", wrapper.QualifyLead)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/reopen", wrapper.ReopenLead)

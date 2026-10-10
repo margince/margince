@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 84,
     "system_frame_tokens": 586,
-    "tokens": 29706,
+    "tokens": 29742,
     "median_tool_tokens": 292,
     "mean_tool_tokens": 353
   },
@@ -199,6 +199,10 @@
       "tokens": 385
     },
     {
+      "name": "attach_document",
+      "tokens": 369
+    },
+    {
       "name": "describe_report_vocabulary",
       "tokens": 349
     },
@@ -225,10 +229,6 @@
     {
       "name": "search_report_evidence",
       "tokens": 335
-    },
-    {
-      "name": "attach_document",
-      "tokens": 333
     },
     {
       "name": "decide_approval",

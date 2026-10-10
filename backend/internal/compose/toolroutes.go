@@ -11,7 +11,9 @@ package compose
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -65,18 +67,28 @@ func (s Server) SearchContext(w http.ResponseWriter, r *http.Request, params crm
 	serveTool(w, r, s.toolRegistry.Invoke, "search_context", params)
 }
 
-// SearchReportEvidence serves search_report_evidence. The run the path names
-// overrides a run_id in the body, so the route never searches another run.
+// SearchReportEvidence serves search_report_evidence, over the run the path names.
 func (s Server) SearchReportEvidence(w http.ResponseWriter, r *http.Request, runID openapi_types.UUID) {
-	args := map[string]json.RawMessage{}
-	if !httperr.Decode(w, r, &args) {
+	args, ok := toolArgsWithPath(w, r, pathArgument{"run_id", runID.String()})
+	if !ok {
 		return
 	}
-	if args == nil {
-		args = map[string]json.RawMessage{}
-	}
-	args["run_id"] = json.RawMessage(strconv.Quote(runID.String()))
 	serveTool(w, r, s.toolRegistry.Invoke, "search_report_evidence", args)
+}
+
+// DraftDealFollowUps serves draft_follow_ups_for.
+func (s Server) DraftDealFollowUps(w http.ResponseWriter, r *http.Request) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "draft_follow_ups_for")
+}
+
+// ProgressDeal serves progress_deal, on the deal the path names.
+func (s Server) ProgressDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ProgressDealParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "progress_deal", pathArgument{dealIDField, id.String()})
+}
+
+// QualifyLead serves qualify_lead, on the lead the path names.
+func (s Server) QualifyLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "qualify_lead", pathArgument{"lead_id", id.String()})
 }
 
 // QueryWorkspace serves query_workspace.
@@ -121,6 +133,71 @@ func (s Server) GetActingIdentity(w http.ResponseWriter, r *http.Request) {
 
 // noArguments is the argument object of a tool that takes none.
 type noArguments struct{}
+
+// pathArgument is a path parameter the tool takes as one of its arguments.
+type pathArgument struct{ name, value string }
+
+// toolArgsWithPath reads the body as the tool's argument object and sets each
+// path parameter over it. So the record the path names is the one the tool
+// acts on, whatever the body says. An empty body is an empty object. On a
+// refusal it writes the answer and reports false.
+func toolArgsWithPath(w http.ResponseWriter, r *http.Request, path ...pathArgument) (map[string]json.RawMessage, bool) {
+	var args map[string]json.RawMessage
+	if err := httperr.DecodeOrRefusal(w, r, &args); err != nil && !errors.Is(err, io.EOF) {
+		httperr.Write(w, r, err)
+		return nil, false
+	}
+	if args == nil {
+		args = map[string]json.RawMessage{}
+	}
+	for _, p := range path {
+		args[p.name] = json.RawMessage(strconv.Quote(p.value))
+	}
+	return args, true
+}
+
+// reservedHeaders are the REST spellings of the two arguments every write tool
+// reserves: its retry key and the approval a retry redeems.
+var reservedHeaders = []struct{ header, arg string }{
+	{idempotencyKeyHeader, "idempotency_key"},
+	{approvalTokenHeader, "approval_id"},
+}
+
+// serveToolCommand runs a write tool for a REST request. The route is not in
+// replayableOperations, so the Idempotency-Key header becomes the tool's own
+// idempotency_key, and an X-Approval-Token its approval_id. A REST retry is then
+// claimed and redeemed once, by Invoke, as the same call over MCP would be.
+func serveToolCommand(w http.ResponseWriter, r *http.Request, invoke toolInvoker, tool string, path ...pathArgument) {
+	args, ok := toolArgsWithPath(w, r, path...)
+	if !ok {
+		return
+	}
+	for _, reserved := range reservedHeaders {
+		if err := foldHeader(args, reserved.header, r.Header.Get(reserved.header), reserved.arg); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
+	serveTool(w, r, invoke, tool, args)
+}
+
+// foldHeader sets arg to the header's value. A body that already names a
+// different value is refused, since the call would claim two keys or redeem two
+// approvals.
+func foldHeader(args map[string]json.RawMessage, header, value, arg string) error {
+	if value == "" {
+		return nil
+	}
+	if sent, named := args[arg]; named {
+		var inBody string
+		if json.Unmarshal(sent, &inBody) != nil || inBody != value {
+			return httperr.Validation(header, "conflicts_with_body",
+				"the "+header+" header and the body's "+arg+" disagree; send one of them")
+		}
+	}
+	args[arg] = json.RawMessage(strconv.Quote(value))
+	return nil
+}
 
 // serveToolBody runs a tool whose argument object is the request body itself.
 // The body passes through undecoded. So the tool refuses a member it does not

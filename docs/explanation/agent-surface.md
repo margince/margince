@@ -30,12 +30,19 @@ run on their own and 🟡 ones stage for approval. Both stay inside the current 
 who granted the passport. Every call checks the credential again, so a revoked passport stops on the next tool call,
 not at the next login. What a passport holds: [authorization.md](authorization.md#what-a-passport-is).
 
+A route marked `served_by: registry` runs its tool through `Registry.Invoke`, so the tool admits,
+stages and redeems the call as on MCP. On such a route the `Idempotency-Key` and `X-Approval-Token`
+headers become the tool's `idempotency_key` and `approval_id` (`internal/compose/toolroutes.go`).
+
 **Files on MCP and REST.** A passport lists a record's files and uploads one over MCP
 (`list_documents`, `attach_document`) or over REST (`listAttachments`, `listCompanyDocuments`,
 `listDealDocuments`, `uploadAttachment`). An upload carries the whole file in its input, and two
 places keep a call's input. An approval stores it in `approval.proposed_change`, and a run stores each
 step in `agent_run.trace`. So an upload is 🟢 with no staging path on MCP or REST, and the REST gate
 refuses to stage one (`internal/compose/agentcommandauto.go`).
+
+MCP and REST take the same upload inputs: the parent record, which may be an `activity`, and an
+optional `contract_id`. The store checks the contract as it checks one a human names.
 
 `agents.AttachLimit` (`internal/modules/agents/tools_documents.go`) sets one file size limit for an
 agent on MCP and REST. It is what one MCP request carries inline, or the operator's attachment limit

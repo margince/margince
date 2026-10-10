@@ -4996,6 +4996,36 @@ paths:
               schema: { $ref: '#/components/schemas/AtRiskRelationships' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /deals/follow-up-drafts:
+    post:
+      tags: [Deals]
+      operationId: draftDealFollowUps
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+      description: |
+        The answer the `draft_follow_ups_for` agent tool gives, run by the same tool on both
+        doors. The deals are the ones `GET /deals/slipping` lists at its default window, worst
+        first, up to `limit` (at most 25). Each draft lands on its deal's timeline as a draft
+        activity and is never sent. A deal whose risk cannot be evidenced gets no draft.
+
+        A retry with the same `idempotency_key` answers the first call's drafts and writes
+        none. An `Idempotency-Key` header is taken as that key.
+      x-mcp-tool: { verb: draft_follow_ups_for, record_type: deal, tier: auto_execute, scope: draft, served_by: registry }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealFollowUpDraftRequest' }
+      responses:
+        '200':
+          description: The drafts written, one per deal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealFollowUpDrafts' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5116,6 +5146,46 @@ paths:
                     code: approval_required
                     detail: Advancing to a closed-won stage is confirm-first; supply an approval token.
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/{id}/progress:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: progressDeal
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Move a deal to a stage and note why, in one call.
+      description: |
+        The answer the `progress_deal` agent tool gives, run by the same tool on both doors:
+        the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
+        timeline. The answer is the deal as it now stands and the note's activity id.
+
+        The tier is the advance's. A move to or from a won or lost stage is confirm-first for
+        an agent: the call stages one approval and answers 403 `approval_required` naming it.
+        Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
+        header, once a human has approved it. A human's own call is its approval.
+
+        A retry with the same `idempotency_key` answers the first call's result and moves
+        nothing. An `Idempotency-Key` header is taken as that key.
+      x-mcp-tool: { verb: progress_deal, record_type: deal, tier: dynamic, scope: write, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProgressDealRequest' }
+      responses:
+        '200':
+          description: The deal at its new stage, and the note logged on it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProgressDealResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /deals/{id}/stakeholders:
@@ -9817,6 +9887,40 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /leads/{id}/qualify:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Leads]
+      operationId: qualifyLead
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Fill a lead's empty qualification fields that its own data settles, and name the rest.
+      description: |
+        The answer the `qualify_lead` agent tool gives, run by the same tool on both doors. A
+        field is filled only when it is empty and the lead's own data settles it, such as a
+        company name from a corporate email domain; each fill names its evidence. A value is
+        never overwritten. `gaps` lists the fields still empty, for a human to fill.
+
+        A retry with the same `idempotency_key` answers the first call's result. An
+        `Idempotency-Key` header is taken as that key.
+      x-mcp-tool: { verb: qualify_lead, record_type: lead, tier: auto_execute, scope: write, served_by: registry }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QualifyLeadRequest' }
+      responses:
+        '200':
+          description: What was filled and what is still empty.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeadQualification' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}/promote-preview:
     parameters:
@@ -38939,6 +39043,109 @@ components:
           type: string
           description: 'The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`.'
         snippet: { type: string }
+    DealFollowUpDraftRequest:
+      type: object
+      description: What `draft_follow_ups_for` takes.
+      required: [segment]
+      additionalProperties: false
+      properties:
+        segment:
+          type: string
+          enum: [slipping]
+          description: The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 25
+          description: How many of the worst deals to draft for. Omit it for 25, the most one call writes.
+        idempotency_key: { type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.' }
+    DealFollowUpDrafts:
+      type: object
+      description: What `draft_follow_ups_for` answers.
+      required: [drafts, segment]
+      properties:
+        segment: { type: string }
+        drafts:
+          type: array
+          items: { $ref: '#/components/schemas/DealFollowUpDraft' }
+    DealFollowUpDraft:
+      type: object
+      description: One drafted follow-up, the activity it was saved as, and why the deal is on the list.
+      required: [deal_id, draft_activity_id, evidence, summary]
+      properties:
+        deal_id: { type: string, format: uuid }
+        draft_activity_id: { type: string, format: uuid }
+        summary: { type: string }
+        evidence: { type: array, items: { $ref: '#/components/schemas/AgentExcerpt' } }
+    ProgressDealRequest:
+      type: object
+      description: What `progress_deal` takes besides the deal, which the path names.
+      required: [to_stage_id]
+      additionalProperties: false
+      properties:
+        to_stage_id:
+          type: string
+          format: uuid
+          description: The stage to move to. Its semantic decides whether the move is confirm-first.
+        lost_reason:
+          type: string
+          description: Required when the stage closes the deal as lost.
+        won_without_contract_reason:
+          type: string
+          enum: [imported, purchase_order, verbal, renewal_by_email, other]
+          description: Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+        won_without_contract_detail:
+          type: string
+          maxLength: 500
+          description: What the reason was, required when it is `other`.
+        note:
+          type: string
+          description: Logged as a note on the deal's timeline after the move.
+        if_version:
+          type: integer
+          description: The deal's version the move was decided on. A deal that has changed since is refused.
+        approval_id:
+          type: string
+          format: uuid
+          description: The approval a human gave this exact call, on its retry.
+        idempotency_key: { type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.' }
+    ProgressDealResult:
+      type: object
+      description: What `progress_deal` answers.
+      required: [deal]
+      properties:
+        deal: { $ref: '#/components/schemas/AgentRecord' }
+        note_activity_id:
+          type: string
+          format: uuid
+          description: The note logged on the deal, absent when the call carried none.
+    QualifyLeadRequest:
+      type: object
+      description: What `qualify_lead` takes besides the lead, which the path names.
+      additionalProperties: false
+      properties:
+        idempotency_key: { type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.' }
+    LeadQualification:
+      type: object
+      description: What `qualify_lead` answers.
+      required: [filled, gaps, record_id]
+      properties:
+        record_id: { type: string, format: uuid, description: The lead. }
+        filled:
+          type: object
+          description: The fields this call filled, by name.
+          additionalProperties: { $ref: '#/components/schemas/LeadQualifiedField' }
+        gaps:
+          type: array
+          items: { type: string }
+          description: The qualification fields still empty, for a human to fill.
+    LeadQualifiedField:
+      type: object
+      description: The value a field was filled with and what it was read from.
+      required: [evidence, value]
+      properties:
+        value: { type: string }
+        evidence: { type: array, items: { $ref: '#/components/schemas/AgentExcerpt' } }
     DealCoverage:
       type: object
       required: [deal_id, stakeholders, our_side, risks, sections_omitted]

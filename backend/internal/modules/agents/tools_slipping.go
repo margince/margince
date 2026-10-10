@@ -176,7 +176,7 @@ func (t draftFollowUpsFor) Spec() mcp.ToolSpec {
 		Description:   draftFollowUpsForCopy.render(),
 		Instead:       draftFollowUpsForCopy.Instead,
 		RequiredScope: principal.ScopeDraft, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listDeals + draftEmail + logActivity",
+		OpenAPIOp: "draftDealFollowUps",
 		InputSchema: schema(`{"type":"object","required":["segment"],"properties":{
 			"segment":{"type":"string","enum":["slipping"],"description":"The deal set to draft follow-ups for; drafts land on each deal's timeline and are NEVER sent"},
 			"limit":{"type":"integer","minimum":1,"maximum":25,"description":"How many of the top-ranked deals to draft for; omit it for 25, the server-side ceiling on records one call may write"}},

@@ -12,10 +12,9 @@ package integration
 import (
 	"bytes"
 	"cmp"
-	"context"
 	"encoding/base64"
 	"encoding/json"
-	"io"
+	"mime/multipart"
 	"net/http"
 	"slices"
 	"strings"
@@ -40,25 +39,32 @@ type fileRefusal struct {
 func uploadAs(t *testing.T, e *apptest.AppEnv, bearer map[string]string, entityType, entityID string, content []byte) (int, json.RawMessage) {
 	t.Helper()
 	form, contentType := multipartAttachment(t, entityType, entityID, "scan.pdf", content)
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, e.TS.URL+"/v1/attachments", form)
+	status, raw := postUpload(t, e, "/v1/attachments", bearer, form, contentType)
+	return status, json.RawMessage(raw)
+}
+
+// uploadFiledAs is uploadAs with the document filed against a contract.
+func uploadFiledAs(t *testing.T, e *apptest.AppEnv, bearer map[string]string, entityType, entityID, contract string, content []byte) (int, json.RawMessage) {
+	t.Helper()
+	var form bytes.Buffer
+	mw := multipart.NewWriter(&form)
+	for name, value := range map[string]string{"entity_type": entityType, "entity_id": entityID, "contract_id": contract} {
+		if err := mw.WriteField(name, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	part, err := mw.CreateFormFile("file", "scan.pdf")
 	if err != nil {
-		t.Fatalf("building the upload: %v", err)
+		t.Fatal(err)
 	}
-	req.Header.Set("Content-Type", contentType)
-	for k, v := range bearer {
-		req.Header.Set(k, v)
+	if _, err := part.Write(content); err != nil {
+		t.Fatal(err)
 	}
-	//nolint:bodyclose // apptest.CloseBody closes it in the deferred call below, which the checker cannot follow across the helper.
-	resp, err := e.Client.Do(req)
-	if err != nil {
-		t.Fatalf("uploading: %v", err)
+	if err := mw.Close(); err != nil {
+		t.Fatal(err)
 	}
-	defer apptest.CloseBody(t, resp)
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("reading the upload response: %v", err)
-	}
-	return resp.StatusCode, raw
+	status, raw := postUpload(t, e, "/v1/attachments", bearer, &form, mw.FormDataContentType())
+	return status, json.RawMessage(raw)
 }
 
 func attachmentIDOf(t *testing.T, raw json.RawMessage) string {
@@ -146,27 +152,29 @@ func TestAPassportListsAndUploadsFilesOverREST(t *testing.T) {
 	if company := d.restFileIDs(t, "/v1/companies/"+company+"/documents"); len(company) != 2 || !slices.Contains(company, uploaded) {
 		t.Errorf("the company's library lists %v, want the human's file and the agent's %s", company, uploaded)
 	}
-	assertTheUploadNamesTheAgent(t, d.e, uploaded)
+	assertTheAgentWrote(t, d.e, uploaded, "create")
 }
 
-func assertTheUploadNamesTheAgent(t *testing.T, e *apptest.AppEnv, attachment string) {
+// assertTheAgentWrote holds a write's audit row and outbox event to the agent
+// that made it, not the human who lent the passport.
+func assertTheAgentWrote(t *testing.T, e *apptest.AppEnv, entity, action string) {
 	t.Helper()
 	var actorType, actorID string
 	if err := e.Owner.QueryRow(t.Context(), `SELECT actor_type, actor_id FROM audit_log
-		WHERE entity_id = $1 AND action = 'create'`, attachment).Scan(&actorType, &actorID); err != nil {
-		t.Fatalf("reading the upload's audit row: %v", err)
+		WHERE entity_id = $1 AND action = $2 ORDER BY occurred_at DESC LIMIT 1`, entity, action).Scan(&actorType, &actorID); err != nil {
+		t.Fatalf("reading the %s audit row of %s: %v", action, entity, err)
 	}
 	if actorType != "agent" {
-		t.Errorf("the upload's audit row names a %s, want the agent", actorType)
+		t.Errorf("the %s audit row of %s names a %s, want the agent", action, entity, actorType)
 	}
 	var envelopes int
 	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM event_outbox
 		WHERE envelope::text LIKE '%' || $1 || '%' AND envelope::text LIKE '%' || $2 || '%'`,
-		attachment, actorID).Scan(&envelopes); err != nil {
-		t.Fatalf("reading the upload's outbox row: %v", err)
+		entity, actorID).Scan(&envelopes); err != nil {
+		t.Fatalf("reading the outbox rows of %s: %v", entity, err)
 	}
 	if envelopes == 0 {
-		t.Errorf("no outbox event of attachment %s names the actor %s its audit row names", attachment, actorID)
+		t.Errorf("no outbox event of %s names the actor %s its audit row names", entity, actorID)
 	}
 }
 
@@ -266,5 +274,63 @@ func TestAnAgentUploadOverTheToolsLimitIsRefusedAsTheToolRefusesIt(t *testing.T)
 
 	if status, raw := uploadAs(t, d.e, nil, "company", company, content); status != http.StatusCreated {
 		t.Errorf("a human's upload of the same file → %d %s, want 201 under the route's own limit", status, bytes.TrimSpace(raw))
+	}
+}
+
+// filedRow is what an upload lands as, apart from its id and when.
+type filedRow struct {
+	EntityType, EntityID, ContractID, CompanyID, Checksum, CapturedBy string
+	ByteSize                                                          int64
+}
+
+func filedRowOf(t *testing.T, e *apptest.AppEnv, attachment string) filedRow {
+	t.Helper()
+	var row filedRow
+	if err := e.Owner.QueryRow(t.Context(), `SELECT entity_type, entity_id::text, coalesce(contract_id::text, ''),
+		coalesce(company_id::text, ''), checksum, captured_by, byte_size FROM attachment WHERE id = $1`, attachment).Scan(
+		&row.EntityType, &row.EntityID, &row.ContractID, &row.CompanyID, &row.Checksum, &row.CapturedBy, &row.ByteSize,
+	); err != nil {
+		t.Fatalf("reading attachment %s: %v", attachment, err)
+	}
+	return row
+}
+
+// One file filed on a meeting note and against the account's contract lands as
+// one row on either door. The parent, contract, account, bytes and author agree.
+func TestAFileOnAMeetingAndAContractLandsAlikeOnBothDoors(t *testing.T) {
+	d := newTwoDoors(t, "files-contract", "read", "write")
+	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Signed Works", "source": "manual"})
+	contract := createdID(t, d.e, "/v1/contracts", AnyMap{"company_id": company, "title": "Master services agreement"})
+	meeting := createdID(t, d.e, "/v1/activities", AnyMap{
+		"kind": "note", "body": "Signed in the room", "source": "manual",
+		"links": []AnyMap{{"entity_type": "company", "entity_id": company}},
+	})
+	content := []byte("%PDF-1.7 the signed agreement")
+
+	status, raw := uploadFiledAs(t, d.e, d.bearer, "activity", meeting, contract, content)
+	if status != http.StatusCreated {
+		t.Fatalf("the passport's filed upload → %d %s", status, raw)
+	}
+	var viaTool struct {
+		AttachmentID string `json:"attachment_id"`
+		ContractID   string `json:"contract_id"`
+	}
+	if err := json.Unmarshal(d.tool(t, "attach_document", map[string]any{
+		"entity_type": "activity", "entity_id": meeting, "contract_id": contract, "filename": "scan.pdf",
+		"content_type": "application/pdf", "content_base64": base64.StdEncoding.EncodeToString(content),
+	}), &viaTool); err != nil {
+		t.Fatalf("attach_document does not decode: %v", err)
+	}
+	if viaTool.ContractID != contract {
+		t.Errorf("attach_document answers contract %q, want %s", viaTool.ContractID, contract)
+	}
+	rest, tool := filedRowOf(t, d.e, attachmentIDOf(t, raw)), filedRowOf(t, d.e, viaTool.AttachmentID)
+	if rest != tool {
+		t.Errorf("the REST upload landed as\n%+v\nattach_document as\n%+v", rest, tool)
+	}
+	if want := (filedRow{EntityType: "activity", EntityID: meeting, ContractID: contract}); rest.EntityType != want.EntityType ||
+		rest.EntityID != want.EntityID || rest.ContractID != want.ContractID {
+		t.Errorf("the upload landed on %s %s against contract %q, want the meeting against %s",
+			rest.EntityType, rest.EntityID, rest.ContractID, contract)
 	}
 }

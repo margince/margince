@@ -31,6 +31,9 @@ type DocumentUpload struct {
 	Filename    string
 	ContentType string
 	Content     []byte
+	// ContractID files the document against one agreement, as the REST
+	// upload's contract_id does. Nil files it against none.
+	ContractID *ids.UUID
 }
 
 // Documents is the seam onto the attachment store, implemented in compose.
@@ -111,18 +114,20 @@ func (t attachDocument) Spec() mcp.ToolSpec {
 			"properties":{` + documentParentSchema() + `,
 			"filename":{"type":"string","description":"The file's name, with its extension"},
 			"content_type":{"type":"string","description":"The file's media type, e.g. application/pdf"},
-			"content_base64":{"type":"string","description":"The whole file, standard base64 with = padding"}},
+			"content_base64":{"type":"string","description":"The whole file, standard base64 with = padding"},
+			"contract_id":{"type":"string","format":"uuid","description":"The agreement this file is paper for, when it is one"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[AttachedDocument](),
 	}
 }
 
 type attachArgs struct {
-	EntityType    string   `json:"entity_type"`
-	EntityID      ids.UUID `json:"entity_id"`
-	Filename      string   `json:"filename"`
-	ContentType   string   `json:"content_type"`
-	ContentBase64 string   `json:"content_base64"`
+	EntityType    string    `json:"entity_type"`
+	EntityID      ids.UUID  `json:"entity_id"`
+	Filename      string    `json:"filename"`
+	ContentType   string    `json:"content_type"`
+	ContentBase64 string    `json:"content_base64"`
+	ContractID    *ids.UUID `json:"contract_id"`
 }
 
 func (t attachDocument) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -149,6 +154,7 @@ func (t attachDocument) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	parent := RecordLink{EntityType: args.EntityType, EntityID: args.EntityID}
 	stored, err := t.docs.Attach(ctx, DocumentUpload{
 		RecordLink: parent, Filename: args.Filename, ContentType: args.ContentType, Content: content,
+		ContractID: args.ContractID,
 	})
 	if err != nil {
 		return nil, refusedKind(err)

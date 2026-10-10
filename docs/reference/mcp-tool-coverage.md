@@ -323,9 +323,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
+| `attach_document` | 1.00 | 3 | `case57_put_it_on_the_file` |
 | `book_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
-| `attach_document` | 1.00 | 3 | `case57_put_it_on_the_file` |
 | `decide_approval` | 1.00 | 9 | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
@@ -368,8 +368,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
-| `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `attach_document` | 1.00 | 3 | `case57_put_it_on_the_file` |
+| `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |

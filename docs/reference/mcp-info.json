@@ -10,16 +10,16 @@
   "totals": {
     "tools": 84,
     "resources": 9,
-    "tool_catalog_bytes": 263565,
+    "tool_catalog_bytes": 263804,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 66781,
+    "approx_wire_tokens_total": 66841,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 68516,
-      "input_schema_bytes": 59391,
-      "output_schema_bytes": 114876,
-      "description_plus_input_schema_bytes": 127907
+      "description_bytes": 68542,
+      "input_schema_bytes": 59508,
+      "output_schema_bytes": 114972,
+      "description_plus_input_schema_bytes": 128050
     }
   },
   "tools": {
@@ -1030,7 +1030,7 @@
           "readOnlyHint": false,
           "title": "Attach a file to a record"
         },
-        "description": "Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab — use it whenever the user wants a file kept on a record, and never save a file's text as a note instead. Up to 6.2 MB per file, or less where the workspace sets a smaller upload limit. Common document, image and email formats are accepted; any other kind is refused, and the refusal names the accepted ones. Tell the user about a refused file; never rename, convert or zip it to get it accepted. The file is stored, not read, and is not filed against a contract. Use log_activity for what was said about the file, linked to the same record. Keep attachment_id to name the file to the user. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab — use it whenever the user wants a file kept on a record, and never save a file's text as a note instead. Up to 6.2 MB per file, or less where the workspace sets a smaller upload limit. Common document, image and email formats are accepted; any other kind is refused, and the refusal names the accepted ones. Tell the user about a refused file; never rename, convert or zip it to get it accepted. The file is stored, not read. It is filed against a contract only when you name contract_id. Use log_activity for what was said about the file, linked to the same record. Keep attachment_id to name the file to the user. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -1040,6 +1040,11 @@
             },
             "content_type": {
               "description": "The file's media type, e.g. application/pdf",
+              "type": "string"
+            },
+            "contract_id": {
+              "description": "The agreement this file is paper for, when it is one",
+              "format": "uuid",
               "type": "string"
             },
             "entity_id": {
@@ -1095,6 +1100,10 @@
                   "type": "string"
                 },
                 "content_type": {
+                  "type": "string"
+                },
+                "contract_id": {
+                  "format": "uuid",
                   "type": "string"
                 },
                 "created_at": {
@@ -7599,6 +7608,10 @@
                         "type": "string"
                       },
                       "content_type": {
+                        "type": "string"
+                      },
+                      "contract_id": {
+                        "format": "uuid",
                         "type": "string"
                       },
                       "created_at": {

@@ -35,7 +35,7 @@ func TestVocabularyRoutesAnswerAsTheirTools(t *testing.T) {
 }
 
 // GET /whoami names the admin the passport acts for, as whoami does, and a
-// session reads the same person for itself.
+// session reads the same admin for itself.
 func TestWhoamiRouteAnswersAsTheTool(t *testing.T) {
 	d := newTwoDoors(t, "whoami-route", "read")
 	rest := d.rest(t, "GET", "/v1/whoami", nil)

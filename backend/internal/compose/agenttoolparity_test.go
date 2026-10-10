@@ -58,22 +58,12 @@ func TestEveryDeclaredToolVerbIsRegistered(t *testing.T) {
 	}
 }
 
-// The gate above proves a tool EXISTS for every declared verb. This one proves
-// the surface has no tool the contract never declared: an agent could call it,
-// and no operation says an agent may.
+// The reverse of the gate above: no tool the contract never declared, since an
+// agent could call it and no operation says it may.
 //
-// Both directions, because either alone is satisfied by a surface that is wrong
-// in the other. Registry-only tools are legitimate for the §2.2 intents, which
-// compose over contract operations rather than backing one, so those are named
-// by the verbs the policy table cannot see.
-//
-// A composed EXTENSION tool is the third legitimate case, and it is declared —
-// just not here. Its authority comes from its unit's manifest (ADR-0120), which
-// is why an installation can add a verb without editing the contract, and the
-// composed set is what a reviewer reads instead of the policy table. Skipping it
-// by name rather than by "not in the table" keeps the sweep absolute for
-// everything else.
-func TestEveryRegisteredToolIsDeclaredOrAnIntent(t *testing.T) {
+// An extension tool is declared in its unit's manifest instead (ADR-0120). It
+// is skipped by name, so the sweep stays absolute for everything else.
+func TestEveryRegisteredToolIsDeclared(t *testing.T) {
 	declared := map[string]bool{}
 	for _, pol := range agentPolicies {
 		if pol.Access == accessTool {
@@ -87,12 +77,11 @@ func TestEveryRegisteredToolIsDeclaredOrAnIntent(t *testing.T) {
 	}
 	composed := composedToolNames()
 	for _, spec := range specs {
-		if declared[spec.Name] || composedIntents[spec.Name] || composed[spec.Name] {
+		if declared[spec.Name] || composed[spec.Name] {
 			continue
 		}
 		t.Errorf("%s is registered but no operation declares it, so an agent may call a verb the "+
-			"contract never granted. Declare the backing operation's x-mcp-tool, or add it to "+
-			"composedIntents with the operations it composes over.", spec.Name)
+			"contract never granted. Declare it in the x-mcp-tool of the route that runs it.", spec.Name)
 	}
 }
 
@@ -130,49 +119,6 @@ func TestTheSweepSkipsExactlyWhatTheComposedSetRegisters(t *testing.T) {
 	}
 	if !registered {
 		t.Fatal("the composed tool never reached the registry — the skip would be covering nothing")
-	}
-}
-
-// composedIntents are the §2.2 tools that answer a question by composing several
-// contract operations rather than backing one, so no single `x-mcp-tool`
-// declares them. Some of them write — `qualify_lead` fills gap-only fields,
-// `progress_deal` moves a deal and notes it — which §2.2 sanctions because the
-// writes go through the same provider seam the declared CRUD verbs use.
-// TestComposedIntentsNeverEgress holds the line that actually matters.
-var composedIntents = map[string]bool{
-	"draft_follow_ups_for": true,
-	"qualify_lead":         true,
-	"progress_deal":        true,
-	"run_report":           true,
-}
-
-// An intent may write inside the workspace; it may NOT reach outside it.
-//
-// An internal write is bounded by the granting human's own RBAC and row scope,
-// which the provider seam applies whatever composed the call. Egress is not: a
-// `send` or an `enrich` leaves the workspace, and the operation that would have
-// declared it is the only place a reviewer would ever see that. An intent that
-// egresses is therefore outbound authority nothing declared — invisible to the
-// declaration gate above precisely because no operation declares an intent.
-func TestComposedIntentsNeverEgress(t *testing.T) {
-	registry := NewRegistry(nil, SendPath{})
-
-	checked := 0
-	for name := range composedIntents {
-		spec, registered := registry.Spec(name)
-		if !registered {
-			t.Errorf("%s is listed as a composed intent but is not registered; delete the entry", name)
-			continue
-		}
-		checked++
-		if spec.RequiredScope.Egresses() {
-			t.Errorf("intent %s spends the outbound %q cap. It backs no contract operation, so "+
-				"nothing declares that this surface may leave the workspace — give it a backing "+
-				"operation with x-mcp-tool, or keep it inside.", name, spec.RequiredScope)
-		}
-	}
-	if checked == 0 {
-		t.Fatal("no composed intents resolved — this sweep asserted nothing")
 	}
 }
 
@@ -401,11 +347,9 @@ func joinLines(lines []string) string {
 // only leads.
 //
 // WHY THIS ONE REACHES WHAT THE OTHER CANNOT. The census above groups by the
-// record type the CONTRACT declares, so a composed intent — which no
-// `x-mcp-tool` declares and no policy row names — is outside it. This test asks
-// a question the schema answers on its own: if you take a generic id, you must
-// take the type that gives it meaning. No declaration needed, so every
-// registered tool is in the corpus, composed intents included.
+// record type the CONTRACT declares, so a verb whose route names none is outside
+// it. This test asks the schema alone: a generic id needs the type that gives
+// it meaning. So every registered tool is in the corpus.
 func TestAGenericIDNamesAGenericVerb(t *testing.T) {
 	t.Parallel()
 
@@ -446,14 +390,10 @@ func TestAGenericIDNamesAGenericVerb(t *testing.T) {
 // one way a gate fails without a failing assertion (AGENTS.md, "a census that
 // can fail short has already failed"):
 //
-//   - A COMPOSED INTENT. `qualify_lead` composes getLead + updateLead, so no
-//     `x-mcp-tool` declares it and it carries no policy row — it is outside THIS
-//     census. TestAGenericIDNamesAGenericVerb below covers the half that matters
-//     by asking the schema instead of the contract, so the shape qualify_lead
-//     actually had is now held. What remains out of reach is a composed intent
-//     that names a plausible `<type>_id` for the WRONG type; catching that needs
-//     every record-scoped tool to declare its record type in Go, which is a real
-//     change and the honest next step.
+//   - A VERB WHOSE ROUTE NAMES NO RECORD TYPE. It is outside THIS census.
+//     TestAGenericIDNamesAGenericVerb covers the half that matters by asking the
+//     schema instead of the contract. A plausible `<type>_id` for the WRONG type
+//     stays out of reach.
 //   - A RECORD TYPE WITH ONE VERB has no sibling to disagree with, so a lone
 //     wrong spelling passes. TestOneVerbPerRecordTypeIsStillHeldToTheConvention
 //     below plants that case rather than leaving it to chance.

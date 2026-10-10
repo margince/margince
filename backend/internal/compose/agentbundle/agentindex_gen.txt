@@ -81,10 +81,12 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /deals` | createDeal | Create a deal. | Change records | at once |
 | `GET /deals/slipping` | listSlippingDeals | The open deals going quiet or past their expected close date, worst first. | any | at once |
 | `GET /deals/at-risk` | listAtRiskRelationships | The open deals whose relationships are going cold, and why. | any | at once |
+| `POST /deals/follow-up-drafts` | draftDealFollowUps | Draft a follow-up on each slipping deal, worst first. Nothing is sent. | Draft messages | at once |
 | `GET /deals/{id}` | getDeal | Get a deal by id (the 360 record). | any | at once |
 | `PATCH /deals/{id}` | updateDeal | Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. | Change records | at once |
 | `DELETE /deals/{id}` | archiveDeal | Archive (soft-delete) a deal. | Change records | at once |
 | `POST /deals/{id}/advance` | advanceDeal | Advance a deal to a new stage (audit-logged with prior + next stage). | Change records | may wait for approval |
+| `POST /deals/{id}/progress` | progressDeal | Move a deal to a stage and note why, in one call. | Change records | may wait for approval |
 | `GET /deals/{id}/stakeholders` | listDealStakeholders | List a deal's stakeholders (deal↔contact relationships). | any | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | any | at once |
 | `GET /acquisition-sources` | listAcquisitionSources | List deal acquisition sources, active and retired, in display order. | any | at once |
@@ -175,6 +177,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /leads/{id}` | updateLead | Update a lead (partial). | Change records | at once |
 | `DELETE /leads/{id}` | disqualifyLead | Disqualify (soft-archive) a lead, with a reason. | Change records | at once |
 | `POST /leads/{id}/promote` | promoteLead | Promote a lead to a contact on genuine engagement (non-lossy merge). | Change records | at once |
+| `POST /leads/{id}/qualify` | qualifyLead | Fill a lead's empty qualification fields that its own data settles, and name the rest. | Change records | at once |
 | `POST /leads/{id}/demote` | demoteLead | The documented reverse of POST /leads/{id}/promote, deterministic and conservative: it **blocks rather than orphans**. | Change records | at once |
 | `GET /lead-sources` | listLeadSources | List lead sources, active and inactive, in display order. | any | at once |
 | `GET /lead-disqualify-reasons` | listLeadDisqualifyReasons | List disqualification reasons, active and inactive, in display order. | any | at once |

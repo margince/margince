@@ -1595,6 +1595,10 @@ func (stubs) ListAtRiskRelationships(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "ListAtRiskRelationships")
 }
 
+func (stubs) DraftDealFollowUps(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DraftDealFollowUps")
+}
+
 func (stubs) ListSlippingDeals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSlippingDealsParams) {
 	httperr.NotImplemented(w, r, "ListSlippingDeals")
 }
@@ -1653,6 +1657,10 @@ func (stubs) ListDealOutcomeReviews(w nethttp.ResponseWriter, r *nethttp.Request
 
 func (stubs) CreateDealOutcomeReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "CreateDealOutcomeReview")
+}
+
+func (stubs) ProgressDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ProgressDealParams) {
+	httperr.NotImplemented(w, r, "ProgressDeal")
 }
 
 func (stubs) ProposeDealRoles(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -2041,6 +2049,10 @@ func (stubs) PromoteLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 
 func (stubs) PreviewLeadPromotion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "PreviewLeadPromotion")
+}
+
+func (stubs) QualifyLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "QualifyLead")
 }
 
 func (stubs) ReopenLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ReopenLeadParams) {

@@ -3343,6 +3343,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/follow-up-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+         * @description The answer the `draft_follow_ups_for` agent tool gives, run by the same tool on both
+         *     doors. The deals are the ones `GET /deals/slipping` lists at its default window, worst
+         *     first, up to `limit` (at most 25). Each draft lands on its deal's timeline as a draft
+         *     activity and is never sent. A deal whose risk cannot be evidenced gets no draft.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's drafts and writes
+         *     none. An `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["draftDealFollowUps"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}": {
         parameters: {
             query?: never;
@@ -3393,6 +3419,39 @@ export interface paths {
          *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          */
         post: operations["advanceDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a deal to a stage and note why, in one call.
+         * @description The answer the `progress_deal` agent tool gives, run by the same tool on both doors:
+         *     the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
+         *     timeline. The answer is the deal as it now stands and the note's activity id.
+         *
+         *     The tier is the advance's. A move to or from a won or lost stage is confirm-first for
+         *     an agent: the call stages one approval and answers 403 `approval_required` naming it.
+         *     Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
+         *     header, once a human has approved it. A human's own call is its approval.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result and moves
+         *     nothing. An `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["progressDeal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6500,6 +6559,35 @@ export interface paths {
          *     floor on `promote_lead`.
          */
         post: operations["promoteLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/qualify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fill a lead's empty qualification fields that its own data settles, and name the rest.
+         * @description The answer the `qualify_lead` agent tool gives, run by the same tool on both doors. A
+         *     field is filled only when it is empty and the lead's own data settles it, such as a
+         *     company name from a corporate email domain; each fill names its evidence. A value is
+         *     never overwritten. `gaps` lists the fields still empty, for a human to fill.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result. An
+         *     `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["qualifyLead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -27626,6 +27714,93 @@ export interface components {
             /** @description The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`. */
             source: string;
             snippet: string;
+        };
+        /** @description What `draft_follow_ups_for` takes. */
+        DealFollowUpDraftRequest: {
+            /**
+             * @description The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+             * @enum {string}
+             */
+            segment: "slipping";
+            /** @description How many of the worst deals to draft for. Omit it for 25, the most one call writes. */
+            limit?: number;
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `draft_follow_ups_for` answers. */
+        DealFollowUpDrafts: {
+            segment: string;
+            drafts: components["schemas"]["DealFollowUpDraft"][];
+        };
+        /** @description One drafted follow-up, the activity it was saved as, and why the deal is on the list. */
+        DealFollowUpDraft: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            draft_activity_id: string;
+            summary: string;
+            evidence: components["schemas"]["AgentExcerpt"][];
+        };
+        /** @description What `progress_deal` takes besides the deal, which the path names. */
+        ProgressDealRequest: {
+            /**
+             * Format: uuid
+             * @description The stage to move to. Its semantic decides whether the move is confirm-first.
+             */
+            to_stage_id: string;
+            /** @description Required when the stage closes the deal as lost. */
+            lost_reason?: string;
+            /**
+             * @description Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+             * @enum {string}
+             */
+            won_without_contract_reason?: "imported" | "purchase_order" | "verbal" | "renewal_by_email" | "other";
+            /** @description What the reason was, required when it is `other`. */
+            won_without_contract_detail?: string;
+            /** @description Logged as a note on the deal's timeline after the move. */
+            note?: string;
+            /** @description The deal's version the move was decided on. A deal that has changed since is refused. */
+            if_version?: number;
+            /**
+             * Format: uuid
+             * @description The approval a human gave this exact call, on its retry.
+             */
+            approval_id?: string;
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `progress_deal` answers. */
+        ProgressDealResult: {
+            deal: components["schemas"]["AgentRecord"];
+            /**
+             * Format: uuid
+             * @description The note logged on the deal, absent when the call carried none.
+             */
+            note_activity_id?: string;
+        };
+        /** @description What `qualify_lead` takes besides the lead, which the path names. */
+        QualifyLeadRequest: {
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `qualify_lead` answers. */
+        LeadQualification: {
+            /**
+             * Format: uuid
+             * @description The lead.
+             */
+            record_id: string;
+            /** @description The fields this call filled, by name. */
+            filled: {
+                [key: string]: components["schemas"]["LeadQualifiedField"];
+            };
+            /** @description The qualification fields still empty, for a human to fill. */
+            gaps: string[];
+        };
+        /** @description The value a field was filled with and what it was read from. */
+        LeadQualifiedField: {
+            value: string;
+            evidence: components["schemas"]["AgentExcerpt"][];
         };
         DealCoverage: {
             /** Format: uuid */
@@ -49228,6 +49403,34 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    draftDealFollowUps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealFollowUpDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description The drafts written, one per deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealFollowUpDrafts"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getDeal: {
         parameters: {
             query?: never;
@@ -49414,6 +49617,49 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    progressDeal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressDealRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal at its new stage, and the note logged on it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressDealResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -55144,6 +55390,38 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    qualifyLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QualifyLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description What was filled and what is still empty. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadQualification"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     previewLeadPromotion: {

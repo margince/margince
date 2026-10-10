@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 84 |
 | Resources | 9 |
-| Tool catalog | 257.4 KB |
+| Tool catalog | 257.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66781 |
+| Approx. wire tokens | 66841 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 112.2 KB | 43% | **No**: a result's shape, never listed to a model |
+| Output schemas | 112.3 KB | 43% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 66.9 KB | 25% | Yes, every step |
-| Input schemas | 58.0 KB | 22% | Yes, every step |
+| Input schemas | 58.1 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
-| **Description + input schema** | **124.9 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **125.0 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -62,7 +62,7 @@ descriptions and input schemas are what each step pays for.
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.7 KB |
-| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 2.9 KB |
+| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.0 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
@@ -98,7 +98,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 3.0 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.5 KB |
-| [`list_documents`](#list_documents) | List a record's documents | yes |  | 2.2 KB |
+| [`list_documents`](#list_documents) | List a record's documents | yes |  | 2.3 KB |
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.4 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.7 KB |
@@ -1384,9 +1384,10 @@ record's Documents tab — use it whenever the user wants a file kept on a recor
 file's text as a note instead. Up to 6.2 MB per file, or less where the workspace sets a smaller
 upload limit. Common document, image and email formats are accepted; any other kind is refused, and
 the refusal names the accepted ones. Tell the user about a refused file; never rename, convert or
-zip it to get it accepted. The file is stored, not read, and is not filed against a contract. Use
-log_activity for what was said about the file, linked to the same record. Keep attachment_id to name
-the file to the user. (Governance: runs immediately; requires passport scope "write".)
+zip it to get it accepted. The file is stored, not read. It is filed against a contract only when
+you name contract_id. Use log_activity for what was said about the file, linked to the same record.
+Keep attachment_id to name the file to the user. (Governance: runs immediately; requires passport
+scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1401,6 +1402,11 @@ the file to the user. (Governance: runs immediately; requires passport scope "wr
     },
     "content_type": {
       "description": "The file's media type, e.g. application/pdf",
+      "type": "string"
+    },
+    "contract_id": {
+      "description": "The agreement this file is paper for, when it is one",
+      "format": "uuid",
       "type": "string"
     },
     "entity_id": {
@@ -1462,6 +1468,10 @@ the file to the user. (Governance: runs immediately; requires passport scope "wr
           "type": "string"
         },
         "content_type": {
+          "type": "string"
+        },
+        "contract_id": {
+          "format": "uuid",
           "type": "string"
         },
         "created_at": {
@@ -8460,6 +8470,10 @@ again, so the record does not carry the same file twice. Keep next_cursor to rea
                 "type": "string"
               },
               "content_type": {
+                "type": "string"
+              },
+              "contract_id": {
+                "format": "uuid",
                 "type": "string"
               },
               "created_at": {

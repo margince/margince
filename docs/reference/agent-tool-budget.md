@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 84 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29706 |  |  | 90% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29742 |  |  | 90% |  |  |  |
 
 ### `morning_brief`
 
@@ -182,6 +182,7 @@ listing once. Read a row as what that tool costs a menu.
 | `prep_for_meeting` | 394 |  |
 | `enrich` | 390 |  |
 | `draft_email` | 385 |  |
+| `attach_document` | 369 |  |
 | `describe_report_vocabulary` | 349 |  |
 | `catch_me_up_on` | 348 | 2 scenarios |
 | `describe_record_fields` | 345 |  |
@@ -189,7 +190,6 @@ listing once. Read a row as what that tool costs a menu.
 | `search_context` | 344 |  |
 | `check_availability` | 342 |  |
 | `search_report_evidence` | 335 |  |
-| `attach_document` | 333 |  |
 | `decide_approval` | 332 |  |
 | `forecast_input_checks` | 324 |  |
 | `demote_lead` | 317 |  |

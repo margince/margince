@@ -37,11 +37,10 @@ func TestAgentBearerIsRefusedOnHumanOnlyReads(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	// One route per class the finding named: the attachment surface (a file's
-	// bytes and their extracted text), the AI call log, the audit log, the
-	// voice profiles, and the webhook subscriptions. A 404 would be a pass for
-	// the wrong reason — the point is that the refusal happens before the
-	// handler ever looks for the row — so each asserts 403 exactly.
+	// One route per human-only class: a file's bytes and extracted text, the AI
+	// call log, the audit log, voice profiles and webhook subscriptions. Each
+	// asserts 403, since the refusal comes before the handler looks for the row.
+	// A 404 would pass for the wrong reason.
 	for _, route := range []string{
 		"/v1/attachments/00000000-0000-7000-8000-0000000000aa",
 		"/v1/attachments/00000000-0000-7000-8000-0000000000aa/extraction",

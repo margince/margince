@@ -14,7 +14,7 @@ var attachDocumentCopy = toolCopy{
 		"workspace sets a smaller upload limit. Common document, image and email formats are " +
 		"accepted; any other kind is refused, and the refusal names the accepted ones. Tell the user " +
 		"about a refused file; never rename, convert or zip it to get it accepted. The file is " +
-		"stored, not read, and is not filed against a contract.",
+		"stored, not read. It is filed against a contract only when you name contract_id.",
 	Instead: "Use log_activity for what was said about the file, linked to the same record.",
 	Retain:  "Keep attachment_id to name the file to the user.",
 }

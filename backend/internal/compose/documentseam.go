@@ -62,7 +62,8 @@ func (d documentSeam) Attach(ctx context.Context, upload agents.DocumentUpload) 
 	stored, err := d.store().UploadAttachment(ctx, activities.AttachmentInput{
 		EntityType: upload.EntityType, EntityID: upload.EntityID,
 		Filename: upload.Filename, ContentType: upload.ContentType,
-		Content: bytes.NewReader(upload.Content),
+		Content:    bytes.NewReader(upload.Content),
+		ContractID: upload.ContractID,
 	})
 	if err != nil {
 		return agents.AttachedDocument{}, err
@@ -136,6 +137,7 @@ func attachedDocument(att crmcontracts.Attachment) agents.AttachedDocument {
 		Checksum:     orZero(att.Checksum),
 		CapturedBy:   orZero(att.CapturedBy),
 		CreatedAt:    att.CreatedAt,
+		ContractID:   (*ids.UUID)(att.ContractId),
 	}
 }
 

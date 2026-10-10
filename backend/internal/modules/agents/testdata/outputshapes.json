@@ -693,6 +693,10 @@
           "content_type": {
             "type": "string"
           },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "created_at": {
             "type": "string"
           },
@@ -5319,6 +5323,10 @@
                 },
                 "content_type": {
                   "type": "string"
+                },
+                "contract_id": {
+                  "type": "string",
+                  "format": "uuid"
                 },
                 "created_at": {
                   "type": "string"

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -202,4 +203,53 @@ func equalCounts(a, b map[agentvolume.Counter]int) bool {
 		}
 	}
 	return true
+}
+
+// commandCall runs serveToolCommand on one request and answers the arguments
+// the tool was invoked with, nil when it was not invoked.
+func commandCall(t *testing.T, body string, headers map[string]string) (map[string]any, *httptest.ResponseRecorder) {
+	t.Helper()
+	var invoked map[string]any
+	invoke := func(_ context.Context, _ string, in json.RawMessage) (json.RawMessage, error) {
+		if err := json.Unmarshal(in, &invoked); err != nil {
+			t.Fatalf("the tool was handed arguments that are not an object: %s", in)
+		}
+		return json.RawMessage(`{"data":{}}`), nil
+	}
+	req := httptest.NewRequest(http.MethodPost, "/v1/deals/x/progress", bytes.NewBufferString(body))
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	recorder := httptest.NewRecorder()
+	serveToolCommand(recorder, req, invoke, "progress_deal", pathArgument{"deal_id", "from-the-path"})
+	return invoked, recorder
+}
+
+// The REST spellings of the retry key and the approval reach the tool as its
+// own arguments. The deal is the one the path names.
+func TestACommandRouteHandsTheToolItsHeadersAndItsPath(t *testing.T) {
+	invoked, _ := commandCall(t, `{"deal_id":"from-the-body","to_stage_id":"s"}`, map[string]string{
+		idempotencyKeyHeader: "monday", approvalTokenHeader: "approval-1",
+	})
+	want := map[string]any{
+		"deal_id": "from-the-path", "to_stage_id": "s", "idempotency_key": "monday", "approval_id": "approval-1",
+	}
+	if !reflect.DeepEqual(invoked, want) {
+		t.Errorf("the tool was invoked with %v, want %v", invoked, want)
+	}
+	if empty, _ := commandCall(t, "", nil); !reflect.DeepEqual(empty, map[string]any{"deal_id": "from-the-path"}) {
+		t.Errorf("an empty body invoked the tool with %v, want only the path's deal", empty)
+	}
+}
+
+// A header and a body member that name two different keys are refused before
+// the tool runs: the call cannot claim both.
+func TestACommandRouteRefusesAHeaderTheBodyContradicts(t *testing.T) {
+	invoked, recorder := commandCall(t, `{"idempotency_key":"tuesday"}`, map[string]string{idempotencyKeyHeader: "monday"})
+	if recorder.Code != http.StatusUnprocessableEntity || invoked != nil {
+		t.Errorf("a contradicting key answered %d and invoked %v, want 422 and no run", recorder.Code, invoked)
+	}
+	if invoked, _ := commandCall(t, `{"idempotency_key":"monday"}`, map[string]string{idempotencyKeyHeader: "monday"}); invoked == nil {
+		t.Error("a header repeating the body's key was refused, want it run")
+	}
 }
