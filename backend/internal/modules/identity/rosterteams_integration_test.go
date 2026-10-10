@@ -265,3 +265,21 @@ func deleteOnlyMemberAdmin(t *testing.T, e *revocationEnv) Identity {
 	}
 	return deleter
 }
+
+func TestTeamSearchTreatsPercentAndUnderscoreAsTypedText(t *testing.T) {
+	e := setupRevocationEnv(t, "roster-team-search")
+	for _, name := range []string{"100% Club", "Sales_EU", "Plain Team"} {
+		if _, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, name); err != nil {
+			t.Fatalf("creating %q: %v", name, err)
+		}
+	}
+	for q, want := range map[string]string{"%": "100% Club", "_": "Sales_EU"} {
+		rows, _, err := e.svc.ListTeams(e.wsCtx(e.admin), ListTeamsInput{Q: &q})
+		if err != nil {
+			t.Fatalf("searching teams for %q: %v", q, err)
+		}
+		if len(rows) != 1 || rows[0].Name != want {
+			t.Errorf("team search %q returned %d rows; want only %q", q, len(rows), want)
+		}
+	}
+}

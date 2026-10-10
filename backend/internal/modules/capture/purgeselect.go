@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -245,7 +246,7 @@ func addressMatch(kind, col, arg string) string {
 // with a user and the workspace clause has none, so the pairing is theirs.
 func matchValue(kind, value string) string {
 	if kind == ExclusionKindDomain {
-		return escapeLikeValue(value)
+		return storekit.EscapeLike(value)
 	}
 	return value
 }
@@ -284,14 +285,6 @@ func workspaceMatchClause(kind, value string) (string, []any) {
 		           -- today, and this does not depend on all four continuing to.
 		           AND ` + addressMatch(kind, "lower(ap.address)", "$1") + `))`,
 		[]any{matchValue(kind, value)}
-}
-
-// escapeLikeValue neutralises the LIKE metacharacters, so a rule value is
-// matched as the text somebody typed.
-func escapeLikeValue(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	value = strings.ReplaceAll(value, "%", `\%`)
-	return strings.ReplaceAll(value, "_", `\_`)
 }
 
 // ReleaseImportTx drops this seat's claim on a message a colleague also
