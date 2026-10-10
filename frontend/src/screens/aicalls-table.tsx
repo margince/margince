@@ -15,6 +15,7 @@ import { DECIDE_RUNG, tierLabel } from "./ai-decision-labels";
 import { providerName } from "./ai-provider-names";
 import { CallDetailPanel } from "./aicalls-detail";
 import { sentinelLabel } from "./aicalls-sentinel";
+import "./aicalls.css";
 
 type CallSummary = components["schemas"]["AiCallSummary"];
 
