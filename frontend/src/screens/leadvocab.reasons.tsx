@@ -27,9 +27,9 @@ import {
   useLeadDisqualifyReasons,
 } from "./leadsources";
 import {
-  LeadCount,
   nameRefusal,
   rowsOf,
+  VocabCount,
   VocabNotices,
   VocabRowMenu,
 } from "./leadvocab.rows";
@@ -127,7 +127,9 @@ function reasonColumns({
       key: "leads",
       header: t("leadSources.colLeads"),
       align: "end",
-      render: (reason) => <LeadCount count={reason.lead_count ?? 0} />,
+      render: (reason) => (
+        <VocabCount count={reason.lead_count ?? 0} unit="leadSources.leads" />
+      ),
     },
     {
       key: "active",

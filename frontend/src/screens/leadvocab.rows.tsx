@@ -5,7 +5,7 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
+import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, problemMessageOf } from "./common";
 import "./leadvocab.css";
@@ -33,7 +33,10 @@ export function nameRefusal(
 }
 
 // Folded, the column heading is out of sight, so the count reads as a sentence.
-export function LeadCount({ count }: Readonly<{ count: number }>) {
+export function VocabCount({
+  count,
+  unit,
+}: Readonly<{ count: number; unit: PluralBase }>) {
   const { locale } = useLocale();
   const plural = usePlural();
   const figure = formatNumber(count, locale);
@@ -41,7 +44,7 @@ export function LeadCount({ count }: Readonly<{ count: number }>) {
     <>
       <span className="lead-vocab-figure">{figure}</span>
       <span className="lead-vocab-sentence">
-        {plural("leadSources.leads", count, { count: figure })}
+        {plural(unit, count, { count: figure })}
       </span>
     </>
   );
@@ -49,22 +52,24 @@ export function LeadCount({ count }: Readonly<{ count: number }>) {
 
 // Rename and Remove for one entry. A refused remove stays in the menu with its
 // reason in words, because the server would answer the delete with a 409.
+// A catalog with no delete passes no `onRemove`.
 export function VocabRowMenu({
   label,
   canEdit,
-  canRemove,
+  canRemove: mayRemove = false,
   refusal,
   onRename,
   onRemove,
 }: Readonly<{
   label: string;
   canEdit: boolean;
-  canRemove: boolean;
+  canRemove?: boolean;
   refusal?: string;
   onRename: () => void;
-  onRemove: () => void;
+  onRemove?: () => void;
 }>) {
   const t = useT();
+  const canRemove = mayRemove && onRemove !== undefined;
   if (!canEdit && !canRemove) return null;
   return (
     <span className="cell-actions">

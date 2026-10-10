@@ -49,8 +49,8 @@ import {
   useLeadSources,
 } from "./leadsources";
 import {
-  LeadCount,
   rowsOf,
+  VocabCount,
   VocabNotices,
   VocabRowMenu,
 } from "./leadvocab.rows";
@@ -255,7 +255,9 @@ function sourceColumns({
       key: "leads",
       header: t("leadSources.colLeads"),
       align: "end",
-      render: (source) => <LeadCount count={source.lead_count ?? 0} />,
+      render: (source) => (
+        <VocabCount count={source.lead_count ?? 0} unit="leadSources.leads" />
+      ),
     },
     {
       key: "intent",
@@ -337,7 +339,9 @@ function DiscoveredSources({
       key: "leads",
       header: t("leadSources.colLeads"),
       align: "end",
-      render: (found) => <LeadCount count={found.lead_count} />,
+      render: (found) => (
+        <VocabCount count={found.lead_count} unit="leadSources.leads" />
+      ),
     },
   ];
   if (canCreate) {

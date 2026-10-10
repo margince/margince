@@ -1,33 +1,105 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import { useState } from "react";
 import { useCanWrite } from "../app/capability";
-import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { Heading } from "../design-system/heading";
+import { Button, EmptyState } from "../design-system/atoms";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { KeyedName } from "../design-system/keyedname";
+import { NameDialog } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
-import { useT } from "../i18n";
+import { type Translator, useT } from "../i18n";
 import {
   type AcquisitionSource,
   useAcquisitionSources,
   useCreateAcquisitionSource,
   useUpdateAcquisitionSource,
 } from "./acquisitionsources.queries";
-import { problemMessageOf, QueryGate } from "./common";
+import { QueryStates } from "./common";
+import {
+  nameRefusal,
+  rowsOf,
+  VocabCount,
+  VocabNotices,
+  VocabRowMenu,
+} from "./leadvocab.rows";
 
-/**
- * Settings → the business channels a deal may be attributed to.
- *
- * Sibling of the lead-source card and deliberately NOT the same list: that one
- * also administers how records reach Margince and what each origin is worth to
- * a lead's score. This one names how an opportunity reached the business, and
- * the two vocabularies would fight if they shared a table.
- *
- * There is no delete. A key a deal has ever carried must stay resolvable or
- * that deal stops rendering its own history, so the only withdrawal is the
- * active switch — which keeps the entry readable everywhere it is already
- * stored while removing it from every picker.
- */
+function sourceColumns({
+  t,
+  canEdit,
+  onActive,
+  onRename,
+}: Readonly<{
+  t: Translator;
+  canEdit: boolean;
+  onActive: (source: AcquisitionSource, active: boolean) => void;
+  onRename: (source: AcquisitionSource) => void;
+}>): DataTableColumn<AcquisitionSource>[] {
+  const name: DataTableColumn<AcquisitionSource> = {
+    key: "name",
+    header: t("acqSources.colSource"),
+    grow: true,
+    render: (source) => <KeyedName name={source.label} code={source.key} />,
+  };
+  const deals: DataTableColumn<AcquisitionSource> = {
+    key: "deals",
+    header: t("acqSources.colDeals"),
+    align: "end",
+    render: (source) =>
+      typeof source.deal_count === "number" ? (
+        <VocabCount count={source.deal_count} unit="acqSources.deals" />
+      ) : (
+        <DealsWithheld />
+      ),
+  };
+  const active: DataTableColumn<AcquisitionSource> = {
+    key: "active",
+    header: t("leadSources.colActive"),
+    render: (source) => (
+      <Switch
+        label={t("acqSources.activeFor", { label: source.label })}
+        labelHidden
+        checked={source.active}
+        disabled={!canEdit}
+        onChange={(next) => onActive(source, next)}
+      />
+    ),
+  };
+  const verbs: DataTableColumn<AcquisitionSource> = {
+    key: "verbs",
+    header: t("leadSources.colActions"),
+    headerHidden: true,
+    fold: "end",
+    render: (source) => (
+      <VocabRowMenu
+        label={source.label}
+        canEdit={canEdit}
+        onRename={() => onRename(source)}
+      />
+    ),
+  };
+  return [name, deals, active, verbs];
+}
+
+// A seat that may not read deals is sent no count, and a zero would claim none.
+function DealsWithheld() {
+  const t = useT();
+  return (
+    <span title={t("acqSources.dealsWithheld")}>
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">{t("acqSources.dealsWithheld")}</span>
+    </span>
+  );
+}
+
+type Naming =
+  | { mode: "create" }
+  | { mode: "rename"; source: AcquisitionSource };
+
+// Business channels a deal is attributed to, apart from lead sources, which
+// record how a record reached Margince. No delete: a key a deal carried must
+// stay resolvable, so the switch retires it from pickers instead.
 export function AcquisitionSourcesCard() {
   const t = useT();
   const canCreate = useCanWrite("custom_field", "create");
@@ -35,14 +107,33 @@ export function AcquisitionSourcesCard() {
   const query = useAcquisitionSources();
   const create = useCreateAcquisitionSource();
   const update = useUpdateAcquisitionSource();
-  const [adding, setAdding] = useState(false);
-  const failure = [create, update].find((m) => m.isError);
+  const rename = useUpdateAcquisitionSource();
+  // Kept after close, so the dialog leaving the page still reads as what it was.
+  const [naming, setNaming] = useState<Naming>({ mode: "create" });
+  const [namingOpen, setNamingOpen] = useState(false);
+  const sources = rowsOf(query.data);
+  const write = naming.mode === "rename" ? rename : create;
+  const refused = nameRefusal(write.error, t, "acqSources.duplicate");
+  const open = (next: Naming) => {
+    create.reset();
+    rename.reset();
+    setNaming(next);
+    setNamingOpen(true);
+  };
+  const columns = sourceColumns({
+    t,
+    canEdit,
+    onActive: (source, active) =>
+      update.mutate({ id: source.id, body: { active } }),
+    onRename: (source) => open({ mode: "rename", source }),
+  });
+  const done = { onSuccess: () => setNamingOpen(false) };
   return (
     <Panel
       title={t("acqSources.title")}
       titleAction={
         canCreate && (
-          <Button onClick={() => setAdding(true)}>
+          <Button onClick={() => open({ mode: "create" })}>
             {t("acqSources.addOpen")}
           </Button>
         )
@@ -50,164 +141,54 @@ export function AcquisitionSourcesCard() {
     >
       <PanelBody>
         <PanelIntro>{t("acqSources.sub")}</PanelIntro>
-        <SettingList>
-          <SettingRow
-            label={t("acqSources.listLabel")}
-            layout="stack"
-            control={
-              <QueryGate query={query} pendingLabel={t("acqSources.loading")}>
-                {(sources) => (
-                  <ul
-                    className="lead-vocab-list"
-                    data-testid="acquisition-source-list"
-                  >
-                    {sources.map((source) => (
-                      <AcquisitionSourceRow
-                        key={source.id}
-                        source={source}
-                        canEdit={canEdit}
-                        onUpdate={(body) =>
-                          update.mutate({ id: source.id, body })
-                        }
-                      />
-                    ))}
-                  </ul>
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {!canEdit && <p>{t("acqSources.readOnly")}</p>}
-        {failure?.error && (
-          <Callout
-            tone="danger"
-            live="alert"
-            title={problemMessageOf(failure.error, t)}
-          />
-        )}
-        {adding && (
-          <AddAcquisitionSourceDialog
-            onClose={() => setAdding(false)}
-            onAdd={(label) =>
-              create.mutate({ label }, { onSuccess: () => setAdding(false) })
-            }
-            pending={create.isPending}
-          />
-        )}
       </PanelBody>
-    </Panel>
-  );
-}
-
-function AcquisitionSourceRow({
-  source,
-  canEdit,
-  onUpdate,
-}: Readonly<{
-  source: AcquisitionSource;
-  canEdit: boolean;
-  onUpdate: (body: { label?: string; active?: boolean }) => void;
-}>) {
-  const t = useT();
-  const [label, setLabel] = useState(source.label);
-  return (
-    <li className="lead-vocab-row" data-testid={`acq-source-${source.key}`}>
-      <Field label={t("acqSources.labelFor", { key: source.key })}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={label}
-            disabled={!canEdit}
-            onChange={(e) => setLabel(e.target.value)}
-            onBlur={() => {
-              const next = label.trim();
-              // Only on a real change, and never on an emptied field: a blank
-              // box is a half-finished edit, not an instruction to erase the
-              // name every deal carrying this key renders through.
-              if (next && next !== source.label) {
-                onUpdate({ label: next });
-              } else if (!next) {
-                setLabel(source.label);
-              }
-            }}
-          />
-        )}
-      </Field>
-      {/* The KEY, shown because it is what deals actually store and what a
-          report groups by — a reader renaming the label needs to see that the
-          thing underneath does not move. */}
-      <span className="t-caption lead-vocab-key">{source.key}</span>
-      <span className="lead-vocab-flags">
-        {source.system && <Badge>{t("acqSources.builtIn")}</Badge>}
-        <Switch
-          label={t("acqSources.activeFor", { label: source.label })}
-          labelHidden
-          checked={source.active}
-          disabled={!canEdit}
-          onChange={(next: boolean) => onUpdate({ active: next })}
+      {query.isSuccess && sources.length > 0 ? (
+        <DataTable
+          bleed
+          fold
+          label={t("acqSources.title")}
+          columns={columns}
+          rows={[...sources]}
+          rowKey={(source) => source.id}
+          rowTestId={(source) => `acq-source-${source.key}`}
         />
-      </span>
-    </li>
-  );
-}
-
-function AddAcquisitionSourceDialog({
-  onClose,
-  onAdd,
-  pending,
-}: Readonly<{
-  onClose: () => void;
-  onAdd: (label: string) => void;
-  pending: boolean;
-}>) {
-  const t = useT();
-  const [label, setLabel] = useState("");
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy="acq-source-add-title"
-      intent="form"
-    >
-      <Heading
-        size="large"
-        className="t-h3 modal-title"
-        id="acq-source-add-title"
-      >
-        {t("acqSources.addTitle")}
-      </Heading>
-      <form
-        id="acq-source-add-form"
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (label.trim() && !pending) {
-            onAdd(label.trim());
+      ) : (
+        <PanelBody>
+          <QueryStates query={query} pendingLabel={t("acqSources.loading")}>
+            <EmptyState>{t("common.empty")}</EmptyState>
+          </QueryStates>
+        </PanelBody>
+      )}
+      <VocabNotices
+        readOnly={!canEdit}
+        error={update.isError ? update.error : undefined}
+      />
+      <NameDialog
+        open={namingOpen}
+        onClose={() => setNamingOpen(false)}
+        title={t(
+          naming.mode === "rename"
+            ? "acqSources.renameTitle"
+            : "acqSources.addTitle",
+        )}
+        label={t("acqSources.addLabel")}
+        initial={naming.mode === "rename" ? naming.source.label : ""}
+        confirmLabel={t(
+          naming.mode === "rename"
+            ? "leadSources.renameSave"
+            : "acqSources.addConfirm",
+        )}
+        pending={write.isPending}
+        problem={refused.problem}
+        nameProblem={refused.nameProblem}
+        onSave={(label) => {
+          if (naming.mode === "rename") {
+            rename.mutate({ id: naming.source.id, body: { label } }, done);
+          } else {
+            create.mutate({ label }, done);
           }
         }}
-      >
-        <Field label={t("acqSources.addLabel")} hint={t("acqSources.addHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-            />
-          )}
-        </Field>
-      </form>
-      <div className="actions">
-        <Button variant="ghost" onClick={onClose}>
-          {t("deals.cancel")}
-        </Button>
-        <Button
-          type="submit"
-          form="acq-source-add-form"
-          disabled={!label.trim() || pending}
-        >
-          {t("acqSources.addConfirm")}
-        </Button>
-      </div>
-    </Modal>
+      />
+    </Panel>
   );
 }
