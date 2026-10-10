@@ -51,10 +51,14 @@ func TestServedByReachesTheTableOnlyWhereDeclared(t *testing.T) {
 }
 
 // A served_by value the contract does not declare fails generation, like every
-// other annotation value. An unknown value must not leave the gate admitting a
-// call the registry admits again.
+// other annotation value. The vocabulary refuses it, not the derivation: an
+// unknown value read as unmarked would gate a route meant for the registry
+// twice.
 func TestAnUndeclaredServedByFailsGeneration(t *testing.T) {
-	policies, _ := policiesOf(t, strings.ReplaceAll(slippingPaths, "%s", "handler"))
+	policies, derived := policiesOf(t, strings.ReplaceAll(slippingPaths, "%s", "handler"))
+	if len(derived) != 0 {
+		t.Fatalf("derivation refused the value itself: %v", derived)
+	}
 	vocab := vocabulary{
 		access: []string{"tool"}, tier: []string{"auto_execute"}, scope: []string{"read"}, servedBy: []string{"registry"},
 	}

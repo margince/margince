@@ -66,7 +66,7 @@ func restParityProblems(tool, openAPIOp string, byID map[string]passportOperatio
 				"no bearerAuth), so REST cannot do what this tool does.")
 		case agentPolicies[op.method+" "+op.route].Tool != tool:
 			problems = append(problems, id+" declares x-mcp-tool verb "+
-				quotedOrNone(agentPolicies[op.method+" "+op.route].Tool)+", not "+tool+", so it "+
+				verbOrNone(agentPolicies[op.method+" "+op.route].Tool)+", not "+tool+", so it "+
 				"serves some other answer. Run the tool's engine on a route that declares it.")
 		}
 	}
@@ -76,7 +76,8 @@ func restParityProblems(tool, openAPIOp string, byID map[string]passportOperatio
 // A registry-served route answers the tool's own JSON, which the shape gate
 // holds. A route that keeps its own shape (GET /attachments behind
 // list_documents) can still drift from the tool's records. So some both-doors
-// integration test calls that tool through twoDoors and compares the two.
+// integration test calls that tool through twoDoors; the census sees the call,
+// and review holds that the test compares what the two doors return.
 func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 	ops, _ := passportOperations(t)
 	byID := map[string]passportOperation{}
@@ -99,6 +100,13 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 	}
 
 	untested := untestedDoorsBaseline(t)
+	if len(untested) > untestedDoorsCeiling {
+		t.Errorf("%s lists %d tools, over its ceiling of %d; a new tool gets its both-doors test "+
+			"instead of a line here", untestedDoorsPath, len(untested), untestedDoorsCeiling)
+	} else if len(untested) < untestedDoorsCeiling {
+		t.Errorf("%s lists %d tools; lower untestedDoorsCeiling to %d so the list cannot grow back",
+			untestedDoorsPath, len(untested), len(untested))
+	}
 	extensionTools := composedToolNames()
 	ownShape := 0
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
@@ -111,7 +119,7 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 		switch {
 		case !called[spec.Name] && !listed:
 			t.Errorf("%s runs on %s, which answers in its own shape, and no integration test calls "+
-				"it through twoDoors to compare the records both doors give", spec.Name, spec.OpenAPIOp)
+				"it through twoDoors", spec.Name, spec.OpenAPIOp)
 		case called[spec.Name] && listed:
 			t.Errorf("%s now has a both-doors test; remove it from %s", spec.Name, untestedDoorsPath)
 		}
@@ -124,9 +132,11 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 	}
 }
 
-// untestedDoorsPath lists the tools that ran on a route of their own shape
-// before this gate existed and still lack a both-doors test. It only shrinks.
+// untestedDoorsPath lists tools on a route of their own shape still lacking a
+// both-doors test. untestedDoorsCeiling is its size; both only go down.
 const untestedDoorsPath = "testdata/untested_tool_doors.txt"
+
+const untestedDoorsCeiling = 58
 
 func untestedDoorsBaseline(t *testing.T) map[string]bool {
 	t.Helper()
@@ -162,7 +172,7 @@ func passportCalls(op passportOperation) bool {
 	return admitted && acceptsPassport(op.security)
 }
 
-func quotedOrNone(verb string) string {
+func verbOrNone(verb string) string {
 	if verb == "" {
 		return "(none)"
 	}
