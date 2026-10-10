@@ -239,6 +239,17 @@ func TestParseTimezone(t *testing.T) {
 	}
 }
 
+func TestZoneNameIsStoredExactlyAsSent(t *testing.T) {
+	if err := ZoneName("Europe/Berlin"); err != nil {
+		t.Fatalf("ZoneName refused a zone: %v", err)
+	}
+	for _, name := range []string{"", "Local", " Europe/Berlin", "Europe/Berlin ", "Mars/Olympus"} {
+		if err := ZoneName(name); err == nil {
+			t.Errorf("ZoneName accepted %q", name)
+		}
+	}
+}
+
 func TestPlainDecimal(t *testing.T) {
 	ok := []string{"0", "5", "0.25", "5.00", "1234567890", "0.000001"}
 	for _, s := range ok {

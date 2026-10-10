@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -76,19 +75,8 @@ type CompanyRollupResult struct {
 func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.UUID, scope string, now func() time.Time) (CompanyRollupResult, error) {
 	for _, object := range []datasource.EntityType{datasource.EntityCompany, datasource.EntityDeal, datasource.EntityActivity} {
 		if err := auth.Require(ctx, string(object), principal.ActionRead); err != nil {
-			// Permission refusal precedes input validation: a caller missing
-			// any of the three grants gets 403 even for a bogus scope value,
-			// matching arc 1a's gate order — what the caller can't do is
-			// decided before what the caller asked for is judged well-formed.
 			return CompanyRollupResult{}, err
 		}
-	}
-	if scope != companyRollupScopeTree && scope != companyRollupScopeSelf {
-		// The handler validates the enum at the edge; a value reaching
-		// this far is refused with the wire-ready 422 shape rather than
-		// silently defaulted (the contract names the vocabulary).
-		return CompanyRollupResult{}, httperr.Validation("scope", "invalid_enum",
-			fmt.Sprintf("scope must be %q or %q", companyRollupScopeTree, companyRollupScopeSelf))
 	}
 
 	asOf := now().UTC()

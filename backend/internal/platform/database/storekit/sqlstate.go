@@ -41,6 +41,9 @@ const (
 	// 22021 is the one NUL and malformed UTF-8 raise: text Postgres cannot
 	// store, so the caller's string is what to change.
 	pgCharacterNotInRepertoire = "22021"
+	// 22P05 is the same NUL arriving inside a jsonb value, which Postgres
+	// cannot hold as text either.
+	pgUntranslatableCharacter = "22P05"
 )
 
 // pgViolation names the violated constraint when err is the given
@@ -193,7 +196,7 @@ func IsInvalidValueForType(err error) bool {
 	switch pgErr.Code {
 	case pgInvalidTextRepresentation, pgNumericValueOutOfRange,
 		pgStringDataRightTruncation, pgInvalidDatetimeFormat, pgDatetimeFieldOverflow,
-		pgCharacterNotInRepertoire:
+		pgCharacterNotInRepertoire, pgUntranslatableCharacter:
 		return true
 	default:
 		return false

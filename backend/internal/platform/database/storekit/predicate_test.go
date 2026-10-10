@@ -220,6 +220,8 @@ func TestCompileRejectsInvalidShapes(t *testing.T) {
 		{"eq number on text", leaf("title", OpEq, 7.0), CodeFilterValueInvalid},
 		{"malformed uuid", leaf("owner_id", OpEq, "not-a-uuid"), CodeFilterValueInvalid},
 		{"malformed date", leaf("expected_close_date", OpEq, "31/12/2026"), CodeFilterValueInvalid},
+		{"date in year zero", leaf("expected_close_date", OpEq, "0000-01-01"), CodeFilterValueInvalid},
+		{"date past the storable range", leaf("expected_close_date", OpLt, "9999-12-31"), CodeFilterValueInvalid},
 		{"NaN number", leaf("probability", OpEq, nan()), CodeFilterValueInvalid},
 		{"fractional currency", leaf("amount_minor", OpEq, 12.5), CodeFilterValueInvalid},
 		{"currency beyond int64 range", leaf("amount_minor", OpGt, 1e19), CodeFilterValueInvalid},

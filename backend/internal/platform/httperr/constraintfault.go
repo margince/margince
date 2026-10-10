@@ -66,7 +66,7 @@ func constraintFault(err error) (Fault, bool) {
 		return Fault{
 			Status: http.StatusUnprocessableEntity, Code: "value_wrong_type",
 			Detail: "a value in this request is not of the type the field it names holds — a " +
-				"malformed id, a number where text was sent, a date that is not one. Check each " +
+				"malformed id, a number where text was sent, a date that is not one, a control character such as NUL. Check each " +
 				"value against this operation's schema; do not retry unchanged.",
 			InfraCause: err,
 		}, true
