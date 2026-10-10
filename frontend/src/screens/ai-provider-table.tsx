@@ -6,6 +6,7 @@ import { Badge } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
 import { KeyedName } from "../design-system/keyedname";
+import { RowOpen } from "../design-system/rowopen";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { ProviderCallsLine } from "./ai-call-figures";
@@ -21,7 +22,7 @@ import {
   STATE_LABEL,
   STATE_TONE,
 } from "./ai-provider-sheet";
-import { RowOpen, TierChips } from "./ai-terms";
+import { TierChips } from "./ai-terms";
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
 

@@ -118,6 +118,34 @@ describe("the configured automations table", () => {
   });
 });
 
+describe("a rule's run history", () => {
+  it("opens as a detail row under its rule, from the keyboard, and closes again", async () => {
+    const user = userEvent.setup();
+    mount();
+    const renewal = await row("au-2");
+    const toggle = within(renewal).getByRole("button", {
+      name: "Run history of Renewal reminder",
+    });
+    toggle.focus();
+    await user.keyboard("{Enter}");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const detail = document.getElementById(
+      toggle.getAttribute("aria-controls") ?? "",
+    );
+    if (!detail) {
+      throw new Error("the toggle names no detail");
+    }
+    expect(detail.closest("tr")?.previousElementSibling).toBe(renewal);
+    expect(
+      await within(detail).findByRole("heading", {
+        name: en["auto.runs.title"],
+      }),
+    ).toBeInTheDocument();
+    await user.keyboard("{Enter}");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
 describe("the starter library", () => {
   it("opens a template's create dialog from a press anywhere on its row", async () => {
     const user = userEvent.setup();

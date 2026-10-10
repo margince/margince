@@ -2,14 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Fragment, type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
-import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { Switch } from "../design-system/switch";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useNow } from "../format/now";
@@ -32,6 +31,12 @@ type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Inspecting = Readonly<{ runs: boolean; preview: boolean }>;
 
 const CLOSED: Inspecting = { runs: false, preview: false };
+const RUNS_ONLY: Inspecting = { runs: true, preview: false };
+
+// The row's detail holds whichever inspectors are open; its chevron opens runs.
+function anyOpen(inspecting: Inspecting | undefined): boolean {
+  return inspecting !== undefined && (inspecting.runs || inspecting.preview);
+}
 const RELATIVE_TICK_MS = 60_000;
 
 /** Puts a dialog away while keeping what it showed, so it can animate out. */
@@ -140,27 +145,37 @@ export function ConfiguredAutomations({
         rows={automations}
         rowKey={(automation) => automation.id}
         rowTestId={(automation) => `automation-${automation.id}`}
+        detail={
+          canViewRuns
+            ? {
+                header: t("auto.runs.title"),
+                toggleLabel: (automation) =>
+                  t("auto.runsFor", { name: automation.name }),
+                expanded: new Set(
+                  automations
+                    .filter((one) => anyOpen(inspecting[one.id]))
+                    .map((one) => one.id),
+                ),
+                onToggle: (id) =>
+                  setInspecting((prior) => ({
+                    ...prior,
+                    [id]: anyOpen(prior[id]) ? CLOSED : RUNS_ONLY,
+                  })),
+                render: (automation) => {
+                  const open = inspecting[automation.id] ?? CLOSED;
+                  return (
+                    <AutomationInspectors
+                      automationId={automation.id}
+                      runsOpen={open.runs}
+                      previewOpen={open.preview}
+                      canConfigure={canViewRuns}
+                    />
+                  );
+                },
+              }
+            : undefined
+        }
       />
-      {canViewRuns &&
-        automations.map((automation) => {
-          const open = inspecting[automation.id] ?? CLOSED;
-          if (!open.runs && !open.preview) {
-            return null;
-          }
-          return (
-            <Fragment key={automation.id}>
-              <PanelGroupHead title={automation.name} level="h4" />
-              <PanelBody>
-                <AutomationInspectors
-                  automationId={automation.id}
-                  runsOpen={open.runs}
-                  previewOpen={open.preview}
-                  canConfigure={canViewRuns}
-                />
-              </PanelBody>
-            </Fragment>
-          );
-        })}
       {editing && editingEntry && (
         <AutomationDialog
           key={editing.seq}

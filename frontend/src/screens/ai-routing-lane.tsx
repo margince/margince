@@ -8,6 +8,7 @@ import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { KeyedName } from "../design-system/keyedname";
 import { Popover } from "../design-system/popover";
+import { RowOpen } from "../design-system/rowopen";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
@@ -16,7 +17,7 @@ import { DECIDE_RUNG, gaveUpLabel, tierLabel } from "./ai-decision-labels";
 import type { ModelCatalogue, ModelLane } from "./ai-models";
 import { providerName } from "./ai-provider-names";
 import { laneGloss, priceLabel, servingSort } from "./ai-routing-lane-text";
-import { RowOpen, TermChip } from "./ai-terms";
+import { TermChip } from "./ai-terms";
 
 // The Model tiers table: one row per lane the routing document binds — the
 // tiers, the embedder and the optional decision model — joined to the health

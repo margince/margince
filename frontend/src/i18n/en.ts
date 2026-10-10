@@ -8351,6 +8351,7 @@ export const en = {
 
   "auto.runs.open": "Runs",
   "auto.runs.title": "Run history",
+  "auto.runsFor": "Run history of {name}",
   "auto.runs.filterAll": "All",
   "auto.runs.filterFired": "Fired",
   "auto.runs.filterFailed": "Failed",

@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { RowOpen } from "../design-system/rowopen";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { tierLabel, tierRank } from "./ai-decision-labels";
@@ -14,7 +15,7 @@ import {
   taskDot,
 } from "./ai-task-details";
 import { TaskName } from "./ai-task-name";
-import { ModelRef, RowOpen, TermChip } from "./ai-terms";
+import { ModelRef, TermChip } from "./ai-terms";
 
 type Feature = components["schemas"]["AiFeatureRoute"];
 

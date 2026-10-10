@@ -281,7 +281,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     );
     const row = await screen.findByTestId("automation-au-1");
     // The state is the switch's own, announced rather than restated beside it
-    // in a second vocabulary: a created automation arrives OFF.
+    // in a second vocabulary: a created automation arrives off.
     expect(
       within(row)
         .getByRole("switch", { name: /is enabled$/ })

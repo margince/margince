@@ -86,7 +86,6 @@ export const AdminCardReadOnly: Story = {
   render: () => <Card readOnly />,
 };
 
-// A press anywhere on a template's row opens the create dialog seeded from it.
 export const CreatingFromATemplate: Story = {
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
@@ -98,7 +97,6 @@ export const CreatingFromATemplate: Story = {
   render: () => <Card />,
 };
 
-// A rule's Edit verb opens its definition in a dialog over the card.
 export const EditingInADialog: Story = {
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();

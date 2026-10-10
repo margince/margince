@@ -8011,6 +8011,7 @@ export const vi = {
 
   "auto.runs.open": "Lượt chạy",
   "auto.runs.title": "Lịch sử chạy",
+  "auto.runsFor": "Lịch sử chạy của {name}",
   "auto.runs.filterAll": "Tất cả",
   "auto.runs.filterFired": "Đã kích hoạt",
   "auto.runs.filterFailed": "Bị lỗi",

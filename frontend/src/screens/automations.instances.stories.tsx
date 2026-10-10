@@ -12,9 +12,6 @@ import { ConfiguredAutomations } from "./automations.instances";
 import { RulePausedReason } from "./automations.lists";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The configured-automations table on its own: every last-run outcome, a rule
-// that never ran, and one the system paused, in the pane it bleeds to.
-
 const meta: Meta = {
   title: "Settings/AI/Automations/Configured automations",
   parameters: { layout: "padded" },

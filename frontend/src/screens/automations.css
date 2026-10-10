@@ -1,6 +1,3 @@
-/* The automations section inside Settings → AI. Layout and token colours only:
-   every control comes from the design system. */
-
 /* One line cut with an ellipsis. A zero width with a full-width floor keeps the
    description from widening its column: it fills the cell it is given. */
 .auto-oneline {

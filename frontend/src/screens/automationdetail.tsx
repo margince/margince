@@ -57,10 +57,9 @@ export const OUTCOME_LOOK: Readonly<
 export function OutcomeBadge({ outcome }: Readonly<{ outcome: Outcome }>) {
   const t = useT();
   const look = OUTCOME_LOOK[outcome];
-  const Icon = look.icon;
   return (
-    <Badge tone={look.tone}>
-      <Icon size={12} aria-hidden /> {t(look.word)}
+    <Badge tone={look.tone} icon={look.icon}>
+      {t(look.word)}
     </Badge>
   );
 }

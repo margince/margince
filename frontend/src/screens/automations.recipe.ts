@@ -32,7 +32,6 @@ function spelledOut(raw: string): string {
   return raw.replace(/^clock:/, "").replaceAll(/[._]/g, " ");
 }
 
-/** What sets an automation off, as a short label. */
 export function triggerLabel(trigger: string, t: Translator): string {
   const key = TRIGGER[trigger];
   return key ? t(key) : spelledOut(trigger);

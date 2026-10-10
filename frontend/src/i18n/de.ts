@@ -8184,6 +8184,7 @@ export const de = {
 
   "auto.runs.open": "Läufe",
   "auto.runs.title": "Bisherige Läufe",
+  "auto.runsFor": "Bisherige Läufe von {name}",
   "auto.runs.filterAll": "Alle",
   "auto.runs.filterFired": "Ausgelöst",
   "auto.runs.filterFailed": "Fehlgeschlagen",

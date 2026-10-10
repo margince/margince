@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, ChevronRight, Zap } from "lucide-react";
+import { CalendarClock, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -8,7 +8,6 @@ import { EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
-import { IconAction } from "../design-system/iconaction";
 import {
   Panel,
   PanelBody,
@@ -16,6 +15,7 @@ import {
   PanelIntro,
 } from "../design-system/panel";
 import { Chip } from "../design-system/readings";
+import { RowOpen } from "../design-system/rowopen";
 import { useTruncationTooltip } from "../design-system/tooltip";
 import { type Translator, useT } from "../i18n";
 import { AutomationDialog } from "./automations.form";
@@ -24,16 +24,14 @@ import { triggerLabel } from "./automations.recipe";
 import { type QueryLike, QueryStates, unwrap, useMe } from "./common";
 import "./automations.css";
 
-// The automations editor (B-EP09.15): a management UI over the CLOSED
-// catalog (E15/ADR-0035). The anti-DSL invariant of features/10 §1 holds by
-// construction — every form field derives from the catalog entry's
-// params_schema plus the instance name; there is no free-form rule body and
-// no user-defined trigger anywhere on this surface, and a test pins that.
+// The automations editor over the closed catalog. Every form field derives from
+// the entry's params_schema plus the instance name: no free-form rule body and no
+// user-defined trigger, and a test pins that.
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
-// A template staged for the create dialog. It OUTLIVES the close — hence `open`
-// as a field, and `seq`, which re-keys the form so every open re-seeds it.
+// A template staged for the create dialog. It outlives the close, so `open` is
+// a field; `seq` re-keys the form so every open re-seeds it.
 type StagedTemplate = { entry: CatalogEntry; seq: number; open: boolean };
 
 // One section of Settings → AI: the page owns the reading column and the h1.
@@ -96,7 +94,7 @@ export function AutomationsAdmin() {
     },
   });
 
-  // Reset on OPEN, not on close: the closing dialog still shows its refusal.
+  // Reset on open, not on close: the closing dialog still shows its refusal.
   const stage = (entry: CatalogEntry) => {
     create.reset();
     setStaged((prior) => ({ entry, seq: (prior?.seq ?? 0) + 1, open: true }));
@@ -152,7 +150,7 @@ export function AutomationsAdmin() {
   );
 }
 
-// Without the read grant the section says it is WITHHELD: an empty list would
+// Without the read grant the section says it is withheld: an empty list would
 // claim the workspace runs no automations. Behind /me, so it is a settled denial.
 function InstancesSection({
   instances,
@@ -273,18 +271,12 @@ function libraryColumns(
       align: "end",
       fold: "end",
       render: (entry) => (
-        <IconAction
-          variant="ghost"
-          icon={<ChevronRight aria-hidden />}
-          label={t("auto.use")}
-          onClick={() => onUse(entry)}
-        />
+        <RowOpen label={t("auto.use")} onOpen={() => onUse(entry)} />
       ),
     },
   ];
 }
 
-// One line, cut short; the whole text on hover and focus.
 function OneLine({ text }: Readonly<{ text: string }>) {
   const tip = useTruncationTooltip<HTMLSpanElement>(text);
   return (

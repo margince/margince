@@ -6,7 +6,6 @@ import { Panel, PanelBody } from "../design-system/panel";
 import {
   ModelRef,
   PanelTitle,
-  RowOpen,
   TermChip,
   TermLegend,
   TierChips,
@@ -30,13 +29,6 @@ function Terms() {
           </p>
           <TierChips tiers={["cheap_cloud", "premium", "embeddings"]} />
           <ModelRef provider="gemini" model="gemini-3.5-flash" />
-          <p>
-            <RowOpen label="Edit Everyday cloud" />
-            <RowOpen
-              label="Edit Search and retrieval"
-              refusal="Search and retrieval has no settings of its own."
-            />
-          </p>
         </PanelBody>
       </Panel>
     </StoryProviders>
