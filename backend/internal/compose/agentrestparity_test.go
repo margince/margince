@@ -136,7 +136,7 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 // both-doors test. untestedDoorsCeiling is its size; both only go down.
 const untestedDoorsPath = "testdata/untested_tool_doors.txt"
 
-const untestedDoorsCeiling = 34
+const untestedDoorsCeiling = 13
 
 func untestedDoorsBaseline(t *testing.T) map[string]bool {
 	t.Helper()
@@ -153,7 +153,9 @@ func untestedDoorsBaseline(t *testing.T) map[string]bool {
 	return names
 }
 
-var bothDoorsToolCall = regexp.MustCompile(`\.tool\(t, "([a-z0-9_]+)"`)
+// bothDoorsToolCall finds a tool asked through the tool door of twoDoors: asked
+// to run (`tool`) or asked where the door must refuse or stage (`toolRefused`).
+var bothDoorsToolCall = regexp.MustCompile(`\.tool(?:Refused)?\(t, "([a-z0-9_]+)"`)
 
 // keepsItsOwnShape reports a tool any of whose operations is not served by the
 // registry.

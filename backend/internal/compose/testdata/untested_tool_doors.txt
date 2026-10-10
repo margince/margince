@@ -1,36 +1,15 @@
 # Tools on a route of their own shape with no both-doors records test yet.
 # Remove a line when its test lands; never add one.
-advance_deal
-advance_project_phase
 annotate_brief
-apply_tag
-archive_record
 book_meeting
-bulk_update_records
-change_lists
 commit_import
-create_record
-create_tag
-create_task
 decide_approval
 decide_approval_bundle
 decide_duplicate
-demote_lead
-disqualify_lead
 draft_email
 enrich
 invite_meeting
-log_activity
-merge_records
-merge_tags
 preview_import
-promote_lead
-relink_activities
-relink_activity
-relink_thread
-remove_tag
 send_company_email
 send_email
 send_message
-update_record
-update_tag
