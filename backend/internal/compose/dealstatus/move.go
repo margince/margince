@@ -363,10 +363,14 @@ func lastContact(f facts) (crmcontracts.Activity, bool) {
 	return crmcontracts.Activity{}, false
 }
 
+// noContactLogged is the claim an absent last contact supports: a note is on
+// the timeline but is no contact, so "nothing logged" would be false.
+const noContactLogged = "No call, meeting or mail has been logged on this deal yet"
+
 func nextStepReason(f facts) string {
 	last, ok := lastContact(f)
 	if !ok {
-		return "Nothing has been logged on this deal yet — agree the next step."
+		return noContactLogged + " — agree the next step."
 	}
 	return fmt.Sprintf("The last contact was %s and nothing is booked — agree the next step.",
 		since(f.now, last.OccurredAt))

@@ -65,7 +65,7 @@ func storyLines(f facts) []sentence {
 			fmt.Sprintf("The last contact was %s: %s.", since(f.now, last.OccurredAt), subjectOf(last)),
 			last))
 	} else {
-		lines = append(lines, plain("Nothing has been logged on this deal yet."))
+		lines = append(lines, plain(noContactLogged+"."))
 	}
 	if n := len(f.openTasks); n > 0 {
 		lines = append(lines, plain(openTasksLine(n, f.moreTasks)))

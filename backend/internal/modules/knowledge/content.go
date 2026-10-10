@@ -42,8 +42,9 @@ func handbookStorageKey(filename string) string { return handbookKeyPrefix + fil
 //
 // It is reachable, not theoretical: a release that withdraws a page leaves its
 // rows behind until the boot reconciliation removes them, and a request can
-// arrive in between. Distinct from a missing object because the repair is
-// different — nobody should go looking in a bucket for it.
+// arrive in between. So can a worker older than a release that adds a page,
+// which an ingest waits out. Distinct from a missing object because the repair
+// is different — nobody should go looking in a bucket for it.
 var ErrHandbookPageGone = errors.New("knowledge: this release does not ship that handbook page")
 
 // openContent streams a document's bytes, whichever side of the split it is on.

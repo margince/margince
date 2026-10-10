@@ -7,6 +7,8 @@ package attention
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"time"
 )
 
@@ -64,4 +66,15 @@ func (s *Service) degradable(ctx context.Context, budget time.Duration, fn func(
 		return fn(ctx)
 	}
 	return s.snapshots.Degradable(ctx, budget, fn)
+}
+
+// logLaneFailure records a lane the page named as unavailable. A caller who
+// left ends the request context and takes the lane's connection with it, so
+// that failure is logged below the level an operator sweeps for faults.
+func logLaneFailure(ctx context.Context, msg string, args ...any) {
+	level := slog.LevelError
+	if errors.Is(ctx.Err(), context.Canceled) {
+		level = slog.LevelDebug
+	}
+	slog.Log(ctx, level, msg, args...)
 }

@@ -10,7 +10,6 @@ package attention
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -115,7 +114,7 @@ func (s *Service) readFollowUps(
 			Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		}
 	case err != nil:
-		slog.ErrorContext(ctx, "a follow-up read failed", "source", source, "error", err)
+		logLaneFailure(ctx, "a follow-up read failed", "source", source, "error", err)
 		return nil, false, &crmcontracts.WorklistSourceUnavailable{
 			Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}

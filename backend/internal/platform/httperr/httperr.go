@@ -401,7 +401,7 @@ func loggedPath(r *http.Request) string {
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	fault, ok := Classify(err)
-	if !ok && callerLeft(r, err) {
+	if !ok && callerLeft(r) {
 		// Debug, not error: nothing failed on our side, and the sweep an operator
 		// reads for faults must not have to rule these out by hand.
 		slog.DebugContext(r.Context(), "client closed the request",

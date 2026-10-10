@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/knowledge"
 )
 
 func TestAThrottledIngestSaysTheProviderWasTheCause(t *testing.T) {
@@ -37,13 +38,28 @@ func TestAThrottledIngestWaitsOutTheProviderForABoundedTime(t *testing.T) {
 	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	throttled := fmt.Errorf("embedding: %w", ai.ErrProviderThrottled)
 
-	if wait, snooze := throttleSnooze(throttled, now.Add(-time.Minute), now); !snooze || wait <= 0 {
+	if wait, snooze := ingestSnooze(throttled, now.Add(-time.Minute), now); !snooze || wait <= 0 {
 		t.Errorf("a fresh throttled ingest was not snoozed: %v %v", wait, snooze)
 	}
-	if _, snooze := throttleSnooze(throttled, now.Add(-2*knowledgeIngestThrottleWindow), now); snooze {
+	if _, snooze := ingestSnooze(throttled, now.Add(-2*knowledgeIngestSnoozeWindow), now); snooze {
 		t.Error("an ingest throttled past the window was still snoozed, so it would wait forever")
 	}
-	if _, snooze := throttleSnooze(errors.New("a database blip"), now, now); snooze {
+	if _, snooze := ingestSnooze(errors.New("a database blip"), now, now); snooze {
 		t.Error("a failure that is not a throttle was snoozed")
+	}
+}
+
+// A rollout can hand a page the new release added to a worker that does not
+// ship it yet. That clears when a newer worker takes the job, so it waits for a
+// bounded time and does not spend the attempts that mark a document failed.
+func TestAHandbookPageAnOlderWorkerDoesNotShipWaitsForANewerOne(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	gone := fmt.Errorf("%q: %w", "meetings-and-booking.md", knowledge.ErrHandbookPageGone)
+
+	if wait, snooze := ingestSnooze(gone, now.Add(-time.Minute), now); !snooze || wait <= 0 {
+		t.Errorf("a page this worker does not ship was not snoozed: %v %v", wait, snooze)
+	}
+	if _, snooze := ingestSnooze(gone, now.Add(-2*knowledgeIngestSnoozeWindow), now); snooze {
+		t.Error("a page still unshipped past the window was snoozed, so it would wait forever")
 	}
 }
