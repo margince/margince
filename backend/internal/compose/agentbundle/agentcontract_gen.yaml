@@ -1511,6 +1511,9 @@ paths:
         Needs the passport permission Draft messages.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
         required: true
         content:
@@ -1663,6 +1666,7 @@ paths:
 
         May wait for a human to approve, depending on the change.
       parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
         required: true
@@ -3561,6 +3565,9 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
         required: false
         content:
@@ -8435,6 +8442,13 @@ components:
         what makes an operation replay-safe** — an operation that omits it ignores the header rather
         than half-honouring it, so read this contract, not the client, to know which calls are safe
         to retry blind.
+    ToolIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      schema: {type: string, maxLength: 255}
+      description: |-
+        It is held for 24h per caller and tool, not per path: the same key on two records of one
+        tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
     ApprovalToken:
       name: X-Approval-Token
       in: header

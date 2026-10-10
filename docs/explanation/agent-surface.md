@@ -32,7 +32,10 @@ not at the next login. What a passport holds: [authorization.md](authorization.m
 
 A route marked `served_by: registry` runs its tool through `Registry.Invoke`, so the tool admits,
 stages and redeems the call as on MCP. On such a route the `Idempotency-Key` and `X-Approval-Token`
-headers become the tool's `idempotency_key` and `approval_id` (`internal/compose/toolroutes.go`).
+headers become the tool's `idempotency_key` and `approval_id` (`internal/compose/toolroutes.go`), on
+the write routes that declare them. The key is then the tool's, held per caller and tool rather than
+per path. So one key on two records of one tool answers `409`, and a key spent over MCP replays on
+REST.
 
 **Files on MCP and REST.** A passport lists a record's files and uploads one over MCP
 (`list_documents`, `attach_document`) or over REST (`listAttachments`, `listCompanyDocuments`,

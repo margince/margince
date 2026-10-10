@@ -202,7 +202,7 @@ func composeReportCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, 
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
 func uploadAttachmentCommand(agentPolicy, restCommandDeps, *http.Request, []byte) (agents.GovernedCall, error) {
-	return nil, fmt.Errorf("agent gate: %w: %w", agents.ErrFileCannotWait, apperrors.ErrPermissionDenied)
+	return nil, agents.FileCannotWait(fmt.Errorf("agent gate: uploadAttachment is confirm-first here: %w", apperrors.ErrRequiresApproval))
 }
 
 // decideApprovalCommand decodes a decision on ONE staged proposal. The verdict

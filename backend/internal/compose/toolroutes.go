@@ -77,18 +77,20 @@ func (s Server) SearchReportEvidence(w http.ResponseWriter, r *http.Request, run
 }
 
 // DraftDealFollowUps serves draft_follow_ups_for.
-func (s Server) DraftDealFollowUps(w http.ResponseWriter, r *http.Request) {
-	serveToolCommand(w, r, s.toolRegistry.Invoke, "draft_follow_ups_for")
+func (s Server) DraftDealFollowUps(w http.ResponseWriter, r *http.Request, params crmcontracts.DraftDealFollowUpsParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "draft_follow_ups_for", reservedArgs{params.IdempotencyKey, params.XApprovalToken})
 }
 
 // ProgressDeal serves progress_deal, on the deal the path names.
-func (s Server) ProgressDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ProgressDealParams) {
-	serveToolCommand(w, r, s.toolRegistry.Invoke, "progress_deal", pathArgument{dealIDField, id.String()})
+func (s Server) ProgressDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ProgressDealParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "progress_deal", reservedArgs{params.IdempotencyKey, params.XApprovalToken},
+		pathArgument{dealIDField, id.String()})
 }
 
 // QualifyLead serves qualify_lead, on the lead the path names.
-func (s Server) QualifyLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	serveToolCommand(w, r, s.toolRegistry.Invoke, "qualify_lead", pathArgument{"lead_id", id.String()})
+func (s Server) QualifyLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.QualifyLeadParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "qualify_lead", reservedArgs{params.IdempotencyKey, params.XApprovalToken},
+		pathArgument{"lead_id", id.String()})
 }
 
 // QueryWorkspace serves query_workspace.
@@ -156,24 +158,29 @@ func toolArgsWithPath(w http.ResponseWriter, r *http.Request, path ...pathArgume
 	return args, true
 }
 
-// reservedHeaders are the REST spellings of the two arguments every write tool
-// reserves: its retry key and the approval a retry redeems.
-var reservedHeaders = []struct{ header, arg string }{
-	{idempotencyKeyHeader, "idempotency_key"},
-	{approvalTokenHeader, "approval_id"},
-}
+// reservedArgs are the two arguments every write tool reserves, its retry key
+// and the approval a retry redeems, as the route's declared headers carry them.
+// They come from the generated Params, so a header the route does not declare
+// never reaches the tool.
+type reservedArgs struct{ idempotencyKey, approvalID *string }
 
 // serveToolCommand runs a write tool for a REST request. The route is not in
 // replayableOperations, so the Idempotency-Key header becomes the tool's own
 // idempotency_key, and an X-Approval-Token its approval_id. A REST retry is then
 // claimed and redeemed once, by Invoke, as the same call over MCP would be.
-func serveToolCommand(w http.ResponseWriter, r *http.Request, invoke toolInvoker, tool string, path ...pathArgument) {
+func serveToolCommand(w http.ResponseWriter, r *http.Request, invoke toolInvoker, tool string, reserved reservedArgs, path ...pathArgument) {
 	args, ok := toolArgsWithPath(w, r, path...)
 	if !ok {
 		return
 	}
-	for _, reserved := range reservedHeaders {
-		if err := foldHeader(args, reserved.header, r.Header.Get(reserved.header), reserved.arg); err != nil {
+	for _, fold := range []struct {
+		header, arg string
+		value       *string
+	}{
+		{idempotencyKeyHeader, "idempotency_key", reserved.idempotencyKey},
+		{approvalTokenHeader, "approval_id", reserved.approvalID},
+	} {
+		if err := foldHeader(args, fold.header, fold.value, fold.arg); err != nil {
 			httperr.Write(w, r, err)
 			return
 		}
@@ -184,13 +191,14 @@ func serveToolCommand(w http.ResponseWriter, r *http.Request, invoke toolInvoker
 // foldHeader sets arg to the header's value. A body that already names a
 // different value is refused, since the call would claim two keys or redeem two
 // approvals.
-func foldHeader(args map[string]json.RawMessage, header, value, arg string) error {
-	if value == "" {
+func foldHeader(args map[string]json.RawMessage, header string, sent *string, arg string) error {
+	if sent == nil || *sent == "" {
 		return nil
 	}
-	if sent, named := args[arg]; named {
+	value := *sent
+	if inArgs, named := args[arg]; named {
 		var inBody string
-		if json.Unmarshal(sent, &inBody) != nil || inBody != value {
+		if json.Unmarshal(inArgs, &inBody) != nil || inBody != value {
 			return httperr.Validation(header, "conflicts_with_body",
 				"the "+header+" header and the body's "+arg+" disagree; send one of them")
 		}

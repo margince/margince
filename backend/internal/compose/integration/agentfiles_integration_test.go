@@ -22,7 +22,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // fileRefusal is the slice of a problem body these tests branch on.
@@ -193,6 +197,25 @@ func TestAReadOnlyPassportCannotUploadAFile(t *testing.T) {
 	}
 }
 
+// capturedPrivately mints a contact as mail capture does before anything has
+// judged the sender: owned by the mailbox's human and visible to them alone.
+func capturedPrivately(t *testing.T, e *apptest.AppEnv, owner, address string) string {
+	t.Helper()
+	mail := createdID(t, e, "/v1/activities", AnyMap{"kind": "note", "body": "Mail from " + address})
+	ws := apptest.InstallationWorkspaceUUID(t.Context(), t, e.Owner)
+	capture := principal.SystemActing(principal.WithWorkspaceID(t.Context(), ws), "capture")
+	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](ws)))
+	captured, err := store.EnsureCounterparty(capture, contacts.EnsureCounterpartyInput{
+		Email: address, OwnerID: ids.MustParse(owner), ActivityID: ids.From[ids.ActivityKind](ids.MustParse(mail)),
+		Source: "gmail:" + mail, CapturedBy: "connector:gmail", SuppressCompany: true,
+		OwnerScoped: true, NarrowedBecause: contacts.NarrowedAwaitingVerdict,
+	})
+	if err != nil {
+		t.Fatalf("capturing %s into the colleague's mailbox: %v", address, err)
+	}
+	return captured.ContactID.String()
+}
+
 // A record the lending human cannot see is absent to the passport. Its files
 // list as not found, and a file sent to it lands nowhere.
 func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
@@ -201,13 +224,7 @@ func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
 	colleague := createdID(t, d.e, "/v1/users", AnyMap{
 		"email": "colleague@files-hidden.test", "display_name": "Colleague", "role": "rep",
 	})
-	var hidden string
-	if err := d.e.Owner.QueryRow(t.Context(), `
-		INSERT INTO contact (full_name, owner_id, visibility, source, captured_by)
-		VALUES ('Private Contact', $1, 'owner', 'manual', 'connector:gmail') RETURNING id`,
-		colleague).Scan(&hidden); err != nil {
-		t.Fatalf("seeding a contact captured into the colleague's mailbox: %v", err)
-	}
+	hidden := capturedPrivately(t, d.e, colleague, "private@files-hidden.test")
 
 	if status := d.e.Call(t, "GET", "/v1/attachments?entity_type=contact&entity_id="+hidden, nil, d.bearer, nil); status != http.StatusNotFound {
 		t.Errorf("listing a hidden contact's files → %d, want 404", status)

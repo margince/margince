@@ -49131,6 +49131,9 @@ type ProfileFieldKey string
 // Sort defines model for Sort.
 type Sort = string
 
+// ToolIdempotencyKey defines model for ToolIdempotencyKey.
+type ToolIdempotencyKey = string
+
 // VoiceProfileVersionNumber defines model for VoiceProfileVersionNumber.
 type VoiceProfileVersionNumber = int
 
@@ -52022,6 +52025,23 @@ type CreateDealParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// DraftDealFollowUpsParams defines parameters for DraftDealFollowUps.
+type DraftDealFollowUpsParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
 // ListSlippingDealsParams defines parameters for ListSlippingDeals.
 type ListSlippingDealsParams struct {
 	// QuietDays Days without recorded activity after which an open deal counts as gone quiet.
@@ -52169,6 +52189,11 @@ type CreateOfferParams struct {
 
 // ProgressDealParams defines parameters for ProgressDeal.
 type ProgressDealParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
 	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
 	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
 	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
@@ -52733,6 +52758,23 @@ type PromoteLeadParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// QualifyLeadParams defines parameters for QualifyLead.
+type QualifyLeadParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
 
 	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
 	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
@@ -67863,7 +67905,7 @@ type ServerInterface interface {
 	ListAtRiskRelationships(w http.ResponseWriter, r *http.Request)
 	// Draft a follow-up on each slipping deal, worst first. Nothing is sent.
 	// (POST /deals/follow-up-drafts)
-	DraftDealFollowUps(w http.ResponseWriter, r *http.Request)
+	DraftDealFollowUps(w http.ResponseWriter, r *http.Request, params DraftDealFollowUpsParams)
 	// The open deals going quiet or past their expected close date, worst first.
 	// (GET /deals/slipping)
 	ListSlippingDeals(w http.ResponseWriter, r *http.Request, params ListSlippingDealsParams)
@@ -68205,7 +68247,7 @@ type ServerInterface interface {
 	PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id)
 	// Fill a lead's empty qualification fields that its own data settles, and name the rest.
 	// (POST /leads/{id}/qualify)
-	QualifyLead(w http.ResponseWriter, r *http.Request, id Id)
+	QualifyLead(w http.ResponseWriter, r *http.Request, id Id, params QualifyLeadParams)
 	// Put a disqualified lead back on the open ladder.
 	// (POST /leads/{id}/reopen)
 	ReopenLead(w http.ResponseWriter, r *http.Request, id Id, params ReopenLeadParams)
@@ -71493,7 +71535,7 @@ func (_ Unimplemented) ListAtRiskRelationships(w http.ResponseWriter, r *http.Re
 
 // Draft a follow-up on each slipping deal, worst first. Nothing is sent.
 // (POST /deals/follow-up-drafts)
-func (_ Unimplemented) DraftDealFollowUps(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) DraftDealFollowUps(w http.ResponseWriter, r *http.Request, params DraftDealFollowUpsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72177,7 +72219,7 @@ func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Reque
 
 // Fill a lead's empty qualification fields that its own data settles, and name the rest.
 // (POST /leads/{id}/qualify)
-func (_ Unimplemented) QualifyLead(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) QualifyLead(w http.ResponseWriter, r *http.Request, id Id, params QualifyLeadParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -91125,6 +91167,9 @@ func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter
 // DraftDealFollowUps operation middleware
 func (siw *ServerInterfaceWrapper) DraftDealFollowUps(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -91133,8 +91178,51 @@ func (siw *ServerInterfaceWrapper) DraftDealFollowUps(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DraftDealFollowUpsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DraftDealFollowUps(w, r)
+		siw.Handler.DraftDealFollowUps(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -91998,6 +92086,25 @@ func (siw *ServerInterfaceWrapper) ProgressDeal(w http.ResponseWriter, r *http.R
 	var params ProgressDealParams
 
 	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
 
 	// ------------- Optional header parameter "X-Approval-Token" -------------
 	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
@@ -95534,8 +95641,51 @@ func (siw *ServerInterfaceWrapper) QualifyLead(w http.ResponseWriter, r *http.Re
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params QualifyLeadParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.QualifyLead(w, r, id)
+		siw.Handler.QualifyLead(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

@@ -113,9 +113,9 @@ func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() t
 		cut := len(quiet) >= slippingScanLimit || len(open) >= slippingScanLimit
 
 		// The quiet sweep already applied the window, so its rows are admitted
-		// on that ground alone. Testing candidate.Stalled instead would ask the
-		// deal row's own 60-day flag, which is FALSE for every deal a shorter
-		// window admits — the lane would fetch the right rows and drop them all.
+		// on that ground alone. candidate.Stalled is the row's flag at
+		// StalledThresholdDays, FALSE for every deal a shorter window admits.
+		// Testing it would fetch the right rows and drop them all.
 		admitted := map[ids.UUID]bool{}
 		for _, d := range quiet {
 			admitted[ids.UUID(d.Id)] = true
@@ -138,8 +138,8 @@ func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() t
 				continue
 			}
 			// Stalled means quiet at the window asked for, so the tool can
-			// evidence that idle claim. The row's own flag is the 60-day
-			// answer, which also holds at any shorter window.
+			// evidence that idle claim. The row's own flag is the answer at
+			// deals.StalledThresholdDays, which also holds at any shorter window.
 			candidate.Stalled = admitted[candidate.DealID] ||
 				(candidate.Stalled && quietForDays <= deals.StalledThresholdDays)
 			seen[candidate.DealID] = true

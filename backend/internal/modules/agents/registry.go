@@ -349,6 +349,12 @@ func (r *Registry) tierResolverFor(ctx context.Context, t mcp.Tool, name string,
 // would keep the file's bytes in the approval, so nothing is staged.
 var ErrFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
 
+// FileCannotWait is that answer on both doors, over the refusal that asked for
+// an approval. So a caller reads one code wherever it sent the file.
+func FileCannotWait(refusal error) error {
+	return fmt.Errorf("%w: %w", ErrFileCannotWait, refusal)
+}
+
 // stageRefusedCall parks a 🟡 call the gate refused as a staged approval, so
 // the human decision the refusal asks for has somewhere to land; a retry
 // carrying its approval_id redeems it. A tool that cannot describe its own
@@ -357,7 +363,7 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 	stageable, ok := t.(stageableTool)
 	switch {
 	case !ok && t.Spec().MaxArgsBytes > httperr.MaxBodyBytes:
-		return fmt.Errorf("%w: %w", ErrFileCannotWait, refusal)
+		return FileCannotWait(refusal)
 	case !ok:
 		return refusal
 	}

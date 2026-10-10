@@ -218,6 +218,34 @@ func TestTheQualifyRouteFillsALeadAsTheToolDoes(t *testing.T) {
 	}
 }
 
+// The route's Idempotency-Key is the tool's retry key, held per caller and tool
+// rather than per path. A key the tool spent over MCP replays its answer on the
+// route, and the same key on a second lead is a conflict.
+func TestTheQualifyRoutesRetryKeyIsTheTools(t *testing.T) {
+	d := newTwoDoors(t, "qualify-key", "read", "write")
+	first := createdID(t, d.e, "/v1/leads", AnyMap{
+		"full_name": "Dora Kessler", "email": "dora@kessler-maschinenbau.de", "source": "manual",
+	})
+	second := createdID(t, d.e, "/v1/leads", AnyMap{
+		"full_name": "Emil Kessler", "email": "emil@kessler-maschinenbau.de", "source": "manual",
+	})
+	keyed := maps.Clone(d.bearer)
+	keyed["Idempotency-Key"] = "qualify-monday"
+
+	viaTool := d.tool(t, "qualify_lead", map[string]any{"lead_id": first, "idempotency_key": "qualify-monday"})
+	var replayed json.RawMessage
+	if status := d.e.Call(t, "POST", "/v1/leads/"+first+"/qualify", nil, keyed, &replayed); status != http.StatusOK {
+		t.Fatalf("the route under the tool's key → %d %s", status, replayed)
+	}
+	if compacted(t, replayed) != compacted(t, viaTool) {
+		t.Errorf("the route answered\n%s\nwant the tool's recorded answer\n%s", replayed, viaTool)
+	}
+	var refusal fileRefusal
+	if status := d.e.Call(t, "POST", "/v1/leads/"+second+"/qualify", nil, keyed, &refusal); status != http.StatusConflict || refusal.Code != "conflict" {
+		t.Errorf("the same key on a second lead → %d %q, want 409 conflict", status, refusal.Code)
+	}
+}
+
 type sharedDrafts struct {
 	Segment string `json:"segment"`
 	Drafts  []struct {

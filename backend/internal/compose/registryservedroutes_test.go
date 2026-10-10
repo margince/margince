@@ -237,3 +237,96 @@ func shapeDifferences(at string, declared *openapi3.Schema, answered toolShape) 
 	}
 	return problems
 }
+
+// agentGate applies the contract's tier and scope to every route but these, so
+// on a served route they are words nothing enforces. They must then say what
+// Invoke enforces: the tool's own tier and cap, neither raised nor lowered.
+func TestEveryRegistryServedRouteDeclaresItsToolsTierAndScope(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	declaredAs := map[mcp.RiskTier]agentTier{
+		mcp.TierAutoExecute:          tierAutoExecute,
+		mcp.TierConfirmationRequired: tierConfirmationRequired,
+		mcp.TierDynamic:              tierDynamic,
+	}
+	for _, route := range registryServedRoutes(t) {
+		pol := agentPolicies[route]
+		spec, registered := registry.Spec(pol.Tool)
+		if !registered {
+			t.Errorf("%s declares %s, which is not registered", route, pol.Tool)
+			continue
+		}
+		if want := declaredAs[spec.Tier]; pol.Tier != want {
+			t.Errorf("%s (%s) declares tier %q, and %s runs at %q: Invoke admits at the tool's tier, so "+
+				"the contract must state that one", route, pol.Op, pol.Tier, pol.Tool, want)
+		}
+		if string(pol.Scope) != string(spec.RequiredScope) {
+			t.Errorf("%s (%s) declares scope %q, and %s requires %q", route, pol.Op, pol.Scope, pol.Tool, spec.RequiredScope)
+		}
+	}
+}
+
+// reservedRouteHeaders are the headers a served write route declares, and which
+// serveToolCommand hands the tool as its reserved arguments.
+var reservedRouteHeaders = []string{idempotencyKeyHeader, approvalTokenHeader}
+
+// A served route passes its query parameters and body members to the tool by
+// name. Each must be an argument the tool takes, or Invoke refuses a call the
+// contract allows. A path parameter is left out: its handler names the
+// argument. A write route declares both reserved headers and a read route none.
+func TestEveryRegistryServedRouteTakesOnlyItsToolsArguments(t *testing.T) {
+	contract := operationsByID(t)
+	registry := NewRegistry(nil, SendPath{})
+	for _, route := range registryServedRoutes(t) {
+		pol := agentPolicies[route]
+		spec, registered := registry.Spec(pol.Tool)
+		if !registered {
+			t.Errorf("%s declares %s, which is not registered", route, pol.Tool)
+			continue
+		}
+		takes := toolArguments(t, spec)
+		op := contract[pol.Op]
+		var headers []string
+		for _, ref := range op.Parameters {
+			switch param := ref.Value; param.In {
+			case openapi3.ParameterInHeader:
+				headers = append(headers, param.Name)
+			case openapi3.ParameterInQuery:
+				if !takes[param.Name] {
+					t.Errorf("%s (%s) takes query parameter %q, which %s has no argument for", route, pol.Op, param.Name, pol.Tool)
+				}
+			}
+		}
+		if op.RequestBody != nil {
+			body := op.RequestBody.Value.Content.Get("application/json").Schema.Value
+			for _, member := range slices.Sorted(maps.Keys(body.Properties)) {
+				if !takes[member] {
+					t.Errorf("%s (%s) takes body member %q, which %s has no argument for", route, pol.Op, member, pol.Tool)
+				}
+			}
+		}
+		want := reservedRouteHeaders
+		if spec.ReadOnly() {
+			want = nil
+		}
+		slices.Sort(headers)
+		if !slices.Equal(headers, slices.Sorted(slices.Values(want))) {
+			t.Errorf("%s (%s) declares headers %v, want %v: the reserved headers reach a write tool only "+
+				"where the route declares them", route, pol.Op, headers, want)
+		}
+	}
+}
+
+func toolArguments(t *testing.T, spec mcp.ToolSpec) map[string]bool {
+	t.Helper()
+	var shape struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
+		t.Fatalf("%s's input schema does not decode: %v", spec.Name, err)
+	}
+	takes := map[string]bool{}
+	for name := range shape.Properties {
+		takes[name] = true
+	}
+	return takes
+}

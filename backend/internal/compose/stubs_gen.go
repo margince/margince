@@ -1595,7 +1595,7 @@ func (stubs) ListAtRiskRelationships(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "ListAtRiskRelationships")
 }
 
-func (stubs) DraftDealFollowUps(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) DraftDealFollowUps(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DraftDealFollowUpsParams) {
 	httperr.NotImplemented(w, r, "DraftDealFollowUps")
 }
 
@@ -2051,7 +2051,7 @@ func (stubs) PreviewLeadPromotion(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "PreviewLeadPromotion")
 }
 
-func (stubs) QualifyLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) QualifyLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.QualifyLeadParams) {
 	httperr.NotImplemented(w, r, "QualifyLead")
 }
 

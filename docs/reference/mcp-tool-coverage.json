@@ -26,12 +26,12 @@
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
-      "cases_with_a_committed_run": 29,
-      "cases_that_reached_their_bar": 29,
+      "cases_with_a_committed_run": 31,
+      "cases_that_reached_their_bar": 31,
       "cases_below_their_bar": 0,
-      "runs": 87,
-      "passed": 78,
-      "reliability": 0.896551724137931,
+      "runs": 93,
+      "passed": 83,
+      "reliability": 0.8924731182795699,
       "cases_below_their_bar_named": [],
       "route": "Codex CLI"
     }
@@ -700,7 +700,7 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -1041,7 +1041,17 @@
         "whats_slipping_this_week"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case59_file_it_on_the_meeting_and_the_contract",
@@ -1055,7 +1065,17 @@
         "attach_document"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case6_ask_the_company",
@@ -2284,8 +2304,8 @@
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2470,8 +2490,8 @@
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -2807,8 +2827,8 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 3,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -3077,8 +3097,8 @@
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -3101,7 +3121,14 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured_by_model": {}
+      "measured_by_model": {
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "list_approvals",
