@@ -2935,8 +2935,6 @@ export const de = {
   "tagAdmin.merge": "Zusammenführen",
   "tagAdmin.archive": "Stilllegen",
   "tagAdmin.restore": "Wiederherstellen",
-  "tagAdmin.usage": "Datensätze: {count}",
-  "tagAdmin.usagePending": "Wird gezählt…",
   "tagAdmin.nearMatchTitle": "Ähnliches Tag vorhanden",
   "tagAdmin.nearMatch":
     "{names}. Vergib das vorhandene Tag, es sei denn, dieses meint etwas anderes.",
@@ -2950,7 +2948,6 @@ export const de = {
   "tagAdmin.mergedTitle": "Zusammengeführt",
   "tagAdmin.mergedBody":
     "Zum behaltenen Tag verschobene Datensätze: {moved}. Entfernte Duplikate, wo ein Datensatz bereits beide Tags hatte: {collapsed}.",
-  "tagAdmin.countUsage": "Datensätze zählen",
   "tagAdmin.noVersion":
     "Dieses Tag wurde ohne Version geladen und kann nicht gespeichert werden. Lade die Seite neu und versuche es erneut.",
   "tagAdmin.withheld":
@@ -2958,9 +2955,15 @@ export const de = {
   "tagAdmin.truncatedTitle": "Liste gekürzt",
   "tagAdmin.truncated":
     "Tags jenseits des Limits werden nicht angezeigt und lassen sich weder bearbeiten noch als Ziel einer Zusammenführung wählen.",
-  "tagAdmin.usageFailed": "Zählung nicht verfügbar",
-  "tagAdmin.changeFailed": "Das Tag wurde nicht geändert. Versuche es erneut.",
   "tagAdmin.done": "Fertig",
+  "tagAdmin.colTag": "Tag",
+  "tagAdmin.colUsage": "Verwendet in",
+  "tagAdmin.usedBy_one": "{count} Datensatz",
+  "tagAdmin.usedBy_other": "{count} Datensätze",
+  "tagAdmin.retired": "Stillgelegt",
+  "tagAdmin.rowActions": "Aktionen für {name}",
+  "tagAdmin.retiredToast": "{name} stillgelegt",
+  "tagAdmin.restoredToast": "{name} wiederhergestellt",
   "tags.archived": "archiviert",
   "tags.columnHeader": "Tags",
   "tags.filterAll": "Beliebiges Tag",
@@ -3054,7 +3057,6 @@ export const de = {
     "Nur Admins und Operations können diese Liste ändern",
   "leadSources.notSaved": "Änderung nicht gespeichert",
   "leadSources.notAdded": "Quelle nicht hinzugefügt",
-  "leadSources.labelFor": "Bezeichnung der Quelle {key}",
   "leadSources.intentFor": "Kaufinteresse von {label}",
   "leadSources.intent": "Kaufinteresse",
   "leadSources.intent.high": "Hohes Kaufinteresse",
@@ -3062,7 +3064,6 @@ export const de = {
   "leadSources.intent.low": "Geringes Kaufinteresse",
   "leadSources.intentHint":
     "Hoch fügt dem Score Punkte hinzu, Gering zieht Punkte ab. Änderungen gelten ab der nächsten Neuberechnung jedes Leads.",
-  "leadSources.leadCount": "Leads: {count}",
   "leadSources.builtIn": "Vorgegeben",
   "leadSources.builtInKept":
     "Vorgegebene Quellen lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
@@ -3070,7 +3071,6 @@ export const de = {
     "{count} Lead nutzt diese Quelle. Deaktiviere sie stattdessen.",
   "leadSources.inUse_other":
     "{count} Leads nutzen diese Quelle. Deaktiviere sie stattdessen.",
-  "leadSources.deactivateInstead": "stattdessen deaktivieren",
   "leadSources.activeFor": "{label} ist aktiv",
   "leadSources.remove": "Entfernen",
   "leadSources.removeTitle": "Quelle entfernen?",
@@ -3079,28 +3079,41 @@ export const de = {
   "leadSources.newLabel": "Neue Quelle",
   "leadSources.labelField": "Bezeichnung",
   "leadSources.addOpen": "Neue Quelle",
-  "leadSources.listLabel": "Quellen in der Liste",
   "leadSources.discovered": "Gefundene Werte",
   "leadSources.newPlaceholder": "Messe",
   "leadSources.add": "Quelle hinzufügen",
   "leadSources.discoveredSub":
     "Werte auf Leads aus Connectors und Importen, die noch nicht in der Liste stehen. Füge einen hinzu, um ihm Bezeichnung und Gewichtung zu geben.",
   "leadSources.adopt": "Zur Liste hinzufügen",
+  "leadSources.colSource": "Quelle",
+  "leadSources.colLeads": "Leads",
+  "leadSources.colActive": "Aktiv",
+  "leadSources.colActions": "Aktionen",
+  "leadSources.leads_one": "{count} Lead",
+  "leadSources.leads_other": "{count} Leads",
+  "leadSources.rowActions": "Aktionen für {label}",
+  "leadSources.rename": "Umbenennen",
+  "leadSources.renameTitle": "Quelle umbenennen",
+  "leadSources.renameSave": "Namen speichern",
   "leadReasons.title": "Disqualifizierungsgründe",
   "leadReasons.sub":
     "Was Vertriebsmitarbeitende beim Disqualifizieren eines Leads wählen. Der Grund steht am Lead und lässt sich filtern.",
-  "leadReasons.labelFor": "Bezeichnung des Grunds {label}",
-  "leadReasons.leadCount": "Leads: {count}",
   "leadReasons.inUse_one":
     "{count} Lead hat diesen Grund. Deaktiviere ihn stattdessen.",
   "leadReasons.inUse_other":
     "{count} Leads haben diesen Grund. Deaktiviere ihn stattdessen.",
   "leadReasons.newLabel": "Neuer Grund",
-  "leadReasons.listLabel": "Gründe in der Liste",
   "leadReasons.add": "Grund hinzufügen",
   "leadReasons.removeTitle": "Grund entfernen?",
   "leadReasons.removeBody":
     "„{label}“ wird von keinem Lead verwendet und wird aus der Liste entfernt.",
+  "leadReasons.colReason": "Grund",
+  "leadReasons.renameTitle": "Grund umbenennen",
+  "leadReasons.labelField": "Grund",
+  "leadReasons.builtInKept":
+    "Vorgegebene Gründe lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
+  "leadReasons.duplicate":
+    "Einen Grund mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "followUpSettings.title": "Nachfassen",
   "followUpSettings.sub":
     "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Startseite des Absenders erscheint.",
@@ -3467,7 +3480,7 @@ export const de = {
   "reviewTemplates.title": "Fragen zum Abschlussrückblick",
   "reviewTemplates.empty": "Keine Fragen für den Rückblick eingerichtet",
   "reviewTemplates.retired": "Stillgelegt",
-  "reviewTemplates.required": "(erforderlich)",
+  "reviewTemplates.required": "Erforderlich",
   "outcomeReview.title": "Abschlussrückblick",
   "outcomeReview.add": "Rückblick hinzufügen",
   "outcomeReview.save": "Rückblick speichern",
@@ -8254,7 +8267,6 @@ export const de = {
   "cf.col.type": "Typ",
   "cf.col.addedBy": "Hinzugefügt von",
   "cf.addedByYou": "Du",
-  "cf.addedByAdmin": "Admin",
   "cf.empty.deal":
     "Noch keine eigenen Felder für Deals. Füge eines hinzu, um Daten zu erfassen, die die Kernfelder nicht abdecken.",
   "cf.empty.company":
@@ -8307,6 +8319,7 @@ export const de = {
     "Feld „{label}“ hinzugefügt. Es erscheint in Datensätzen, Filtern, Exporten und der API.",
   "cf.edit": "Bezeichnung bearbeiten",
   "cf.archive": "Feld archivieren",
+  "cf.rowActions": "Aktionen für {label}",
   "cf.archived":
     "„{label}“ archiviert. Das Feld ist bei neuen Datensätzen ausgeblendet, bleibt in Audit-Log und Verlauf erhalten und lässt sich wiederherstellen.",
   "cf.renamePrompt": "Neue Bezeichnung",
@@ -9121,7 +9134,6 @@ export const de = {
   "users.teamRenameTitle": "Team umbenennen",
   "users.teamRenameSave": "Namen speichern",
   "users.teamRenamed": "Team in „{name}“ umbenannt",
-  "users.notRenamed": "Team nicht umbenannt",
   "users.teamAddMember": "Mitglied hinzufügen",
   "users.teamAddPlaceholder": "Nach Name oder E-Mail suchen",
   "users.teamRemoveMember": "{name} aus {team} entfernen",
@@ -9135,7 +9147,6 @@ export const de = {
   "users.newTeamPlaceholder": "Zum Beispiel DACH Sales",
   "users.createTeam": "Team anlegen",
   "users.notArchived": "Team nicht archiviert",
-  "users.notCreated": "Team nicht angelegt",
   "users.teamNotChanged": "Mitgliedschaft nicht geändert",
   "users.inviteFailed": "Einladung nicht gesendet",
   "users.access.title": "Zugriff des Mitglieds",
@@ -9336,6 +9347,12 @@ export const de = {
   "product.activeFilterAll": "Alle",
   "product.inactive": "Inaktiv",
   "product.archived": "Archiviert",
+  "product.rowActions": "Aktionen für {name}",
+  "product.status": "Status",
+  "product.pricePerMonth": "pro Monat",
+  "product.pricePerQuarter": "pro Quartal",
+  "product.pricePerHalfYear": "pro Halbjahr",
+  "product.pricePerYear": "pro Jahr",
 
   "template.title": "Angebotsvorlagen",
   "template.readOnly":
@@ -9356,6 +9373,8 @@ export const de = {
   "template.localeFilterAll": "Alle Sprachen",
   "template.localeDE": "Deutsch (DE)",
   "template.localeEN": "Englisch (US)",
+  "template.rowActions": "Aktionen für {name}",
+  "template.default": "Standard",
 
   "tools.title": "Agenten-Werkzeuge",
   "tools.sub":
@@ -12589,10 +12608,10 @@ export const de = {
   "stageAutomation.expired": "Abgelaufen",
   "stageAutomation.expiredHint":
     "Niemand hat geantwortet, bevor das Zeitfenster endete. Das ist keine Ablehnung.",
-  "stageAutomation.cleanAcceptance": "Wie vorgeschlagen angenommen",
-  "stageAutomation.edits": "Nach Änderungen angenommen",
+  "stageAutomation.cleanAcceptance": "Angenommen",
+  "stageAutomation.edits": "Bearbeitet",
   "stageAutomation.rejections": "Abgelehnt",
-  "stageAutomation.unsafe": "Rückgängig gemacht oder korrigiert",
+  "stageAutomation.unsafe": "Rückgängig",
   "stageAutomation.unsafeHint":
     "Wechsel, die jemand rückgängig gemacht hat oder deren Beleg als falsch markiert wurde. Ein Wechsel zählt einmal, auch wenn beides geschah.",
   "stageAutomation.observationDays": "Beobachtete Tage",
@@ -12626,6 +12645,14 @@ export const de = {
   "stageAutomation.rulesLoading": "Regeln für Übergänge werden geladen…",
   "stageAutomation.saveFailed": "Änderung nicht gespeichert",
   "stageAutomation.nothingReviewed": "Vorgeschlagen, aber noch keiner geprüft.",
+  "stageAutomation.detail": "Details",
+  "stageAutomation.detailFor": "Details zu {transition}",
+  "stageAutomation.evidenceShare":
+    "{accepted} von {reviewed} wie vorgeschlagen angenommen",
+  "stageAutomation.acceptedHint":
+    "Wie vorgeschlagen angenommen, ohne Änderung.",
+  "stageAutomation.editedHint":
+    "Angenommen, nachdem jemand den Vorschlag geändert hat.",
   "employment.importLoading": "Gekaufter Berufsverlauf wird geladen…",
   "employment.apply": "Importierte Unternehmen verknüpfen",
   "employment.status.current": "Aktuell",

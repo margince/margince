@@ -550,12 +550,12 @@ describe("TeamsCard", () => {
     await user.click(
       within(first).getByRole("button", { name: en["users.createTeam"] }),
     );
-    expect(await within(first).findByText(en["users.notCreated"])).toBeTruthy();
+    expect(await within(first).findByText("the team was merged")).toBeTruthy();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     const second = await open();
-    expect(within(second).queryByText(en["users.notCreated"])).toBeNull();
+    expect(within(second).queryByText("the team was merged")).toBeNull();
   });
 });
 

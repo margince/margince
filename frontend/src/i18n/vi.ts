@@ -2879,8 +2879,6 @@ export const vi = {
   "tagAdmin.merge": "Gộp",
   "tagAdmin.archive": "Ngừng dùng",
   "tagAdmin.restore": "Khôi phục",
-  "tagAdmin.usage": "{count} hồ sơ",
-  "tagAdmin.usagePending": "Đang đếm…",
   "tagAdmin.nearMatchTitle": "Đã có thẻ tương tự",
   "tagAdmin.nearMatch":
     "{names}. Dùng thẻ đã có, trừ khi thẻ này thực sự khác.",
@@ -2894,16 +2892,21 @@ export const vi = {
   "tagAdmin.mergedTitle": "Đã gộp",
   "tagAdmin.mergedBody":
     "Hồ sơ đã chuyển sang thẻ giữ lại: {moved}. Thẻ trùng đã gỡ ở hồ sơ vốn có cả hai thẻ: {collapsed}.",
-  "tagAdmin.countUsage": "Đếm hồ sơ",
   "tagAdmin.noVersion":
     "Thẻ này được tải về không kèm phiên bản nên không thể lưu. Tải lại trang rồi thử lại.",
   "tagAdmin.withheld": "Bạn không có quyền truy cập thẻ của công ty này.",
   "tagAdmin.truncatedTitle": "Danh sách đã cắt bớt",
   "tagAdmin.truncated":
     "Thẻ vượt quá giới hạn không hiển thị và không thể sửa hay gộp vào.",
-  "tagAdmin.usageFailed": "Không thể đếm",
-  "tagAdmin.changeFailed": "Không thể thay đổi thẻ. Thử lại.",
   "tagAdmin.done": "Xong",
+  "tagAdmin.colTag": "Thẻ",
+  "tagAdmin.colUsage": "Đang dùng ở",
+  "tagAdmin.usedBy_one": "{count} hồ sơ",
+  "tagAdmin.usedBy_other": "{count} hồ sơ",
+  "tagAdmin.retired": "Đã ngừng dùng",
+  "tagAdmin.rowActions": "Thao tác cho {name}",
+  "tagAdmin.retiredToast": "Đã ngừng dùng {name}",
+  "tagAdmin.restoredToast": "Đã khôi phục {name}",
   "tags.archived": "trong kho lưu trữ",
   "tags.columnHeader": "Thẻ",
   "tags.filterAll": "Thẻ bất kỳ",
@@ -2995,7 +2998,6 @@ export const vi = {
     "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này",
   "leadSources.notSaved": "Không thể lưu thay đổi",
   "leadSources.notAdded": "Không thể thêm nguồn",
-  "leadSources.labelFor": "Nhãn của nguồn {key}",
   "leadSources.intentFor": "Ý định của {label}",
   "leadSources.intent": "Ý định",
   "leadSources.intent.high": "Ý định mua cao",
@@ -3003,7 +3005,6 @@ export const vi = {
   "leadSources.intent.low": "Ý định mua thấp",
   "leadSources.intentHint":
     "Cao cộng điểm, Thấp trừ điểm. Thay đổi áp dụng ở lần tính lại điểm tiếp theo của từng lead.",
-  "leadSources.leadCount": "{count} lead",
   "leadSources.builtIn": "Có sẵn",
   "leadSources.builtInKept":
     "Nguồn có sẵn có thể đổi tên hoặc tắt, nhưng không thể gỡ.",
@@ -3011,7 +3012,6 @@ export const vi = {
     "{count} lead đang dùng nguồn này. Tắt nguồn thay vì gỡ.",
   "leadSources.inUse_other":
     "{count} lead đang dùng nguồn này. Tắt nguồn thay vì gỡ.",
-  "leadSources.deactivateInstead": "tắt thay vì gỡ",
   "leadSources.activeFor": "{label} đang bật",
   "leadSources.remove": "Gỡ",
   "leadSources.removeTitle": "Gỡ nguồn này?",
@@ -3020,28 +3020,40 @@ export const vi = {
   "leadSources.newLabel": "Nguồn mới",
   "leadSources.labelField": "Nhãn",
   "leadSources.addOpen": "Nguồn mới",
-  "leadSources.listLabel": "Nguồn trong danh sách",
   "leadSources.discovered": "Giá trị đã phát hiện",
   "leadSources.newPlaceholder": "Hội chợ",
   "leadSources.add": "Thêm nguồn",
   "leadSources.discoveredSub":
     "Các giá trị trên lead đến từ trình kết nối và các lần nhập, chưa có trong danh sách. Thêm một giá trị để gán nhãn và trọng số.",
   "leadSources.adopt": "Thêm vào danh sách",
+  "leadSources.colSource": "Nguồn",
+  "leadSources.colLeads": "Lead",
+  "leadSources.colActive": "Đang bật",
+  "leadSources.colActions": "Thao tác",
+  "leadSources.leads_one": "{count} lead",
+  "leadSources.leads_other": "{count} lead",
+  "leadSources.rowActions": "Thao tác cho {label}",
+  "leadSources.rename": "Đổi tên",
+  "leadSources.renameTitle": "Đổi tên nguồn",
+  "leadSources.renameSave": "Lưu tên",
   "leadReasons.title": "Lý do loại",
   "leadReasons.sub":
     "Lý do nhân viên kinh doanh chọn khi loại một lead. Lý do hiển thị trên lead và có thể dùng để lọc.",
-  "leadReasons.labelFor": "Nhãn của lý do {label}",
-  "leadReasons.leadCount": "{count} lead",
   "leadReasons.inUse_one":
     "{count} lead đang dùng lý do này. Tắt lý do thay vì gỡ.",
   "leadReasons.inUse_other":
     "{count} lead đang dùng lý do này. Tắt lý do thay vì gỡ.",
   "leadReasons.newLabel": "Lý do mới",
-  "leadReasons.listLabel": "Lý do trong danh sách",
   "leadReasons.add": "Thêm lý do",
   "leadReasons.removeTitle": "Gỡ lý do này?",
   "leadReasons.removeBody":
     "Không có lead nào dùng “{label}”, nên lý do này sẽ được gỡ khỏi danh sách.",
+  "leadReasons.colReason": "Lý do",
+  "leadReasons.renameTitle": "Đổi tên lý do",
+  "leadReasons.labelField": "Lý do",
+  "leadReasons.builtInKept":
+    "Lý do có sẵn có thể đổi tên hoặc tắt, nhưng không thể gỡ.",
+  "leadReasons.duplicate": "Đã có lý do mang tên này. Hãy chọn tên khác.",
   "followUpSettings.title": "Việc tiếp theo",
   "followUpSettings.sub":
     "Thời điểm một thư đã gửi khách hàng hiện lại trên Trang chủ của người gửi thành việc tiếp theo.",
@@ -3398,7 +3410,7 @@ export const vi = {
   "reviewTemplates.title": "Câu hỏi đánh giá kết quả",
   "reviewTemplates.empty": "Chưa thiết lập câu hỏi đánh giá",
   "reviewTemplates.retired": "Đã ngừng dùng",
-  "reviewTemplates.required": "(bắt buộc)",
+  "reviewTemplates.required": "Bắt buộc",
   "outcomeReview.title": "Đánh giá kết quả",
   "outcomeReview.add": "Thêm đánh giá",
   "outcomeReview.save": "Lưu đánh giá",
@@ -8081,7 +8093,6 @@ export const vi = {
   "cf.col.type": "Loại",
   "cf.col.addedBy": "Người thêm",
   "cf.addedByYou": "Bạn",
-  "cf.addedByAdmin": "Quản trị viên",
   "cf.empty.deal":
     "Chưa có trường tùy chỉnh nào trên Deal. Thêm một trường để theo dõi dữ liệu mà trường lõi chưa bao quát.",
   "cf.empty.company":
@@ -8133,6 +8144,7 @@ export const vi = {
     "Đã thêm trường “{label}”. Trường xuất hiện trên hồ sơ, trong bộ lọc, bản xuất và API.",
   "cf.edit": "Sửa nhãn",
   "cf.archive": "Chuyển trường vào kho lưu trữ",
+  "cf.rowActions": "Thao tác cho {label}",
   "cf.archived":
     "Đã chuyển “{label}” vào kho lưu trữ. Trường bị ẩn khỏi hồ sơ mới, vẫn giữ trong nhật ký hoạt động và lịch sử, và có thể khôi phục.",
   "cf.renamePrompt": "Nhãn mới",
@@ -8925,7 +8937,6 @@ export const vi = {
   "users.teamRenameTitle": "Đổi tên nhóm",
   "users.teamRenameSave": "Lưu tên",
   "users.teamRenamed": "Đã đổi tên nhóm thành “{name}”",
-  "users.notRenamed": "Không thể đổi tên nhóm",
   "users.teamAddMember": "Thêm thành viên",
   "users.teamAddPlaceholder": "Tìm theo tên hoặc email",
   "users.teamRemoveMember": "Gỡ {name} khỏi {team}",
@@ -8939,7 +8950,6 @@ export const vi = {
   "users.newTeamPlaceholder": "Ví dụ: DACH Sales",
   "users.createTeam": "Tạo nhóm",
   "users.notArchived": "Không thể chuyển nhóm vào kho lưu trữ",
-  "users.notCreated": "Không thể tạo nhóm",
   "users.teamNotChanged": "Không thể thay đổi thành viên nhóm",
   "users.inviteFailed": "Không thể gửi lời mời",
   "users.access.title": "Quyền truy cập của người dùng",
@@ -9141,6 +9151,12 @@ export const vi = {
   "product.activeFilterAll": "Tất cả",
   "product.inactive": "Ngừng bán",
   "product.archived": "Trong kho lưu trữ",
+  "product.rowActions": "Thao tác cho {name}",
+  "product.status": "Trạng thái",
+  "product.pricePerMonth": "mỗi tháng",
+  "product.pricePerQuarter": "mỗi quý",
+  "product.pricePerHalfYear": "mỗi sáu tháng",
+  "product.pricePerYear": "mỗi năm",
 
   "template.title": "Mẫu báo giá",
   "template.readOnly":
@@ -9161,6 +9177,8 @@ export const vi = {
   "template.localeFilterAll": "Tất cả ngôn ngữ",
   "template.localeDE": "Tiếng Đức (DE)",
   "template.localeEN": "Tiếng Anh (US)",
+  "template.rowActions": "Thao tác cho {name}",
+  "template.default": "Mặc định",
 
   "tools.title": "Công cụ agent",
   "tools.sub":
@@ -12324,11 +12342,10 @@ export const vi = {
   "stageAutomation.expired": "Đã hết hạn",
   "stageAutomation.expiredHint":
     "Không ai trả lời trước khi hết thời hạn. Đây không phải từ chối.",
-  "stageAutomation.cleanAcceptance": "Chấp nhận nguyên đề xuất",
-  "stageAutomation.edits": "Ch\u1ea5p nh\u1eadn sau khi s\u1eeda",
+  "stageAutomation.cleanAcceptance": "Chấp nhận",
+  "stageAutomation.edits": "Đã sửa",
   "stageAutomation.rejections": "Đã từ chối",
-  "stageAutomation.unsafe":
-    "\u0110\u00e3 ho\u00e0n t\u00e1c ho\u1eb7c s\u1eeda",
+  "stageAutomation.unsafe": "Bị hoàn tác",
   "stageAutomation.unsafeHint":
     "Bước chuyển bị hoàn tác hoặc có bằng chứng bị đánh dấu sai. Mỗi bước chuyển chỉ tính một lần dù xảy ra cả hai.",
   "stageAutomation.observationDays": "S\u1ed1 ng\u00e0y quan s\u00e1t",
@@ -12363,6 +12380,12 @@ export const vi = {
   "stageAutomation.saveFailed": "Không thể lưu thay đổi",
   "stageAutomation.nothingReviewed":
     "Đã đề xuất, nhưng chưa có quyết định nào.",
+  "stageAutomation.detail": "Chi tiết",
+  "stageAutomation.detailFor": "Chi tiết của {transition}",
+  "stageAutomation.evidenceShare":
+    "Chấp nhận nguyên đề xuất {accepted} trên {reviewed}",
+  "stageAutomation.acceptedHint": "Chấp nhận nguyên đề xuất, không sửa gì.",
+  "stageAutomation.editedHint": "Chấp nhận sau khi đề xuất đã được sửa.",
   "employment.importLoading": "Đang tải lịch sử công tác đã mua…",
   "employment.apply": "Liên kết công ty đã nhập",
   "employment.status.current": "Hiện tại",

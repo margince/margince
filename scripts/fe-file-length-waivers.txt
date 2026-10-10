@@ -90,10 +90,9 @@
 855 frontend/src/screens/onboarding-gate.tsx
 836 frontend/src/screens/worklist.copy.ts
 795 frontend/src/screens/common.tsx
-817 frontend/src/screens/leadvocab.tsx
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
 850 frontend/src/screens/settingscatalog.ts
-865 frontend/src/screens/customfields.tsx
+624 frontend/src/screens/customfields.tsx
 922 frontend/src/screens/contactprovider.tsx
 887 frontend/src/screens/share.tsx
 848 frontend/src/screens/integrations-provider.tsx

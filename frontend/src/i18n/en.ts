@@ -2994,8 +2994,6 @@ export const en = {
   "tagAdmin.merge": "Merge",
   "tagAdmin.archive": "Retire",
   "tagAdmin.restore": "Restore",
-  "tagAdmin.usage": "{count} records",
-  "tagAdmin.usagePending": "Counting…",
   "tagAdmin.nearMatchTitle": "Similar tag exists",
   "tagAdmin.nearMatch":
     "{names}. Apply the existing tag unless this one is different.",
@@ -3009,16 +3007,21 @@ export const en = {
   "tagAdmin.mergedTitle": "Merged",
   "tagAdmin.mergedBody":
     "Records moved to the kept tag: {moved}. Duplicates removed, where a record already had both: {collapsed}.",
-  "tagAdmin.countUsage": "Count records",
   "tagAdmin.noVersion":
     "This tag loaded without a version and cannot be saved. Reload the page and retry.",
   "tagAdmin.withheld": "You do not have access to this company’s tags.",
   "tagAdmin.truncatedTitle": "List shortened",
   "tagAdmin.truncated":
     "Tags past the limit are not shown and cannot be edited or merged into.",
-  "tagAdmin.usageFailed": "Count unavailable",
-  "tagAdmin.changeFailed": "The tag was not changed. Retry.",
   "tagAdmin.done": "Done",
+  "tagAdmin.colTag": "Tag",
+  "tagAdmin.colUsage": "Used by",
+  "tagAdmin.usedBy_one": "{count} record",
+  "tagAdmin.usedBy_other": "{count} records",
+  "tagAdmin.retired": "Retired",
+  "tagAdmin.rowActions": "Actions for {name}",
+  "tagAdmin.retiredToast": "{name} retired",
+  "tagAdmin.restoredToast": "{name} restored",
   "tags.archived": "archived",
   "tags.columnHeader": "Tags",
   "tags.filterAll": "Any tag",
@@ -3110,7 +3113,6 @@ export const en = {
     "Only an administrator or operations user can change this list",
   "leadSources.notSaved": "Change was not saved",
   "leadSources.notAdded": "Source was not added",
-  "leadSources.labelFor": "Label of source {key}",
   "leadSources.intentFor": "Intent of {label}",
   "leadSources.intent": "Intent",
   "leadSources.intent.high": "High intent",
@@ -3118,7 +3120,6 @@ export const en = {
   "leadSources.intent.low": "Low intent",
   "leadSources.intentHint":
     "High adds points to the score and Low subtracts them. Changes apply at each lead’s next rescore.",
-  "leadSources.leadCount": "{count} leads",
   "leadSources.builtIn": "Built-in",
   "leadSources.builtInKept":
     "Built-in sources can be renamed or deactivated, not removed.",
@@ -3126,7 +3127,6 @@ export const en = {
     "{count} lead uses this source. Deactivate it instead.",
   "leadSources.inUse_other":
     "{count} leads use this source. Deactivate it instead.",
-  "leadSources.deactivateInstead": "deactivate instead",
   "leadSources.activeFor": "{label} is active",
   "leadSources.remove": "Remove",
   "leadSources.removeTitle": "Remove this source?",
@@ -3135,28 +3135,41 @@ export const en = {
   "leadSources.newLabel": "New source",
   "leadSources.labelField": "Label",
   "leadSources.addOpen": "New source",
-  "leadSources.listLabel": "Sources in the list",
   "leadSources.discovered": "Discovered values",
   "leadSources.newPlaceholder": "Trade show",
   "leadSources.add": "Add source",
   "leadSources.discoveredSub":
     "Values on leads from connectors and imports that are not in the list yet. Add one to give it a label and weight.",
   "leadSources.adopt": "Add to list",
+  "leadSources.colSource": "Source",
+  "leadSources.colLeads": "Leads",
+  "leadSources.colActive": "Active",
+  "leadSources.colActions": "Actions",
+  "leadSources.leads_one": "{count} lead",
+  "leadSources.leads_other": "{count} leads",
+  "leadSources.rowActions": "Actions for {label}",
+  "leadSources.rename": "Rename",
+  "leadSources.renameTitle": "Rename source",
+  "leadSources.renameSave": "Save name",
   "leadReasons.title": "Disqualification reasons",
   "leadReasons.sub":
     "What a rep chooses when disqualifying a lead. The reason shows on the lead and can be filtered.",
-  "leadReasons.labelFor": "Label of reason {label}",
-  "leadReasons.leadCount": "{count} leads",
   "leadReasons.inUse_one":
     "{count} lead has this reason. Deactivate it instead.",
   "leadReasons.inUse_other":
     "{count} leads have this reason. Deactivate it instead.",
   "leadReasons.newLabel": "New reason",
-  "leadReasons.listLabel": "Reasons in the list",
   "leadReasons.add": "Add reason",
   "leadReasons.removeTitle": "Remove this reason?",
   "leadReasons.removeBody":
     "“{label}” is not used by any lead and is removed from the list.",
+  "leadReasons.colReason": "Reason",
+  "leadReasons.renameTitle": "Rename reason",
+  "leadReasons.labelField": "Reason",
+  "leadReasons.builtInKept":
+    "Built-in reasons can be renamed or deactivated, not removed.",
+  "leadReasons.duplicate":
+    "A reason with this name already exists. Choose another name.",
   "followUpSettings.title": "Follow-ups",
   "followUpSettings.sub":
     "When a message sent to a customer comes back on the sender’s Home as a follow-up.",
@@ -3517,7 +3530,7 @@ export const en = {
   "reviewTemplates.title": "Outcome review questions",
   "reviewTemplates.empty": "No review questions are set up",
   "reviewTemplates.retired": "Retired",
-  "reviewTemplates.required": "(required)",
+  "reviewTemplates.required": "Required",
   "outcomeReview.title": "Outcome review",
   "outcomeReview.add": "Add review",
   "outcomeReview.save": "Save review",
@@ -8421,7 +8434,6 @@ export const en = {
   "cf.col.type": "Type",
   "cf.col.addedBy": "Added by",
   "cf.addedByYou": "You",
-  "cf.addedByAdmin": "Administrator",
   "cf.empty.deal":
     "No custom fields on Deal yet. Add one to track data the core fields do not cover.",
   "cf.empty.company":
@@ -8473,6 +8485,7 @@ export const en = {
     "Field “{label}” added. It appears on records and in filters, exports and the API.",
   "cf.edit": "Edit label",
   "cf.archive": "Archive field",
+  "cf.rowActions": "Actions for {label}",
   "cf.archived":
     "“{label}” archived. It is hidden from new records, kept in audit and history, and can be restored.",
   "cf.renamePrompt": "New label",
@@ -9261,7 +9274,6 @@ export const en = {
   "users.teamRenameTitle": "Rename team",
   "users.teamRenameSave": "Save name",
   "users.teamRenamed": "Team renamed to “{name}”",
-  "users.notRenamed": "Team not renamed",
   "users.teamAddMember": "Add member",
   "users.teamAddPlaceholder": "Search by name or email",
   "users.teamRemoveMember": "Remove {name} from {team}",
@@ -9275,7 +9287,6 @@ export const en = {
   "users.newTeamPlaceholder": "For example, DACH Sales",
   "users.createTeam": "Create team",
   "users.notArchived": "Team not archived",
-  "users.notCreated": "Team not created",
   "users.teamNotChanged": "Membership not changed",
   "users.inviteFailed": "Invitation not sent",
   "users.access.title": "User access",
@@ -9473,6 +9484,12 @@ export const en = {
   "product.activeFilterAll": "All",
   "product.inactive": "Inactive",
   "product.archived": "Archived",
+  "product.rowActions": "Actions for {name}",
+  "product.status": "Status",
+  "product.pricePerMonth": "per month",
+  "product.pricePerQuarter": "per quarter",
+  "product.pricePerHalfYear": "per six months",
+  "product.pricePerYear": "per year",
 
   "template.title": "Offer templates",
   "template.settingsSub":
@@ -9484,14 +9501,16 @@ export const en = {
   "template.archiveConfirm":
     "Archive this template? Offers that already use it keep its layout. New offers cannot select it.",
   "template.name": "Name",
-  "template.locale": "Locale",
+  "template.locale": "Language",
   "template.isDefault": "Default for locale",
   "template.header": "Header text",
   "template.footer": "Footer text",
-  "template.localeFilter": "Locale",
-  "template.localeFilterAll": "All locales",
+  "template.localeFilter": "Language",
+  "template.localeFilterAll": "All languages",
   "template.localeDE": "German (DE)",
   "template.localeEN": "English (US)",
+  "template.rowActions": "Actions for {name}",
+  "template.default": "Default",
 
   "tools.title": "Agent tools",
   "tools.sub":
@@ -12728,10 +12747,10 @@ export const en = {
   "stageAutomation.expired": "Expired",
   "stageAutomation.expiredHint":
     "No one answered before the window closed. This is not a rejection.",
-  "stageAutomation.cleanAcceptance": "Accepted as proposed",
-  "stageAutomation.edits": "Accepted after edits",
+  "stageAutomation.cleanAcceptance": "Accepted",
+  "stageAutomation.edits": "Edited",
   "stageAutomation.rejections": "Rejected",
-  "stageAutomation.unsafe": "Undone or corrected",
+  "stageAutomation.unsafe": "Undone",
   "stageAutomation.unsafeHint":
     "Moves someone reversed or whose evidence they marked wrong. A move counts once even if both happened.",
   "stageAutomation.observationDays": "Days observed",
@@ -12765,6 +12784,12 @@ export const en = {
   "stageAutomation.rulesLoading": "Loading transition rules…",
   "stageAutomation.saveFailed": "Change not saved",
   "stageAutomation.nothingReviewed": "Proposed, but none reviewed yet.",
+  "stageAutomation.detail": "Details",
+  "stageAutomation.detailFor": "Details for {transition}",
+  "stageAutomation.evidenceShare":
+    "{accepted} of {reviewed} accepted as proposed",
+  "stageAutomation.acceptedHint": "Accepted as proposed, with nothing changed.",
+  "stageAutomation.editedHint": "Accepted after someone changed the proposal.",
   "employment.importLoading": "Loading purchased employment history…",
   "employment.apply": "Link imported companies",
   "employment.status.current": "Current",
