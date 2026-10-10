@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useIsMutating, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useIsMutating,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./common";
@@ -13,17 +17,27 @@ const MEMBERS_KEY = ["users-admin"] as const;
 
 // include_inactive is honored server-side only for a caller holding
 // `user_admin:read`, so a deactivated member stays reachable for reactivation.
+// The roster is read a page at a time; the card asks for the next on demand.
 export function useMembers() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: MEMBERS_KEY,
-    queryFn: async (): Promise<User[]> => {
-      const data = unwrap(
+    initialPageParam: "",
+    queryFn: async ({ pageParam }) =>
+      unwrap(
         await api.GET("/users", {
-          params: { query: { include_inactive: true } },
+          params: {
+            query: {
+              include_inactive: true,
+              ...(pageParam ? { cursor: pageParam } : {}),
+            },
+          },
         }),
-      );
-      return data.data;
-    },
+      ),
+    getNextPageParam: (last) =>
+      last.page.has_more && last.page.next_cursor
+        ? last.page.next_cursor
+        : undefined,
+    select: (data): User[] => data.pages.flatMap((page) => page.data),
   });
 }
 

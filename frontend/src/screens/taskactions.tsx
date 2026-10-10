@@ -30,6 +30,7 @@ import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "./activityread";
+import { useCompleteTask } from "./taskcomplete";
 import { refetchAfterWrite } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
@@ -118,13 +119,10 @@ export function snoozedDueAt(
 }
 
 /**
- * TaskCompleteCheck is the tick affordance itself — a checkbox rather than a
- * labelled button, for a row that names its own verb (ticking IS completing)
- * rather than one that reads as a menu of actions. Every caller lists OPEN
- * tasks only, so the box always starts unchecked; ticking it fires the
- * completion and the row leaves the list on the invalidated re-read, rather
- * than the checkbox itself flipping to a done state it would then have to
- * keep showing.
+ * TaskCompleteCheck is the tick itself: a checkbox for a row that names its
+ * own verb, since ticking is completing. Every caller lists open tasks only,
+ * so the box starts unchecked. The row leaves on the invalidated re-read,
+ * with the confirmation and its Undo raised meanwhile.
  */
 export function TaskCompleteCheck({
   activityId,
@@ -136,11 +134,11 @@ export function TaskCompleteCheck({
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
+  const complete = useCompleteTask(update);
   const isThisTask = update.variables?.id === activityId;
   const pending = update.isPending && isThisTask;
-  // A rejected PATCH re-enables the box and leaves it unchecked — the same
-  // rendering a click that did nothing would leave. Without this, the two are
-  // indistinguishable and the reader has no reason to try again.
+  // A rejected PATCH re-enables the box, unchecked, like a click that did
+  // nothing; this line is what tells the two apart.
   const failed = update.isError && isThisTask;
   return (
     <>
@@ -151,9 +149,7 @@ export function TaskCompleteCheck({
         label={<span className="sr-only">{t("tasks.complete")}</span>}
         checked={false}
         disabled={pending}
-        onChange={() =>
-          update.mutate({ id: activityId, version, body: { is_done: true } })
-        }
+        onChange={() => complete(activityId, version)}
       />
       {failed && <ErrorLine error={update.error} inline />}
     </>
@@ -185,15 +181,14 @@ export function TaskQuickActions({
   const recordZone = useRecordZone();
   const nextDue = snoozedDueAt(dueAt, recordZone);
   const pending = update.isPending && update.variables?.id === activityId;
+  const complete = useCompleteTask(update);
   return (
     <>
       {showComplete && (
         <Button
           variant="primary"
           disabled={pending}
-          onClick={() =>
-            update.mutate({ id: activityId, version, body: { is_done: true } })
-          }
+          onClick={() => complete(activityId, version)}
         >
           {t("tasks.complete")}
         </Button>
