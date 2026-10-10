@@ -225,8 +225,7 @@ export const RowMenu: Story = {
     <StoryProviders>
       <VocabRowMenu
         label="Webinar"
-        canEdit
-        canRemove
+        verbs={{ canEdit: true, canRemove: true }}
         refusal="2 leads use this source. Deactivate it instead."
         onRename={() => undefined}
         onRemove={() => undefined}

@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import {
   cleanup,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -18,6 +19,7 @@ import { TAG_TONES } from "../design-system/tagpill";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { translate } from "../i18n";
 import { en } from "../i18n/en";
+import { useSentenceWords } from "./filtersentence";
 import {
   installFetchStub,
   jsonResponse,
@@ -49,11 +51,11 @@ const RETIRED = {
 
 const ADMIN = { tag: ["read", "create", "update", "delete"] };
 
-function mount(
+function routeTags(
   words: readonly unknown[],
-  grants: Record<string, string[]> = ADMIN,
-  extra: RouteMap = {},
-  asked: URL[] = [],
+  grants: Record<string, string[]>,
+  extra: RouteMap,
+  asked: URL[],
 ) {
   installFetchStub({
     "GET /me": meRoute(grants as never),
@@ -70,6 +72,15 @@ function mount(
     asked.push(new URL(url, "http://localhost"));
     return routed(input, init);
   };
+}
+
+function mount(
+  words: readonly unknown[],
+  grants: Record<string, string[]> = ADMIN,
+  extra: RouteMap = {},
+  asked: URL[] = [],
+) {
+  routeTags(words, grants, extra, asked);
   render(
     <StoryProviders>
       <ToastProvider>
@@ -110,7 +121,8 @@ describe("the tag vocabulary card", () => {
     expect(await screen.findByText("Key Account")).toBeInTheDocument();
   });
 
-  // The list counts a word's records only when asked, and this card is the one reader that asks.
+  // Counting reads every tagging, so this card asks and the filter sentence
+  // on every list page does not.
   it("asks the list for each word's count and draws it", async () => {
     const asked: URL[] = [];
     mount([KEY_ACCOUNT], ADMIN, {}, asked);
@@ -121,6 +133,18 @@ describe("the tag vocabulary card", () => {
     ).toBeInTheDocument();
     const list = asked.find((url) => url.pathname.endsWith("/tags"));
     expect(list?.searchParams.get("with_carried_by")).toBe("true");
+  });
+
+  it("leaves the count out of the catalog a filter sentence reads", async () => {
+    const asked: URL[] = [];
+    routeTags([], ADMIN, {}, asked);
+    renderHook(() => useSentenceWords(), { wrapper: StoryProviders });
+    await waitFor(() =>
+      expect(asked.some((url) => url.pathname.endsWith("/tags"))).toBe(true),
+    );
+    const list = asked.find((url) => url.pathname.endsWith("/tags"));
+    expect(list?.searchParams.get("include_archived")).toBe("true");
+    expect(list?.searchParams.has("with_carried_by")).toBe(false);
   });
 
   // A retired word is restored HERE, so a list that hid it would leave the

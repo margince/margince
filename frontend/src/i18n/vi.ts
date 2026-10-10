@@ -1351,9 +1351,6 @@ export const vi = {
   "share.rosterErrorBoth": "Không thể tải danh sách thành viên và nhóm.",
   "share.rosterEmpty": "Không có thành viên hay nhóm nào để chia sẻ.",
 
-  "edit.versionSkew":
-    "Hồ sơ này đã thay đổi từ lúc mở. Tải lại trang rồi thử lại.",
-
   "merge.contact": "Gộp liên hệ",
   "merge.company": "Gộp công ty",
   "merge.searchPlaceholder": "Tìm kiếm…",
@@ -3002,6 +2999,7 @@ export const vi = {
     "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này",
   "leadSources.notSaved": "Không thể lưu thay đổi",
   "leadSources.notAdded": "Không thể thêm nguồn",
+  "leadSources.duplicate": "Đã có nguồn mang tên này. Hãy chọn tên khác.",
   "leadSources.intentFor": "Ý định của {label}",
   "leadSources.intent": "Ý định",
   "leadSources.intent.high": "Ý định mua cao",

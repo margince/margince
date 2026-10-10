@@ -170,6 +170,7 @@ describe("ProductsAdmin", () => {
     expect(
       await screen.findByRole("button", { name: "New product" }),
     ).toBeTruthy();
+    expect(await screen.findByText("Consulting Day")).toBeTruthy();
     expect(rowMenu()).toBeNull();
     expect(postureLine()).toBeNull();
   });

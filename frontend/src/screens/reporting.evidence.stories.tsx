@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { en } from "../i18n/en";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
@@ -83,11 +83,10 @@ export const StaleReading: Story = {
   },
   play: async () => {
     const dialog = within(await within(document.body).findByRole("dialog"));
-    await expect(
-      await dialog.findByText(en["reporting.evidenceStale"]),
-    ).toBeVisible();
-    await expect(
-      dialog.getByRole("button", { name: en["common.retry"] }),
-    ).toBeVisible();
+    const stale = await dialog.findByText(en["reporting.evidenceStale"]);
+    const retry = dialog.getByRole("button", { name: en["common.retry"] });
+    // The drawer fades in from opacity 0, so visibility is waited for.
+    await waitFor(() => expect(stale).toBeVisible());
+    await expect(retry).toBeVisible();
   },
 };

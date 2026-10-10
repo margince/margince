@@ -172,6 +172,9 @@ it("says where a role applies and who holds it in words, never the stored keys",
   ).toBeInTheDocument();
   expect(within(row).queryByText(/company, deal/)).toBeNull();
   expect(within(row).queryByRole("textbox")).toBeNull();
+  expect(
+    screen.getByRole("columnheader", { name: en["leadSources.colActions"] }),
+  ).toBeInTheDocument();
   const lead = screen.getByTestId("record-role-delivery_lead");
   expect(within(lead).getByText("On projects")).toBeInTheDocument();
   expect(
@@ -244,5 +247,8 @@ it("leaves every control inert for a reader and says why", async () => {
     screen.queryByRole("button", {
       name: en["table.rowActions"].replace("{name}", "Technical contact"),
     }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("columnheader", { name: en["leadSources.colActions"] }),
   ).toBeNull();
 });

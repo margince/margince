@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -440,8 +441,13 @@ func TestDisqualifyWithNoPinIsUnconditioned(t *testing.T) {
 // one reason would split a report on why leads were dropped.
 func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	e := setupPromoteConsent(t)
-	if _, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " no budget "}); !errors.Is(err, apperrors.ErrConflict) {
+	_, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " no budget "})
+	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a second spelling of the stock \"No budget\" answered %v, want a conflict", err)
+	}
+	want := `conflict: a disqualification reason called "no budget" already exists`
+	if fault, _ := httperr.Classify(err); fault.Detail != want {
+		t.Errorf("the conflict reads %q, want %q", fault.Detail, want)
 	}
 	custom, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "Procurement freeze"})
 	if err != nil {

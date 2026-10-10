@@ -250,13 +250,14 @@ describe("a decision that lost its race", () => {
     jsonResponse({ title: "Conflict", status: 409, code: "version_skew" }, 409);
 
   it("asks for the staging again when its record moved", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => skew()),
     );
     render(<ApprovalRow approval={closeDateApproval()} />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+    await user.click(screen.getByRole("button", { name: "Approve" }));
 
     expect(await screen.findByText(en["decision.versionSkew"])).toBeVisible();
   });
@@ -264,6 +265,7 @@ describe("a decision that lost its race", () => {
   // Nobody stages a rate proposal by hand, so staging again is advice the
   // reader cannot follow.
   it("sends a rate proposal back to the refresh", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => skew()),
@@ -279,7 +281,7 @@ describe("a decision that lost its race", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+    await user.click(screen.getByRole("button", { name: "Approve" }));
 
     expect(await screen.findByText(en["decision.fxRateMoved"])).toBeVisible();
     expect(screen.queryByText(en["decision.versionSkew"])).toBeNull();

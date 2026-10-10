@@ -25,9 +25,9 @@ import { problemMessageOf, QueryStates } from "./common";
 import type { Tag } from "./tagadmin.queries";
 import {
   useArchiveTag,
+  useCountedTagCatalog,
   useMergeTags,
   useRestoreTag,
-  useTagCatalog,
 } from "./tagadmin.queries";
 import { TagDialog } from "./tagdialog";
 import { useUndoableRemoval } from "./undoableremoval";
@@ -58,7 +58,7 @@ export function TagVocabularyCard() {
     canEdit: useCanWrite("tag", "update"),
     canArchive: useCanWrite("tag", "delete"),
   };
-  const catalog = useTagCatalog(canRead);
+  const catalog = useCountedTagCatalog(canRead);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Tag | null>(null);
   const [merging, setMerging] = useState<Tag | null>(null);

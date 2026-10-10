@@ -15744,6 +15744,7 @@ components:
         carried_by:
           type: integer
           readOnly: true
+          minimum: 0
           description: >-
             How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read that asks `with_carried_by`; absent otherwise.
     CreateTagRequest:
@@ -17755,6 +17756,7 @@ components:
         score: {type: [number, 'null'], description: Relevance score.}
         carried_by:
           type: [integer, 'null']
+          minimum: 0
           description: >-
             For a `tag` hit only: how many contacts, companies, deals and leads carry this word, as THIS caller may see them — the same types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
         works_at:

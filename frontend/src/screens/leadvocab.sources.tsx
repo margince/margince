@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type FormEvent, useId, useRef, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { rowsOf } from "../api/rows";
 import { useCanWrite } from "../app/capability";
 import { isOption } from "../app/options";
@@ -18,7 +18,11 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { KeyedName } from "../design-system/keyedname";
-import { NameDialog } from "../design-system/namedialog";
+import {
+  NameDialog,
+  nameRefusal,
+  useRefusedName,
+} from "../design-system/namedialog";
 import {
   Panel,
   PanelBody,
@@ -49,7 +53,11 @@ import {
   useLeadSources,
   useSourceMutations,
 } from "./leadsources";
-import { leadsColumn, VocabRowMenu } from "./leadvocab.rows";
+import {
+  leadsColumn,
+  useRemovalFocus,
+  vocabMenuColumn,
+} from "./leadvocab.rows";
 
 const INTENTS = ["high", "neutral", "low"] as const;
 
@@ -77,7 +85,10 @@ function AddSourceDialog({
   const formId = useId();
   const [label, setLabel] = useState("");
   const [intent, setIntent] = useState<LeadSourceIntent>("neutral");
-  const ready = label.trim() !== "";
+  const name = label.trim();
+  const refused = nameRefusal(create.error, t, "leadSources.duplicate");
+  const { refusedName, markSent } = useRefusedName(name, refused.nameProblem);
+  const ready = name !== "" && !refusedName;
   const singlePress = useSinglePress(create.isPending);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="form">
@@ -90,22 +101,20 @@ function AddSourceDialog({
         onSubmit={singlePress((e: FormEvent) => {
           e.preventDefault();
           if (!ready || create.isPending) return;
-          create.mutate(
-            { label: label.trim(), intent },
-            { onSuccess: onClose },
-          );
+          markSent();
+          create.mutate({ label: name, intent }, { onSuccess: onClose });
         })}
       >
-        {create.isError && (
+        {refused.problem && (
           <Callout
             kind="outcome"
             tone="danger"
             title={t("leadSources.notAdded")}
           >
-            {problemMessageOf(create.error, t)}
+            {refused.problem}
           </Callout>
         )}
-        <Field label={t("leadSources.labelField")}>
+        <Field label={t("leadSources.labelField")} error={refusedName}>
           {(control) => (
             <TextInput
               {...control}
@@ -227,22 +236,12 @@ function sourceColumns({
         />
       ),
     },
-    {
-      key: "verbs",
-      header: t("leadSources.colActions"),
-      headerHidden: true,
-      fold: "end",
-      render: (source) => (
-        <VocabRowMenu
-          label={source.label}
-          canEdit={canEdit}
-          canRemove={canRemove}
-          refusal={refusal(source)}
-          onRename={() => onRename(source)}
-          onRemove={() => onRemove(source)}
-        />
-      ),
-    },
+    ...vocabMenuColumn(t, grants, (source: LeadSource) => ({
+      label: source.label,
+      refusal: refusal(source),
+      onRename: () => onRename(source),
+      onRemove: () => onRemove(source),
+    })),
   ];
 }
 
@@ -261,16 +260,22 @@ function DiscoveredSources({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const tableId = useId();
+  // By position: a discovered key is whatever a lead carried, spaces included.
+  const nameId = (found: DiscoveredLeadSource) =>
+    `${tableId}-${discovered.indexOf(found)}`;
   const columns: DataTableColumn<DiscoveredLeadSource>[] = [
     {
       key: "name",
       header: t("leadSources.colSource"),
       grow: true,
       render: (found) => (
-        <KeyedName
-          name={sourceKeyLabel(found.key, administered, t)}
-          code={found.key}
-        />
+        <span id={nameId(found)}>
+          <KeyedName
+            name={sourceKeyLabel(found.key, administered, t)}
+            code={found.key}
+          />
+        </span>
       ),
     },
     leadsColumn({ t, plural, locale }, (found) => found.lead_count),
@@ -283,6 +288,7 @@ function DiscoveredSources({
       fold: "end",
       render: (found) => (
         <Button
+          aria-describedby={nameId(found)}
           onClick={() =>
             onAdopt(found, sourceKeyLabel(found.key, administered, t))
           }
@@ -323,10 +329,9 @@ export function LeadSourcesCard() {
   const [adding, setAdding] = useState(false);
   const [renaming, setRenaming] = useState<LeadSource | null>(null);
   const [removing, setRemoving] = useState<LeadSource | null>(null);
-  // The removed row takes its menu with it, so focus lands on the card's verb.
-  const removed = useRef(false);
-  const addVerb = useRef<HTMLButtonElement>(null);
+  const removal = useRemovalFocus();
   const failure = [adopt, update].find((m) => m.isError);
+  const renameRefused = nameRefusal(rename.error, t, "leadSources.duplicate");
   const administered = rowsOf(query.data?.data);
   const discovered = rowsOf(query.data?.discovered);
   const columns = sourceColumns({
@@ -339,14 +344,17 @@ export function LeadSourcesCard() {
       rename.reset();
       setRenaming(source);
     },
-    onRemove: setRemoving,
+    onRemove: (source) => {
+      removal.opened();
+      setRemoving(source);
+    },
   });
   return (
     <Panel
-      title={t("leadSources.title")}
+      title={<span id={removal.titleId}>{t("leadSources.title")}</span>}
       titleAction={
         canCreate && (
-          <Button ref={addVerb} onClick={() => setAdding(true)}>
+          <Button ref={removal.addVerb} onClick={() => setAdding(true)}>
             {t("leadSources.addOpen")}
           </Button>
         )
@@ -405,7 +413,8 @@ export function LeadSourcesCard() {
         initial={renaming?.label ?? ""}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        problem={renameRefused.problem}
+        nameProblem={renameRefused.nameProblem}
         onSave={(label) => {
           if (renaming) {
             rename.mutate(
@@ -421,7 +430,7 @@ export function LeadSourcesCard() {
           remove.reset();
           setRemoving(null);
         }}
-        returnFocusTo={() => (removed.current ? addVerb.current : null)}
+        returnFocusTo={removal.returnFocusTo}
         title={t("leadSources.removeTitle")}
         confirmLabel={t("leadSources.remove")}
         confirmVariant="danger"
@@ -431,7 +440,7 @@ export function LeadSourcesCard() {
           if (removing) {
             remove.mutate(removing.id, {
               onSuccess: () => {
-                removed.current = true;
+                removal.landed();
                 setRemoving(null);
               },
             });

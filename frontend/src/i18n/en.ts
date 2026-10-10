@@ -1374,9 +1374,6 @@ export const en = {
   "share.rosterErrorBoth": "People and teams did not load.",
   "share.rosterEmpty": "No people or teams to share with.",
 
-  "edit.versionSkew":
-    "This record changed since it was opened. Reload and retry.",
-
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",
   "merge.searchPlaceholder": "Search…",
@@ -3117,6 +3114,8 @@ export const en = {
     "Only an administrator or operations user can change this list",
   "leadSources.notSaved": "Change was not saved",
   "leadSources.notAdded": "Source was not added",
+  "leadSources.duplicate":
+    "A source with this name already exists. Choose another name.",
   "leadSources.intentFor": "Intent of {label}",
   "leadSources.intent": "Intent",
   "leadSources.intent.high": "High intent",

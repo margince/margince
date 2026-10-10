@@ -42,6 +42,22 @@ export function useTagCatalog(enabled = true) {
     queryFn: async () => {
       return unwrap(
         await api.GET("/tags", {
+          params: { query: { include_archived: true } },
+        }),
+      );
+    },
+  });
+}
+
+/** The catalog with each word's record count, for the admin card alone:
+ *  counting reads every tagging, which no list page should pay for. */
+export function useCountedTagCatalog(enabled: boolean) {
+  return useQuery({
+    queryKey: ["tags", "catalog", "carried_by"],
+    enabled,
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/tags", {
           params: { query: { include_archived: true, with_carried_by: true } },
         }),
       );

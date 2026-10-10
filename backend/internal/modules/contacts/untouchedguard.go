@@ -93,14 +93,16 @@ func refuseIfVersionMoved(entity string, current *int64, o writeOptions) error {
 	// read would wave through exactly the write the pin was attached to stop.
 	if current == nil {
 		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
-			"the %s carries no version to compare against the %d this write was authorised at",
+			"This %s has no version to check against version %d, so nothing was changed. "+
+				"Read it again, then make the change again if it still applies.",
 			entity, *o.atVersion)}
 	}
 	if *current == *o.atVersion {
 		return nil
 	}
 	return &apperrors.VersionSkewError{Message: fmt.Sprintf(
-		"the %s is at version %d, not the version %d this write was authorised against",
+		"This %s is at version %d, not version %d, so nothing was changed. "+
+			"Read it again, then make the change again if it still applies.",
 		entity, *current, *o.atVersion)}
 }
 

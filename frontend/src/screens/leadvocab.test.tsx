@@ -172,6 +172,11 @@ describe("LeadSourcesCard", () => {
     expect(within(manual).getByText("3")).toBeTruthy();
     // No always-open text box: a rename goes through the row's menu.
     expect(within(manual).queryByRole("textbox")).toBeNull();
+    expect(
+      screen.getAllByRole("columnheader", {
+        name: en["leadSources.colActions"],
+      }),
+    ).not.toHaveLength(0);
   });
 
   it("folds each row onto a title line with its menu at the end, and the count keeps its unit", async () => {
@@ -275,6 +280,71 @@ describe("LeadSourcesCard", () => {
     );
   });
 
+  it("hands focus back to the row a later Remove was cancelled from", async () => {
+    const user = userEvent.setup();
+    const rows = [source("webinar", "Webinar"), source("fair", "Fair")];
+    vi.stubGlobal("fetch", backend(ADMIN, [], { rows }));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await openMenu(user, "Webinar");
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Remove",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en["leadSources.addOpen"] }),
+      ).toHaveFocus(),
+    );
+    await openMenu(user, "Fair");
+    const fairMenu = document.getElementById(
+      screen
+        .getByRole("button", {
+          name: en["table.rowActions"].replace("{name}", "Fair"),
+        })
+        .getAttribute("aria-controls") ?? "",
+    );
+    if (!fairMenu) throw new Error("the menu for Fair drew no items");
+    const fairRemove = within(fairMenu).getByRole("button", { name: "Remove" });
+    await user.click(fairRemove);
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["create.cancel"],
+      }),
+    );
+    // The menu stays open under a dialog, so focus goes back to the item.
+    await waitFor(() => expect(fairRemove).toHaveFocus());
+  });
+
+  it("hands focus to the card's title when the seat may remove but not add", async () => {
+    const user = userEvent.setup();
+    const rows = [source("webinar", "Webinar")];
+    vi.stubGlobal(
+      "fetch",
+      backend({ custom_field: ["read", "delete"] }, [], { rows }),
+    );
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await openMenu(user, "Webinar");
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Remove",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText(en["leadSources.title"])).toHaveFocus(),
+    );
+  });
+
   it("refuses removing a built-in in words beside the verb", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend(ADMIN));
@@ -328,6 +398,40 @@ describe("LeadSourcesCard", () => {
     );
   });
 
+  it("says a duplicate source name on the field and keeps the dialog open", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["leadSources.addOpen"] }),
+    );
+    const dialog = within(screen.getByRole("dialog"));
+    const field = dialog.getByTestId("lead-source-new-label");
+    await user.type(field, "Trade show{Enter}");
+    expect(await dialog.findByText(en["leadSources.duplicate"])).toBeTruthy();
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(dialog.queryByText(CONFLICT.detail)).toBeNull();
+  });
+
+  it("names the discovered value each Add to list adopts", async () => {
+    vi.stubGlobal("fetch", backend(ADMIN));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    const found = await screen.findByTestId(
+      "lead-source-discovered-connector:apollo",
+    );
+    expect(
+      within(found).getByRole("button", { name: en["leadSources.adopt"] }),
+    ).toHaveAccessibleDescription(/connector:apollo/);
+  });
+
   it("leaves every control inert for a reader and says why", async () => {
     vi.stubGlobal("fetch", backend(READER));
     render(
@@ -350,6 +454,12 @@ describe("LeadSourcesCard", () => {
     ).toBeNull();
     // Built-in changes nothing a reader can do, so it is not said.
     expect(screen.queryByText("Built-in")).toBeNull();
+    // The discovered table has no verb for a reader either.
+    expect(
+      screen.queryByRole("columnheader", {
+        name: en["leadSources.colActions"],
+      }),
+    ).toBeNull();
   });
 });
 

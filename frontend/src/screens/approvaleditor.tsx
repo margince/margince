@@ -280,12 +280,8 @@ function FieldLine({ name, value }: Readonly<{ name: string; value: string }>) {
   );
 }
 
-/**
- * The row-local decide outcomes that KEEP the row mounted: a generic error and
- * the version-skew state in its kind's words. The already-decided note is not
- * here. Its pending invalidation unmounts the row, so `useDecisionSink` shows
- * it at screen level, where it survives the refetch.
- */
+/** Outcomes that keep the row mounted. Already-decided is not one: its refetch
+ *  unmounts the row, so `useDecisionSink` says it at screen level. */
 export function DecideOutcome({
   decide,
   skewKey,

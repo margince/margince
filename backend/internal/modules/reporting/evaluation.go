@@ -232,9 +232,15 @@ func (s *Service) checkedEvaluation(ctx context.Context, tx pgx.Tx, selection cr
 		return Evaluation{}, err
 	}
 	if subtle.ConstantTimeCompare([]byte(expectation.Key), []byte(evaluation.Result.EvaluationKey)) != 1 {
-		return Evaluation{}, apperrors.ErrVersionSkew
+		return Evaluation{}, errEvidenceStale
 	}
 	return evaluation, nil
+}
+
+// errEvidenceStale refuses evidence or an export asked of figures that changed since
+// the report was read. The generic skew sentence speaks of a lost write, and this is a read.
+var errEvidenceStale = &apperrors.VersionSkewError{
+	Message: "The figures changed after this report was read. Reload the report, then try again.",
 }
 
 // EvaluatedReceipt binds an evaluation to its context and captured source values.

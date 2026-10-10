@@ -207,6 +207,7 @@ describe("OfferTemplatesAdmin", () => {
     expect(
       await screen.findByRole("button", { name: "New template" }),
     ).toBeTruthy();
+    expect(await screen.findByText("Standard DE")).toBeTruthy();
     expect(rowMenu()).toBeNull();
     expect(postureLine()).toBeNull();
   });

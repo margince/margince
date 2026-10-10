@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import { rowsOf } from "../api/rows";
 import { useCanWrite } from "../app/capability";
@@ -28,7 +28,11 @@ import {
   type LeadDisqualifyReason,
   useLeadDisqualifyReasons,
 } from "./leadsources";
-import { leadsColumn, VocabRowMenu } from "./leadvocab.rows";
+import {
+  leadsColumn,
+  useRemovalFocus,
+  vocabMenuColumn,
+} from "./leadvocab.rows";
 
 type ReasonPatch = { id: string; label?: string; active?: boolean };
 
@@ -133,22 +137,16 @@ function reasonColumns({
         />
       ),
     },
-    {
-      key: "verbs",
-      header: t("leadSources.colActions"),
-      headerHidden: true,
-      fold: "end",
-      render: (reason) => (
-        <VocabRowMenu
-          label={reason.label}
-          canEdit={canEdit}
-          canRemove={canRemove}
-          refusal={refusal(reason)}
-          onRename={() => onRename(reason)}
-          onRemove={() => onRemove(reason)}
-        />
-      ),
-    },
+    ...vocabMenuColumn(
+      t,
+      { canEdit, canRemove },
+      (reason: LeadDisqualifyReason) => ({
+        label: reason.label,
+        refusal: refusal(reason),
+        onRename: () => onRename(reason),
+        onRemove: () => onRemove(reason),
+      }),
+    ),
   ];
 }
 
@@ -170,9 +168,7 @@ export function LeadDisqualifyReasonsCard() {
   const [naming, setNaming] = useState<Naming>({ mode: "create" });
   const [namingOpen, setNamingOpen] = useState(false);
   const [removing, setRemoving] = useState<LeadDisqualifyReason | null>(null);
-  // The removed row takes its menu with it, so focus lands on the card's verb.
-  const removed = useRef(false);
-  const addVerb = useRef<HTMLButtonElement>(null);
+  const removal = useRemovalFocus();
   const reasons = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
   const refused = nameRefusal(write.error, t, "leadReasons.duplicate");
@@ -190,15 +186,21 @@ export function LeadDisqualifyReasonsCard() {
     canRemove,
     onActive: (reason, active) => update.mutate({ id: reason.id, active }),
     onRename: (reason) => open({ mode: "rename", reason }),
-    onRemove: setRemoving,
+    onRemove: (reason) => {
+      removal.opened();
+      setRemoving(reason);
+    },
   });
   const done = { onSuccess: () => setNamingOpen(false) };
   return (
     <Panel
-      title={t("leadReasons.title")}
+      title={<span id={removal.titleId}>{t("leadReasons.title")}</span>}
       titleAction={
         canCreate && (
-          <Button ref={addVerb} onClick={() => open({ mode: "create" })}>
+          <Button
+            ref={removal.addVerb}
+            onClick={() => open({ mode: "create" })}
+          >
             {t("leadReasons.newLabel")}
           </Button>
         )
@@ -264,7 +266,7 @@ export function LeadDisqualifyReasonsCard() {
           remove.reset();
           setRemoving(null);
         }}
-        returnFocusTo={() => (removed.current ? addVerb.current : null)}
+        returnFocusTo={removal.returnFocusTo}
         title={t("leadReasons.removeTitle")}
         confirmLabel={t("leadSources.remove")}
         confirmVariant="danger"
@@ -274,7 +276,7 @@ export function LeadDisqualifyReasonsCard() {
           if (removing) {
             remove.mutate(removing.id, {
               onSuccess: () => {
-                removed.current = true;
+                removal.landed();
                 setRemoving(null);
               },
             });

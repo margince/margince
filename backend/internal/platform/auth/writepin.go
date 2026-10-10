@@ -36,6 +36,14 @@ const (
 	PinAdmitted
 )
 
+// StalePinError refuses a caller's version that is not the one the gate read the
+// record at. Both doors answer it, so an agent reads one sentence whichever it called.
+func StalePinError(callerPin, admitted int64) error {
+	return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+		"This record is at version %d, not version %d, so nothing was changed. "+
+			"Read it again, then retry with its current version.", admitted, callerPin)}
+}
+
 // WritePin is the resolved precondition, and where it came from.
 type WritePin struct {
 	// Version is the version to condition the write on; meaningful only when
@@ -131,9 +139,7 @@ func ResolveWritePin(in WritePinInputs) (WritePin, error) {
 	if callerPin != nil {
 		disagrees := in.GateRead && *callerPin != admitted
 		if disagrees && !in.ApprovalSpent {
-			return WritePin{}, &apperrors.VersionSkewError{Message: fmt.Sprintf(
-				"version %d is not the version this record was read at (%d) — re-read it and retry",
-				*callerPin, admitted)}
+			return WritePin{}, StalePinError(*callerPin, admitted)
 		}
 		return WritePin{
 			Version: *callerPin, Source: PinCaller,

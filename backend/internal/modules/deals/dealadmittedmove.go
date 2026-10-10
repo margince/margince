@@ -72,8 +72,9 @@ func refuseAMoveTheGateDidNotAdmit(
 		return nil
 	}
 	return &apperrors.VersionSkewError{Message: fmt.Sprintf(
-		"this move was admitted unattended as open-to-open and is now %s-to-%s — "+
-			"a stage's semantic changed after the gate read it",
+		"A stage changed while this move ran: it now goes from a %s stage to a %s stage, "+
+			"so the deal was not moved. Read the pipeline's stages again, "+
+			"then repeat the call if the move still applies.",
 		source, target)}
 }
 
@@ -126,8 +127,8 @@ func lockedMoveSemantics(
 	target, hasTarget := semantics[to.UUID]
 	if !hasSource || !hasTarget {
 		return "", "", &apperrors.VersionSkewError{
-			Message: "a stage this move names is no longer live, so the premise it was admitted on " +
-				"cannot be re-checked",
+			Message: "A stage this move names was archived while it ran, so the deal was not moved. " +
+				"Read the deal and its pipeline's stages again before you move it.",
 		}
 	}
 	return source, target, nil

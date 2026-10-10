@@ -7,12 +7,7 @@ import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { derivedRecordKeys } from "./activitykeys";
-import {
-  isVersionSkew,
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-} from "./common";
+import { ProblemError, problemExistingId, problemMessageOf } from "./common";
 import {
   type CreateField,
   type FormRows,
@@ -329,9 +324,6 @@ export function EditAction<Updated extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
-  const skew =
-    mutation.error instanceof ProblemError &&
-    isVersionSkew(mutation.error.problem);
   return (
     <>
       {/* Square in a header. A pencil is the one glyph every reader in this
@@ -369,13 +361,7 @@ export function EditAction<Updated extends { id: string }>({
         fields={fields}
         record={record}
         pending={mutation.isPending}
-        error={
-          mutation.isError
-            ? skew
-              ? t("edit.versionSkew")
-              : problemMessageOf(mutation.error, t)
-            : null
-        }
+        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
         existing={existing}
         resolveExisting={resolveExisting}
         onValuesChange={onValuesChange}

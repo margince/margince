@@ -139,8 +139,8 @@ var (
 	ErrSeatLimitReached = errors.New("seat limit reached")
 )
 
-// VersionSkewError is a lost version race whose message is written for the
-// reader. A plain wrap of ErrVersionSkew answers one generic reload sentence instead.
+// VersionSkewError is a lost version race whose Message a REST client or an MCP agent reads, so it
+// says what happened and what to do. Narration belongs in a plain wrap, which answers the generic sentence.
 type VersionSkewError struct {
 	Message string
 }

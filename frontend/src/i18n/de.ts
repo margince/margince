@@ -1380,9 +1380,6 @@ export const de = {
   "share.rosterErrorBoth": "Personen und Teams wurden nicht geladen.",
   "share.rosterEmpty": "Keine Personen oder Teams zum Teilen.",
 
-  "edit.versionSkew":
-    "Dieser Datensatz wurde seit dem Öffnen geändert. Lade die Seite neu und versuche es erneut.",
-
   "merge.contact": "Kontakt zusammenführen",
   "merge.company": "Unternehmen zusammenführen",
   "merge.searchPlaceholder": "Suchen…",
@@ -2961,7 +2958,7 @@ export const de = {
     "Tags jenseits des Limits werden nicht angezeigt und lassen sich weder bearbeiten noch als Ziel einer Zusammenführung wählen.",
   "tagAdmin.done": "Fertig",
   "tagAdmin.colTag": "Tag",
-  "tagAdmin.colUsage": "Verwendet in",
+  "tagAdmin.colUsage": "Verwendung",
   "tagAdmin.usedBy_one": "{count} Datensatz",
   "tagAdmin.usedBy_other": "{count} Datensätze",
   "tagAdmin.retired": "Stillgelegt",
@@ -3061,6 +3058,8 @@ export const de = {
     "Nur Admins und Operations können diese Liste ändern",
   "leadSources.notSaved": "Änderung nicht gespeichert",
   "leadSources.notAdded": "Quelle nicht hinzugefügt",
+  "leadSources.duplicate":
+    "Eine Quelle mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "leadSources.intentFor": "Kaufinteresse von {label}",
   "leadSources.intent": "Kaufinteresse",
   "leadSources.intent.high": "Hohes Kaufinteresse",

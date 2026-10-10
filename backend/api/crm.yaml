@@ -45777,6 +45777,7 @@ components:
         carried_by:
           type: integer
           readOnly: true
+          minimum: 0
           description: >
             How many live contacts, companies, deals and leads carry this tag, as THIS caller may
             see them: a type the caller may not read counts nothing, and within a readable type
@@ -50079,6 +50080,7 @@ components:
         score: { type: [number, 'null'], description: Relevance score. }
         carried_by:
           type: [integer, 'null']
+          minimum: 0
           description: >
             For a `tag` hit only: how many contacts, companies, deals and leads carry this
             word, as THIS caller may see them — the same types the tag page counts and the

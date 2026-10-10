@@ -96,7 +96,7 @@ const disqualifyReasonLabelOnce = "lead_disqualify_reason_label_once"
 // label, and passes any other error through.
 func disqualifyLabelTaken(err error, label string) error {
 	if constraint, ok := storekit.UniqueViolation(err); ok && constraint == disqualifyReasonLabelOnce {
-		return fmt.Errorf("a disqualification reason called %q already exists: %w", label, apperrors.ErrConflict)
+		return fmt.Errorf("%w: a disqualification reason called %q already exists", apperrors.ErrConflict, label)
 	}
 	return err
 }

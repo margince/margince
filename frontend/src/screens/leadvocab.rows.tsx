@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useId, useRef } from "react";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import type { DataTableColumn } from "../design-system/datatable";
 import { formatNumber } from "../format/format";
@@ -29,32 +30,61 @@ export function leadsColumn<Row>(
   };
 }
 
-// Rename and Remove for one lead source or reason. A refused remove stays in
-// the menu with its reason in words, as the server would answer it with a 409.
-export function VocabRowMenu({
-  label,
-  canEdit,
-  canRemove,
-  refusal,
-  onRename,
-  onRemove,
-}: Readonly<{
+type VocabVerbs = Readonly<{ canEdit: boolean; canRemove: boolean }>;
+
+type VocabRow = Readonly<{
   label: string;
-  canEdit: boolean;
-  canRemove: boolean;
   refusal?: string;
   onRename: () => void;
   onRemove: () => void;
-}>) {
+}>;
+
+// No column for a seat with neither verb, or every row ends in an empty cell.
+export function vocabMenuColumn<Row>(
+  t: Translator,
+  verbs: VocabVerbs,
+  menu: (row: Row) => VocabRow,
+): DataTableColumn<Row>[] {
+  if (!verbs.canEdit && !verbs.canRemove) return [];
+  return [
+    {
+      key: "verbs",
+      header: t("leadSources.colActions"),
+      headerHidden: true,
+      fold: "end",
+      render: (row) => {
+        const { label, refusal, onRename, onRemove } = menu(row);
+        return (
+          <VocabRowMenu
+            label={label}
+            verbs={verbs}
+            refusal={refusal}
+            onRename={onRename}
+            onRemove={onRemove}
+          />
+        );
+      },
+    },
+  ];
+}
+
+// A refused remove stays in the menu with its reason in words, as the server
+// would answer it with a 409.
+export function VocabRowMenu({
+  label,
+  verbs,
+  refusal,
+  onRename,
+  onRemove,
+}: VocabRow & Readonly<{ verbs: VocabVerbs }>) {
   const t = useT();
-  if (!canEdit && !canRemove) return null;
   return (
     <span className="cell-actions">
       <OverflowMenu label={t("table.rowActions", { name: label })}>
-        {canEdit && (
+        {verbs.canEdit && (
           <Button onClick={onRename}>{t("leadSources.rename")}</Button>
         )}
-        {canRemove && (
+        {verbs.canRemove && (
           <Button variant="danger" reason={refusal} onClick={onRemove}>
             {t("leadSources.remove")}
           </Button>
@@ -62,4 +92,29 @@ export function VocabRowMenu({
       </OverflowMenu>
     </span>
   );
+}
+
+// A landed Remove takes its row's menu with it. Focus goes to the add verb,
+// or to the card's title for a seat that may remove but not add.
+export function useRemovalFocus() {
+  const landed = useRef(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  return {
+    addVerb,
+    titleId,
+    opened: () => {
+      landed.current = false;
+    },
+    landed: () => {
+      landed.current = true;
+    },
+    returnFocusTo: (): HTMLElement | null => {
+      if (!landed.current) return null;
+      if (addVerb.current) return addVerb.current;
+      const title = document.getElementById(titleId);
+      title?.setAttribute("tabindex", "-1");
+      return title;
+    },
+  };
 }

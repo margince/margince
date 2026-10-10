@@ -84,18 +84,17 @@ function sourceColumns({
     header: t("leadSources.colActions"),
     headerHidden: true,
     fold: "end",
-    render: (source) =>
-      canEdit && (
-        <span className="cell-actions">
-          <OverflowMenu label={t("table.rowActions", { name: source.label })}>
-            <Button onClick={() => onRename(source)}>
-              {t("leadSources.rename")}
-            </Button>
-          </OverflowMenu>
-        </span>
-      ),
+    render: (source) => (
+      <span className="cell-actions">
+        <OverflowMenu label={t("table.rowActions", { name: source.label })}>
+          <Button onClick={() => onRename(source)}>
+            {t("leadSources.rename")}
+          </Button>
+        </OverflowMenu>
+      </span>
+    ),
   };
-  return [name, deals, active, verbs];
+  return canEdit ? [name, deals, active, verbs] : [name, deals, active];
 }
 
 // A seat that may not read deals is sent no count, and a zero would claim none.

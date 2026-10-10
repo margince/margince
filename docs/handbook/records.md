@@ -79,7 +79,7 @@ Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text, with the reason when you point at them.
-If someone else changed the same field while you were editing, your edit is refused: "This record changed since it was opened. Reload and retry."
+If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 Also called: read-only record, edit greyed out, cannot change.
 
@@ -323,7 +323,7 @@ If someone else edits the record between your reading the screen and pressing th
 **An agent cannot put a change back.** Only a human can undo a change.
 
 ### Can two users edit the same record at the same time?
-Yes. Two users can edit one contact, company, deal or lead in Margince at once. Each save changes only the fields that user changed, so edits to different fields both go through. If a colleague saved the same field first, your save is refused with "This record changed since it was opened. Reload and retry."
+Yes. Two users can edit one contact, company, deal or lead in Margince at once. Each save changes only the fields that user changed, so edits to different fields both go through. If a colleague saved the same field first, your save is refused with "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 Nothing from your form is saved; close it, load the record again, check the new value and edit again. A project or offer refuses the save after any change since you opened it. Nothing locks a record or shows who else has it open.
 Also called: edit conflict, simultaneous editing, someone overwrote my change.

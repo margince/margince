@@ -81,7 +81,7 @@ function roleColumns({
   onActive: (role: RecordRole, active: boolean) => void;
   onRename: (role: RecordRole) => void;
 }>): DataTableColumn<RecordRole>[] {
-  return [
+  const columns: DataTableColumn<RecordRole>[] = [
     {
       key: "name",
       header: t("recordRoles.colRole"),
@@ -106,23 +106,25 @@ function roleColumns({
         />
       ),
     },
-    {
+  ];
+  if (canEdit) {
+    columns.push({
       key: "verbs",
       header: t("leadSources.colActions"),
       headerHidden: true,
       fold: "end",
-      render: (role) =>
-        canEdit && (
-          <span className="cell-actions">
-            <OverflowMenu label={t("table.rowActions", { name: role.label })}>
-              <Button onClick={() => onRename(role)}>
-                {t("leadSources.rename")}
-              </Button>
-            </OverflowMenu>
-          </span>
-        ),
-    },
-  ];
+      render: (role) => (
+        <span className="cell-actions">
+          <OverflowMenu label={t("table.rowActions", { name: role.label })}>
+            <Button onClick={() => onRename(role)}>
+              {t("leadSources.rename")}
+            </Button>
+          </OverflowMenu>
+        </span>
+      ),
+    });
+  }
+  return columns;
 }
 
 function Choices<Value extends string>({

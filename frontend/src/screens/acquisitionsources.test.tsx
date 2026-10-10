@@ -94,7 +94,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it("names each source over its key and counts its deals, with no text box and no Built-in badge", async () => {
+it("names each source over its key and counts its deals, with no text box", async () => {
   vi.stubGlobal("fetch", backend(ADMIN));
   render(<AcquisitionSourcesCard />);
   const row = await screen.findByTestId("acq-source-existing_customer");
@@ -103,8 +103,9 @@ it("names each source over its key and counts its deals, with no text box and no
   expect(within(row).getByText("12")).toBeInTheDocument();
   expect(within(row).getByText("12 deals")).toBeInTheDocument();
   expect(within(row).queryByRole("textbox")).toBeNull();
-  // No remove verb, so built-in changes nothing a seat can do.
-  expect(screen.queryByText("Built-in")).toBeNull();
+  expect(
+    screen.getByRole("columnheader", { name: en["leadSources.colActions"] }),
+  ).toBeInTheDocument();
   const cells = [...row.querySelectorAll("td")];
   expect(cells[0]?.getAttribute("data-fold")).toBe("title");
   expect(cells.at(-1)?.getAttribute("data-fold")).toBe("end");
@@ -218,5 +219,8 @@ it("leaves every control inert for a reader and says why", async () => {
   ).toBeNull();
   expect(
     screen.queryByRole("button", { name: actionsFor("Partner") }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("columnheader", { name: en["leadSources.colActions"] }),
   ).toBeNull();
 });

@@ -11,8 +11,8 @@ import { en } from "../i18n/en";
 import { jsonResponse, render } from "./settings.testkit";
 import { NewTeamAction, RenameTeamAction } from "./team-dialogs";
 
-// A team name is unique, and the server answers a second one with a 409 whose
-// English detail names the store, not the reader's next step.
+// A team name is unique, and the 409 detail names the store, not the reader's
+// next step.
 const TAKEN = {
   type: "about:blank",
   title: "Conflict",

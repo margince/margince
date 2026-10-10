@@ -94,8 +94,8 @@ func TestTheTagListCountsOnlyWhatTheCallerMaySee(t *testing.T) {
 	}
 }
 
-// The count reads every tagging, so the pickers and filters that list the
-// words without it pay nothing for it.
+// The count reads every tagging, so a list read that does not ask for it
+// pays nothing for it.
 func TestTheTagListCountsNothingUnlessAsked(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
@@ -149,38 +149,71 @@ func listedDealCounts(ctx context.Context, t *testing.T, e *Env) map[string]*int
 	return out
 }
 
+// referredDealsListed counts the live deals carrying source that the deal list
+// shows ctx in one pipeline.
+func referredDealsListed(ctx context.Context, t *testing.T, e *Env, pipeline ids.PipelineID, source string) int {
+	t.Helper()
+	listed, _, err := e.Deals.ListDeals(ctx, deals.ListDealsInput{PipelineID: &pipeline})
+	if err != nil {
+		t.Fatalf("listing the pipeline's deals: %v", err)
+	}
+	n := 0
+	for _, deal := range listed {
+		if deal.AcquisitionSource != nil && *deal.AcquisitionSource == source {
+			n++
+		}
+	}
+	return n
+}
+
+// A deal is workspace-readable, so an own-scope seat reads a colleague's deals
+// and counts them too. The count agrees with the deal list that seat reads.
 func TestTheAcquisitionCatalogCountsTheLiveDealsTheCallerMaySee(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
 	referral := "referral"
-	var archived ids.DealID
-	for _, name := range []string{"Referred one", "Referred two", "Referred and archived"} {
-		deal := ids.From[ids.DealKind](e.SeedDeal(t, name, pipeline, open, &e.Rep1))
+	refer := func(name string, owner *ids.UUID) ids.DealID {
+		deal := ids.From[ids.DealKind](e.SeedDeal(t, name, pipeline, open, owner))
 		if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{AcquisitionSource: &referral}); err != nil {
 			t.Fatalf("attributing %q: %v", name, err)
 		}
-		archived = deal
+		return deal
 	}
-	if _, err := e.Deals.ArchiveDeal(admin, archived, nil); err != nil {
+	refer("Referred one", &e.Rep1)
+	refer("Referred two", &e.Rep1)
+	refer("Referred to rep two", &e.Rep2)
+	if _, err := e.Deals.ArchiveDeal(admin, refer("Referred and archived", &e.Rep1), nil); err != nil {
 		t.Fatalf("archiving a referred deal: %v", err)
 	}
 
-	seat := func(objects map[string]principal.ObjectGrant) context.Context {
-		return e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
-			RoleKeys: []string{"custom"}, Objects: objects, RowScope: principal.RowScopeAll,
+	seat := func(user ids.UUID, scope principal.RowScope, objects map[string]principal.ObjectGrant) context.Context {
+		return e.As(user, []ids.UUID{e.Team1}, principal.Permissions{
+			RoleKeys: []string{"custom"}, Objects: objects, RowScope: scope,
 		})
 	}
-	counts := listedDealCounts(seat(map[string]principal.ObjectGrant{
-		"custom_field": {Read: true}, "deal": {Read: true},
-	}), t, e)
-	if got := counts[referral]; got == nil || *got != 2 {
-		t.Errorf("referral deal_count = %s, want the 2 live deals", countText(got))
+	readsDeals := map[string]principal.ObjectGrant{"custom_field": {Read: true}, "deal": {Read: true}}
+	for _, c := range []struct {
+		name   string
+		reader context.Context
+		want   int
+	}{
+		{"a seat that sees every deal", seat(e.Rep2, principal.RowScopeAll, readsDeals), 3},
+		{"rep one, scoped to their own deals", seat(e.Rep1, principal.RowScopeOwn, readsDeals), 3},
+		{"rep two, scoped to their own deals", seat(e.Rep2, principal.RowScopeOwn, readsDeals), 3},
+	} {
+		counts := listedDealCounts(c.reader, t, e)
+		if got := counts[referral]; got == nil || *got != c.want {
+			t.Errorf("%s: referral deal_count = %s, want %d", c.name, countText(got), c.want)
+		}
+		if listed := referredDealsListed(c.reader, t, e, pipeline, referral); listed != c.want {
+			t.Errorf("%s: the deal list shows %d referred deals, the catalog counts %d", c.name, listed, c.want)
+		}
+		if got := counts["inbound"]; got == nil || *got != 0 {
+			t.Errorf("%s: an unused source reads deal_count %s, want 0", c.name, countText(got))
+		}
 	}
-	if got := counts["inbound"]; got == nil || *got != 0 {
-		t.Errorf("an unused source reads deal_count %s, want 0", countText(got))
-	}
-	vocabularyOnly := seat(map[string]principal.ObjectGrant{"custom_field": {Read: true}})
+	vocabularyOnly := seat(e.Rep2, principal.RowScopeAll, map[string]principal.ObjectGrant{"custom_field": {Read: true}})
 	if got := listedDealCounts(vocabularyOnly, t, e)[referral]; got != nil {
 		t.Errorf("a seat that may not read deals was told %d deals carry the source, want no count", *got)
 	}
