@@ -260,12 +260,9 @@ func (s *RunStore) RecordIdentityTx(ctx context.Context, tx pgx.Tx, runID RunID,
 	return recordIdentityInTx(ctx, tx, runID, sourceSystem, object, externalID, nativeID)
 }
 
-// ReleaseIdentityTx drops a binding so its key can name a replacement record.
-// Only a finished undo frees a key: a paused one pages these rows by offset.
-func (s *RunStore) ReleaseIdentityTx(ctx context.Context, tx pgx.Tx, sourceSystem, object, externalID string) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
-		return err
-	}
+// recordIdentityInTx is the statement both entry points run.
+func recordIdentityInTx(ctx context.Context, tx pgx.Tx, runID RunID, sourceSystem, object, externalID string, nativeID ids.UUID) error {
+	// A finished undo frees its keys; a paused one still pages them by offset.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM import_record_map m
 		 USING import_run r
@@ -274,11 +271,6 @@ func (s *RunStore) ReleaseIdentityTx(ctx context.Context, tx pgx.Tx, sourceSyste
 		sourceSystem, object, externalID, StatusUndone); err != nil {
 		return fmt.Errorf("migration: releasing the %s %s identity: %w", object, externalID, err)
 	}
-	return nil
-}
-
-// recordIdentityInTx is the statement both entry points run.
-func recordIdentityInTx(ctx context.Context, tx pgx.Tx, runID RunID, sourceSystem, object, externalID string, nativeID ids.UUID) error {
 	// The run is resolved BY the statement rather than trusted from the
 	// argument, so a mapping can never be written under a run that does not
 	// exist: the SELECT finds no row, the INSERT writes none, and the caller

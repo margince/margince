@@ -63,7 +63,6 @@ func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids
 		w.nativeIDs[externalID] = binding.NativeID
 		return binding.NativeID, true, nil
 	case binding.RunStatus == migration.StatusUndone:
-		w.archivedBindings[externalID] = true
 		return ids.UUID{}, false, nil
 	default:
 		return binding.NativeID, true, errBoundRecordArchived

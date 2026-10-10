@@ -164,8 +164,8 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 	return out, nil
 }
 
-// identityOf is the one spelling a row's key travels under: an email folds as
-// the contact store keys it, any other key is kept.
+// identityOf is the spelling a row's key travels under: an email folds as the
+// contact store keys it, any other key is kept.
 func (s *CSVSource) identityOf(external string) string {
 	if s.mapping[s.sourceKey] == "email" {
 		return correspondence.Fold(external)

@@ -36,6 +36,7 @@ func TestExportBundleContactsCarryTheReachableEmail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	//nolint:bodyclose // apptest.CloseBody closes it in the deferred call below, which the checker cannot follow across the helper.
 	resp, err := e.Client.Do(req)
 	if err != nil {
 		t.Fatalf("bundle request: %v", err)

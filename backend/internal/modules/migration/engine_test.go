@@ -92,9 +92,6 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			_, _, err := s.LookupBinding(ctx, "legacy_crm", "contact", "1")
 			return err
 		}},
-		{"ReleaseIdentityTx", func() error {
-			return s.ReleaseIdentityTx(ctx, nil, "legacy_crm", "contact", "1")
-		}},
 		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
@@ -647,7 +644,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
 		"CreateStagedRun": true, "AwaitApproval": true, "Approve": true,
 		"ResumeApproved": true, "FailValidation": true, "GetStaged": true,
-		"RecordIdentityTx": true, "ReleaseIdentityTx": true, "LookupBinding": true, "Undo": true,
+		"RecordIdentityTx": true, "LookupBinding": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()

@@ -14,7 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-var contactImportMapping = map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
+func contactImportMapping() map[string]string {
+	return map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
+}
 
 // importContactFile uploads, stages and approves one contact file and returns
 // the run's report.
@@ -24,7 +26,7 @@ func importContactFile(t *testing.T, e *apptest.AppEnv, file string) (string, im
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, status := createRunWithMapping(t, e, "contact", profile.SourceRef, contactImportMapping)
+	run, status := createRunWithMapping(t, e, "contact", profile.SourceRef, contactImportMapping())
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}

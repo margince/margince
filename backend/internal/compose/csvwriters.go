@@ -58,9 +58,6 @@ type csvWriters struct {
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
 	// identity map.
 	nativeIDs map[string]ids.UUID
-	// archivedBindings marks external keys whose bound record is archived, so
-	// the create that replaces it also releases the old binding.
-	archivedBindings map[string]bool
 	// employers caches one answer per folded company name the FILE names, so a
 	// file naming one employer on every row asks the database once. Nil until
 	// the first row needs it; bounded by the file, never by the estate.
@@ -107,10 +104,9 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		// refused the shapes a client can send, so what reaches here is a stored
 		// mapping — and a run that already passed its dry run must not die at
 		// commit over a word.
-		contextTag:       parseContextTag(settled.ContextTag),
-		nativeIDs:        map[string]ids.UUID{},
-		authors:          authorSeats{},
-		archivedBindings: map[string]bool{},
+		contextTag: parseContextTag(settled.ContextTag),
+		nativeIDs:  map[string]ids.UUID{},
+		authors:    authorSeats{},
 	}
 }
 
@@ -476,11 +472,6 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 		if id, err = create(tx); err != nil {
 			return err
 		}
-		if w.archivedBindings[externalID] {
-			if err := w.identities.ReleaseIdentityTx(ctx, tx, csvSourceSystem(), w.object, externalID); err != nil {
-				return err
-			}
-		}
 		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, csvSourceSystem(), w.object, externalID, id); err != nil {
 			return err
 		}
@@ -489,6 +480,5 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 		return err
 	}
 	w.nativeIDs[externalID] = id
-	delete(w.archivedBindings, externalID)
 	return nil
 }
