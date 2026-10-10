@@ -1107,8 +1107,8 @@ describe("DealsScreen", () => {
     expect(
       screen.getByText(`weighted ${formatMoney(1_234_567, "EUR", "en")}`),
     ).toBeTruthy();
-    // The true stage count (250), not "1" — the single loaded card's count —
-    // in the column and again in the board header, which adds the columns up.
+    // The true stage count (250), not the one loaded card. It shows in the
+    // column and again in the board header, which adds the columns up.
     expect(screen.getAllByText("250 deals")).toHaveLength(2);
   });
 

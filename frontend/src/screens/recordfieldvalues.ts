@@ -43,8 +43,8 @@ export function groupValue(
 ): string {
   const values = prefillFromRecord(fields, record);
   const code = values.currency ?? "";
-  // A group that pairs figures with a currency code reads as money: the code
-  // is already inside each figure, so it is not repeated as its own part.
+  // A group that pairs figures with a currency code reads as money. The code
+  // is inside each figure, so it is not repeated as its own part.
   const moneyLocale = /^[A-Z]{3}$/.test(code) ? locale : undefined;
   const rows = prefillRowsFromRecord(fields, record);
   if (
@@ -115,8 +115,8 @@ function plainPart(
   return value;
 }
 
-// One part of a money group: the figure written in its currency, nothing for
-// the currency field itself, and undefined for a part that is not money.
+// One part of a money group. A figure is written in its currency, the
+// currency field itself is empty, and a part that is not money is undefined.
 function moneyPart(
   field: CreateField,
   value: string,

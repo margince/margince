@@ -79,8 +79,8 @@ export function WonWithoutContractFact({
 /**
  * Why a lost deal was lost, on the head beside the `lost` badge it explains.
  *
- * The server requires the reason to close a deal as lost, so the head can
- * always state it; free text wraps like the win detail does.
+ * The server requires a reason to close a deal as lost. Free text wraps
+ * like the win detail does.
  */
 export function LostReasonFact({
   deal,

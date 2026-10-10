@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { mapDealCreate } from "./deals";
 
 describe("mapDealCreate currency", () => {
-  // A currency with no figure is half a money value, which the API refuses in
-  // its own field names; a deal born with only a name carries no currency.
+  // A currency with no figure is half a money value. The API refuses it in
+  // its own field names, so a name-only deal carries no currency.
   it("sends no currency when neither figure was typed", () => {
     const body = mapDealCreate(
       { name: "x", stage_id: "s-1", currency: "EUR" },

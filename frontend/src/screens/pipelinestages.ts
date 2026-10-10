@@ -7,9 +7,8 @@ type Stage = components["schemas"]["Stage"];
 
 /**
  * Every pipeline's stages in one ladder, the default pipeline first. A deal
- * report counts deals in all pipelines, so a row can name a stage the default
- * one does not carry; positions are offset per pipeline to keep each ladder
- * together.
+ * report counts deals in all pipelines, so a row can name a stage outside the
+ * default one. Positions are offset per pipeline to keep each ladder together.
  */
 export function stagesOfEveryPipeline(
   pipelines: readonly { is_default?: boolean; stages?: readonly Stage[] }[],

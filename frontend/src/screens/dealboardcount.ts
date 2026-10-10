@@ -8,9 +8,8 @@ type Stage = components["schemas"]["Stage"];
 type CountedStage = { count: number };
 
 /**
- * A column's deal count: the true count, falling back to the loaded page's
- * while the totals are still loading, so the column shows SOME number rather
- * than a misleading 0.
+ * A column's deal count. It is the true count, or the loaded page's while
+ * the totals load, so the column never shows a misleading 0.
  */
 export function stageCount(
   totals: CountedStage | undefined,

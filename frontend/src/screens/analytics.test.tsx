@@ -664,8 +664,8 @@ describe("reports never sum money across currencies", () => {
     ).toEqual(["Qualify", "Propose"]);
   });
 
-  // The report counts deals in every pipeline, so a stage of a pipeline that
-  // is not the default must still be named, not printed as its id.
+  // The report counts deals in every pipeline. A stage outside the default
+  // pipeline must be named, not printed as its id.
   it("names a stage of a pipeline that is not the default", () => {
     const stages = stagesOfEveryPipeline([
       {
