@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -163,6 +164,14 @@ func (c commsAdapter) SendCompanyEmail(
 func (c commsAdapter) send(
 	ctx context.Context, origin activities.SendOrigin, in agents.SendEmailArgs,
 ) (agents.SendEmailResult, error) {
+	// A tool call that leaves a string out decodes to "", and the HTTP door
+	// refuses the missing keys, so this door refuses the blank ones.
+	if strings.TrimSpace(in.Subject) == "" {
+		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: activities.FieldSubject}
+	}
+	if strings.TrimSpace(in.Body) == "" {
+		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: activities.FieldBody}
+	}
 	// FIRST, before the message is composed or a consent decision is recorded:
 	// a record this installation no longer holds is not one to file a send
 	// against, and the staging gate that already said so ran before the

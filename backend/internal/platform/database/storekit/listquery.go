@@ -338,8 +338,7 @@ func parsesAsKind(kind, value string) bool {
 		_, err := strconv.ParseInt(value, 10, 64)
 		return err == nil
 	case fieldcatalog.TypeDate:
-		_, err := time.Parse("2006-01-02", value)
-		return err == nil
+		return isStorableCalendarDay(value)
 	case fieldcatalog.TypeBoolean:
 		return value == "true" || value == "false"
 	case KindTimestamp:

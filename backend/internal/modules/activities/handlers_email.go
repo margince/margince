@@ -270,6 +270,25 @@ func (c DraftContext) language() textlang.Lang {
 	return draftfloor.DefaultLang
 }
 
+// The wire names of the two fields every mail send requires, shared with the
+// agent door that refuses them blank.
+const (
+	FieldSubject = fieldSubject
+	FieldBody    = fieldBody
+)
+
+// requiredSent answers a send body that left out `subject` or `body`, which
+// both send requests require. An empty string is a value the caller chose.
+func requiredSent(w http.ResponseWriter, r *http.Request) bool {
+	for _, field := range []string{fieldSubject, fieldBody} {
+		if err := httperr.RequireSent(r, field, field+" is required"); err != nil {
+			httperr.Write(w, r, err)
+			return false
+		}
+	}
+	return true
+}
+
 // SendCompanyEmail starts a NEW conversation from a record rather than
 // answering one. It differs from SendEmail in exactly two places — the origin
 // it builds and the links that origin carries — and shares the send itself,
@@ -277,7 +296,7 @@ func (c DraftContext) language() textlang.Lang {
 // drift between the two surfaces (ADR-0087 §1).
 func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crmcontracts.SendCompanyEmailParams) {
 	var req crmcontracts.SendCompanyEmailRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.Decode(w, r, &req) || !requiredSent(w, r) {
 		return
 	}
 	links := linkInputsOf(&req.Links)
@@ -375,7 +394,7 @@ func sendInputFrom(to []openapi_types.Email, cc, bcc *[]openapi_types.Email, sub
 // inherits. Its account-started twin above shares everything after the origin.
 func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.SendEmailParams) {
 	var req crmcontracts.SendEmailRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.Decode(w, r, &req) || !requiredSent(w, r) {
 		return
 	}
 	// Deliverability — the RFC 8058 header and the visible footer — is
