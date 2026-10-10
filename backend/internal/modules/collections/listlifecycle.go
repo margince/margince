@@ -79,11 +79,8 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 	return out, err
 }
 
-// checkUpdate refuses an update before its transaction opens: no version, a
-// blank name, an unknown sharing, or a filter the list cannot hold. It stores
-// the trimmed name, as a new list does. The filter is judged against the
-// list's own record type here because SegmentEngine reads the custom-field
-// catalogue on its own connection.
+// checkUpdate refuses a bad update before its transaction opens, and trims the
+// name as a new list does. SegmentEngine reads the catalogue on its own connection.
 func (s *Store) checkUpdate(ctx context.Context, id ids.ListID, in *UpdateListInput) error {
 	if err := auth.Require(ctx, listObject, principal.ActionUpdate); err != nil {
 		return err

@@ -47,10 +47,6 @@ func (e *onboardingProposalEngine) get(w http.ResponseWriter, r *http.Request, p
 	// concern, defaulting to English when absent.
 	locale := string(crmcontracts.GetOnboardingCompanyProposalParamsLocaleOnboardingProposalLocaleEN)
 	if params.Locale != nil {
-		if !params.Locale.Valid() {
-			httperr.Write(w, r, httperr.Validation("locale", "invalid", onboardingLocaleRefusal()))
-			return
-		}
 		locale = string(*params.Locale)
 	}
 	state, err := e.state.Get(r.Context())

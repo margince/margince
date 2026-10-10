@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -349,22 +350,25 @@ func stepEvidence(step proposedStep, lines []string, activityID ids.ActivityID) 
 	}
 }
 
-// quotedFromTranscript is the transcript's own words behind one step.
+// quotedFromTranscript is the transcript's own words behind one step: the
+// first run of adjacent cited lines. A quote joined across a gap is a string
+// the transcript never holds, and the claim writer refuses what the message
+// does not hold.
 //
-// One function because two readers need the SAME string: the evidence a reader
-// sees, and the proposal's `cited` field, which the rejection memory keys on. A
-// second spelling of the trim would let the two diverge on a long quotation,
-// and the memory would then fail to recognise a refusal that a reader can see
-// is about the same words.
+// One function because two readers need the same string: the evidence a reader
+// sees, and the proposal's `cited` field, which the rejection memory keys on.
 func quotedFromTranscript(step proposedStep, lines []string) string {
-	quoted := make([]string, 0, len(step.SourceLines))
-	for _, line := range step.SourceLines {
-		quoted = append(quoted, lines[line-1])
+	cited := slices.Sorted(slices.Values(step.SourceLines))
+	first, last := cited[0], cited[0]
+	for _, line := range cited[1:] {
+		if line > last+1 {
+			break
+		}
+		last = line
 	}
-	snippet := strings.Join(quoted, "\n")
 	// Trimmed on a rune boundary: cutting mid-sequence would replace the last
 	// character with U+FFFD, a glyph the transcript does not contain.
-	return textcut.Bytes(snippet, approvals.MaxEvidenceSnippet)
+	return textcut.Bytes(strings.Join(lines[first-1:last], "\n"), approvals.MaxEvidenceSnippet)
 }
 
 // transcriptReadStore is the slice of the activities store this engine drives.

@@ -10,8 +10,8 @@ import "strings"
 // significant: folding them would admit quotes the text does not contain.
 //
 // An empty quote never matches, because strings.Contains is true for it
-// against any text. This is the one grounding rule for the extractors and for
-// a manual write.
+// against any text. The commitment and stage-evidence extractors still match
+// spans with their own comparison.
 func Quoted(text, quote string) bool {
 	quote = CollapseSpace(quote)
 	if quote == "" {

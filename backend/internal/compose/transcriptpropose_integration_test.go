@@ -303,6 +303,33 @@ func TestATranscriptStatingNothingProducesNoProposalAndSaysSo(t *testing.T) {
 	}
 }
 
+// Lines cited across a gap are not one passage of the transcript. The reading
+// still finishes, quoting the words the transcript does hold.
+func TestAReadingThatCitesLinesAcrossAGapStillStagesItsProposal(t *testing.T) {
+	e := setupTranscript(t)
+	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
+		"summary": "Send the revised pricing", "owner": "Priya",
+		"source_lines": []int{3, 4, 1}, "confidence": 0.9,
+	}}})
+	if err != nil {
+		t.Fatalf("building the model reply: %v", err)
+	}
+
+	read := e.read(t, cannedBrain{reply: string(raw)})
+
+	if read.Status != activities.TranscriptReadDone || len(read.ProposalIDs) != 1 {
+		t.Fatalf("the reading must finish with one proposal, got %s with %d (%v)",
+			read.Status, len(read.ProposalIDs), read.StatusDetail)
+	}
+	staged, err := e.svc.Get(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]))
+	if err != nil {
+		t.Fatalf("reading back the staged proposal: %v", err)
+	}
+	if snippet := storedEvidence(t, staged.Evidence)[0].Snippet; !strings.Contains(transcriptBody, snippet) {
+		t.Errorf("the evidence %q is not words the transcript holds", snippet)
+	}
+}
+
 func TestAReadingThatCitesALineThatDoesNotExistStagesNothing(t *testing.T) {
 	e := setupTranscript(t)
 

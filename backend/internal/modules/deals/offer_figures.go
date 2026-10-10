@@ -18,7 +18,7 @@ import (
 // never reaches a CHECK that can only say "check the picklist".
 const (
 	// maxPriceMinor is the largest minor-unit amount a JSON number holds without loss.
-	maxPriceMinor = 1<<53 - 1
+	maxPriceMinor = values.MaxExactInteger
 	// The columns' widths, numeric(14,3) and numeric(5,2), in thousandths and
 	// hundredths.
 	maxQuantityMilli = 99999999999999
