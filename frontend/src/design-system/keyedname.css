@@ -1,0 +1,13 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+code.keyed-name-key {
+  font: var(--fontBodySmall);
+  font-family: var(--fontFamilyMono);
+  color: var(--textSecondary);
+  overflow-wrap: anywhere;
+}
+
+code.keyed-name-only {
+  overflow-wrap: anywhere;
+}

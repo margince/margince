@@ -6,8 +6,8 @@ import { ErrorLine } from "../design-system/errorline";
 import { SegmentBar, type SegmentBarParts } from "../design-system/readings";
 import { formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { formatSeconds } from "./ai-call-figures";
+import { gaveUpLabel } from "./ai-decision-labels";
 import "./ai-settings.css";
 
 // What one task's calls did over a window: how many got an answer, from which
@@ -16,20 +16,6 @@ import "./ai-settings.css";
 
 type Flow = components["schemas"]["AiTaskFlow"];
 type Step = components["schemas"]["AiFlowStep"];
-
-/** Why a step gave a call up, in words; an unknown reason reads as itself. */
-const GAVE_UP: Readonly<Record<string, MessageKey>> = {
-  timeout: "aiOutcome.gaveUp.timeout",
-  provider_error: "aiOutcome.gaveUp.failed",
-  provider_throttled: "aiOutcome.gaveUp.throttled",
-  provider_quota: "aiOutcome.gaveUp.quota",
-  provider_refused: "aiOutcome.gaveUp.refused",
-  decision_error: "aiOutcome.gaveUp.failed",
-  decision_below_floor: "aiOutcome.gaveUp.unsure",
-  decision_off_enum: "aiOutcome.gaveUp.offEnum",
-  schema_invalid: "aiOutcome.gaveUp.invalid",
-  output_rejected: "aiOutcome.gaveUp.invalid",
-};
 
 function share(part: number, total: number, locale: Locale): string {
   if (!total) return formatPercent(0, locale);
@@ -145,7 +131,7 @@ function StepCard({
                 count,
                 {
                   count: formatNumber(count, locale),
-                  reason: GAVE_UP[reason] ? t(GAVE_UP[reason]) : reason,
+                  reason: gaveUpLabel(reason, t),
                 },
               )}
             </span>

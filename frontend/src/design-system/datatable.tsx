@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { TableScroll } from "./atoms";
 import "./atoms.css";
 import "./datatable.css";
@@ -15,6 +15,7 @@ export function DataTable<Row>({
   columns,
   rows,
   rowKey,
+  rowTestId,
   onRowClick,
   label,
   bleed,
@@ -24,6 +25,8 @@ export function DataTable<Row>({
   columns: DataTableColumn<Row>[];
   rows: Row[];
   rowKey: (row: Row) => string;
+  rowTestId?: (row: Row) => string;
+  /** A press on a control inside the row, or inside a popover it opened, stays that control's. */
   onRowClick?: (row: Row) => void;
   /** What the scroll region is called once the table is wider than its box. */
   label: string;
@@ -67,8 +70,15 @@ export function DataTable<Row>({
             <tr
               key={rowKey(row)}
               className={onRowClick ? "rowlink" : undefined}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onClick={
+                onRowClick
+                  ? (event) => {
+                      if (opensRow(event)) onRowClick(row);
+                    }
+                  : undefined
+              }
               role={role("row")}
+              data-testid={rowTestId?.(row)}
             >
               {columns.map((column) => (
                 <td
@@ -106,6 +116,19 @@ export type DataTableColumn<Row> = Readonly<{
   // still read, so it must not hold a control.
   fold?: "title" | "end" | "hide";
 }>;
+
+// React bubbles a click out of a portal into the row that rendered it, so a
+// target outside the row is a popover's, never the row's.
+function opensRow(event: MouseEvent<HTMLTableRowElement>): boolean {
+  const target = event.target;
+  if (!(target instanceof Element) || !event.currentTarget.contains(target)) {
+    return false;
+  }
+  const control = target.closest(
+    "a, button, input, select, textarea, label, [role='button']",
+  );
+  return control === null || !event.currentTarget.contains(control);
+}
 
 function foldTitle<Row>(columns: DataTableColumn<Row>[]): string | undefined {
   const named = columns.find((column) => column.fold === "title");

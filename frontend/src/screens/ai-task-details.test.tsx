@@ -215,7 +215,7 @@ it("keeps a greyed Edit on a row with nothing to tune, saying where its model is
   });
   expect(edit).toBeDisabled();
   expect(edit).toHaveAccessibleDescription(
-    /on the embeddings row under Model tiers/,
+    /on the Embedding model row under Model tiers/,
   );
   await user.hover(edit.parentElement ?? edit);
   expect(await screen.findByRole("tooltip")).toHaveTextContent(

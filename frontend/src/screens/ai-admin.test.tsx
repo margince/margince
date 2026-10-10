@@ -435,7 +435,7 @@ it("the task table says decision model first, and why another feature skips it",
   // is in the task's details, with its provider.
   const decisionRow = screen.getByText("Classify correspondence").closest("tr");
   expect(decisionRow?.querySelector("td:nth-child(3)")?.textContent).toBe(
-    "geminiexample-model",
+    "Google Geminiexample-model",
   );
   const first = await openTaskDetails(user, "Classify correspondence");
   expect(first).toHaveTextContent(

@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 type T = ReturnType<typeof useT>;
 
@@ -11,12 +12,60 @@ type T = ReturnType<typeof useT>;
 // once and every screen that meets it in a health or usage row imports it.
 export const DECIDE_RUNG = "decide";
 
-// A tier as a reader meets it in a table. Every ladder tier is shown as the
-// routing document spells it, because that is the word an operator greps for;
-// `decide` alone is named, since it is no tier anybody bound and the bare word
-// reads as a verb in a column of nouns.
+// Cheapest first. Typed by the task contract's enum, so a tier it grows
+// without a name here fails the typecheck.
+export type Tier = components["schemas"]["AssistantConfiguredModel"]["tier"];
+
+const TIER_NAMES = {
+  local_small: "aiTier.local_small",
+  cheap_cloud: "aiTier.cheap_cloud",
+  premium: "aiTier.premium",
+  frontier: "aiTier.frontier",
+  local_large: "aiTier.local_large",
+} as const satisfies Record<Tier, MessageKey>;
+
+// The lanes bound beside the ladder, under their routing keys and the rungs
+// their calls are stamped with (embedlane.go, decidetrace.go).
+const LANE_NAMES: Readonly<Record<string, MessageKey>> = {
+  embeddings: "aiTier.embeddings",
+  embed: "aiTier.embeddings",
+  decisions: "aiTier.decide",
+  [DECIDE_RUNG]: "aiTier.decide",
+};
+
+function isTier(key: string): key is Tier {
+  return Object.hasOwn(TIER_NAMES, key);
+}
+
+export const TIER_ORDER: readonly Tier[] =
+  Object.keys(TIER_NAMES).filter(isTier);
+
 export function tierLabel(tier: string, t: T): string {
-  return tier === DECIDE_RUNG ? t("aiTier.decide") : tier;
+  if (isTier(tier)) return t(TIER_NAMES[tier]);
+  const lane = LANE_NAMES[tier];
+  return lane ? t(lane) : tier;
+}
+
+export function tierRank(tier: string): number {
+  return isTier(tier) ? TIER_ORDER.indexOf(tier) : TIER_ORDER.length;
+}
+
+const GAVE_UP: Readonly<Record<string, MessageKey>> = {
+  timeout: "aiOutcome.gaveUp.timeout",
+  provider_error: "aiOutcome.gaveUp.failed",
+  provider_throttled: "aiOutcome.gaveUp.throttled",
+  provider_quota: "aiOutcome.gaveUp.quota",
+  provider_refused: "aiOutcome.gaveUp.refused",
+  decision_error: "aiOutcome.gaveUp.failed",
+  decision_below_floor: "aiOutcome.gaveUp.unsure",
+  decision_off_enum: "aiOutcome.gaveUp.offEnum",
+  schema_invalid: "aiOutcome.gaveUp.invalid",
+  output_rejected: "aiOutcome.gaveUp.invalid",
+};
+
+export function gaveUpLabel(reason: string, t: T): string {
+  const key = GAVE_UP[reason];
+  return key ? t(key) : reason;
 }
 
 // Why an attempt ran, where the answer is that the decision model before it did

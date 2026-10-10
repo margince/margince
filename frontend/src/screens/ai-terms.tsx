@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Layers, ListChecks, Server } from "lucide-react";
-import type { ReactNode } from "react";
+import { ChevronRight, Layers, ListChecks, Server } from "lucide-react";
+import { type ReactNode, useId } from "react";
 import { Badge } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
+import { KeyedName } from "../design-system/keyedname";
 import { Popover } from "../design-system/popover";
 import { useT } from "../i18n";
+import { tierLabel, tierRank } from "./ai-decision-labels";
+import { providerName } from "./ai-provider-names";
 import "./ai-settings.css";
 
 // The three words this settings area is built from, each with one mark wherever
@@ -37,25 +41,69 @@ export function ModelRef({
   model,
 }: Readonly<{ provider: string; model: string }>) {
   const t = useT();
+  const name = providerName(provider, t);
   return (
     <Popover
       onHover
       label={
         <>
-          <TermChip term="provider">{provider}</TermChip>
+          <TermChip term="provider">{name}</TermChip>
           <span className="sr-only">{model}</span>
         </>
       }
     >
       <dl className="ai-model-facts">
         <dt>{t("aiTerms.provider")}</dt>
-        <dd>{provider}</dd>
+        <dd>
+          <KeyedName name={name} code={provider} />
+        </dd>
         <dt>{t("aiRouting.model.label")}</dt>
         <dd>
           <code className="ai-model-id">{model}</code>
         </dd>
       </dl>
     </Popover>
+  );
+}
+
+export function TierChips({ tiers }: Readonly<{ tiers: readonly string[] }>) {
+  const t = useT();
+  const ordered = [...tiers].sort((a, b) => tierRank(a) - tierRank(b));
+  return (
+    <span className="ai-tier-chips">
+      {ordered.map((tier) => (
+        <TermChip key={tier} term="tier">
+          {tierLabel(tier, t)}
+        </TermChip>
+      ))}
+    </span>
+  );
+}
+
+// The keyboard path to what a press on the row opens. A refusal rides the tip
+// and the description, not a visible line that would widen the row.
+export function RowOpen({
+  label,
+  refusal,
+  onOpen,
+}: Readonly<{ label: string; refusal?: string; onOpen?: () => void }>) {
+  const reasonId = useId();
+  return (
+    <>
+      <IconAction
+        variant="ghost"
+        icon={<ChevronRight aria-hidden />}
+        label={label}
+        hint={refusal}
+        reasonId={refusal === undefined ? undefined : reasonId}
+        onClick={onOpen}
+      />
+      {refusal !== undefined && (
+        <span id={reasonId} className="sr-only">
+          {refusal}
+        </span>
+      )}
+    </>
   );
 }
 

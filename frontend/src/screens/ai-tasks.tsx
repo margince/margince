@@ -15,10 +15,8 @@ import { QueryGate } from "./common";
 
 // What each AI task runs on right now, under the bindings above it.
 //
-// Read-only: a task's tier is fixed by the task contract, and what that tier
-// is bound to is edited on the Model tiers card. The row leads with the
-// resolved model — the chain after the budget and the decision model have had
-// their say — rather than with the policy's first pick.
+// A task's tier is fixed by the task contract and bound on the Model tiers
+// card; a row here opens the task's own request settings.
 export function AiTasksCard() {
   const t = useT();
   const canManage = useCanWrite("ai_routing", "update");
@@ -41,28 +39,28 @@ export function AiTasksCard() {
     <Panel title={<PanelTitle term="task">{t("aiTasks.title")}</PanelTitle>}>
       <PanelBody>
         <PanelIntro>{t("aiTasks.intro")}</PanelIntro>
-        <QueryGate query={status} pendingLabel={t("aiTasks.title")}>
-          {(current) => (
-            <AiFeatureTable
-              rows={current.features}
-              health={health}
-              providers={providers}
-              canTrace={canDiagnose}
-              onEdit={(row) => setOpened(row.task)}
-            />
-          )}
-        </QueryGate>
-        {/* Outside the gate, from the last good read: a failed refetch
-            behind an open sheet must not take the draft in it away. */}
-        {route ? (
-          <TaskSheet
-            route={route}
-            canManage={canManage}
-            canSeeCalls={canDiagnose}
-            onClose={() => setOpened(null)}
-          />
-        ) : null}
       </PanelBody>
+      <QueryGate query={status} pendingLabel={t("aiTasks.title")}>
+        {(current) => (
+          <AiFeatureTable
+            rows={current.features}
+            health={health}
+            providers={providers}
+            canTrace={canDiagnose}
+            onEdit={(row) => setOpened(row.task)}
+          />
+        )}
+      </QueryGate>
+      {/* Outside the gate, from the last good read: a failed refetch
+          behind an open sheet must not take the draft in it away. */}
+      {route ? (
+        <TaskSheet
+          route={route}
+          canManage={canManage}
+          canSeeCalls={canDiagnose}
+          onClose={() => setOpened(null)}
+        />
+      ) : null}
     </Panel>
   );
 }

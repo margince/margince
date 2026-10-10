@@ -61,6 +61,8 @@ const ROUTING = {
     },
     cheap_cloud: { provider: "gemini", model: "gemini-3.5-flash" },
     premium: { provider: "jev", model: "jev-1" },
+    frontier: { provider: "anthropic", model: "claude-opus-4-1" },
+    local_large: { provider: "anthropic", model: "claude-opus-4-1" },
   },
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
 };
@@ -175,7 +177,7 @@ export const RemovingAPrice: Story = {
   },
 };
 
-/** A vendor with a price page but no prices on the sheet: the table says so. */
+/** No prices on the sheet: the table says so, and a model two tiers share is named once. */
 export const NoPrices: Story = { ...List, play: openSheet("anthropic") };
 
 /** The phone: the sheet is a full-screen layer. */

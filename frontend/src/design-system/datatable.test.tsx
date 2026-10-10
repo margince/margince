@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createPortal } from "react-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { TableScroll } from "./atoms";
 import { DataTable, type DataTableColumn } from "./datatable";
@@ -86,6 +87,46 @@ it("marks a row as a link only where a click does something", async () => {
   await user.click(screen.getByText("Consulting Day"));
   expect(opened).toEqual(["Consulting Day"]);
   expect(container.querySelector("tbody tr")?.className).toBe("rowlink");
+});
+
+it("leaves a press on a control in the row, or in a portal it opened, to that control", async () => {
+  const user = userEvent.setup();
+  const opened: string[] = [];
+  const pressed: string[] = [];
+  function Portalled() {
+    return createPortal(<span>Popover text</span>, document.body);
+  }
+  render(
+    <DataTable
+      label="Products"
+      columns={[
+        ...PRODUCT_COLUMNS,
+        {
+          key: "verb",
+          header: "Verb",
+          render: (row: { name: string }) => (
+            <>
+              <button type="button" onClick={() => pressed.push(row.name)}>
+                Price
+              </button>
+              <Portalled />
+            </>
+          ),
+        },
+      ]}
+      rows={PRODUCT_ROWS}
+      rowKey={(row) => row.name}
+      rowTestId={(row) => `product-${row.name}`}
+      onRowClick={(row) => opened.push(row.name)}
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: "Price" }));
+  await user.click(screen.getByText("Popover text"));
+  expect(pressed).toEqual(["Consulting Day"]);
+  expect(opened).toEqual([]);
+  await user.click(screen.getByText("Consulting Day"));
+  expect(opened).toEqual(["Consulting Day"]);
+  expect(screen.getByTestId("product-Consulting Day").tagName).toBe("TR");
 });
 
 it("leaves a row unmarked where nothing answers a click", () => {

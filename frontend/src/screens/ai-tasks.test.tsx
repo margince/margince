@@ -70,33 +70,64 @@ afterEach(() => {
 });
 
 describe("AiTasksCard", () => {
-  it("leads each task with the model it runs on now", async () => {
+  it("names each task's tier and leaves the model to the tier", async () => {
     vi.stubGlobal("fetch", withDiagnostics(EVERYTHING));
     render(<AiTasksCard />);
 
-    expect(await screen.findByText(feature.display_name)).toBeTruthy();
-    expect(screen.getByText("example-model")).toBeTruthy();
-    // The hedge that said this was only the policy's pick is gone: the row is
-    // the resolved chain.
-    expect(screen.queryByText(/does not show provider status/i)).toBeNull();
+    const row = await screen.findByTestId(`ai-task-row-${feature.task}`);
+    expect(within(row).getByText("Everyday cloud")).toBeTruthy();
+    expect(within(row).queryByText("example-model")).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Tier" })).toBeVisible();
+    expect(within(row).queryByText("Custom")).toBeNull();
   });
 
-  it("names each task's tier, and its sheet links to that task's calls", async () => {
+  it("opens a task's sheet from anywhere on its row, linking its calls", async () => {
     vi.stubGlobal("fetch", withDiagnostics(EVERYTHING));
     const user = userEvent.setup();
     render(<AiTasksCard />);
 
-    const row = (await screen.findByText(feature.display_name)).closest("tr");
-    if (!row) throw new Error("the task has no row");
-    expect(within(row).getByText(feature.leading_tier)).toBeTruthy();
-    expect(within(row).queryByText("Custom")).toBeNull();
-    await user.click(within(row).getByRole("button", { name: /^Edit/ }));
+    const row = await screen.findByTestId(`ai-task-row-${feature.task}`);
+    await user.click(within(row).getByText("Everyday cloud"));
     const sheet = await screen.findByRole("dialog");
     expect(
       within(sheet)
         .getByRole("link", { name: "View these calls →" })
         .getAttribute("href"),
     ).toBe(`#/settings/model-calls?task=${feature.task}`);
+  });
+
+  it("refuses the embeddings row's verb with where its settings live", async () => {
+    const embeddings = {
+      ...feature,
+      task: "embeddings",
+      display_name: "Search and retrieval",
+      leading_tier: "embeddings",
+      defaults: undefined,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.includes("/ai/status")) {
+          return jsonResponse({ ...status, features: [embeddings, feature] });
+        }
+        return withDiagnostics(EVERYTHING)(input, init);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AiTasksCard />);
+
+    const rows = await screen.findAllByTestId(/^ai-task-row-/);
+    expect(rows.map((row) => row.dataset.testid)).toEqual([
+      `ai-task-row-${feature.task}`,
+      "ai-task-row-embeddings",
+    ]);
+    const verb = within(rows[1]).getByRole("button", {
+      name: "Edit Search and retrieval",
+    });
+    expect(verb).toHaveAccessibleDescription(/embedding model row/i);
+    await user.click(within(rows[1]).getByText("Embedding model"));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("marks a task an admin customised", async () => {
@@ -152,7 +183,7 @@ describe("a Model tiers row's facts", () => {
     // Named after its lane, so seven dots are seven controls to a reader.
     await user.click(
       await within(cheap).findByRole("button", {
-        name: "cheap_cloud: Responding",
+        name: "Everyday cloud: Responding",
       }),
     );
     expect(await screen.findByText("12 calls, 1 failed")).toBeTruthy();
@@ -165,7 +196,7 @@ describe("a Model tiers row's facts", () => {
     expect(within(premium).getByText("0 tasks")).toBeTruthy();
     expect(
       within(premium).getByRole("button", {
-        name: /^premium: no model calls in the last 1h/i,
+        name: /^Premium: no model calls in the last 1h/i,
       }),
     ).toBeTruthy();
   });
@@ -214,13 +245,16 @@ describe("the Model tiers card for a diagnostics-only reader", () => {
     const cheap = await screen.findByTestId("ai-routing-tier-cheap_cloud");
     expect(within(cheap).getByText("Not bound")).toBeTruthy();
     expect(
-      within(cheap).getByRole("button", { name: "cheap_cloud: Responding" }),
+      within(cheap).getByRole("button", { name: "Everyday cloud: Responding" }),
     ).toBeTruthy();
     const embed = screen.getByTestId("ai-routing-tier-embeddings");
+    expect(within(embed).getByText("Embedding model")).toBeTruthy();
     expect(within(embed).getByText("embeddings")).toBeTruthy();
-    expect(within(embed).getByText(/provider_quota/)).toBeTruthy();
+    expect(
+      within(embed).getByText("3 calls, 3 failed · out of quota"),
+    ).toBeTruthy();
     expect(screen.queryByText("embed")).toBeNull();
-    expect(screen.queryByRole("button", { name: /^edit$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^edit\b/i })).toBeNull();
   });
 
   it("says no lane took a call rather than drawing an empty list", async () => {

@@ -216,7 +216,7 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
 
     expect(await screen.findByText(/no models bound/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /^edit$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^edit\b/i })).toBeNull();
   });
 
   // Cheapest first, most capable last — the ladder, not the alphabet.

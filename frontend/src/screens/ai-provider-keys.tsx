@@ -4,16 +4,12 @@ import { useCan, useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ProviderCallsLine, ProviderRecentCalls } from "./ai-call-figures";
+import { ProviderRecentCalls } from "./ai-call-figures";
 import { useProviderHealth } from "./ai-provider-health";
-import {
-  type ProviderHealthEntry,
-  ProviderHealthNotice,
-} from "./ai-provider-health-notice";
 import {
   credentialKindOf,
   KeyEntry,
@@ -36,13 +32,8 @@ import {
   hasProviderSettings,
   ProviderSettingsForm,
 } from "./ai-provider-settings";
-import {
-  ProviderSheet,
-  type ProviderUsage,
-  providerState,
-  STATE_LABEL,
-  STATE_TONE,
-} from "./ai-provider-sheet";
+import { ProviderSheet } from "./ai-provider-sheet";
+import { ProviderTable } from "./ai-provider-table";
 import { providerUsage, useRouting } from "./ai-routing-query";
 import { PanelTitle } from "./ai-terms";
 import { problemMessageOf, QueryGate } from "./common";
@@ -122,29 +113,29 @@ export function AiProviderKeysCard() {
           const openStatus = list.providers.find((p) => p.provider === opened);
           return (
             <>
-              {list.providers.map((p) => (
-                <ProviderRow
-                  key={p.provider}
-                  status={p}
-                  usage={usage?.get(p.provider)}
-                  health={
-                    canDiagnose
-                      ? health?.providers.find((h) => h.provider === p.provider)
-                      : undefined
-                  }
-                  onOpen={() => {
-                    setDraftHost(null);
-                    setOpened(p.provider);
-                    // The list stays mounted while sheets open and close, so
-                    // a key set elsewhere shows only if opening reads again.
-                    query.refetch();
-                  }}
-                />
-              ))}
+              <ProviderTable
+                providers={list.providers}
+                usage={usage}
+                health={canDiagnose ? health?.providers : undefined}
+                onOpen={(provider) => {
+                  setDraftHost(null);
+                  setOpened(provider);
+                  // The list stays mounted while sheets open and close, so
+                  // a key set elsewhere shows only if opening reads again.
+                  query.refetch();
+                }}
+              />
               {openStatus ? (
                 <ProviderSheet
                   status={openStatus}
                   usage={usage?.get(openStatus.provider)}
+                  health={
+                    canDiagnose
+                      ? health?.providers.find(
+                          (h) => h.provider === openStatus.provider,
+                        )
+                      : undefined
+                  }
                   connection={
                     <>
                       <ProviderConnection
@@ -192,50 +183,6 @@ export function AiProviderKeysCard() {
         }}
       </QueryGate>
     </Panel>
-  );
-}
-
-// One vendor as a reading: its name, the variable its key rides in, whether it
-// can be called and what routing uses it for — and the way into its sheet.
-function ProviderRow({
-  status,
-  usage,
-  health,
-  onOpen,
-}: {
-  status: ProviderStatus;
-  usage: ProviderUsage | undefined;
-  health: ProviderHealthEntry | undefined;
-  onOpen: () => void;
-}) {
-  const t = useT();
-  const state = providerState(status, usage);
-  return (
-    <PanelRow>
-      <div
-        className="ai-provider-line"
-        data-testid={`ai-provider-row-${status.provider}`}
-      >
-        <span className="ai-provider-who">
-          <span>{providerName(status.provider, t)}</span>
-          <ProviderCallsLine provider={status.provider} />
-        </span>
-        <span
-          className="t-caption ai-provider-used"
-          title={usage?.for.join(", ")}
-        >
-          {usage
-            ? t("aiProviders.usedBy", { roles: usage.for.join(", ") })
-            : t("aiProviders.notUsed")}
-        </span>
-        <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
-        <Button onClick={onOpen}>
-          {t("aiRouting.edit")}
-          <span className="sr-only"> {providerName(status.provider, t)}</span>
-        </Button>
-      </div>
-      {health && <ProviderHealthNotice entry={health} />}
-    </PanelRow>
   );
 }
 
@@ -450,7 +397,7 @@ function ProviderConnection({
         open={confirming}
         onClose={() => setConfirming(false)}
         title={t("aiProviderKeys.removeConfirmTitle", {
-          provider: status.provider,
+          provider: providerName(status.provider, t),
         })}
         confirmLabel={t("aiProviderKeys.remove")}
         confirmVariant="danger"
