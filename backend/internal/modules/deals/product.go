@@ -60,13 +60,19 @@ func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmco
 		return crmcontracts.Product{}, err
 	}
 
-	unit := "unit"
-	if in.Unit != nil && *in.Unit != "" {
-		unit = *in.Unit
-	}
-	taxRate := "0.00"
+	unit, _, _ := normalizeLineDefaults(in.Unit, nil, nil)
+	taxRate := zeroPct
 	if in.DefaultTaxRate != nil {
+		if err := checkFigure(defaultTaxLimit, wireDecimal(*in.DefaultTaxRate)); err != nil {
+			return crmcontracts.Product{}, err
+		}
 		taxRate = formatPct(*in.DefaultTaxRate)
+	}
+	if err := checkPrice("unit_price_minor", in.UnitPriceMinor); err != nil {
+		return crmcontracts.Product{}, err
+	}
+	if err := checkCurrency(in.Currency); err != nil {
+		return crmcontracts.Product{}, err
 	}
 	active := in.Active == nil || *in.Active
 	// Settled before the transaction opens, so a half-stated classification
@@ -177,15 +183,28 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		p.Set("description", current.Description, *in.Description)
 	}
 	if in.Unit != nil {
-		p.Set("unit", current.Unit, *in.Unit)
+		unit, err := httperr.RequireNonBlank("unit", *in.Unit)
+		if err != nil {
+			return nil, err
+		}
+		p.Set("unit", current.Unit, unit)
 	}
 	if in.UnitPriceMinor != nil {
+		if err := checkPrice("unit_price_minor", *in.UnitPriceMinor); err != nil {
+			return nil, err
+		}
 		p.Set("unit_price_minor", current.UnitPriceMinor, *in.UnitPriceMinor)
 	}
 	if in.Currency != nil {
+		if err := checkCurrency(*in.Currency); err != nil {
+			return nil, err
+		}
 		p.Set("currency", current.Currency, *in.Currency)
 	}
 	if in.DefaultTaxRate != nil {
+		if err := checkFigure(defaultTaxLimit, wireDecimal(*in.DefaultTaxRate)); err != nil {
+			return nil, err
+		}
 		p.Set("default_tax_rate", current.DefaultTaxRate, formatPct(*in.DefaultTaxRate))
 	}
 	if in.Active != nil {
