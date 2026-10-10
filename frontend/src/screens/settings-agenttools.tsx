@@ -175,7 +175,7 @@ function ToolTable({
       header: t("tools.colScope"),
       render: (tool) => (
         <CellStack>
-          <span className="agents-scopes">
+          <span className="tools-access">
             {tool.required_scope && (
               <Badge>{scopeChipLabel(t, tool.required_scope)}</Badge>
             )}

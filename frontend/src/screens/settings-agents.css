@@ -54,6 +54,20 @@
   }
 }
 
+/* One chip a line, so the column is as wide as its widest chip and the tool's
+   description takes the width. */
+.tools-access {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+@container table-fold (width < 36rem) {
+  .tools-access {
+    flex-flow: row wrap;
+  }
+}
+
 /* The text an agent selects a tool by: one line until its row is opened. */
 .tools-description {
   color: var(--textSecondary);
