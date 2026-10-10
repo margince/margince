@@ -57,8 +57,9 @@ mine** or **Not a customer**.
 **Not a customer** removes the whole thread for everyone, and does not run out. Also called:
 dismiss, delete from worklist, hide, not relevant.
 
-Archiving a contact also takes the messages they wait on a reply to off every Worklist. Restoring the contact
-brings them back. A message stays if another contact it is filed under is not archived.
+Archiving a contact also takes the messages they wait on a reply to off your Worklist. Restoring the
+contact brings them back. Only the contacts you can see count. A message stays if you can see another
+contact it is filed under who is not archived, or if you can see none of its contacts.
 
 ### How do I undo a snooze or removal on my worklist?
 To undo a Worklist snooze or removal in Margince, press **Undo** in the note that appears right
