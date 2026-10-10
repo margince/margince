@@ -88,7 +88,7 @@ export type ListColumn<Row> = {
    */
   fixed?: boolean;
   /**
-   * This column holds the row's VERBS, sized by its buttons rather than by a
+   * This column holds the row's verbs, sized by its buttons rather than by a
    * share of the width. A verb read in half cannot be used. "menu" is one "…"
    * trigger, whose header only assistive technology reads.
    */
