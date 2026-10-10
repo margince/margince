@@ -132,11 +132,11 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 // column per branch, a split costs a table of the width minus one, so the split wins
 // only where the table is narrow and the vocabulary short.
 //
-// DECIDE is the honest one: seven pairs where what the reference MEANS is unsettled, so
+// DECIDE is the honest one: pairs where what the reference MEANS is unsettled, so
 // no ending can be picked. OUTLIVES is the one that stays, and its reason is the whole
 // entry.
 var pairResolution = gatekit.Waive(map[string]string{
-	"deal_stage_evidence.source_id (source_type)":                        "DECIDE — evidence is refuted, never deleted, so a cascade would erase the reason for an earlier stage decision. RESTRICT (an activity or contract with evidence cannot be hard-deleted) or OUTLIVES (the pair outlives its source) is still to be chosen",
+	"deal_stage_evidence.source_id (source_type)":                        "OUTLIVES — evidence is refuted, never deleted, and a stage decision rests on it, so a cascade would erase the reason for that decision and a RESTRICT would block a hard delete of the activity or contract. The observation outlives its source, and the deals readers report a deleted source as source_missing instead of failing on it",
 	"activity_audience_member.subject_id (subject_type)":                 "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
 	"ai_call.subject_id (subject_type)":                                  "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
 	"ai_feedback.subject_id (subject_type)":                              "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",

@@ -63,11 +63,13 @@ type ProgressionCriterion struct {
 }
 
 // EvidenceSource is one claim's pointer back to the record it was read from,
-// with the fragment it rests on.
+// with the fragment it rests on. Gone is true when that record has been
+// deleted since, so a reader does not cite something nobody can open.
 type EvidenceSource struct {
 	SourceType string
 	SourceID   ids.UUID
 	Snippet    string
+	Gone       bool
 }
 
 // ErrNoNextStage is the ordinary outcome for a deal already on its pipeline's
@@ -222,7 +224,7 @@ func readProgressionCriteria(
 		       coalesce(e.commitment, ''), e.confidence,
 		       coalesce(e.contradicted, false), coalesce(e.ids, '{}'),
 		       coalesce(e.source_types, '{}'), coalesce(e.source_ids, '{}'),
-		       coalesce(e.snippets, '{}')
+		       coalesce(e.snippets, '{}'), coalesce(e.sources_gone, '{}')
 		  FROM stage_exit_criterion c
 		  LEFT JOIN LATERAL (
 		      SELECT bool_or(v.met) AS met,
@@ -247,10 +249,12 @@ func readProgressionCriteria(
 		             -- ledger row that records the reading.
 		             array_agg(v.source_type ORDER BY v.id) AS source_types,
 		             array_agg(v.source_id ORDER BY v.id) AS source_ids,
-		             array_agg(coalesce(v.snippet, '') ORDER BY v.id) AS snippets
+		             array_agg(coalesce(v.snippet, '') ORDER BY v.id) AS snippets,
+		             array_agg(v.source_gone ORDER BY v.id) AS sources_gone
 		        FROM (
 		            SELECT ev.*,
-		                   CASE WHEN ev.author_side = 'buyer' THEN 0 ELSE 1 END AS rank
+		                   CASE WHEN ev.author_side = 'buyer' THEN 0 ELSE 1 END AS rank,
+		                   `+evidenceSourceGone+` AS source_gone
 		              FROM deal_stage_evidence ev
 		             WHERE ev.criterion_id = c.id AND ev.deal_id = $2
 		               AND ev.refuted_at IS NULL AND ev.met
@@ -269,13 +273,14 @@ func readProgressionCriteria(
 		var kind, authorSide, commitment string
 		var sourceTypes, snippets []string
 		var sourceIDs []ids.UUID
+		var sourcesGone []bool
 		if err := rows.Scan(&c.CriterionID, &c.Key, &c.Label, &c.Required, &kind,
 			&c.Met, &authorSide, &commitment, &c.Confidence,
 			&c.Contradicted, &c.EvidenceIDs,
-			&sourceTypes, &sourceIDs, &snippets); err != nil {
+			&sourceTypes, &sourceIDs, &snippets, &sourcesGone); err != nil {
 			return nil, fmt.Errorf("scan a criterion's standing: %w", err)
 		}
-		c.Sources = evidenceSources(sourceTypes, sourceIDs, snippets)
+		c.Sources = evidenceSources(sourceTypes, sourceIDs, snippets, sourcesGone)
 		c.Kind = CriterionKind(kind)
 		c.AuthorSide = AuthorSide(authorSide)
 		c.Commitment = commitment
@@ -358,21 +363,21 @@ func readProtection(
 	return ProtectionNone, nil
 }
 
-// evidenceSources zips the three parallel aggregates into one list.
+// evidenceSources zips the four parallel aggregates into one list.
 //
-// All three are aggregated over the same rows in the same order, so they are
+// All four are aggregated over the same rows in the same order, so they are
 // the same length — but a short one is read as far as it goes rather than
 // panicking, because a card citing fewer sources is a smaller answer while a
 // panic in an unattended proposer is a lane that stops.
-func evidenceSources(types []string, ids []ids.UUID, snippets []string) []EvidenceSource {
-	n := min(len(types), min(len(ids), len(snippets)))
+func evidenceSources(types []string, ids []ids.UUID, snippets []string, gone []bool) []EvidenceSource {
+	n := min(len(types), len(ids), len(snippets), len(gone))
 	if n == 0 {
 		return nil
 	}
 	out := make([]EvidenceSource, 0, n)
 	for i := range n {
 		out = append(out, EvidenceSource{
-			SourceType: types[i], SourceID: ids[i], Snippet: snippets[i],
+			SourceType: types[i], SourceID: ids[i], Snippet: snippets[i], Gone: gone[i],
 		})
 	}
 	return out

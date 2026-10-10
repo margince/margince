@@ -279,7 +279,9 @@ func progressionEvidence(facts deals.StageProgressionFacts) []approvals.Evidence
 			continue
 		}
 		for _, src := range c.Sources {
-			if !approvals.EvidenceSourceTypeKnown(src.SourceType) {
+			// A deleted source is dropped for the same reason: the claim still
+			// counts, but a pointer that opens nothing reads as corroboration.
+			if src.Gone || !approvals.EvidenceSourceTypeKnown(src.SourceType) {
 				continue
 			}
 			// The criterion's label stands in for a claim recorded with no

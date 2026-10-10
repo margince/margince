@@ -41468,8 +41468,8 @@ components:
         Mirrors `deal_stage_evidence`. Configuration says what a stage requires;
         this says what was seen, and where.
       required:
-        [id, deal_id, criterion_id, source_type, source_id, author_side,
-         commitment, met, observed_at, extracted_by]
+        [id, deal_id, criterion_id, source_type, source_id, source_missing,
+         author_side, commitment, met, observed_at, extracted_by]
       properties:
         id: { type: string, format: uuid }
         deal_id: { type: string, format: uuid }
@@ -41479,7 +41479,13 @@ components:
           type: string
           format: uuid
           description: |
-            The activity, contract or deal-room decision this was read from.
+            The activity or contract this was read from.
+        source_missing:
+          type: boolean
+          description: |
+            True when the activity or contract `source_id` names has been
+            deleted. The observation stays on the ledger, because a stage
+            decision may rest on it, but `source_id` then opens nothing.
         source_lines:
           type: [array, 'null']
           items: { type: integer }

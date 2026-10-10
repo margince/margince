@@ -24,10 +24,22 @@ import (
 // evidenceColumns is the SELECT list both evidence reads build from, so
 // scanEvidence's fixed Scan order stays correct for each: a column added here
 // without a matching dest fails to compile.
+//
+// Both reads alias the table as ev, which evidenceSourceGone needs.
 const evidenceColumns = `id, deal_id, criterion_id, source_type, source_id,
 	source_lines, snippet, author_side, commitment, met, confidence,
 	observed_at, extracted_by, refuted_at, refuted_by, created_at, updated_at,
-	version`
+	version, ` + evidenceSourceGone
+
+// evidenceSourceGone answers whether the record an evidence row (aliased ev)
+// was read from has been hard-deleted. The source pair has no foreign key on
+// purpose: the observation outlives its source, so readers report the source
+// as gone instead of failing on it. A source type this does not know reads as
+// gone, because nothing can open it.
+const evidenceSourceGone = `CASE ev.source_type
+	WHEN 'activity' THEN NOT EXISTS (SELECT 1 FROM activity a WHERE a.id = ev.source_id)
+	WHEN 'contract' THEN NOT EXISTS (SELECT 1 FROM contract k WHERE k.id = ev.source_id)
+	ELSE true END`
 
 const evidenceField = "evidence"
 
@@ -169,7 +181,7 @@ func evidenceIDFor(ctx context.Context, tx pgx.Tx, in EvidenceInput) (ids.UUID, 
 // readEvidence answers one row by id.
 func readEvidence(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.StageEvidence, error) {
 	e, err := scanEvidence(tx.QueryRow(ctx,
-		`SELECT `+evidenceColumns+` FROM deal_stage_evidence WHERE id = $1`, id))
+		`SELECT `+evidenceColumns+` FROM deal_stage_evidence ev WHERE ev.id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.StageEvidence{}, apperrors.ErrNotFound
 	}
@@ -181,8 +193,8 @@ func readDealEvidence(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID,
 ) ([]crmcontracts.StageEvidence, error) {
 	rows, err := tx.Query(ctx, `SELECT `+evidenceColumns+`
-		  FROM deal_stage_evidence WHERE deal_id = $1
-		 ORDER BY observed_at DESC, id DESC`, dealID)
+		  FROM deal_stage_evidence ev WHERE ev.deal_id = $1
+		 ORDER BY ev.observed_at DESC, ev.id DESC`, dealID)
 	if err != nil {
 		return nil, fmt.Errorf("list stage evidence: %w", err)
 	}
@@ -210,7 +222,8 @@ func scanEvidence(row scannable) (crmcontracts.StageEvidence, error) {
 	if err := row.Scan(&id, &dealID, &criterionID, &sourceType, &sourceID,
 		&out.SourceLines, &out.Snippet, &authorSide, &commitment, &out.Met,
 		&out.Confidence, &out.ObservedAt, &out.ExtractedBy, &out.RefutedAt,
-		&refutedBy, &out.CreatedAt, &out.UpdatedAt, &version); err != nil {
+		&refutedBy, &out.CreatedAt, &out.UpdatedAt, &version,
+		&out.SourceMissing); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return out, err
 		}
