@@ -8114,7 +8114,7 @@ export const de = {
   "auto.tier.runs": "Läuft",
   "auto.tier.approval": "Freigabe erforderlich",
   "auto.sub":
-    "Eine Regel mit „Läuft“ handelt selbstständig. Eine Regel mit „Freigabe erforderlich“ schickt ihre Aktionen an die Freigaben.",
+    "Regeln handeln selbstständig. Eine Regel mit „Freigabe erforderlich“ schickt ihre Aktionen zuerst an die Freigaben.",
   "auto.readOnly":
     "Nur Lesezugriff: Du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Vorlagenbibliothek",

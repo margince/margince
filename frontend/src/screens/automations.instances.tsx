@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -59,10 +60,7 @@ type AutomationPatch = {
 async function patchAutomation({ id, version, body }: AutomationPatch) {
   return unwrap(
     await api.PATCH("/automations/{id}", {
-      params: {
-        path: { id },
-        header: version === undefined ? {} : { "If-Match": String(version) },
-      },
+      params: { path: { id }, ...ifMatch(requireVersion(version)) },
       body,
     }),
   );
@@ -237,9 +235,7 @@ function instanceColumns({
     {
       key: "mode",
       header: t("auto.colMode"),
-      render: (automation) => (
-        <ModeBadge tier={entryFor(automation.key)?.tier} />
-      ),
+      render: (automation) => <Mode tier={entryFor(automation.key)?.tier} />,
     },
     {
       key: "lastRun",
@@ -250,9 +246,11 @@ function instanceColumns({
       key: "runs",
       header: t("auto.colRuns30"),
       align: "end",
-      render: (automation) => (
-        <RunCount count={automation.runs_last_30_days ?? 0} />
-      ),
+      // "Never" in the last-run cell already says it: no count beside it.
+      render: (automation) =>
+        automation.last_run_at ? (
+          <RunCount count={automation.runs_last_30_days ?? 0} />
+        ) : null,
     },
     {
       key: "status",
@@ -270,14 +268,14 @@ function instanceColumns({
   ];
 }
 
-/** Whether the rule acts by itself or waits for a contact, as a word. */
-function ModeBadge({ tier }: Readonly<{ tier?: CatalogEntry["tier"] }>) {
+// Running by itself is the normal mode, so only a screen reader hears it.
+function Mode({ tier }: Readonly<{ tier?: CatalogEntry["tier"] }>) {
   const t = useT();
   if (!tier) {
     return null;
   }
   return tier === "auto_execute" ? (
-    <Badge tone="success">{t("auto.tier.runs")}</Badge>
+    <span className="sr-only">{t("auto.tier.runs")}</span>
   ) : (
     <Badge tone="warning">{t("auto.tier.approval")}</Badge>
   );

@@ -90,7 +90,9 @@ describe("the configured automations table", () => {
     expect(heading.className).toContain("datatable-end");
     const figure = within(await row("au-4")).getByText("1,240");
     expect(figure.closest("td")?.className).toContain("datatable-end");
-    expect(within(await row("au-5")).getByText("0")).toBeInTheDocument();
+    expect(within(await row("au-6")).getByText("0")).toBeInTheDocument();
+    // A rule that never ran says so once: no count beside "Never".
+    expect(within(await row("au-5")).queryByText("0")).toBeNull();
   });
 
   it("captions a rule the system paused with why, and leaves one paused by hand bare", async () => {
@@ -115,6 +117,33 @@ describe("the configured automations table", () => {
       expect(first).not.toHaveTextContent(raw);
     }
     expect(await row("au-6")).not.toHaveTextContent(/list_id|list\.evaluated/);
+  });
+});
+
+describe("a rule's switch", () => {
+  it("pins the flip to the version the row was read at", async () => {
+    const user = userEvent.setup();
+    mount();
+    const stubbed = globalThis.fetch;
+    const sent: { method: string; ifMatch: string | null }[] = [];
+    globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      sent.push({
+        method: request.method,
+        ifMatch: request.headers.get("If-Match"),
+      });
+      return stubbed(input, init);
+    };
+    await user.click(
+      within(await row("au-5")).getByRole("switch", {
+        name: "Post-meeting recap draft is enabled",
+      }),
+    );
+    await waitFor(() =>
+      expect(sent.filter((call) => call.method === "PATCH")).toEqual([
+        { method: "PATCH", ifMatch: "2" },
+      ]),
+    );
   });
 });
 

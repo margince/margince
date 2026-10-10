@@ -147,9 +147,9 @@ export function configuredAutomations(now: number): Automation[] {
       status: "paused",
       paused_reason: "list_archived",
       params: { list_id: "01a0f000-0000-7000-8000-000000000001" },
-      last_run_at: ago(290),
+      last_run_at: ago(24 * 40),
       last_run_outcome: "fired",
-      runs_last_30_days: 1,
+      runs_last_30_days: 0,
     },
   ];
 }

@@ -319,7 +319,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(
       within(confirmationRequired).getByText("Needs approval"),
     ).toBeTruthy();
-    expect(within(autoExecute).getByText("Runs")).toBeTruthy();
+    expect(within(autoExecute).getByText("Runs").className).toBe("sr-only");
     // A colour alone says nothing to a reader who cannot see it apart.
     expect(within(autoExecute).queryByRole("img")).toBeNull();
   });

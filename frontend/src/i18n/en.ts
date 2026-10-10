@@ -8285,7 +8285,7 @@ export const en = {
   "auto.tier.runs": "Runs",
   "auto.tier.approval": "Needs approval",
   "auto.sub":
-    "A rule marked “runs” acts on its own. A rule marked “needs approval” sends its actions to Approvals.",
+    "Rules act on their own. A rule marked “needs approval” sends its actions to Approvals first.",
   "auto.readOnly":
     "Read-only: you do not have permission to change automations.",
   "auto.catalog": "Starter library",

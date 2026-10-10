@@ -7943,7 +7943,7 @@ export const vi = {
   "auto.tier.runs": "Tự chạy",
   "auto.tier.approval": "Cần duyệt",
   "auto.sub":
-    "Quy tắc gắn “Tự chạy” sẽ tự hành động. Quy tắc gắn “Cần duyệt” chuyển hành động vào Phê duyệt.",
+    "Quy tắc tự hành động. Quy tắc gắn “Cần duyệt” chuyển hành động vào Phê duyệt trước.",
   "auto.readOnly": "Chỉ đọc: bạn không có quyền thay đổi tự động hóa.",
   "auto.catalog": "Thư viện khởi đầu",
   "auto.instances": "Tự động hóa đã cấu hình",
