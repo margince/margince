@@ -2,9 +2,12 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { AnalyticsScreen } from "./analytics";
 import { render, reportsStub } from "./analytics.testkit";
 import { stagesOfEveryPipeline } from "./pipelinestages";
+
+type Stage = components["schemas"]["Stage"];
 
 afterEach(() => {
   cleanup();
@@ -16,7 +19,7 @@ const stage = (
   pipeline: string,
   name: string,
   position: number,
-) => ({
+): Stage => ({
   id,
   pipeline_id: pipeline,
   name,

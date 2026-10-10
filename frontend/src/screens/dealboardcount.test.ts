@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { boardDealCount } from "./dealboardcount";
 
-const stages = [
-  { id: "s1", name: "Qualify", position: 1 },
-  { id: "s2", name: "Propose", position: 2 },
-] as Parameters<typeof boardDealCount>[0];
-const loaded = [{ id: "a", stage_id: "s1" }] as Parameters<
-  typeof boardDealCount
->[1];
+const stages = [{ id: "s1" }, { id: "s2" }];
+const loaded = [{ stage_id: "s1" }];
 
 describe("boardDealCount", () => {
   // The header and the columns read one count, the server's.

@@ -20,8 +20,8 @@ export function stageCount(
 
 /** The board's deal count: the columns' counts added up, so header and columns agree. */
 export function boardDealCount(
-  stages: readonly Stage[],
-  deals: readonly Deal[],
+  stages: readonly Pick<Stage, "id">[],
+  deals: readonly Pick<Deal, "stage_id">[],
   totals?: ReadonlyMap<string, CountedStage> | null,
 ): number {
   return stages.reduce(
