@@ -13,40 +13,40 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The contract requires `subject` on both send requests, so a body that leaves
-// the key out is refused before any send or schedule is staged.
-func TestASendWithoutASubjectKeyIsRefusedBeforeItIsStaged(t *testing.T) {
+// The contract requires `subject` and `body` on both send requests, so a body
+// that leaves either key out is refused before any send or schedule is staged.
+func TestASendWithoutASubjectOrBodyKeyIsRefusedBeforeItIsStaged(t *testing.T) {
 	h := Handlers{}
-	company := ids.NewV7().String()
-	cases := map[string]struct {
-		body string
-		send func(http.ResponseWriter, *http.Request)
+	links := `,"links":[{"entity_type":"company","entity_id":"` + ids.NewV7().String() + `"}]`
+	sends := map[string]struct {
+		extra string
+		send  func(http.ResponseWriter, *http.Request)
 	}{
-		"reply": {
-			body: `{"body":"Hello","to":["buyer@example.test"]}`,
-			send: func(w http.ResponseWriter, r *http.Request) {
-				h.SendEmail(w, r, crmcontracts.Id(ids.NewV7()), crmcontracts.SendEmailParams{})
-			},
-		},
-		"company": {
-			body: `{"body":"Hello","to":["buyer@example.test"],"links":[{"entity_type":"company","entity_id":"` + company + `"}]}`,
-			send: func(w http.ResponseWriter, r *http.Request) {
-				h.SendCompanyEmail(w, r, crmcontracts.SendCompanyEmailParams{})
-			},
-		},
+		"reply": {send: func(w http.ResponseWriter, r *http.Request) {
+			h.SendEmail(w, r, crmcontracts.Id(ids.NewV7()), crmcontracts.SendEmailParams{})
+		}},
+		"company": {extra: links, send: func(w http.ResponseWriter, r *http.Request) {
+			h.SendCompanyEmail(w, r, crmcontracts.SendCompanyEmailParams{})
+		}},
 	}
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/v1/emails", strings.NewReader(c.body)).
-				WithContext(humanCtx(ids.NewV7()))
-			rec := httptest.NewRecorder()
-			c.send(rec, req)
-			if rec.Code != http.StatusUnprocessableEntity {
-				t.Fatalf("answered %d, want 422: %s", rec.Code, rec.Body.String())
-			}
-			if !strings.Contains(rec.Body.String(), `"field":"subject"`) {
-				t.Fatalf("the refusal does not name the subject field: %s", rec.Body.String())
-			}
-		})
+	missing := map[string]string{
+		"subject": `{"body":"Hello","to":["buyer@example.test"]`,
+		"body":    `{"subject":"Hi","to":["buyer@example.test"]`,
+	}
+	for name, s := range sends {
+		for field, body := range missing {
+			t.Run(name+" without "+field, func(t *testing.T) {
+				req := httptest.NewRequest(http.MethodPost, "/v1/emails", strings.NewReader(body+s.extra+"}")).
+					WithContext(humanCtx(ids.NewV7()))
+				rec := httptest.NewRecorder()
+				s.send(rec, req)
+				if rec.Code != http.StatusUnprocessableEntity {
+					t.Fatalf("answered %d, want 422: %s", rec.Code, rec.Body.String())
+				}
+				if !strings.Contains(rec.Body.String(), `"field":"`+field+`"`) {
+					t.Fatalf("the refusal does not name %s: %s", field, rec.Body.String())
+				}
+			})
+		}
 	}
 }

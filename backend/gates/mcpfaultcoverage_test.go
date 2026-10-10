@@ -87,12 +87,13 @@ var seamScope = gatekit.Scope{
 // roots can never contradict them, and the sweep would collapse back into the
 // assertion it replaces.
 var seamOutsideRoots = gatekit.Waive(map[string]string{
-	"internal/platform/httperr/httperr.go":         "httperr IS the one classifier both surfaces run: it names datasource's own FieldDecodeError and UnsupportedEntityError so each gets a single wire verdict. It declares no domain error and maps none of its own to a 422 — obligating the classifier would invert the rule this gate enforces",
-	"internal/platform/httperr/wire.go":            "the same classifier's decode helper, calling datasource.RejectNonCanonicalKeys so every surface refuses an unknown key identically; a platform package owns no domain, so it has no error type of its own to carry a verdict",
-	"internal/platform/httperr/decoderefusal.go":   "the classifier's decode-refusal half, naming datasource.UnknownFieldError and FieldDecodeError to render one refusal shape for both surfaces; it maps no error IT declares to a 422",
-	"internal/shared/ports/connector/connector.go": "a seam DEFINITION rather than a capability: it borrows datasource's EntityType and EntityRef to type the connector port's signatures. A Tier-0 shared port has no store, no transport and no error of its own",
-	"internal/shared/ports/retrieval/retrieval.go": "the same posture: the retrieval port's signatures are typed in datasource's EntityRef vocabulary, and a frozen interface declaration has no transport branch to remove",
-	"internal/shared/ports/workflow/workflow.go":   "the same posture: the workflow port types its trigger and action shapes with datasource.EntityRef; it declares interfaces and value shapes only, never an error it maps to a 422",
+	"internal/platform/httperr/httperr.go":               "httperr IS the one classifier both surfaces run: it names datasource's own FieldDecodeError and UnsupportedEntityError so each gets a single wire verdict. It declares no domain error and maps none of its own to a 422 — obligating the classifier would invert the rule this gate enforces",
+	"internal/platform/httperr/wire.go":                  "the same classifier's decode helper, calling datasource.RejectNonCanonicalKeys so every surface refuses an unknown key identically; a platform package owns no domain, so it has no error type of its own to carry a verdict",
+	"internal/platform/httperr/decoderefusal.go":         "the classifier's decode-refusal half, naming datasource.UnknownFieldError and FieldDecodeError to render one refusal shape for both surfaces; it maps no error IT declares to a 422",
+	"internal/platform/database/storekit/calendarday.go": "borrows datasource.InstantInRange, the one range every request-stored date obeys; it declares no error and maps nothing to a 422, the typed refusals stay with its callers",
+	"internal/shared/ports/connector/connector.go":       "a seam DEFINITION rather than a capability: it borrows datasource's EntityType and EntityRef to type the connector port's signatures. A Tier-0 shared port has no store, no transport and no error of its own",
+	"internal/shared/ports/retrieval/retrieval.go":       "the same posture: the retrieval port's signatures are typed in datasource's EntityRef vocabulary, and a frozen interface declaration has no transport branch to remove",
+	"internal/shared/ports/workflow/workflow.go":         "the same posture: the workflow port types its trigger and action shapes with datasource.EntityRef; it declares interfaces and value shapes only, never an error it maps to a 422",
 })
 
 // seamImportPath is the datasource seam — the MCP surface's door into a

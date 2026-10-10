@@ -282,7 +282,7 @@ func validWorkingHours(in WorkingHours) (WorkingHours, error) {
 		days = append(days, day)
 	}
 	sort.Ints(days)
-	if zone, err := values.ParseTimezone(in.Timezone); err != nil || zone.String() != in.Timezone {
+	if err := values.ZoneName(in.Timezone); err != nil {
 		return WorkingHours{}, &WorkingHoursError{
 			Field:   fieldWorkTimezone,
 			Message: "a timezone is an IANA name, such as Europe/Berlin",

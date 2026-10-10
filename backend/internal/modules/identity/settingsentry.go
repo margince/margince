@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
@@ -102,20 +101,10 @@ var Timezone = settings.Define[string](
 	"update",
 	"UTC",
 	func(v string) error {
-		// LoadLocation accepts two values that are not IANA zones and would
-		// silently change what a reporting period means: "" resolves to UTC,
-		// and "Local" resolves to whatever zone the SERVER happens to run in —
-		// so the same installation would compute different period boundaries
-		// on different hosts. Both are refused before the lookup.
-		if v == "" || v == "Local" {
-			return fmt.Errorf("%q is not an IANA zone name — use one like Europe/Berlin", v)
-		}
-		// Then validated by loading it: the tzdata the server actually has is
-		// the only authority on whether a name resolves at report time. A name
-		// that passes a regex and fails at midnight is worse than one refused
-		// here.
-		if _, err := time.LoadLocation(v); err != nil {
-			return fmt.Errorf("%q is not an IANA timezone this server knows", v)
+		// The one zone rule: a "Local" or empty name would make the same
+		// installation compute different period boundaries on different hosts.
+		if err := values.ZoneName(v); err != nil {
+			return fmt.Errorf("%q is not an IANA zone name this server knows — use one like Europe/Berlin", v)
 		}
 		return nil
 	},

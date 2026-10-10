@@ -377,8 +377,8 @@ func validateSchedule(sched SendSchedule, now time.Time) error {
 	}
 	// A zone NAME, never a numeric offset, which would freeze the DST rules of
 	// the day it was written (AC-DS-TZ4). "Local" is the server's zone, so it
-	// is refused. The name is stored as sent, so it must equal the parsed one.
-	if zone, err := values.ParseTimezone(sched.TZ); err != nil || zone.String() != sched.TZ {
+	// is refused, and so is a name with spaces around it.
+	if err := values.ZoneName(sched.TZ); err != nil {
 		return &InvalidScheduleError{Field: FieldScheduledTZ, Reason: "is not an IANA time zone name"}
 	}
 	if sched.At.Sub(now) > scheduleCeiling {

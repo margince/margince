@@ -27,6 +27,20 @@ func ParseTimezone(name string) (Timezone, error) {
 	return Timezone{name: trimmed}, nil
 }
 
+// ZoneName checks a zone name a writer stores exactly as sent. ParseTimezone
+// trims, and a stored name with a space around it would not load again.
+func ZoneName(name string) error {
+	zone, err := ParseTimezone(name)
+	if err != nil {
+		return err
+	}
+	if zone.String() != name {
+		return &ParseError{Field: "timezone", Code: "timezone_malformed",
+			Message: "an IANA zone name has no spaces around it"}
+	}
+	return nil
+}
+
 func (t Timezone) String() string { return t.name }
 func (t Timezone) IsZero() bool   { return t.name == "" }
 
