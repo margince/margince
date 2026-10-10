@@ -47,16 +47,17 @@ func versionOf(t *testing.T, raw json.RawMessage) int {
 func anIDIn(t *testing.T, raw json.RawMessage) string {
 	t.Helper()
 	var named struct {
-		ID       string `json:"id"`
-		RecordID string `json:"record_id"`
-		Result   struct {
+		ID         string `json:"id"`
+		RecordID   string `json:"record_id"`
+		ActivityID string `json:"activity_id"`
+		Result     struct {
 			ID string `json:"id"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(raw, &named); err != nil {
 		t.Fatalf("the answer does not decode: %v\n%s", err, raw)
 	}
-	for _, id := range []string{named.ID, named.RecordID, named.Result.ID} {
+	for _, id := range []string{named.ID, named.RecordID, named.ActivityID, named.Result.ID} {
 		if id != "" {
 			return id
 		}
@@ -82,7 +83,7 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	}
 
 	version := versionOf(t, d.storedContact(t, viaREST))
-	d.restPinned(t, "PATCH", "/v1/contacts/"+viaREST, AnyMap{"title": "Head of Buying"}, version, http.StatusOK)
+	d.restPinned(t, "PATCH", "/v1/contacts/"+viaREST, AnyMap{"title": "Head of Buying"}, version)
 	d.tool(t, "update_record", map[string]any{
 		"record_type": "contact", "id": viaTool, "fields": map[string]any{"title": "Head of Buying"},
 		"if_version": versionOf(t, d.storedContact(t, viaTool)),
@@ -93,14 +94,16 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	}
 	d.sameEffect(t, "update", viaREST, viaTool)
 
-	d.restPinned(t, "DELETE", "/v1/contacts/"+viaREST, nil, versionOf(t, d.storedContact(t, viaREST)), http.StatusOK)
+	d.restPinned(t, "DELETE", "/v1/contacts/"+viaREST, nil, versionOf(t, d.storedContact(t, viaREST)))
 	d.tool(t, "archive_record", map[string]any{"record_type": "contact", "id": viaTool})
 	d.sameEffect(t, "archive", viaREST, viaTool)
 }
 
 type sharedActivity struct {
-	Kind string  `json:"kind"`
-	Body *string `json:"body"`
+	Kind    string  `json:"kind"`
+	Subject *string `json:"subject"`
+	Body    *string `json:"body"`
+	DueAt   *string `json:"due_at"`
 }
 
 // A note logged and a task filed over either door are the same records: the

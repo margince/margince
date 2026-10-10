@@ -100,9 +100,9 @@ func TestCreateAndUpdateTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	}
 	d.sameEffect(t, "update", viaREST.ID, viaTool.ID)
 
-	clear := map[string]any{"color": "none", "description": ""}
-	d.restStatus(t, "PATCH", "/v1/tags/"+viaREST.ID, clear, http.StatusOK)
-	d.tool(t, "update_tag", with(clear, "tag_id", viaTool.ID))
+	blank := map[string]any{"color": "none", "description": ""}
+	d.restStatus(t, "PATCH", "/v1/tags/"+viaREST.ID, blank, http.StatusOK)
+	d.tool(t, "update_tag", with(blank, "tag_id", viaTool.ID))
 	cleared := sameRecords[sharedTag](t, "clear", d.storedTag(t, viaREST.ID), d.storedTag(t, viaTool.ID))
 	if cleared.Color != nil {
 		t.Errorf("colour none left the colour at %q", *cleared.Color)
@@ -144,7 +144,7 @@ func TestApplyAndRemoveTagLeaveTheSameOnEitherDoor(t *testing.T) {
 }
 
 // Folding one tag into another is confirm-first for an agent: each door stages
-// one approval of the same kind and runs nothing until a person approves.
+// one approval of the same kind and runs nothing until a human approves.
 func TestMergeTagsStagesTheSameApprovalOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "tag-merge-doors", "read", "write")
 	into := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Conference 2026", "color": "sky"})

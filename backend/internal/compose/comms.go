@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
-	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -117,17 +116,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 	if err != nil {
 		return "", "", err
 	}
-	answering := activities.DraftContext{
-		Band:     convstate.BandFresh,
-		Threaded: activities.IsMailThread(activity.Kind, activity.Direction),
-	}
-	if activity.Subject != nil {
-		answering.Topic = *activity.Subject
-	}
-	if activity.Body != nil {
-		answering.Body = *activity.Body
-	}
-	subject, body := activities.DeterministicEmailDraft(answering, intent)
+	subject, body := c.store.FloorDraft(ctx, anchor, activity, intent)
 	return subject, body, nil
 }
 

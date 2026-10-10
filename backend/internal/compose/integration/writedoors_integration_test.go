@@ -12,6 +12,8 @@ package integration
 
 import (
 	"encoding/json"
+	"maps"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -35,15 +37,13 @@ func (d *twoDoors) restStatus(t *testing.T, method, path string, body any, want 
 // in If-Match.
 //
 //craft:ignore naked-any the request body is whichever JSON shape the route under test takes
-func (d *twoDoors) restPinned(t *testing.T, method, path string, body any, version int, want int) json.RawMessage {
+func (d *twoDoors) restPinned(t *testing.T, method, path string, body any, version int) json.RawMessage {
 	t.Helper()
 	headers := map[string]string{"If-Match": strconv.Itoa(version)}
-	for name, value := range d.bearer {
-		headers[name] = value
-	}
+	maps.Copy(headers, d.bearer)
 	var out json.RawMessage
-	if status := d.e.Call(t, method, path, body, headers, &out); status != want {
-		t.Fatalf("%s %s as a passport → %d, want %d: %s", method, path, status, want, out)
+	if status := d.e.Call(t, method, path, body, headers, &out); status != http.StatusOK {
+		t.Fatalf("%s %s as a passport → %d, want 200: %s", method, path, status, out)
 	}
 	return out
 }

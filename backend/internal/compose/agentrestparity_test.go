@@ -99,14 +99,6 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 		}
 	}
 
-	untested := untestedDoorsBaseline(t)
-	if len(untested) > untestedDoorsCeiling {
-		t.Errorf("%s lists %d tools, over its ceiling of %d; a new tool gets its both-doors test "+
-			"instead of a line here", untestedDoorsPath, len(untested), untestedDoorsCeiling)
-	} else if len(untested) < untestedDoorsCeiling {
-		t.Errorf("%s lists %d tools; lower untestedDoorsCeiling to %d so the list cannot grow back",
-			untestedDoorsPath, len(untested), len(untested))
-	}
 	extensionTools := composedToolNames()
 	ownShape := 0
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
@@ -114,43 +106,14 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 			continue
 		}
 		ownShape++
-		listed := untested[spec.Name]
-		delete(untested, spec.Name)
-		switch {
-		case !called[spec.Name] && !listed:
+		if !called[spec.Name] {
 			t.Errorf("%s runs on %s, which answers in its own shape, and no integration test calls "+
 				"it through twoDoors", spec.Name, spec.OpenAPIOp)
-		case called[spec.Name] && listed:
-			t.Errorf("%s now has a both-doors test; remove it from %s", spec.Name, untestedDoorsPath)
 		}
 	}
 	if ownShape == 0 {
 		t.Fatal("no tool runs on a route of its own shape — the census found nothing to hold")
 	}
-	for name := range untested {
-		t.Errorf("%s is in %s but is no tool on a route of its own shape; remove it", name, untestedDoorsPath)
-	}
-}
-
-// untestedDoorsPath lists tools on a route of their own shape still lacking a
-// both-doors test. untestedDoorsCeiling is its size; both only go down.
-const untestedDoorsPath = "testdata/untested_tool_doors.txt"
-
-const untestedDoorsCeiling = 13
-
-func untestedDoorsBaseline(t *testing.T) map[string]bool {
-	t.Helper()
-	src, err := os.ReadFile(untestedDoorsPath)
-	if err != nil {
-		t.Fatalf("reading %s: %v", untestedDoorsPath, err)
-	}
-	names := map[string]bool{}
-	for line := range strings.SplitSeq(string(src), "\n") {
-		if name := strings.TrimSpace(line); name != "" && !strings.HasPrefix(name, "#") {
-			names[name] = true
-		}
-	}
-	return names
 }
 
 // bothDoorsToolCall finds a tool asked through the tool door of twoDoors: asked

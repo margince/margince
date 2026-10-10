@@ -37,7 +37,7 @@ func TestLeadLifecycleWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	}
 
 	restLost, toolLost := lead("Rest Lost", "lost-rest@doors.test"), lead("Tool Lost", "lost-tool@doors.test")
-	d.restPinned(t, "DELETE", "/v1/leads/"+restLost, AnyMap{}, versionOf(t, d.storedLead(t, restLost)), http.StatusOK)
+	d.restPinned(t, "DELETE", "/v1/leads/"+restLost, AnyMap{}, versionOf(t, d.storedLead(t, restLost)))
 	d.tool(t, "disqualify_lead", map[string]any{"lead_id": toolLost})
 	disqualified := sameRecords[sharedLead](t, "disqualify", d.storedLead(t, restLost), d.storedLead(t, toolLost))
 	if disqualified.Status != "disqualified" {
@@ -47,7 +47,7 @@ func TestLeadLifecycleWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 
 	restWon, toolWon := lead("Rest Won", "won-rest@doors.test"), lead("Tool Won", "won-tool@doors.test")
 	restPromoted := d.restPinned(t, "POST", "/v1/leads/"+restWon+"/promote", AnyMap{"trigger": "human_qualify"},
-		versionOf(t, d.storedLead(t, restWon)), http.StatusOK)
+		versionOf(t, d.storedLead(t, restWon)))
 	toolPromoted := d.tool(t, "promote_lead", map[string]any{"lead_id": toolWon, "trigger": "human_qualify"})
 	promoted := sameRecords[sharedLead](t, "promote", d.storedLead(t, restWon), d.storedLead(t, toolWon))
 	if promoted.Status != "promoted" {
@@ -56,7 +56,7 @@ func TestLeadLifecycleWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	d.sameEffect(t, "promote", restWon, toolWon)
 
 	d.restPinned(t, "POST", "/v1/leads/"+restWon+"/demote", AnyMap{"reason": "Promoted by mistake"},
-		versionOf(t, d.storedLead(t, restWon)), http.StatusOK)
+		versionOf(t, d.storedLead(t, restWon)))
 	d.tool(t, "demote_lead", map[string]any{"lead_id": toolWon, "reason": "Promoted by mistake"})
 	demoted := sameRecords[sharedLead](t, "demote", d.storedLead(t, restWon), d.storedLead(t, toolWon))
 	if demoted.Status == "promoted" {
@@ -80,7 +80,7 @@ func TestAdvanceWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	viaTool := openDeal(t, d.e, stages, "Tool advanced renewal")
 	storedDeal := func(id string) json.RawMessage { return d.restStatus(t, "GET", "/v1/deals/"+id, nil, http.StatusOK) }
 
-	d.restPinned(t, "POST", "/v1/deals/"+viaREST+"/advance", AnyMap{"to_stage_id": next}, versionOf(t, storedDeal(viaREST)), http.StatusOK)
+	d.restPinned(t, "POST", "/v1/deals/"+viaREST+"/advance", AnyMap{"to_stage_id": next}, versionOf(t, storedDeal(viaREST)))
 	d.tool(t, "advance_deal", map[string]any{"deal_id": viaTool, "to_stage_id": next, "if_version": versionOf(t, storedDeal(viaTool))})
 	moved := sameRecords[sharedStage](t, "advance deal", storedDeal(viaREST), storedDeal(viaTool))
 	if moved.StageID != next {
@@ -94,19 +94,13 @@ func TestAdvanceWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	}
 	restProject, toolProject := project("Rest rollout"), project("Tool rollout")
 	storedProject := func(id string) json.RawMessage { return d.restStatus(t, "GET", "/v1/projects/"+id, nil, http.StatusOK) }
-	d.restPinned(t, "POST", "/v1/projects/"+restProject+"/advance", AnyMap{"to_phase": "pursuing"}, versionOf(t, storedProject(restProject)), http.StatusOK)
+	d.restPinned(t, "POST", "/v1/projects/"+restProject+"/advance", AnyMap{"to_phase": "pursuing"}, versionOf(t, storedProject(restProject)))
 	d.tool(t, "advance_project_phase", map[string]any{"project_id": toolProject, "to_phase": "pursuing", "if_version": versionOf(t, storedProject(toolProject))})
 	phased := sameRecords[sharedStage](t, "advance project", storedProject(restProject), storedProject(toolProject))
 	if phased.Phase != "pursuing" {
 		t.Errorf("the advanced project is in phase %q, want pursuing", phased.Phase)
 	}
 	d.sameEffect(t, "advance project", restProject, toolProject)
-}
-
-type sharedLinks struct {
-	Links []struct {
-		EntityType string `json:"entity_type"`
-	} `json:"links"`
 }
 
 // An activity filed under another contact, singly or in a batch, is left alike
@@ -142,7 +136,7 @@ func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 
 	restOne, toolOne := note("Rest filed note"), note("Tool filed note")
 	d.restPinned(t, "POST", "/v1/activities/"+restOne+"/relink", AnyMap{"entity_type": "contact", "entity_id": to, "replace_existing_of_type": true},
-		versionOf(t, stored(restOne)), http.StatusOK)
+		versionOf(t, stored(restOne)))
 	d.tool(t, "relink_activity", map[string]any{"activity_id": toolOne, "entity_type": "contact", "entity_id": to, "replace_existing_of_type": true})
 	for _, id := range []string{restOne, toolOne} {
 		if got := linkedTo(id); len(got) != 1 || got[0] != to {

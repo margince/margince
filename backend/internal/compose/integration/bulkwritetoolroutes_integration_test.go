@@ -61,14 +61,6 @@ func TestBulkUpdateRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 	}
 }
 
-type sharedList struct {
-	Name       string  `json:"name"`
-	Purpose    *string `json:"purpose"`
-	EntityType string  `json:"entity_type"`
-	ListType   string  `json:"list_type"`
-	Sharing    string  `json:"sharing"`
-}
-
 // A Shortlist made, renamed and given a member over either door is the same
 // list with the same rows behind it.
 func TestChangeListsLeavesTheSameOnEitherDoor(t *testing.T) {
@@ -113,7 +105,7 @@ func TestMergeRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 	toolSource, toolSurvivor := pair("Merge Tool Source", "Merge Tool Survivor")
 
 	d.restPinned(t, "POST", "/v1/contacts/"+restSource+"/merge", AnyMap{"target_id": restSurvivor},
-		versionOf(t, d.storedContact(t, restSource)), http.StatusOK)
+		versionOf(t, d.storedContact(t, restSource)))
 	d.tool(t, "merge_records", map[string]any{"record_type": "contact", "source_id": toolSource, "target_id": toolSurvivor})
 	for _, pair := range [][2]string{{restSource, restSurvivor}, {toolSource, toolSurvivor}} {
 		var read struct {
