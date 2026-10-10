@@ -5173,8 +5173,6 @@ export const de = {
     "Dieser Bereich misst die Datensätze eines einzelnen Nutzerkontos. Die breiteren Bereiche decken den Rest der Sicht ab.",
   "analytics.reportWinLoss": "Gewonnen und verloren",
   "analytics.reportStageAge": "Verweildauer je Phase",
-  "analytics.won": "Gewonnen",
-  "analytics.lost": "Verloren",
   "analytics.baseValue": "Deal-Wert · {currency}",
   "analytics.baseValueUnnamed": "Deal-Wert",
   "analytics.noBaseCurrency": "Kein Betrag",

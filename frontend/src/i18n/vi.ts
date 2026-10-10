@@ -5070,8 +5070,6 @@ export const vi = {
     "Mục này đo hồ sơ của một thành viên. Các mục rộng hơn bao gồm phần còn lại của phạm vi.",
   "analytics.reportWinLoss": "Thắng và thua",
   "analytics.reportStageAge": "Thời gian ở giai đoạn",
-  "analytics.won": "Thắng",
-  "analytics.lost": "Thua",
   "analytics.baseValue": "Giá trị deal ({currency})",
   "analytics.baseValueUnnamed": "Giá trị deal",
   "analytics.noBaseCurrency": "Không có số tiền",

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { operations } from "../api/schema";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useEntityName } from "./entityref.queries";
 
 // The deals list's enum-valued dials, narrowed to what the wire admits.
@@ -11,32 +13,54 @@ import { useEntityName } from "./entityref.queries";
 // nothing instead of being sent. The request would be refused, and a list that
 // fails to load says less than one that is simply not narrowed.
 
-// The four buckets a deal's own column can hold. `slipped` is derived by the
-// report from a claimed category and a close date, so no filter can name it.
-const FORECAST_FILTER_VALUES = [
-  "commit",
-  "best_case",
-  "pipeline",
-  "omitted",
-] as const;
+type DealQuery = NonNullable<operations["listDeals"]["parameters"]["query"]>;
+export type DealStatus = NonNullable<DealQuery["status"]>;
+type ForecastFilter = NonNullable<DealQuery["forecast_category"]>;
+
+// Each record is keyed by the contract's own union, so a value the wire adds
+// fails the build here until it is listed. `slipped` is not in the forecast
+// union: the report derives it from a claimed category and a close date.
+const FORECAST_FILTER: Readonly<Record<ForecastFilter, true>> = {
+  commit: true,
+  best_case: true,
+  pipeline: true,
+  omitted: true,
+};
 
 export function forecastCategoryFilter(
   value: string | undefined,
-): (typeof FORECAST_FILTER_VALUES)[number] | undefined {
-  return FORECAST_FILTER_VALUES.find((admitted) => admitted === value);
+): ForecastFilter | undefined {
+  return Object.keys(FORECAST_FILTER).find(
+    (admitted): admitted is ForecastFilter => admitted === value,
+  );
 }
 
-export const DEAL_STATUS_VALUES = ["open", "won", "lost"] as const;
+/** A deal's status in words, once for every screen that names one. */
+export const DEAL_STATUS_LABEL: Readonly<Record<DealStatus, MessageKey>> = {
+  open: "deals.statusOpen",
+  won: "deals.statusWon",
+  lost: "deals.statusLost",
+};
+
+export const DEAL_STATUS_VALUES = Object.keys(
+  DEAL_STATUS_LABEL,
+) as readonly DealStatus[];
 
 export function dealStatusFilter(
   value: string | undefined,
-): (typeof DEAL_STATUS_VALUES)[number] | undefined {
+): DealStatus | undefined {
   return DEAL_STATUS_VALUES.find((admitted) => admitted === value);
 }
 
+export function dealStatusLabel(value: string): MessageKey | undefined {
+  const status = dealStatusFilter(value);
+  return status && DEAL_STATUS_LABEL[status];
+}
+
 // What the company chip calls a company nobody picked in this session, one the
-// address named. `undefined` leaves the id. A read still out says so, and a
-// failed read does not print the id as though it were the answer.
+// address named. A read still out says so. A failed read does not print the id
+// as though it were the answer. A company the reader cannot open stays applied
+// and is named as withheld, since its id says nothing they can use.
 export function useAppliedCompanyName(id: string | undefined) {
   const t = useT();
   const { name, reading } = useEntityName("company", id);
@@ -46,5 +70,7 @@ export function useAppliedCompanyName(id: string | undefined) {
   if (reading === "pending") {
     return t("common.loading");
   }
-  return reading === "failed" ? t("ref.nameLoadFailed") : undefined;
+  return t(
+    reading === "failed" ? "ref.nameLoadFailed" : "deal.companyWithheld",
+  );
 }

@@ -5260,8 +5260,6 @@ export const en = {
     "This section measures one user’s records. Wider sections cover the rest of the lens.",
   "analytics.reportWinLoss": "Won and lost",
   "analytics.reportStageAge": "Time in stage",
-  "analytics.won": "Won",
-  "analytics.lost": "Lost",
   "analytics.baseValue": "Deal value · {currency}",
   "analytics.baseValueUnnamed": "Deal value",
   "analytics.noBaseCurrency": "No amount",

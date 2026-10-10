@@ -1,19 +1,10 @@
-import type { MessageKey } from "../../i18n/en";
 import {
   type AcquisitionSource,
   acquisitionFilterOptions,
 } from "../acquisitionsources.queries";
-import { DEAL_STATUS_VALUES } from "../dealdials";
+import { DEAL_STATUS_LABEL, DEAL_STATUS_VALUES } from "../dealdials";
 import type { FilterSpec } from "../listquery";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
-
-// Keyed by the status union, so a status the wire adds fails the build here
-// until it has a word.
-const STATUS_LABEL: Record<(typeof DEAL_STATUS_VALUES)[number], MessageKey> = {
-  open: "deals.statusOpen",
-  won: "deals.statusWon",
-  lost: "deals.statusLost",
-};
 
 // The surface's own narrowing chips, beside the stage and company ones
 // dealFilterChips builds.
@@ -47,7 +38,7 @@ export function dealSurfaceChips({
       allLabel: "deals.filterStatusAll",
       options: DEAL_STATUS_VALUES.map((value) => ({
         value,
-        label: STATUS_LABEL[value],
+        label: DEAL_STATUS_LABEL[value],
       })),
     },
     {

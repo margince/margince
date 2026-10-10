@@ -20,12 +20,13 @@ import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "./dealsaddress";
 // write `#/deals?company_id=…&status=…`. A link opened in a new tab has no
 // picked label, so the list sends every dial the address names. The chip names
 // its record as a picked one does.
-//
-// Kept out of deals.test.tsx, which is long past its size ceiling.
 
 type Deal = components["schemas"]["Deal"];
 
 const COMPANY = { id: "c-nw", display_name: "Northwind Traders" };
+
+// A company the API will not admit exists: gone, or hidden by row scope.
+const HIDDEN_COMPANY_ID = "c-hidden";
 
 function deal(overrides: Partial<Deal>): Deal {
   return {
@@ -123,6 +124,9 @@ function stubBackend(seen: Seen) {
     }
     if (path.endsWith(`/companies/${COMPANY.id}`)) {
       return jsonResponse(COMPANY);
+    }
+    if (path.endsWith(`/companies/${HIDDEN_COMPANY_ID}`)) {
+      return jsonResponse({ title: "Not found", status: 404 }, 404);
     }
     if (path.endsWith("/companies")) {
       return jsonResponse({ data: [COMPANY], page: { next_cursor: null } });
@@ -231,5 +235,22 @@ describe("the deals list opened from an address", () => {
       }),
     ).toBeTruthy();
     expect(screen.queryByText(COMPANY.id)).toBeNull();
+  });
+
+  it("keeps a company the reader cannot open applied, named as withheld", async () => {
+    window.location.hash = `#/deals?company_id=${HIDDEN_COMPANY_ID}&view=table`;
+    const seen = noneSeen();
+    vi.stubGlobal("fetch", stubBackend(seen));
+    render();
+
+    expect(
+      await screen.findByRole("group", { name: "Company: Company withheld" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(HIDDEN_COMPANY_ID)).toBeNull();
+    await waitFor(() =>
+      expect(
+        seen.dealUrls.at(-1)?.includes(`company_id=${HIDDEN_COMPANY_ID}`),
+      ).toBe(true),
+    );
   });
 });
