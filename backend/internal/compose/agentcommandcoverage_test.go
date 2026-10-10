@@ -40,11 +40,14 @@ import (
 // Keyed by OP rather than by route because that is the key restCommands is
 // keyed by, and the gate below compares the two sets directly. The route comes
 // along as the value so a failure names the place a reader has to go.
+//
+// A registry-served route is not in it. agentGate passes it through, and the
+// tool it runs stages through its own StageInfo, as on the MCP door.
 func agentReachableMutations() map[string]string {
 	routes := make(map[string]string, len(agentPolicies))
 	for route, pol := range agentPolicies {
 		method, _, _ := strings.Cut(route, " ")
-		if pol.Access != accessTool || !mutatingMethod(method) {
+		if pol.Access != accessTool || !mutatingMethod(method) || pol.ServedBy == servedByRegistry {
 			continue
 		}
 		routes[pol.Op] = route

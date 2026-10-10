@@ -186,7 +186,7 @@ func (t catchMeUpOn) Spec() mcp.ToolSpec {
 		Description:   catchMeUpOnCopy.render(),
 		Instead:       catchMeUpOnCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getContact/getCompany/getDeal + listActivities",
+		OpenAPIOp:    "catchUpOnRecord",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[AssembledContextResult](),
 	}
@@ -223,7 +223,7 @@ func (t prepForMeeting) Spec() mcp.ToolSpec {
 		Description:   prepForMeetingCopy.render(),
 		Instead:       prepForMeetingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getMeetingBrief | getContact/getCompany/getDeal + listActivities",
+		OpenAPIOp:    "prepForMeeting",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[PrepForMeetingResult](),
 	}

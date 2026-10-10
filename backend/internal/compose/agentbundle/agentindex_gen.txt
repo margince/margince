@@ -40,6 +40,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /companies/{id}/merge` | mergeCompany | Merge this company into a target (non-lossy). | Change records | at once |
 | `GET /companies/{id}/hierarchy-rollup` | getCompanyHierarchyRollup | Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count. | any | at once |
 | `GET /companies/{id}/360` | getCompany360 | The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps. | any | at once |
+| `GET /companies/{id}/intro-paths` | listIntroPaths | The colleagues who could introduce you at this company, warmest first. | any | at once |
 | `GET /companies/{id}/graph` | getCompanyGraph | The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner companies. | any | at once |
 | `GET /companies/{id}/coverage` | getCompanyCoverage | How well this account is covered — who answers, who is missing from the buying team, and the warmest way in. | any | at once |
 | `GET /companies/{id}/contacts` | listCompanyContacts | The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account. | any | at once |
@@ -79,6 +80,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals` | listDeals | List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads. | any | at once |
 | `POST /deals` | createDeal | Create a deal. | Change records | at once |
 | `GET /deals/slipping` | listSlippingDeals | The open deals going quiet or past their expected close date, worst first. | any | at once |
+| `GET /deals/at-risk` | listAtRiskRelationships | The open deals whose relationships are going cold, and why. | any | at once |
 | `GET /deals/{id}` | getDeal | Get a deal by id (the 360 record). | any | at once |
 | `PATCH /deals/{id}` | updateDeal | Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. | Change records | at once |
 | `DELETE /deals/{id}` | archiveDeal | Archive (soft-delete) a deal. | Change records | at once |
@@ -121,6 +123,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /projects/{id}` | updateProject | Update a project. | Change records | at once |
 | `DELETE /projects/{id}` | archiveProject | Archive a project (soft delete; archive is the delete). | Change records | at once |
 | `POST /projects/{id}/advance` | advanceProjectPhase | Move a project along the phase ladder (audit-logged with prior + next phase). | Change records | at once |
+| `GET /projects/{id}/handoff` | prepareProjectHandoff | What delivery needs to take this project over. | any | at once |
 | `GET /projects/{id}/360` | getProject360 | The whole project page in one round trip — the project, its company, its phase history, its deals, stakeholders, contracts, documents, commitments, timeline and filing coverage. | any | at once |
 | `GET /projects/{id}/health-assessments` | listProjectHealthAssessments | How this project has been going, newest judgement first. | any | at once |
 | `GET /projects/{id}/stakeholders` | listProjectStakeholders | List a project's stakeholders (project↔contact relationships). | any | at once |
@@ -158,6 +161,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /availability` | getAvailability | Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb). | any | at once |
 | `POST /bookings` | bookMeeting | Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb). | Send messages | at once |
 | `GET /activities/follow-up-settings` | getFollowUpSettings | How long a sent message may go unanswered before the worklist reminds its sender. | any | at once |
+| `GET /commitments` | listOpenCommitments | The promises still open, overdue first. | any | at once |
 | `GET /activity-review-templates` | listActivityReviewTemplates | The question sets an outcome review can ask. | any | at once |
 
 ## Leads
@@ -259,13 +263,23 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /forecast/movement` | getForecastMovement | What moved the forecast between two snapshots, and which deals moved it. | any | at once |
 | `GET /forecast/calls` | listForecastCalls | What this period's forecast has been called, newest first. | any | at once |
 | `POST /analytics/query` | runAnalyticsQuery | Answer a question nobody wrote a report for. | Read records | at once |
+| `POST /analytics/runs/{run_id}/evidence-search` | searchReportEvidence | Which records behind a saved run carry the words, and which do not. | Read records | at once |
 | `POST /analytics/reports/render` | renderAnalyticsReport | Resolve a report document's figures for this reader. | Read records | at once |
+| `GET /analytics/vocabulary` | describeAnalyticsVocabulary | What an analytics query may name, for this caller. | any | at once |
+| `GET /analytics/reports/blocks` | describeReportBlocks | The block grammar a report document is written in. | any | at once |
+| `GET /analytics/reports/vocabulary` | describeReportVocabulary | The prebuilt reports, and the names each one's plan may use. | any | at once |
 
 ## Search
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /query-vocabulary` | describeQueryVocabulary | Everything a workspace query plan may say, for this caller. | any | at once |
+| `GET /catch-up` | catchUpOnRecord | What has been going on with one record, in one cited picture. | any | at once |
+| `GET /meeting-prep` | prepForMeeting | Get ready for a meeting about one record. | any | at once |
+| `GET /context-search` | searchContext | The records most relevant to a description, ranked by meaning as well as words. | any | at once |
+| `POST /workspace-queries` | queryWorkspace | Answer a query plan over the workspace's records. | Read records | at once |
+| `POST /entity-resolutions` | resolveEntities | Whether the contacts and companies in a payload are already records here. | Read records | at once |
+| `GET /record-fields` | describeRecordFields | The fields a record create or update may write, for each record type. | any | at once |
 | `GET /search` | search | Cross-object search (contacts, companies, deals, activities, leads). | any | at once |
 
 ## Approvals
@@ -283,6 +297,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /whoami` | getActingIdentity | Who this caller acts for. | any | at once |
 | `GET /installation/settings` | getInstallationSettings | The installation's own settings. | any | at once |
 | `GET /users` | listUsers | List workspace members (roster) — cursor-paginated. Read-only. | any | at once |
 | `GET /users/names` | nameSeats | Name the colleagues behind a set of ids. Read-only. | any | at once |

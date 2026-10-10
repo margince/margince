@@ -63,6 +63,7 @@ func (t describeRecordFields) Spec() mcp.ToolSpec {
 		// about not ADVERTISING the write vocabulary in a catalogue a read-only
 		// client browses; this door is one such a client must ask for by name.
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "describeRecordFields",
 		// No arguments. The document is composed from the contract and is the
 		// same for every caller, so a record_type filter would only let one
 		// narrow what it already receives, at the cost of a name it could spell

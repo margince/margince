@@ -73,6 +73,7 @@ func (t whoami) Spec() mcp.ToolSpec {
 		Description:   whoamiCopy.render(),
 		Instead:       whoamiCopy.Instead,
 		RequiredScope: principal.ScopeRead, SelfDescribing: true, Tier: mcp.TierAutoExecute,
+		OpenAPIOp:    "getActingIdentity",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[WhoamiResult](),
 	}

@@ -140,87 +140,10 @@ func TestTheSweepSkipsExactlyWhatTheComposedSetRegisters(t *testing.T) {
 // writes go through the same provider seam the declared CRUD verbs use.
 // TestComposedIntentsNeverEgress holds the line that actually matters.
 var composedIntents = map[string]bool{
-	"catch_me_up_on":        true,
-	"prep_for_meeting":      true,
-	"intro_path_to":         true,
-	"at_risk_relationships": true,
-	"draft_follow_ups_for":  true,
-	// whoami names the human this passport acts for. /v1/me is human-only —
-	// correctly, since it is a session's own view — so there is no REST
-	// operation to twin, and this reads a principal rather than a record.
-	"whoami": true,
-	// review_commitments reads the timeline for a set `GET /activities` cannot
-	// select: open tasks ordered by when they came DUE, which that operation
-	// neither filters on nor sorts by. Read-only.
-	"review_commitments": true,
-	// prepare_handoff composes the project read with the deals rolled up to it,
-	// the contacts attached to it and the promises outstanding on it — four
-	// operations, so no single one declares it. Read-only, and it writes
-	// nothing: moving work into delivery is advance_project_phase's act.
-	"prepare_handoff": true,
-	"qualify_lead":    true,
-	"progress_deal":   true,
-	"run_report":      true,
-	// query_workspace composes over the same list operations search_records
-	// does, but no single one of them can declare it: a plan chooses its target
-	// at call time, and the records it selects are read back through the
-	// datasource seam. It is read-only and reaches nothing outside the
-	// workspace, which is what TestComposedIntentsNeverEgress holds it to.
-	"query_workspace": true,
-	// describe_report_vocabulary answers the document margince://schema/reports
-	// publishes, for a caller that reads no resources — and the Surface-B runner
-	// is one, since it is offered no resource step at all. It backs no REST
-	// operation: `runReport` runs a report, and there is no operation that
-	// answers what a report's plan may SAY. Read-only, it returns no records,
-	// and the vocabulary it names is the engine's own compile-time table, so it
-	// names nothing about a workspace at all.
-	"describe_report_vocabulary": true,
-	// describe_report_blocks answers the document
-	// margince://schema/report-blocks publishes, for the same caller and the
-	// same reason: the Surface-B runner is offered no resource step. It backs
-	// no REST operation either — `renderAnalyticsReport` renders a document,
-	// and no operation answers what a document may CONTAIN. Read-only, it
-	// returns no records, and the grammar it names is the engine's own
-	// compile-time list, so it names nothing about a workspace at all.
-	"describe_report_blocks": true,
-	// describe_analytics_vocabulary answers the document
-	// margince://schema/analytics publishes, for the same caller and the same
-	// reason as the two doors above. It backs no REST operation:
-	// `runAnalyticsQuery` runs a query, and no operation answers what a query
-	// may SAY. Read-only, and the document is derived per caller, narrowed to
-	// what this principal may already read — so it names nothing a caller
-	// could not reach by asking.
-	"describe_analytics_vocabulary": true,
-	// describe_record_fields answers the document
-	// margince://schema/record-fields publishes, for the same caller and the
-	// same reason as the three doors above. It backs no REST operation:
-	// `createRecord` and `updateRecord` WRITE, and no operation answers what a
-	// write may NAME. It writes nothing itself, returns no records, and the
-	// document is composed from the contract shapes, so it names nothing about
-	// a workspace at all.
-	"describe_record_fields": true,
-	// search_report_evidence composes explainReportRunCell's drill-through
-	// with the search module's bounded ranking and classification, so no one
-	// operation declares it. Read-only; every listed record is read back
-	// through the provider under the caller's own grants.
-	"search_report_evidence": true,
-	// search_context ranks across record types through the retrieval index,
-	// which no single list operation is: `GET /search` is the lexical half
-	// alone and answers no vector lane, and the records the sweep names are
-	// read back through the datasource seam. Read-only.
-	//
-	// It does not EGRESS in the sense this file's rule is about — no record
-	// leaves the workspace — but the caller's query string does reach the
-	// configured embed provider, exactly as query_workspace's similarity clause
-	// does and as every indexed record already did. That is the AI runtime's own
-	// lane, governed by the routing config rather than by a passport scope, and
-	// the rule below is about outbound authority no operation declared.
-	"search_context": true,
-	// resolve_entities asks the dedupe ladder a question, which is not an
-	// operation at all: `/dedupe/candidates` serves the STORED review queue,
-	// a different question from "who does this payload name". Read-only, and
-	// every record it names is read back through the datasource seam.
-	"resolve_entities": true,
+	"draft_follow_ups_for": true,
+	"qualify_lead":         true,
+	"progress_deal":        true,
+	"run_report":           true,
 }
 
 // An intent may write inside the workspace; it may NOT reach outside it.
