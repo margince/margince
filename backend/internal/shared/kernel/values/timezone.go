@@ -27,8 +27,8 @@ func ParseTimezone(name string) (Timezone, error) {
 	return Timezone{name: trimmed}, nil
 }
 
-// ZoneName checks a zone name a writer stores exactly as sent. ParseTimezone
-// trims, and a stored name with a space around it would not load again.
+// ZoneName checks a zone name a writer stores as sent. ParseTimezone trims,
+// and a stored name with a space around it would not load again.
 func ZoneName(name string) error {
 	zone, err := ParseTimezone(name)
 	if err != nil {
