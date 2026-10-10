@@ -205,7 +205,8 @@ type Identifier struct {
 // whole search into a scan of the record table.
 func QuickFindClauseWith(pos int, nameExpr string, id Identifier) string {
 	clause := fmt.Sprintf(`search_tsv @@ websearch_to_tsquery('simple', f_unaccent($%[1]d))
-	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || replace(replace(replace(f_fold_apostrophes(lower($%[1]d)), '\', '\\'), '%%', '\%%'), '_', '\_') || '%%'`, pos, nameExpr)
+	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || %[3]s || '%%'`,
+		pos, nameExpr, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower($%d))", pos)))
 	if id.Table != "" {
 		clause += fmt.Sprintf(`
 	   OR id = ANY (ARRAY(SELECT %[2]s FROM %[3]s
