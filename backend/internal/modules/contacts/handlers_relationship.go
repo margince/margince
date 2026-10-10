@@ -91,7 +91,12 @@ func (h Handlers) UpdateRelationship(w http.ResponseWriter, r *http.Request, id 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	rel, err := h.store.UpdateRelationship(r.Context(), ids.UUID(id), relationshipUpdateInput(req, ifVersion))
+	in, err := relationshipUpdateInput(req, ifVersion, httperr.ClearedFields(r))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	rel, err := h.store.UpdateRelationship(r.Context(), ids.UUID(id), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

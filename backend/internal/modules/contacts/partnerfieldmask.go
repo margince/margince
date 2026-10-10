@@ -17,7 +17,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // partnerMaskObject is the RBAC object a partner's masks are configured under —
@@ -92,6 +94,22 @@ func refuseUnclearablePartnerFields(cleared []string) error {
 	for _, field := range cleared {
 		if !slices.Contains(partnerClearable, field) {
 			return &storekit.NotClearableError{Field: field}
+		}
+	}
+	return nil
+}
+
+// refuseBlankServedSegments refuses a segment with no visible text. A null
+// member decodes to the empty string, so it is refused here too instead of
+// stored as a word beside the real ones.
+func refuseBlankServedSegments(segments *[]string) error {
+	if segments == nil {
+		return nil
+	}
+	for _, segment := range *segments {
+		if !values.HasVisibleText(segment) {
+			return httperr.Validation("served_segments", "invalid",
+				"served_segments holds only words; remove an empty or null entry")
 		}
 	}
 	return nil

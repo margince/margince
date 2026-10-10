@@ -21,6 +21,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -63,7 +64,7 @@ func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) CreateR
 // patch carries no endpoints at all — an edge's ends are what it IS, so moving
 // one is a new edge and an archive, never an update — which is why this takes
 // the version pin the create mapper has no use for.
-func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersion *int64) UpdateRelationshipInput {
+func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersion *int64, cleared []string) (UpdateRelationshipInput, error) {
 	in := UpdateRelationshipInput{
 		Role:             req.Role,
 		IsCurrentPrimary: req.IsCurrentPrimary,
@@ -80,7 +81,19 @@ func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersi
 	if req.EndedAt != nil {
 		in.EndedAt = &req.EndedAt.Time
 	}
-	return in
+	for _, field := range cleared {
+		switch field {
+		case "role":
+			in.ClearRole = true
+		case "started_at":
+			in.ClearStartedAt = true
+		case "ended_at":
+			in.ClearEndedAt = true
+		default:
+			return UpdateRelationshipInput{}, &storekit.NotClearableError{Field: field}
+		}
+	}
+	return in, nil
 }
 
 // wireRelationship renders one edge for the wire. Every endpoint column the row
