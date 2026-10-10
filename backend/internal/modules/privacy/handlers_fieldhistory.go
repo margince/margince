@@ -15,14 +15,8 @@ import (
 
 // GetFieldHistory implements (GET /field-history).
 func (h Handlers) GetFieldHistory(w http.ResponseWriter, r *http.Request, params crmcontracts.GetFieldHistoryParams) {
-	entityType := string(params.EntityType)
-	if !fieldHistoryEntityTypes[entityType] {
-		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_entity_type",
-			"entity_type must be one of "+fieldHistoryEntityTypeList))
-		return
-	}
 	f := FieldHistoryFilter{
-		EntityType: entityType,
+		EntityType: string(params.EntityType),
 		EntityID:   ids.UUID(params.EntityId),
 		Field:      params.Field,
 		Cursor:     params.Cursor,
@@ -30,11 +24,6 @@ func (h Handlers) GetFieldHistory(w http.ResponseWriter, r *http.Request, params
 	}
 	if params.ActorType != nil {
 		at := string(*params.ActorType)
-		if !fieldHistoryActorTypes[at] {
-			httperr.Write(w, r, httperr.Validation("actor_type", "invalid_actor_type",
-				"actor_type must be one of human, agent, system, connector, buyer"))
-			return
-		}
 		f.ActorType = &at
 	}
 
@@ -48,7 +37,7 @@ func (h Handlers) GetFieldHistory(w http.ResponseWriter, r *http.Request, params
 	for _, e := range page.Entries {
 		auditIDs = append(auditIDs, e.ID)
 	}
-	answers := h.undoabilityFor(r.Context(), entityType, ids.UUID(params.EntityId), auditIDs)
+	answers := h.undoabilityFor(r.Context(), f.EntityType, ids.UUID(params.EntityId), auditIDs)
 	data := make([]crmcontracts.FieldHistoryEntry, 0, len(page.Entries))
 	for _, e := range page.Entries {
 		wire := fieldHistoryEntryToWire(e)

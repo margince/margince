@@ -99,10 +99,6 @@ var fieldHistoryEntityTypeList = func() string {
 	return strings.Join(kinds, ", ")
 }()
 
-var fieldHistoryActorTypes = map[string]bool{
-	"human": true, "agent": true, "system": true, "connector": true, "buyer": true,
-}
-
 // fieldHistoryProjectedActions is the closed set of audit verbs whose
 // before/after columns are honest per-field images of the record:
 // create/update/restore carry value snapshots, archive carries the

@@ -36,8 +36,7 @@ type companyRollupHandlers struct {
 
 // GetCompanyHierarchyRollup implements (GET
 // /companies/{id}/hierarchy-rollup). An absent scope defaults to the
-// contract's "tree"; anything else reaches CompanyHierarchyRollup verbatim,
-// which is the read's own refusal point for an out-of-vocabulary value.
+// contract's "tree"; a value outside the enum was refused before this ran.
 func (h companyRollupHandlers) GetCompanyHierarchyRollup(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetCompanyHierarchyRollupParams) {
 	scope := companyRollupScopeTree
 	if params.Scope != nil {

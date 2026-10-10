@@ -8,6 +8,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"go/format"
@@ -26,6 +27,9 @@ const routePrefix = "/v1"
 type queryEnum struct {
 	Name   string
 	Values []string
+	// Array says the parameter carries a list; Explode says each member is its
+	// own key. Only an array that is not exploded travels as one joined value.
+	Array, Explode bool
 }
 
 func main() {
@@ -39,7 +43,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("gen-queryenums: loading %s: %v", *in, err)
 	}
-	table := deriveTable(doc)
+	table, err := deriveTable(doc)
+	if err != nil {
+		log.Fatalf("gen-queryenums: %v", err)
+	}
 	formatted, err := format.Source([]byte(render(table)))
 	if err != nil {
 		log.Fatalf("gen-queryenums: formatting the generated table: %v", err)
@@ -51,24 +58,25 @@ func main() {
 }
 
 // deriveTable maps "METHOD /v1/path" to the enum query parameters of that
-// operation. An operation-level parameter replaces a path-level one of the
-// same name, as OpenAPI says.
-func deriveTable(doc *openapi3.T) map[string][]queryEnum {
+// operation, whatever its method: a DELETE takes a closed scope too.
+// An operation-level parameter replaces a path-level one of the same name.
+func deriveTable(doc *openapi3.T) (map[string][]queryEnum, error) {
 	table := map[string][]queryEnum{}
 	for path, item := range doc.Paths.Map() {
 		for method, op := range item.Operations() {
-			if method != "GET" {
-				continue
+			enums, err := enumsOf(item.Parameters, op.Parameters)
+			if err != nil {
+				return nil, fmt.Errorf("%s %s: %w", method, path, err)
 			}
-			if enums := enumsOf(item.Parameters, op.Parameters); len(enums) > 0 {
+			if len(enums) > 0 {
 				table[method+" "+routePrefix+path] = enums
 			}
 		}
 	}
-	return table
+	return table, nil
 }
 
-func enumsOf(pathLevel, opLevel openapi3.Parameters) []queryEnum {
+func enumsOf(pathLevel, opLevel openapi3.Parameters) ([]queryEnum, error) {
 	byName := map[string]*openapi3.Parameter{}
 	for _, params := range []openapi3.Parameters{pathLevel, opLevel} {
 		for _, ref := range params {
@@ -79,34 +87,61 @@ func enumsOf(pathLevel, opLevel openapi3.Parameters) []queryEnum {
 	}
 	var out []queryEnum
 	for name, param := range byName {
-		if values := enumValues(param.Schema); len(values) > 0 {
-			out = append(out, queryEnum{Name: name, Values: values})
+		values, array, err := enumValues(param.Schema)
+		if err != nil {
+			return nil, fmt.Errorf("query parameter %q: %w", name, err)
+		}
+		if len(values) > 0 {
+			// A form-style query parameter explodes unless it says otherwise.
+			explode := param.Explode == nil || *param.Explode
+			out = append(out, queryEnum{Name: name, Values: values, Array: array, Explode: explode})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out
+	return out, nil
 }
 
 // enumValues reads the closed string set off a parameter's schema, or its
-// items when the parameter is an array. A set with any non-string member is
-// not a vocabulary this table can compare a query value against.
-func enumValues(ref *openapi3.SchemaRef) []string {
+// items when the parameter is an array. A set with a non-string member is not
+// a vocabulary this table can compare against. An enum under allOf, oneOf or
+// anyOf cannot be read, so it is refused. Skipping it would leave the
+// parameter unchecked, silently.
+func enumValues(ref *openapi3.SchemaRef) (values []string, array bool, err error) {
 	if ref == nil || ref.Value == nil {
-		return nil
+		return nil, false, nil
 	}
 	schema := ref.Value
 	if schema.Items != nil && schema.Items.Value != nil {
-		schema = schema.Items.Value
+		schema, array = schema.Items.Value, true
 	}
-	values := make([]string, 0, len(schema.Enum))
+	if hidesAnEnum(schema) {
+		return nil, false, errors.New("an enum reached through allOf, oneOf or anyOf; declare it on the schema itself")
+	}
+	values = make([]string, 0, len(schema.Enum))
 	for _, raw := range schema.Enum {
 		s, ok := raw.(string)
 		if !ok {
-			return nil
+			return nil, false, nil
 		}
 		values = append(values, s)
 	}
-	return values
+	return values, array, nil
+}
+
+// hidesAnEnum reports an enum that sits under a composition keyword rather
+// than on the schema itself.
+func hidesAnEnum(schema *openapi3.Schema) bool {
+	if len(schema.Enum) > 0 {
+		return false
+	}
+	for _, group := range []openapi3.SchemaRefs{schema.AllOf, schema.OneOf, schema.AnyOf} {
+		for _, member := range group {
+			if member != nil && member.Value != nil && (len(member.Value.Enum) > 0 || hidesAnEnum(member.Value)) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func render(table map[string][]queryEnum) string {
@@ -129,7 +164,8 @@ func render(table map[string][]queryEnum) string {
 			for i, v := range e.Values {
 				quoted[i] = fmt.Sprintf("%q", v)
 			}
-			fmt.Fprintf(&b, "\t\t{Name: %q, Values: []string{%s}},\n", e.Name, strings.Join(quoted, ", "))
+			fmt.Fprintf(&b, "\t\t{Name: %q, Values: []string{%s}, Array: %t, Explode: %t},\n",
+				e.Name, strings.Join(quoted, ", "), e.Array, e.Explode)
 		}
 		b.WriteString("\t},\n")
 	}

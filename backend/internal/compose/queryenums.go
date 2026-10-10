@@ -13,9 +13,11 @@ import (
 )
 
 // queryEnum is one query parameter the contract closes to a set of values.
+// Array and Explode come from the parameter's own schema and style.
 type queryEnum struct {
-	Name   string
-	Values []string
+	Name           string
+	Values         []string
+	Array, Explode bool
 }
 
 // refuseUnknownQueryEnum answers 422 for a query value outside the enum the
@@ -41,7 +43,7 @@ func unknownQueryEnum(r *http.Request) *httperr.DetailedError {
 	query := r.URL.Query()
 	for _, e := range enums {
 		for _, raw := range query[e.Name] {
-			if !admitsQueryValue(e.Values, raw) {
+			if !e.admits(raw) {
 				return httperr.Validation(e.Name, "invalid", "expected one of: "+strings.Join(e.Values, ", "))
 			}
 		}
@@ -49,17 +51,15 @@ func unknownQueryEnum(r *http.Request) *httperr.DetailedError {
 	return nil
 }
 
-// admitsQueryValue accepts a member, or a comma list of members: an array
-// parameter may arrive either as repeated keys or as one joined value.
-func admitsQueryValue(values []string, raw string) bool {
-	if slices.Contains(values, raw) {
-		return true
-	}
-	if !strings.Contains(raw, ",") {
-		return false
+// admits reports whether one query value belongs to the enum. Only an array
+// that is not exploded travels as one comma-joined value. Anywhere else a comma
+// belongs to the value, and the handler reads it as one.
+func (e queryEnum) admits(raw string) bool {
+	if !e.Array || e.Explode {
+		return slices.Contains(e.Values, raw)
 	}
 	for part := range strings.SplitSeq(raw, ",") {
-		if !slices.Contains(values, part) {
+		if !slices.Contains(e.Values, part) {
 			return false
 		}
 	}
