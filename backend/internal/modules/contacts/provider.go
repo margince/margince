@@ -60,6 +60,12 @@ func (p *Provider) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros
 	return p
 }
 
+// WithGrantCarrier mirrors the HTTP wiring for the same reason.
+func (p *Provider) WithGrantCarrier(carrier GrantCarrier) *Provider {
+	p.store = p.store.WithGrantCarrier(carrier)
+	return p
+}
+
 func ref(t datasource.EntityType, id openapi_types.UUID) datasource.EntityRef {
 	return datasource.EntityRef{Type: t, ID: ids.UUID(id)}
 }

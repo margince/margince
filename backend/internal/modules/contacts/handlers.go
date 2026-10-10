@@ -158,6 +158,13 @@ func (h Handlers) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros 
 	return h
 }
 
+// WithGrantCarrier wires the seam that carries the shares on a retiring record
+// onto the survivor — see grantcarry.go.
+func (h Handlers) WithGrantCarrier(carrier GrantCarrier) Handlers {
+	h.store = h.store.WithGrantCarrier(carrier)
+	return h
+}
+
 // duplicateID renders a duplicate error's existing-row pointer for the
 // wire. The dedupe pre-checks leave ExistingID zero when the row is not
 // visible to the caller (or a race hid it); the response then omits

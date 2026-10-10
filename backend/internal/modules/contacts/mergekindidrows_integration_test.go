@@ -5,9 +5,8 @@
 
 package contacts
 
-// What a merge does with the rows a reader owns about a record. They are the
-// access shared on it, an unsent draft, a verdict on an AI claim, a notice and
-// a plan line. The author of an inherited value is covered here too.
+// What a merge does with the rows a reader owns about a record: an unsent
+// draft, a verdict on an AI claim, a notice and a plan line. The author of an inherited value is covered here too.
 
 import (
 	"context"
@@ -21,38 +20,6 @@ func (e *dedupeEnv) user(ctx context.Context, t *testing.T, email string) ids.UU
 	id := ids.NewV7()
 	e.execAs(ctx, t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Reader')`, id, email)
 	return id
-}
-
-func (e *dedupeEnv) grant(ctx context.Context, t *testing.T, recordID, subject ids.UUID, access string) {
-	t.Helper()
-	e.execAs(ctx, t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
-		VALUES ('company', $1, 'user', $2, $3, $4)`, recordID, subject, access, e.rep)
-}
-
-// A reader who could open the retired company can open the survivor.
-func TestMergingACompanyCarriesTheAccessSharedOnIt(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := asAdmin(e)
-	source, survivor := e.companyPair(ctx, t)
-	both := e.user(ctx, t, "both@grant.test")
-	onlyRetired := e.user(ctx, t, "only@grant.test")
-	e.grant(ctx, t, source.UUID, both, "write")
-	e.grant(ctx, t, survivor.UUID, both, "read")
-	e.grant(ctx, t, source.UUID, onlyRetired, "read")
-
-	if _, err := e.store.MergeCompany(ctx, source, survivor, nil); err != nil {
-		t.Fatalf("merge: %v", err)
-	}
-	const held = `SELECT count(*) FROM record_grant WHERE record_type = 'company' AND record_id = $1`
-	if n := e.countAs(ctx, t, held, source); n != 0 {
-		t.Errorf("%d grants still name the retired company", n)
-	}
-	if n := e.countAs(ctx, t, held, survivor); n != 2 {
-		t.Errorf("the survivor holds %d grants, want 2", n)
-	}
-	if n := e.countAs(ctx, t, held+` AND subject_id = $2 AND access = 'write'`, survivor, both); n != 1 {
-		t.Errorf("a subject holding both keeps the stronger access: got %d write grants", n)
-	}
 }
 
 // A draft, a verdict, a notice and a plan line follow the survivor.

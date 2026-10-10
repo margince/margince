@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -94,7 +95,8 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		// An imported contact can take a lead over, which carries the lead's
 		// stops and consent links (see newCounterpartyStore).
 		contacts: contacts.NewStore(db).WithStopCarrier(consent.NewStore(db)).
-			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)),
+			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
+			WithGrantCarrier(identity.NewServiceFor(db)),
 		tags:        collections.NewStore(db),
 		identities:  migration.NewRunStore(db),
 		runID:       runID,

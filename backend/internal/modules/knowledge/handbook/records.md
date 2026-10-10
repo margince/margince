@@ -112,6 +112,7 @@ To merge two duplicate contacts in Margince, open the contact you want to remove
 2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the contact you kept.
 The contact you merged away is archived, not deleted. Leads have no merge; deals have no merge either.
+Anyone the merged-away contact was shared with can now open the contact you kept, with the higher access of their two shares.
 Also called: combine, deduplicate, remove a duplicate.
 
 ### How do I call a contact?
@@ -195,6 +196,7 @@ To merge two duplicate companies in Margince, open the company you want to remov
 2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the company you kept.
 The company you merged away is archived, not deleted. You cannot merge an archived company.
+Anyone the merged-away company was shared with can now open the company you kept, with the higher access of their two shares.
 Also called: combine companies, deduplicate accounts.
 
 ### How do I stop a company coming back from email?

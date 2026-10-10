@@ -21,9 +21,6 @@ func moveKindIDRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 	if err := moveKindIDSingles(ctx, tx, entityType, sourceID, targetID); err != nil {
 		return err
 	}
-	if err := moveKindIDGrants(ctx, tx, entityType, sourceID, targetID); err != nil {
-		return err
-	}
 	return moveKindIDOwned(ctx, tx, entityType, sourceID, targetID)
 }
 
@@ -39,34 +36,6 @@ func moveKindIDSingles(ctx context.Context, tx pgx.Tx, entityType string, source
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID, entityType); err != nil {
 			return fmt.Errorf("move the rows naming the %s by kind and id: %w", entityType, err)
-		}
-	}
-	return nil
-}
-
-// moveKindIDGrants carries the access shared on the retired company or contact.
-// A subject who holds a grant on both keeps the stronger access and the longer
-// reach, so nobody loses sight of the survivor.
-func moveKindIDGrants(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
-	for _, stmt := range []string{
-		`UPDATE record_grant b
-		   SET access = CASE WHEN a.access = 'write' THEN 'write' ELSE b.access END,
-		       expires_at = CASE WHEN a.expires_at IS NULL OR b.expires_at IS NULL THEN NULL
-		                         ELSE GREATEST(a.expires_at, b.expires_at) END,
-		       version = b.version + 1
-		  FROM record_grant a
-		 WHERE a.record_type = $3 AND a.record_id = $1
-		   AND b.record_type = $3 AND b.record_id = $2
-		   AND b.subject_type = a.subject_type AND b.subject_id = a.subject_id`,
-		`DELETE FROM record_grant a
-		  WHERE a.record_type = $3 AND a.record_id = $1 AND EXISTS (
-		    SELECT 1 FROM record_grant b
-		     WHERE b.record_type = $3 AND b.record_id = $2
-		       AND b.subject_type = a.subject_type AND b.subject_id = a.subject_id)`,
-		`UPDATE record_grant SET record_id = $2 WHERE record_type = $3 AND record_id = $1`,
-	} {
-		if _, err := tx.Exec(ctx, stmt, sourceID, targetID, entityType); err != nil {
-			return fmt.Errorf("carry the grants on the %s: %w", entityType, err)
 		}
 	}
 	return nil

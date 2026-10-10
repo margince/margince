@@ -129,6 +129,9 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	if err := s.carryConsentSatellitesTx(ctx, tx, from, to); err != nil {
 		return fmt.Errorf("carry the merged-away lead's consent links: %w", err)
 	}
+	if err := s.carryGrantsTx(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("carry the merged-away lead's grants: %w", err)
+	}
 	return carryLeadMembershipsToLead(ctx, tx, sourceID, targetID)
 }
 

@@ -75,7 +75,8 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		// and the introduction asks ride the same way.
 		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
 		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
-			introductions.NewStore(InstallationDB(pool), time.Now))
+			introductions.NewStore(InstallationDB(pool), time.Now)).
+		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool)))
 }
 
 // newFinanceHandlers builds the invoicing transport over the two edges it

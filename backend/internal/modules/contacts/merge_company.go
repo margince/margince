@@ -50,7 +50,7 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
+		out, err = s.mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
 	return out, err
@@ -64,7 +64,7 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 // write and this merge together. The dedupe queue is the one that needs it: it
 // marks a candidate 'merged' and then merges, and two transactions there leave
 // a candidate claiming a merge that never happened (#1970).
-func mergeCompanyTx(
+func (s *Store) mergeCompanyTx(
 	ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, ifVersion *int64, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
 	// A merge fills the survivor's legal_name from the record it retires
@@ -106,6 +106,9 @@ func mergeCompanyTx(
 	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Company{}, err
+	}
+	if err := s.carryGrantsTx(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("carry the merged-away company's grants: %w", err)
 	}
 	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)

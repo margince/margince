@@ -192,6 +192,9 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err := s.carryIntrosTx(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's introduction asks: %w", err)
 	}
+	if err := s.carryGrantsTx(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's grants: %w", err)
+	}
 	p := buildSurvivorshipPatch(tgt, src)
 	if !p.Empty() {
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {

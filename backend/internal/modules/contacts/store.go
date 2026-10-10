@@ -76,6 +76,9 @@ type Store struct {
 	// strand one — see satellitecarry.go.
 	consentCarrier ConsentSatelliteCarrier
 	introCarrier   IntroCarrier
+	// grantCarrier moves the shares on a retiring record; nil refuses a merge
+	// that would strand one — see grantcarry.go.
+	grantCarrier GrantCarrier
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a
