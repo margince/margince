@@ -91,6 +91,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 **Indexes**
 
+- `workflow_run_by_automation`: `btree (handler, "right"(idempotency_key, 36), created_at DESC, id DESC) WHERE (status <> 'skipped')`
 - `workflow_run_pkey`: `unique, btree (id)`
 - `workflow_run_troubled`: `btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed', 'blocked']))`
 - `workflow_run_unique`: `unique, btree (handler, idempotency_key)`

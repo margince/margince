@@ -31925,6 +31925,7 @@ components:
         occurred_at: { type: string, format: date-time }
         kind: { type: string, enum: [completion, embedding, decision], x-go-type: string, description: 'What the call asked: a chat completion, an embedding, or a decision model.' }
         task: { type: string }
+        task_display_name: { type: [string, 'null'], description: 'What a screen calls the task, the same name the usage lines carry. Absent for a task with no name, which a screen shows by its key.' }
         tier: { type: string, description: 'Empty when the call failed before routing.' }
         provider: { type: string }
         model_id: { type: string, description: 'The configured binding.' }
@@ -32042,12 +32043,20 @@ components:
                 response: { description: 'The captured response text (JSON string).' }
     AiCallListResponse:
       type: object
-      required: [data, page, payload_capture_enabled, tasks]
+      required: [data, page, payload_capture_enabled, tasks, task_options]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/AiCallSummary' } }
         page: { $ref: '#/components/schemas/PageInfo' }
         payload_capture_enabled: { type: boolean, description: 'The deployment''s ai.capture_payloads posture.' }
         tasks: { type: array, items: { type: string }, description: 'Every task with at least one terminal call, sorted — the complete filter option set (matches the terminal-only list), independent of the current page.' }
+        task_options: { type: array, items: { $ref: '#/components/schemas/AiCallTaskOption' }, description: 'The same tasks in the same order, each with the name a screen shows for it.' }
+    AiCallTaskOption:
+      type: object
+      description: One task the call log can be filtered to.
+      required: [task]
+      properties:
+        task: { type: string, description: 'The key the task filter takes.' }
+        display_name: { type: [string, 'null'], description: 'What a screen calls the task, as task_display_name on a call. Absent for a task with no name, which a screen shows by its key.' }
     # ---- channel connections (telegram-oa design §4.1, §5) ----
     ChannelConnection:
       type: object
@@ -51900,6 +51909,27 @@ components:
         version: { type: integer }
         created_at: { type: string, format: date-time }
         updated_at: { type: [string, 'null'], format: date-time }
+        last_run_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the rule last ran: fired, queued for approval, failed or was blocked. A skipped
+            firing never counts. Only GET /automations carries it, to every caller who may read
+            automations; a single read, a create and an update leave it out. Absent on a list item
+            whose rule has never run.
+        last_run_outcome:
+          type: [string, 'null']
+          enum: [fired, queued_for_approval, failed, blocked, null]
+          description: >-
+            How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET
+            /automations carries it, and only beside last_run_at.
+        runs_last_30_days:
+          type: integer
+          minimum: 0
+          description: >-
+            Runs other than skipped ones in the 30 days before the server read the list. Every GET
+            /automations item carries it, 0 for a rule that has not run; a single read, a create
+            and an update leave it out.
 
     CreateAutomationRequest:
       type: object

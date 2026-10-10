@@ -38,23 +38,19 @@ import (
 // which is exactly why an event trigger's non-match is safe to record
 // (recordSkip below) and a clock trigger's is not (runOne's !matched
 // branch).
-// Two readers decode this shape back out of the row: ListRuns
-// (automations_runs.go) for one instance's history, and troubledRunsSQL
-// (troubledruns.go) for the cross-instance health read — a change to the
-// "@<automation id>" suffix lands on both.
+// Three readers decode this shape back out of the row. ListRuns reads one
+// instance's history and runSummaryJoins the list's last run and count, both
+// in automations_runs.go; troubledRunsSQL (troubledruns.go) reads health.
+// A change to the "@<automation id>" suffix lands on all three, and on the
+// workflow_run_by_automation index over its last 36 characters.
 func runKey(h workflow.Handler, ev workflow.Event) string {
 	return retryPrefix(ev) + h.IdempotencyKey(ev) + "@" + ev.AutomationID.String()
 }
 
 // retryPrefix marks a re-driven firing so its run claims its own row instead
-// of colliding with the failed run it retries.
-//
-// It PREFIXES for a reason that is easy to get backwards: both readers of this
-// shape match "@<automation id>" anchored at the END of the key — ListRuns
-// (automations_runs.go) and troubledRunsSQL (troubledruns.go). A marker
-// appended after the automation id would break both, and it would break them
-// silently: retried runs would simply stop appearing in the health lane that
-// offered the retry, with nothing failing anywhere.
+// of colliding with the failed run it retries. It prefixes because every
+// reader runKey names anchors the automation id at the end of the key. A
+// suffix would silently drop retried runs from the health lane that offered them.
 func retryPrefix(ev workflow.Event) string {
 	if ev.RetryAttempt == 0 {
 		return ""
