@@ -193,6 +193,9 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 	if err := refuseUnclearablePartnerFields(in.Cleared); err != nil {
 		return crmcontracts.Partner{}, err
 	}
+	if err := refuseBlankServedSegments(in.ServedSegments); err != nil {
+		return crmcontracts.Partner{}, err
+	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Partner{}, err

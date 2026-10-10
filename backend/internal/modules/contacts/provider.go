@@ -298,7 +298,11 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		row, err := p.store.UpdateRelationship(ctx, in.Ref.ID, relationshipUpdateInput(req, in.IfVersion))
+		update, err := relationshipUpdateInput(req, in.IfVersion, in.Clear)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		row, err := p.store.UpdateRelationship(ctx, in.Ref.ID, update)
 		return edgeRef(row.ID), err
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}

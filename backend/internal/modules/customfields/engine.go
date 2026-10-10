@@ -166,7 +166,7 @@ const (
 // (checkConstraintClause), matching this package's belt-and-suspenders
 // posture for identifiers.
 func validOptionText(s string) bool {
-	return utf8.ValidString(s) && !strings.Contains(s, "\x00")
+	return utf8.ValidString(s) && !strings.Contains(s, "\x00") && values.HasVisibleText(s)
 }
 
 // Validate checks spec against the closed type/object sets and the

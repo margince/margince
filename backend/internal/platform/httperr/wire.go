@@ -16,7 +16,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -475,15 +474,5 @@ func ClearedFields(r *http.Request) []string {
 	if !ok {
 		return nil
 	}
-	cleared := make([]string, 0, len(fields))
-	for name, raw := range fields {
-		if string(raw) == "null" {
-			cleared = append(cleared, name)
-		}
-	}
-	if len(cleared) == 0 {
-		return nil
-	}
-	sort.Strings(cleared)
-	return cleared
+	return NullKeys(fields)
 }

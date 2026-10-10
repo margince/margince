@@ -289,3 +289,12 @@ func validRoleForKind(kind string, role *string) error {
 	}
 	return validBillingContactRole(kind, role)
 }
+
+// refuseRoleClear refuses to empty the role of an edge whose role is what the
+// row means; every other kind keeps its role optional.
+func refuseRoleClear(kind string) error {
+	if kind == ProjectStakeholderKind {
+		return &RequiredFieldError{Field: fieldRole}
+	}
+	return validBillingContactRole(kind, nil)
+}
