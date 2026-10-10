@@ -16,7 +16,7 @@ import (
 
 func TestALeadAndARelationshipMustNameTheirSource(t *testing.T) {
 	t.Parallel()
-	for _, origin := range []string{"", "   ", "​"} {
+	for _, origin := range []string{"", "   ", "\u200b"} {
 		_, leadErr := leadCreateInput(crmcontracts.CreateLeadRequest{Source: origin})
 		_, relErr := relationshipCreateInput(crmcontracts.CreateRelationshipRequest{Source: origin})
 		for name, err := range map[string]error{"lead": leadErr, "relationship": relErr} {
