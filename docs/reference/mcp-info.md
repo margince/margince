@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 257.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66881 |
+| Approx. wire tokens | 66887 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.5 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
-| [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
+| [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.7 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
@@ -6131,9 +6131,9 @@ Draft a follow-up for each deal in a segment at once — today only the slipping
 each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only
 for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One
 call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific
-conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft
-comes back with its deal_id and draft_activity_id — those are how a human finds the drafts to
-review. (Governance: runs immediately; requires passport scope "draft".)
+conversation; this tool answers "chase everything that is slipping" or "that has gone quiet", not
+"reply to this". Each draft comes back with its deal_id and draft_activity_id — those are how a
+human finds the drafts to review. (Governance: runs immediately; requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>

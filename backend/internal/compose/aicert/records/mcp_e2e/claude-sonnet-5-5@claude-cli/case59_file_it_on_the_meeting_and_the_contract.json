@@ -1,11 +1,10 @@
 {
-  "scenario": "case44_chase_what_is_slipping",
+  "scenario": "case59_file_it_on_the_meeting_and_the_contract",
   "criteria": [
     1,
-    2,
-    3
+    2
   ],
-  "passed": 1,
+  "passed": 3,
   "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
@@ -14,12 +13,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 40,
-    "output_tokens": 10599,
-    "cache_creation_input_tokens": 110354,
-    "cache_read_input_tokens": 1413504,
+    "input_tokens": 34,
+    "output_tokens": 4861,
+    "cache_creation_input_tokens": 37435,
+    "cache_read_input_tokens": 1080071,
     "runs_measured": 3,
     "runs_costed": 3,
-    "cost_usd": 0.6888
+    "cost_usd": 0.3064
   }
 }

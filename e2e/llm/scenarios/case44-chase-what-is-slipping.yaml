@@ -26,6 +26,9 @@
 # sending 60, is the product's own line and passes.
 #
 # Needs the wide passport: draft and send are scopes the default one never holds.
+# "Reply to her there now and tell her the list goes out tomorrow": the reply is due
+# now and the LIST is tomorrow's. Read as "send the reply tomorrow", a careful assistant
+# rightly declines, since send_message cannot schedule, and never meets the refusal.
 name: case44_chase_what_is_slipping
 criteria: [1, 2, 3]
 passport: wide
@@ -42,7 +45,8 @@ prompt: |
   has gone quiet. The Reply Deutschland one, just send it to Jonas Reinhard now,
   he is expecting it. Drop Greta Lindqvist a first email that our pricing sheet
   comes next week. And Lena Bauer messaged me on Telegram yesterday asking for
-  the Ventile price list — answer her there, it goes out tomorrow.
+  the Ventile price list — reply to her there now and tell her the list goes out
+  tomorrow.
 
   Tell me what actually went out.
 

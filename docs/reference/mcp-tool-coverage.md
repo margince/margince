@@ -17,7 +17,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 32 of 34 | 🟢 Yes | Reliable on 32 of 32 jobs tried. |
+| `claude-sonnet-5-5` | Claude Code CLI | 34 of 34 | 🟡 Mostly | Reliable on 33 of 34 jobs tried; not yet: Chase what is slipping. |
 | `gpt-5.6-sol` | Codex CLI | 31 of 34 | 🟢 Yes | Reliable on 31 of 31 jobs tried. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
@@ -54,7 +54,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | ✅ | ✅ |
 | Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | ✅ | ✅ |
 | The fair leads are prospects now | A default nobody set changes without asking<br>The sign-off given up front is used<br>The company that needed sign-off is the one a human had set | ✅ | ✅ |
-| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ✅ | ✅ |
+| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ❌ | ✅ |
 | Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read | ✅ | ✅ |
 | Get us in a room | A recorded booking is not an invitation<br>The held invitation is reported as waiting<br>The two are kept apart | ✅ | - |
 | Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | ✅ | - |
@@ -64,8 +64,8 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | A word from the fair, offered and not claimed | A tag is offered and not claimed | ✅ | ✅ |
 | Not the same contact | Two different contacts are told apart | ✅ | ✅ |
 | Put it on the file | A file handed over is kept as a file<br>The file is not retyped as a note<br>A refused kind of file is reported, not worked around | ✅ | ✅ |
-| Quiet for three weeks | The window the user named is the window asked | - | ✅ |
-| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | - | ✅ |
+| Quiet for three weeks | The window the user named is the window asked | ✅ | ✅ |
+| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | ✅ | ✅ |
 
 ---
 
@@ -105,10 +105,10 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 32 of 34 | 32 | 0 | 91/96 | 95% |
-| `gpt-5.6-sol@codex-cli` | 31 of 34 | 31 | 0 | 83/93 | 89% |
+| `claude-sonnet-5-5@claude-cli` | 34 of 34 | 33 | 1 | 95/102 | 93% |
+| `gpt-5.6-sol@codex-cli` | 31 of 34 | 31 | 0 | 84/93 | 90% |
 
-> `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 34 cases.
+> `claude-sonnet-5-5@claude-cli` below its bar on: case44_chase_what_is_slipping
 
 > `gpt-5.6-sol@codex-cli` has no committed run for 3 of 34 cases.
 
@@ -192,8 +192,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The transport is named as the installation names it<br>**2** A channel that cannot send replies still captures, files and reads | `list_channel_providers`, `log_activity` |
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A default nobody set changes without asking<br>**2** The sign-off given up front is used<br>**3** The company that needed sign-off is the one a human had set | `decide_approval`, `update_record` |
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A default nobody set changes without asking<br>**2** The sign-off given up front is used<br>**3** The company that needed sign-off is the one a human had set | `decide_approval`, `update_record` |
-| [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_follow_ups_for`, `send_company_email`, `send_message`, `send_company_email` or `send_email` |
-| [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_follow_ups_for`, `send_company_email`, `send_message`, `send_company_email` or `send_email` |
+| [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `claude-sonnet-5-5@claude-cli` | **FAIL** | 1/3 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_follow_ups_for`, `send_company_email`, `send_message`, `send_company_email` or `send_email` |
+| [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_follow_ups_for`, `send_company_email`, `send_message`, `send_company_email` or `send_email` |
 | [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `advance_deal` or `progress_deal` |
 | [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `advance_deal` or `progress_deal` |
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A recorded booking is not an invitation<br>**2** The held invitation is reported as waiting<br>**3** The two are kept apart | `book_meeting`, `invite_meeting` |
@@ -211,7 +211,9 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
 | [case57_put_it_on_the_file](../../e2e/llm/scenarios/case57-put-it-on-the-file.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A file handed over is kept as a file<br>**2** The file is not retyped as a note<br>**3** A refused kind of file is reported, not worked around | `attach_document` |
 | [case57_put_it_on_the_file](../../e2e/llm/scenarios/case57-put-it-on-the-file.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A file handed over is kept as a file<br>**2** The file is not retyped as a note<br>**3** A refused kind of file is reported, not worked around | `attach_document` |
+| [case58_quiet_for_three_weeks](../../e2e/llm/scenarios/case58-quiet-for-three-weeks.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The window the user named is the window asked | `whats_slipping_this_week` |
 | [case58_quiet_for_three_weeks](../../e2e/llm/scenarios/case58-quiet-for-three-weeks.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The window the user named is the window asked | `whats_slipping_this_week` |
+| [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | `attach_document` |
 | [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | `attach_document` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
@@ -320,10 +322,8 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `send_company_email` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
-| `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `forecast_readings` | 1.00 | 6 | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
 | `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
@@ -332,7 +332,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
-| `attach_document` | 1.00 | 3 | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` |
+| `attach_document` | 1.00 | 6 | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` |
 | `book_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `decide_approval` | 1.00 | 9 | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
@@ -340,7 +340,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `draft_follow_ups_for` | 1.00 | 3 | `case44_chase_what_is_slipping` |
+| `whats_slipping_this_week` | 1.00 | 3 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `relink_activities` | 1.00 | 6 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
@@ -368,8 +368,10 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
+| `send_company_email` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
+| `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `forecast_readings` | 1.00 | 6 | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
@@ -380,6 +382,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
+| `draft_follow_ups_for` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `whats_slipping_this_week` | 1.00 | 3 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
@@ -404,29 +407,29 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
+| `send_company_email` | 0.33 | 1/3 | `case44_chase_what_is_slipping` | `case44_chase_what_is_slipping` |
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `log_activity` | 0.67 | 4/6 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
 | `create_record` | 0.83 | 10/12 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `send_message` | 0.33 | 1/3 | `case44_chase_what_is_slipping` | `case44_chase_what_is_slipping` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
 | `demote_lead` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
+| `draft_follow_ups_for` | 0.33 | 1/3 | `case44_chase_what_is_slipping` | `case44_chase_what_is_slipping` |
 | `list_channel_providers` | 0.67 | 2/3 | - | `case42_can_i_answer_on_whatsapp` |
 
 ### `gpt-5.6-sol@codex-cli`
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `send_company_email` | 0.67 | 2/3 | - | `case44_chase_what_is_slipping` |
 | `log_activity` | 0.83 | 5/6 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
 | `create_record` | 0.75 | 9/12 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
-| `send_message` | 0.67 | 2/3 | - | `case44_chase_what_is_slipping` |
 | `query_workspace` | 0.67 | 2/3 | - | `case4_use_the_moment` |
 | `search_records` | 0.67 | 2/3 | - | `case5_before_the_meeting` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
 | `decide_approval` | 0.89 | 8/9 | - | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 | `promote_lead` | 0.67 | 2/3 | - | `case40_sort_the_queue` |
-| `draft_follow_ups_for` | 0.67 | 2/3 | - | `case44_chase_what_is_slipping` |
 | `relink_activities` | 0.83 | 5/6 | - | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `qualify_lead` | 0.67 | 2/3 | - | `case40_sort_the_queue` |
 | `disqualify_lead` | 0.67 | 2/3 | - | `case40_sort_the_queue` |
