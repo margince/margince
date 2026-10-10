@@ -97,7 +97,7 @@ export function ConfiguredAutomations({
     }
   }, [canEdit]);
   // Settled, not only succeeded: a refusal such as version_skew means the list
-  // is stale, and only a fresh read gives the next write the right version.
+  // is stale. Only a fresh read gives the next write the right version.
   const edit = useMutation({
     mutationFn: patchAutomation,
     onSuccess: () => setEditing(shut),

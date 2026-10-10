@@ -51,7 +51,7 @@ function scopeLabelKey(scope: PassportScope): MessageKey {
   return `passport.scope.${scope}`;
 }
 
-// The revoke confirm hands focus back to the passport's name: the row stays
+// The revoke confirm hands focus back to the passport's name. The row stays
 // listed as revoked, but the menu item it was opened from is gone.
 function passportAnchor(id: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-passport="${id}"]`);

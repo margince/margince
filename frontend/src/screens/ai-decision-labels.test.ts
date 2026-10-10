@@ -48,8 +48,8 @@ describe("TIER_ORDER", () => {
   });
 });
 
-// The codes are the server's: read them from the Go that files them, so a code
-// added there without words here fails this test rather than reading "Failed".
+// The codes are the server's, read from the Go that files them. A code added
+// there without words here fails this test rather than reading "Failed".
 function filedCodes(): { codes: string[]; returns: number } {
   const here = dirname(fileURLToPath(import.meta.url));
   const ai = join(here, "../../../backend/internal/modules/ai");
