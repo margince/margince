@@ -80,8 +80,8 @@ func readBundleCSV(t *testing.T, archive *zip.Reader, name string) [][]string {
 	return nil
 }
 
-// A contact export carries the address and number a mail merge needs: the
-// primary ones, never a retired one, and empty for a contact that has none.
+// A contact export carries the address and number a mail merge needs. They are
+// the primary ones, and empty for a contact that has none.
 func TestContactExportCarriesTheReachableEmailAndPhone(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

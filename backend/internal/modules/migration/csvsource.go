@@ -165,8 +165,8 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 }
 
 // identityOf is the spelling two rows are compared by. An email is one identity
-// however it is cased, which is how the contact store keys it; any other key is
-// compared exactly.
+// however it is cased, as the contact store keys it. Any other key is compared
+// as spelled.
 func (s *CSVSource) identityOf(external string) string {
 	if s.mapping[s.sourceKey] == "email" {
 		return strings.ToLower(external)

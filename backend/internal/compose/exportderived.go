@@ -6,8 +6,8 @@ package compose
 import "github.com/margince/margince/backend/internal/modules/contacts"
 
 // Columns an export computes from a child table. A contact's address and number
-// live on contact_email and contact_phone, so an export of the base table alone
-// leaves with neither and cannot feed a mail merge.
+// live on contact_email and contact_phone. Without them an export cannot feed a
+// mail merge.
 const (
 	exportPrimaryEmail = "primary_email"
 	exportPrimaryPhone = "primary_phone"

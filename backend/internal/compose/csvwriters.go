@@ -164,52 +164,6 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 	}, nil
 }
 
-func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids.UUID, bool, error) {
-	if object != w.object {
-		return ids.UUID{}, false, fmt.Errorf("import: this run carries %q, not %q", w.object, object)
-	}
-	if id, ok := w.nativeIDs[externalID]; ok {
-		return id, true, nil
-	}
-	id, found, err := w.identities.LookupIdentity(ctx, csvSourceSystem(), object, externalID)
-	if err != nil {
-		return ids.UUID{}, false, err
-	}
-	if !found {
-		return id, false, nil
-	}
-	// A binding to an archived record (an undone import, or a record archived by
-	// hand) names nothing a re-import can update, so the key counts as unlanded.
-	archived, err := w.isArchived(ctx, id)
-	if err != nil {
-		return ids.UUID{}, false, err
-	}
-	if archived {
-		w.archivedBindings[externalID] = true
-		return ids.UUID{}, false, nil
-	}
-	w.nativeIDs[externalID] = id
-	return id, true, nil
-}
-
-// isArchived reads the bound record with archived rows included, so a row-scope
-// miss still answers not-found rather than reading as archived.
-func (w *csvWriters) isArchived(ctx context.Context, id ids.UUID) (bool, error) {
-	switch w.object {
-	case migration.ObjectLead:
-		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.IncludeArchived)
-		return err == nil && lead.ArchivedAt != nil, err
-	case migration.ObjectCompany:
-		company, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.IncludeArchived)
-		return err == nil && company.ArchivedAt != nil, err
-	case migration.ObjectContact:
-		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.IncludeArchived)
-		return err == nil && contact.ArchivedAt != nil, err
-	default:
-		return false, fmt.Errorf("import: %q is not an importable object", w.object)
-	}
-}
-
 // Ensure lands one row: created the first time, updated when the file has
 // since changed, unchanged when it has not.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {

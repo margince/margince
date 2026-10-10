@@ -298,8 +298,8 @@ func TestASkipNamesTheLineTheRowCameFrom(t *testing.T) {
 	}
 }
 
-// An email is one identity however it is cased, so two rows that differ only
-// in case are one claim; the preview must not promise a second create.
+// An email is one identity however it is cased. Two rows that differ only in
+// case are one claim, so the preview must not promise a second create.
 func TestCSVSourceTreatsEmailsDifferingInCaseAsOneIdentity(t *testing.T) {
 	body := "Email,First Name\nAda@X.test,Ada\nada@x.test,Again\nbob@x.test,Bob\n"
 	mapping, sourceKey := leadMapping()

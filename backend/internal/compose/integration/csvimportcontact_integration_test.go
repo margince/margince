@@ -516,8 +516,8 @@ func contactTitle(t *testing.T, e *apptest.AppEnv, email string) string {
 	return ""
 }
 
-// A file whose contacts an undone import made can be staged and run again: the
-// undo archived them, so the same addresses are free to be created once more.
+// A file whose contacts an undone import made can be staged and run again. The
+// undo archived them, so their addresses are free to be created once more.
 func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
 	e := setupImportApp(t)
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
