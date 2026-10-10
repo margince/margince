@@ -198,7 +198,7 @@ test("paging is in the address, and Back returns to the page you left", async ({
   // Page one is spelled by ABSENCE, so an address only carries a page once the
   // reader has moved off the first — a dial in front of somebody who turned
   // nothing is noise.
-  // A second page needs more than one page of companies; an address naming a
+  // A second page needs more than one page of companies. An address naming a
   // page the list does not reach is brought back to its last page.
   await page.route(/\/companies(\?|$)/, (route) =>
     route.fulfill({
