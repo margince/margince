@@ -53,6 +53,7 @@ var textLimits = []textLimit{
 		schemaPath("components", "schemas", "MailDraftInput", "properties", "bcc", "items")},
 	{"internal/modules/collections/memberwrite.go", "maxMemberNote",
 		schemaPath("components", "schemas", "ListMemberChangeRequest", "properties", "note")},
+	{"internal/modules/knowledge/corpustext.go", "maxAskQuestion", corpusBody("post", "/knowledge/corpora/{id}/ask", "question")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusName", corpusBody("post", "/knowledge/corpora", "name")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusTopic", corpusBody("post", "/knowledge/corpora", "topic_statement")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusDescription", corpusBody("post", "/knowledge/corpora", "description")},
