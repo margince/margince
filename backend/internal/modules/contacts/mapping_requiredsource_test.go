@@ -3,8 +3,8 @@
 
 package contacts
 
-// A lead and a relationship name where they came from, as a contact, a company
-// and a deal already must: a record with no recorded origin cannot be traced.
+// A lead and a relationship name their source, as a contact, a company and a
+// deal already must. A record with no origin cannot be traced.
 
 import (
 	"errors"

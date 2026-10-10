@@ -8,23 +8,12 @@ package gates
 // Every contract request body that requires a `source` must be refused when it
 // names none.
 //
-// The defect behind this gate: oapi-codegen renders a REQUIRED string as a bare
-// string, and encoding/json leaves an absent key at "" with no error. A create
-// that never asks whether the caller stated an origin stores a row whose origin
-// column is empty, and every later reader of where a record came from is told
-// nothing. Three creates once skipped the question while their neighbours asked
-// it.
-//
-// The obligation is derived from the generated contract. The walk finds every
-// request body with a required `source`, then finds the function in the modules
-// that handles that body and calls httperr.RequireNonBlank("source", ...). A
-// body no such function handles is neither guarded nor waived, and fails here.
-//
-// WHAT THIS CANNOT SEE, stated rather than discovered. It credits a function for
-// every contract type it mentions, so a function that handles two bodies and
-// guards one passes for both. It reads the call, not its result: a function that
-// calls RequireNonBlank and drops the error is read as guarded. The integration
-// test for the create routes is what proves the refusal reaches the caller.
+// encoding/json leaves an absent key at "" with no error, so a create that never
+// asks stores a row with no origin. The walk finds each body with a required
+// `source`, then a module function that mentions it and calls
+// httperr.RequireNonBlank("source", ...). A body with neither is a failure.
+// Blind spots: a function that mentions two bodies and guards one passes for both,
+// and a dropped error still counts as a call.
 
 import (
 	"go/ast"

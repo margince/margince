@@ -258,9 +258,8 @@ func (e *AppEnv) SetWorkspaceSeat(t *testing.T, seat string) {
 // Call issues one API request with the dev workspace header and decodes
 // the JSON response into out (when non-nil), returning the status code.
 //
-// A create body for a record the contract makes name its source gets one when
-// the scenario left it out: every real client states it, and a scenario about
-// something else should not have to. CallVerbatim sends the body untouched.
+// A create body that lacks the `source` the contract requires gets one, as
+// every real client sends it. CallVerbatim sends the body untouched.
 //
 //craft:ignore naked-any the test transport seam: body/out are whichever request/response shapes the scenario exercises
 func (e *AppEnv) Call(t *testing.T, method, path string, body any, headers map[string]string, out any) int {
@@ -291,8 +290,8 @@ func withRecordSource(method, path string, body any) any {
 	return withSource
 }
 
-// CallVerbatim is Call without the default source: the body goes out exactly as
-// given, for the scenarios that are about what a body leaves out.
+// CallVerbatim is Call without the default source, for a scenario about what a
+// body leaves out.
 //
 //craft:ignore naked-any the test transport seam: body/out are whichever request/response shapes the scenario exercises
 func (e *AppEnv) CallVerbatim(t *testing.T, method, path string, body any, headers map[string]string, out any) int {
