@@ -76,8 +76,8 @@ func restParityProblems(tool, openAPIOp string, byID map[string]passportOperatio
 // A registry-served route answers the tool's own JSON, which the shape gate
 // holds. A route that keeps its own shape (GET /attachments behind
 // list_documents) can still drift from the tool's records. So some both-doors
-// integration test calls that tool through twoDoors; the census sees the call,
-// and review holds that the test compares what the two doors return.
+// integration test calls that tool through twoDoors. The census sees the call;
+// review holds that the test compares what the two doors return.
 func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 	ops, _ := passportOperations(t)
 	byID := map[string]passportOperation{}
