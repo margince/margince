@@ -224,7 +224,7 @@ func ingestDetail(err error) string {
 		return unsupported.Error()
 	}
 	if errors.Is(err, knowledge.ErrHandbookPageGone) {
-		return "This handbook page belongs to a newer release than the worker that read it, so it could not be indexed. An administrator has to update every worker to the current release."
+		return "This handbook page is not in the handbook the worker holds, so it could not be indexed. An administrator has to update every worker to the current release, or the page has been withdrawn."
 	}
 	if errors.Is(err, ai.ErrProviderThrottled) {
 		return "The AI provider was rate limiting this installation, so the document could not be indexed. Try uploading it again in a few minutes."

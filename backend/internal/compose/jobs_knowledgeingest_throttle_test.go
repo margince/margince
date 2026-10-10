@@ -57,8 +57,10 @@ func TestAFailedHandbookPageDoesNotAskForAnUpload(t *testing.T) {
 	if strings.Contains(strings.ToLower(detail), "upload") {
 		t.Errorf("%q asks for an upload of a page that ships with the release", detail)
 	}
-	if !strings.Contains(detail, "release") {
-		t.Errorf("%q does not say the release is the cause", detail)
+	for _, cause := range []string{"update every worker", "withdrawn"} {
+		if !strings.Contains(detail, cause) {
+			t.Errorf("%q does not name the cause %q", detail, cause)
+		}
 	}
 }
 
