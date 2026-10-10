@@ -5,8 +5,8 @@
 
 package compose
 
-// A paid lookup is bought only as the request spells it: a run that names no
-// provider, or an empty list of categories, is refused before the money.
+// A paid lookup is bought as the request spells it. A run naming no provider,
+// or an empty category list, is refused before the money.
 
 import (
 	"context"

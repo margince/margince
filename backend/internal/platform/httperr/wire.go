@@ -457,9 +457,9 @@ func RequireSent(r *http.Request, field, message string) error {
 	return nil
 }
 
-// RequireAnyField refuses a patch body that carried no key at all: a schema with
-// `minProperties: 1` promises an empty object is a mistake, and the decoded struct
-// of an all-optional patch cannot tell it from a real edit.
+// RequireAnyField refuses a patch body that carried no key at all.
+// A schema with `minProperties: 1` calls an empty object a mistake. The decoded
+// struct of an all-optional patch cannot tell it from a real edit.
 func RequireAnyField(r *http.Request) error {
 	if fields, ok := r.Context().Value(presentFieldsKey{}).(map[string]json.RawMessage); ok && len(fields) > 0 {
 		return nil

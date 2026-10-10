@@ -219,9 +219,9 @@ func (h integrationsHandlers) GetContactEnrichmentRun(w http.ResponseWriter, r *
 	httperr.WriteJSON(w, http.StatusOK, toProviderRun(run))
 }
 
-// refuseUnnamedPurchase refuses a paid run that leaves out what it buys. An empty
-// provider falls back to the connected one and an empty list to the connection's
-// whole selection, so a request meaning "none" would spend the most.
+// refuseUnnamedPurchase refuses a paid run that leaves out what it buys.
+// An empty provider or list falls back to the connection's own choice. A
+// request meaning "none" would then spend the most.
 func refuseUnnamedPurchase(body crmcontracts.CreateContactEnrichmentRunRequest) error {
 	if strings.TrimSpace(string(body.Provider)) == "" {
 		return httperr.Validation("provider", "required", "name the provider to buy from")

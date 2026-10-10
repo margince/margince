@@ -247,6 +247,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `emailpresentation_test.go` | H2 | A retained email reads the same everywhere, or it does not read the same anywhere. |
 | `emptyarraycheck_test.go` | H2 | array\_length answers NULL for an empty array rather than 0, so a CHECK that bounds a length with it evaluates to UNKNOWN for `{}`, and Postgres accepts a row on an UNKNOWN check. |
 | `emptylistwire_test.go` | H2 | Every list envelope carries its rows in a field the writer can find. |
+| `emptypatchrefusal_test.go` | H2 | A request body whose schema says `minProperties` promises an empty object is refused. |
 | `enteredatwriters_test.go` | H2 | Nothing writes when a record entered the installation. |
 | `entitymodelowners_test.go` | H3 | The ownership map and the schema name the same tables. |
 | `envcontract_test.go` | H3 | The MARGINCE\_\* variables the code reads, .env.example names, configuration.md names and an entrypoint requires agree with each other. |
