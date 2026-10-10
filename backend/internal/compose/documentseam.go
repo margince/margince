@@ -9,6 +9,7 @@ package compose
 import (
 	"bytes"
 	"context"
+	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -18,8 +19,28 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
+
+// UploadAttachment holds an agent to the file size attach_document takes, so a
+// passport files no larger a file over REST than over MCP. A human keeps the
+// route's own limit.
+func (s Server) UploadAttachment(w http.ResponseWriter, r *http.Request) {
+	handlers := s.activitiesHandlers
+	if p, ok := principal.Actor(r.Context()); ok && p.Type == principal.PrincipalAgent {
+		handlers = handlers.WithFileCeiling(activities.FileCeiling{
+			Bytes:  agents.AttachLimit(s.uploadLimits.Attachment),
+			Refuse: agentFileTooLarge,
+		})
+	}
+	handlers.UploadAttachment(w, r)
+}
+
+// agentFileTooLarge is the tool's own refusal, naming the multipart part.
+func agentFileTooLarge(size, limit int64) error {
+	return agents.TooLargeToAttach("file", size, limit)
+}
 
 // documentSeam reads the object store and the upload limit off srv per call,
 // because both arrive by option after the registry is built (see importSeam).

@@ -117,7 +117,7 @@ func TestAttachDocumentRefusesWhatItCannotStore(t *testing.T) {
 		"a word, not a type":    {map[string]any{"content_type": "pdf"}, "content_type"},
 		"an unparsable type":    {map[string]any{"content_type": "application/pdf; ="}, "content_type"},
 		"a blank filename":      {map[string]any{"filename": "  "}, "filename"},
-		"a record without docs": {map[string]any{"entity_type": "activity"}, "entity_type"},
+		"a record without docs": {map[string]any{"entity_type": "relationship"}, "entity_type"},
 		"an unknown argument":   {map[string]any{"contract_id": ids.NewV7().String()}, ""},
 	}
 	for name, tc := range cases {

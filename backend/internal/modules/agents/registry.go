@@ -345,9 +345,9 @@ func (r *Registry) tierResolverFor(ctx context.Context, t mcp.Tool, name string,
 	}
 }
 
-// errFileCannotWait answers a confirm-first call that carries a file: staging it
+// ErrFileCannotWait answers a confirm-first call that carries a file: staging it
 // would keep the file's bytes in the approval, so nothing is staged.
-var errFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
+var ErrFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
 
 // stageRefusedCall parks a 🟡 call the gate refused as a staged approval, so
 // the human decision the refusal asks for has somewhere to land; a retry
@@ -357,7 +357,7 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 	stageable, ok := t.(stageableTool)
 	switch {
 	case !ok && t.Spec().MaxArgsBytes > httperr.MaxBodyBytes:
-		return fmt.Errorf("%w: %w", errFileCannotWait, refusal)
+		return fmt.Errorf("%w: %w", ErrFileCannotWait, refusal)
 	case !ok:
 		return refusal
 	}

@@ -93,7 +93,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 4 |
 | … **no case requires** | 29 |
 | … of those, permitted somewhere but never required | 24 |
-| Prompt tokens spent on tools no case requires | 8728 |
+| Prompt tokens spent on tools no case requires | 8731 |
 | Use cases | 32 |
 | Acceptance criteria the cases declare, each with a statement | 78 |
 
@@ -325,8 +325,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `book_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
-| `decide_approval` | 1.00 | 9 | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 | `attach_document` | 1.00 | 3 | `case57_put_it_on_the_file` |
+| `decide_approval` | 1.00 | 9 | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
@@ -498,7 +498,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `read_brief` | 205 | `agent_loop` | - | `morning_brief` |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |
 | `list_pipelines` | 191 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
-| `list_documents` | 165 | - | `case57_put_it_on_the_file` | - |
+| `list_documents` | 168 | - | `case57_put_it_on_the_file` | - |
 | `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file` | - |
 | `read_import_run` | 67 | - | `case10_finish_the_import`, `case3_spreadsheet` | - |
 

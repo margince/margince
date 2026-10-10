@@ -357,7 +357,7 @@ up first: authorizing creates the connection.
 ## Files and agents
 
 ### Can an agent put a file on a record?
-Yes. A connected agent whose connection has **Change records** ticked can put a file on a company, contact, deal, lead or project. The file shows on the record's **Documents** tab, as if you had uploaded it.
+Yes. A connected agent whose connection has **Change records** ticked can put a file on a company, contact, deal, lead, project or activity. The file shows with the record's files, as if you had uploaded it. This works the same whether the agent connects through Claude or uses its passport with the Margince API.
 - It is done at once, and never waits for an approval.
 - A file can be up to about 6.2 MB, or your installation's upload limit if that is smaller.
 - The same kinds of file are taken as in the app; see [Which kinds of file can I upload?](documents-and-files.md#which-kinds-of-file-can-i-upload).

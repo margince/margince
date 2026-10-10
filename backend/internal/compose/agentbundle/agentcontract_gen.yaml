@@ -5339,6 +5339,26 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+  /query-vocabulary:
+    get:
+      tags: [Search]
+      operationId: describeQueryVocabulary
+      security: [{bearerAuth: []}]
+      summary: Everything a workspace query plan may say, for this caller.
+      description: |-
+        The answer the `describe_query_vocabulary` agent tool gives, run by the same tool on
+        both doors: the record types this caller can ask about, the fields each one names,
+        the operators each field admits, and the one relationship hop a plan may take. It
+        is the document `margince://schema/query` publishes, composed for the caller, so it
+        lists only what they can already read.
+      responses:
+        '200':
+          description: The query vocabulary for this caller.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QueryVocabulary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /search:
     get:
       tags: [Search]
@@ -7288,6 +7308,77 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /attachments:
+    get:
+      tags: [Attachments]
+      operationId: listAttachments
+      security: [{bearerAuth: []}]
+      summary: List the attachments hung off one entity (cursor-paginated metadata).
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: entity_type
+          in: query
+          required: true
+          schema: {type: string, enum: [contact, company, deal, activity, lead, project]}
+        - name: entity_id
+          in: query
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: A page of attachment metadata for the entity.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttachmentListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: List the attachments hung off one entity (cursor-paginated metadata).
+    post:
+      tags: [Attachments]
+      operationId: uploadAttachment
+      security: [{bearerAuth: []}]
+      summary: Upload a file and attach it to an entity.
+      description: |-
+        Multipart upload. The bytes are written to object storage; the row records the
+        metadata + object key. `captured_by` is server-stamped from the authenticated
+        principal, never the request. The parent entity must be visible to the caller
+        (a hidden or cross-tenant entity answers 404, never leaks existence).
+        The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
+        Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
+        answers 422 `unsupported_file_type`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [entity_type, entity_id, file]
+              properties:
+                contract_id:
+                  type: string
+                  format: uuid
+                  description: 'The agreement this document is about. Optional: most client paper is about no particular agreement.'
+                entity_type: {type: string, enum: [contact, company, deal, activity, lead, project]}
+                entity_id: {type: string, format: uuid}
+                file: {type: string, format: binary}
+      responses:
+        '201':
+          description: The stored attachment metadata.
+          headers:
+            Location: {schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Attachment'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/network:
     get:
       tags: [Contacts]
@@ -7309,6 +7400,37 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /deals/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Attachments]
+      operationId: listDealDocuments
+      security: [{bearerAuth: []}]
+      summary: The deal's Files area — its own uploads and the files of every message linked to it.
+      description: |-
+        Every attachment whose parent is the deal, plus every attachment of an activity
+        linked to the deal: that is where a captured email's files live, so without
+        this read an emailed contract is unreachable from the deal it is about.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: category
+          in: query
+          schema: {type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other]}
+        - name: include_hidden
+          in: query
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: The deal's documents.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealDocumentListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/status:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7387,6 +7509,43 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /companies/{id}/documents:
+    get:
+      tags: [Attachments]
+      operationId: listCompanyDocuments
+      security: [{bearerAuth: []}]
+      summary: Every document that rolls up to this account, pinned first.
+      description: |-
+        The account's library. A document reachable from a company may hang off a deal, a
+        contact, an activity or the company itself, and each of those has its own
+        visibility.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: category
+          in: query
+          schema: {type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other]}
+        - name: doc_state
+          in: query
+          schema: {type: string, enum: [draft, current, final, superseded]}
+        - name: pinned_only
+          in: query
+          schema: {type: boolean, default: false}
+        - name: contract_id
+          in: query
+          description: Only the paper filed against this agreement.
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The account's documents.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttachmentListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /imports:
     post:
       tags: [Import]
@@ -10772,6 +10931,15 @@ components:
         source_kind: {type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.'}
         due_at: {type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.'}
         occurred_at: {type: string, format: date-time, description: 'When it was said.'}
+    QueryVocabulary:
+      type: object
+      description: What `describe_query_vocabulary` answers.
+      required: [vocabulary]
+      properties:
+        vocabulary:
+          type: object
+          additionalProperties: true
+          description: The query vocabulary document, as `margince://schema/query` publishes it.
     SlippingDealList:
       type: object
       description: What `whats_slipping_this_week` answers, worst first.
@@ -12991,6 +13159,40 @@ components:
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         created_at: {type: string, format: date-time}
+    AttachmentListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/Attachment'}}
+        page: {$ref: '#/components/schemas/PageInfo'}
+    DealDocument:
+      type: object
+      description: |-
+        One file in a deal's Files area: the attachment, whether it is hidden from this
+        deal, and where a captured file came from, so a reader can tell "the contract
+        Laura mailed on the 12th" from "the draft I uploaded".
+      required: [attachment, hidden]
+      properties:
+        attachment: {$ref: '#/components/schemas/Attachment'}
+        hidden: {type: boolean}
+        origin:
+          $ref: '#/components/schemas/DealDocumentOrigin'
+    DealDocumentOrigin:
+      type: object
+      description: Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal.
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: {type: string, format: uuid}
+        kind: {type: string, description: 'The activity kind the file arrived with: email, message, meeting.'}
+        subject: {type: [string, 'null']}
+        occurred_at: {type: string, format: date-time}
+        counterparty_email: {type: [string, 'null'], format: email}
+    DealDocumentListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/DealDocument'}}
+        page: {$ref: '#/components/schemas/PageInfo'}
     EmailDraft:
       type: object
       description: A drafted email (never sent by drafting). Send via /activities/{id}/send-email ().

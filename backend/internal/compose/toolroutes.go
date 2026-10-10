@@ -23,6 +23,11 @@ func (s Server) ListSlippingDeals(w http.ResponseWriter, r *http.Request, params
 	serveTool(w, r, s.toolRegistry.Invoke, "whats_slipping_this_week", params)
 }
 
+// DescribeQueryVocabulary serves describe_query_vocabulary, which takes no arguments.
+func (s Server) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
+	serveTool(w, r, s.toolRegistry.Invoke, "describe_query_vocabulary", struct{}{})
+}
+
 // serveTool runs one tool for a REST request and writes the tool's payload.
 //
 // args becomes the tool's argument object as JSON. Name the parameters after

@@ -8395,6 +8395,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/query-vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything a workspace query plan may say, for this caller.
+         * @description The answer the `describe_query_vocabulary` agent tool gives, run by the same tool on
+         *     both doors: the record types this caller can ask about, the fields each one names,
+         *     the operators each field admits, and the one relationship hop a plan may take. It
+         *     is the document `margince://schema/query` publishes, composed for the caller, so it
+         *     lists only what they can already read.
+         */
+        get: operations["describeQueryVocabulary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -17144,6 +17168,10 @@ export interface paths {
          *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
          *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
          *     answers 422 `unsupported_file_type`.
+         *
+         *     An agent may file one no larger than the `attach_document` tool takes: what one MCP
+         *     request carries inline, or the operator's attachment limit when that is smaller. A
+         *     larger file answers 422 on `file`, as the tool refuses it.
          */
         post: operations["uploadAttachment"];
         delete?: never;
@@ -26826,6 +26854,13 @@ export interface components {
              * @description When it was said.
              */
             occurred_at: string;
+        };
+        /** @description What `describe_query_vocabulary` answers. */
+        QueryVocabulary: {
+            /** @description The query vocabulary document, as `margince://schema/query` publishes it. */
+            vocabulary: {
+                [key: string]: unknown;
+            };
         };
         /** @description What `whats_slipping_this_week` answers, worst first. */
         SlippingDealList: {
@@ -57908,6 +57943,28 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    describeQueryVocabulary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The query vocabulary for this caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     search: {

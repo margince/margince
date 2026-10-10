@@ -40432,6 +40432,12 @@ type QualifyingEventRecord struct {
 // QualifyingEventRecordKind defines model for QualifyingEventRecord.Kind.
 type QualifyingEventRecordKind string
 
+// QueryVocabulary What `describe_query_vocabulary` answers.
+type QueryVocabulary struct {
+	// Vocabulary The query vocabulary document, as `margince://schema/query` publishes it.
+	Vocabulary map[string]interface{} `json:"vocabulary"`
+}
+
 // QuickCaptureContactRequest One contact as a reader of their public profile can state them. Deliberately
 // flatter than CreateContactRequest: one email and one phone rather than the
 // arrays, because a form optimized for typing has one box each.
@@ -67784,6 +67790,9 @@ type ServerInterface interface {
 	// Reply in a thread as the buyer.
 	// (POST /public/rooms/threads/{threadId}/comments)
 	ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID)
+	// Everything a workspace query plan may say, for this caller.
+	// (GET /query-vocabulary)
+	DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request)
 	// List manual per-record grants, filtered by record or by subject (ADR-0039).
 	// (GET /record-grants)
 	ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams)
@@ -72083,6 +72092,12 @@ func (_ Unimplemented) OpenBuyerRoomThread(w http.ResponseWriter, r *http.Reques
 // Reply in a thread as the buyer.
 // (POST /public/rooms/threads/{threadId}/comments)
 func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Everything a workspace query plan may say, for this caller.
+// (GET /query-vocabulary)
+func (_ Unimplemented) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78332,6 +78347,8 @@ func (siw *ServerInterfaceWrapper) ListAttachments(w http.ResponseWriter, r *htt
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
@@ -78406,6 +78423,8 @@ func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *ht
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -82484,6 +82503,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyDocuments(w http.ResponseWriter, r
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -90230,6 +90251,8 @@ func (siw *ServerInterfaceWrapper) ListDealDocuments(w http.ResponseWriter, r *h
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -99831,6 +99854,28 @@ func (siw *ServerInterfaceWrapper) ReplyBuyerRoomThread(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// DescribeQueryVocabulary operation middleware
+func (siw *ServerInterfaceWrapper) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeQueryVocabulary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRecordGrants operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordGrants(w http.ResponseWriter, r *http.Request) {
 
@@ -109025,6 +109070,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/rooms/threads/{threadId}/comments", wrapper.ReplyBuyerRoomThread)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/query-vocabulary", wrapper.DescribeQueryVocabulary)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-grants", wrapper.ListRecordGrants)

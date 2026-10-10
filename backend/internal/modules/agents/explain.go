@@ -95,7 +95,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// Quoting the error whole would have carried the unescaped original
 		// beside the escaped copy.
 		return stagedExplanation(staged)
-	case errors.Is(err, errFileCannotWait):
+	case errors.Is(err, ErrFileCannotWait):
 		return "This call needs a contact's approval, and a file cannot wait for an approval: the approval would " +
 			"keep the file. Nothing was changed. Do not retry; tell the user to attach the file in the Margince app."
 	case errors.Is(err, errFileKindRefused):

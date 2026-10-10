@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 257.4 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66775 |
+| Approx. wire tokens | 66781 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -62,7 +62,7 @@ descriptions and input schemas are what each step pays for.
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.7 KB |
-| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 2.8 KB |
+| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 2.9 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
@@ -1413,7 +1413,8 @@ the file to the user. (Governance: runs immediately; requires passport scope "wr
         "contact",
         "deal",
         "lead",
-        "project"
+        "project",
+        "activity"
       ],
       "type": "string"
     },
@@ -8414,7 +8415,8 @@ again, so the record does not carry the same file twice. Keep next_cursor to rea
         "contact",
         "deal",
         "lead",
-        "project"
+        "project",
+        "activity"
       ],
       "type": "string"
     },

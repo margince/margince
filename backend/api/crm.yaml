@@ -5742,6 +5742,7 @@ paths:
       tags: [Pipelines]
       operationId: listPipelines
       summary: List pipelines.
+      x-mcp-tool: { verb: list_pipelines, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/IncludeArchived'
       responses:
@@ -13152,6 +13153,28 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /query-vocabulary:
+    get:
+      tags: [Search]
+      operationId: describeQueryVocabulary
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Everything a workspace query plan may say, for this caller.
+      description: |
+        The answer the `describe_query_vocabulary` agent tool gives, run by the same tool on
+        both doors: the record types this caller can ask about, the fields each one names,
+        the operators each field admits, and the one relationship hop a plan may take. It
+        is the document `margince://schema/query` publishes, composed for the caller, so it
+        lists only what they can already read.
+      x-mcp-tool: { verb: describe_query_vocabulary, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The query vocabulary for this caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryVocabulary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ----------------------------- /search ------------------------------------
   /search:
@@ -22796,7 +22819,6 @@ paths:
       tags: [Activities]
       operationId: listActivityReviewTemplates
       summary: The question sets an outcome review can ask.
-      x-mcp-tool: { verb: describe_query_vocabulary, tier: auto_execute, scope: read }
       responses:
         '200':
           description: Every live template.
@@ -25208,8 +25230,8 @@ paths:
     get:
       tags: [Attachments]
       operationId: listAttachments
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: list_documents, tier: auto_execute, scope: read }
       summary: List the attachments hung off one entity (cursor-paginated metadata).
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -25234,8 +25256,8 @@ paths:
     post:
       tags: [Attachments]
       operationId: uploadAttachment
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: attach_document, tier: auto_execute, scope: write }
       summary: Upload a file and attach it to an entity.
       description: |
         Multipart upload. The bytes are written to object storage; the row records the
@@ -25245,6 +25267,10 @@ paths:
         The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
         Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
         answers 422 `unsupported_file_type`.
+
+        An agent may file one no larger than the `attach_document` tool takes: what one MCP
+        request carries inline, or the operator's attachment limit when that is smaller. A
+        larger file answers 422 on `file`, as the tool refuses it.
       requestBody:
         required: true
         content:
@@ -25278,6 +25304,7 @@ paths:
       tags: [Contacts]
       operationId: getContactNetwork
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: who_knows, record_type: contact, tier: auto_execute, scope: read }
       summary: Who on our team knows this contact, and how well.
       description: |
         The contact-anchored answer to the question the company connections card answers
@@ -25315,8 +25342,8 @@ paths:
     get:
       tags: [Attachments]
       operationId: listDealDocuments
-      security: [ { cookieAuth: [] } ]
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: list_documents, record_type: deal, tier: auto_execute, scope: read }
       summary: The deal's Files area — its own uploads and the files of every message linked to it.
       description: |
         Every attachment whose parent is the deal, plus every attachment of an activity
@@ -25450,6 +25477,7 @@ paths:
       tags: [Deals]
       operationId: getDealCoverage
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: company_coverage, record_type: deal, tier: auto_execute, scope: read }
       summary: Who covers this deal, and what is wrong with how it is covered.
       description: |
         Every seat on the deal, which of them are actually engaged, which colleagues
@@ -26509,8 +26537,8 @@ paths:
     get:
       tags: [Attachments]
       operationId: listCompanyDocuments
-      security: [ { cookieAuth: [] } ]
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: list_documents, record_type: company, tier: auto_execute, scope: read }
       summary: Every document that rolls up to this account, pinned first (DOC-WIRE-1).
       description: |
         The account's library. A document reachable from a company may hang off a deal, a
@@ -37943,6 +37971,15 @@ components:
         source_kind: { type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.' }
         due_at: { type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.' }
         occurred_at: { type: string, format: date-time, description: 'When it was said.' }
+    QueryVocabulary:
+      type: object
+      description: What `describe_query_vocabulary` answers.
+      required: [vocabulary]
+      properties:
+        vocabulary:
+          type: object
+          additionalProperties: true
+          description: The query vocabulary document, as `margince://schema/query` publishes it.
     SlippingDealList:
       type: object
       description: What `whats_slipping_this_week` answers, worst first.

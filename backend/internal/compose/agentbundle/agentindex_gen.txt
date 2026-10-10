@@ -265,6 +265,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /query-vocabulary` | describeQueryVocabulary | Everything a workspace query plan may say, for this caller. | any | at once |
 | `GET /search` | search | Cross-object search (contacts, companies, deals, activities, leads). | any | at once |
 
 ## Approvals

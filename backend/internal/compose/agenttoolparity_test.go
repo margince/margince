@@ -140,14 +140,11 @@ func TestTheSweepSkipsExactlyWhatTheComposedSetRegisters(t *testing.T) {
 // writes go through the same provider seam the declared CRUD verbs use.
 // TestComposedIntentsNeverEgress holds the line that actually matters.
 var composedIntents = map[string]bool{
-	"catch_me_up_on":           true,
-	"prep_for_meeting":         true,
-	"who_knows":                true,
-	"company_coverage":         true,
-	"intro_path_to":            true,
-	"at_risk_relationships":    true,
-	"whats_slipping_this_week": true,
-	"draft_follow_ups_for":     true,
+	"catch_me_up_on":        true,
+	"prep_for_meeting":      true,
+	"intro_path_to":         true,
+	"at_risk_relationships": true,
+	"draft_follow_ups_for":  true,
 	// whoami names the human this passport acts for. /v1/me is human-only —
 	// correctly, since it is a session's own view — so there is no REST
 	// operation to twin, and this reads a principal rather than a record.
@@ -161,7 +158,6 @@ var composedIntents = map[string]bool{
 	// operations, so no single one declares it. Read-only, and it writes
 	// nothing: moving work into delivery is advance_project_phase's act.
 	"prepare_handoff": true,
-	"list_pipelines":  true,
 	"qualify_lead":    true,
 	"progress_deal":   true,
 	"run_report":      true,
@@ -171,13 +167,6 @@ var composedIntents = map[string]bool{
 	// datasource seam. It is read-only and reaches nothing outside the
 	// workspace, which is what TestComposedIntentsNeverEgress holds it to.
 	"query_workspace": true,
-	// describe_query_vocabulary answers the document margince://schema/query
-	// publishes, for a client that reads TOOLS and not resources. It backs no
-	// REST operation at all: the vocabulary is composed at call time from the
-	// field catalog and the live column catalog, narrowed to what this
-	// principal may already read. Read-only, it returns no records, and it
-	// names nothing a caller could not reach by asking.
-	"describe_query_vocabulary": true,
 	// describe_report_vocabulary answers the document margince://schema/reports
 	// publishes, for a caller that reads no resources — and the Surface-B runner
 	// is one, since it is offered no resource step at all. It backs no REST
@@ -232,10 +221,6 @@ var composedIntents = map[string]bool{
 	// a different question from "who does this payload name". Read-only, and
 	// every record it names is read back through the datasource seam.
 	"resolve_entities": true,
-	// The agent's door to a record's files: the multipart attachment routes stay
-	// human-only, and both tools reach the same store those routes write and read.
-	"attach_document": true,
-	"list_documents":  true,
 }
 
 // An intent may write inside the workspace; it may NOT reach outside it.

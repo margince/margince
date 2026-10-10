@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 84 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29701 |  |  | 90% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29706 |  |  | 90% |  |  |  |
 
 ### `morning_brief`
 
@@ -189,8 +189,8 @@ listing once. Read a row as what that tool costs a menu.
 | `search_context` | 344 |  |
 | `check_availability` | 342 |  |
 | `search_report_evidence` | 335 |  |
+| `attach_document` | 333 |  |
 | `decide_approval` | 332 |  |
-| `attach_document` | 330 |  |
 | `forecast_input_checks` | 324 |  |
 | `demote_lead` | 317 |  |
 | `promote_lead` | 304 |  |
@@ -228,8 +228,8 @@ listing once. Read a row as what that tool costs a menu.
 | `intro_path_to` | 187 |  |
 | `create_tag` | 183 |  |
 | `list_channel_providers` | 174 |  |
+| `list_documents` | 168 |  |
 | `remove_tag` | 166 |  |
-| `list_documents` | 165 |  |
 | `read_project_360` | 156 |  |
 | `read_approval` | 154 |  |
 | `get_record_tags` | 144 |  |

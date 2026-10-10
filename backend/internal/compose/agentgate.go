@@ -46,6 +46,12 @@ const approvalTokenHeader = "X-Approval-Token"
 // mutation; anything larger is not a plausible contract payload.
 const maxGatedBody = 1 << 20
 
+// gatedBodyLimit widens that bound to what the operation's tool takes in one
+// call, which is wider only for a tool that carries a file.
+func gatedBodyLimit(spec mcp.ToolSpec) int64 {
+	return max(maxGatedBody, spec.MaxArgsBytes)
+}
+
 func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, ownership agents.FieldOwnership, imports agents.Imports, tags agents.Tags, gate *auth.Gate) func(http.Handler) http.Handler {
 	// ONE set of read-side dependencies for both questions this door asks of a
 	// command: what tier it runs at, and what an approval of it would bind to.
@@ -218,8 +224,9 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 			"agent gate: %s %s: %w", pol.Op, reason, apperrors.ErrPermissionDenied))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
-	body, err := io.ReadAll(io.LimitReader(r.Body, maxGatedBody+1))
-	if err != nil || len(body) > maxGatedBody {
+	limit := gatedBodyLimit(spec)
+	body, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
+	if err != nil || int64(len(body)) > limit {
 		httperr.Write(w, r, httperr.Validation("body", "too_large", "request body unreadable or exceeds the gated limit"))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}

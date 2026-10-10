@@ -2567,6 +2567,10 @@ func (stubs) ReplyBuyerRoomThread(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ReplyBuyerRoomThread")
 }
 
+func (stubs) DescribeQueryVocabulary(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DescribeQueryVocabulary")
+}
+
 func (stubs) ListRecordGrants(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRecordGrantsParams) {
 	httperr.NotImplemented(w, r, "ListRecordGrants")
 }
