@@ -11,7 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -71,7 +70,7 @@ func restoreTagRemovalTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, remova
 	if err := requireTagRemoval(ctx, record.EntityType, record.EntityID); err != nil {
 		return out, err
 	}
-	if err := auth.EnsureWritableLive(ctx, tx, record.EntityType, record.EntityID); err != nil {
+	if err := holdTagTarget(ctx, tx, record.EntityType, record.EntityID); err != nil {
 		return out, err
 	}
 	if err := refuseRetiredTag(ctx, tx, tagID); err != nil {

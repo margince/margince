@@ -274,7 +274,7 @@ func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType stri
 		// live-visibility probe first and only narrows with the write arm —
 		// so a record that does not exist or is archived still answers
 		// not-found rather than confirming it exists by refusing differently.
-		if err := auth.EnsureWritableLive(ctx, tx, entityType, entityID); err != nil {
+		if err := holdTagTarget(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
 		by, byKind := assigningPrincipal(ctx)
@@ -295,6 +295,17 @@ func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType stri
 		return err
 	}()
 	return out, err
+}
+
+// holdTagTarget is the row gate of a write that adds a tagging, and it holds the
+// record FOR SHARE until commit. A sender purge locks a contact, asks whether a
+// colleague tagged it, then anonymises it. A tagging that held nothing could
+// commit between that question and the scrub, and be erased with the record.
+func holdTagTarget(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) error {
+	if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
+		return err
+	}
+	return auth.EnsureWritableLive(ctx, tx, entityType, entityID)
 }
 
 // The keys a tag audit row files a tagging under.

@@ -201,6 +201,8 @@ func (s *RetentionService) anonymiseOneContact(
 	anonymised := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The lock first, so an edit cannot land between the answer and the scrub.
+		// A tag, list membership or note waits on it too: each writer holds the
+		// contact FOR SHARE, or through activity_link's foreign key.
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR UPDATE`, id); err != nil {
 			return err
 		}
