@@ -258,7 +258,7 @@ func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion 
 //
 // Live means both halves. Deactivating an account sets `status` and leaves
 // `archived_at` NULL, so an archived-only test admits a colleague who has left.
-// An audience is a list of people expected to read the thing.
+// An audience is a list of readers expected to read the thing.
 func ensureAudienceSubjectsExist(ctx context.Context, tx pgx.Tx, members []AudienceMember) error {
 	for _, m := range members {
 		var exists bool

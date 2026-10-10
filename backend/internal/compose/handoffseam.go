@@ -40,7 +40,7 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 	return func(ctx context.Context, projectID ids.UUID) (agents.HandoffFacts, error) {
 		res, err := page.Read(ctx, ids.From[ids.ProjectKind](projectID), project360.Reading{
 			Only: handoffSections,
-			// A handoff lists work a person owes. The clock's own reminders are
+			// A handoff lists work somebody owes. The clock's own reminders are
 			// on the project and on its page, and are not a promise anyone made.
 			ExcludeSystemMinted: true,
 		})

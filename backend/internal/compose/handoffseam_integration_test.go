@@ -35,7 +35,7 @@ type handoffScene struct {
 }
 
 // seedHandoffScene files a project with dealCount deals, one seat, one task a
-// person filed and one reminder the clock filed, all through the real writers.
+// colleague filed and one reminder the clock filed, through the real writers.
 func seedHandoffScene(t *testing.T, e *integration.Env, dealCount int) handoffScene {
 	t.Helper()
 	admin := e.Admin()
@@ -121,7 +121,7 @@ func TestTheHandoffShowsTheProjectAsItsPageDoes(t *testing.T) {
 		t.Fatalf("the page lists tasks %v, want the filed task and the clock's reminder", pageTasks)
 	}
 	if len(facts.OpenCommitments) != 1 || facts.OpenCommitments[0].TaskID == nil || *facts.OpenCommitments[0].TaskID != scene.human {
-		t.Errorf("the handoff lists %+v, want only the task a person filed", facts.OpenCommitments)
+		t.Errorf("the handoff lists %+v, want only the task a colleague filed", facts.OpenCommitments)
 	}
 }
 
