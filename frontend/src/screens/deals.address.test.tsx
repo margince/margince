@@ -1,0 +1,237 @@
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
+import { LocaleProvider } from "../i18n";
+import { DealsScreen, dealsQueryParams } from "./deals";
+import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "./dealsaddress";
+
+// A list opened from an address shows the view the address names.
+//
+// The company page's lost-deal figure and the pipeline report's open-deal count
+// both write `#/deals?company_id=…&status=…`; a link opened in a new tab has
+// no picked label and no session behind it, so the list has to carry every dial
+// the address names and the chip has to name its record the way a picked one
+// does.
+//
+// Kept out of deals.test.tsx, which is long past its size ceiling.
+
+type Deal = components["schemas"]["Deal"];
+
+const COMPANY = { id: "c-nw", display_name: "Northwind Traders" };
+
+function deal(overrides: Partial<Deal>): Deal {
+  return {
+    id: "d1",
+    name: "Fleet retrofit",
+    amount_minor: 4_800_000,
+    currency: "EUR",
+    pipeline_id: "pl",
+    stage_id: "s1",
+    status: "open",
+    source: "manual",
+    captured_by: "human:u1",
+    version: 4,
+    created_at: "2026-06-01T00:00:00Z",
+    updated_at: "2026-06-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function render() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <DealsScreen />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+type Seen = { dealUrls: string[]; reportBodies: { filters?: unknown }[] };
+
+const noneSeen = (): Seen => ({ dealUrls: [], reportBodies: [] });
+
+/** The backend this screen reads; `dealUrls` and `reportBodies` record asks. */
+function stubBackend(seen: Seen) {
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = input instanceof Request ? input : null;
+    const url = String(request ? request.url : input);
+    const method = request ? request.method : (init?.method ?? "GET");
+    const path = new URL(url, "http://localhost").pathname;
+    if (url.includes("/pipelines")) {
+      return jsonResponse({
+        data: [
+          {
+            id: "pl",
+            name: "Sales",
+            is_default: true,
+            position: 0,
+            stages: [
+              {
+                id: "s1",
+                pipeline_id: "pl",
+                name: "Qualify",
+                position: 1,
+                semantic: "open",
+                win_probability: 20,
+              },
+            ],
+          },
+        ],
+        page: { next_cursor: null },
+      });
+    }
+    if (method === "POST" && url.includes("/reports/deals-by-stage")) {
+      seen.reportBodies.push(request ? await request.json() : init?.body);
+      return jsonResponse({
+        report: "deals-by-stage",
+        plan: {},
+        columns: [],
+        rows: [],
+      });
+    }
+    if (url.includes("/me")) {
+      return jsonResponse({
+        user: {
+          id: "u-me",
+          email: "me@acme.test",
+          display_name: "Me",
+          timezone: "UTC",
+          status: "active",
+          is_agent: false,
+        },
+        roles: ["rep"],
+        teams: [],
+      });
+    }
+    if (path.endsWith(`/companies/${COMPANY.id}`)) {
+      return jsonResponse(COMPANY);
+    }
+    if (path.endsWith("/companies")) {
+      return jsonResponse({ data: [COMPANY], page: { next_cursor: null } });
+    }
+    if (path.endsWith("/deals")) {
+      seen.dealUrls.push(url);
+      return jsonResponse({
+        data: [deal({})],
+        page: { next_cursor: null, has_more: false },
+      });
+    }
+    return jsonResponse({ data: [], page: { next_cursor: null } });
+  });
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  window.location.hash = "";
+  localStorage.clear();
+});
+
+// A link may only name a dial the list sends on. The sample value of each is
+// typed by the dial union, so a dial added to the links without a sample here
+// does not compile, and one the list ignores fails the case below.
+const SAMPLE: Record<DealDial, string> = {
+  stage_id: "s1",
+  company_id: "c-nw",
+  status: "lost",
+};
+
+describe("a deals link", () => {
+  it.each(ADDRESSABLE_DEAL_DIALS)(
+    "names %s, which the list sends on",
+    (dial) => {
+      const sent = dealsQueryParams({
+        pipelineId: "",
+        q: "",
+        sort: "",
+        includeArchived: false,
+        filters: { [dial]: SAMPLE[dial] },
+      });
+      expect(sent[dial]).toBe(SAMPLE[dial]);
+    },
+  );
+});
+
+describe("the deals list opened from an address", () => {
+  it("narrows by the status the address names, and says so", async () => {
+    window.location.hash = "#/deals?status=lost&view=table";
+    const seen = noneSeen();
+    vi.stubGlobal("fetch", stubBackend(seen));
+    render();
+
+    // The row names the dial and its value, so the narrowing is on screen
+    // rather than only in the address.
+    expect(
+      await screen.findByRole("group", { name: "Status: Lost" }),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(seen.dealUrls.at(-1)?.includes("status=lost")).toBe(true),
+    );
+  });
+
+  it("widens when the status row is deleted", async () => {
+    window.location.hash = "#/deals?status=open&view=table";
+    const seen = noneSeen();
+    vi.stubGlobal("fetch", stubBackend(seen));
+    const user = userEvent.setup();
+    render();
+
+    const row = await screen.findByRole("group", { name: "Status: Open" });
+    await user.click(
+      within(row).getByRole("button", {
+        name: "More actions for the Status filter",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Delete filter" }));
+
+    await waitFor(() =>
+      expect(seen.dealUrls.at(-1)?.includes("status=")).toBe(false),
+    );
+  });
+
+  it("gives the board's stage totals the status it is narrowed by", async () => {
+    window.location.hash = "#/deals?status=open";
+    const seen = noneSeen();
+    vi.stubGlobal("fetch", stubBackend(seen));
+    render();
+
+    await waitFor(() => expect(seen.reportBodies.length).toBeGreaterThan(0));
+    expect(seen.reportBodies.at(-1)).toMatchObject({
+      filters: { status: "open" },
+    });
+  });
+
+  it("names the company chip by its name, not its id", async () => {
+    window.location.hash = `#/deals?company_id=${COMPANY.id}&view=table`;
+    const seen = noneSeen();
+    vi.stubGlobal("fetch", stubBackend(seen));
+    render();
+
+    expect(
+      await screen.findByRole("group", {
+        name: `Company: ${COMPANY.display_name}`,
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText(COMPANY.id)).toBeNull();
+  });
+});

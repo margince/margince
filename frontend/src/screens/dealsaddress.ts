@@ -28,10 +28,18 @@ import { routeHash } from "../app/router";
  * moves an existing caller: a signature every call site has to follow is one
  * that breaks in the merge when a branch adds the fourth.
  */
+export const ADDRESSABLE_DEAL_DIALS = [
+  "stage_id",
+  "company_id",
+  "status",
+] as const;
+
+export type DealDial = (typeof ADDRESSABLE_DEAL_DIALS)[number];
+
 export function dealsFilteredBy(
-  param: string,
+  param: DealDial,
   value: string,
-  extra: Readonly<Record<string, string>> = {},
+  extra: Readonly<Partial<Record<DealDial, string>>> = {},
 ): string {
   const dials = new URLSearchParams({ [param]: value, ...extra });
   return `${routeHash({ screen: "deals" })}?${dials.toString()}`;

@@ -126,6 +126,11 @@ import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { currencyBeside } from "./dealcurrency";
+import {
+  dealStatusFilter,
+  forecastCategoryFilter,
+  useAppliedCompanyName,
+} from "./dealdials";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
 import { lastMailColumn } from "./dealmailaside";
@@ -241,33 +246,9 @@ const VIEW_PARAM = "view";
 // choice to the server as a filter.
 const DEAL_SCREEN_DIALS: readonly string[] = [PIPELINE_PARAM, VIEW_PARAM];
 
-// FORECAST_FILTER_VALUES are the four buckets a deal's own column can hold.
-// `slipped` is the report's derivation from a claimed category and a close
-// date, so it is a dimension of the forecast tiles and never a filter here.
-const FORECAST_FILTER_VALUES = [
-  "commit",
-  "best_case",
-  "pipeline",
-  "omitted",
-] as const;
-
-// forecastCategoryFilter narrows a stored dial to what the wire admits.
-//
-// The value arrives as a bare string because a SAVED VIEW carries it, and a
-// view written before a category was renamed — or by hand — can hold anything.
-// An unadmitted value selects nothing rather than being sent: the request
-// would be refused, and a list that fails to load says less than one that
-// simply is not narrowed. Same reading `tag_mode` takes of a stored mode its
-// own enum no longer admits.
-function forecastCategoryFilter(
-  value: string | undefined,
-): (typeof FORECAST_FILTER_VALUES)[number] | undefined {
-  return FORECAST_FILTER_VALUES.find((admitted) => admitted === value);
-}
-
 // dealsQueryParams builds the board's /deals query — the full dial set
 // (pipeline/stage/owner/company filters + sort).
-function dealsQueryParams(f: DealFilters) {
+export function dealsQueryParams(f: DealFilters) {
   const { filters } = f;
   return {
     limit: 100,
@@ -280,6 +261,7 @@ function dealsQueryParams(f: DealFilters) {
     owner_team_id: filters.owner_team_id || undefined,
     unassigned: filters.unassigned === "true" ? true : undefined,
     company_id: filters.company_id || undefined,
+    status: dealStatusFilter(filters.status),
     partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     forecast_category: forecastCategoryFilter(filters.forecast_category),
@@ -334,6 +316,8 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   if (f.pipelineId) out.pipeline_id = f.pipelineId;
   if (filters.owner_id) out.owner_id = filters.owner_id;
   if (filters.company_id) out.company_id = filters.company_id;
+  const status = dealStatusFilter(filters.status);
+  if (status) out.status = status;
   if (filters.partner_company_id)
     out.partner_company_id = filters.partner_company_id;
   if (filters.stalled === "true") out.stalled = true;
@@ -1468,6 +1452,7 @@ function narrowsTheDealList(query: ListQuery): boolean {
 function dealFilterChips(
   stages: Stage[],
   t: ReturnType<typeof useT>,
+  companyName: string | undefined,
 ): ListChip[] {
   return [
     {
@@ -1482,6 +1467,7 @@ function dealFilterChips(
       allLabel: t("deals.filterCompanyAll"),
       options: [],
       search: searchCompanies,
+      appliedName: companyName,
     },
   ];
 }
@@ -2170,7 +2156,8 @@ export function DealsScreen({
       query={savableDealQuery(dealsListState.query, pipelineId)}
     />
   );
-  const dealChips = dealFilterChips(stages, t);
+  const companyName = useAppliedCompanyName(query.filters.company_id);
+  const dealChips = dealFilterChips(stages, t, companyName);
   const tagChips = useTagChips();
   const rowSelection = dealRowSelection({
     view,

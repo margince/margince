@@ -70,6 +70,7 @@ const company: ListChip = {
         candidate.label.toLowerCase().includes(query.toLowerCase()),
       ),
     ),
+  appliedName: undefined,
 };
 
 /**

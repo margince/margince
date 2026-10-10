@@ -527,7 +527,7 @@ function FilterRow({
 }>) {
   const t = useT();
   const active = chip.options.find((option) => option.value === value);
-  const valueLabel = active?.label ?? pickedLabel ?? value;
+  const valueLabel = active?.label ?? pickedLabel ?? chip.appliedName ?? value;
   return (
     <fieldset className="lt-frow" aria-label={`${chip.label}: ${valueLabel}`}>
       <span className="lt-frow-attr">{chip.label}</span>
