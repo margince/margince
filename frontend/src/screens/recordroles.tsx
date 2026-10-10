@@ -1,20 +1,34 @@
-import { useState } from "react";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { type FormEvent, useState } from "react";
+import { rowsOf } from "../api/rows";
 import { useCanWrite } from "../app/capability";
 import {
-  Badge,
   Button,
   Checkbox,
+  EmptyState,
   Field,
-  Modal,
   TextInput,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { Heading } from "../design-system/heading";
+import { CellStack } from "../design-system/cellstack";
+import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { KeyedName } from "../design-system/keyedname";
+import {
+  NameDialog,
+  nameRefusal,
+  useRefusedName,
+} from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { PanelNotices } from "../design-system/panelnotices";
+import { useSinglePress } from "../design-system/presslatch";
 import { Switch } from "../design-system/switch";
-import { useT } from "../i18n";
-import { problemMessageOf, QueryGate } from "./common";
+import { INTL_LOCALE } from "../format/format";
+import { type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, QueryStates } from "./common";
+import { vocabMenuColumn } from "./leadvocab.rows";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -24,22 +38,217 @@ import {
   useUpdateRecordRole,
 } from "./recordassignments.queries";
 
-/**
- * Settings → the responsibilities a colleague or team can hold on a record.
- *
- * A role names what somebody is accountable for and grants no access of its
- * own, which the subtitle says because "role" reads like a permission on most
- * products a user has met.
- *
- * There is no delete. A role an assignment has ever carried must stay
- * resolvable or that assignment stops rendering its own history, so the only
- * withdrawal is the active switch — which keeps the entry readable everywhere
- * it is already stored while removing it from every picker.
- *
- * Applicability is chosen at creation and read-only on existing roles. The
- * server refuses narrowing while a live assignment depends on the removed
- * scope; retiring a role preserves those assignments and permits a replacement.
- */
+const RECORD_KINDS: Record<AssignmentRecordType, MessageKey> = {
+  company: "recordRoles.kind.company",
+  deal: "recordRoles.kind.deal",
+  project: "recordRoles.kind.project",
+};
+
+function heldByKey(kinds: readonly AssignmentSubjectKind[]): MessageKey | null {
+  const user = kinds.includes("user");
+  const team = kinds.includes("team");
+  if (user && team) return "recordRoles.heldBy.either";
+  if (user) return "recordRoles.heldBy.user";
+  return team ? "recordRoles.heldBy.team" : null;
+}
+
+// Read-only, because narrowing either set is refused while a live assignment
+// depends on it.
+function RoleReach({ role }: Readonly<{ role: RecordRole }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const records = new Intl.ListFormat(INTL_LOCALE[locale], {
+    style: "long",
+    type: "conjunction",
+  }).format(rowsOf(role.record_types).map((kind) => t(RECORD_KINDS[kind])));
+  const heldBy = heldByKey(rowsOf(role.assignee_kinds));
+  return (
+    <CellStack>
+      <span>{t("recordRoles.appliesOn", { records })}</span>
+      {heldBy && <span className="t-caption">{t(heldBy)}</span>}
+    </CellStack>
+  );
+}
+
+function roleColumns({
+  t,
+  canEdit,
+  onActive,
+  onRename,
+}: Readonly<{
+  t: Translator;
+  canEdit: boolean;
+  onActive: (role: RecordRole, active: boolean) => void;
+  onRename: (role: RecordRole) => void;
+}>): DataTableColumn<RecordRole>[] {
+  return [
+    {
+      key: "name",
+      header: t("recordRoles.colRole"),
+      grow: true,
+      render: (role) => <KeyedName name={role.label} code={role.key} />,
+    },
+    {
+      key: "reach",
+      header: t("recordRoles.recordTypes"),
+      render: (role) => <RoleReach role={role} />,
+    },
+    {
+      key: "active",
+      header: t("leadSources.colActive"),
+      render: (role) => (
+        <Switch
+          label={t("recordRoles.activeFor", { label: role.label })}
+          labelHidden
+          checked={role.active}
+          disabled={!canEdit}
+          onChange={(next) => onActive(role, next)}
+        />
+      ),
+    },
+    ...vocabMenuColumn(
+      t,
+      { canEdit, canRemove: false },
+      (role: RecordRole) => ({
+        label: role.label,
+        onRename: () => onRename(role),
+      }),
+    ),
+  ];
+}
+
+function Choices<Value extends string>({
+  legend,
+  options,
+  chosen,
+  disabled,
+  onChange,
+}: Readonly<{
+  legend: string;
+  options: readonly { value: Value; label: string }[];
+  chosen: readonly Value[];
+  disabled: boolean;
+  onChange: (next: Value[]) => void;
+}>) {
+  return (
+    <fieldset className="field-multiselect" disabled={disabled}>
+      <legend className="t-name">{legend}</legend>
+      {options.map(({ value, label }) => (
+        <Checkbox
+          key={value}
+          label={label}
+          checked={chosen.includes(value)}
+          onChange={(e) =>
+            onChange(
+              e.target.checked
+                ? [...chosen, value]
+                : chosen.filter((other) => other !== value),
+            )
+          }
+        />
+      ))}
+    </fieldset>
+  );
+}
+
+// Mounted only while open, so a half-made role never waits for the next opening.
+function AddRoleDialog({
+  create,
+  onClose,
+}: Readonly<{
+  create: ReturnType<typeof useCreateRecordRole>;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const [label, setLabel] = useState("");
+  const [recordTypes, setRecordTypes] = useState<AssignmentRecordType[]>([]);
+  const [assigneeKinds, setAssigneeKinds] = useState<AssignmentSubjectKind[]>(
+    [],
+  );
+  const name = label.trim();
+  const refused = nameRefusal(create.error, t, "recordRoles.duplicate");
+  const { refusedName: nameProblem, markSent } = useRefusedName(
+    name,
+    refused.nameProblem,
+  );
+  const singlePress = useSinglePress(create.isPending);
+  const ready =
+    name !== "" &&
+    recordTypes.length > 0 &&
+    assigneeKinds.length > 0 &&
+    !nameProblem;
+  const save = () => {
+    if (!ready || create.isPending) return;
+    markSent();
+    create.mutate(
+      {
+        label: name,
+        record_types: recordTypes,
+        assignee_kinds: assigneeKinds,
+      },
+      { onSuccess: onClose },
+    );
+  };
+  return (
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={t("recordRoles.addTitle")}
+      intent="form"
+      confirmLabel={t("recordRoles.addConfirm")}
+      confirmDisabled={!ready}
+      pending={create.isPending}
+      error={refused.problem}
+      onConfirm={save}
+    >
+      <form
+        className="form-stack"
+        onSubmit={singlePress((event: FormEvent) => {
+          event.preventDefault();
+          save();
+        })}
+      >
+        <Field
+          label={t("recordRoles.addLabel")}
+          hint={t("recordRoles.addHint")}
+          error={nameProblem}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+          )}
+        </Field>
+        <Choices
+          legend={t("recordRoles.recordTypes")}
+          options={(["company", "deal", "project"] as const).map((kind) => ({
+            value: kind,
+            label: t(`search.kind.${kind}`),
+          }))}
+          chosen={recordTypes}
+          disabled={create.isPending}
+          onChange={setRecordTypes}
+        />
+        <Choices
+          legend={t("recordRoles.assigneeKinds")}
+          options={[
+            { value: "user", label: t("assignments.kindUser") },
+            { value: "team", label: t("assignments.kindTeam") },
+          ]}
+          chosen={assigneeKinds}
+          disabled={create.isPending}
+          onChange={setAssigneeKinds}
+        />
+      </form>
+    </ConfirmModal>
+  );
+}
+
+// A role names what somebody answers for on a record and grants no access.
+// No delete: a role an assignment carried must stay resolvable, so the switch
+// retires it. Where a role applies is set at creation only.
 export function RecordRolesCard() {
   const t = useT();
   const canCreate = useCanWrite("custom_field", "create");
@@ -47,8 +256,23 @@ export function RecordRolesCard() {
   const query = useRecordRoles();
   const create = useCreateRecordRole();
   const update = useUpdateRecordRole();
+  const rename = useUpdateRecordRole();
   const [adding, setAdding] = useState(false);
-  const failure = [create, update].find((m) => m.isError);
+  // Kept after close, so the dialog leaving the page still names its role.
+  const [renaming, setRenaming] = useState<RecordRole | null>(null);
+  const [renamingOpen, setRenamingOpen] = useState(false);
+  const roles = rowsOf(query.data);
+  const columns = roleColumns({
+    t,
+    canEdit,
+    onActive: (role, active) =>
+      update.mutate({ id: role.id, body: { active } }),
+    onRename: (role) => {
+      rename.reset();
+      setRenaming(role);
+      setRenamingOpen(true);
+    },
+  });
   return (
     <Panel
       title={t("recordRoles.title")}
@@ -62,215 +286,60 @@ export function RecordRolesCard() {
     >
       <PanelBody>
         <PanelIntro>{t("recordRoles.sub")}</PanelIntro>
-        <SettingList>
-          <SettingRow
-            label={t("recordRoles.listLabel")}
-            layout="stack"
-            control={
-              <QueryGate query={query} pendingLabel={t("recordRoles.loading")}>
-                {(roles) => (
-                  <ul
-                    className="lead-vocab-list"
-                    data-testid="record-role-list"
-                  >
-                    {roles.map((role) => (
-                      <RecordRoleRow
-                        key={role.id}
-                        role={role}
-                        canEdit={canEdit}
-                        onUpdate={(body) =>
-                          update.mutate({ id: role.id, body })
-                        }
-                      />
-                    ))}
-                  </ul>
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {!canEdit && <p>{t("recordRoles.readOnly")}</p>}
-        {failure?.error && (
-          <Callout
-            tone="danger"
-            live="alert"
-            title={problemMessageOf(failure.error, t)}
-          />
-        )}
-        {adding && (
-          <AddRecordRoleDialog
-            onClose={() => setAdding(false)}
-            onAdd={(body) =>
-              create.mutate(body, { onSuccess: () => setAdding(false) })
-            }
-            pending={create.isPending}
-          />
-        )}
       </PanelBody>
-    </Panel>
-  );
-}
-
-function RecordRoleRow({
-  role,
-  canEdit,
-  onUpdate,
-}: Readonly<{
-  role: RecordRole;
-  canEdit: boolean;
-  onUpdate: (body: { label?: string; active?: boolean }) => void;
-}>) {
-  const t = useT();
-  const [label, setLabel] = useState(role.label);
-  return (
-    <li className="lead-vocab-row" data-testid={`record-role-${role.key}`}>
-      <Field label={t("recordRoles.labelFor", { key: role.key })}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={label}
-            disabled={!canEdit}
-            onChange={(e) => setLabel(e.target.value)}
-            onBlur={() => {
-              const next = label.trim();
-              // Only on a real change, and never on an emptied field: a blank
-              // box is a half-finished edit, not an instruction to erase the
-              // name every assignment carrying this role renders through.
-              if (next && next !== role.label) {
-                onUpdate({ label: next });
-              } else if (!next) {
-                setLabel(role.label);
-              }
-            }}
-          />
-        )}
-      </Field>
-      {/* Where the role may be held, and by whom. Read-only, because narrowing
-          either set is refused while a live assignment depends on it. */}
-      <span className="t-caption">
-        {role.record_types.join(", ")} · {role.assignee_kinds.join(", ")}
-      </span>
-      <span className="lead-vocab-flags">
-        {role.system && <Badge>{t("recordRoles.builtIn")}</Badge>}
-        <Switch
-          label={t("recordRoles.activeFor", { label: role.label })}
-          labelHidden
-          checked={role.active}
-          disabled={!canEdit}
-          onChange={(next: boolean) => onUpdate({ active: next })}
+      {query.isSuccess && roles.length > 0 ? (
+        <DataTable
+          bleed
+          fold
+          label={t("recordRoles.title")}
+          columns={columns}
+          rows={[...roles]}
+          rowKey={(role) => role.id}
+          rowTestId={(role) => `record-role-${role.key}`}
         />
-      </span>
-    </li>
-  );
-}
-
-function AddRecordRoleDialog({
-  onClose,
-  onAdd,
-  pending,
-}: Readonly<{
-  onClose: () => void;
-  onAdd: (body: {
-    label: string;
-    record_types: AssignmentRecordType[];
-    assignee_kinds: AssignmentSubjectKind[];
-  }) => void;
-  pending: boolean;
-}>) {
-  const t = useT();
-  const [label, setLabel] = useState("");
-  const [recordTypes, setRecordTypes] = useState<AssignmentRecordType[]>([]);
-  const [assigneeKinds, setAssigneeKinds] = useState<AssignmentSubjectKind[]>(
-    [],
-  );
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy="record-role-add-title"
-      intent="form"
-    >
-      <Heading
-        size="large"
-        className="t-h3 modal-title"
-        id="record-role-add-title"
-      >
-        {t("recordRoles.addTitle")}
-      </Heading>
-      <div className="form-stack">
-        <Field
-          label={t("recordRoles.addLabel")}
-          hint={t("recordRoles.addHint")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-            />
-          )}
-        </Field>
-        <fieldset className="field-multiselect" disabled={pending}>
-          <legend className="t-name">{t("recordRoles.recordTypes")}</legend>
-          {(["company", "deal", "project"] as const).map((kind) => (
-            <Checkbox
-              key={kind}
-              label={t(`search.kind.${kind}`)}
-              checked={recordTypes.includes(kind)}
-              onChange={(e) =>
-                setRecordTypes((current) =>
-                  e.target.checked
-                    ? [...current, kind]
-                    : current.filter((value) => value !== kind),
-                )
-              }
-            />
-          ))}
-        </fieldset>
-        <fieldset className="field-multiselect" disabled={pending}>
-          <legend className="t-name">{t("recordRoles.assigneeKinds")}</legend>
-          {(["user", "team"] as const).map((kind) => (
-            <Checkbox
-              key={kind}
-              label={t(
-                kind === "user"
-                  ? "assignments.kindUser"
-                  : "assignments.kindTeam",
-              )}
-              checked={assigneeKinds.includes(kind)}
-              onChange={(e) =>
-                setAssigneeKinds((current) =>
-                  e.target.checked
-                    ? [...current, kind]
-                    : current.filter((value) => value !== kind),
-                )
-              }
-            />
-          ))}
-        </fieldset>
-      </div>
-      <div className="actions">
-        <Button variant="ghost" onClick={onClose}>
-          {t("deals.cancel")}
-        </Button>
-        <Button
-          disabled={
-            !label.trim() ||
-            !recordTypes.length ||
-            !assigneeKinds.length ||
-            pending
+      ) : (
+        <PanelBody>
+          <QueryStates query={query} pendingLabel={t("recordRoles.loading")}>
+            <EmptyState>{t("common.empty")}</EmptyState>
+          </QueryStates>
+        </PanelBody>
+      )}
+      <PanelNotices
+        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        refused={
+          update.isError
+            ? { title: t("leadSources.notSaved"), error: update.error }
+            : undefined
+        }
+      />
+      {adding && (
+        <AddRoleDialog
+          create={create}
+          onClose={() => {
+            create.reset();
+            setAdding(false);
+          }}
+        />
+      )}
+      {/* A rename cannot collide: only the key is unique, and it never changes. */}
+      <NameDialog
+        open={renamingOpen}
+        onClose={() => setRenamingOpen(false)}
+        title={t("recordRoles.renameTitle")}
+        label={t("recordRoles.addLabel")}
+        initial={renaming?.label ?? ""}
+        confirmLabel={t("leadSources.renameSave")}
+        pending={rename.isPending}
+        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        onSave={(label) => {
+          if (renaming) {
+            rename.mutate(
+              { id: renaming.id, body: { label } },
+              { onSuccess: () => setRenamingOpen(false) },
+            );
           }
-          onClick={() =>
-            onAdd({
-              label: label.trim(),
-              record_types: recordTypes,
-              assignee_kinds: assigneeKinds,
-            })
-          }
-        >
-          {t("recordRoles.addConfirm")}
-        </Button>
-      </div>
-    </Modal>
+        }}
+      />
+    </Panel>
   );
 }

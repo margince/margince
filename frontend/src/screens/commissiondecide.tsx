@@ -166,9 +166,7 @@ export function CommissionDecision({
 
   function refusal(): string | null {
     if (!mutation.isError) return null;
-    return isVersionSkewOf(mutation.error)
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t);
+    return problemMessageOf(mutation.error, t);
   }
 
   function submit() {

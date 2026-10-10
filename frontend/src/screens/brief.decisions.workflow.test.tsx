@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useNow } from "../format/now";
 import { en } from "../i18n/en";
-import { usePendingApprovals } from "./approvals.queries";
+import { type Approval, usePendingApprovals } from "./approvals.queries";
 import { DecisionsSection } from "./brief.decisions";
 import { deckItems } from "./brief.decisions.items";
 import {
@@ -40,6 +40,25 @@ function ApprovalTray() {
     />
   );
 }
+
+// Approves one staged item from the deck against a server that lost the race.
+async function approveIntoSkew(staged: Approval) {
+  stubApi({
+    "GET /approvals": () => pendingPage([staged], new Set()),
+    [`POST /approvals/${staged.id}/approve`]: () =>
+      jsonResponse({ title: "Conflict", code: "version_skew" }, 409),
+  });
+  const user = userEvent.setup();
+  render(<ApprovalTray />);
+  await user.click(await screen.findByRole("button", { name: "Deck" }));
+
+  await screen.findByText(staged.summary ?? "");
+  await user.click(screen.getByRole("button", { name: "Approve" }));
+  await user.click(
+    screen.getByRole("button", { name: "Send staged decisions" }),
+  );
+}
+
 describe("ApprovalTray — the deck stages, and only the commit sends", () => {
   it("stages three verdicts without a single write, then sends exactly the two that are verdicts", async () => {
     const queue = [
@@ -283,6 +302,28 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
       "POST /approvals/ap-1/approve",
       "POST /approvals/ap-2/approve",
     ]);
+  });
+
+  // A staging whose record moved needs staging again. The sentence for a lost
+  // record edit would not say so.
+  it("says a verdict on a moved staging needs staging again", async () => {
+    await approveIntoSkew(proposal("ap-1", "Send the Weber follow-up"));
+
+    expect(
+      (await screen.findAllByText(en["decision.versionSkew"])).length,
+    ).toBeGreaterThan(0);
+  });
+
+  // A rate proposal is not staged by hand: its remedy is a fresh refresh.
+  it("sends a rate proposal that lost its race back to the refresh", async () => {
+    await approveIntoSkew(
+      proposal("ap-1", "Update the EUR rate", { kind: "fx_rate_proposal" }),
+    );
+
+    expect(
+      (await screen.findAllByText(en["decision.fxRateMoved"])).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(en["decision.versionSkew"])).toBeNull();
   });
 
   // The approve still mints a token — an agent redeems its own staging with

@@ -4864,6 +4864,7 @@ public.lead_disqualify_reason.system boolean NOT NULL gen=- def=false
 public.lead_disqualify_reason.trg_lead_disqualify_reason_updated CREATE TRIGGER trg_lead_disqualify_reason_updated BEFORE UPDATE ON public.lead_disqualify_reason FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.lead_disqualify_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_disqualify_reason.version bigint NOT NULL gen=- def=1
+public.lead_disqualify_reason_label_once CREATE UNIQUE INDEX lead_disqualify_reason_label_once ON public.lead_disqualify_reason USING btree (lower(btrim(label)))
 public.lead_disqualify_reason_pkey CREATE UNIQUE INDEX lead_disqualify_reason_pkey ON public.lead_disqualify_reason USING btree (id)
 public.lead_manual_signal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead_manual_signal.band text NOT NULL gen=- def=-

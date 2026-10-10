@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale } from "../i18n";
-import { Badge, Button } from "./atoms";
+import { Badge, Button, OverflowMenu } from "./atoms";
 import type { ListChip } from "./listsurface";
 import { CellStrip, type ListColumn, ListTable } from "./listtable";
 import { SelectionBar } from "./selectionbar";
@@ -111,6 +111,7 @@ function Surface({
   pending?: boolean;
   problem?: ReactNode;
   hasMore?: boolean;
+  hideShortPager?: boolean;
   caption?: string;
   note?: string;
   /** The caller's sentence under the empty line, for the story that shows it. */
@@ -514,4 +515,69 @@ export const CellStrips: Story = {
       />
     </div>
   ),
+};
+
+// A list that fits the smallest page size has no pages to walk. A caller that
+// opts in draws no pager under it.
+export const ShortListWithoutPager: Story = {
+  render: () => <Surface rows={companies(12)} hideShortPager />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Sort by Company" });
+    await expect(
+      canvas.queryByRole("combobox", { name: "Rows per page" }),
+    ).toBeNull();
+  },
+};
+
+// Past the smallest page size the pager stays, even once a larger size fits
+// every row, so the reader can always take that size back.
+export const LongerListKeepsPager: Story = {
+  render: () => <Surface rows={companies(40)} hideShortPager />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("navigation", { name: "Pages" });
+    await expect(
+      canvas.getByRole("combobox", { name: "Rows per page" }),
+    ).toBeVisible();
+  },
+};
+
+const menuColumns: ListColumn<Company>[] = [
+  ...columns.slice(0, 3),
+  {
+    key: "menu",
+    header: "Actions",
+    verbs: "menu",
+    cell: (row: Company) => (
+      <OverflowMenu label={`Actions for ${row.name}`}>
+        <Button>Edit</Button>
+        <Button variant="danger">Archive</Button>
+      </OverflowMenu>
+    ),
+  },
+];
+
+async function openRowMenu({ canvasElement }: { canvasElement: HTMLElement }) {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("button", { name: "Actions for Company 01" }),
+  );
+  await within(document.body).findByRole("button", { name: "Edit" });
+}
+
+// Several verbs per row fold into one trailing menu. Its heading is read and
+// never drawn, so forced colours show nothing over the column either.
+export const RowMenu: Story = {
+  render: () => <Surface rows={companies(4)} columns={menuColumns} />,
+  play: openRowMenu,
+};
+
+// On a phone each row is a card, and the menu keeps its corner of it.
+export const RowMenuOnPhone: Story = {
+  render: () => <Surface rows={companies(4)} columns={menuColumns} />,
+  play: openRowMenu,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

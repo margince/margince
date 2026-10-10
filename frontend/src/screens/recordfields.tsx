@@ -22,12 +22,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
 import { derivedRecordKeys } from "./activitykeys";
-import {
-  ProblemError,
-  problemCodeOf,
-  problemExistingId,
-  problemMessageOf,
-} from "./common";
+import { ProblemError, problemExistingId, problemMessageOf } from "./common";
 import {
   type CreateField,
   type FormRows,
@@ -163,18 +158,7 @@ function RecordField({
       rows: FormRows;
       baseline: FieldRecord;
       save: RecordFieldSave;
-    }) => {
-      try {
-        return await save(values, rows, baseline);
-      } catch (error) {
-        if (problemCodeOf(error) === "version_skew")
-          throw new ProblemError({
-            code: "version_skew",
-            detail: t("edit.versionSkew"),
-          });
-        throw error;
-      }
-    },
+    }) => save(values, rows, baseline),
     onSuccess: async () => {
       await Promise.all([
         invalidateRecord(qc, props.kind, props.record.id),

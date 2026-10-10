@@ -140,6 +140,9 @@ func fxRateAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.Ap
 	}
 }
 
+// fxRefreshAdvice is the remedy both refusals name, as the web's decision.fxRateMoved does.
+const fxRefreshAdvice = "Refresh the rates from their sources for a current proposal."
+
 // fxPriorMatches enforces the proposal's precondition: the rate in force now
 // must be exactly the one the diff was computed against (numerically — the
 // sheet stores scale-10 text). An empty ExpectedPriorRate asserts "none was
@@ -152,10 +155,12 @@ func fxPriorMatches(p fxRateProposal, prior string, found bool) error {
 	case found && p.ExpectedPriorRate != "" && sameRate(prior, p.ExpectedPriorRate):
 		return nil
 	case !found:
-		return fmt.Errorf("the %s rate the proposal was diffed against is no longer in force — re-run the refresh: %w",
-			p.FromCurrency, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"The %s exchange rate this proposal was made against is no longer in force, so it was not applied. "+
+				fxRefreshAdvice, p.FromCurrency)}
 	default:
-		return fmt.Errorf("the %s rate changed since the proposal was diffed (now %s) — re-run the refresh: %w",
-			p.FromCurrency, prior, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"The %s exchange rate changed to %s after this proposal was made, so it was not applied. "+
+				fxRefreshAdvice, p.FromCurrency, prior)}
 	}
 }

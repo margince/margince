@@ -773,7 +773,7 @@ test("says a concurrent edit happened rather than printing the sentinel", async 
     />,
   );
   await user.click(await screen.findByRole("button", { name: /^Confirm$/ }));
-  await screen.findByText(/changed since it was opened/);
+  await screen.findByText(/changed after you opened it/);
   expect(screen.queryByText("version skew")).toBeNull();
 });
 

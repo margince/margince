@@ -19,13 +19,7 @@ import {
 import { Select } from "../design-system/select";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import {
-  isVersionSkewOf,
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-} from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import {
   EMPTY_LINE_BILLING,
   type LineBilling,
@@ -182,11 +176,8 @@ function EditOfferHeaderModal({
     },
   });
 
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : null;
 
   return (
@@ -508,12 +499,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
 
   const activeError =
     addMutation.error ?? updateMutation.error ?? removeMutation.error;
-  const skew = isVersionSkewOf(activeError);
-  const errorMessage = activeError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(activeError, t)
-    : null;
+  const errorMessage = activeError ? problemMessageOf(activeError, t) : null;
 
   const saveLine =
     (lineItemId: string) => (patch: UpdateOfferLineItemRequest) => {
@@ -786,11 +772,8 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     },
   });
 
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : null;
 
   return (
@@ -851,11 +834,8 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     },
   });
 
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : null;
 
   return (
@@ -919,11 +899,8 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     },
   });
 
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : null;
 
   return (

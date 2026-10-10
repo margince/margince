@@ -32657,6 +32657,8 @@ export interface components {
             active: boolean;
             /** @description Seeded with the installation. Fully editable; it simply cannot be removed. */
             readonly system: boolean;
+            /** @description Live deals carrying this key that the caller may see. Absent when the caller may not read deals, because a zero would claim no deal carries it. Set on the list read; absent on the record a write answers. */
+            readonly deal_count?: number;
             /** Format: int64 */
             readonly version: number;
             /** Format: date-time */
@@ -33821,6 +33823,8 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /** @description How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read that asks `with_carried_by`; absent otherwise. */
+            readonly carried_by?: number;
         };
         CreateTagRequest: {
             name: string;
@@ -51340,6 +51344,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listTransitionPolicies: {
@@ -56400,6 +56405,15 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
+            /** @description Another reason already holds this label, compared trimmed and ignoring case. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -56472,6 +56486,15 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description Another reason already holds this label, compared trimmed and ignoring case. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58724,6 +58747,8 @@ export interface operations {
             query?: {
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
+                /** @description Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in the workspace, so a caller that only needs the words leaves it off. */
+                with_carried_by?: boolean;
             };
             header?: never;
             path?: never;

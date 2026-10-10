@@ -27,7 +27,7 @@ import { readStoredJson, STORAGE_KEYS, writeStored } from "../app/storage";
 type ColumnSize = Readonly<{ share: number | null; min: number }>;
 
 const COLUMN_SIZES: Readonly<
-  Record<"identity" | "numeric" | "standard" | "verbs", ColumnSize>
+  Record<"identity" | "numeric" | "standard" | "verbs" | "menu", ColumnSize>
 > = {
   identity: { share: 2.4, min: 200 },
   numeric: { share: 0.9, min: 110 },
@@ -35,6 +35,8 @@ const COLUMN_SIZES: Readonly<
   // Two labelled ghost buttons side by side in the longest locale this tree
   // ships: German turns "Edit product" into "Produkt bearbeiten".
   verbs: { share: null, min: 320 },
+  // The 32px "…" square inside the cell's 12px padding either side.
+  menu: { share: null, min: 56 },
 };
 
 /** The column flags that decide a column's size. */
@@ -42,7 +44,7 @@ export type SizedColumn = Readonly<{
   key: string;
   fixed?: boolean;
   numeric?: boolean;
-  verbs?: boolean;
+  verbs?: boolean | "menu";
 }>;
 
 /**
@@ -66,7 +68,7 @@ function sizeOf(column: SizedColumn): ColumnSize {
     return COLUMN_SIZES.identity;
   }
   if (column.verbs) {
-    return COLUMN_SIZES.verbs;
+    return column.verbs === "menu" ? COLUMN_SIZES.menu : COLUMN_SIZES.verbs;
   }
   return column.numeric ? COLUMN_SIZES.numeric : COLUMN_SIZES.standard;
 }
@@ -133,14 +135,16 @@ export type ColumnLayout = Readonly<{
  * `<col>` under fixed layout takes a bare percentage only, so no minimum fits.
  *
  * Dragged columns and verb columns keep their pixels. The rest divide what is
- * left by their shares, so hiding a column widens the others.
+ * left by their shares, so hiding a column widens the others. A share under
+ * its minimum holds the minimum and the others divide the rest, so the row
+ * fits any box with room for every minimum.
  */
 export function columnLayout(
   shown: readonly SizedColumn[],
   widths: Widths,
   available: number,
 ): ColumnLayout {
-  const pinnedWidth = (column: SizedColumn) => {
+  const fixedWidth = (column: SizedColumn) => {
     const resized = widths[column.key];
     if (resized) {
       return resized;
@@ -148,30 +152,45 @@ export function columnLayout(
     const { share, min } = sizeOf(column);
     return share === null ? min : undefined;
   };
+  const shared = shown.filter((column) => fixedWidth(column) === undefined);
+  const floored = new Set<string>();
+  const pinnedWidth = (column: SizedColumn) =>
+    fixedWidth(column) ??
+    (floored.has(column.key) ? sizeOf(column).min : undefined);
   const shareOf = (column: SizedColumn) =>
     pinnedWidth(column) === undefined ? (sizeOf(column).share ?? 0) : 0;
-  const shares = shown.reduce((total, column) => total + shareOf(column), 0);
+  const sum = (of: (column: SizedColumn) => number) =>
+    shown.reduce((total, column) => total + of(column), 0);
   // The shares divide what the pinned columns leave, not the whole width, or
   // the last column would be pushed off the edge.
-  const claimed = shown.reduce(
-    (total, column) => total + (pinnedWidth(column) ?? 0),
-    0,
-  );
-  const spare = Math.max(0, available - claimed);
+  const spareOf = () =>
+    Math.max(0, available - sum((column) => pinnedWidth(column) ?? 0));
+  const shortOf = () =>
+    shared.filter(
+      (column) =>
+        !floored.has(column.key) &&
+        (spareOf() * shareOf(column)) / sum(shareOf) < sizeOf(column).min,
+    );
+  for (let short = shortOf(); short.length > 0; short = shortOf()) {
+    for (const column of short) {
+      floored.add(column.key);
+    }
+  }
+  const shares = sum(shareOf);
+  const spare = spareOf();
   // Not rounded: rounding each column up makes the table wider than its box,
   // which draws a scrollbar over nothing.
   const widthPxOf = (column: SizedColumn) =>
-    pinnedWidth(column) ??
-    Math.max(sizeOf(column).min, (spare * shareOf(column)) / shares);
+    pinnedWidth(column) ?? (spare * shareOf(column)) / shares;
   return {
     widthOf: (column) =>
       shares <= 0 && pinnedWidth(column) === undefined
         ? undefined
         : `${widthPxOf(column)}px`,
-    floor: shown.reduce((total, column) => total + widthPxOf(column), 0),
+    floor: sum(widthPxOf),
     // Once every column is pinned narrower than the page, a trailing gap takes
     // the rest. Handing it back to the columns would undo the widths just set.
-    slack: shares === 0 ? undefined : "0px",
+    slack: shared.length === 0 ? undefined : "0px",
   };
 }
 

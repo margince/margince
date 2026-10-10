@@ -83,7 +83,7 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
   return (
     <>
       <OverflowMenu
-        label={t("users.rowActions", { name: member.display_name })}
+        label={t("table.rowActions", { name: member.display_name })}
       >
         {canMintLink && (
           <Button disabled={pending} onClick={openLink}>

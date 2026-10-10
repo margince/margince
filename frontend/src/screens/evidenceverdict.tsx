@@ -8,7 +8,7 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { isVersionSkewOf, problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
@@ -190,15 +190,8 @@ export function EvidenceVerdict({
       await settle();
     },
   });
-  // Losing the race is the one refusal a precondition creates, and the server
-  // states it as the bare sentinel `version skew` — two words naming a concept
-  // no reader has met. The catalog says what happened and what to do instead.
   const reasonFor = (failure: Error | null) =>
-    failure === null
-      ? undefined
-      : isVersionSkewOf(failure)
-        ? t("edit.versionSkew")
-        : problemMessageOf(failure, t);
+    failure === null ? undefined : problemMessageOf(failure, t);
   const corrected = reasonFor(correct.error);
   const confirmed = reasonFor(confirm.error);
 

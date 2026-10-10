@@ -729,6 +729,7 @@ export function ListTable<Row>({
   bodyOwnsPaging = false,
   bodyCount,
   selection,
+  hideShortPager,
 }: Readonly<{
   /**
    * The page's own name, for a screen where this table IS the page. Handed
@@ -751,6 +752,8 @@ export function ListTable<Row>({
   bodyOwnsPaging?: boolean;
   /** The count for a body that pages itself — see the design-system table. */
   bodyCount?: ReactNode;
+  /** See the design-system table's own `hideShortPager`. */
+  hideShortPager?: boolean;
   /**
    * Where a row's record lives. One declaration drives both ways in: clicking
    * the row navigates, and the identity cell becomes a real link that opens in
@@ -1053,6 +1056,7 @@ export function ListTable<Row>({
           : undefined
       }
       hasMore={state.hasMore}
+      hideShortPager={hideShortPager}
       onLoadMore={state.loadMore}
       total={state.total}
       // The page size is part of the server query, not a second slice on top

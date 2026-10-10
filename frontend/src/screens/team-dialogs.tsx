@@ -6,17 +6,12 @@ import { UserMinus } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import {
-  Avatar,
-  Button,
-  Field,
-  Modal,
-  TextInput,
-} from "../design-system/atoms";
+import { Avatar, Button, Field, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
+import { NameDialog, nameRefusal } from "../design-system/namedialog";
 import { useToast } from "../design-system/toast";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
@@ -235,7 +230,6 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
   const toast = useToast();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(team.name);
   const rename = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       unwrap(
@@ -251,101 +245,31 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
       toast.show(t("users.teamRenamed", { name }));
     },
   });
-  const name = draft.trim();
+  const renameRefused = nameRefusal(rename.error, t, "users.teamDuplicate");
   return (
     <>
       <Button
         onClick={() => {
-          setDraft(team.name);
           rename.reset();
           setOpen(true);
         }}
       >
         {t("users.teamRename")}
       </Button>
-      <TeamNameDialog
+      <NameDialog
         open={open}
         onClose={() => setOpen(false)}
         title={t("users.teamRenameTitle")}
-        submitLabel={t("users.teamRenameSave")}
-        refusedTitle={t("users.notRenamed")}
-        draft={draft}
-        onDraft={setDraft}
-        ready={name !== "" && name !== team.name && !rename.isPending}
-        error={rename.isError ? rename.error : null}
+        label={t("users.teamNameLabel")}
+        initial={team.name}
+        placeholder={t("users.newTeamPlaceholder")}
+        confirmLabel={t("users.teamRenameSave")}
         pending={rename.isPending}
-        onSubmit={() => rename.mutate({ id: team.id, name })}
+        problem={renameRefused.problem}
+        nameProblem={renameRefused.nameProblem}
+        onSave={(name) => rename.mutate({ id: team.id, name })}
       />
     </>
-  );
-}
-
-// The one dialog a team's name is typed into, new or renamed. It closes only on
-// the write that landed, so a refusal keeps the name where it was typed.
-function TeamNameDialog({
-  open,
-  onClose,
-  title,
-  submitLabel,
-  refusedTitle,
-  draft,
-  onDraft,
-  ready,
-  error,
-  pending,
-  onSubmit,
-}: Readonly<{
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  submitLabel: string;
-  refusedTitle: string;
-  draft: string;
-  onDraft: (name: string) => void;
-  ready: boolean;
-  error: Error | null;
-  pending: boolean;
-  onSubmit: () => void;
-}>) {
-  const t = useT();
-  const titleId = useId();
-  const formId = useId();
-  return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="form">
-      <Heading size="large" className="t-h3 modal-title" id={titleId}>
-        {title}
-      </Heading>
-      <form
-        id={formId}
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (ready) onSubmit();
-        }}
-      >
-        <Field label={t("users.teamNameLabel")} required>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={draft}
-              placeholder={t("users.newTeamPlaceholder")}
-              disabled={pending}
-              onChange={(event) => onDraft(event.target.value)}
-            />
-          )}
-        </Field>
-        {error && (
-          <Callout tone="danger" kind="outcome" title={refusedTitle}>
-            {problemMessageOf(error, t)}
-          </Callout>
-        )}
-      </form>
-      <div className="actions">
-        <Button type="submit" form={formId} variant="primary" disabled={!ready}>
-          {submitLabel}
-        </Button>
-      </div>
-    </Modal>
   );
 }
 
@@ -354,18 +278,16 @@ export function NewTeamAction() {
   const t = useT();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState("");
   const create = useMutation({
     mutationFn: async (name: string) => {
       return unwrap(await api.POST("/teams", { body: { name } }));
     },
     onSuccess: () => {
-      setDraft("");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["teams"] });
     },
   });
-  const name = draft.trim();
+  const createRefused = nameRefusal(create.error, t, "users.teamDuplicate");
   return (
     <>
       {/* Named for what it opens; the dialog's submit reads "Create team". */}
@@ -377,18 +299,17 @@ export function NewTeamAction() {
       >
         {t("users.newTeamOpen")}
       </Button>
-      <TeamNameDialog
+      <NameDialog
         open={open}
         onClose={() => setOpen(false)}
         title={t("users.newTeamLabel")}
-        submitLabel={t("users.createTeam")}
-        refusedTitle={t("users.notCreated")}
-        draft={draft}
-        onDraft={setDraft}
-        ready={name !== "" && !create.isPending}
-        error={create.isError ? create.error : null}
+        label={t("users.teamNameLabel")}
+        placeholder={t("users.newTeamPlaceholder")}
+        confirmLabel={t("users.createTeam")}
         pending={create.isPending}
-        onSubmit={() => create.mutate(name)}
+        problem={createRefused.problem}
+        nameProblem={createRefused.nameProblem}
+        onSave={(name) => create.mutate(name)}
       />
     </>
   );

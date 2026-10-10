@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en } from "../i18n/en";
 import { ReportingComparison } from "./reporting.comparison";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -163,10 +164,9 @@ it("refreshes stale live evidence rather than silently displaying new source row
       />
     </StoryProviders>,
   );
-  expect(
-    await screen.findByText("Refresh the evaluated reading"),
-  ).toBeVisible();
-  await user.click(screen.getAllByRole("button", { name: "Retry" })[0]);
+  expect(await screen.findByText(en["reporting.evidenceStale"])).toBeVisible();
+  expect(screen.queryByText("Refresh the evaluated reading")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Retry" }));
   await waitFor(() => expect(close).toHaveBeenCalledOnce());
 });
 
@@ -192,6 +192,34 @@ it.each([undefined, "edition-september"])(
     ).toBeVisible();
   },
 );
+
+it("says a stale export reloads the report, not that a record changed", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/evaluate.csv": () =>
+      jsonResponse(
+        {
+          status: 409,
+          code: "version_skew",
+          detail: "Refresh the evaluated reading",
+        },
+        409,
+      ),
+  });
+  render(
+    <StoryProviders>
+      <ReportingExportButton evaluation={reportingStoryEvaluation} />
+    </StoryProviders>,
+  );
+  await user.click(screen.getByRole("button", { name: "Export CSV" }));
+  expect(await screen.findByText(en["reporting.exportStale"])).toBeVisible();
+  expect(screen.queryByText(en["common.versionSkew"])).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() =>
+    expect(screen.queryByText(en["reporting.exportStale"])).toBeNull(),
+  );
+});
 
 it("shows a refused reporting setup instead of an empty editor", async () => {
   const user = userEvent.setup({ delay: null });

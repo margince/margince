@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+.reviewtemplate-head-end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Straight in the Panel, so each question row runs to the pane's edges. */
+.reviewtemplate-questions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reviewtemplate-question {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.reviewtemplate-number {
+  min-width: 2ch;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.reviewtemplate-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The next template's head starts a new group, so a rule spans the pane above it. */
+.panel > .reviewtemplate-questions + .panel-grouphead::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: var(--borderSubtle);
+}

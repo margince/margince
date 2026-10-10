@@ -40,6 +40,8 @@ export type CommitResult = Readonly<{
    * landed.
    */
   failure: unknown | null;
+  /** The failed approval's kind, which words its failure; null for a bundle. */
+  failedKind: string | null;
 }>;
 
 /**
@@ -152,6 +154,7 @@ export async function commitTray(input: {
   let alreadyDecided = false;
   let edits = 0;
   let failure: unknown | null = null;
+  let failedKind: string | null = null;
   for (const decision of input.staged) {
     const item = byId.get(decision.id);
     if (!item || decision.verdict === "skip") {
@@ -170,8 +173,9 @@ export async function commitTray(input: {
       // whatever made this one fail. What already went, went, and the result
       // says so rather than the throw erasing it.
       failure = error;
+      failedKind = item.kind === "single" ? item.approval.kind : null;
       break;
     }
   }
-  return { alreadyDecided, edits, failure };
+  return { alreadyDecided, edits, failure, failedKind };
 }

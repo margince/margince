@@ -2,10 +2,10 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import { Badge } from "../design-system/atoms";
+import { Badge, OverflowMenu } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { useT } from "../i18n";
+import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";
 import { unwrap, useMe } from "./common";
@@ -48,40 +48,46 @@ async function fetchTemplatesPage(
   };
 }
 
-const LOCALE_OPTIONS = [
-  { value: "de-DE", label: "de-DE" },
-  { value: "en-US", label: "en-US" },
-];
-
-const LOCALE_FILTER_OPTIONS: { value: string; label: MessageKey }[] = [
+const LOCALE_OPTIONS: { value: string; label: MessageKey }[] = [
   { value: "de-DE", label: "template.localeDE" },
   { value: "en-US", label: "template.localeEN" },
 ];
 
-const TEMPLATE_FIELDS: CreateField[] = [
-  { key: "name", label: "template.name", required: true },
-  {
-    key: "locale",
-    label: "template.locale",
-    type: "select",
-    required: true,
-    options: LOCALE_OPTIONS,
-  },
-  {
-    key: "is_default",
-    label: "template.isDefault",
-    type: "select",
-    required: true,
-    options: [
-      { value: "false", label: "false" },
-      { value: "true", label: "true" },
-    ],
-  },
-  // The offer PDF prints these two layout keys by exactly these names;
-  // backend/gates/offertemplatelayout_test.go holds the spellings together.
-  { key: "header", label: "template.header" },
-  { key: "footer", label: "template.footer" },
-];
+function languageOf(locale: string, t: Translator): string {
+  const known = LOCALE_OPTIONS.find((option) => option.value === locale);
+  return known ? t(known.label) : locale;
+}
+
+// Built per render: option labels are shown as given, so they arrive translated.
+function templateFields(t: Translator): CreateField[] {
+  return [
+    { key: "name", label: "template.name", required: true },
+    {
+      key: "locale",
+      label: "template.locale",
+      type: "select",
+      required: true,
+      options: LOCALE_OPTIONS.map(({ value, label }) => ({
+        value,
+        label: t(label),
+      })),
+    },
+    {
+      key: "is_default",
+      label: "template.isDefault",
+      type: "select",
+      required: true,
+      options: [
+        { value: "false", label: t("field.no") },
+        { value: "true", label: t("field.yes") },
+      ],
+    },
+    // The offer PDF prints these two layout keys by these names;
+    // backend/gates/offertemplatelayout_test.go holds the spellings together.
+    { key: "header", label: "template.header" },
+    { key: "footer", label: "template.footer" },
+  ];
+}
 
 /**
  * The offer shells an offer is built from, as a section of Settings → Data model.
@@ -111,6 +117,7 @@ export function OfferTemplatesAdmin() {
     initialSort: "name",
     paramScope: "templates",
   });
+  const fields = templateFields(t);
 
   const createTemplate = async (values: Record<string, string>) => {
     return unwrap(
@@ -152,52 +159,54 @@ export function OfferTemplatesAdmin() {
   // them does: an emptied actions column would still take width, carry a header
   // and appear in the column picker, which reads as a table that lost its
   // buttons rather than as a permission.
-  const rowActions: ListColumn<OfferTemplate> = {
+  const rowMenu: ListColumn<OfferTemplate> = {
     key: "actions",
     header: t("table.actions"),
-    // Sized by its verbs rather than by a share of the page — see the same
-    // column on the products table beside it (listtable.tsx, COLUMN_SIZES.verbs).
-    verbs: true,
+    verbs: "menu",
     cell: (tpl: OfferTemplate) => (
-      <div className="listsection-rowverbs">
-        {canUpdate && (
-          <EditAction
-            label={t("template.edit")}
-            savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-            invalidate="offer-templates"
-            recordKey="offer-template"
-            record={{
-              ...tpl,
-              is_default: String(tpl.is_default),
-              // layout is already an index signature on the contract type, so
-              // its members read straight off it — a cast here would only be
-              // re-asserting what the schema states.
-              header: tpl.layout.header ?? "",
-              footer: tpl.layout.footer ?? "",
-            }}
-            update={updateTemplate(tpl)}
-            fields={TEMPLATE_FIELDS}
-          />
-        )}
-        {canArchive && (
-          <ArchiveAction
-            label={t("template.archive")}
-            confirmText={t("template.archiveConfirm")}
-            archivedMessage={t("record.archiveDone", { name: tpl.name })}
-            invalidate="offer-templates"
-            recordKey="offer-template"
-            onArchived={() => list.refetch()}
-            archive={async () => {
-              const data = unwrap(
-                await api.DELETE("/offer-templates/{id}", {
-                  params: { path: { id: tpl.id } },
-                }),
-              );
-              return data ?? tpl;
-            }}
-          />
-        )}
-      </div>
+      <span className="cell-actions">
+        <OverflowMenu label={t("table.rowActions", { name: tpl.name })}>
+          {canUpdate && (
+            <EditAction
+              labelled
+              label={t("template.edit")}
+              savedMessage={(saved) =>
+                t("record.saveDone", { name: saved.name })
+              }
+              invalidate="offer-templates"
+              recordKey="offer-template"
+              record={{
+                ...tpl,
+                is_default: String(tpl.is_default),
+                // The contract types layout as an index signature, so its
+                // members read straight off it. A cast would restate the schema.
+                header: tpl.layout.header ?? "",
+                footer: tpl.layout.footer ?? "",
+              }}
+              update={updateTemplate(tpl)}
+              fields={fields}
+            />
+          )}
+          {canArchive && (
+            <ArchiveAction
+              label={t("template.archive")}
+              confirmText={t("template.archiveConfirm")}
+              archivedMessage={t("record.archiveDone", { name: tpl.name })}
+              invalidate="offer-templates"
+              recordKey="offer-template"
+              onArchived={() => list.refetch()}
+              archive={async () => {
+                const data = unwrap(
+                  await api.DELETE("/offer-templates/{id}", {
+                    params: { path: { id: tpl.id } },
+                  }),
+                );
+                return data ?? tpl;
+              }}
+            />
+          )}
+        </OverflowMenu>
+      </span>
     ),
   };
 
@@ -220,6 +229,7 @@ export function OfferTemplatesAdmin() {
       </PanelBody>
       <ListTable
         state={list}
+        hideShortPager
         unit="unit.offerTemplates"
         searchable={false}
         action={
@@ -233,7 +243,7 @@ export function OfferTemplatesAdmin() {
               screen="settings"
               stay
               create={createTemplate}
-              fields={TEMPLATE_FIELDS}
+              fields={fields}
             />
           ) : undefined
         }
@@ -249,18 +259,16 @@ export function OfferTemplatesAdmin() {
             key: "locale",
             header: t("template.locale"),
             sort: "locale",
-            cell: (tpl: OfferTemplate) => tpl.locale,
+            cell: (tpl: OfferTemplate) => languageOf(tpl.locale, t),
           },
           {
             key: "is_default",
-            header: t("template.isDefault"),
+            header: t("template.default"),
             sort: "is_default",
             cell: (tpl: OfferTemplate) =>
-              tpl.is_default ? (
-                <Badge tone="success">{t("template.isDefault")}</Badge>
-              ) : null,
+              tpl.is_default ? <Badge>{t("template.default")}</Badge> : null,
           },
-          ...(canUpdate || canArchive ? [rowActions] : []),
+          ...(canUpdate || canArchive ? [rowMenu] : []),
         ]}
         rowKey={(tpl) => tpl.id}
         chips={[
@@ -268,7 +276,7 @@ export function OfferTemplatesAdmin() {
             key: "locale",
             label: "template.localeFilter",
             allLabel: "template.localeFilterAll",
-            options: LOCALE_FILTER_OPTIONS,
+            options: LOCALE_OPTIONS,
           },
         ]}
       />

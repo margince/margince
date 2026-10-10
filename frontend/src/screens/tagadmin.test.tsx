@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import {
   cleanup,
   render,
+  renderHook,
   screen,
   waitFor,
   within,
@@ -15,7 +16,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TAG_TONES } from "../design-system/tagpill";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { translate } from "../i18n";
 import { en } from "../i18n/en";
+import { useSentenceWords } from "./filtersentence";
 import {
   installFetchStub,
   jsonResponse,
@@ -34,6 +38,7 @@ const KEY_ACCOUNT = {
   name: "Key Account",
   color: "amber",
   version: 3,
+  carried_by: 7,
 };
 const RETIRED = {
   id: "t-2",
@@ -41,14 +46,16 @@ const RETIRED = {
   name: "Trade Fair 2025",
   version: 1,
   archived_at: "2026-01-01T00:00:00Z",
+  carried_by: 0,
 };
 
 const ADMIN = { tag: ["read", "create", "update", "delete"] };
 
-function mount(
+function routeTags(
   words: readonly unknown[],
-  grants: Record<string, string[]> = ADMIN,
-  extra: RouteMap = {},
+  grants: Record<string, string[]>,
+  extra: RouteMap,
+  asked: URL[],
 ) {
   installFetchStub({
     "GET /me": meRoute(grants as never),
@@ -57,23 +64,50 @@ function mount(
         data: words,
         page: { has_more: false, next_cursor: null },
       }),
-    "GET /tags/t-1": () =>
-      jsonResponse({
-        ...KEY_ACCOUNT,
-        usage: { contacts: 4, companies: 2, deals: 1, leads: 0 },
-      }),
-    "GET /tags/t-2": () =>
-      jsonResponse({
-        ...RETIRED,
-        usage: { contacts: 0, companies: 0, deals: 0, leads: 0 },
-      }),
     ...extra,
   });
+  const routed = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    asked.push(new URL(url, "http://localhost"));
+    return routed(input, init);
+  };
+}
+
+function mount(
+  words: readonly unknown[],
+  grants: Record<string, string[]> = ADMIN,
+  extra: RouteMap = {},
+  asked: URL[] = [],
+) {
+  routeTags(words, grants, extra, asked);
   render(
     <StoryProviders>
-      <TagVocabularyCard />
+      <ToastProvider>
+        <TagVocabularyCard />
+        <ToastRegion />
+      </ToastProvider>
     </StoryProviders>,
   );
+}
+
+// The row's own menu: every row offers one, and "the first menu" would pass
+// whichever row it opened.
+async function openRowMenu(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  const trigger = await screen.findByRole("button", {
+    name: translate("en", "table.rowActions", { name }),
+  });
+  await user.click(trigger);
+  const items = document.getElementById(
+    trigger.getAttribute("aria-controls") ?? "",
+  );
+  if (!items) {
+    throw new Error(`the menu for ${name} drew no items`);
+  }
+  return within(items);
 }
 
 afterEach(() => {
@@ -87,16 +121,48 @@ describe("the tag vocabulary card", () => {
     expect(await screen.findByText("Key Account")).toBeInTheDocument();
   });
 
+  // Counting reads every tagging, so this card asks and the filter sentence
+  // on every list page does not.
+  it("asks the list for each word's count and draws it", async () => {
+    const asked: URL[] = [];
+    mount([KEY_ACCOUNT], ADMIN, {}, asked);
+    expect(
+      await screen.findByText(
+        translate("en", "tagAdmin.usedBy_other", { count: "7" }),
+      ),
+    ).toBeInTheDocument();
+    const list = asked.find((url) => url.pathname.endsWith("/tags"));
+    expect(list?.searchParams.get("with_carried_by")).toBe("true");
+  });
+
+  it("leaves the count out of the catalog a filter sentence reads", async () => {
+    const asked: URL[] = [];
+    routeTags([], ADMIN, {}, asked);
+    renderHook(() => useSentenceWords(), { wrapper: StoryProviders });
+    await waitFor(() =>
+      expect(asked.some((url) => url.pathname.endsWith("/tags"))).toBe(true),
+    );
+    const list = asked.find((url) => url.pathname.endsWith("/tags"));
+    expect(list?.searchParams.get("include_archived")).toBe("true");
+    expect(list?.searchParams.has("with_carried_by")).toBe(false);
+  });
+
   // A retired word is restored HERE, so a list that hid it would leave the
   // verb with nothing to act on and an admin concluding the word was deleted.
-  it("lists a retired word, offering to restore rather than retire it", async () => {
+  it("lists a retired word as retired, offering to restore rather than retire it", async () => {
+    const user = userEvent.setup();
     mount([RETIRED]);
-    expect(await screen.findByText(/Trade Fair 2025/)).toBeInTheDocument();
+    const row = await screen.findByTestId("tag-t-2");
+    expect(within(row).getByText(en["tagAdmin.retired"])).toBeInTheDocument();
+    const menu = await openRowMenu(user, "Trade Fair 2025");
     expect(
-      screen.getByRole("button", { name: en["tagAdmin.restore"] }),
+      menu.getByRole("button", { name: en["tagAdmin.restore"] }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: en["tagAdmin.archive"] }),
+      menu.queryByRole("button", { name: en["tagAdmin.archive"] }),
+    ).toBeNull();
+    expect(
+      menu.queryByRole("button", { name: en["tagAdmin.edit"] }),
     ).toBeNull();
   });
 
@@ -109,7 +175,9 @@ describe("the tag vocabulary card", () => {
       screen.queryByRole("button", { name: en["tagAdmin.add"] }),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: en["tagAdmin.edit"] }),
+      screen.queryByRole("button", {
+        name: translate("en", "table.rowActions", { name: "Key Account" }),
+      }),
     ).toBeNull();
   });
 
@@ -166,27 +234,92 @@ describe("the tag vocabulary card", () => {
     expect(none.querySelector("[class*='tagpill-dot']")).toBeNull();
   });
 
-  // The count is four row-scoped queries per tag on the server, so drawing it
-  // for every row would spend hundreds opening the card to answer a question
-  // about the one word being retired.
-  it("counts a word's records only when asked", async () => {
-    const user = userEvent.setup();
-    const detail = vi.fn(() =>
-      jsonResponse({
-        ...KEY_ACCOUNT,
-        usage: { contacts: 4, companies: 2, deals: 1, leads: 0 },
-      }),
-    );
-    mount([KEY_ACCOUNT], ADMIN, { "GET /tags/t-1": detail });
-    await screen.findByText("Key Account");
+  // The count rides the list read, so the card asks nothing per word.
+  it("says how many records carry each word, from the list alone", async () => {
+    const detail = vi.fn(() => jsonResponse(KEY_ACCOUNT));
+    mount([KEY_ACCOUNT, RETIRED], ADMIN, { "GET /tags/t-1": detail });
+    const row = await screen.findByTestId("tag-t-1");
+    expect(within(row).getByText("7 records")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("tag-t-2")).getByText("0 records"),
+    ).toBeInTheDocument();
     expect(detail).not.toHaveBeenCalled();
+  });
+
+  it("retires a word at once and puts it back through Undo", async () => {
+    const user = userEvent.setup();
+    const retire = vi.fn(() => new Response(null, { status: 204 }));
+    const restore = vi.fn(() => new Response(null, { status: 204 }));
+    mount([KEY_ACCOUNT], ADMIN, {
+      "DELETE /tags/t-1": retire,
+      "POST /tags/t-1/restore": restore,
+    });
+    const menu = await openRowMenu(user, "Key Account");
+    await user.click(
+      menu.getByRole("button", { name: en["tagAdmin.archive"] }),
+    );
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const said = await screen.findByRole("status");
+    await waitFor(() =>
+      expect(said).toHaveTextContent(
+        translate("en", "tagAdmin.retiredToast", { name: "Key Account" }),
+      ),
+    );
+    expect(retire).toHaveBeenCalledTimes(1);
 
     await user.click(
-      screen.getByRole("button", { name: en["tagAdmin.countUsage"] }),
+      await within(said).findByRole("button", { name: en["common.undo"] }),
     );
+    await waitFor(() => expect(restore).toHaveBeenCalledTimes(1));
     await waitFor(() =>
-      expect(screen.getByText(/7 records/)).toBeInTheDocument(),
+      expect(screen.getByRole("status")).toHaveTextContent(
+        translate("en", "tagAdmin.restoredToast", { name: "Key Account" }),
+      ),
     );
+  });
+
+  it("keeps a refused retire on screen as a danger toast", async () => {
+    const user = userEvent.setup();
+    mount([KEY_ACCOUNT], ADMIN, {
+      "DELETE /tags/t-1": () =>
+        jsonResponse({ detail: "The tag changed since you opened it." }, 409),
+    });
+    const menu = await openRowMenu(user, "Key Account");
+    await user.click(
+      menu.getByRole("button", { name: en["tagAdmin.archive"] }),
+    );
+    expect(
+      await screen.findByText("The tag changed since you opened it."),
+    ).toBeInTheDocument();
+  });
+
+  // A second create would come back a conflict over the word the first one
+  // coined, so a double press must send one.
+  it("coins one word for a double press on Add, and closes", async () => {
+    const user = userEvent.setup();
+    // Held open, so the second press lands while the first is still in flight.
+    let answer: (response: Response) => void = () => {};
+    const coin = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    mount([KEY_ACCOUNT], ADMIN, { "POST /tags": coin });
+    await user.click(
+      await screen.findByRole("button", { name: en["tagAdmin.add"] }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(dialog.getByLabelText(en["tagAdmin.nameLabel"]), "Fresh");
+    const add = dialog.getByRole("button", { name: en["tagAdmin.create"] });
+    await user.dblClick(add);
+    await user.click(add);
+    expect(coin).toHaveBeenCalledTimes(1);
+
+    answer(jsonResponse({ id: "t-9", name: "Fresh", version: 1 }, 201));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(coin).toHaveBeenCalledTimes(1);
   });
 
   // A row read back without a version takes no write: an unpinned PATCH is
@@ -197,9 +330,8 @@ describe("the tag vocabulary card", () => {
     const user = userEvent.setup();
     const { version: _dropped, ...unversioned } = KEY_ACCOUNT;
     mount([unversioned]);
-    await user.click(
-      await screen.findByRole("button", { name: en["tagAdmin.edit"] }),
-    );
+    const menu = await openRowMenu(user, "Key Account");
+    await user.click(menu.getByRole("button", { name: en["tagAdmin.edit"] }));
     // Said before the press, not after it: there is nothing the reader can
     // retype to fix this, so offering the verb would be offering a refusal.
     expect(
@@ -221,9 +353,8 @@ describe("the tag vocabulary card", () => {
         return jsonResponse(KEY_ACCOUNT);
       },
     });
-    await user.click(
-      await screen.findByRole("button", { name: en["tagAdmin.edit"] }),
-    );
+    const menu = await openRowMenu(user, "Key Account");
+    await user.click(menu.getByRole("button", { name: en["tagAdmin.edit"] }));
     const dialog = within(await screen.findByRole("dialog"));
     await user.click(
       dialog.getByRole("checkbox", { name: en["tagAdmin.suggestibleLabel"] }),
@@ -270,15 +401,13 @@ describe("the tag vocabulary card", () => {
   it("says merge cannot be undone and releases the name", async () => {
     const user = userEvent.setup();
     mount([KEY_ACCOUNT, { ...RETIRED, archived_at: null }]);
-    // The row's OWN verb: both live words offer one, and pressing "the first
-    // Merge button" would be a test that passes whichever row it opened.
-    const row = (await screen.findByText("Key Account")).closest("li");
-    expect(row).not.toBeNull();
-    await user.click(
-      within(row as HTMLElement).getByRole("button", {
-        name: en["tagAdmin.merge"],
+    const menu = await openRowMenu(user, "Key Account");
+    await user.click(menu.getByRole("button", { name: en["tagAdmin.merge"] }));
+    expect(
+      await screen.findByRole("dialog", {
+        name: translate("en", "tagAdmin.mergeTitle", { name: "Key Account" }),
       }),
-    );
+    ).toBeInTheDocument();
     // The heading is the claim and the body is what it costs, so the released
     // name is asserted on the notice as a whole rather than on its heading.
     const warning = await screen.findByText(en["tagAdmin.mergeWarningTitle"]);

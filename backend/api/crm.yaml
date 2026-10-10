@@ -6435,6 +6435,7 @@ paths:
               schema: { $ref: '#/components/schemas/StageAutomationReport' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------- /stage-automation/policies/{id} ----------------------
   /stage-automation/policies/{id}:
@@ -10631,6 +10632,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LeadDisqualifyReason' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Another reason already holds this label, compared trimmed and ignoring case.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /lead-disqualify-reasons/{id}:
@@ -10657,6 +10663,11 @@ paths:
               schema: { $ref: '#/components/schemas/LeadDisqualifyReason' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Another reason already holds this label, compared trimmed and ignoring case.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Leads]
@@ -12903,6 +12914,13 @@ paths:
       x-mcp-tool: { verb: list_tags, record_type: tag, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/IncludeArchived'
+        - name: with_carried_by
+          in: query
+          schema: { type: boolean, default: false }
+          description: >
+            Also count, per tag, the records this caller may see carrying it, as `carried_by`.
+            The count reads every tagging in the workspace, so a caller that only needs the words
+            leaves it off.
       responses:
         '200':
           description: Tags.
@@ -44480,6 +44498,14 @@ components:
           type: boolean
           readOnly: true
           description: Seeded with the installation. Fully editable; it simply cannot be removed.
+        deal_count:
+          type: integer
+          readOnly: true
+          minimum: 0
+          description: >-
+            Live deals carrying this key that the caller may see. Absent when the caller may not
+            read deals, because a zero would claim no deal carries it. Set on the list read;
+            absent on the record a write answers.
         version: { type: integer, format: int64, readOnly: true }
         created_at: { type: string, format: date-time, readOnly: true }
         updated_at: { type: string, format: date-time, readOnly: true }
@@ -45748,6 +45774,15 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        carried_by:
+          type: integer
+          readOnly: true
+          minimum: 0
+          description: >
+            How many live contacts, companies, deals and leads carry this tag, as THIS caller may
+            see them: a type the caller may not read counts nothing, and within a readable type
+            only the rows the caller's scope admits are counted. The sum of the tag page's
+            `usage`. Set on the list read that asks `with_carried_by`; absent otherwise.
 
     CreateTagRequest:
       type: object
@@ -50045,6 +50080,7 @@ components:
         score: { type: [number, 'null'], description: Relevance score. }
         carried_by:
           type: [integer, 'null']
+          minimum: 0
           description: >
             For a `tag` hit only: how many contacts, companies, deals and leads carry this
             word, as THIS caller may see them — the same types the tag page counts and the

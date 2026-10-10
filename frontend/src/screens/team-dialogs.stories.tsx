@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { viewerZone } from "../format/timezone";
+import { en } from "../i18n/en";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import {
   RenameTeamAction,
@@ -140,5 +141,41 @@ export const RenameDialog: Story = {
       await within(canvasElement).findByRole("button", { name: "Rename" }),
     );
     await within(document.body).findByRole("dialog");
+  },
+};
+
+// A name another team holds is refused on the field, in the reader's words.
+export const RenameDuplicate: Story = {
+  render: () => {
+    installFetchStub({
+      "PATCH /teams/t-1": () =>
+        jsonResponse(
+          {
+            type: "about:blank",
+            title: "Conflict",
+            status: 409,
+            code: "conflict",
+            detail: 'conflict: a team named "Nord" already exists',
+          },
+          409,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <RenameTeamAction team={TEAM} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Rename" }),
+    );
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    const field = dialog.getByLabelText(en["users.teamNameLabel"]);
+    await userEvent.clear(field);
+    await userEvent.type(field, "Nord{Enter}");
+    await expect(
+      await dialog.findByText(en["users.teamDuplicate"]),
+    ).toBeInTheDocument();
   },
 };

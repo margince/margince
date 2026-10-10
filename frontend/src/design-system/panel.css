@@ -95,6 +95,13 @@
 .panel-intro:last-child {
   margin-bottom: 0;
 }
+/* `PanelNotices`: each notice keeps its own width rather than stretching into a banner. */
+.panel-notices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
 .form-stack > .panel-intro {
   margin-bottom: calc(var(--space-4) - var(--space-3));
 }

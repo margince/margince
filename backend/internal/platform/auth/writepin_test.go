@@ -15,6 +15,7 @@ package auth_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -68,6 +69,16 @@ func TestACallerPinTheGateDidNotReadIsSkew(t *testing.T) {
 	_, err := auth.ResolveWritePin(auth.WritePinInputs{CallerPin: new(int64(7)), Admitted: 9, GateRead: true})
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("a caller pin of 7 against an admitted 9 answered %v, want version skew", err)
+	}
+}
+
+// The refusal names the record's version before the caller's, which is the one
+// an agent has to read again.
+func TestAStalePinNamesTheRecordsVersionBeforeTheCallers(t *testing.T) {
+	t.Parallel()
+	_, err := auth.ResolveWritePin(auth.WritePinInputs{CallerPin: new(int64(3)), Admitted: 5, GateRead: true})
+	if err == nil || !strings.Contains(err.Error(), "at version 5, not version 3") {
+		t.Fatalf("a caller pin of 3 against an admitted 5 answered %v, want \"at version 5, not version 3\"", err)
 	}
 }
 

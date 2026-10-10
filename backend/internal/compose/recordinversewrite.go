@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -56,9 +55,6 @@ func (s RestoreSeam) reverseByVerb(
 		answer, err = s.evaluator.Evaluate(ctx, tx, row, Binding)
 		return err
 	})
-	if errors.Is(err, apperrors.ErrVersionSkew) {
-		return privacy.RecordHistoryEntry{}, err
-	}
 	if err != nil {
 		return privacy.RecordHistoryEntry{}, fmt.Errorf("compose: decide whether the change can be undone: %w", err)
 	}

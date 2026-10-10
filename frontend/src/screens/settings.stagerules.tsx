@@ -1,17 +1,22 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { Button, EmptyState } from "../design-system/atoms";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Heading } from "../design-system/heading";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryStates, unwrap } from "./common";
+import "./settings.stageautomation.css";
 
 type TransitionPolicy = components["schemas"]["TransitionPolicy"];
 type TransitionRecord = components["schemas"]["StageTransitionRecord"];
@@ -91,26 +96,30 @@ export function StageRulesCard({
     },
   });
 
-  if (transitions.length === 0) {
-    return <EmptyState>{t("stageAutomation.noRules")}</EmptyState>;
-  }
-
   const byTransition = new Map(
     (rules.data?.data ?? []).map((rule) => [
       keyOf(rule.from_stage_id, rule.to_stage_id),
       rule,
     ]),
   );
-  // The read's own pending and failed faces, rather than this card's: a
-  // failure here replaces the whole section, and the shared pair keeps the
-  // server's account of it and offers the reader the retry.
+  const settled = !rules.isPending && !rules.isError;
   return (
-    <QueryStates query={rules} pendingLabel={t("stageAutomation.rulesLoading")}>
-      <section>
-        <Heading size="small" as="h3">
-          {t("stageAutomation.rules")}
-        </Heading>
-        <p>{t("stageAutomation.rulesIntro")}</p>
+    <Panel title={t("stageAutomation.rules")}>
+      <PanelBody>
+        <PanelIntro>{t("stageAutomation.rulesIntro")}</PanelIntro>
+        {transitions.length === 0 && (
+          <EmptyState>{t("stageAutomation.noRules")}</EmptyState>
+        )}
+        {/* The read's own pending and failed faces: they keep the server's
+            account of a failure and offer the retry. */}
+        {transitions.length > 0 && !settled && (
+          <QueryStates
+            query={rules}
+            pendingLabel={t("stageAutomation.rulesLoading")}
+          >
+            {null}
+          </QueryStates>
+        )}
         {/* Above the switches, because it OVERRIDES every one of them: while the
             installation has automation off, the server forces each transition to
             propose whatever its own row reads. A switch showing `auto` beneath
@@ -133,7 +142,9 @@ export function StageRulesCard({
             {problemMessageOf(save.error, t)}
           </Callout>
         )}
-        <ul>
+      </PanelBody>
+      {transitions.length > 0 && settled && (
+        <SettingList bleed="settings">
           {transitions.map((row) => (
             <TransitionRule
               key={keyOf(row.from_stage_id, row.to_stage_id)}
@@ -153,9 +164,9 @@ export function StageRulesCard({
               }
             />
           ))}
-        </ul>
-      </section>
-    </QueryStates>
+        </SettingList>
+      )}
+    </Panel>
   );
 }
 
@@ -180,67 +191,102 @@ function TransitionRule({
   const t = useT();
   const { locale } = useLocale();
   const label = `${row.from_stage_name} → ${row.to_stage_name}`;
+  const suspended = rule?.suspended_at ? rule : undefined;
   return (
-    <li>
-      <Switch
-        label={label}
-        hint={t("stageAutomation.modeHint")}
-        checked={rule?.mode === "auto"}
-        disabled={!mayChange}
-        reason={mayChange ? undefined : t("stageAutomation.readOnly")}
-        pending={saving}
-        onChange={(on) => onToggle(on ? "auto" : "propose", rule?.version)}
-      />
-      {rule?.mode === "auto" && !rule.suspended_at && (
-        <p className="t-caption">
-          {notEarnedYet(row, rule, reportWindowDays)
-            ? t("stageAutomation.notEarnedYet", {
-                why: notEarnedYet(row, rule, reportWindowDays),
-              })
-            : t("stageAutomation.undoWindow", {
-                // Through the locale: a bare String() prints the English
-                // notation to every reader, and a magnitude in somebody
-                // else's notation is one they read wrong.
-                hours: formatNumber(rule.undo_window_hours, locale),
-              })}
-        </p>
+    <SettingRow
+      label={label}
+      description={
+        suspended ? (
+          <SuspensionNote rule={suspended} />
+        ) : (
+          <>
+            {t("stageAutomation.modeHint")}
+            {rule?.mode === "auto" && (
+              <span className="stagerule-note t-caption">
+                {notEarnedYet(row, rule, reportWindowDays)
+                  ? t("stageAutomation.notEarnedYet", {
+                      why: notEarnedYet(row, rule, reportWindowDays),
+                    })
+                  : t("stageAutomation.undoWindow", {
+                      // Through the locale: a bare String() prints the English
+                      // notation to every reader, and a magnitude in somebody
+                      // else's notation is one they read wrong.
+                      hours: formatNumber(rule.undo_window_hours, locale),
+                    })}
+              </span>
+            )}
+          </>
+        )
+      }
+      control={(props) => (
+        <>
+          {suspended && mayChange && (
+            <ResumeRule
+              rule={suspended}
+              pipelineId={pipelineId}
+              transitionLabel={label}
+              transitionLabelId={props["aria-labelledby"]}
+            />
+          )}
+          <Switch
+            describedBy={props["aria-describedby"]}
+            label={label}
+            labelHidden
+            checked={rule?.mode === "auto"}
+            disabled={!mayChange}
+            reason={mayChange ? undefined : t("stageAutomation.readOnly")}
+            pending={saving}
+            onChange={(on) => onToggle(on ? "auto" : "propose", rule?.version)}
+          />
+        </>
       )}
-      {rule?.suspended_at && (
-        <SuspendedRule
-          rule={rule}
-          pipelineId={pipelineId}
-          mayChange={mayChange}
-          transitionLabel={label}
-        />
-      )}
-    </li>
+    />
   );
 }
 
 /**
- * A rule the PRODUCT turned off, with the reason and a way back.
+ * A rule the PRODUCT turned off, with the reason.
  *
  * The reason is drawn rather than summarised, because it is the whole basis on
  * which somebody decides to start the transition again — and a suspension
  * shown without one is a control asking for a decision it gave no grounds for.
  */
-function SuspendedRule({
-  rule,
-  pipelineId,
-  mayChange,
-  transitionLabel,
-}: Readonly<{
-  rule: TransitionPolicy;
-  pipelineId: string;
-  mayChange: boolean;
-  transitionLabel: string;
-}>) {
+function SuspensionNote({ rule }: Readonly<{ rule: TransitionPolicy }>) {
   const t = useT();
   const { locale } = useLocale();
   // The READER's zone. A suspension stamped at 23:40 UTC happened on a
-  // different day for half the contacts who will read this, and a date without a
+  // different day for half the contacts who will read this. A date without a
   // zone shows one of them the wrong one.
   const zone = viewerZone();
+  return (
+    <>
+      <Badge tone="warning">{t("stageAutomation.suspended")}</Badge>{" "}
+      {rule.suspended_reason}
+      {rule.suspended_at && (
+        <span className="stagerule-note t-caption">
+          {t("stageAutomation.suspendedSince", {
+            date: formatDate(rule.suspended_at, locale, zone),
+          })}
+        </span>
+      )}
+    </>
+  );
+}
+
+/** The way back from a suspension, asked before it is taken. */
+function ResumeRule({
+  rule,
+  pipelineId,
+  transitionLabel,
+  transitionLabelId,
+}: Readonly<{
+  rule: TransitionPolicy;
+  pipelineId: string;
+  transitionLabel: string;
+  /** The row's name, so each "Resume" says which transition it starts. */
+  transitionLabelId: string;
+}>) {
+  const t = useT();
   const [asking, setAsking] = useState(false);
   const queryClient = useQueryClient();
   const resume = useMutation({
@@ -263,27 +309,12 @@ function SuspendedRule({
 
   return (
     <>
-      <Callout
-        tone="warning"
-        kind="event"
-        title={t("stageAutomation.suspended")}
-        actions={
-          mayChange ? (
-            <Button onClick={() => setAsking(true)}>
-              {t("stageAutomation.resume")}
-            </Button>
-          ) : undefined
-        }
+      <Button
+        aria-describedby={transitionLabelId}
+        onClick={() => setAsking(true)}
       >
-        {rule.suspended_reason && <p>{rule.suspended_reason}</p>}
-        {rule.suspended_at && (
-          <p>
-            {t("stageAutomation.suspendedSince", {
-              date: formatDate(rule.suspended_at, locale, zone),
-            })}
-          </p>
-        )}
-      </Callout>
+        {t("stageAutomation.resume")}
+      </Button>
       <ConfirmModal
         open={asking}
         onClose={() => setAsking(false)}

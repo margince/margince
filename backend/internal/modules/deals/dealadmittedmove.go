@@ -71,10 +71,11 @@ func refuseAMoveTheGateDidNotAdmit(
 	if autoExecutedMoveIsOpenToOpen(source, target) {
 		return nil
 	}
-	return fmt.Errorf(
-		"this move was admitted unattended as open-to-open and is now %s-to-%s — "+
-			"a stage's semantic changed after the gate read it: %w",
-		source, target, apperrors.ErrVersionSkew)
+	return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+		"A stage changed while this move ran, so the deal was not moved. "+
+			"The move now goes from a stage marked %s to one marked %s. "+
+			"Read the pipeline's stages again, then repeat the call if the move still applies.",
+		source, target)}
 }
 
 // lockedMoveSemantics reads both endpoints' semantics under FOR SHARE, which is
@@ -125,9 +126,10 @@ func lockedMoveSemantics(
 	source, hasSource := semantics[from.UUID]
 	target, hasTarget := semantics[to.UUID]
 	if !hasSource || !hasTarget {
-		return "", "", fmt.Errorf(
-			"a stage this move names is no longer live, so the premise it was admitted on "+
-				"cannot be re-checked: %w", apperrors.ErrVersionSkew)
+		return "", "", &apperrors.VersionSkewError{
+			Message: "A stage this move names was archived while it ran, so the deal was not moved. " +
+				"Read the deal and its pipeline's stages again before you move it.",
+		}
 	}
 	return source, target, nil
 }

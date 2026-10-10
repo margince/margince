@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { StageAutomationCard } from "./settings.stageautomation";
@@ -119,18 +120,99 @@ describe("stage automation report", () => {
     // behind a tooltip: 85% over twenty cards and 85% over four are different
     // claims, and only the count says which this is.
     expect(cells).toContain("20");
-    // The span actually watched. A fine rate earned in one afternoon is not a
-    // record, and this is the number that says so.
-    expect(cells).toContain("34");
     expect(cells).toContain("85%");
     expect(cells).toContain("10%");
     expect(cells).toContain("5%");
-    // The evidence cut: which claims this installation actually accepts.
-    expect(row?.textContent).toContain("document_signed 12/12");
+  });
+
+  it("keeps the span watched one press away, beside the counts no rate shows", async () => {
+    vi.stubGlobal("fetch", reportStub());
+    const user = userEvent.setup();
+    render(<StageAutomationCard />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Details for Discovery → Negotiation",
+      }),
+    );
+    // A fine rate earned in one afternoon is not a record, and this is the
+    // number that says so.
+    const facts = Array.from(
+      document.querySelectorAll("tr.datatable-detail .factlist-row"),
+    ).map((row) => row.textContent);
+    expect(facts.slice(0, 3)).toEqual([
+      "Still open3",
+      "Expired2",
+      "Days observed34",
+    ]);
+  });
+
+  it("sets every figure against the end of its column, heading included", async () => {
+    vi.stubGlobal("fetch", reportStub());
+    render(<StageAutomationCard />);
+
+    const table = await screen.findByRole("table", {
+      name: "Stage automation",
+    });
+    const headings = within(table)
+      .getAllByRole("columnheader")
+      .filter((heading) => heading.classList.contains("datatable-end"))
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual([
+      "Reviewed",
+      "Accepted",
+      "Edited",
+      "Rejected",
+      "Undone or corrected",
+      "Details",
+    ]);
+    // The transition is a name, read from the start like any name.
+    const name = within(table).getByText("Discovery → Negotiation");
+    expect(name.closest("td")?.classList.contains("datatable-end")).toBe(false);
+  });
+
+  it("names the evidence a transition rested on in words, never by its key", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportStub({
+        window_days: 30,
+        data: [
+          {
+            ...REPORT.data[0],
+            evidence_kinds: [
+              ...REPORT.data[0].evidence_kinds,
+              {
+                kind: "meeting_booked",
+                reviewed: 3,
+                accepted_clean: 2,
+                unsafe: 0,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+    render(<StageAutomationCard />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Details for Discovery → Negotiation",
+      }),
+    );
+
+    expect(await screen.findByText("Document signed")).toBeTruthy();
+    expect(screen.getByText("12 of 12 accepted as proposed")).toBeTruthy();
+    // A kind this build has no label for still reads as words.
+    expect(screen.getByText("meeting booked")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(
+      /document_signed|meeting_booked/,
+    );
   });
 
   it("tells a transition nobody answered from one contacts reject", async () => {
     vi.stubGlobal("fetch", reportStub());
+    const user = userEvent.setup();
     render(<StageAutomationCard />);
 
     const unanswered = (
@@ -141,10 +223,36 @@ describe("stage automation report", () => {
     // transition has been proposed four times and answered never, and the two
     // ask for opposite fixes — a better proposal, or somebody to look.
     expect(unanswered?.textContent).not.toContain("0%");
-    expect(unanswered?.textContent).toContain("—");
-    // And the four open cards are visible, so the absence is explained rather
-    // than just blank.
-    expect(unanswered?.textContent).toContain("4");
+    // The sentence sits under the name; the figure column holds only a dash.
+    const cells = Array.from(unanswered?.querySelectorAll("td") ?? []);
+    expect(cells[0].textContent).toContain("Proposed, but none reviewed yet.");
+    expect(cells[1].textContent).toBe("—");
+    // And the four open cards are one press away, so the absence is explained.
+    await user.click(
+      screen.getByRole("button", {
+        name: "Details for Negotiation → Contract",
+      }),
+    );
+    const open = await screen.findByText("Still open");
+    expect(open.closest(".factlist-row")?.textContent).toContain("4");
+  });
+
+  it("spells out each short heading in a definition list", async () => {
+    vi.stubGlobal("fetch", reportStub());
+    render(<StageAutomationCard />);
+
+    await screen.findByRole("table", { name: "Stage automation" });
+    const terms = Array.from(document.querySelectorAll("dl.factlist dt")).map(
+      (term) => term.textContent,
+    );
+    expect(terms).toEqual([
+      "Reviewed",
+      "Accepted",
+      "Edited",
+      "Undone or corrected",
+      "Expired",
+      "Days observed",
+    ]);
   });
 
   // The three states a reader must be able to tell apart. "Nothing proposed" is

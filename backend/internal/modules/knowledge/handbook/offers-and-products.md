@@ -124,7 +124,7 @@ To add a product to the rate card in Margince, open **Settings → Products and 
 1. Open the account menu at the top right and choose **Settings**, then **Products and offers**.
 2. Click **New product**.
 3. Fill **Name**, **Unit price** and **Currency** (all required). If you like, also fill **SKU**, **Description**, **Unit**, **Default tax rate %**, **Billing** and **Billing period**.
-To change a price, use **Edit product** on its row; to stop using one, **Archive product**. Without the right role the list reads "Read-only. Your role cannot change products."
+To change a price, use **Edit product** in its row's **…** menu; **Archive product** there stops using one. Without the right role the list reads "Read-only. Your role cannot change products."
 Also called: price list, price book, catalogue, SKU.
 
 A product holds a name, a SKU if you want one, a description, a unit, a unit price and currency, and a default tax rate. It also holds its billing type: one-time or recurring, and for recurring, the period.
@@ -141,8 +141,8 @@ An offer template is a PDF layout with your brand, in German or English. Each la
 
 ### How do I create an offer template?
 To create an offer template in Margince, open **Settings → Products and offers** and click **New template** in the **Offer templates** panel.
-1. Fill **Name** and choose the **Locale** (`de-DE` or `en-US`).
-2. Set **Default for locale** to true or false.
+1. Fill **Name** and choose the **Language** (German or English).
+2. Set **Default for this language** to Yes or No.
 3. If you like, fill **Header text** and **Footer text**. The PDF prints the header above the buyer and the footer at the end.
 Then pick the template on an offer with **Edit header** → **Template**.
 Also called: quote template, proposal layout, letterhead.

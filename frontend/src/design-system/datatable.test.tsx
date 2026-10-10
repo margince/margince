@@ -375,7 +375,11 @@ it("hides a folded heading and an empty cell by clipping, never by display", () 
   expect(fold).toContain(".table-scroll-fold > .table > thead,");
   expect(fold).toContain(':is(:empty, [data-fold="hide"])');
   expect(fold).toContain("clip-path: inset(50%);");
-  expect(fold).not.toContain("display: none");
+  // `folded` swaps a figure for its phrase, and only one of the two may be heard.
+  const swap =
+    /\.table-scroll-fold \.datatable-unfolded \{\s*display: none;\s*\}/;
+  expect(fold).toMatch(swap);
+  expect(fold.replace(swap, "")).not.toContain("display: none");
 });
 
 // A glyph between caption cells is left at a line's end, or leads the next

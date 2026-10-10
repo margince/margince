@@ -6,6 +6,7 @@ import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Popover } from "../design-system/popover";
@@ -22,6 +23,7 @@ import {
   reportingQuery,
 } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
+import { reloadReportingFigures } from "./reporting.queries";
 
 export function ReportingEvidenceDrawer({
   evaluation,
@@ -158,23 +160,6 @@ export function ReportingEvidenceDrawer({
               )}
             </p>
           </Popover>
-          {isVersionSkewOf(query.error) && (
-            <Button
-              onClick={() => {
-                client.invalidateQueries({
-                  predicate: (query) =>
-                    [
-                      "reporting-evaluation",
-                      "reporting-live",
-                      "reporting-forecast",
-                    ].includes(String(query.queryKey[0])),
-                });
-                onClose();
-              }}
-            >
-              {t("common.retry")}
-            </Button>
-          )}
           {selectedValue != null && (
             <p className="t-num">
               {t("reporting.selectedValue")}:{" "}
@@ -186,86 +171,106 @@ export function ReportingEvidenceDrawer({
               )}
             </p>
           )}
-          <QueryGate query={query} pendingLabel={t("reporting.evidence")}>
-            {(evidence) => (
-              <>
-                <p>
-                  {plural("reporting.pageRecords", evidence.rows.length, {
-                    count: formatNumber(evidence.rows.length, locale),
-                  })}
-                </p>
-                <DataTable
-                  label={t("reporting.evidence")}
-                  rows={evidence.rows}
-                  rowKey={(row) => row.key}
-                  columns={[
-                    {
-                      key: "source",
-                      header: t("reporting.record"),
-                      render: (row) =>
-                        row.restricted ? (
-                          t("reporting.restricted")
-                        ) : row.source_id && row.source_type === "deal" ? (
-                          <Button
-                            variant="link"
-                            onClick={() => {
-                              onClose();
-                              navigate({ screen: "deals", id: row.source_id });
-                            }}
-                          >
-                            {row.label}
-                          </Button>
-                        ) : (
-                          row.label
+          {isVersionSkewOf(query.error) ? (
+            <ErrorLine
+              actions={
+                <Button
+                  onClick={() => {
+                    reloadReportingFigures(client);
+                    onClose();
+                  }}
+                >
+                  {t("common.retry")}
+                </Button>
+              }
+            >
+              {t("reporting.evidenceStale")}
+            </ErrorLine>
+          ) : (
+            <QueryGate query={query} pendingLabel={t("reporting.evidence")}>
+              {(evidence) => (
+                <>
+                  <p>
+                    {plural("reporting.pageRecords", evidence.rows.length, {
+                      count: formatNumber(evidence.rows.length, locale),
+                    })}
+                  </p>
+                  <DataTable
+                    label={t("reporting.evidence")}
+                    rows={evidence.rows}
+                    rowKey={(row) => row.key}
+                    columns={[
+                      {
+                        key: "source",
+                        header: t("reporting.record"),
+                        render: (row) =>
+                          row.restricted ? (
+                            t("reporting.restricted")
+                          ) : row.source_id && row.source_type === "deal" ? (
+                            <Button
+                              variant="link"
+                              onClick={() => {
+                                onClose();
+                                navigate({
+                                  screen: "deals",
+                                  id: row.source_id,
+                                });
+                              }}
+                            >
+                              {row.label}
+                            </Button>
+                          ) : (
+                            row.label
+                          ),
+                      },
+                      {
+                        key: "date",
+                        header: dateHeading,
+                        render: (row) =>
+                          row.occurred_at
+                            ? formatDateTime(
+                                row.occurred_at,
+                                locale,
+                                evidence.context.timezone,
+                              )
+                            : "—",
+                      },
+                      {
+                        key: "amount",
+                        header: t(
+                          metric?.unit === "days"
+                            ? "reporting.daysUnit"
+                            : metric?.unit === "count"
+                              ? "reporting.countUnit"
+                              : "reporting.dealValue",
                         ),
-                    },
-                    {
-                      key: "date",
-                      header: dateHeading,
-                      render: (row) =>
-                        row.occurred_at
-                          ? formatDateTime(
-                              row.occurred_at,
-                              locale,
-                              evidence.context.timezone,
-                            )
-                          : "—",
-                    },
-                    {
-                      key: "amount",
-                      header: t(
-                        metric?.unit === "days"
-                          ? "reporting.daysUnit"
-                          : metric?.unit === "count"
-                            ? "reporting.countUnit"
-                            : "reporting.dealValue",
-                      ),
-                      render: (row) =>
-                        reportingAmount(
-                          row.value,
-                          metric?.unit ?? definition?.unit ?? "count",
-                          evidence.context.currency,
-                          locale,
-                        ),
-                    },
-                  ]}
-                />
-                {canBack && (
-                  <Button variant="ghost" onClick={back}>
-                    {t("reporting.back")}
-                  </Button>
-                )}
-                {evidence.next_cursor && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setCursor(evidence.next_cursor)}
-                  >
-                    {t("reporting.next")}
-                  </Button>
-                )}
-              </>
-            )}
-          </QueryGate>
+                        render: (row) =>
+                          reportingAmount(
+                            row.value,
+                            metric?.unit ?? definition?.unit ?? "count",
+                            evidence.context.currency,
+                            locale,
+                          ),
+                      },
+                    ]}
+                  />
+                  {canBack && (
+                    <Button variant="ghost" onClick={back}>
+                      {t("reporting.back")}
+                    </Button>
+                  )}
+                  {evidence.next_cursor && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => setCursor(evidence.next_cursor)}
+                    >
+                      {t("reporting.next")}
+                    </Button>
+                  )}
+                </>
+              )}
+            </QueryGate>
+          )}
         </Stack>
       </DrawerBody>
     </Modal>

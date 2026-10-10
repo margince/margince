@@ -28,12 +28,7 @@ import { useToast } from "../design-system/toast";
 import { VisibilityBadge } from "../design-system/visibility";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  isVersionSkewOf,
-  problemMessageOf,
-  unwrap,
-  useViewerId,
-} from "./common";
+import { problemMessageOf, unwrap, useViewerId } from "./common";
 import { useMemberName } from "./membernames";
 import { invalidateRecord, recordWriteKeys } from "./recordwritekeys";
 import "./recordaccess.css";
@@ -117,8 +112,7 @@ export function RecordAccess({
   });
   const sentence = useAudienceSentence(kind, record);
   const viewerId = useViewerId();
-  const failure = (error: unknown) =>
-    isVersionSkewOf(error) ? t("edit.versionSkew") : problemMessageOf(error, t);
+  const failure = (error: unknown) => problemMessageOf(error, t);
   const setVisibility = useMutation({
     // Every value the write needs is a VARIABLE, never a closure over the
     // render that drew the control: a click landing between the commit and the

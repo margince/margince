@@ -206,6 +206,10 @@ export const de = {
   "reporting.upper": "75. Perzentil",
   "reporting.data": "Als Tabelle anzeigen",
   "reporting.evidence": "Belege",
+  "reporting.evidenceStale":
+    "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und öffne die Belege dann noch einmal.",
+  "reporting.exportStale":
+    "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und exportiere ihn dann noch einmal.",
   "reporting.details": "Details",
   "reporting.unavailable": "Nicht verfügbar",
   "reporting.restricted": "Geschützter Datensatz",
@@ -1378,9 +1382,6 @@ export const de = {
   "share.rosterErrorBoth": "Personen und Teams wurden nicht geladen.",
   "share.rosterEmpty": "Keine Personen oder Teams zum Teilen.",
 
-  "edit.versionSkew":
-    "Dieser Datensatz wurde seit dem Öffnen geändert. Lade die Seite neu und versuche es erneut.",
-
   "merge.contact": "Kontakt zusammenführen",
   "merge.company": "Unternehmen zusammenführen",
   "merge.searchPlaceholder": "Suchen…",
@@ -1534,6 +1535,8 @@ export const de = {
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
     "Dieser Platz hat nur Lesezugriff, daher wurde die Anfrage abgelehnt. Lass den Platz von einem Admin hochstufen.",
+  "common.versionSkew":
+    "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
   "common.retry": "Erneut versuchen",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
@@ -1604,6 +1607,7 @@ export const de = {
 
   "table.range": "{unit} {first} bis {last} von {count}",
   "table.pagination": "Seiten",
+  "table.rowActions": "Aktionen für {name}",
   "table.page": "Seite {number}",
   "table.prev": "Zurück",
   "table.next": "Weiter",
@@ -2010,7 +2014,6 @@ export const de = {
   "access.downloads_other": "{count} Dokumente heruntergeladen",
   "access.linkRequested":
     "Hat am {when} einen neuen Link angefordert. Stelle einen aus und sende ihn selbst.",
-  "access.rowActions": "Aktionen für {name}",
   "access.issueLink": "Neuen Link ausstellen",
   "access.changeCapability": "Berechtigungen ändern",
   "access.revoke": "Zugang entziehen",
@@ -2935,8 +2938,6 @@ export const de = {
   "tagAdmin.merge": "Zusammenführen",
   "tagAdmin.archive": "Stilllegen",
   "tagAdmin.restore": "Wiederherstellen",
-  "tagAdmin.usage": "Datensätze: {count}",
-  "tagAdmin.usagePending": "Wird gezählt…",
   "tagAdmin.nearMatchTitle": "Ähnliches Tag vorhanden",
   "tagAdmin.nearMatch":
     "{names}. Vergib das vorhandene Tag, es sei denn, dieses meint etwas anderes.",
@@ -2950,7 +2951,6 @@ export const de = {
   "tagAdmin.mergedTitle": "Zusammengeführt",
   "tagAdmin.mergedBody":
     "Zum behaltenen Tag verschobene Datensätze: {moved}. Entfernte Duplikate, wo ein Datensatz bereits beide Tags hatte: {collapsed}.",
-  "tagAdmin.countUsage": "Datensätze zählen",
   "tagAdmin.noVersion":
     "Dieses Tag wurde ohne Version geladen und kann nicht gespeichert werden. Lade die Seite neu und versuche es erneut.",
   "tagAdmin.withheld":
@@ -2958,9 +2958,14 @@ export const de = {
   "tagAdmin.truncatedTitle": "Liste gekürzt",
   "tagAdmin.truncated":
     "Tags jenseits des Limits werden nicht angezeigt und lassen sich weder bearbeiten noch als Ziel einer Zusammenführung wählen.",
-  "tagAdmin.usageFailed": "Zählung nicht verfügbar",
-  "tagAdmin.changeFailed": "Das Tag wurde nicht geändert. Versuche es erneut.",
   "tagAdmin.done": "Fertig",
+  "tagAdmin.colTag": "Tag",
+  "tagAdmin.colUsage": "Verwendung",
+  "tagAdmin.usedBy_one": "{count} Datensatz",
+  "tagAdmin.usedBy_other": "{count} Datensätze",
+  "tagAdmin.retired": "Stillgelegt",
+  "tagAdmin.retiredToast": "{name} stillgelegt",
+  "tagAdmin.restoredToast": "{name} wiederhergestellt",
   "tags.archived": "archiviert",
   "tags.columnHeader": "Tags",
   "tags.filterAll": "Beliebiges Tag",
@@ -3055,7 +3060,8 @@ export const de = {
     "Nur Admins und Operations können diese Liste ändern",
   "leadSources.notSaved": "Änderung nicht gespeichert",
   "leadSources.notAdded": "Quelle nicht hinzugefügt",
-  "leadSources.labelFor": "Bezeichnung der Quelle {key}",
+  "leadSources.duplicate":
+    "Eine Quelle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
   "leadSources.intentFor": "Kaufinteresse von {label}",
   "leadSources.intent": "Kaufinteresse",
   "leadSources.intent.high": "Hohes Kaufinteresse",
@@ -3063,7 +3069,6 @@ export const de = {
   "leadSources.intent.low": "Geringes Kaufinteresse",
   "leadSources.intentHint":
     "Hoch fügt dem Score Punkte hinzu, Gering zieht Punkte ab. Änderungen gelten ab der nächsten Neuberechnung jedes Leads.",
-  "leadSources.leadCount": "Leads: {count}",
   "leadSources.builtIn": "Vorgegeben",
   "leadSources.builtInKept":
     "Vorgegebene Quellen lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
@@ -3071,7 +3076,6 @@ export const de = {
     "{count} Lead nutzt diese Quelle. Deaktiviere sie stattdessen.",
   "leadSources.inUse_other":
     "{count} Leads nutzen diese Quelle. Deaktiviere sie stattdessen.",
-  "leadSources.deactivateInstead": "stattdessen deaktivieren",
   "leadSources.activeFor": "{label} ist aktiv",
   "leadSources.remove": "Entfernen",
   "leadSources.removeTitle": "Quelle entfernen?",
@@ -3080,28 +3084,40 @@ export const de = {
   "leadSources.newLabel": "Neue Quelle",
   "leadSources.labelField": "Bezeichnung",
   "leadSources.addOpen": "Neue Quelle",
-  "leadSources.listLabel": "Quellen in der Liste",
   "leadSources.discovered": "Gefundene Werte",
   "leadSources.newPlaceholder": "Messe",
   "leadSources.add": "Quelle hinzufügen",
   "leadSources.discoveredSub":
     "Werte auf Leads aus Connectors und Importen, die noch nicht in der Liste stehen. Füge einen hinzu, um ihm Bezeichnung und Gewichtung zu geben.",
   "leadSources.adopt": "Zur Liste hinzufügen",
+  "leadSources.colSource": "Quelle",
+  "leadSources.colLeads": "Leads",
+  "leadSources.colActive": "Aktiv",
+  "leadSources.colActions": "Aktionen",
+  "leadSources.leads_one": "{count} Lead",
+  "leadSources.leads_other": "{count} Leads",
+  "leadSources.rename": "Umbenennen",
+  "leadSources.renameTitle": "Quelle umbenennen",
+  "leadSources.renameSave": "Namen speichern",
   "leadReasons.title": "Disqualifizierungsgründe",
   "leadReasons.sub":
     "Was Vertriebsmitarbeitende beim Disqualifizieren eines Leads wählen. Der Grund steht am Lead und lässt sich filtern.",
-  "leadReasons.labelFor": "Bezeichnung des Grunds {label}",
-  "leadReasons.leadCount": "Leads: {count}",
   "leadReasons.inUse_one":
     "{count} Lead hat diesen Grund. Deaktiviere ihn stattdessen.",
   "leadReasons.inUse_other":
     "{count} Leads haben diesen Grund. Deaktiviere ihn stattdessen.",
   "leadReasons.newLabel": "Neuer Grund",
-  "leadReasons.listLabel": "Gründe in der Liste",
   "leadReasons.add": "Grund hinzufügen",
   "leadReasons.removeTitle": "Grund entfernen?",
   "leadReasons.removeBody":
     "„{label}“ wird von keinem Lead verwendet und wird aus der Liste entfernt.",
+  "leadReasons.colReason": "Grund",
+  "leadReasons.renameTitle": "Grund umbenennen",
+  "leadReasons.labelField": "Grund",
+  "leadReasons.builtInKept":
+    "Vorgegebene Gründe lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
+  "leadReasons.duplicate":
+    "Einen Grund mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "followUpSettings.title": "Nachfassen",
   "followUpSettings.sub":
     "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Startseite des Absenders erscheint.",
@@ -3440,18 +3456,20 @@ export const de = {
   "acqSources.title": "Akquisequellen",
   "acqSources.sub":
     "Geschäftskanäle, denen ein Deal zugeordnet werden kann. Lead-Quellen, die festhalten, wie ein Datensatz in Margince gelangt ist, sind davon getrennt.",
-  "acqSources.listLabel": "Quellen",
   "acqSources.loading": "Quellen werden geladen…",
   "acqSources.addOpen": "Neue Quelle",
   "acqSources.addTitle": "Neue Akquisequelle",
   "acqSources.addLabel": "Bezeichnung",
-  "acqSources.addHint":
-    "Der Schlüssel wird aus der Bezeichnung abgeleitet und lässt sich später nicht ändern.",
   "acqSources.addConfirm": "Quelle hinzufügen",
-  "acqSources.builtIn": "Vorgegeben",
-  "acqSources.readOnly": "Für deine Rolle sind diese Quellen schreibgeschützt.",
-  "acqSources.labelFor": "Bezeichnung für {key}",
   "acqSources.activeFor": "{label} ist an einem Deal wählbar",
+  "acqSources.colSource": "Quelle",
+  "acqSources.colDeals": "Deals",
+  "acqSources.dealsWithheld": "Nicht angezeigt: Deine Rolle sieht keine Deals",
+  "acqSources.deals_one": "{count} Deal",
+  "acqSources.deals_other": "{count} Deals",
+  "acqSources.renameTitle": "Quelle umbenennen",
+  "acqSources.duplicate":
+    "Eine Quelle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
   "settings.page.reviewtemplates.sub":
     "Fragen, die Vertriebsmitarbeitende zu einem gewonnenen oder verlorenen Deal beantworten.",
   "settings.tab.reviewtemplates": "Abschlussrückblicke",
@@ -3468,7 +3486,7 @@ export const de = {
   "reviewTemplates.title": "Fragen zum Abschlussrückblick",
   "reviewTemplates.empty": "Keine Fragen für den Rückblick eingerichtet",
   "reviewTemplates.retired": "Stillgelegt",
-  "reviewTemplates.required": "(erforderlich)",
+  "reviewTemplates.required": "Erforderlich",
   "outcomeReview.title": "Abschlussrückblick",
   "outcomeReview.add": "Rückblick hinzufügen",
   "outcomeReview.save": "Rückblick speichern",
@@ -3541,10 +3559,7 @@ export const de = {
   "recordRoles.title": "Verantwortungsrollen",
   "recordRoles.sub":
     "Wofür ein Teammitglied oder ein Team bei einem Unternehmen, Deal oder Projekt verantwortlich sein kann. Eine Rolle gewährt keinen Zugriff auf den Datensatz.",
-  "recordRoles.listLabel": "Rollen",
   "recordRoles.loading": "Rollen werden geladen…",
-  "recordRoles.readOnly": "Nur Admins können diese Rollen ändern.",
-  "recordRoles.builtIn": "Vorgegeben",
   "recordRoles.addOpen": "Rolle hinzuf\u00fcgen",
   "recordRoles.addTitle": "Verantwortungsrolle hinzuf\u00fcgen",
   "recordRoles.recordTypes": "Gilt für",
@@ -3553,8 +3568,18 @@ export const de = {
   "recordRoles.addHint":
     "Wofür die zuständige Seite verantwortlich ist, in einfachen Worten.",
   "recordRoles.addConfirm": "Rolle hinzuf\u00fcgen",
-  "recordRoles.labelFor": "Name f\u00fcr {key}",
   "recordRoles.activeFor": "{label} kann neu zugewiesen werden",
+  "recordRoles.colRole": "Rolle",
+  "recordRoles.appliesOn": "Bei {records}",
+  "recordRoles.kind.company": "Unternehmen",
+  "recordRoles.kind.deal": "Deals",
+  "recordRoles.kind.project": "Projekten",
+  "recordRoles.heldBy.user": "Zuweisbar an ein Teammitglied",
+  "recordRoles.heldBy.team": "Zuweisbar an ein Team",
+  "recordRoles.heldBy.either": "Zuweisbar an ein Teammitglied oder ein Team",
+  "recordRoles.renameTitle": "Rolle umbenennen",
+  "recordRoles.duplicate":
+    "Eine Rolle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
   "deal.acquisitionUnset": "Nicht festgelegt",
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
@@ -3798,6 +3823,8 @@ export const de = {
   "decision.dismiss": "Ausblenden",
   "decision.versionSkew":
     "Der Datensatz wurde nach dem Vormerken geändert. Merke ihn erneut vor, bevor du entscheidest.",
+  "decision.fxRateMoved":
+    "Der Wechselkurs hat sich geändert, nachdem dieser Vorschlag erstellt wurde, deshalb wurde der Vorschlag nicht übernommen. Für einen aktuellen Vorschlag aktualisiere die Kurse unter Einstellungen → Unternehmensprofil aus ihren Quellen.",
   "decision.reRead": "Neu laden",
   "decision.alreadyDecided":
     "Bereits entschieden. Hier ist nichts mehr zu tun.",
@@ -4501,7 +4528,6 @@ export const de = {
   "files.originUnknown": "unbekanntem Absender",
   "files.uploaded": "Hochgeladen am {when}",
   "files.hiddenBadge": "Ausgeblendet",
-  "files.rowActions": "Aktionen für {name}",
   "files.hide": "An diesem Deal ausblenden",
   "files.unhide": "Wieder an diesem Deal anzeigen",
   "files.delete": "Löschen",
@@ -5628,7 +5654,6 @@ export const de = {
   "agents.revokeGrantNamed": "Verbindung zu {client} beenden",
   "agents.colClient": "Client",
   "agents.colConnected": "Verbunden",
-  "agents.rowActions": "Aktionen für {client}",
   "agents.disconnectConfirm":
     "Damit endet die gesamte Verbindung, nicht nur ein Satz Zugangsdaten. Der Agent verliert den Zugriff beim nächsten Aufruf und kann ihn nicht erneuern. Für eine neue Verbindung muss der Zugriff erneut freigegeben werden.",
   "agents.connectHow": "MCP-Client verbinden",
@@ -5666,7 +5691,6 @@ export const de = {
   "settings.passportNoExpiry": "Kein Ablauf",
   "settings.passportLastUsedOn": "Zuletzt genutzt am {date}",
   "settings.passportExpiresOn": "Läuft am {date} ab",
-  "settings.passportActions": "Aktionen für {name}",
   "settings.revokeNamed": "{name} widerrufen",
   "settings.revokeConfirm":
     "Die Zugangsdaten des Passports werden sofort ungültig. Der Agent verliert beim nächsten Aufruf den Zugriff.",
@@ -6054,7 +6078,6 @@ export const de = {
   "notice.unassigned": "Nicht zugewiesen",
   "notice.recordUnavailable": "Datensatz nicht verfügbar",
   "notice.dutyFor": "{rule} für {contact}",
-  "notice.rowActions": "Aktionen für {duty}",
   "notice.noAcquisition": "Kein Herkunftsnachweis",
   "notice.acqOn": "{kind} am {date}",
   "notice.acqRecorded": "{kind}, erfasst am {date}",
@@ -8153,7 +8176,6 @@ export const de = {
   "auto.dateField.loadError":
     "Datumsfelder wurden nicht geladen. Versuche es erneut.",
   "auto.enabledFor": "{name} ist aktiv",
-  "auto.rowActions": "Aktionen für {name}",
   "auto.colMode": "Modus",
   "auto.colLastRun": "Letzter Lauf",
   "auto.colRuns30": "Läufe (30 Tage)",
@@ -8255,7 +8277,6 @@ export const de = {
   "cf.col.type": "Typ",
   "cf.col.addedBy": "Hinzugefügt von",
   "cf.addedByYou": "Du",
-  "cf.addedByAdmin": "Admin",
   "cf.empty.deal":
     "Noch keine eigenen Felder für Deals. Füge eines hinzu, um Daten zu erfassen, die die Kernfelder nicht abdecken.",
   "cf.empty.company":
@@ -9116,13 +9137,11 @@ export const de = {
   "users.teamColumn": "Team",
   "users.teamMembersColumn": "Mitglieder",
   "users.teamParent": "Teil von {name}",
-  "users.teamRowActions": "Aktionen für {name}",
   "users.teamRename": "Umbenennen",
   "users.teamArchive": "Archivieren",
   "users.teamRenameTitle": "Team umbenennen",
   "users.teamRenameSave": "Namen speichern",
   "users.teamRenamed": "Team in „{name}“ umbenannt",
-  "users.notRenamed": "Team nicht umbenannt",
   "users.teamAddMember": "Mitglied hinzufügen",
   "users.teamAddPlaceholder": "Nach Name oder E-Mail suchen",
   "users.teamRemoveMember": "{name} aus {team} entfernen",
@@ -9133,10 +9152,11 @@ export const de = {
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",
   "users.teamNameLabel": "Teamname",
+  "users.teamDuplicate":
+    "Ein Team mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "users.newTeamPlaceholder": "Zum Beispiel DACH Sales",
   "users.createTeam": "Team anlegen",
   "users.notArchived": "Team nicht archiviert",
-  "users.notCreated": "Team nicht angelegt",
   "users.teamNotChanged": "Mitgliedschaft nicht geändert",
   "users.inviteFailed": "Einladung nicht gesendet",
   "users.access.title": "Zugriff des Mitglieds",
@@ -9193,7 +9213,6 @@ export const de = {
   "users.invite": "Einladen",
   "users.setRole": "Rolle festlegen…",
   "users.setRoleFor": "Rolle für {name} festlegen",
-  "users.rowActions": "Aktionen für {name}",
   "users.rolesHeld": "Hat {roles}. Eine Rollenauswahl ersetzt alle.",
   "users.deactivate": "Deaktivieren",
   "users.reactivate": "Reaktivieren",
@@ -9337,6 +9356,11 @@ export const de = {
   "product.activeFilterAll": "Alle",
   "product.inactive": "Inaktiv",
   "product.archived": "Archiviert",
+  "product.status": "Status",
+  "product.pricePerMonth": "pro Monat",
+  "product.pricePerQuarter": "pro Quartal",
+  "product.pricePerHalfYear": "pro Halbjahr",
+  "product.pricePerYear": "pro Jahr",
 
   "template.title": "Angebotsvorlagen",
   "template.readOnly":
@@ -9350,13 +9374,14 @@ export const de = {
     "Diese Vorlage archivieren? Angebote, die sie bereits verwenden, behalten ihr Layout. Neue Angebote können sie nicht mehr auswählen.",
   "template.name": "Name",
   "template.locale": "Sprache",
-  "template.isDefault": "Standard für die Sprache",
+  "template.isDefault": "Standard für diese Sprache",
   "template.header": "Kopfzeilentext",
   "template.footer": "Fußzeilentext",
   "template.localeFilter": "Sprache",
   "template.localeFilterAll": "Alle Sprachen",
   "template.localeDE": "Deutsch (DE)",
   "template.localeEN": "Englisch (US)",
+  "template.default": "Standard",
 
   "tools.title": "Agenten-Werkzeuge",
   "tools.sub":
@@ -12590,8 +12615,8 @@ export const de = {
   "stageAutomation.expired": "Abgelaufen",
   "stageAutomation.expiredHint":
     "Niemand hat geantwortet, bevor das Zeitfenster endete. Das ist keine Ablehnung.",
-  "stageAutomation.cleanAcceptance": "Wie vorgeschlagen angenommen",
-  "stageAutomation.edits": "Nach Änderungen angenommen",
+  "stageAutomation.cleanAcceptance": "Angenommen",
+  "stageAutomation.edits": "Bearbeitet",
   "stageAutomation.rejections": "Abgelehnt",
   "stageAutomation.unsafe": "Rückgängig gemacht oder korrigiert",
   "stageAutomation.unsafeHint":
@@ -12627,6 +12652,14 @@ export const de = {
   "stageAutomation.rulesLoading": "Regeln für Übergänge werden geladen…",
   "stageAutomation.saveFailed": "Änderung nicht gespeichert",
   "stageAutomation.nothingReviewed": "Vorgeschlagen, aber noch keiner geprüft.",
+  "stageAutomation.detail": "Details",
+  "stageAutomation.detailFor": "Details zu {transition}",
+  "stageAutomation.evidenceShare":
+    "{accepted} von {reviewed} wie vorgeschlagen angenommen",
+  "stageAutomation.acceptedHint":
+    "Wie vorgeschlagen angenommen, ohne Änderung.",
+  "stageAutomation.editedHint":
+    "Angenommen, nachdem jemand den Vorschlag geändert hat.",
   "employment.importLoading": "Gekaufter Berufsverlauf wird geladen…",
   "employment.apply": "Importierte Unternehmen verknüpfen",
   "employment.status.current": "Aktuell",

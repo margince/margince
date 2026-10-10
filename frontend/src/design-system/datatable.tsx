@@ -118,7 +118,7 @@ export function DataTable<Row>({
                       role={role("cell")}
                       data-fold={fold ? foldPlace(column, title) : undefined}
                     >
-                      {column.render(row)}
+                      {cellContent(column, row, fold === true)}
                     </td>
                   ))}
                 </tr>
@@ -236,7 +236,24 @@ export type DataTableColumn<Row> = Readonly<{
   // Where the cell goes when a `fold` table folds. "hide" leaves sight but is
   // still read, so it must not hold a control.
   fold?: "title" | "end" | "hide";
+  /** The cell once its table folds and the heading is out of sight: a bare figure says its unit. Undefined keeps the cell. */
+  folded?: (row: Row) => ReactNode | undefined;
 }>;
+
+function cellContent<Row>(
+  column: DataTableColumn<Row>,
+  row: Row,
+  fold: boolean,
+): ReactNode {
+  const phrase = fold ? column.folded?.(row) : undefined;
+  if (phrase === undefined) return column.render(row);
+  return (
+    <>
+      <span className="datatable-unfolded">{column.render(row)}</span>
+      <span className="datatable-folded">{phrase}</span>
+    </>
+  );
+}
 
 // React bubbles a portal's click into the row that rendered it, so a target
 // outside the row is a popover's. A drag that selects text is not a press.

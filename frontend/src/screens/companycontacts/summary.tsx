@@ -14,13 +14,13 @@ import {
   StatCard,
 } from "../../design-system/atoms";
 import { PipelineBoard } from "../../design-system/composed";
+import { ErrorLine } from "../../design-system/errorline";
 import { RelationshipMap } from "../../design-system/relationshipmap";
 import { StatStrip } from "../../design-system/statstrip";
 import { ProvenanceTag } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
-  isVersionSkewOf,
   problemCodeOf,
   problemMessageOf,
   throwProblem,
@@ -703,13 +703,7 @@ function WriteNote({
   // The PATCH's failure first: a suggestion that failed minutes ago would
   // otherwise mask the newer write the reader just pressed.
   if (patch.isError) {
-    return (
-      <p className="cp-write-note">
-        {isVersionSkewOf(patch.error)
-          ? t("edit.versionSkew")
-          : problemMessageOf(patch.error, t)}
-      </p>
-    );
+    return <ErrorLine error={patch.error} />;
   }
   if (suggest.isError) {
     return (

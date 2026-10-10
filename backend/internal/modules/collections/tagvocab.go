@@ -185,6 +185,30 @@ func CountTagReachBatch(ctx context.Context, tx pgx.Tx, tagIDs []ids.TagID) (map
 	return out, nil
 }
 
+// ListTagsCarried is ListTags with each tag's reach, counted in the same
+// transaction so a tag and its count describe one moment.
+func (s *Store) ListTagsCarried(ctx context.Context, archived storekit.ArchivedFilter) ([]tagRow, map[ids.TagID]int, bool, error) {
+	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
+		return nil, nil, false, err
+	}
+	var tags []tagRow
+	var reach map[ids.TagID]int
+	truncated := false
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		if tags, truncated, err = listTagRows(ctx, tx, archived); err != nil {
+			return err
+		}
+		tagIDs := make([]ids.TagID, 0, len(tags))
+		for _, t := range tags {
+			tagIDs = append(tagIDs, t.ID)
+		}
+		reach, err = CountTagReachBatch(ctx, tx, tagIDs)
+		return err
+	})
+	return tags, reach, truncated, err
+}
+
 // countVisibleTaggedBatch is countVisibleTagged over many tags at once, under
 // the same object grant and the same row-scope predicate.
 func countVisibleTaggedBatch(ctx context.Context, tx pgx.Tx, tagIDs []ids.TagID, entityType string) (map[ids.TagID]int, error) {

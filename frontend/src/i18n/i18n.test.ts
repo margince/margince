@@ -210,6 +210,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "analytics.forecastDeals_one",
   "filters.library.records.deal_one",
   "filters.library.records.lead_one",
+  "leadSources.leads_one",
+  "acqSources.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
 

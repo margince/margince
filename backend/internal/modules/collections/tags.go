@@ -55,32 +55,38 @@ func (s *Store) ListTags(ctx context.Context, archived storekit.ArchivedFilter) 
 	var out []tagRow
 	truncated := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		sql := "SELECT " + tagColumns + " FROM tag"
-		if archived != storekit.IncludeArchived {
-			sql += " WHERE archived_at IS NULL"
-		}
-		rows, err := tx.Query(ctx, sql+" ORDER BY lower(name) LIMIT $1", catalogCap+1)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			t, err := scanTag(rows)
-			if err != nil {
-				return err
-			}
-			out = append(out, t)
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if len(out) > catalogCap {
-			out = out[:catalogCap]
-			truncated = true
-		}
-		return nil
+		var err error
+		out, truncated, err = listTagRows(ctx, tx, archived)
+		return err
 	})
 	return out, truncated, err
+}
+
+func listTagRows(ctx context.Context, tx pgx.Tx, archived storekit.ArchivedFilter) ([]tagRow, bool, error) {
+	sql := "SELECT " + tagColumns + " FROM tag"
+	if archived != storekit.IncludeArchived {
+		sql += " WHERE archived_at IS NULL"
+	}
+	rows, err := tx.Query(ctx, sql+" ORDER BY lower(name) LIMIT $1", catalogCap+1)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+	var out []tagRow
+	for rows.Next() {
+		t, err := scanTag(rows)
+		if err != nil {
+			return nil, false, err
+		}
+		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+	if len(out) > catalogCap {
+		return out[:catalogCap], true, nil
+	}
+	return out, false, nil
 }
 
 // CreateTag coins a word. Colour and description are both optional and both

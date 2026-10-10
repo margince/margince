@@ -215,6 +215,10 @@ export const vi = {
   "reporting.upper": "Phân vị 75",
   "reporting.data": "Xem biểu đồ dạng bảng",
   "reporting.evidence": "Bằng chứng",
+  "reporting.evidenceStale":
+    "Số liệu đã thay đổi sau khi tải báo cáo này. Chọn Thử lại để tải lại báo cáo, rồi mở lại phần bằng chứng.",
+  "reporting.exportStale":
+    "Số liệu đã thay đổi sau khi tải báo cáo này. Chọn Thử lại để tải lại báo cáo, rồi xuất lại.",
   "reporting.details": "Chi tiết",
   "reporting.unavailable": "Không khả dụng",
   "reporting.restricted": "Hồ sơ bị hạn chế",
@@ -1349,9 +1353,6 @@ export const vi = {
   "share.rosterErrorBoth": "Không thể tải danh sách thành viên và nhóm.",
   "share.rosterEmpty": "Không có thành viên hay nhóm nào để chia sẻ.",
 
-  "edit.versionSkew":
-    "Hồ sơ này đã thay đổi từ lúc mở. Tải lại trang rồi thử lại.",
-
   "merge.contact": "Gộp liên hệ",
   "merge.company": "Gộp công ty",
   "merge.searchPlaceholder": "Tìm kiếm…",
@@ -1501,6 +1502,8 @@ export const vi = {
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
     "Tài khoản này chỉ có quyền xem. Liên hệ quản trị viên để nâng cấp tài khoản.",
+  "common.versionSkew":
+    "Hồ sơ này đã thay đổi sau khi bạn mở. Tải lại để xem thay đổi, rồi thực hiện lại thao tác.",
   "common.retry": "Thử lại",
   "common.empty": "Chưa có gì ở đây.",
   "common.saving": "Đang lưu…",
@@ -1561,6 +1564,7 @@ export const vi = {
   "list.viewHot": "Lead nóng",
   "table.range": "{first} đến {last} trong {count} {unit}",
   "table.pagination": "Phân trang",
+  "table.rowActions": "Thao tác cho {name}",
   "table.page": "Trang {number}",
   "table.prev": "Trước",
   "table.next": "Tiếp",
@@ -1965,7 +1969,6 @@ export const vi = {
   "access.downloads_other": "Đã tải xuống {count} tài liệu",
   "access.linkRequested":
     "Đã yêu cầu liên kết mới {when}. Cấp một liên kết rồi tự gửi.",
-  "access.rowActions": "Thao tác cho {name}",
   "access.issueLink": "Cấp liên kết mới",
   "access.changeCapability": "Đổi quyền",
   "access.revoke": "Thu hồi quyền truy cập",
@@ -2879,8 +2882,6 @@ export const vi = {
   "tagAdmin.merge": "Gộp",
   "tagAdmin.archive": "Ngừng dùng",
   "tagAdmin.restore": "Khôi phục",
-  "tagAdmin.usage": "{count} hồ sơ",
-  "tagAdmin.usagePending": "Đang đếm…",
   "tagAdmin.nearMatchTitle": "Đã có thẻ tương tự",
   "tagAdmin.nearMatch":
     "{names}. Dùng thẻ đã có, trừ khi thẻ này thực sự khác.",
@@ -2894,16 +2895,20 @@ export const vi = {
   "tagAdmin.mergedTitle": "Đã gộp",
   "tagAdmin.mergedBody":
     "Hồ sơ đã chuyển sang thẻ giữ lại: {moved}. Thẻ trùng đã gỡ ở hồ sơ vốn có cả hai thẻ: {collapsed}.",
-  "tagAdmin.countUsage": "Đếm hồ sơ",
   "tagAdmin.noVersion":
     "Thẻ này được tải về không kèm phiên bản nên không thể lưu. Tải lại trang rồi thử lại.",
   "tagAdmin.withheld": "Bạn không có quyền truy cập thẻ của công ty này.",
   "tagAdmin.truncatedTitle": "Danh sách đã cắt bớt",
   "tagAdmin.truncated":
     "Thẻ vượt quá giới hạn không hiển thị và không thể sửa hay gộp vào.",
-  "tagAdmin.usageFailed": "Không thể đếm",
-  "tagAdmin.changeFailed": "Không thể thay đổi thẻ. Thử lại.",
   "tagAdmin.done": "Xong",
+  "tagAdmin.colTag": "Thẻ",
+  "tagAdmin.colUsage": "Đang dùng ở",
+  "tagAdmin.usedBy_one": "{count} hồ sơ",
+  "tagAdmin.usedBy_other": "{count} hồ sơ",
+  "tagAdmin.retired": "Đã ngừng dùng",
+  "tagAdmin.retiredToast": "Đã ngừng dùng {name}",
+  "tagAdmin.restoredToast": "Đã khôi phục {name}",
   "tags.archived": "trong kho lưu trữ",
   "tags.columnHeader": "Thẻ",
   "tags.filterAll": "Thẻ bất kỳ",
@@ -2996,7 +3001,8 @@ export const vi = {
     "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này",
   "leadSources.notSaved": "Không thể lưu thay đổi",
   "leadSources.notAdded": "Không thể thêm nguồn",
-  "leadSources.labelFor": "Nhãn của nguồn {key}",
+  "leadSources.duplicate":
+    "Đã có nguồn mang tên hoặc khóa này. Hãy chọn tên khác.",
   "leadSources.intentFor": "Ý định của {label}",
   "leadSources.intent": "Ý định",
   "leadSources.intent.high": "Ý định mua cao",
@@ -3004,7 +3010,6 @@ export const vi = {
   "leadSources.intent.low": "Ý định mua thấp",
   "leadSources.intentHint":
     "Cao cộng điểm, Thấp trừ điểm. Thay đổi áp dụng ở lần tính lại điểm tiếp theo của từng lead.",
-  "leadSources.leadCount": "{count} lead",
   "leadSources.builtIn": "Có sẵn",
   "leadSources.builtInKept":
     "Nguồn có sẵn có thể đổi tên hoặc tắt, nhưng không thể gỡ.",
@@ -3012,7 +3017,6 @@ export const vi = {
     "{count} lead đang dùng nguồn này. Tắt nguồn thay vì gỡ.",
   "leadSources.inUse_other":
     "{count} lead đang dùng nguồn này. Tắt nguồn thay vì gỡ.",
-  "leadSources.deactivateInstead": "tắt thay vì gỡ",
   "leadSources.activeFor": "{label} đang bật",
   "leadSources.remove": "Gỡ",
   "leadSources.removeTitle": "Gỡ nguồn này?",
@@ -3021,28 +3025,39 @@ export const vi = {
   "leadSources.newLabel": "Nguồn mới",
   "leadSources.labelField": "Nhãn",
   "leadSources.addOpen": "Nguồn mới",
-  "leadSources.listLabel": "Nguồn trong danh sách",
   "leadSources.discovered": "Giá trị đã phát hiện",
   "leadSources.newPlaceholder": "Hội chợ",
   "leadSources.add": "Thêm nguồn",
   "leadSources.discoveredSub":
     "Các giá trị trên lead đến từ trình kết nối và các lần nhập, chưa có trong danh sách. Thêm một giá trị để gán nhãn và trọng số.",
   "leadSources.adopt": "Thêm vào danh sách",
+  "leadSources.colSource": "Nguồn",
+  "leadSources.colLeads": "Lead",
+  "leadSources.colActive": "Đang bật",
+  "leadSources.colActions": "Thao tác",
+  "leadSources.leads_one": "{count} lead",
+  "leadSources.leads_other": "{count} lead",
+  "leadSources.rename": "Đổi tên",
+  "leadSources.renameTitle": "Đổi tên nguồn",
+  "leadSources.renameSave": "Lưu tên",
   "leadReasons.title": "Lý do loại",
   "leadReasons.sub":
     "Lý do nhân viên kinh doanh chọn khi loại một lead. Lý do hiển thị trên lead và có thể dùng để lọc.",
-  "leadReasons.labelFor": "Nhãn của lý do {label}",
-  "leadReasons.leadCount": "{count} lead",
   "leadReasons.inUse_one":
     "{count} lead đang dùng lý do này. Tắt lý do thay vì gỡ.",
   "leadReasons.inUse_other":
     "{count} lead đang dùng lý do này. Tắt lý do thay vì gỡ.",
   "leadReasons.newLabel": "Lý do mới",
-  "leadReasons.listLabel": "Lý do trong danh sách",
   "leadReasons.add": "Thêm lý do",
   "leadReasons.removeTitle": "Gỡ lý do này?",
   "leadReasons.removeBody":
     "Không có lead nào dùng “{label}”, nên lý do này sẽ được gỡ khỏi danh sách.",
+  "leadReasons.colReason": "Lý do",
+  "leadReasons.renameTitle": "Đổi tên lý do",
+  "leadReasons.labelField": "Lý do",
+  "leadReasons.builtInKept":
+    "Lý do có sẵn có thể đổi tên hoặc tắt, nhưng không thể gỡ.",
+  "leadReasons.duplicate": "Đã có lý do mang tên này. Hãy chọn tên khác.",
   "followUpSettings.title": "Việc tiếp theo",
   "followUpSettings.sub":
     "Thời điểm một thư đã gửi khách hàng hiện lại trên Trang chủ của người gửi thành việc tiếp theo.",
@@ -3372,17 +3387,21 @@ export const vi = {
   "acqSources.title": "Nguồn tiếp cận",
   "acqSources.sub":
     "Các kênh kinh doanh có thể gán cho deal. Nguồn lead, ghi nhận cách một hồ sơ vào Margince, là danh mục riêng.",
-  "acqSources.listLabel": "Nguồn",
   "acqSources.loading": "Đang tải nguồn…",
   "acqSources.addOpen": "Nguồn mới",
   "acqSources.addTitle": "Nguồn tiếp cận mới",
   "acqSources.addLabel": "Nhãn",
-  "acqSources.addHint": "Khóa lấy từ nhãn và không thể đổi về sau.",
   "acqSources.addConfirm": "Thêm nguồn",
-  "acqSources.builtIn": "Có sẵn",
-  "acqSources.readOnly": "Các nguồn này ở chế độ chỉ đọc với vai trò hiện tại.",
-  "acqSources.labelFor": "Nhãn cho {key}",
   "acqSources.activeFor": "Có thể chọn {label} cho deal",
+  "acqSources.colSource": "Nguồn",
+  "acqSources.colDeals": "Deal",
+  "acqSources.dealsWithheld":
+    "Không hiển thị: vai trò hiện tại không xem được deal",
+  "acqSources.deals_one": "{count} deal",
+  "acqSources.deals_other": "{count} deal",
+  "acqSources.renameTitle": "Đổi tên nguồn",
+  "acqSources.duplicate":
+    "Đã có nguồn mang tên hoặc khóa này. Hãy chọn tên khác.",
   "settings.page.reviewtemplates.sub":
     "Câu hỏi nhân viên kinh doanh trả lời khi deal thắng hoặc thua.",
   "settings.tab.reviewtemplates": "Đánh giá kết quả",
@@ -3399,7 +3418,7 @@ export const vi = {
   "reviewTemplates.title": "Câu hỏi đánh giá kết quả",
   "reviewTemplates.empty": "Chưa thiết lập câu hỏi đánh giá",
   "reviewTemplates.retired": "Đã ngừng dùng",
-  "reviewTemplates.required": "(bắt buộc)",
+  "reviewTemplates.required": "Bắt buộc",
   "outcomeReview.title": "Đánh giá kết quả",
   "outcomeReview.add": "Thêm đánh giá",
   "outcomeReview.save": "Lưu đánh giá",
@@ -3471,10 +3490,7 @@ export const vi = {
   "recordRoles.title": "Vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
   "recordRoles.sub":
     "Những gì một đồng nghiệp hoặc nhóm có thể chịu trách nhiệm trên công ty, deal hoặc dự án. Vai trò không cấp quyền truy cập hồ sơ.",
-  "recordRoles.listLabel": "Vai tr\u00f2",
   "recordRoles.loading": "Đang tải vai trò…",
-  "recordRoles.readOnly": "Chỉ quản trị viên thay đổi được các vai trò này.",
-  "recordRoles.builtIn": "C\u00f3 s\u1eb5n",
   "recordRoles.addOpen": "Th\u00eam vai tr\u00f2",
   "recordRoles.addTitle": "Th\u00eam vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
   "recordRoles.recordTypes": "Áp dụng cho",
@@ -3483,8 +3499,18 @@ export const vi = {
   "recordRoles.addHint":
     "\u0110i\u1ec1u m\u00e0 b\u00ean ph\u1ee5 tr\u00e1ch ch\u1ecbu tr\u00e1ch nhi\u1ec7m, di\u1ec5n \u0111\u1ea1t d\u1ec5 hi\u1ec3u.",
   "recordRoles.addConfirm": "Th\u00eam vai tr\u00f2",
-  "recordRoles.labelFor": "T\u00ean cho {key}",
   "recordRoles.activeFor": "{label} có thể được giao mới",
+  "recordRoles.colRole": "Vai trò",
+  "recordRoles.appliesOn": "Áp dụng cho {records}",
+  "recordRoles.kind.company": "công ty",
+  "recordRoles.kind.deal": "deal",
+  "recordRoles.kind.project": "dự án",
+  "recordRoles.heldBy.user": "Giao cho đồng nghiệp",
+  "recordRoles.heldBy.team": "Giao cho nhóm",
+  "recordRoles.heldBy.either": "Giao cho đồng nghiệp hoặc nhóm",
+  "recordRoles.renameTitle": "Đổi tên vai trò",
+  "recordRoles.duplicate":
+    "Đã có vai trò mang tên hoặc khóa này. Hãy chọn tên khác.",
   "deal.acquisitionUnset": "Chưa chọn",
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
@@ -3727,6 +3753,8 @@ export const vi = {
   "decision.dismiss": "Bỏ qua",
   "decision.versionSkew":
     "Hồ sơ này đã thay đổi sau khi xếp chờ duyệt. Xếp chờ duyệt lại trước khi quyết định.",
+  "decision.fxRateMoved":
+    "Tỷ giá đã thay đổi sau khi đề xuất này được tạo, nên đề xuất không được áp dụng. Để có đề xuất mới, cập nhật tỷ giá từ nguồn trong Cài đặt, mục Hồ sơ công ty.",
   "decision.reRead": "Tải lại",
   "decision.alreadyDecided": "Đã quyết định. Không còn gì phải làm.",
   "decision.expired": "Đã hết hạn",
@@ -4418,7 +4446,6 @@ export const vi = {
   "files.originUnknown": "người gửi không rõ",
   "files.uploaded": "Đã tải lên {when}",
   "files.hiddenBadge": "Đã ẩn",
-  "files.rowActions": "Thao tác cho {name}",
   "files.hide": "Ẩn khỏi deal này",
   "files.unhide": "Hiển thị lại trên deal này",
   "files.delete": "Xóa",
@@ -5505,7 +5532,6 @@ export const vi = {
   "agents.revokeGrantNamed": "Kết thúc kết nối với {client}",
   "agents.colClient": "Ứng dụng khách",
   "agents.colConnected": "Kết nối",
-  "agents.rowActions": "Thao tác cho {client}",
   "agents.disconnectConfirm":
     "Thao tác này kết thúc cả kết nối chứ không chỉ một thông tin xác thực. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo và không thể gia hạn. Để kết nối lại, cần duyệt lại quyền truy cập.",
   "agents.connectHow": "Kết nối ứng dụng khách MCP",
@@ -5542,7 +5568,6 @@ export const vi = {
   "settings.passportNoExpiry": "Không hết hạn",
   "settings.passportLastUsedOn": "Dùng lần cuối {date}",
   "settings.passportExpiresOn": "Hết hạn {date}",
-  "settings.passportActions": "Thao tác cho {name}",
   "settings.revokeNamed": "Thu hồi {name}",
   "settings.revokeConfirm":
     "Thông tin xác thực của passport sẽ mất hiệu lực ngay. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo.",
@@ -5926,7 +5951,6 @@ export const vi = {
   "notice.unassigned": "Chưa giao",
   "notice.recordUnavailable": "Hồ sơ không khả dụng",
   "notice.dutyFor": "{rule} cho {contact}",
-  "notice.rowActions": "Thao tác cho {duty}",
   "notice.noAcquisition": "Không có bằng chứng về nguồn",
   "notice.acqOn": "{kind} ngày {date}",
   "notice.acqRecorded": "{kind}, ghi nhận ngày {date}",
@@ -7981,7 +8005,6 @@ export const vi = {
     "Đối tượng này chưa có trường ngày nào đang hoạt động.",
   "auto.dateField.loadError": "Không thể tải trường ngày. Thử lại.",
   "auto.enabledFor": "{name} đang bật",
-  "auto.rowActions": "Thao tác cho {name}",
   "auto.colMode": "Chế độ",
   "auto.colLastRun": "Lần chạy gần nhất",
   "auto.colRuns30": "Số lần chạy (30 ngày)",
@@ -8082,7 +8105,6 @@ export const vi = {
   "cf.col.type": "Loại",
   "cf.col.addedBy": "Người thêm",
   "cf.addedByYou": "Bạn",
-  "cf.addedByAdmin": "Quản trị viên",
   "cf.empty.deal":
     "Chưa có trường tùy chỉnh nào trên Deal. Thêm một trường để theo dõi dữ liệu mà trường lõi chưa bao quát.",
   "cf.empty.company":
@@ -8920,13 +8942,11 @@ export const vi = {
   "users.teamColumn": "Nhóm",
   "users.teamMembersColumn": "Thành viên",
   "users.teamParent": "Thuộc {name}",
-  "users.teamRowActions": "Thao tác cho {name}",
   "users.teamRename": "Đổi tên",
   "users.teamArchive": "Chuyển vào kho lưu trữ",
   "users.teamRenameTitle": "Đổi tên nhóm",
   "users.teamRenameSave": "Lưu tên",
   "users.teamRenamed": "Đã đổi tên nhóm thành “{name}”",
-  "users.notRenamed": "Không thể đổi tên nhóm",
   "users.teamAddMember": "Thêm thành viên",
   "users.teamAddPlaceholder": "Tìm theo tên hoặc email",
   "users.teamRemoveMember": "Gỡ {name} khỏi {team}",
@@ -8937,10 +8957,10 @@ export const vi = {
   "users.newTeamLabel": "Nhóm mới",
   "users.newTeamOpen": "Nhóm mới",
   "users.teamNameLabel": "Tên nhóm",
+  "users.teamDuplicate": "Đã có nhóm mang tên này. Hãy chọn tên khác.",
   "users.newTeamPlaceholder": "Ví dụ: DACH Sales",
   "users.createTeam": "Tạo nhóm",
   "users.notArchived": "Không thể chuyển nhóm vào kho lưu trữ",
-  "users.notCreated": "Không thể tạo nhóm",
   "users.teamNotChanged": "Không thể thay đổi thành viên nhóm",
   "users.inviteFailed": "Không thể gửi lời mời",
   "users.access.title": "Quyền truy cập của người dùng",
@@ -8998,7 +9018,6 @@ export const vi = {
   "users.invite": "Mời",
   "users.setRole": "Chọn vai trò…",
   "users.setRoleFor": "Chọn vai trò cho {name}",
-  "users.rowActions": "Thao tác cho {name}",
   "users.rolesHeld":
     "Đang có vai trò {roles}. Chọn một vai trò sẽ thay thế toàn bộ.",
   "users.deactivate": "Vô hiệu hóa",
@@ -9142,6 +9161,11 @@ export const vi = {
   "product.activeFilterAll": "Tất cả",
   "product.inactive": "Ngừng bán",
   "product.archived": "Trong kho lưu trữ",
+  "product.status": "Trạng thái",
+  "product.pricePerMonth": "mỗi tháng",
+  "product.pricePerQuarter": "mỗi quý",
+  "product.pricePerHalfYear": "mỗi sáu tháng",
+  "product.pricePerYear": "mỗi năm",
 
   "template.title": "Mẫu báo giá",
   "template.readOnly":
@@ -9155,13 +9179,14 @@ export const vi = {
     "Chuyển mẫu này vào kho lưu trữ? Báo giá đang dùng mẫu này vẫn giữ bố cục. Báo giá mới sẽ không thể chọn mẫu này.",
   "template.name": "Tên",
   "template.locale": "Ngôn ngữ",
-  "template.isDefault": "Mặc định cho ngôn ngữ",
+  "template.isDefault": "Mặc định cho ngôn ngữ này",
   "template.header": "Văn bản đầu trang",
   "template.footer": "Văn bản chân trang",
   "template.localeFilter": "Ngôn ngữ",
   "template.localeFilterAll": "Tất cả ngôn ngữ",
   "template.localeDE": "Tiếng Đức (DE)",
   "template.localeEN": "Tiếng Anh (US)",
+  "template.default": "Mặc định",
 
   "tools.title": "Công cụ agent",
   "tools.sub":
@@ -12325,11 +12350,10 @@ export const vi = {
   "stageAutomation.expired": "Đã hết hạn",
   "stageAutomation.expiredHint":
     "Không ai trả lời trước khi hết thời hạn. Đây không phải từ chối.",
-  "stageAutomation.cleanAcceptance": "Chấp nhận nguyên đề xuất",
-  "stageAutomation.edits": "Ch\u1ea5p nh\u1eadn sau khi s\u1eeda",
+  "stageAutomation.cleanAcceptance": "Đã chấp nhận",
+  "stageAutomation.edits": "Đã sửa",
   "stageAutomation.rejections": "Đã từ chối",
-  "stageAutomation.unsafe":
-    "\u0110\u00e3 ho\u00e0n t\u00e1c ho\u1eb7c s\u1eeda",
+  "stageAutomation.unsafe": "Đã hoàn tác hoặc đính chính",
   "stageAutomation.unsafeHint":
     "Bước chuyển bị hoàn tác hoặc có bằng chứng bị đánh dấu sai. Mỗi bước chuyển chỉ tính một lần dù xảy ra cả hai.",
   "stageAutomation.observationDays": "S\u1ed1 ng\u00e0y quan s\u00e1t",
@@ -12364,6 +12388,12 @@ export const vi = {
   "stageAutomation.saveFailed": "Không thể lưu thay đổi",
   "stageAutomation.nothingReviewed":
     "Đã đề xuất, nhưng chưa có quyết định nào.",
+  "stageAutomation.detail": "Chi tiết",
+  "stageAutomation.detailFor": "Chi tiết của {transition}",
+  "stageAutomation.evidenceShare":
+    "Chấp nhận nguyên đề xuất {accepted} trên {reviewed}",
+  "stageAutomation.acceptedHint": "Chấp nhận nguyên đề xuất, không sửa gì.",
+  "stageAutomation.editedHint": "Chấp nhận sau khi đề xuất đã được sửa.",
   "employment.importLoading": "Đang tải lịch sử công tác đã mua…",
   "employment.apply": "Liên kết công ty đã nhập",
   "employment.status.current": "Hiện tại",

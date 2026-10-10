@@ -1,11 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { isVersionSkewOf, throwProblem } from "./common";
 import { downloadBytes } from "./download";
 import { type ReportingEvaluation, reportingQuery } from "./reporting.model";
+import { reloadReportingFigures } from "./reporting.queries";
 
 export function ReportingExportButton({
   evaluation,
@@ -15,6 +16,7 @@ export function ReportingExportButton({
   editionId?: string;
 }>) {
   const t = useT();
+  const client = useQueryClient();
   const download = useMutation({
     mutationFn: async ({
       evaluation,
@@ -53,7 +55,24 @@ export function ReportingExportButton({
       >
         {t("reporting.exportCsv")}
       </Button>
-      <ErrorLine error={download.error} />
+      {isVersionSkewOf(download.error) ? (
+        <ErrorLine
+          actions={
+            <Button
+              onClick={() => {
+                reloadReportingFigures(client);
+                download.reset();
+              }}
+            >
+              {t("common.retry")}
+            </Button>
+          }
+        >
+          {t("reporting.exportStale")}
+        </ErrorLine>
+      ) : (
+        <ErrorLine error={download.error} />
+      )}
     </>
   );
 }

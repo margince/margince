@@ -364,6 +364,8 @@ func leadIDsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.UUI
 func seedLeadSource(t *testing.T, e *Env, key, label string) {
 	t.Helper()
 	e.WsExec(t, `INSERT INTO lead_source (key, label) VALUES ($1, $2)`, key, label)
+	// Reset keeps the source table, so the seeded row would outlive this test.
+	t.Cleanup(func() { e.WsExec(t, `DELETE FROM lead_source WHERE key = $1`, key) })
 }
 
 // seedLeadFromSource creates a lead filed under one catalog source.

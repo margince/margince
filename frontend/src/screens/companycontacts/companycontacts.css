@@ -35,7 +35,8 @@
 /* What the last reading did. A line, not a toast: the reader may be looking at
  * the board rather than the button when it answers, and a message that has
  * already faded cannot tell them why nothing changed. */
-.cp-write-note {
+.cp-write-note,
+.cp-board-tools + .t-danger {
   margin: 0 0 var(--space-2);
 }
 

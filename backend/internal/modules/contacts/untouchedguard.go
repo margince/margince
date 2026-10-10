@@ -92,16 +92,18 @@ func refuseIfVersionMoved(entity string, current *int64, o writeOptions) error {
 	// than passing. The alternative reads as "checked" and is not: an unversioned
 	// read would wave through exactly the write the pin was attached to stop.
 	if current == nil {
-		return fmt.Errorf(
-			"the %s carries no version to compare against the %d this write was authorised at: %w",
-			entity, *o.atVersion, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"This %s has no version, so a change conditioned on version %d cannot be made to it. "+
+				"Nothing was changed. Make the change without a version condition.",
+			entity, *o.atVersion)}
 	}
 	if *current == *o.atVersion {
 		return nil
 	}
-	return fmt.Errorf(
-		"the %s is at version %d, not the version %d this write was authorised against: %w",
-		entity, *current, *o.atVersion, apperrors.ErrVersionSkew)
+	return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+		"This %s is at version %d, not version %d, so nothing was changed. "+
+			"Read it again, then make the change again if it still applies.",
+		entity, *current, *o.atVersion)}
 }
 
 // HumanTouchedError refuses a write whose caller asked for it only while the

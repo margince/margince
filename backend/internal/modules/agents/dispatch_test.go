@@ -46,6 +46,17 @@ func TestExplainScrubsUnmappedErrors(t *testing.T) {
 	}
 }
 
+// A lost race written for its reader is the whole answer: the generic retry
+// would contradict a remedy that is a re-stage or a reload.
+func TestExplainAnswersAVersionSkewInItsReadersWords(t *testing.T) {
+	srv := NewDispatcher(nil, nil, "t", "0")
+	advice := "The figures changed after this report was read. Reload the report, then try again."
+	got := srv.explain("t", fmt.Errorf("evidence: %w", &apperrors.VersionSkewError{Message: advice}))
+	if got != advice {
+		t.Errorf("explain = %q, want the reader's own sentence %q", got, advice)
+	}
+}
+
 // The sentinel taxonomy stays actionable: mapped errors keep their
 // guidance (and their safe, domain-authored detail) — scrubbing must not
 // flatten "a human must say yes" into "something broke".

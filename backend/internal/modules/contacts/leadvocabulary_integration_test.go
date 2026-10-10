@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -132,6 +133,16 @@ func TestLeadSourceGovernsHumanWritesAndTheScore(t *testing.T) {
 	if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(crawl.Id), UpdateLeadSourceInput{Active: &inactive}); err != nil {
 		t.Fatal(err)
 	}
+	// Reset keeps the source table; the adopted family is in use, so the store refuses its delete.
+	t.Cleanup(func() {
+		active := true
+		if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(crawl.Id), UpdateLeadSourceInput{Active: &active}); err != nil {
+			t.Errorf("reactivating crawl: %v", err)
+		}
+		if _, err := e.owner.Exec(context.Background(), `DELETE FROM lead_source WHERE key = 'connector:apollo'`); err != nil {
+			t.Errorf("removing the adopted connector family: %v", err)
+		}
+	})
 	email := "vocab@example.test"
 	var inactiveErr *InactiveLeadSourceError
 	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &email, Source: "crawl"}); !errors.As(err, &inactiveErr) {
@@ -354,7 +365,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 		t.Errorf("lead_source.changed = %v, want %v", got, wantSources)
 	}
 
-	reason, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "No budget"})
+	reason, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "Procurement freeze"})
 	if err != nil {
 		t.Fatalf("create reason: %v", err)
 	}
@@ -368,7 +379,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 	// The label FOLLOWS the rename here, where the source's key did not: a
 	// reason has no key, so the label is its identity and a stale one would
 	// name something that no longer exists.
-	wantReasons := []string{"created:No budget", "updated:Budget withdrawn", "deleted:Budget withdrawn"}
+	wantReasons := []string{"created:Procurement freeze", "updated:Budget withdrawn", "deleted:Budget withdrawn"}
 	slices.Sort(wantReasons)
 	if got := published("lead_disqualify_reason.changed"); !slices.Equal(got, wantReasons) {
 		t.Errorf("lead_disqualify_reason.changed = %v, want %v", got, wantReasons)
@@ -423,5 +434,40 @@ func TestDisqualifyWithNoPinIsUnconditioned(t *testing.T) {
 	}
 	if closed.Status != crmcontracts.LeadStatusDisqualified {
 		t.Errorf("status = %v, want disqualified", closed.Status)
+	}
+}
+
+// A label names one reason, compared trimmed and case-folded: two spellings of
+// one reason would split a report on why leads were dropped.
+func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
+	e := setupPromoteConsent(t)
+	_, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " no budget "})
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a second spelling of the stock \"No budget\" answered %v, want a conflict", err)
+	}
+	want := `conflict: a disqualification reason called "no budget" already exists`
+	if fault, _ := httperr.Classify(err); fault.Detail != want {
+		t.Errorf("the conflict reads %q, want %q", fault.Detail, want)
+	}
+	custom, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "Procurement freeze"})
+	if err != nil {
+		t.Fatalf("create reason: %v", err)
+	}
+	// Reset keeps the reason table, so the row would outlive this test.
+	t.Cleanup(func() {
+		if err := e.store.DeleteLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id)); err != nil {
+			t.Errorf("removing the custom reason: %v", err)
+		}
+	})
+	if _, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " procurement FREEZE "}); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a second spelling of a custom reason answered %v, want a conflict", err)
+	}
+	taken := "No Budget"
+	if _, err := e.store.UpdateLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id), UpdateLeadDisqualifyReasonInput{Label: &taken}); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a rename onto a held label answered %v, want a conflict", err)
+	}
+	sortOrder := 5
+	if _, err := e.store.UpdateLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id), UpdateLeadDisqualifyReasonInput{SortOrder: &sortOrder}); err != nil {
+		t.Fatalf("a reorder that leaves the label alone: %v", err)
 	}
 }

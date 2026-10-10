@@ -1,18 +1,5 @@
-/* Scoped styles for the custom-fields admin surface. Layout only — the design
-   system carries the look of every control on it, so what is left here is the
-   panel's own bands, the builder's form layout, the field cell, the staged
-   (writing) tint and the retired-cell dim. The object bar and the type picker
-   are SegmentedControls now, and the refusal and the confirm gate are Callouts:
-   all four used to be drawn here, each in a chrome of its own. */
-
-/* The whole surface is ONE Panel with ONE body now: the object picker, the
-   field table and the add verb are rows in a SettingList, and the change trail
-   is a Disclosure standing in the same list. So the inter-band rhythm this file
-   used to own belongs to `SettingList` — the hairline between two rows and the
-   interval around them are the list's, not each row's, which is the whole
-   reason that primitive exists. What is left here is the parts the design
-   system has no primitive for: the builder's form layout, the field cell, the
-   type chip and the audit list. */
+/* Layout only: the design system draws every control here. This file owns the
+   builder's form, the field cell, the staged tint and the change list. */
 
 /* What a reader may NOT do here, said once for the whole section — the same
    line products and offer templates carry, so the three read alike.
@@ -35,14 +22,6 @@
 /* The intro wraps; the badge keeps its word whole. */
 .cf-builder-head > .badge {
   flex: none;
-}
-
-/* The rename and archive buttons in a field row, which shipped as an
-   undeclared class doing nothing: the pair ran together on the browser's
-   inter-word space. */
-.cf-rowactions {
-  display: flex;
-  gap: var(--gapActions);
 }
 
 /* This screen's hint line. All it owns is the interval a hint keeps to its
@@ -91,8 +70,7 @@
   padding: var(--space-1) var(--space-2);
 }
 
-/* Field cell: a type-glyph tile, then the human label with the immutable API
-   key on its own muted line beneath it — never run together. */
+/* Field cell: a type-glyph tile, then the label over its immutable API key. */
 .cf-fieldcell {
   display: flex;
   align-items: center;
@@ -115,34 +93,10 @@
   height: 15px;
 }
 
-.cf-fieldmeta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.cf-fieldname {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* The field's API key — the string an integrator copies into a payload. */
-.cf-key {
-  display: block;
-}
-
 /* just-added optimistic row, pending the server commit. The italic carries the
  * staged-ness. */
 .cf-cell-staged {
   font-style: italic;
-}
-
-/* archived field, still legible in the audit-retained list. The strike-through
- * says archived. */
-.cf-cell-retired {
-  text-decoration: line-through;
 }
 
 /* recent-changes rail. Loading, empty, withheld and failed are SurfaceState's
@@ -151,4 +105,14 @@
   list-style: none;
   display: flex;
   flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+
+.cf-audit > li {
+  padding-block: var(--space-2);
+}
+
+.cf-audit > li + li {
+  border-top: 1px solid var(--borderSubtle);
 }

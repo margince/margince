@@ -164,7 +164,7 @@ function PassportTable({
         passport.revoked_at == null && (
           <span className="cell-actions">
             <OverflowMenu
-              label={t("settings.passportActions", { name: passport.label })}
+              label={t("table.rowActions", { name: passport.label })}
             >
               <Button
                 variant="danger"

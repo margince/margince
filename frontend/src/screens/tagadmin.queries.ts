@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { unwrap } from "./common";
+import type { MutationOutcome } from "./undoableremoval";
 
 export type Tag = components["schemas"]["Tag"];
 /** The palette, from the contract rather than restated beside it. */
@@ -22,22 +23,12 @@ export type TagColor = NonNullable<Tag["color"]>;
 export type TagColorEdit = NonNullable<
   components["schemas"]["UpdateTagRequest"]["color"]
 >;
-export type TagDetail = components["schemas"]["TagDetail"];
 
-/**
- * The whole vocabulary, ARCHIVED INCLUDED, for the admin card.
- *
- * The picker asks for live words only, because a retired one cannot be
- * applied. This card is where a retired word is restored, so a list that hid
- * them would leave the verb with nothing to act on — and an admin looking for
- * a word they archived last month would conclude it was deleted.
- */
+/** The whole vocabulary, archived words included, so the filter sentence can
+ *  tell a retired tag in a clause from a live one. */
 export function useTagCatalog(enabled = true) {
   return useQuery({
     queryKey: ["tags", "catalog"],
-    // Not asked at all without the grant: the settings entry opens on any of
-    // five data-model reads, so this card is mounted for seats that hold none
-    // of the tag ones, and the request could only answer 403.
     enabled,
     queryFn: async () => {
       return unwrap(
@@ -49,21 +40,16 @@ export function useTagCatalog(enabled = true) {
   });
 }
 
-/**
- * One tag with how much of the workspace carries it.
- *
- * Asked per tag rather than folded into the catalog: the counts are row-scoped
- * per record type, which is three joins the list read does not do for words
- * nobody has opened.
- */
-export function useTagDetail(tagID: string | undefined) {
+/** The catalog with each word's record count, for the admin card alone:
+ *  counting reads every tagging, which no list page should pay for. */
+export function useCountedTagCatalog(enabled: boolean) {
   return useQuery({
-    queryKey: ["tag", tagID],
-    enabled: Boolean(tagID),
+    queryKey: ["tags", "catalog", "carried_by"],
+    enabled,
     queryFn: async () => {
       return unwrap(
-        await api.GET("/tags/{id}", {
-          params: { path: { id: tagID as string } },
+        await api.GET("/tags", {
+          params: { query: { include_archived: true, with_carried_by: true } },
         }),
       );
     },
@@ -147,8 +133,11 @@ export function useUpdateTag() {
   });
 }
 
-/** Retire a word: it stops being offered, and stays on what already carries it. */
-export function useArchiveTag() {
+/**
+ * Retire a word: it stops being offered, and stays on what already carries it.
+ * `onSuccess` gets the id that restores it.
+ */
+export function useArchiveTag(outcome: MutationOutcome<string | null>) {
   const invalidate = useVocabularyInvalidation();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -157,12 +146,17 @@ export function useArchiveTag() {
           params: { path: { id } },
         }),
       );
+      return id;
     },
-    onSuccess: invalidate,
+    onError: outcome.onError,
+    onSuccess: (id) => {
+      invalidate();
+      outcome.onSuccess(id);
+    },
   });
 }
 
-export function useRestoreTag() {
+export function useRestoreTag(outcome: MutationOutcome<string>) {
   const invalidate = useVocabularyInvalidation();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -172,7 +166,11 @@ export function useRestoreTag() {
         }),
       );
     },
-    onSuccess: invalidate,
+    onError: outcome.onError,
+    onSuccess: (_, id) => {
+      invalidate();
+      outcome.onSuccess(id);
+    },
   });
 }
 

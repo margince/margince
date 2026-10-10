@@ -135,9 +135,10 @@ func checkPolicyBounds(body crmcontracts.SetTransitionPolicyRequest) error {
 		return httperr.Validation("mode", "unknown_mode",
 			"a transition either proposes its moves or applies them; there is no third answer")
 	}
-	if body.WindowDays != nil && (*body.WindowDays < 1 || *body.WindowDays > 365) {
-		return httperr.Validation("window_days", "out_of_range",
-			"a rate is counted over 1 to 365 days")
+	if body.WindowDays != nil {
+		if err := checkWindowDays(*body.WindowDays); err != nil {
+			return err
+		}
 	}
 	if body.UndoWindowHours != nil &&
 		(*body.UndoWindowHours < 1 || *body.UndoWindowHours > 8760) {
@@ -148,6 +149,16 @@ func checkPolicyBounds(body crmcontracts.SetTransitionPolicyRequest) error {
 		return err
 	}
 	return checkRate("correction_reversal_threshold", body.CorrectionReversalThreshold)
+}
+
+// checkWindowDays holds a rate window to the contract's 1 to 365 days. The
+// report and the policy share it, so a window one accepts the other does too.
+func checkWindowDays(days int) error {
+	if days < 1 || days > 365 {
+		return httperr.Validation("window_days", "out_of_range",
+			"a rate is counted over 1 to 365 days")
+	}
+	return nil
 }
 
 // checkRate refuses a threshold outside 0..1.

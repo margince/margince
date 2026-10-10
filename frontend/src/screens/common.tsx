@@ -536,6 +536,8 @@ const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["provider_unavailable", "common.providerUnavailable"],
   ["permission_denied", "common.permissionDenied"],
   ["seat_tier_insufficient", "common.seatReadOnly"],
+  // The server's skew detail is English, worded for API and agent readers.
+  ["version_skew", "common.versionSkew"],
 ]);
 
 // RFC 7807 bodies carry the honest detail; surface it instead of a generic
@@ -695,10 +697,8 @@ export function problemFieldErrorsOf(error: unknown): FieldProblem[] {
   return error instanceof ProblemError ? problemFieldErrors(error.problem) : [];
 }
 
-// A 409 whose code names the If-Match precondition failure — the record
-// changed under the caller since the form was opened. Distinguished from
-// problemExistingId's duplicate-collision code so the edit form can show the
-// "reload and retry" copy instead of the raw server detail.
+// A 409 naming the If-Match precondition failure: the record changed under the
+// caller since the form opened, which problemExistingId's duplicate is not.
 export function isVersionSkew(problem: unknown): boolean {
   if (!problem || typeof problem !== "object") return false;
   const record = problem as Record<string, unknown>;

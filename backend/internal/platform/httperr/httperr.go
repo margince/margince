@@ -59,6 +59,9 @@ var mapping = []struct {
 	{apperrors.ErrRetentionHold, http.StatusLocked, "locked"},
 }
 
+// versionSkewDetail tells a reader who lost a version race what to do next.
+const versionSkewDetail = "This record changed after you opened it. Reload it to see the change, then make yours again."
+
 // clientInputValidation maps the typed errors that mean "the CALLER got the
 // request wrong" onto their contract validation shape — each carrying its own
 // field and machine code, so the client is told which input to fix rather than
@@ -349,6 +352,11 @@ func Classify(err error) (Fault, bool) {
 			if m.sentinel == apperrors.ErrProviderUnusable {
 				f.Detail = m.sentinel.Error()
 				f.InfraCause = err
+			}
+			// A plain wrap around a lost race names a code path. A message written
+			// for the reader is an apperrors.VersionSkewError, answered as a MessageFault above.
+			if m.sentinel == apperrors.ErrVersionSkew {
+				f.Detail = versionSkewDetail
 			}
 			// A sentinel wrapped around an infrastructure failure must not
 			// carry that failure's text to a caller. It gets the sentinel's
