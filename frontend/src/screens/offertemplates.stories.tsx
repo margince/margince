@@ -86,14 +86,25 @@ export const RowMenu: Story = {
   },
 };
 
+// Below the fold the header verbs sit in a "More actions" menu.
+async function pressHeadVerb(canvasElement: HTMLElement, name: string) {
+  const canvas = within(canvasElement);
+  await canvas.findByRole("table");
+  if (!canvas.queryByRole("button", { name })) {
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "More actions" }),
+    );
+  }
+  await userEvent.click(
+    await within(document.body).findByRole("button", { name }),
+  );
+}
+
 // The language and the default read as words in the form, not as codes.
 export const NewTemplateLanguage: Story = {
   render: renderTemplates,
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "New template" }),
-    );
+    await pressHeadVerb(canvasElement, "New template");
     const form = within(await within(document.body).findByRole("dialog"));
     await userEvent.click(form.getByRole("combobox", { name: /^Language/ }));
     await within(document.body).findByRole("option", { name: "English (US)" });
