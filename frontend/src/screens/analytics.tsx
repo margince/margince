@@ -64,6 +64,7 @@ import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { QueryGate, unwrap } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
+import { stagesOfEveryPipeline } from "./pipelinestages";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingLibrary } from "./reporting.library";
 import { ReportingOverview } from "./reporting.overview";
@@ -1008,15 +1009,13 @@ export function AnalyticsScreen() {
   const context = useAnalyticsContext();
   const { selection, selectScope } = useAnalyticsSelection(context.data);
 
-  const pipelineQuery = useQuery({
-    queryKey: ["pipelines"],
+  const stagesQuery = useQuery({
+    queryKey: ["pipelines", "all-stages"],
     queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
+      const pipelines = unwrap(
+        await api.GET("/pipelines", { params: { query: {} } }),
       );
-      return data.data.find((pipeline) => pipeline.is_default) ?? data.data[0];
+      return stagesOfEveryPipeline(pipelines.data);
     },
   });
 
@@ -1112,7 +1111,7 @@ export function AnalyticsScreen() {
           selection={selection}
           onSelectScope={selectScope}
           scopeControl={scopeControl}
-          stages={pipelineQuery.data?.stages ?? []}
+          stages={stagesQuery.data ?? []}
         />
       </div>
     </div>

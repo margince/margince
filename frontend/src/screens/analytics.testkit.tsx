@@ -47,6 +47,8 @@ export type ReportsStubOpts = {
   // it between two runs of one report, as a reconfigured installation does.
   baseCurrency?: string;
   stageRows?: Record<string, unknown>[];
+  // The pipelines list the screen reads stage names from.
+  pipelines?: unknown;
   forecastRows?: Record<string, unknown>[];
   companyRows?: Record<string, unknown>[];
   meetingRows?: Record<string, unknown>[];
@@ -229,7 +231,7 @@ const ROUTES: readonly Route[] = [
   },
   {
     when: ({ url }) => url.includes("/pipelines"),
-    answer: () => jsonResponse(PIPELINES),
+    answer: (_asked, opts) => jsonResponse(opts.pipelines ?? PIPELINES),
   },
   {
     when: ({ url, method }) => method === "POST" && url.includes("/reports/"),

@@ -176,7 +176,7 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
       />,
     );
     expect(screen.getByText(long)).toBeInTheDocument();
-    expect(screen.getByText(long)).toHaveClass("deal-win-detail");
+    expect(screen.getByText(long)).toHaveClass("deal-close-detail");
     expect(screen.getByText("Qualified")).toBeInTheDocument();
   });
 
@@ -188,8 +188,11 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
       join(resolve(__dirname, ".."), "dealstatus.css"),
       "utf8",
     );
-    const rule = /\.deal-win-detail\s*\{([^}]*)\}/.exec(css);
-    expect(rule, ".deal-win-detail is gone from dealstatus.css").not.toBeNull();
+    const rule = /\.deal-close-detail\s*\{([^}]*)\}/.exec(css);
+    expect(
+      rule,
+      ".deal-close-detail is gone from dealstatus.css",
+    ).not.toBeNull();
     const body = rule?.[1] ?? "";
 
     expect(body).toMatch(/max-width:/);
@@ -201,9 +204,46 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     ]) {
       expect(
         body,
-        `.deal-win-detail clips its content (${clip.source}); the value is what a controller is shown`,
+        `.deal-close-detail clips its content (${clip.source}); the value is what a controller is shown`,
       ).not.toMatch(clip);
     }
+  });
+
+  it("states why a lost deal was lost on its head", () => {
+    show(
+      <DealIdentityFacts
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "lost",
+          lost_reason: "Budget frozen until next year",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.getByText(en["deals.lostReason"])).toBeInTheDocument();
+    expect(
+      screen.getByText("Budget frozen until next year"),
+    ).toBeInTheDocument();
+  });
+
+  it("asks nothing about a loss on a deal that is not lost", () => {
+    show(
+      <DealIdentityFacts
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          status: "open",
+          lost_reason: "stale",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.queryByText(en["deals.lostReason"])).not.toBeInTheDocument();
   });
 
   it("says nothing about paperwork on a won deal a contract carried", () => {

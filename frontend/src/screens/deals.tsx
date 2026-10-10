@@ -125,6 +125,7 @@ import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
+import { currencyBeside } from "./dealcurrency";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
 import { lastMailColumn } from "./dealmailaside";
@@ -693,7 +694,7 @@ export function mapDealCreate(
     expected_arr_minor: expectedArr
       ? toMinorUnits(Number(expectedArr), currency)
       : null,
-    currency,
+    currency: currencyBeside(currency, amount, expectedArr),
     company_id: str(values.company_id) || null,
     partner_company_id: str(values.partner_company_id) || null,
     // The empty option means the caller made no claim, and null is how that
