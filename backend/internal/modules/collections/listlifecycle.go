@@ -56,6 +56,9 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 		}
 		p := listPatch(current, in)
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, listObject, id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

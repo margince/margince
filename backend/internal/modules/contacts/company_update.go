@@ -123,6 +123,9 @@ func (s *Store) updateCompanyInTx(
 		return crmcontracts.Company{}, err
 	}
 	if p.Empty() {
+		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
+			return crmcontracts.Company{}, err
+		}
 		return current, nil
 	}
 	if in.Visibility != nil {

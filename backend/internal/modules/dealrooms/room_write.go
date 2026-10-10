@@ -226,6 +226,9 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 		}
 		p := buildRoomPatch(current, in)
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, roomObject, id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

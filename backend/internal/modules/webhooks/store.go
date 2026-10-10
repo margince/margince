@@ -305,6 +305,9 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 			p.Set(fieldEventTypes, current.EventTypes, *in.EventTypes)
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "webhook_subscription", id, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

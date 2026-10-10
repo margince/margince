@@ -264,12 +264,12 @@ func (s *Store) UpdateAcquisitionSource(
 		if in.Active != nil {
 			patch.Set("active", before.Active, *in.Active)
 		}
+		if in.IfVersion != nil && *in.IfVersion != before.Version {
+			return apperrors.ErrConflict
+		}
 		if patch.Empty() {
 			out, err = readAcquisitionSource(ctx, tx, id)
 			return err
-		}
-		if in.IfVersion != nil && *in.IfVersion != before.Version {
-			return apperrors.ErrConflict
 		}
 		// ApplyLocked under a NoArchiveColumn lock, NOT ApplyWithVersion:
 		// ApplyWithVersion always narrows with `archived_at IS NULL`, and this

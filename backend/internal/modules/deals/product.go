@@ -145,6 +145,9 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 			return err
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "product", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

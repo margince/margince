@@ -402,6 +402,9 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 			return err
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly)
 			return err
 		}

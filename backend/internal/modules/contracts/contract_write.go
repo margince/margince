@@ -189,6 +189,9 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		// carrying custom fields succeeds and changes nothing.
 		storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties)
 		if patch.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
+				return err
+			}
 			// The unchanged row still leaves the store, so it is masked like
 			// any other answer. It is re-read WITH the catalog rather than
 			// reusing the pre-image: writableContract reads with nil columns,
