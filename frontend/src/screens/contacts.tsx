@@ -76,9 +76,11 @@ async function createContact(
   rows: FormRows | undefined,
   customFields: Record<string, unknown>,
   t: (key: MessageKey) => string,
+  idempotencyKey: string,
 ): Promise<Contact> {
   return unwrap(
     await api.POST("/contacts", {
+      params: { header: { "Idempotency-Key": idempotencyKey } },
       body: { ...mapContactBody(values, rows ?? {}), ...customFields },
     }),
     t,
@@ -218,8 +220,8 @@ function ContactsList() {
               label={t("create.contact")}
               invalidate="contacts"
               screen="contacts"
-              create={(values, rows) =>
-                createContact(values, rows, cf.toBody(values), t)
+              create={(values, rows, key) =>
+                createContact(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "contacts", id })}
               fields={[...contactCreateFields(t), ...cf.formFields]}

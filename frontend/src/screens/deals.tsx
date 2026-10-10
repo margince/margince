@@ -1861,34 +1861,31 @@ function DealCreateAction({
   startOpen: boolean;
 }>) {
   const t = useT();
-  // The picker asks the server for ONE company's projects, so the form's chosen
-  // company is what it is keyed on: a project is worked by several companies,
-  // and only the server can say which of them this one is on.
-  //
-  // The company comes from the OPEN FORM rather than from anything on this
-  // screen, because there is nothing else it could come from: a create form has
-  // no record, and the reader picks the company inside the same dialog. The
-  // form publishes its answers (CreateAction's onValuesChange) and the query
-  // follows them, which is the read `optionsFor` cannot do — it is a pure
-  // function of the values, so it can only filter a list already fetched, and a
-  // project list row names only its anchor company, so nothing in the browser
-  // can compute which projects a company is on.
+  // The picker asks the server for one company's projects, so it is keyed on
+  // the company the open form names. A create form has no record to take it
+  // from, and only the server knows which projects a company is on. The form
+  // publishes its answers (CreateAction's onValuesChange) and the query follows.
   const [formCompany, setFormCompany] = useState("");
   const openProjects = useProjectsOfCompany(formCompany || undefined);
 
-  const createDeal = async (values: Record<string, string>) => {
+  const createDeal = async (
+    values: Record<string, string>,
+    _rows: unknown,
+    idempotencyKey: string,
+  ) => {
     if (!pipeline) {
       throwProblem(null);
     }
-    // A project asked for on the form is born first, on the deal's company,
-    // so the deal can name it at birth.
+    // A project asked for on the form is born first, so the deal names it.
     const projectId = await resolveDealProject(
       values,
       values.company_id?.trim() || null,
       t,
+      idempotencyKey,
     );
     return unwrap(
       await api.POST("/deals", {
+        params: { header: { "Idempotency-Key": idempotencyKey } },
         body: {
           ...mapDealCreate(
             { ...values, project_id: projectId ?? "" },

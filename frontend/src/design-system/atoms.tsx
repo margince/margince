@@ -204,7 +204,7 @@ export function Button({
 }) {
   const ownReasonId = useId();
   const busyLabelId = useId();
-  const singlePress = useSinglePress();
+  const singlePress = useSinglePress(pending);
   const classes = [
     "btn",
     `btn-${variant}`,

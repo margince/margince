@@ -276,8 +276,8 @@ export function CompaniesScreen() {
               label={t("create.company")}
               invalidate="companies"
               screen="companies"
-              create={(values, rows) =>
-                createCompany(values, rows, cf.toBody(values), t)
+              create={(values, rows, key) =>
+                createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
               fields={[...companyCreateFields, ...cf.formFields]}

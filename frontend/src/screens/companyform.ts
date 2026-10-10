@@ -360,9 +360,11 @@ export async function createCompany(
   rows: FormRows | undefined,
   customFields: Record<string, unknown>,
   t: (key: MessageKey) => string,
+  idempotencyKey: string,
 ): Promise<Company> {
   return unwrap(
     await api.POST("/companies", {
+      params: { header: { "Idempotency-Key": idempotencyKey } },
       body: { ...mapCompanyBody(values, rows ?? {}), ...customFields },
     }),
     t,

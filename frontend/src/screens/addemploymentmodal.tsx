@@ -175,7 +175,8 @@ export function AddEmploymentModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!company || !validDateEntry(start) || create.isPending}
+          disabled={!company || !validDateEntry(start)}
+          pending={create.isPending}
           onClick={() => {
             if (!company) {
               return;
