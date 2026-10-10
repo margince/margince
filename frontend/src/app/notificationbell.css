@@ -96,6 +96,11 @@ span.notifrow-subject {
   margin: 0;
 }
 
+/* The caption beneath a notice: when it was raised. */
+.notifrow-when {
+  margin: 0;
+}
+
 .notifrow-verb {
   display: flex;
   justify-content: flex-start;

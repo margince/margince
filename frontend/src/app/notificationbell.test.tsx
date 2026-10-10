@@ -217,6 +217,52 @@ describe("NotificationBell", () => {
     expect(items[1]?.textContent).toContain("An automation could not run");
   });
 
+  it("heads a notice that is only field pairs with its class, not the pairs", async () => {
+    const fields = "into_tag_id=01a11ecb-0000, to_stage_id=01a0ced5-0000";
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", fields, { kind: "approval_pending" }),
+        notice("n2", "Fold one tag into another: into_tag_id=01a1", {
+          kind: "approval_pending",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const [bare, sentence] = await screen.findAllByRole("listitem");
+    expect(within(bare).getByText("Approvals waiting on you")).toBeTruthy();
+    expect(within(bare).getByText(fields)).toBeTruthy();
+    // A subject that is a sentence is still the headline, untouched.
+    expect(
+      within(sentence).getByText("Fold one tag into another: into_tag_id=01a1"),
+    ).toBeTruthy();
+    expect(within(sentence).queryByText("Approvals waiting on you")).toBeNull();
+  });
+
+  it("says when each notice was raised", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          created_at: "2026-09-15T09:00:00Z",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const [row] = await screen.findAllByRole("listitem");
+    const when = row.querySelector("time");
+    expect(when?.getAttribute("datetime")).toBe("2026-09-15T09:00:00Z");
+    expect(when?.textContent).toMatch(/2026|15/);
+  });
+
   // The chrome's one dismissal, so the centre closes the way every other
   // popover in the strip does.
   it("closes again on Escape", async () => {

@@ -67,8 +67,6 @@ test.describe("the rail footer at 1280 by 720", () => {
     const figure = page.locator(".arspend b");
     await expect(figure).toBeVisible();
     const chevron = page.locator(".archev");
-    expect(
-      overlapArea(await rect(figure), await rect(chevron)),
-    ).toBe(0);
+    expect(overlapArea(await rect(figure), await rect(chevron))).toBe(0);
   });
 });
