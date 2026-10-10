@@ -200,11 +200,11 @@ func Dedupe(sentences []Sentence) []Sentence {
 	return out
 }
 
-// Quoted reports whether a quote is the text's own words: values.Quoted, the one
-// grounding rule, under the name the extractors in this package call it by.
+// Quoted is values.Quoted, the one grounding rule, under the name the
+// extractors here call it by.
 func Quoted(text, quote string) bool { return values.Quoted(text, quote) }
 
-// CollapseSpace is values.CollapseSpace, the normalisation Quoted compares under.
+// CollapseSpace is values.CollapseSpace.
 func CollapseSpace(s string) string { return values.CollapseSpace(s) }
 
 // Source renders one record as the text a sentence citing it is held against.

@@ -39,7 +39,7 @@ func TestAMinorAmountMustFitWhatAJSONNumberHoldsExactly(t *testing.T) {
 	t.Parallel()
 
 	for amount, refused := range map[int64]bool{0: false, 100: false, maxPriceMinor: false, maxPriceMinor + 1: true, -1: true} {
-		if err := checkPrice("unit_price_minor", amount); (err != nil) != refused {
+		if err := checkPrice(amount); (err != nil) != refused {
 			t.Errorf("checkPrice(%d) = %v, want refused=%v", amount, err, refused)
 		}
 	}

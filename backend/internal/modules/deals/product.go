@@ -68,7 +68,7 @@ func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmco
 		}
 		taxRate = formatPct(*in.DefaultTaxRate)
 	}
-	if err := checkPrice("unit_price_minor", in.UnitPriceMinor); err != nil {
+	if err := checkPrice(in.UnitPriceMinor); err != nil {
 		return crmcontracts.Product{}, err
 	}
 	if err := checkCurrency(in.Currency); err != nil {
@@ -190,7 +190,7 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		p.Set("unit", current.Unit, unit)
 	}
 	if in.UnitPriceMinor != nil {
-		if err := checkPrice("unit_price_minor", *in.UnitPriceMinor); err != nil {
+		if err := checkPrice(*in.UnitPriceMinor); err != nil {
 			return nil, err
 		}
 		p.Set("unit_price_minor", current.UnitPriceMinor, *in.UnitPriceMinor)

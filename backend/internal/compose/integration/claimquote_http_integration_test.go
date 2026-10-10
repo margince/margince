@@ -12,9 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// A claim is stored only against words the message holds: one whose quote is
-// not in the cited note, or whose text is blank, would read as trustworthy as a
-// grounded one.
+// A claim is stored only against words its note holds. An ungrounded one reads
+// as trustworthy as a grounded one.
 func TestAClaimIsRecordedOnlyAgainstWordsTheNoteHolds(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

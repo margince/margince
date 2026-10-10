@@ -14,14 +14,15 @@ import (
 )
 
 // The ranges of the numbers an offer line and a product carry, as the contract
-// and the columns declare them. A figure outside one is refused by name here,
-// so it never reaches a CHECK that can only say "check the picklist".
+// and the columns declare them. A figure outside one is refused by name, so it
+// never reaches a CHECK that can only say "check the picklist".
 const (
-	// maxPriceMinor is the largest minor-unit amount a JSON number holds exactly.
+	// maxPriceMinor is the largest minor-unit amount a JSON number holds without loss.
 	maxPriceMinor = 1<<53 - 1
-	// The columns' widths: numeric(14,3) and numeric(5,2).
-	maxQuantity = "99999999999.999"
-	maxPercent  = "999.99"
+	// The columns' widths, numeric(14,3) and numeric(5,2), in thousandths and
+	// hundredths.
+	maxQuantityMilli = 99999999999999
+	maxPercentCenti  = 99999
 )
 
 // FigureError maps to 422: a number outside the range or precision its field
@@ -43,17 +44,13 @@ type figureLimit struct {
 	places       int
 }
 
-func bound(s string) *big.Rat {
-	r, _ := new(big.Rat).SetString(s)
-	return r
-}
-
 var (
-	quantityLimit = figureLimit{"quantity", bound("0"), bound(maxQuantity), true, 3}
-	discountLimit = figureLimit{"discount_pct", bound("0"), bound("100"), false, 2}
-	taxLimit      = figureLimit{"tax_rate", bound("0"), bound(maxPercent), false, 2}
+	zero          = big.NewRat(0, 1)
+	quantityLimit = figureLimit{field: "quantity", min: zero, max: big.NewRat(maxQuantityMilli, 1000), minExclusive: true, places: 3}
+	discountLimit = figureLimit{field: "discount_pct", min: zero, max: big.NewRat(100, 1), places: 2}
+	taxLimit      = figureLimit{field: "tax_rate", min: zero, max: big.NewRat(maxPercentCenti, 100), places: 2}
 	// The product's default carries the same bounds under its own name.
-	defaultTaxLimit = figureLimit{"default_tax_rate", bound("0"), bound(maxPercent), false, 2}
+	defaultTaxLimit = figureLimit{field: "default_tax_rate", min: zero, max: big.NewRat(maxPercentCenti, 100), places: 2}
 )
 
 // wireDecimal renders a number as the caller wrote it. The column would round
@@ -68,13 +65,13 @@ func checkFigure(lim figureLimit, value string) error {
 		return err
 	}
 	if dot := strings.IndexByte(value, '.'); dot >= 0 && len(strings.TrimRight(value, "0"))-dot-1 > lim.places {
-		return &FigureError{lim.field, fmt.Sprintf("holds at most %d decimal places", lim.places)}
+		return &FigureError{Field: lim.field, Rule: fmt.Sprintf("holds at most %d decimal places", lim.places)}
 	}
 	switch c := rat.Cmp(lim.min); {
 	case c < 0 || (c == 0 && lim.minExclusive):
-		return &FigureError{lim.field, "must be " + belowRule(lim) + plain(lim.min, lim.places)}
+		return &FigureError{Field: lim.field, Rule: "must be " + belowRule(lim) + plain(lim.min, lim.places)}
 	case rat.Cmp(lim.max) > 0:
-		return &FigureError{lim.field, "must be at most " + plain(lim.max, lim.places)}
+		return &FigureError{Field: lim.field, Rule: "must be at most " + plain(lim.max, lim.places)}
 	}
 	return nil
 }
@@ -96,9 +93,9 @@ func belowRule(lim figureLimit) string {
 }
 
 // checkPrice refuses a minor-unit amount outside 0 to the largest exact number.
-func checkPrice(field string, amountMinor int64) error {
+func checkPrice(amountMinor int64) error {
 	if amountMinor < 0 || amountMinor > maxPriceMinor {
-		return &FigureError{field, fmt.Sprintf("must be between 0 and %d", int64(maxPriceMinor))}
+		return &FigureError{Field: productPriceColumn, Rule: fmt.Sprintf("must be between 0 and %d", int64(maxPriceMinor))}
 	}
 	return nil
 }
@@ -106,7 +103,7 @@ func checkPrice(field string, amountMinor int64) error {
 // checkCurrency refuses a currency that is not three upper-case letters.
 func checkCurrency(code string) error {
 	if !values.ValidCurrency(code) {
-		return &FigureError{"currency", "must be a three-letter upper-case code, such as EUR"}
+		return &FigureError{Field: currencyField, Rule: "must be a three-letter upper-case code, such as EUR"}
 	}
 	return nil
 }
@@ -114,7 +111,7 @@ func checkCurrency(code string) error {
 // checkLinePosition refuses a position before the first.
 func checkLinePosition(position *int) error {
 	if position != nil && *position < 1 {
-		return &FigureError{"position", "must be 1 or more"}
+		return &FigureError{Field: "position", Rule: "must be 1 or more"}
 	}
 	return nil
 }
@@ -129,7 +126,7 @@ func checkLineFigures(line OfferLineInput) error {
 			return err
 		}
 	}
-	return checkPrice("unit_price_minor", line.UnitPriceMinor)
+	return checkPrice(line.UnitPriceMinor)
 }
 
 // requireLineWords refuses a patch that blanks a line's description or unit,
@@ -146,7 +143,7 @@ func requireLineWords(in UpdateOfferLineInput) (UpdateOfferLineInput, error) {
 // trimmedWord answers a sent word trimmed, or refuses it when it is blank.
 func trimmedWord(field string, word *string) (*string, error) {
 	if word == nil {
-		return nil, nil
+		return word, nil
 	}
 	text, err := httperr.RequireNonBlank(field, *word)
 	return &text, err

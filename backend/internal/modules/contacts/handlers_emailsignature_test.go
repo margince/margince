@@ -10,9 +10,8 @@ import (
 	"testing"
 )
 
-// A save that names no body must be refused before the store is reached: empty
-// text is how a member clears a signature, so a forgotten field cannot read as
-// that request.
+// A save with no body is refused before the store is reached. Empty text clears
+// a signature, so a forgotten field must not read as that request.
 func TestSavingASignatureWithNoBodyIsRefusedNamingTheField(t *testing.T) {
 	t.Parallel()
 

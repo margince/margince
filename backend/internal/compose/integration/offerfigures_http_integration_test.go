@@ -5,10 +5,11 @@
 
 package integration
 
-// The numbers and words an offer line and a product carry are held to the
-// contract on every write, and a refusal names the field to fix.
+// An offer line and a product hold the contract's figures and words on every
+// write. A refusal names the field to fix.
 
 import (
+	"maps"
 	"net/http"
 	"testing"
 
@@ -52,9 +53,7 @@ func TestAnOfferLineHoldsTheContractsFigures(t *testing.T) {
 
 	line := func(extra AnyMap) AnyMap {
 		body := AnyMap{"description": "Support", "quantity": 1, "unit_price_minor": 100}
-		for k, v := range extra {
-			body[k] = v
-		}
+		maps.Copy(body, extra)
 		return body
 	}
 	for field, bad := range map[string]AnyMap{
@@ -92,9 +91,7 @@ func TestAProductHoldsTheContractsFigures(t *testing.T) {
 
 	product := func(extra AnyMap) AnyMap {
 		body := AnyMap{"name": "Plan", "unit_price_minor": 100, "currency": "EUR", "source": "manual"}
-		for k, v := range extra {
-			body[k] = v
-		}
+		maps.Copy(body, extra)
 		return body
 	}
 	for field, bad := range map[string]AnyMap{

@@ -24,7 +24,9 @@ func TestAListWriteHoldsTheContractsLimits(t *testing.T) {
 	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Noted Contact"}, nil, &contact)
 
 	members := "/v1/lists/" + list.ID + "/members"
-	change := func(note string) AnyMap { return AnyMap{"entity_type": "contact", "entity_id": contact["id"], "note": note} }
+	change := func(note string) AnyMap {
+		return AnyMap{"entity_type": "contact", "entity_id": contact["id"], "note": note}
+	}
 	for path, note := range map[string]string{members: strings.Repeat("n", 501), members + "/remove": strings.Repeat("n", 501)} {
 		if status := e.Call(t, "POST", path, change(note), nil, nil); status != http.StatusUnprocessableEntity {
 			t.Errorf("POST %s with a 501-character note → %d, want 422", path, status)
