@@ -159,7 +159,7 @@ func RankRouteIn(edges []RouteInEdge, score func(ids.ContactID) (int, bool)) []R
 //
 // It carries the EDGE gate for the same reason, and the name says why: these
 // ARE edges, returned with their kind and role. Refusing is the honest answer
-// on both surfaces — company360 names `intro_path` in groups_omitted, and the warm
+// on both surfaces — company360 names `signal_route` in groups_omitted, and the warm
 // room refuses outright rather than reporting a COLD verdict it reached by not
 // being allowed to look for warmth.
 func RouteInEdges(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]RouteInEdge, error) {

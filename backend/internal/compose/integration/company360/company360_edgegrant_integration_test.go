@@ -106,7 +106,7 @@ func TestARoleRefusedTheEdgeSeesTheAccountPageWithoutItsEdgesAndIsToldSo(t *test
 	// The honesty channel. Absent-and-named is the whole point: absent alone
 	// reads as "nobody works here", which is a different and false statement.
 	//
-	// `contacts` only. intro_path is NOT named, and that is correct rather than
+	// `contacts` only. signal_route is NOT named, and that is correct rather than
 	// a gap: readRouteIn returns before it reaches the edge when the account
 	// carries no open resolved signal, and this fixture seeds none — "there is
 	// no active path to propose" is not "a group you may not read", which is

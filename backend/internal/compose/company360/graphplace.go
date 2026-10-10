@@ -5,7 +5,7 @@ package company360
 
 // Placing the read rows as nodes and edges: the deterministic order each
 // group is drawn in, the caps and what they report, the direction every edge
-// runs, and which contact the warm-intro path marks. No SQL here — every rule
+// runs, and which contact the warm-signal route marks. No SQL here — every rule
 // below is provable from already-read rows (graph_test.go), which is why the
 // caps and the edge orientation are testable without a database.
 
@@ -208,7 +208,7 @@ func (g *graphAssembly) addUserNode(user graphUser) {
 	})
 }
 
-// markIntroPath names the contact the warm room would route the account's
+// markSignalRoute names the contact the warm room would route the account's
 // active signal through, and marks their node.
 //
 // It reports nothing unless that exact contact is already a node here. The
@@ -217,7 +217,7 @@ func (g *graphAssembly) addUserNode(user graphUser) {
 // contact, because their only seat is on a deal it did not draw, saying
 // nothing is the honest answer. Naming the strongest contact it happens to
 // be showing would be a second, quieter ranking.
-func (g *graphAssembly) markIntroPath() {
+func (g *graphAssembly) markSignalRoute() {
 	if g.signalID == nil {
 		return
 	}
@@ -234,8 +234,8 @@ func (g *graphAssembly) markIntroPath() {
 		return
 	}
 	onPath := true
-	g.out.Nodes[index].IntroPath = &onPath
-	g.out.IntroPath = &crmcontracts.CompanyGraphIntroPath{
+	g.out.Nodes[index].OnSignalRoute = &onPath
+	g.out.SignalRoute = &crmcontracts.CompanyGraphSignalRoute{
 		SignalId:  openapi_types.UUID(*g.signalID),
 		ContactId: openapi_types.UUID(contactID),
 	}

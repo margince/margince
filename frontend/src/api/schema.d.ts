@@ -2018,7 +2018,7 @@ export interface paths {
          *
          *     **Authorization is per group**, the same posture `GET /companies/{id}/360`
          *     takes for its sections. Reading the company itself is mandatory. Contacts
-         *     need the contact grant, deals need the deal grant, and the intro path needs the
+         *     need the contact grant, deals need the deal grant, and the signal route needs the
          *     signal grant; a group the caller may not read is left out of `nodes`/`edges` and
          *     named in `groups_omitted`, so the card can say "hidden from you" instead of
          *     drawing a company with no contacts. Within a group every row carries that
@@ -25742,10 +25742,10 @@ export interface components {
              * @description `company`, `contact` and `deal` are the account's own records.
              *     `user` is a member of THIS workspace — someone on our side who is connected to the
              *     account. A user node carries its display name as the `label` and nothing else:
-             *     `detail`, `strength` and `strength_bucket` are null and `intro_path` is ABSENT,
+             *     `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
              *     because §4 measures our relationship with the account's contacts, not with each
-             *     other. `intro_path` is a plain boolean and is never sent as null on any node —
-             *     a client reads its absence as "not on the warm-intro path".
+             *     other. `on_signal_route` is a plain boolean and is never sent as null on any node —
+             *     a client reads its absence as "not on the signal's route".
              * @enum {string}
              */
             kind: "company" | "contact" | "deal" | "user";
@@ -25778,10 +25778,12 @@ export interface components {
             strength_bucket?: null | "none" | "weak" | "moderate" | "strong";
             /**
              * @description This contact is the route in the active signal's warm-intro path proposes.
-             *     At most one node carries it, and only when `intro_path` at the top level is
+             *     At most one node carries it, and only when `signal_route` at the top level is
              *     present. Absent on every other node — there is nothing to say about them.
+             *     It is not the best introduction to the account: `GET /companies/{id}/intro-paths`
+             *     answers that, by ranking the colleagues who know someone there.
              */
-            intro_path?: boolean;
+            on_signal_route?: boolean;
             /**
              * @description The company node's resolved logo (A55), same value `Company.logo_url` carries.
              *     Absent on a company with no resolved logo and on every contact or deal node —
@@ -28197,8 +28199,9 @@ export interface components {
             strength_bucket?: "none" | "weak" | "moderate" | "strong" | null;
         };
         /**
-         * @description The warm-intro route the account's most recent open signal proposes: which signal,
-         *     and which contact is the way in. The contact is ranked exactly as
+         * @description The route in the account's most recent open signal proposes: which signal, and
+         *     which contact is the way in. It is not the best introduction to the account, which
+         *     `GET /companies/{id}/intro-paths` answers. The contact is ranked exactly as
          *     `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
          *     the card and the warm room can never name different contacts.
          *
@@ -28210,12 +28213,12 @@ export interface components {
          *     never names a DIFFERENT contact than the warm room: it either shows that contact or
          *     says nothing.
          */
-        CompanyGraphIntroPath: {
+        CompanyGraphSignalRoute: {
             /** Format: uuid */
             signal_id: string;
             /**
              * Format: uuid
-             * @description The route-in contact. Always present in `nodes`, carrying `intro_path: true`.
+             * @description The route-in contact. Always present in `nodes`, carrying `on_signal_route: true`.
              */
             contact_id: string;
         };
@@ -28456,7 +28459,7 @@ export interface components {
             /**
              * @description The groups withheld for lack of a grant — so a client can say "you can't see
              *     this" instead of "there is none". `contacts` withheld also withholds
-             *     `deal_stakeholder` edges and the intro path, because both name a contact.
+             *     `deal_stakeholder` edges and the signal route, because both name a contact.
              *
              *     `our_side` is the workspace members connected to the account — the owner and the
              *     teammates who have interacted with its contacts. It needs BOTH the contact and the
@@ -28467,8 +28470,8 @@ export interface components {
              *     grant beyond the company read this whole endpoint already demands, so they
              *     are row-scope pruned like every other node and can never be withheld wholesale.
              */
-            groups_omitted: ("contacts" | "deals" | "intro_path" | "our_side")[];
-            intro_path?: components["schemas"]["CompanyGraphIntroPath"];
+            groups_omitted: ("contacts" | "deals" | "signal_route" | "our_side")[];
+            signal_route?: components["schemas"]["CompanyGraphSignalRoute"];
         };
         /**
          * @description The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:

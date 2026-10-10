@@ -10726,8 +10726,8 @@ components:
           description: |-
             `company`, `contact` and `deal` are the account's own records.
             `user` is a member of THIS workspace — someone on our side who is connected to the
-            account. `intro_path` is a plain boolean and is never sent as null on any node —
-            a client reads its absence as "not on the warm-intro path".
+            account. `on_signal_route` is a plain boolean and is never sent as null on any node —
+            a client reads its absence as "not on the signal's route".
         label:
           type: string
           description: The record's display name — the company's, the contact's full name, the deal's name, the workspace member's display name.
@@ -10757,12 +10757,14 @@ components:
           type: [string, 'null']
           enum: [null, none, weak, moderate, strong]
           description: The server's band for `strength` — the same vocabulary `RelationshipStrength.bucket` uses. Never re-derived from the score by a client.
-        intro_path:
+        on_signal_route:
           type: boolean
           description: |-
             This contact is the route in the active signal's warm-intro path proposes.
-            At most one node carries it, and only when `intro_path` at the top level is
+            At most one node carries it, and only when `signal_route` at the top level is
             present. Absent on every other node — there is nothing to say about them.
+            It is not the best introduction to the account: `GET /companies/{id}/intro-paths`
+            answers that, by ranking the colleagues who know someone there.
         logo_url:
           type: [string, 'null']
           description: |-
@@ -12205,11 +12207,12 @@ components:
             `none` means no qualifying interaction at all and is shown as "no signal yet",
             never as a zero: "we have never spoken" and "we spoke and it went cold" are
             different facts about an account.
-    CompanyGraphIntroPath:
+    CompanyGraphSignalRoute:
       type: object
       description: |-
-        The warm-intro route the account's most recent open signal proposes: which signal,
-        and which contact is the way in. The contact is ranked exactly as
+        The route in the account's most recent open signal proposes: which signal, and
+        which contact is the way in. It is not the best introduction to the account, which
+        `GET /companies/{id}/intro-paths` answers. The contact is ranked exactly as
         `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
         the card and the warm room can never name different contacts.
       required: [signal_id, contact_id]
@@ -12218,7 +12221,7 @@ components:
         contact_id:
           type: string
           format: uuid
-          description: 'The route-in contact. Always present in `nodes`, carrying `intro_path: true`.'
+          description: 'The route-in contact. Always present in `nodes`, carrying `on_signal_route: true`.'
     CompanyCoverage:
       type: object
       required: [as_of, summary, deals, completeness]
@@ -12399,11 +12402,11 @@ components:
           description: |-
             The groups withheld for lack of a grant — so a client can say "you can't see
             this" instead of "there is none". `contacts` withheld also withholds
-            `deal_stakeholder` edges and the intro path, because both name a contact.
+            `deal_stakeholder` edges and the signal route, because both name a contact.
           items:
             type: string
-            enum: [contacts, deals, intro_path, our_side]
-        intro_path: {$ref: '#/components/schemas/CompanyGraphIntroPath'}
+            enum: [contacts, deals, signal_route, our_side]
+        signal_route: {$ref: '#/components/schemas/CompanyGraphSignalRoute'}
     Relationship:
       type: object
       description: |-

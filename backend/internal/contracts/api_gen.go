@@ -4887,10 +4887,10 @@ func (e CompanyFactSuspectReason) Valid() bool {
 
 // Defines values for CompanyGraphGroupsOmitted.
 const (
-	CompanyGraphGroupsOmittedContacts  CompanyGraphGroupsOmitted = "contacts"
-	CompanyGraphGroupsOmittedDeals     CompanyGraphGroupsOmitted = "deals"
-	CompanyGraphGroupsOmittedIntroPath CompanyGraphGroupsOmitted = "intro_path"
-	CompanyGraphGroupsOmittedOurSide   CompanyGraphGroupsOmitted = "our_side"
+	CompanyGraphGroupsOmittedContacts    CompanyGraphGroupsOmitted = "contacts"
+	CompanyGraphGroupsOmittedDeals       CompanyGraphGroupsOmitted = "deals"
+	CompanyGraphGroupsOmittedOurSide     CompanyGraphGroupsOmitted = "our_side"
+	CompanyGraphGroupsOmittedSignalRoute CompanyGraphGroupsOmitted = "signal_route"
 )
 
 // Valid indicates whether the value is a known member of the CompanyGraphGroupsOmitted enum.
@@ -4900,9 +4900,9 @@ func (e CompanyGraphGroupsOmitted) Valid() bool {
 		return true
 	case CompanyGraphGroupsOmittedDeals:
 		return true
-	case CompanyGraphGroupsOmittedIntroPath:
-		return true
 	case CompanyGraphGroupsOmittedOurSide:
+		return true
+	case CompanyGraphGroupsOmittedSignalRoute:
 		return true
 	default:
 		return false
@@ -29143,7 +29143,7 @@ type CompanyGraph struct {
 
 	// GroupsOmitted The groups withheld for lack of a grant — so a client can say "you can't see
 	// this" instead of "there is none". `contacts` withheld also withholds
-	// `deal_stakeholder` edges and the intro path, because both name a contact.
+	// `deal_stakeholder` edges and the signal route, because both name a contact.
 	//
 	// `our_side` is the workspace members connected to the account — the owner and the
 	// teammates who have interacted with its contacts. It needs BOTH the contact and the
@@ -29154,9 +29154,14 @@ type CompanyGraph struct {
 	// grant beyond the company read this whole endpoint already demands, so they
 	// are row-scope pruned like every other node and can never be withheld wholesale.
 	GroupsOmitted []CompanyGraphGroupsOmitted `json:"groups_omitted"`
+	Nodes         []CompanyGraphNode          `json:"nodes"`
 
-	// IntroPath The warm-intro route the account's most recent open signal proposes: which signal,
-	// and which contact is the way in. The contact is ranked exactly as
+	// RootId The account the graph is centred on — the node carrying `root: true`.
+	RootId openapi_types.UUID `json:"root_id"`
+
+	// SignalRoute The route in the account's most recent open signal proposes: which signal, and
+	// which contact is the way in. It is not the best introduction to the account, which
+	// `GET /companies/{id}/intro-paths` answers. The contact is ranked exactly as
 	// `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
 	// the card and the warm room can never name different contacts.
 	//
@@ -29167,11 +29172,7 @@ type CompanyGraph struct {
 	// which happens when their only seat is on a deal the card did not draw. The card
 	// never names a DIFFERENT contact than the warm room: it either shows that contact or
 	// says nothing.
-	IntroPath *CompanyGraphIntroPath `json:"intro_path,omitempty"`
-	Nodes     []CompanyGraphNode     `json:"nodes"`
-
-	// RootId The account the graph is centred on — the node carrying `root: true`.
-	RootId openapi_types.UUID `json:"root_id"`
+	SignalRoute *CompanyGraphSignalRoute `json:"signal_route,omitempty"`
 }
 
 // CompanyGraphGroupsOmitted defines model for CompanyGraph.GroupsOmitted.
@@ -29278,24 +29279,6 @@ type CompanyGraphEdgeKind string
 // different facts about an account.
 type CompanyGraphEdgeStrengthBucket string
 
-// CompanyGraphIntroPath The warm-intro route the account's most recent open signal proposes: which signal,
-// and which contact is the way in. The contact is ranked exactly as
-// `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
-// the card and the warm room can never name different contacts.
-//
-// Absent when the caller lacks the signal or contact grant (then `groups_omitted` says
-// so), when the account has no open resolved signal, when it has one and no live
-// contact this caller can read — a cold account has no warm path, and inventing one
-// would be a claim — or when the route-in contact is not one of this graph's nodes,
-// which happens when their only seat is on a deal the card did not draw. The card
-// never names a DIFFERENT contact than the warm room: it either shows that contact or
-// says nothing.
-type CompanyGraphIntroPath struct {
-	// ContactId The route-in contact. Always present in `nodes`, carrying `intro_path: true`.
-	ContactId openapi_types.UUID `json:"contact_id"`
-	SignalId  openapi_types.UUID `json:"signal_id"`
-}
-
 // CompanyGraphNode One record in the account's one-hop neighbourhood. `id` is the record's own id,
 // so a client routes to it with the same route it uses everywhere else.
 type CompanyGraphNode struct {
@@ -29307,18 +29290,13 @@ type CompanyGraphNode struct {
 	Detail *string            `json:"detail,omitempty"`
 	Id     openapi_types.UUID `json:"id"`
 
-	// IntroPath This contact is the route in the active signal's warm-intro path proposes.
-	// At most one node carries it, and only when `intro_path` at the top level is
-	// present. Absent on every other node — there is nothing to say about them.
-	IntroPath *bool `json:"intro_path,omitempty"`
-
 	// Kind `company`, `contact` and `deal` are the account's own records.
 	// `user` is a member of THIS workspace — someone on our side who is connected to the
 	// account. A user node carries its display name as the `label` and nothing else:
-	// `detail`, `strength` and `strength_bucket` are null and `intro_path` is ABSENT,
+	// `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
 	// because §4 measures our relationship with the account's contacts, not with each
-	// other. `intro_path` is a plain boolean and is never sent as null on any node —
-	// a client reads its absence as "not on the warm-intro path".
+	// other. `on_signal_route` is a plain boolean and is never sent as null on any node —
+	// a client reads its absence as "not on the signal's route".
 	Kind CompanyGraphNodeKind `json:"kind"`
 
 	// Label The record's display name — the company's, the contact's full name, the deal's name, the workspace member's display name.
@@ -29328,6 +29306,13 @@ type CompanyGraphNode struct {
 	// Absent on a company with no resolved logo and on every contact or deal node —
 	// a client draws the node's monogram or its token-coloured circle instead.
 	LogoUrl *string `json:"logo_url,omitempty"`
+
+	// OnSignalRoute This contact is the route in the active signal's warm-intro path proposes.
+	// At most one node carries it, and only when `signal_route` at the top level is
+	// present. Absent on every other node — there is nothing to say about them.
+	// It is not the best introduction to the account: `GET /companies/{id}/intro-paths`
+	// answers that, by ranking the colleagues who know someone there.
+	OnSignalRoute *bool `json:"on_signal_route,omitempty"`
 
 	// Root This node is the account the graph is centred on. Exactly one node carries
 	// `true`. Always present, because "is this the centre" is a fact about every
@@ -29346,14 +29331,33 @@ type CompanyGraphNode struct {
 // CompanyGraphNodeKind `company`, `contact` and `deal` are the account's own records.
 // `user` is a member of THIS workspace — someone on our side who is connected to the
 // account. A user node carries its display name as the `label` and nothing else:
-// `detail`, `strength` and `strength_bucket` are null and `intro_path` is ABSENT,
+// `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
 // because §4 measures our relationship with the account's contacts, not with each
-// other. `intro_path` is a plain boolean and is never sent as null on any node —
-// a client reads its absence as "not on the warm-intro path".
+// other. `on_signal_route` is a plain boolean and is never sent as null on any node —
+// a client reads its absence as "not on the signal's route".
 type CompanyGraphNodeKind string
 
 // CompanyGraphNodeStrengthBucket The server's band for `strength` — the same vocabulary `RelationshipStrength.bucket` uses. Never re-derived from the score by a client.
 type CompanyGraphNodeStrengthBucket string
+
+// CompanyGraphSignalRoute The route in the account's most recent open signal proposes: which signal, and
+// which contact is the way in. It is not the best introduction to the account, which
+// `GET /companies/{id}/intro-paths` answers. The contact is ranked exactly as
+// `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
+// the card and the warm room can never name different contacts.
+//
+// Absent when the caller lacks the signal or contact grant (then `groups_omitted` says
+// so), when the account has no open resolved signal, when it has one and no live
+// contact this caller can read — a cold account has no warm path, and inventing one
+// would be a claim — or when the route-in contact is not one of this graph's nodes,
+// which happens when their only seat is on a deal the card did not draw. The card
+// never names a DIFFERENT contact than the warm room: it either shows that contact or
+// says nothing.
+type CompanyGraphSignalRoute struct {
+	// ContactId The route-in contact. Always present in `nodes`, carrying `on_signal_route: true`.
+	ContactId openapi_types.UUID `json:"contact_id"`
+	SignalId  openapi_types.UUID `json:"signal_id"`
+}
 
 // CompanyGrowthFit Cached per reader (DOSS-DDL-2), because it folds seat-dependent workspace context
 // and makes recommendations.
