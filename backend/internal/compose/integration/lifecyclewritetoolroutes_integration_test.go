@@ -6,9 +6,9 @@
 package integration
 
 // The lifecycle writes: disqualify_lead, promote_lead, demote_lead,
-// advance_deal, advance_project_phase and the three relinks. Each test asks the
-// route as a passport and the tool over MCP for the same change on two equal
-// records, then compares the records they leave and the audit and outbox rows.
+// advance_deal, advance_project_phase and the three relinks. Each test asks both
+// doors for the same change on two equal records. It compares the records they
+// leave and the audit and outbox rows.
 
 import (
 	"encoding/json"

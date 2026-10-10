@@ -57,9 +57,10 @@ func (d *twoDoors) toolRefused(t *testing.T, name string, args map[string]any) s
 	return d.mcp.CallRefused(t, name, args)
 }
 
-// effect is what a write left on one entity: one line per audit row naming the
-// action, the actor and the fields the row changed, and the event types its
-// outbox rows carry. Two doors that run the same write leave the same lines.
+// effect is what a write left on one entity. It has one line per audit row,
+// naming the action, the actor and the fields the row changed. It also holds
+// the event types of its outbox rows. Two doors that run the same write leave
+// the same lines.
 type effect struct {
 	Audit  []string
 	Events []string
@@ -189,9 +190,9 @@ func (d *twoDoors) stagedOn(t *testing.T, target string) []staged {
 }
 
 // sameStagedKind fails unless each door staged one approval of the same kind
-// against the same kind of record. The sentence a human reads and the change
-// it replays are written by each door's own staging path, so they are left out
-// of the comparison and both must only be present.
+// against the same kind of record. The sentence a human reads and the change it
+// replays are written by each door's own staging path. So they are left out of
+// the comparison, and both must only be present.
 func (d *twoDoors) sameStagedKind(t *testing.T, what, viaREST, viaTool string) staged {
 	t.Helper()
 	onREST, onTool := d.stagedOn(t, viaREST), d.stagedOn(t, viaTool)

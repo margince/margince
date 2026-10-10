@@ -6,10 +6,9 @@
 package integration
 
 // The writes that change several records or fold two into one:
-// merge_records, bulk_update_records and change_lists. Each test asks the route
-// as a passport and the tool over MCP for the same change on two equal sets of
-// records, then compares what each door answered or stored and what it left in
-// the audit and outbox rows.
+// merge_records, bulk_update_records and change_lists. Each test asks both
+// doors for the same change on two equal sets of records. It compares what each
+// door answered or stored, and the audit and outbox rows it left.
 
 import (
 	"encoding/json"
@@ -27,8 +26,8 @@ type sharedBulk struct {
 }
 
 // A tag put on two contacts in one bulk change is the same change on either
-// door: the same count, nothing skipped, one audit row per record naming the
-// agent.
+// door. The count is the same, nothing is skipped, and each record gets one
+// audit row naming the agent.
 func TestBulkUpdateRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "bulk-write-doors", "read", "write")
 	tag := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Spring list", "color": "lime"})

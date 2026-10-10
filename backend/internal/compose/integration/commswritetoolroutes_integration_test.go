@@ -73,7 +73,7 @@ func TestBookMeetingLeavesTheSameOnEitherDoor(t *testing.T) {
 }
 
 // A send to someone who has not consented is refused the same way on either
-// door, for a reply and for a first message, and nothing is sent.
+// door. That holds for a reply and for a first message, and nothing is sent.
 func TestSendsAreRefusedAlikeOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "send-write-doors", "read", "write", "send")
 	contact := createdID(t, d.e, "/v1/contacts", AnyMap{

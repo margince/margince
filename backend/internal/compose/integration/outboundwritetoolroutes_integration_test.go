@@ -6,9 +6,8 @@
 package integration
 
 // The writes that reach outside: enrich and invite_meeting are confirm-first
-// for an agent, so each door stages one approval of the same kind and runs
-// nothing until a human approves. Each test asks the route as a passport and
-// the tool over MCP about two equal records.
+// for an agent. Each door stages one approval of the same kind and runs nothing
+// until a human approves. Each test asks both doors about two equal records.
 
 import (
 	"net/http"

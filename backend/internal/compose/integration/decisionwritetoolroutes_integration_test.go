@@ -7,8 +7,8 @@ package integration
 
 // The writes that decide something already waiting: decide_duplicate,
 // decide_approval, and the import pair preview_import and commit_import. Each
-// test asks the route as a passport and the tool over MCP for the same change
-// on two equal records, then compares what each left behind.
+// test asks both doors for the same change on two equal records. It compares
+// what each left behind.
 
 import (
 	"encoding/json"
@@ -107,7 +107,8 @@ func (d *twoDoors) stagedApprovalOn(t *testing.T, tag string) string {
 }
 
 // A staged action approved or rejected by another passport is decided alike
-// over either door: the same status and reason, and the same rows behind them.
+// over either door. The status and the reason are the same, and so are the rows
+// behind them.
 func TestDecideApprovalLeavesTheSameOnEitherDoor(t *testing.T) {
 	proposer := newTwoDoors(t, "decide-write-doors", "read", "write")
 	decider := proposer.lend(t, "decider", "read", "write")
@@ -137,8 +138,8 @@ func TestDecideApprovalLeavesTheSameOnEitherDoor(t *testing.T) {
 }
 
 // sharedRun is the run as the route reads it back. The tool answers a preview
-// as {run: {run_id, state}, mapping, columns}, so the preview is compared on the
-// run id and state, and the run on what the route stores.
+// as {run: {run_id, state}, mapping, columns}. So the preview is compared on
+// the run id and state, and the run on what the route stores.
 type sharedRun struct {
 	Status string `json:"status"`
 }

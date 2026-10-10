@@ -6,9 +6,9 @@
 package integration
 
 // The five tag writes: create_tag, update_tag, apply_tag, remove_tag and
-// merge_tags. Each test asks the route as a passport and the tool over MCP for
-// the same change on two equal records, then compares what the two answered
-// or stored and what each left in the audit and outbox rows.
+// merge_tags. Each test asks both doors for the same change on two equal
+// records. It compares what the two answered or stored, and the audit and
+// outbox rows each left.
 
 import (
 	"encoding/json"
@@ -110,8 +110,8 @@ func TestCreateAndUpdateTagLeaveTheSameOnEitherDoor(t *testing.T) {
 }
 
 // A tag put on a contact and taken off again leaves the same rows on either
-// door. The route answers a handle that puts the tagging back and the tool
-// answers the state, so the two are compared on what each left behind.
+// door. The route answers a handle that puts the tagging back, and the tool
+// answers the state. So the two are compared on what each left behind.
 func TestApplyAndRemoveTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "tagging-write-doors", "read", "write")
 	tag := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Key account", "color": "amber"})
@@ -143,7 +143,7 @@ func TestApplyAndRemoveTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	d.sameEffect(t, "remove", viaREST, viaTool)
 }
 
-// Folding one tag into another is confirm-first for an agent: each door stages
+// Folding one tag into another is confirm-first for an agent. Each door stages
 // one approval of the same kind and runs nothing until a human approves.
 func TestMergeTagsStagesTheSameApprovalOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "tag-merge-doors", "read", "write")

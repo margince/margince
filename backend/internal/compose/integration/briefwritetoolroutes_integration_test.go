@@ -7,8 +7,8 @@ package integration
 
 // annotate_brief writes an overnight pass's findings onto the acting rep's own
 // brief run. The route and the tool resolve the same run from the same
-// principal, and each pass replaces the findings of the one before, so a finding
-// is read back after each door writes it.
+// principal. Each pass replaces the findings of the one before, so a finding is
+// read back after each door writes it.
 
 import (
 	"encoding/json"

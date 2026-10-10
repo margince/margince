@@ -20,8 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
-// A reply to a channel conversation, sent by a passport over either door, is
-// accepted the same way and leaves one delivery of the same shape.
+// A passport's reply to a channel conversation is accepted the same way on
+// either door. It leaves one delivery of the same shape.
 func TestSendMessageLeavesTheSameOnEitherDoor(t *testing.T) {
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
@@ -54,8 +54,8 @@ func TestSendMessageLeavesTheSameOnEitherDoor(t *testing.T) {
 	tool := d.tool(t, "send_message", map[string]any{
 		"activity_id": c.activityID, "body": "Yes, shipping Monday.", "consent_purpose": "transactional",
 	})
-	// The route answers the reply it filed and the tool its id and a status, so
-	// the two are compared on the stored reply and the delivery behind it.
+	// The route answers the reply it filed and the tool its id and a status.
+	// So the two are compared on the stored reply and its delivery.
 	viaREST, viaTool := anIDIn(t, rest), anIDIn(t, tool)
 	stored := func(id string) json.RawMessage {
 		return d.restStatus(t, "GET", "/v1/activities/"+id, nil, http.StatusOK)

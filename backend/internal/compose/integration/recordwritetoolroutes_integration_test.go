@@ -7,9 +7,8 @@ package integration
 
 // The record writes an agent makes: create_record, update_record,
 // archive_record, merge_records, log_activity and create_task. Each test asks
-// the route as a passport and the tool over MCP for the same change on two
-// equal records, then compares the stored records and what each door left in
-// the audit and outbox rows.
+// both doors for the same change on two equal records. It compares the stored
+// records and the audit and outbox rows each door left.
 
 import (
 	"encoding/json"
@@ -66,8 +65,9 @@ func anIDIn(t *testing.T, raw json.RawMessage) string {
 	return ""
 }
 
-// A contact made, edited and archived over either door is left alike: the same
-// stored fields, and the same audit and outbox rows naming the agent.
+// A contact made, edited and archived over either door is left alike. The
+// stored fields are the same, and so are the audit and outbox rows naming the
+// agent.
 func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "record-write-doors", "read", "write")
 
@@ -106,9 +106,9 @@ type sharedActivity struct {
 	DueAt   *string `json:"due_at"`
 }
 
-// A note logged and a task filed over either door are the same records: the
-// same kind and text, linked to the same kind of record, with the same rows
-// behind them.
+// A note logged and a task filed over either door are the same records. They
+// have the same kind and text, link to the same kind of record, and leave the
+// same rows.
 func TestLogActivityAndCreateTaskLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "activity-write-doors", "read", "write")
 	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Linked Lena", "source": "manual"})

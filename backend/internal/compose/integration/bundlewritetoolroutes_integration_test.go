@@ -21,9 +21,9 @@ const stagedPerBundle = 2
 type bundleMember struct{ Kind, Outcome, Status string }
 
 // bundleOutcomes reads what each member of a decided bundle came to. The
-// route nests each approval under `data` and the tool lists the members flat,
-// and the members' ids differ per bundle, so the answers are compared on the
-// kind, outcome and status each member came to.
+// route nests each approval under `data` and the tool lists the members flat.
+// The members' ids differ per bundle, so the answers are compared on kind,
+// outcome and status.
 func bundleOutcomes(t *testing.T, raw json.RawMessage) []bundleMember {
 	t.Helper()
 	var body struct {
