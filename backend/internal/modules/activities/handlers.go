@@ -58,6 +58,9 @@ type Handlers struct {
 	// (OPS-CFG-12), injected by WithUploadLimit. Zero refuses every upload,
 	// which is the honest reading of "nobody has said" for a bound.
 	uploadLimit int64
+	// fileCeiling, when set, bounds the uploaded file itself below uploadLimit,
+	// and refuses a larger one in its own words (WithFileCeiling).
+	fileCeiling FileCeiling
 	// colleagues names the addresses that are ours by DOMAIN rather than by
 	// seat, so addressing a reply can skip a co-worker who has no login. The
 	// domains live in capture, which this module may not import, so compose

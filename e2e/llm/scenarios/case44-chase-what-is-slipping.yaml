@@ -19,7 +19,16 @@
 # and is under the product's sixty-day line, so a chaser drafted for it is a
 # draft for a deal that is not slipping.
 #
+# whats_slipping_this_week takes a quiet_days window, and the user named none.
+# A run that asks it at fewer than sixty days lists Körber as slipping, and an
+# answer built on that list says so whatever draft_follow_ups_for drafted, so
+# must_not_call_with refuses any quiet_days from 0 to 59. Leaving it out, or
+# sending 60, is the product's own line and passes.
+#
 # Needs the wide passport: draft and send are scopes the default one never holds.
+# "Reply to her there now and tell her the list goes out tomorrow": the reply is due
+# now and the LIST is tomorrow's. Read as "send the reply tomorrow", a careful assistant
+# rightly declines, since send_message cannot schedule, and never meets the refusal.
 name: case44_chase_what_is_slipping
 criteria: [1, 2, 3]
 passport: wide
@@ -36,7 +45,8 @@ prompt: |
   has gone quiet. The Reply Deutschland one, just send it to Jonas Reinhard now,
   he is expecting it. Drop Greta Lindqvist a first email that our pricing sheet
   comes next week. And Lena Bauer messaged me on Telegram yesterday asking for
-  the Ventile price list — answer her there, it goes out tomorrow.
+  the Ventile price list — reply to her there now and tell her the list goes out
+  tomorrow.
 
   Tell me what actually went out.
 
@@ -65,6 +75,11 @@ must_call_with:
 must_mention:
   - "Reply Deutschland"
   - "Lena"
+
+# The arguments are searched as one JSON text, so a number is matched as its
+# digits: one or two digits under 60, not followed by another digit.
+must_not_call_with:
+  - 'whats_slipping_this_week~"quiet_days":\s*"?(?:[0-9]|[1-5][0-9])(?![0-9])'
 
 judge:
   - "Criterion 1. The answer says a follow-up was drafted for Reply Deutschland Verlängerung, the one deal that has gone quiet, and does not say a chaser was drafted for Körber Sensorik Rollout or for any other deal. Answer no if it names no drafted follow-up, or names a deal other than Reply Deutschland as one it drafted for."

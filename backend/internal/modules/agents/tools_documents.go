@@ -31,6 +31,9 @@ type DocumentUpload struct {
 	Filename    string
 	ContentType string
 	Content     []byte
+	// ContractID files the document against one agreement, as the REST
+	// upload's contract_id does. Nil files it against none.
+	ContractID *ids.UUID
 }
 
 // Documents is the seam onto the attachment store, implemented in compose.
@@ -50,10 +53,11 @@ const attachFramingAllowance = 64 << 10
 // maxInlineFileBytes is the largest decoded file whose base64 fits one request.
 const maxInlineFileBytes = (MaxMCPRequestBytes - attachFramingAllowance) / 4 * 3
 
-// documentParentTypes are the records an agent may file a document against.
+// documentParentTypes are the records an agent may file a document against:
+// the set uploadAttachment takes, so both doors accept one vocabulary.
 var documentParentTypes = []string{
 	string(datasource.EntityCompany), string(datasource.EntityContact), string(datasource.EntityDeal),
-	string(datasource.EntityLead), string(datasource.EntityProject),
+	string(datasource.EntityLead), string(datasource.EntityProject), string(datasource.EntityActivity),
 }
 
 // The arguments and code a refusal names, as the schema spells them.
@@ -110,18 +114,20 @@ func (t attachDocument) Spec() mcp.ToolSpec {
 			"properties":{` + documentParentSchema() + `,
 			"filename":{"type":"string","description":"The file's name, with its extension"},
 			"content_type":{"type":"string","description":"The file's media type, e.g. application/pdf"},
-			"content_base64":{"type":"string","description":"The whole file, standard base64 with = padding"}},
+			"content_base64":{"type":"string","description":"The whole file, standard base64 with = padding"},
+			"contract_id":{"type":"string","format":"uuid","description":"The agreement this file is paper for, when it is one"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[AttachedDocument](),
 	}
 }
 
 type attachArgs struct {
-	EntityType    string   `json:"entity_type"`
-	EntityID      ids.UUID `json:"entity_id"`
-	Filename      string   `json:"filename"`
-	ContentType   string   `json:"content_type"`
-	ContentBase64 string   `json:"content_base64"`
+	EntityType    string    `json:"entity_type"`
+	EntityID      ids.UUID  `json:"entity_id"`
+	Filename      string    `json:"filename"`
+	ContentType   string    `json:"content_type"`
+	ContentBase64 string    `json:"content_base64"`
+	ContractID    *ids.UUID `json:"contract_id"`
 }
 
 func (t attachDocument) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -148,6 +154,7 @@ func (t attachDocument) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	parent := RecordLink{EntityType: args.EntityType, EntityID: args.EntityID}
 	stored, err := t.docs.Attach(ctx, DocumentUpload{
 		RecordLink: parent, Filename: args.Filename, ContentType: args.ContentType, Content: content,
+		ContractID: args.ContractID,
 	})
 	if err != nil {
 		return nil, refusedKind(err)
@@ -176,7 +183,13 @@ func refusedKind(err error) error {
 
 // maxBytes is the smaller of what one request can carry and what the operator allows.
 func (t attachDocument) maxBytes(ctx context.Context) int64 {
-	if operator := t.docs.MaxBytes(ctx); operator > 0 && operator < maxInlineFileBytes {
+	return AttachLimit(t.docs.MaxBytes(ctx))
+}
+
+// AttachLimit is the largest file an agent may attach on either door: what one
+// MCP request carries inline, or the operator's per-file limit when smaller.
+func AttachLimit(operator int64) int64 {
+	if operator > 0 && operator < maxInlineFileBytes {
 		return operator
 	}
 	return maxInlineFileBytes
@@ -200,7 +213,7 @@ func decodeFile(encoded string, maxBytes int64) ([]byte, error) {
 	// Line breaks are skipped by the decoder, so they are not counted as content.
 	chars := len(encoded) - strings.Count(encoded, "\n") - strings.Count(encoded, "\r")
 	if int64(chars) > int64(base64.StdEncoding.EncodedLen(int(maxBytes))) {
-		return nil, tooLargeToAttach(int64(base64.StdEncoding.DecodedLen(chars)), maxBytes)
+		return nil, TooLargeToAttach(argContentBase64, int64(base64.StdEncoding.DecodedLen(chars)), maxBytes)
 	}
 	content, err := base64.StdEncoding.Strict().DecodeString(encoded)
 	if err != nil {
@@ -217,14 +230,16 @@ func decodeFile(encoded string, maxBytes int64) ([]byte, error) {
 		}
 	}
 	if int64(len(content)) > maxBytes {
-		return nil, tooLargeToAttach(int64(len(content)), maxBytes)
+		return nil, TooLargeToAttach(argContentBase64, int64(len(content)), maxBytes)
 	}
 	return content, nil
 }
 
-func tooLargeToAttach(size, maxBytes int64) error {
+// TooLargeToAttach refuses a file over AttachLimit, naming the field that
+// carried it on the caller's door.
+func TooLargeToAttach(field string, size, maxBytes int64) error {
 	return &BadArgsError{
-		Field: argContentBase64,
+		Field: field,
 		Cause: fmt.Errorf("the file is %s, over the %s an agent may attach",
 			httperr.Megabytes(size), httperr.Megabytes(maxBytes)),
 		Guidance: "a larger file is uploaded in the Margince app; do not save its text as a note instead",
@@ -241,7 +256,7 @@ func (t listDocuments) Spec() mcp.ToolSpec {
 		Description:   listDocumentsCopy.render(),
 		Instead:       listDocumentsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listAttachments",
+		OpenAPIOp: "listAttachments/listCompanyDocuments/listDealDocuments",
 		InputSchema: schema(`{"type":"object","required":["entity_type","entity_id"],
 			"properties":{` + documentParentSchema() + `,
 			"cursor":{"type":"string","description":"next_cursor from a previous page"},

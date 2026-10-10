@@ -42,8 +42,8 @@ make the credential: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
 Every core verb the surface serves; the generated [mcp-info.md](mcp-info.md) has the live tool count.
 `TestTheToolCatalogsTiersAreTheContractsTiers` holds the tiers and the rows of this table against the contract, both
 ways. Every operation with `x-mcp-tool` in `api/crm.yaml` has a registered tool of that verb. Every registered tool is
-declared by an operation, or listed as a composed intent. `TestEveryDeclaredToolVerbIsRegistered` and
-`TestEveryRegisteredToolIsDeclaredOrAnIntent` hold both ways.
+declared by an operation. `TestEveryDeclaredToolVerbIsRegistered` and `TestEveryRegisteredToolIsDeclared` hold both
+ways.
 
 - **Tier**: 🟢 runs at once. 🟡 is refused until a human gives the staged approval. **dynamic** is decided on each call,
   from what the call points at. It may only *raise* the tier.
@@ -219,11 +219,9 @@ Many operations carry it. These are the ones an agent may expect to reach:
 | `renderOffer`, `regenerateOffer` | No tool backs them, and none can today. |
 | `sendOffer` | It *is* the sales promise: the version can no longer change, and how it converts to the base currency is fixed from then on. Nothing leaves the installation: to send an offer moves nothing over the wire, and delivery to the other party is a separate feature that does not exist yet. |
 
-The other way also exists. Some registered tools name no contract verb, because they are *intent* tools built over
-many operations, not a transport for one. Some cases are `company_coverage`, `catch_me_up_on`, `prep_for_meeting` and
-`progress_deal`. The full set is `composedIntents` in `internal/compose/agenttoolparity_test.go`. Their `OpenAPIOp`
-field records how they are built (`progress_deal` reads `advanceDeal + logActivity`) as documentation, not as a policy
-key.
+An intent tool built over many operations, such as `catch_me_up_on` or `progress_deal`, has a route of its own. That
+route runs the tool through the registry (`served_by: registry`), so the verb is declared like any other. Its
+`OpenAPIOp` names that route.
 
 ## The hints are derived
 

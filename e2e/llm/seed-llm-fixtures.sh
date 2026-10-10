@@ -170,9 +170,28 @@ print("")' "$email"
 # written nothing, and the first evidence was an assistant finding an empty CRM.
 # A fixture that fails must fail loudly — the run is worthless either way, and
 # only one of the two says why.
+# The source every fixture row is stamped with. Free-form on the write side, and
+# worth spending: a row a reader finds in a failing transcript says which lane
+# put it there.
+FIXTURE_SOURCE="seed:llm-fixtures"
+
+# with_source adds FIXTURE_SOURCE to a record's create body that names none,
+# because every record create requires a source.
+with_source() {
+  local path="$1" body="$2"
+  case "$path" in
+    /companies|/contacts|/relationships|/deals|/projects|/tasks|/activities) ;;
+    *) printf '%s' "$body"; return 0 ;;
+  esac
+  printf '%s' "$body" | FIXTURE_SOURCE="$FIXTURE_SOURCE" python3 -c 'import json,os,sys
+row=json.load(sys.stdin)
+row.setdefault("source", os.environ["FIXTURE_SOURCE"])
+print(json.dumps(row, ensure_ascii=False))'
+}
+
 create_or_die() {
   local path="$1" body="$2" what="$3" response id
-  response="$(api POST "$path" "$body")"
+  response="$(api POST "$path" "$(with_source "$path" "$body")")"
   id="$(printf '%s' "$response" | python3 -c 'import json,sys
 try: print(json.load(sys.stdin).get("id",""))
 except Exception: print("")')"
@@ -509,11 +528,6 @@ print("")' "$email"
 days_ahead() {
   date -u -v+"$1"d '+%Y-%m-%d' 2>/dev/null || date -u -d "$1 days" '+%Y-%m-%d'
 }
-
-# The source every fixture row is stamped with. Free-form on the write side, and
-# worth spending: a row a reader finds in a failing transcript says which lane
-# put it there.
-FIXTURE_SOURCE="seed:llm-fixtures"
 
 # --- CASE 8: two proposals waiting for a human decision ---------------------
 #
@@ -1484,6 +1498,42 @@ if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'dail
   code="$(status_of PATCH "/deals/$valantic_deal" "$slipped")"
   [[ "$code" = "200" ]] || { echo "slipping the valantic deal answered HTTP $code" >&2; exit 1; }
   freeze_forecast
+fi
+
+# --- CASE 59: a signed contract to file on the meeting it was signed in -------
+#
+# THE PROJECT IS THE DOOR TO THE CONTRACT. An agent reads contracts only through
+# read_project_360, so the contract names the project, and the meeting is on the
+# project's timeline beside it: one read hands the run both ids it must file
+# against. The contract carries no value or dates, so no forecast, revenue or
+# board-pack figure another case asserts moves.
+#
+# A company, project and contact of their own, named after nothing another case
+# searches for. The meeting is with the contact and not the company, because a
+# meeting cannot be filed against a company (see case 9).
+harzer="$(company_id_by_name "Harzer Steuerungstechnik GmbH")"
+if [[ -z "$harzer" ]]; then
+  body="$(printf '{"display_name":"Harzer Steuerungstechnik GmbH","owner_id":"%s","industry":"Steuerungstechnik"}' "$me")"
+  harzer="$(create_or_die "/companies" "$body" "Harzer Steuerungstechnik GmbH")"
+fi
+albers="$(seed_contact "Katrin Albers" "katrin.albers@harzer-steuerung.test" "$me")"
+link_employment "$albers" "$harzer" "Katrin Albers at Harzer Steuerungstechnik"
+goslar="$(api GET "/projects?q=$(url_encode "Leitstand Goslar")&limit=50" | python3 -c 'import json,sys
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == "Leitstand Goslar":
+        print(row["id"]); break
+else:
+    print("")')"
+if [[ -z "$goslar" ]]; then
+  body="$(printf '{"name":"Leitstand Goslar","company_id":"%s","owner_id":"%s","source":"%s","description":"Neuer Leitstand für das Werk Goslar."}' \
+    "$harzer" "$me" "$FIXTURE_SOURCE")"
+  goslar="$(create_or_die "/projects" "$body" "the Leitstand Goslar project")"
+  body="$(printf '{"company_id":"%s","project_id":"%s","title":"Servicevertrag Leitstand Goslar","contract_number":"HST-2026-014"}' \
+    "$harzer" "$goslar")"
+  create_or_die "/contracts" "$body" "the Leitstand Goslar service contract" >/dev/null
+  body="$(printf '{"kind":"meeting","meeting_status":"held","occurred_at":"%s","subject":"Vertragsunterzeichnung Leitstand Goslar","body":"Servicevertrag mit Katrin Albers unterzeichnet.","source":"%s","links":[{"entity_type":"contact","entity_id":"%s"},{"entity_type":"project","entity_id":"%s"}]}' \
+    "$(days_ago 1)" "$FIXTURE_SOURCE" "$albers" "$goslar")"
+  create_or_die "/activities" "$body" "the Leitstand Goslar signing meeting" >/dev/null
 fi
 
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------

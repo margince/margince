@@ -249,6 +249,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"runReport":              runReportCommand,
 	"runAnalyticsQuery":      analyticsQueryCommand,
 	"renderAnalyticsReport":  composeReportCommand,
+	"uploadAttachment":       uploadAttachmentCommand,
 
 	// The two decisions, over four routes. They are the only entries here whose
 	// command names no target record, and the resolver says why: the row a

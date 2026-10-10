@@ -76,14 +76,17 @@ func appWithUploads(t *testing.T) *apptest.AppEnv {
 }
 
 // postUpload sends one multipart body to a route and returns its status and
-// response text.
-func postUpload(t *testing.T, e *apptest.AppEnv, path string, form *bytes.Buffer, contentType string) (int, string) {
+// response text. Nil headers send it as the signed-in admin.
+func postUpload(t *testing.T, e *apptest.AppEnv, path string, headers map[string]string, form *bytes.Buffer, contentType string) (int, string) {
 	t.Helper()
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, e.TS.URL+path, form)
 	if err != nil {
 		t.Fatalf("building the upload: %v", err)
 	}
 	req.Header.Set("Content-Type", contentType)
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 	//nolint:bodyclose // apptest.CloseBody closes it in the deferred call below, which the checker cannot follow across the helper.
 	resp, err := e.Client.Do(req)
 	if err != nil {
@@ -171,7 +174,7 @@ func TestAnUploadOverTheJSONBoundReachesTheHandler(t *testing.T) {
 	e := appWithUploads(t)
 	form, contentType := attachmentForm(t, e, fileOf(2<<20))
 
-	code, body := postUpload(t, e, "/v1/attachments", form, contentType)
+	code, body := postUpload(t, e, "/v1/attachments", nil, form, contentType)
 	if code != http.StatusCreated {
 		t.Fatalf("a 2 MiB upload under a %d MB ceiling answered %d: %s",
 			testAttachmentMB, code, body)
@@ -185,7 +188,7 @@ func TestAnOversizeUploadIsRefusedWithTheConfiguredNumber(t *testing.T) {
 	e := appWithUploads(t)
 	form, contentType := attachmentForm(t, e, fileOf(4_000_000))
 
-	code, body := postUpload(t, e, "/v1/attachments", form, contentType)
+	code, body := postUpload(t, e, "/v1/attachments", nil, form, contentType)
 	if code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("a 4 MB upload under a %d MB ceiling answered %d, want 413: %s",
 			testAttachmentMB, code, body)
@@ -222,13 +225,13 @@ func TestEachUploadRouteIsBoundedSeparately(t *testing.T) {
 	e := appWithUploads(t)
 
 	form, contentType := attachmentForm(t, e, fileOf(betweenTheCeilings))
-	if code, body := postUpload(t, e, "/v1/attachments", form, contentType); code != http.StatusCreated {
+	if code, body := postUpload(t, e, "/v1/attachments", nil, form, contentType); code != http.StatusCreated {
 		t.Fatalf("a %d-byte upload under the %d MB attachment ceiling answered %d: %s",
 			betweenTheCeilings, testAttachmentMB, code, body)
 	}
 
 	importBody, importType := importForm(t, betweenTheCeilings)
-	code, body := postUpload(t, e, "/v1/imports/sources", importBody, importType)
+	code, body := postUpload(t, e, "/v1/imports/sources", nil, importBody, importType)
 	if code != http.StatusRequestEntityTooLarge {
 		t.Errorf("the same %d bytes answered %d on the import route, want 413 — "+
 			"raising what a scanned contract may weigh must not raise what a CSV "+
@@ -251,7 +254,7 @@ func TestAStoredUploadKeepsItsOwnSizeAndChecksum(t *testing.T) {
 	content := fileOf(size)
 	form, contentType := attachmentForm(t, e, content)
 
-	code, body := postUpload(t, e, "/v1/attachments", form, contentType)
+	code, body := postUpload(t, e, "/v1/attachments", nil, form, contentType)
 	if code != http.StatusCreated {
 		t.Fatalf("upload answered %d: %s", code, body)
 	}
@@ -309,7 +312,7 @@ func TestTheLinkedInRouteRidesItsOwnConfiguredCeiling(t *testing.T) {
 	// Under the 1 MB LinkedIn ceiling: refused for its CONTENT (not a LinkedIn
 	// export), which is proof the bytes reached the handler at all.
 	small, smallType := linkedInForm(t, 500_000)
-	code, body := postUpload(t, e, "/v1/me/linkedin-connections", small, smallType)
+	code, body := postUpload(t, e, "/v1/me/linkedin-connections", nil, small, smallType)
 	if code == http.StatusRequestEntityTooLarge {
 		t.Errorf("a 500 KB export under a %d MB ceiling was refused as too large: %s",
 			testLinkedInMB, body)
@@ -317,7 +320,7 @@ func TestTheLinkedInRouteRidesItsOwnConfiguredCeiling(t *testing.T) {
 
 	// Over it: refused for its SIZE, naming the configured number.
 	big, bigType := linkedInForm(t, 1_500_000)
-	code, body = postUpload(t, e, "/v1/me/linkedin-connections", big, bigType)
+	code, body = postUpload(t, e, "/v1/me/linkedin-connections", nil, big, bigType)
 	if code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("a 1.5 MB export under a %d MB ceiling answered %d, want 413: %s",
 			testLinkedInMB, code, body)
@@ -362,7 +365,7 @@ func TestAnUnwiredImportCeilingIsOurFaultNotTheCallers(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	form, contentType := importForm(t, 1000)
-	code, body := postUpload(t, e, "/v1/imports/sources", form, contentType)
+	code, body := postUpload(t, e, "/v1/imports/sources", nil, form, contentType)
 
 	if code != http.StatusInternalServerError {
 		t.Fatalf("an unwired import ceiling answered %d, want 500 — anything in "+

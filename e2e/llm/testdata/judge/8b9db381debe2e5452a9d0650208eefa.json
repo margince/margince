@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states the file is stored as a file on the signing meeting Vertragsunterzeichnung Leitstand Goslar, meeting the criterion's core requirement.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer tells the reader that the signed PDF is now stored as a file on the signing meeting (Vertragsunterzeichnung Leitstand Goslar). Answer no if it says the file was stored only on the project, the company or Katrin Albers, says it was saved as a note, or never says where the file was stored.",
+  "answer": "servicevertrag-signiert.pdf is now stored as a file on the signing meeting, Vertragsunterzeichnung Leitstand Goslar. I could not link it to the Servicevertrag from here; please do that in the app."
+}

@@ -4,6 +4,29 @@
  */
 
 export interface paths {
+    "/whoami": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who this caller acts for.
+         * @description The answer the `whoami` agent tool gives, run by the same tool on both doors: the
+         *     acting human's id, name, email, language and timezone. A passport learns whom it
+         *     acts for; a session learns its own seat. `GET /me` is a session's fuller view of
+         *     itself and stays human-only.
+         */
+        get: operations["getActingIdentity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -1944,6 +1967,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/{id}/intro-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The colleagues who could introduce you at this company, warmest first.
+         * @description The answer the `intro_path_to` agent tool gives, run by the same tool on both doors.
+         *     Each route names a contact at the company and the colleague who knows them, ranked
+         *     by how warm that relationship is. Warmth is computed over a bounded read of the
+         *     company's contacts; `candidates_truncated` says a warmer route may exist past it.
+         */
+        get: operations["listIntroPaths"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/graph": {
         parameters: {
             query?: never;
@@ -3240,6 +3289,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/slipping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open deals going quiet or past their expected close date, worst first.
+         * @description The answer the `whats_slipping_this_week` agent tool gives, run by the same tool on
+         *     both doors, so a passport here and over MCP gets the same deals for the same input.
+         *     Each deal carries the evidence that puts it on the list. A deal whose risk cannot be
+         *     evidenced from its own fields is left out rather than guessed.
+         *
+         *     A deal is on the list when it has had no recorded activity for longer than
+         *     `quiet_days`, or when its expected close date has passed. `quiet_days` defaults to
+         *     60, the product-wide stalled threshold. The home screen's quiet-deals lane asks at
+         *     19 days. Only the deals the caller may see are read.
+         */
+        get: operations["listSlippingDeals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/at-risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open deals whose relationships are going cold, and why.
+         * @description The answer the `at_risk_relationships` agent tool gives, run by the same tool on both
+         *     doors: the caller's open deals that rest on a single contact, have no engaged
+         *     champion, or are carried almost entirely by one colleague on our side. Each deal
+         *     carries the findings that put it on the list. The sweep reads the deals the caller
+         *     may see and stops at its cap; `truncated` says when it did.
+         *     `coverage_withheld` says a deal could not be judged because the caller may not read
+         *     its relationships, so it is missing from the list rather than clean.
+         */
+        get: operations["listAtRiskRelationships"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/follow-up-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+         * @description The answer the `draft_follow_ups_for` agent tool gives, run by the same tool on both
+         *     doors. The deals are the ones `GET /deals/slipping` lists at its default window, worst
+         *     first, up to `limit` (at most 25). Each draft lands on its deal's timeline as a draft
+         *     activity and is never sent. A deal whose risk cannot be evidenced gets no draft.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's drafts and writes
+         *     none. An `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["draftDealFollowUps"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}": {
         parameters: {
             query?: never;
@@ -3290,6 +3419,39 @@ export interface paths {
          *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          */
         post: operations["advanceDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a deal to a stage and note why, in one call.
+         * @description The answer the `progress_deal` agent tool gives, run by the same tool on both doors:
+         *     the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
+         *     timeline. The answer is the deal as it now stands and the note's activity id.
+         *
+         *     The tier is the advance's. A move to or from a won or lost stage is confirm-first for
+         *     an agent: the call stages one approval and answers 403 `approval_required` naming it.
+         *     Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
+         *     header, once a human has approved it. A human's own call is its approval.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result and moves
+         *     nothing. An `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["progressDeal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3603,6 +3765,32 @@ export interface paths {
          *     transition is recorded. Closing without a `reason` is `422 closed_reason_required`.
          */
         post: operations["advanceProjectPhase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What delivery needs to take this project over.
+         * @description The answer the `prepare_handoff` agent tool gives, run by the same tool on both doors:
+         *     the project, the deals it was sold through, its stakeholders, the promises still
+         *     open, and the gaps a handoff should close first. It reads and writes nothing; moving
+         *     the project into delivery is a separate act.
+         */
+        get: operations["prepareProjectHandoff"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6377,6 +6565,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/{id}/qualify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fill a lead's empty qualification fields that its own data settles, and name the rest.
+         * @description The answer the `qualify_lead` agent tool gives, run by the same tool on both doors. A
+         *     field is filled only when it is empty and the lead's own data settles it, such as a
+         *     company name from a corporate email domain; each fill names its evidence. A value is
+         *     never overwritten. `gaps` lists the fields still empty, for a human to fill.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result. An
+         *     `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["qualifyLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/{id}/promote-preview": {
         parameters: {
             query?: never;
@@ -8359,6 +8576,190 @@ export interface paths {
          *     group). An out-of-vocabulary key returns `422 code: report_field_not_allowed`.
          */
         get: operations["explainReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/query-vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything a workspace query plan may say, for this caller.
+         * @description The answer the `describe_query_vocabulary` agent tool gives, run by the same tool on
+         *     both doors: the record types this caller can ask about, the fields each one names,
+         *     the operators each field admits, and the one relationship hop a plan may take. It
+         *     is the document `margince://schema/query` publishes, composed for the caller, so it
+         *     lists only what they can already read.
+         */
+        get: operations["describeQueryVocabulary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catch-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What has been going on with one record, in one cited picture.
+         * @description The answer the `catch_me_up_on` agent tool gives, run by the same tool on both doors:
+         *     the recent activity, open tasks and related records around one record, each with the
+         *     passages it rests on. Name the record by `record_id`, or by `record_name` as
+         *     `search_records` would find it; a name that matches more than one record is refused
+         *     with the candidates rather than guessed at.
+         */
+        get: operations["catchUpOnRecord"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meeting-prep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get ready for a meeting about one record.
+         * @description The answer the `prep_for_meeting` agent tool gives, run by the same tool on both
+         *     doors. Given a meeting, the written brief a rep reads before it; given any other
+         *     record, the picture `GET /catch-up` assembles, plus the open items pulled out as the
+         *     things to raise. The record is named as `GET /catch-up` names it.
+         */
+        get: operations["prepForMeeting"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commitments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The promises still open, overdue first.
+         * @description The answer the `review_commitments` agent tool gives, run by the same tool on both
+         *     doors: open tasks and the promises read from conversations, each with when it is
+         *     due and how far past it. Only what the caller may see is read.
+         */
+        get: operations["listOpenCommitments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/context-search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The records most relevant to a description, ranked by meaning as well as words.
+         * @description The answer the `search_context` agent tool gives, run by the same tool on both doors.
+         *     The ranking is the top of an ordering, never every match, so `coverage` is never
+         *     `complete_exact`. A question with conditions on fields belongs to
+         *     `POST /workspace-queries`.
+         */
+        get: operations["searchContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspace-queries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a query plan over the workspace's records.
+         * @description The answer the `query_workspace` agent tool gives, run by the same tool on both
+         *     doors. The plan is written in the grammar `GET /query-vocabulary` publishes for this
+         *     caller; a name outside it is refused by name. A POST because a plan does not fit a
+         *     query string. It reads and stores nothing.
+         */
+        post: operations["queryWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/entity-resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Whether the contacts and companies in a payload are already records here.
+         * @description The answer the `resolve_entities` agent tool gives, run by the same tool on both
+         *     doors. Each candidate is matched by its keys (email, phone, domain) and its name;
+         *     only a match on a unique key can be acted on alone. A POST because a batch of
+         *     candidates does not fit a query string. It reads and stores nothing.
+         */
+        post: operations["resolveEntities"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/record-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The fields a record create or update may write, for each record type.
+         * @description The answer the `describe_record_fields` agent tool gives, run by the same tool on
+         *     both doors: for each record type, the fields a `create_record` or `update_record`
+         *     body may name, their types and their closed vocabularies.
+         */
+        get: operations["describeRecordFields"];
         put?: never;
         post?: never;
         delete?: never;
@@ -16602,6 +17003,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/runs/{run_id}/evidence-search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Which records behind a saved run carry the words, and which do not.
+         * @description The answer the `search_report_evidence` agent tool gives, run by the same tool on
+         *     both doors. The records a saved run measured, or one cell of them, are judged
+         *     against the words: the ones that carry them are cited, the ones that do not are
+         *     counterexamples, and the ones that cannot be judged are named as such. The share
+         *     is given only when every record the caller can read was judged.
+         *
+         *     A POST because a cell's group key values do not fit a query string. It reads and
+         *     stores nothing.
+         */
+        post: operations["searchReportEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/runs/{run_id}/cells/explain": {
         parameters: {
             query?: never;
@@ -16670,6 +17098,71 @@ export interface paths {
          *     different from the report that was composed.
          */
         post: operations["renderAnalyticsReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What an analytics query may name, for this caller.
+         * @description The answer the `describe_analytics_vocabulary` agent tool gives, run by the same
+         *     tool on both doors: the populations, their group keys and measures, and the functions
+         *     and operators `POST /analytics/query` takes, for this caller.
+         */
+        get: operations["describeAnalyticsVocabulary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The block grammar a report document is written in.
+         * @description The answer the `describe_report_blocks` agent tool gives, run by the same tool on
+         *     both doors: every block `POST /analytics/reports/render` accepts, and what each one
+         *     carries.
+         */
+        get: operations["describeReportBlocks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The prebuilt reports, and the names each one's plan may use.
+         * @description The answer the `describe_report_vocabulary` agent tool gives, run by the same tool
+         *     on both doors: the document `margince://schema/reports` publishes.
+         */
+        get: operations["describeReportVocabulary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -17118,6 +17611,10 @@ export interface paths {
          *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
          *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
          *     answers 422 `unsupported_file_type`.
+         *
+         *     An agent may file one no larger than the `attach_document` tool takes: what one MCP
+         *     request carries inline, or the operator's attachment limit when that is smaller. A
+         *     larger file answers 422 on `file`, as the tool refuses it.
          */
         post: operations["uploadAttachment"];
         delete?: never;
@@ -26812,6 +27309,512 @@ export interface components {
              */
             occurred_at: string;
         };
+        /** @description What `search_report_evidence` takes beside the run the path names. */
+        ReportEvidenceSearchRequest: {
+            /** @description The words the evidence would carry. */
+            query: string;
+            /** @description One cell's group key values, in the run's `group_by` order. Omit it to search every record the run measured. */
+            cell?: unknown[];
+            /** @description How many citations, counterexamples and abstentions to return, each. */
+            limit?: number;
+        };
+        /** @description What `query_workspace` takes. */
+        WorkspaceQueryRequest: {
+            /** @description A query plan, in the grammar `GET /query-vocabulary` publishes for this caller. */
+            plan: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `resolve_entities` takes. */
+        EntityResolutionRequest: {
+            candidates: components["schemas"]["EntityResolutionCandidate"][];
+        };
+        /** @description One contact or company named in a payload, by every key it carries. */
+        EntityResolutionCandidate: {
+            /**
+             * @description Which record type this candidate is. Leads are not resolved.
+             * @enum {string}
+             */
+            kind: "contact" | "company";
+            /** @description Your own label, echoed back on its answer so a batch lines up. Never stored. */
+            ref?: string;
+            /** @description Full name for a contact, trading name for a company. */
+            name?: string;
+            /** @description The registered company name, when it differs from the trading name. Read for a company only. */
+            legal_name?: string;
+            /** @description Every address on the payload. For a company each address also gives its domain, unless it is a consumer mail domain. */
+            emails?: string[];
+            /** @description Phone numbers in E.164 form. One that does not normalize is ignored. */
+            phones?: string[];
+            /** @description Company domains the payload claims. Read for a company only. */
+            domains?: string[];
+        };
+        /** @description One record an agent answer rests on. */
+        AgentRecordRef: {
+            /** Format: uuid */
+            record_id: string;
+            record_type: string;
+        };
+        /** @description A quoted passage and the field or record it was read from. */
+        AgentExcerpt: {
+            snippet: string;
+            source: string;
+        };
+        /** @description One record in an assembled picture, summarised, with the passages that put it there. */
+        AgentContextItem: {
+            evidence: components["schemas"]["AgentExcerpt"][];
+            occurred_at?: string;
+            /** Format: uuid */
+            record_id: string;
+            record_type: string;
+            summary: string;
+        };
+        /** @description One heading of an assembled picture: recent activity, open tasks, related records. */
+        AgentContextSection: {
+            items: components["schemas"]["AgentContextItem"][];
+            name: string;
+        };
+        /** @description What `catch_me_up_on` answers: the record asked about and the sections assembled around it. */
+        AgentAssembledContext: {
+            anchor: components["schemas"]["AgentRecordRef"];
+            sections: components["schemas"]["AgentContextSection"][];
+        };
+        /** @description One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact. */
+        AgentGroundedLine: {
+            evidence: components["schemas"]["AgentRecordRef"][];
+            nature?: string;
+            text: string;
+        };
+        /** @description A named way the conversation can go and what to do then. */
+        AgentPlay: {
+            evidence: components["schemas"]["AgentRecordRef"][];
+            label: string;
+            play: string;
+        };
+        /** @description A record a commitment is about. */
+        AgentCommitmentSubject: {
+            /** Format: uuid */
+            entity_id: string;
+            entity_type: string;
+            name?: string;
+        };
+        /** @description One open promise: a task, or a promise read from a conversation, with when it is due. */
+        AgentCommitment: {
+            about: components["schemas"]["AgentCommitmentSubject"][];
+            /** Format: uuid */
+            assignee_id?: string;
+            assignee_name?: string;
+            /** Format: uuid */
+            claim_id?: string;
+            days_overdue?: number;
+            due_at?: string;
+            quote?: string;
+            source: string;
+            /** Format: uuid */
+            source_activity_id?: string;
+            state: string;
+            subject: string;
+            /** Format: uuid */
+            task_id?: string;
+        };
+        /** @description A record as the agent tool surface hands it over: its type, id, version and readable fields. */
+        AgentRecord: {
+            fields: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            id: string;
+            record_type: string;
+            trust_tier?: string;
+            version?: number;
+        };
+        /** @description One ranked record and the passages that matched. */
+        AgentContextHit: {
+            excerpts: components["schemas"]["AgentExcerpt"][];
+            record: components["schemas"]["AgentRecord"];
+            score: number;
+        };
+        /** @description What to do in the room, built over the same records as the brief. */
+        AgentMeetingPlan: {
+            advance: {
+                best: components["schemas"]["AgentGroundedLine"];
+                fallback: components["schemas"]["AgentGroundedLine"];
+                minimum: components["schemas"]["AgentGroundedLine"];
+            };
+            company_arc?: {
+                from: string;
+                summary: components["schemas"]["AgentGroundedLine"];
+                title?: string;
+                to: string;
+            }[];
+            likely_asks?: {
+                basis: components["schemas"]["AgentGroundedLine"];
+                prepare: string;
+                question: string;
+                relevance: string;
+            }[];
+            manager_coaching?: {
+                failure_mode: string;
+                focus: string;
+                intervene_if: string;
+                listen_for: string;
+                paths?: components["schemas"]["AgentPlay"][];
+                watch_for: string;
+            };
+            meeting_type: string;
+            meeting_type_confidence: string;
+            objective?: components["schemas"]["AgentGroundedLine"];
+            objective_caveat?: string;
+            opening?: components["schemas"]["AgentGroundedLine"];
+            questions?: {
+                ask: string;
+                evidence: components["schemas"]["AgentRecordRef"][];
+                listen_for: string;
+                why: string;
+            }[];
+            readiness: string;
+            scenarios?: components["schemas"]["AgentPlay"][];
+            top_risk?: {
+                avoid: string;
+                say: string;
+                show: string;
+                text: components["schemas"]["AgentGroundedLine"];
+            };
+            unknowns?: {
+                kind: string;
+                question: string;
+            }[];
+        };
+        /** @description The written brief for the booked meeting the record leads to, when there is one. */
+        AgentMeetingBrief: {
+            /** Format: uuid */
+            activity_id: string;
+            generated_at: string;
+            generated_by: string;
+            plan?: components["schemas"]["AgentMeetingPlan"];
+            /** Format: uuid */
+            project_id?: string;
+            sections: {
+                kind: string;
+                sentences: components["schemas"]["AgentGroundedLine"][];
+            }[];
+        };
+        /** @description Why an answer is partial or shaped as it is. `code` is a machine key; `path` names the input it is about. */
+        AgentQueryNote: {
+            code: string;
+            detail: string;
+            path?: string;
+        };
+        /** @description What `at_risk_relationships` answers: the deals whose relationships are going cold, and how much of the pipeline was read. */
+        AtRiskRelationships: {
+            coverage_withheld: boolean;
+            deals: {
+                /** Format: uuid */
+                deal_id: string;
+                name: string;
+                risks: {
+                    contact_ids?: string[];
+                    contacts?: {
+                        /** Format: uuid */
+                        contact_id: string;
+                        name: string;
+                    }[];
+                    days_since_touch?: number;
+                    kind: string;
+                    summary: string;
+                    user_ids?: string[];
+                }[];
+            }[];
+            deals_scanned: number;
+            truncated: boolean;
+        };
+        /** @description What `prep_for_meeting` answers: the assembled picture, the open items to act on, and the written brief when one exists. */
+        MeetingPrep: {
+            brief?: components["schemas"]["AgentMeetingBrief"];
+            briefing: components["schemas"]["AgentAssembledContext"];
+            meeting_focus: {
+                /** Format: uuid */
+                record_id: string;
+                summary: string;
+            }[];
+        };
+        /** @description What `prepare_handoff` answers: the project, the deals it was sold through, the stakeholders, the open promises and the gaps. */
+        ProjectHandoff: {
+            as_of: string;
+            /** Format: uuid */
+            company_id?: string;
+            deals: {
+                amount_minor?: number;
+                currency?: string;
+                /** Format: uuid */
+                deal_id: string;
+                name: string;
+                status: string;
+            }[];
+            description?: string;
+            gaps: {
+                code: string;
+                message: string;
+                source: string;
+            }[];
+            key?: string;
+            name: string;
+            open_commitments: components["schemas"]["AgentCommitment"][];
+            /** Format: uuid */
+            owner_id?: string;
+            owner_name?: string;
+            phase: string;
+            /** Format: uuid */
+            project_id: string;
+            stakeholders: {
+                /** Format: uuid */
+                contact_id: string;
+                name?: string;
+                role?: string;
+            }[];
+            started_at?: string;
+            target_end_date?: string;
+        };
+        /** @description What `review_commitments` answers: the open promises, overdue first, as of one instant. */
+        OpenCommitments: {
+            as_of: string;
+            commitments: components["schemas"]["AgentCommitment"][];
+        };
+        /** @description What `intro_path_to` answers: the colleagues who know someone at the company, warmest first. */
+        IntroPaths: {
+            candidates_truncated: boolean;
+            /** Format: uuid */
+            company_id: string;
+            routes: {
+                /** Format: uuid */
+                contact_id: string;
+                contact_name: string;
+                display_name: string;
+                interactions_90d: number;
+                strength?: number;
+                strength_bucket: string;
+                /** Format: uuid */
+                user_id: string;
+            }[];
+        };
+        /** @description What `search_context` answers: ranked records and the passages that matched. */
+        ContextSearchResult: {
+            coverage: string;
+            hits: components["schemas"]["AgentContextHit"][];
+            notes: components["schemas"]["AgentQueryNote"][];
+        };
+        /** @description What `search_report_evidence` answers: the records of a saved run that carry the words, those that do not, and the share. */
+        ReportEvidenceResult: {
+            abstentions: {
+                /** Format: uuid */
+                id: string;
+                record_type: string;
+            }[];
+            citations: components["schemas"]["AgentContextHit"][];
+            counterexamples: components["schemas"]["AgentRecord"][];
+            coverage: string;
+            notes: components["schemas"]["AgentQueryNote"][];
+            /** @description Absent from the count unless `coverage` is `complete_exact`; a note says why. */
+            prevalence?: {
+                matched: number;
+                of: number;
+                share: number;
+            } | null;
+            tally: {
+                matched: number;
+                unjudged: number;
+                unmatched: number;
+            };
+        };
+        /** @description What `query_workspace` answers: the rows the plan matched, the plan as run, and how complete the answer is. */
+        WorkspaceQueryResult: {
+            coverage: string;
+            executed_plan: string;
+            limit: number;
+            notes: components["schemas"]["AgentQueryNote"][];
+            rows: {
+                distance_km?: number;
+                evidence: {
+                    /** Format: uuid */
+                    id: string;
+                    record_type: string;
+                    relation: string;
+                    title: string;
+                    trust_tier?: string;
+                }[];
+                owner?: {
+                    /** Format: uuid */
+                    id: string;
+                    is_you: boolean;
+                    name?: string;
+                };
+                record: components["schemas"]["AgentRecord"];
+                score?: number;
+            }[];
+        };
+        /** @description What `resolve_entities` answers: for each candidate, the records it matches and whether one match can be acted on. */
+        EntityResolutionResult: {
+            candidates: {
+                decision: string;
+                matches: {
+                    confidence: number;
+                    matched_on: string;
+                    record: components["schemas"]["AgentRecord"];
+                }[];
+                ref?: string;
+            }[];
+        };
+        /** @description What `describe_analytics_vocabulary` answers. */
+        AnalyticsVocabulary: {
+            vocabulary: string;
+        };
+        /** @description What `describe_record_fields` answers. */
+        RecordFieldsVocabulary: {
+            fields: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `describe_report_blocks` answers. */
+        ReportBlockGrammar: {
+            blocks: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `describe_report_vocabulary` answers. */
+        ReportVocabulary: {
+            vocabulary: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `whoami` answers: the human this caller acts for. */
+        ActingIdentity: {
+            /** Format: uuid */
+            acting_user_id: string;
+            display_name: string;
+            email: string;
+            locale?: string;
+            prose_language: string;
+            timezone?: string;
+        };
+        /** @description What `describe_query_vocabulary` answers. */
+        QueryVocabulary: {
+            /** @description The query vocabulary document, as `margince://schema/query` publishes it. */
+            vocabulary: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `whats_slipping_this_week` answers, worst first. */
+        SlippingDealList: {
+            deals: components["schemas"]["SlippingDeal"][];
+        };
+        /** @description One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id, so the order is the same on every read of the same data. */
+        SlippingDeal: {
+            rank: number;
+            /** Format: uuid */
+            deal_id: string;
+            name: string;
+            /**
+             * Format: int64
+             * @description Absent for a deal that carries no amount yet.
+             */
+            amount_minor?: number;
+            /** @description Present when amount_minor is, and only then. */
+            currency?: string;
+            evidence: components["schemas"]["SlippingEvidence"][];
+        };
+        /** @description One reason the deal is on the list, and the field or read it comes from. */
+        SlippingEvidence: {
+            /** @description The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`. */
+            source: string;
+            snippet: string;
+        };
+        /** @description What `draft_follow_ups_for` takes. */
+        DealFollowUpDraftRequest: {
+            /**
+             * @description The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+             * @enum {string}
+             */
+            segment: "slipping";
+            /** @description How many of the worst deals to draft for. Omit it for 25, the most one call writes. */
+            limit?: number;
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `draft_follow_ups_for` answers. */
+        DealFollowUpDrafts: {
+            segment: string;
+            drafts: components["schemas"]["DealFollowUpDraft"][];
+        };
+        /** @description One drafted follow-up, the activity it was saved as, and why the deal is on the list. */
+        DealFollowUpDraft: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            draft_activity_id: string;
+            summary: string;
+            evidence: components["schemas"]["AgentExcerpt"][];
+        };
+        /** @description What `progress_deal` takes besides the deal, which the path names. */
+        ProgressDealRequest: {
+            /**
+             * Format: uuid
+             * @description The stage to move to. Its semantic decides whether the move is confirm-first.
+             */
+            to_stage_id: string;
+            /** @description Required when the stage closes the deal as lost. */
+            lost_reason?: string;
+            /**
+             * @description Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+             * @enum {string}
+             */
+            won_without_contract_reason?: "imported" | "purchase_order" | "verbal" | "renewal_by_email" | "other";
+            /** @description What the reason was, required when it is `other`. */
+            won_without_contract_detail?: string;
+            /** @description Logged as a note on the deal's timeline after the move. */
+            note?: string;
+            /** @description The deal's version the move was decided on. A deal that has changed since is refused. */
+            if_version?: number;
+            /**
+             * Format: uuid
+             * @description The approval a human gave this exact call, on its retry.
+             */
+            approval_id?: string;
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `progress_deal` answers. */
+        ProgressDealResult: {
+            deal: components["schemas"]["AgentRecord"];
+            /**
+             * Format: uuid
+             * @description The note logged on the deal, absent when the call carried none.
+             */
+            note_activity_id?: string;
+        };
+        /** @description What `qualify_lead` takes besides the lead, which the path names. */
+        QualifyLeadRequest: {
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `qualify_lead` answers. */
+        LeadQualification: {
+            /**
+             * Format: uuid
+             * @description The lead.
+             */
+            record_id: string;
+            /** @description The fields this call filled, by name. */
+            filled: {
+                [key: string]: components["schemas"]["LeadQualifiedField"];
+            };
+            /** @description The qualification fields still empty, for a human to fill. */
+            gaps: string[];
+        };
+        /** @description The value a field was filled with and what it was read from. */
+        LeadQualifiedField: {
+            value: string;
+            evidence: components["schemas"]["AgentExcerpt"][];
+        };
         DealCoverage: {
             /** Format: uuid */
             deal_id: string;
@@ -35820,6 +36823,11 @@ export interface components {
              * @enum {string}
              */
             scope?: "read" | "draft" | "write" | "send" | "enrich";
+            /**
+             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. Absent means the operation's own handler runs and the gate admits it.
+             * @enum {string}
+             */
+            served_by?: "registry";
         };
         /**
          * @description EXACTLY ONE input source (B-E01.2b/.13): `url` (fetch+parse a website, ADR-0006), `text` (the
@@ -43481,6 +44489,16 @@ export interface components {
         };
     };
     parameters: {
+        /** @description The type of the record to build around. */
+        AnchorRecordType: "contact" | "company" | "deal" | "lead" | "project" | "activity";
+        /** @description The record to build around. Give this or `record_name`, not both. */
+        AnchorRecordId: string;
+        /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+        AnchorRecordName: string;
+        /** @description Cap the items in each section. */
+        AnchorMaxItems: number;
+        /** @description Keep only what is filed under this project or under none. */
+        AnchorProjectId: string;
         /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
         BriefProjectId: string;
         /** @description The profile field's key — the same closed vocabulary `ContactProfileField.field` carries. */
@@ -43628,6 +44646,12 @@ export interface components {
          */
         IdempotencyKey: string;
         /**
+         * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+         *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+         *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+         */
+        ToolIdempotencyKey: string;
+        /**
          * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
          *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
          *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
@@ -43652,6 +44676,28 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getActingIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The acting human. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActingIdentity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getCurrentPrincipal: {
         parameters: {
             query?: never;
@@ -46657,6 +47703,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listIntroPaths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The introduction routes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroPaths"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getCompanyGraph: {
         parameters: {
             query?: never;
@@ -48312,6 +49384,101 @@ export interface operations {
             };
         };
     };
+    listSlippingDeals: {
+        parameters: {
+            query?: {
+                /** @description Days without recorded activity after which an open deal counts as gone quiet. */
+                quiet_days?: number;
+                /** @description Cap the ranked list. Omit it for every evidenced deal. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The slipping deals, worst first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlippingDealList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listAtRiskRelationships: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The at-risk deals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AtRiskRelationships"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    draftDealFollowUps: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealFollowUpDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description The drafts written, one per deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealFollowUpDrafts"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getDeal: {
         parameters: {
             query?: never;
@@ -48498,6 +49665,55 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    progressDeal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressDealRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal at its new stage, and the note logged on it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressDealResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -49113,6 +50329,32 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    prepareProjectHandoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The handoff brief. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHandoff"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getProject360: {
@@ -54204,6 +55446,55 @@ export interface operations {
             };
         };
     };
+    qualifyLead: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QualifyLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description What was filled and what is still empty. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadQualification"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     previewLeadPromotion: {
         parameters: {
             query?: never;
@@ -57847,6 +59138,233 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    describeQueryVocabulary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The query vocabulary for this caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    catchUpOnRecord: {
+        parameters: {
+            query: {
+                /** @description The type of the record to build around. */
+                record_type: components["parameters"]["AnchorRecordType"];
+                /** @description The record to build around. Give this or `record_name`, not both. */
+                record_id?: components["parameters"]["AnchorRecordId"];
+                /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+                record_name?: components["parameters"]["AnchorRecordName"];
+                /** @description Cap the items in each section. */
+                max_items?: components["parameters"]["AnchorMaxItems"];
+                /** @description Keep only what is filed under this project or under none. */
+                project_id?: components["parameters"]["AnchorProjectId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assembled picture. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAssembledContext"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    prepForMeeting: {
+        parameters: {
+            query: {
+                /** @description The type of the record to build around. */
+                record_type: components["parameters"]["AnchorRecordType"];
+                /** @description The record to build around. Give this or `record_name`, not both. */
+                record_id?: components["parameters"]["AnchorRecordId"];
+                /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+                record_name?: components["parameters"]["AnchorRecordName"];
+                /** @description Cap the items in each section. */
+                max_items?: components["parameters"]["AnchorMaxItems"];
+                /** @description Keep only what is filed under this project or under none. */
+                project_id?: components["parameters"]["AnchorProjectId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meeting preparation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingPrep"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listOpenCommitments: {
+        parameters: {
+            query?: {
+                /** @description Narrow to one owner's promises. Omit it for everyone's. */
+                assignee_id?: string;
+                /** @description Keep only promises filed under this project or under none. */
+                project_id?: string;
+                /** @description Cap the set. 50 is also the ceiling. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open commitments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenCommitments"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    searchContext: {
+        parameters: {
+            query: {
+                /** @description What to look for, in your own words. */
+                query: string;
+                /** @description Restrict the sweep to these types. Omit it to sweep all of them. */
+                record_types?: ("contact" | "company" | "deal" | "lead" | "project")[];
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ranked records. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContextSearchResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    queryWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description The rows the plan matched. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceQueryResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resolveEntities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntityResolutionRequest"];
+            };
+        };
+        responses: {
+            /** @description The matches for each candidate, in the order sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityResolutionResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    describeRecordFields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record write vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordFieldsVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     search: {
@@ -68789,6 +70307,37 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    searchReportEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A saved run, as `POST /analytics/query` with `save` answers one. */
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportEvidenceSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description The evidence for and against. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportEvidenceResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     explainReportRunCell: {
         parameters: {
             query?: never;
@@ -68863,6 +70412,72 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    describeAnalyticsVocabulary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The analytics vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    describeReportBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report block grammar. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportBlockGrammar"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    describeReportVocabulary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     explainAnalyticsCell: {

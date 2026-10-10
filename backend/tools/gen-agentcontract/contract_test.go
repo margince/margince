@@ -4,6 +4,7 @@
 package main
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -375,5 +376,25 @@ func TestADanglingRefRefusesToGenerate(t *testing.T) {
 	broken := strings.Replace(fixture, "#/components/schemas/Contact'", "#/components/schemas/Missing'", 1)
 	if _, _, _, err := agentContract([]byte(broken), tables); err == nil {
 		t.Error("a ref to a component the contract does not declare generated anyway")
+	}
+}
+
+// The index is the census an AI tool reads first. Every operation the bundled
+// contract keeps is one row there, whether or not its tag is in the
+// document's tag list.
+func TestTheIndexCarriesEveryOperationTheContractKeeps(t *testing.T) {
+	undeclared := strings.Replace(fixture, "tags: [Contacts]", "tags: [Undeclared]", 1)
+	contract, index, _, err := agentContract([]byte(undeclared), tables)
+	if err != nil {
+		t.Fatalf("agentContract: %v", err)
+	}
+	kept := regexp.MustCompile(`(?m)^\s+operationId: (\w+)$`).FindAllStringSubmatch(string(contract), -1)
+	if len(kept) == 0 {
+		t.Fatal("the bundled contract keeps no operation — this check holds nothing")
+	}
+	for _, m := range kept {
+		if n := strings.Count(string(index), "| "+m[1]+" |"); n != 1 {
+			t.Errorf("%s is in the bundled contract and %d times in the index", m[1], n)
+		}
 	}
 }

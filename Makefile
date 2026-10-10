@@ -1314,7 +1314,7 @@ rls-store-path:
 ## from a run that never reached the model: a refused credential is named as
 ## one, and a genuinely bad answer is still a finding. It also holds the judged
 ## half offline, against verdicts a real judge gave the committed fixtures: a
-## judge that agreed with everything fails 22 of these cases, and a judge that
+## judge that agreed with everything fails every defect fixture, and a judge that
 ## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-check.sh

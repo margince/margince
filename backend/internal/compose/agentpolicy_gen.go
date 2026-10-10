@@ -77,6 +77,16 @@ const (
 	scopeEnrich agentScope = "enrich"
 )
 
+// agentServedBy says who admits an agent's call; the zero value means the gate does.
+//
+// Values are the closed set declared by components.schemas.AgentAdmissionPolicy in
+// api/crm.yaml; a value outside it fails generation.
+type agentServedBy string
+
+const (
+	servedByRegistry agentServedBy = "registry"
+)
+
 // agentPolicy is one contract operation's admission class for AGENT
 // (Passport) principals (ADR-0055): either the MCP tool verb whose tier
 // governs it on every transport, or an x-agent-access marker. The gate
@@ -93,6 +103,7 @@ type agentPolicy struct {
 	RecordType agentRecordType // the record the operation targets; zero when it declares none
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
+	ServedBy   agentServedBy   // servedByRegistry: the handler's tool call admits it, not the gate
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated
@@ -170,7 +181,6 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/activities/{id}/project-filing":                                {Op: "getActivityProjectFiling", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/activities/{id}/transcript-proposals/latest":                   {Op: "getLatestTranscriptRead", Access: "tool", Tool: "read_record", RecordType: "activity", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities/{id}/transcript-proposals/{readId}":                 {Op: "getTranscriptRead", Access: "tool", Tool: "read_record", RecordType: "activity", Tier: "auto_execute", Scope: "read"},
-	"GET /v1/activity-review-templates":                                     {Op: "listActivityReviewTemplates", Access: "tool", Tool: "describe_query_vocabulary", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/admin/capture-health":                                          {Op: "getCaptureHealth", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/admin/extension-ingest-health":                                 {Op: "getExtensionIngestHealth", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/admin/job-health":                                              {Op: "getJobHealth", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -203,15 +213,18 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/analytics/evidence":                                            {Op: "getReportingEvidence", Access: "tool", Tool: "read_reporting", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/metrics":                                             {Op: "getReportingMetrics", Access: "tool", Tool: "read_reporting", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/reports":                                             {Op: "listReportingReports", Access: "tool", Tool: "read_reporting", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/analytics/reports/blocks":                                      {Op: "describeReportBlocks", Access: "tool", Tool: "describe_report_blocks", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
+	"GET /v1/analytics/reports/vocabulary":                                  {Op: "describeReportVocabulary", Access: "tool", Tool: "describe_report_vocabulary", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/analytics/reports/{id}":                                        {Op: "getReportingReport", Access: "tool", Tool: "read_reporting", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/reports/{id}/editions":                               {Op: "listReportingEditions", Access: "tool", Tool: "read_reporting", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/reports/{id}/evaluation":                             {Op: "evaluateReportingReport", Access: "tool", Tool: "read_reporting", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/runs/{run_id}":                                       {Op: "getReportRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/schema":                                              {Op: "getAnalyticsSchema", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/analytics/vocabulary":                                          {Op: "describeAnalyticsVocabulary", Access: "tool", Tool: "describe_analytics_vocabulary", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/approvals":                                                     {Op: "listApprovals", Access: "tool", Tool: "list_approvals", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/approvals/{id}":                                                {Op: "getApproval", Access: "tool", Tool: "read_approval", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/assistant/profile":                                             {Op: "getAssistantProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/attachments":                                                   {Op: "listAttachments", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/attachments":                                                   {Op: "listAttachments", Access: "tool", Tool: "list_documents", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/attachments/{id}":                                              {Op: "downloadAttachment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/attachments/{id}/extraction":                                   {Op: "getAttachmentExtraction", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/attention":                                                     {Op: "getAttention", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -236,11 +249,13 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/capture/owner-identities":                                      {Op: "listCaptureOwnerIdentities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/capture/senders":                                               {Op: "listCaptureSenders", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/capture/traces/{id}":                                           {Op: "readCaptureTracePipeline", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/catch-up":                                                      {Op: "catchUpOnRecord", Access: "tool", Tool: "catch_me_up_on", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/channel-connections":                                           {Op: "listChannelConnections", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/channel-providers":                                             {Op: "listChannelProviders", Access: "tool", Tool: "list_channel_providers", RecordType: "activity", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/commissions":                                                   {Op: "listCommissionEntries", Access: "tool", Tool: "list_records", RecordType: "commission", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/commissions/summary":                                           {Op: "getCommissionSummary", Access: "tool", Tool: "run_report", RecordType: "commission", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/commissions/{id}":                                              {Op: "getCommissionEntry", Access: "tool", Tool: "read_record", RecordType: "commission", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/commitments":                                                   {Op: "listOpenCommitments", Access: "tool", Tool: "review_commitments", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/communication-reviews":                                         {Op: "listCommunicationReviews", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/communication-reviews/{id}":                                    {Op: "getCommunicationReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies":                                                     {Op: "listCompanies", Access: "tool", Tool: "list_records", RecordType: "company", Tier: "auto_execute", Scope: "read"},
@@ -248,10 +263,11 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/companies/{id}/brief":                                          {Op: "getCompanyBrief", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/capture-triage":                                 {Op: "getCompanyCaptureTriage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/contracts":                                      {Op: "listCompanyContracts", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/companies/{id}/documents":                                      {Op: "listCompanyDocuments", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/companies/{id}/documents":                                      {Op: "listCompanyDocuments", Access: "tool", Tool: "list_documents", RecordType: "company", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/companies/{id}/dossier":                                        {Op: "getCompanyDossier", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/evidence/{entityType}/{entityId}":               {Op: "getClaimEvidence", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/growth-fit":                                     {Op: "getCompanyGrowthFit", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/companies/{id}/intro-paths":                                    {Op: "listIntroPaths", Access: "tool", Tool: "intro_path_to", RecordType: "company", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/companies/{id}/logo":                                           {Op: "getCompanyLogo", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/logo/icon":                                      {Op: "getCompanyLogoIcon", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/partner":                                        {Op: "getPartner", Access: "tool", Tool: "read_record", RecordType: "partner", Tier: "auto_execute", Scope: "read"},
@@ -275,7 +291,9 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/contacts/{id}/enrichment-runs/{run_id}":                        {Op: "getContactEnrichmentRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/graph":                                           {Op: "getContactGraph", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/intro-requests":                                  {Op: "listIntroRequests", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/contacts/{id}/network":                                         {Op: "getContactNetwork", Access: "tool", Tool: "who_knows", RecordType: "contact", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/contacts/{id}/profile-fields":                                  {Op: "getContactProfileFields", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/context-search":                                                {Op: "searchContext", Access: "tool", Tool: "search_context", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/contracts/{id}":                                                {Op: "getContract", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/custom-fields":                                                 {Op: "listCustomFields", Access: "tool", Tool: "search_records", RecordType: "custom_field", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/data-subject-requests":                                         {Op: "listDataSubjectRequests", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -287,8 +305,11 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/deal-rooms/{id}/threads":                                       {Op: "listDealRoomThreads", Access: "tool", Tool: "search_records", RecordType: "deal_room_thread", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-suggestions":                                              {Op: "listDealSuggestions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/deals":                                                         {Op: "listDeals", Access: "tool", Tool: "list_records", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/deals/at-risk":                                                 {Op: "listAtRiskRelationships", Access: "tool", Tool: "at_risk_relationships", RecordType: "deal", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
+	"GET /v1/deals/slipping":                                                {Op: "listSlippingDeals", Access: "tool", Tool: "whats_slipping_this_week", RecordType: "deal", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/deals/{id}":                                                    {Op: "getDeal", Access: "tool", Tool: "read_record", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
-	"GET /v1/deals/{id}/documents":                                          {Op: "listDealDocuments", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/deals/{id}/coverage":                                           {Op: "getDealCoverage", Access: "tool", Tool: "company_coverage", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/deals/{id}/documents":                                          {Op: "listDealDocuments", Access: "tool", Tool: "list_documents", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deals/{id}/offers":                                             {Op: "listDealOffers", Access: "tool", Tool: "search_records", RecordType: "offer", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deals/{id}/outcome-reviews":                                    {Op: "listDealOutcomeReviews", Access: "tool", Tool: "read_record", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deals/{id}/status":                                             {Op: "getDealStatus", Access: "tool", Tool: "read_record", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
@@ -340,6 +361,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/me/notification-preferences":                                   {Op: "listNotificationPreferences", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/me/sessions":                                                   {Op: "listMySessions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/me/working-hours":                                              {Op: "getMyWorkingHours", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/meeting-prep":                                                  {Op: "prepForMeeting", Access: "tool", Tool: "prep_for_meeting", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/notices":                                                       {Op: "listNotices", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/oauth/consent-request":                                         {Op: "getConsentRequest", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/offer-templates":                                               {Op: "listOfferTemplates", Access: "tool", Tool: "search_records", RecordType: "offer_template", Tier: "auto_execute", Scope: "read"},
@@ -350,6 +372,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/onboarding/state":                                              {Op: "getOnboardingState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/partners":                                                      {Op: "listPartners", Access: "tool", Tool: "search_records", RecordType: "partner", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/passports":                                                     {Op: "listPassports", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/pipelines":                                                     {Op: "listPipelines", Access: "tool", Tool: "list_pipelines", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/privacy/controller-particulars":                                {Op: "getControllerParticulars", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/privacy/notice-cases":                                          {Op: "listNoticeCases", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/privacy/notice-cases/{id}":                                     {Op: "getNoticeCase", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -358,7 +381,10 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/projects":                                                      {Op: "listProjects", Access: "tool", Tool: "list_records", RecordType: "project", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/projects/{id}":                                                 {Op: "getProject", Access: "tool", Tool: "read_record", RecordType: "project", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/projects/{id}/360":                                             {Op: "getProject360", Access: "tool", Tool: "read_project_360", RecordType: "project", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/projects/{id}/handoff":                                         {Op: "prepareProjectHandoff", Access: "tool", Tool: "prepare_handoff", RecordType: "project", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/provider-connections":                                          {Op: "listProviderConnections", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/query-vocabulary":                                              {Op: "describeQueryVocabulary", Access: "tool", Tool: "describe_query_vocabulary", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
+	"GET /v1/record-fields":                                                 {Op: "describeRecordFields", Access: "tool", Tool: "describe_record_fields", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/record-grants":                                                 {Op: "listRecordGrants", Access: "tool", Tool: "search_records", RecordType: "record_grant", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/records/{entity_type}/{entity_id}/tags":                        {Op: "getRecordTags", Access: "tool", Tool: "get_record_tags", RecordType: "tag", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/records/{entity_type}/{id}/context":                            {Op: "getRecordContext", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -398,6 +424,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/weekly-reviews":                                                {Op: "listWeeklyReviews", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/weekly-reviews/latest":                                         {Op: "getLatestWeeklyReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/weekly-reviews/team":                                           {Op: "getTeamWeeklyReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/whoami":                                                        {Op: "getActingIdentity", Access: "tool", Tool: "whoami", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/worklist":                                                      {Op: "getWorklist", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/exceptions":                                           {Op: "getTeamExceptions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/worklist/handled":                                              {Op: "getHandledForYou", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -495,12 +522,13 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/analytics/reports/{id}/editions":                              {Op: "freezeReportingEdition", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/reports/{id}/schedules":                             {Op: "createReportingSchedule", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/runs/{run_id}/cells/explain":                        {Op: "explainReportRunCell", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/analytics/runs/{run_id}/evidence-search":                      {Op: "searchReportEvidence", Access: "tool", Tool: "search_report_evidence", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"POST /v1/analytics/targets":                                            {Op: "createReportingTarget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/approval-bundles/{bundle_id}/approve":                         {Op: "approveApprovalBundle", Access: "tool", Tool: "decide_approval_bundle", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/approval-bundles/{bundle_id}/reject":                          {Op: "rejectApprovalBundle", Access: "tool", Tool: "decide_approval_bundle", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/approvals/{id}/approve":                                       {Op: "approveApproval", Access: "tool", Tool: "decide_approval", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/approvals/{id}/reject":                                        {Op: "rejectApproval", Access: "tool", Tool: "decide_approval", RecordType: "", Tier: "auto_execute", Scope: "write"},
-	"POST /v1/attachments":                                                  {Op: "uploadAttachment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/attachments":                                                  {Op: "uploadAttachment", Access: "tool", Tool: "attach_document", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/attachments/{id}/extraction":                                  {Op: "readAttachmentForFields", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/attachments/{id}/extraction:accept":                           {Op: "acceptAttachmentExtraction", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/attachments/{id}/request-access":                              {Op: "requestAttachmentAccess", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -619,10 +647,12 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/deal-suggestions/{id}/accept":                                 {Op: "acceptDealSuggestion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deal-suggestions/{id}/dismiss":                                {Op: "dismissDealSuggestion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals":                                                        {Op: "createDeal", Access: "tool", Tool: "create_record", RecordType: "deal", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/deals/follow-up-drafts":                                       {Op: "draftDealFollowUps", Access: "tool", Tool: "draft_follow_ups_for", RecordType: "deal", Tier: "auto_execute", Scope: "draft", ServedBy: "registry"},
 	"POST /v1/deals/{id}/advance":                                           {Op: "advanceDeal", Access: "tool", Tool: "advance_deal", RecordType: "deal", Tier: "dynamic", Scope: "write"},
 	"POST /v1/deals/{id}/applied-changes/{changeId}/accept":                 {Op: "acceptAppliedDealChange", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals/{id}/offers":                                            {Op: "createOffer", Access: "tool", Tool: "create_record", RecordType: "offer", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/deals/{id}/outcome-reviews":                                   {Op: "createDealOutcomeReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/deals/{id}/progress":                                          {Op: "progressDeal", Access: "tool", Tool: "progress_deal", RecordType: "deal", Tier: "dynamic", Scope: "write", ServedBy: "registry"},
 	"POST /v1/deals/{id}/role-proposals":                                    {Op: "proposeDealRoles", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals/{id}/stage-progressions/{approvalId}/revert":            {Op: "revertStageProgression", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/dedupe/candidates/{id}/disposition":                           {Op: "disposeDedupeCandidate", Access: "tool", Tool: "decide_duplicate", RecordType: "contact", Tier: "auto_execute", Scope: "write"},
@@ -632,6 +662,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/emails:sign-off":                                              {Op: "previewEmailSignOff", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/embeddings/reindex":                                           {Op: "EmbedReindexStart", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/employment-import/backfill":                                   {Op: "backfillEmploymentImport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/entity-resolutions":                                           {Op: "resolveEntities", Access: "tool", Tool: "resolve_entities", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"POST /v1/exports":                                                      {Op: "createFilteredExport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/filters/preview":                                              {Op: "previewFilter", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/filters/propose":                                              {Op: "proposeFilter", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -658,6 +689,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/leads/{id}/demote":                                            {Op: "demoteLead", Access: "tool", Tool: "demote_lead", RecordType: "lead", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/leads/{id}/draft-email":                                       {Op: "draftLeadEmail", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/leads/{id}/promote":                                           {Op: "promoteLead", Access: "tool", Tool: "promote_lead", RecordType: "lead", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/leads/{id}/qualify":                                           {Op: "qualifyLead", Access: "tool", Tool: "qualify_lead", RecordType: "lead", Tier: "auto_execute", Scope: "write", ServedBy: "registry"},
 	"POST /v1/leads/{id}/reopen":                                            {Op: "reopenLead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/lists":                                                        {Op: "createList", Access: "tool", Tool: "change_lists", RecordType: "list", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/lists/{id}/members":                                           {Op: "addListMember", Access: "tool", Tool: "change_lists", RecordType: "list", Tier: "auto_execute", Scope: "write"},
@@ -753,6 +785,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/webhook-subscriptions/{id}/rotate-secret":                     {Op: "rotateWebhookSecret", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/weekly-plans/commitments":                                     {Op: "addWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/weekly-plans/current":                                         {Op: "startWeeklyPlan", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/workspace-queries":                                            {Op: "queryWorkspace", Access: "tool", Tool: "query_workspace", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"PUT /v1/activities/{id}/disposition":                                   {Op: "setActivityDisposition", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/budget":                                                     {Op: "replaceAiBudget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/price-sync":                                                 {Op: "replaceAiPriceSync", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

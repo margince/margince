@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -25,7 +26,6 @@ func renderIndex(root *yaml.Node, ops []operation) []byte {
 			order = append(order, oasnode.Scalar(tag, "name"))
 		}
 	}
-	order = append(order, untagged)
 	byTag := map[string][]operation{}
 	for _, op := range ops {
 		tag := op.tag
@@ -34,6 +34,8 @@ func renderIndex(root *yaml.Node, ops []operation) []byte {
 		}
 		byTag[tag] = append(byTag[tag], op)
 	}
+	order = append(order, undeclaredTags(order, byTag)...)
+	order = append(order, untagged)
 
 	var b strings.Builder
 	b.WriteString("# Margince operations\n\n")
@@ -80,4 +82,22 @@ func (op operation) runs() string {
 // cell keeps a summary on its table row.
 func cell(text string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(text, "\n", " "), "|", "/")
+}
+
+// undeclaredTags are the tags an operation names that the document's tag list
+// does not, sorted. Their operations are as callable as any other, so the
+// index lists them after the declared areas instead of leaving them out.
+func undeclaredTags(declared []string, byTag map[string][]operation) []string {
+	known := map[string]bool{untagged: true}
+	for _, tag := range declared {
+		known[tag] = true
+	}
+	var extra []string
+	for tag := range byTag {
+		if !known[tag] {
+			extra = append(extra, tag)
+		}
+	}
+	sort.Strings(extra)
+	return extra
 }

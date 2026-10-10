@@ -157,6 +157,7 @@ func (t resolveEntities) Spec() mcp.ToolSpec {
 		Description:   resolveEntitiesCopy.render(),
 		Instead:       resolveEntitiesCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "resolveEntities",
 		InputSchema: schema(`{"type":"object","required":["candidates"],"properties":{
 			"candidates":{"type":"array","minItems":1,"maxItems":20,"items":{
 				"type":"object","required":["kind"],"properties":{
