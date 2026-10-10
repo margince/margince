@@ -218,9 +218,8 @@ export type DataTableColumn<Row> = Readonly<{
   fold?: "title" | "end" | "hide";
 }>;
 
-// React bubbles a click out of a portal into the row that rendered it, so a
-// target outside the row is a popover's, never the row's. A drag that selected
-// text to copy is not a press either.
+// React bubbles a portal's click into the row that rendered it, so a target
+// outside the row is a popover's. A drag that selects text is not a press.
 function opensRow(event: MouseEvent<HTMLTableRowElement>): boolean {
   const target = event.target;
   if (!(target instanceof Element) || !event.currentTarget.contains(target)) {

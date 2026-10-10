@@ -62,8 +62,8 @@ export const OutcomesDark: Story = {
   render: () => <Table />,
 };
 
-// Folded: name and recipe lead, the switch and the menu sit at the end, and
-// mode, last run and the run count follow as a caption.
+// Folded: name and recipe lead, and the switch and the menu sit at the end.
+// Mode, last run and the run count follow as a caption.
 export const OutcomesPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

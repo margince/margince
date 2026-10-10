@@ -24,25 +24,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// runKey scopes the idempotency claim to the automation instance: two
-// instances of one type each apply once per event, and a replay of
-// either finds its own claim.
-//
-// For a CLOCK trigger (Trigger.Schedule set) the handler's
-// IdempotencyKey must derive this from the ANCHOR that makes the
-// condition true (last_activity_at, a due date, …), never from ev.ID —
-// a clock condition is continuously true once its anchor is stale
-// enough, so the key has to be stable across every re-evaluation of the
-// SAME anchor and only change when the anchor itself moves. An
-// event-trigger key carries ev.ID (or content derived from the event),
-// which is exactly why an event trigger's non-match is safe to record
-// (recordSkip below) and a clock trigger's is not (runOne's !matched
-// branch).
-// Three readers decode this shape back out of the row. ListRuns reads one
-// instance's history and runSummaryJoins the list's last run and count, both
-// in automations_runs.go; troubledRunsSQL (troubledruns.go) reads health.
-// A change to the "@<automation id>" suffix lands on all three, and on the
-// workflow_run_by_automation index over its last 36 characters.
+// runKey scopes the idempotency claim to one automation instance, so each
+// instance applies once per event. A clock handler keys on its anchor, never
+// ev.ID, which is why runOne records no clock non-match. ListRuns and
+// runSummaryJoins (automations_runs.go), troubledRunsSQL (troubledruns.go) and
+// the workflow_run_by_automation index over the last 36 characters all read
+// the "@<automation id>" suffix. Change the four together.
 func runKey(h workflow.Handler, ev workflow.Event) string {
 	return retryPrefix(ev) + h.IdempotencyKey(ev) + "@" + ev.AutomationID.String()
 }

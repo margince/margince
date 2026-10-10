@@ -99,8 +99,8 @@ const brokered = [
   },
 ];
 
-// One row per outcome the column draws: none for a call that answered first
-// time, a warning for one that limped, danger for one that got no answer.
+// One row per outcome the column draws: none for a first-time answer, a
+// warning for a call that limped, danger for no answer.
 const outcomes = [
   {
     ...summary,
@@ -314,8 +314,8 @@ export const RowExpandedDark: Story = {
   play: openAttemptTrail,
 };
 
-// The trace at 390px folds each call onto two lines: the task, its outcome and
-// its toggle first, the moment, model, tokens and latency under them.
+// At 390px the trace folds each call onto two lines. The task, its outcome and
+// its toggle come first; the moment, model, tokens and latency sit under them.
 export const ListPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

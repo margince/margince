@@ -433,8 +433,8 @@ export function firstBinding(
 }
 
 // The day the price sheet was last written, which is the day its model list was
-// last true: the NEWEST effective date across the sheet, since a sheet is
-// re-priced row by row.
+// last true. A sheet is re-priced row by row, so that day is its newest
+// effective date.
 function sheetAsOf(catalogue: ModelCatalogue): string | null {
   return (catalogue ?? []).reduce<string | null>(
     (latest, rate) =>

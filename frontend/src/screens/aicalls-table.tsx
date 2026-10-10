@@ -22,8 +22,7 @@ type CallSummary = components["schemas"]["AiCallSummary"];
 const RELATIVE_TICK_MS = 60_000;
 
 // The attempts the ladder itself made. A decision model that fell back is the
-// first of `calls_attempted`, and the rung after it is a second model asked,
-// not a retry of the first.
+// first of `calls_attempted`; the next rung is a second model, not a retry.
 function ladderAttempts(call: CallSummary): number {
   return call.decision_attempted
     ? call.calls_attempted - 1

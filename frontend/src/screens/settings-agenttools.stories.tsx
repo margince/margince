@@ -13,7 +13,7 @@ import {
 } from "./story-utils";
 
 // Served descriptions end with the governance clause the server appends, so the
-// fixtures carry it: the clamped line and the opened one both have to hold it.
+// fixtures carry it. The clamped line and the opened one both have to hold it.
 const TOOLS = [
   {
     name: "search_records",

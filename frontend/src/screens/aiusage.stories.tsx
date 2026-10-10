@@ -117,7 +117,7 @@ export const EconomyModeDark: Story = {
   render: story("degraded", [task]),
 };
 
-// The widest the table gets, at 390px: no spend row is reconcilable in pieces,
+// The widest the table gets, at 390px. No spend row is reconcilable in pieces,
 // so the table scrolls inside the card with the task column pinned.
 export const WithCostPhone: Story = {
   globals: { viewport: { value: "phone" } },

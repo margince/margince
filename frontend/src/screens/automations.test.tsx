@@ -469,8 +469,8 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
   });
 
-  // One pane, and each list is a group of it: named by an h3 under the panel's
-  // own h2, so neither reads as a second card.
+  // One pane, and each list is a group of it. An h3 under the panel's own h2
+  // names each, so neither reads as a second card.
   it("names both lists as groups of one panel", async () => {
     vi.stubGlobal("fetch", automationsBackend([instance({})], []));
     render(<AutomationsAdmin />);

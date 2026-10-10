@@ -40,8 +40,8 @@ export function AgentToolsCard() {
   // A connection's credential was minted from a consent screen, never picked
   // from a list, so only the passports this human minted are offered.
   const live = passports.filter((passport) => passport.revoked_at == null);
-  // A revoked passport drops out of the options, and the filter with it, so
-  // the inventory never stays scoped to a choice no longer on offer.
+  // A revoked passport drops out of the options, and the filter with it. The
+  // inventory never stays scoped to a choice no longer on offer.
   const scopeId = live.some((passport) => passport.id === passportId)
     ? passportId
     : "";

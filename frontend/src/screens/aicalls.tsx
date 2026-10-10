@@ -275,7 +275,7 @@ const FILTER_TERM = {
 } as const satisfies Record<CallFilterParam, MessageKey>;
 
 // Each dial under its own name, with a vendor or a tier named as the rest of
-// this page names them; a model id is its own name.
+// this page names them. A model id is its own name.
 function filterWords(filter: CallFilter, t: Translator): string {
   return CALL_FILTER_PARAMS.flatMap((key) => {
     const value = filter[key];

@@ -253,7 +253,7 @@ function PassportName({
 }
 
 // When a passport was last used is a record of something that happened, so it
-// reads on the record zone; its expiry is the holder's own deadline.
+// reads on the record zone. Its expiry is the holder's own deadline.
 function usePassportDates() {
   const t = useT();
   const { locale } = useLocale();
@@ -305,7 +305,7 @@ function MintDialog({
       const { data, error, response } = await api.POST("/passports", {
         body: { label: request.label.trim() || null, scopes: request.scopes },
       });
-      // An expired session must not read as a mint that did nothing: drop every
+      // An expired session must not read as a mint that did nothing. Drop every
       // cached answer before the probe re-asks, so the next sign-in sees none.
       if (response.status === 401) {
         await resetToSignedOut(queryClient);

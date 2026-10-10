@@ -123,8 +123,8 @@ function rank(row: Row): number {
   return row.health ? 0 : ATTENTION[row.state];
 }
 
-// A vendor in use says nothing of its state, since its tier chips already do; a
-// failing one adds how, beside the state and never in its place.
+// A vendor in use says nothing of its state, since its tier chips already do.
+// A failing one adds how, beside the state and never in its place.
 function StateBadges({ row }: Readonly<{ row: Row }>) {
   const t = useT();
   return (

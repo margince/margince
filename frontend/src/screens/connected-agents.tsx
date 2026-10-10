@@ -166,7 +166,7 @@ function ConnectGuide() {
 }
 
 // A connection ends when revoked, or when its credential runs out and its grant
-// cannot renew; a renewable one past its expiry is only between credentials.
+// cannot renew. A renewable one past its expiry is only between credentials.
 type ConnectionState = Readonly<{
   revoked: boolean;
   renewing: boolean;
