@@ -322,3 +322,95 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /bulk/{id}` | getBulkChange | Read what one bulk change did, and whether it was undone. | any | at once |
 | `POST /bulk/{id}/undo/preview` | previewBulkUndo | Say what undoing one bulk change would do, without doing it. | Change records | at once |
 | `POST /bulk/{id}/undo` | undoBulkChange | Put back what one bulk change did, record by record. | Change records | at once |
+
+## Access
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /record-grants` | listRecordGrants | List manual per-record grants, filtered by record or by subject. | any | at once |
+
+## Attachments
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /attachments` | listAttachments | List the attachments hung off one entity (cursor-paginated metadata). | any | at once |
+| `POST /attachments` | uploadAttachment | Upload a file and attach it to an entity. | Change records | at once |
+| `GET /deals/{id}/documents` | listDealDocuments | The deal's Files area — its own uploads and the files of every message linked to it. | any | at once |
+| `GET /companies/{id}/documents` | listCompanyDocuments | Every document that rolls up to this account, pinned first. | any | at once |
+
+## Automations
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /automations/catalog` | listAutomationCatalog | The closed starter library of automation types the workspace can instantiate. | any | at once |
+| `GET /automations` | listAutomations | List the workspace's configured automation instances. | any | at once |
+| `GET /automations/{id}` | getAutomation | Read one automation instance. | any | at once |
+
+## Brief
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /brief` | getMorningBrief | The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks). | any | at once |
+| `PUT /brief/annotations` | annotateMorningBrief | Write the overnight pass's findings onto the acting rep's own brief for today. | Change records | at once |
+
+## Commissions
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /commissions` | listCommissionEntries | The commission ledger — what partners earned on won deals. | any | at once |
+| `GET /commissions/summary` | getCommissionSummary | What is owed, by partner and status — the open-liability figure. | any | at once |
+| `GET /commissions/{id}` | getCommissionEntry | One ledger entry. | any | at once |
+
+## Compliance
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /consent-purposes` | listConsentPurposes | List the workspace's consent purposes (e.g. transactional, marketing_email, profiling). | any | at once |
+| `GET /contacts/{id}/consent` | getContactConsent | Read a contact's per-purpose consent state plus the append-only proof log. | any | at once |
+
+## Import
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `POST /imports` | createImportRun | Create an import run from an uploaded source and a column mapping, and dry-run it. | Change records | at once |
+| `GET /imports/{id}` | getImportRun | Read one import run's lifecycle state. | any | at once |
+| `GET /imports/{id}/report` | getImportRunReport | Read the run's report — what will happen, or what did. | any | at once |
+| `POST /imports/{id}/approve` | approveImportRun | Approve a validated import run and commit it. | Change records | at once |
+
+## Offers
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /products` | listProducts | List rate-card products (live by default; cursor-paginated). | any | at once |
+| `POST /products` | createProduct | Create a rate-card product. | Change records | at once |
+| `GET /products/{id}` | getProduct | Get a product by id. | any | at once |
+| `PATCH /products/{id}` | updateProduct | Update a product (partial). Existing offer lines keep their price snapshot. | Change records | at once |
+| `DELETE /products/{id}` | archiveProduct | Archive (soft-delete) a product. Lines referencing it survive with their snapshot. | Change records | at once |
+| `GET /offer-templates` | listOfferTemplates | List offer templates (branded DE/EN PDF layouts), newest first. | any | at once |
+| `POST /offer-templates` | createOfferTemplate | Create an offer template. | Change records | at once |
+| `GET /offer-templates/{id}` | getOfferTemplate | Get an offer template by id. | any | at once |
+| `PUT /offer-templates/{id}` | updateOfferTemplate | Update an offer template (full replace — every writable field is replaced). | Change records | at once |
+| `DELETE /offer-templates/{id}` | archiveOfferTemplate | Archive (soft-delete) an offer template. | Change records | at once |
+| `GET /deals/{id}/offers` | listDealOffers | List a deal's offers, newest revision first. | any | at once |
+| `POST /deals/{id}/offers` | createOffer | Create a draft offer under a deal (offer_number minted server-side). | Change records | at once |
+| `GET /offers/{id}` | getOffer | Get an offer with its line items and computed totals. | any | at once |
+| `PATCH /offers/{id}` | updateOffer | Update offer header fields — allowed only while status=draft. | Change records | at once |
+| `DELETE /offers/{id}` | archiveOffer | Archive (soft-delete) an offer. | Change records | at once |
+| `POST /offers/{id}/line-items` | addOfferLineItem | Add a line item to a draft offer (position defaults to next; totals recomputed). | Change records | at once |
+| `PATCH /offers/{id}/line-items/{lineItemId}` | updateOfferLineItem | Update a draft offer's line item (totals recomputed; totals themselves are not settable). | Change records | at once |
+| `DELETE /offers/{id}/line-items/{lineItemId}` | removeOfferLineItem | Remove a line item from a draft offer (totals recomputed). | Change records | at once |
+
+## Partners
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /partners` | listPartners | List partner companies (companies with a partner row), filterable by role/cert status. | any | at once |
+
+## Signals
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /signals` | listSignals | List signals (cursor-paginated), newest first. | any | at once |
+| `GET /signals/{id}` | getSignal | Get a signal by id. | any | at once |
+| `GET /signals/{id}/warmth` | getSignalWarmth | The warm/cold classification with the full "why warm" evidence. | any | at once |
+| `GET /signals/{id}/intro-path` | getSignalIntroPath | The proposed warm-intro path for a warm signal — an actionable move, not a notification. | any | at once |
