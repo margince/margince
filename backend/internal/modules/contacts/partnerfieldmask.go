@@ -10,11 +10,13 @@ package contacts
 
 import (
 	"context"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -27,6 +29,10 @@ const partnerMaskObject = "partner"
 // the audit before-image spell the same word for the column, and the three stay
 // separate constants: one name they happen to share is not one vocabulary.
 const partnerFieldMarginTier = "margin_tier"
+
+// partnerFieldNextStepDue is the wire field a null clears; the sort catalog and
+// the audit image spell it the same way and stay their own vocabularies.
+const partnerFieldNextStepDue = "next_step_due_at"
 
 // partnerWithholds are the fields a mask may name on a partner, and how each is
 // withheld. One deliberate act per field, which is what keeps the set finite
@@ -50,6 +56,45 @@ func maskPartners(ctx context.Context, tx pgx.Tx, page []crmcontracts.Partner) e
 		partnerWithholds,
 		func(p *crmcontracts.Partner, names []string) { p.MaskedFields = &names },
 		nil, nil)
+}
+
+// clearsTheCallerMayMake drops, from the fields a body sent as null, those this
+// reader's role withholds. A seat that cannot read the tier is handed a null
+// there and sends it back with every unrelated edit. Honouring it would let the
+// mask wipe what it hides.
+func clearsTheCallerMayMake(ctx context.Context, tx pgx.Tx, cleared []string) ([]string, error) {
+	if len(cleared) == 0 {
+		return nil, nil
+	}
+	probe := []crmcontracts.Partner{{}}
+	if err := maskPartners(ctx, tx, probe); err != nil {
+		return nil, err
+	}
+	if probe[0].MaskedFields == nil {
+		return cleared, nil
+	}
+	return slices.DeleteFunc(slices.Clone(cleared), func(field string) bool {
+		return slices.Contains(*probe[0].MaskedFields, field)
+	}), nil
+}
+
+// partnerClearable are the nullable fields the upsert sets to NULL. The write is
+// one upsert statement, not a storekit.Patch, so ApplyClears has no patch to act
+// on. This set and its refusal are the same contract. gate_metrics clears both
+// numbers it carries.
+var partnerClearable = []string{
+	partnerFieldMarginTier, "next_step", partnerFieldNextStepDue, "served_segments", "gate_metrics",
+}
+
+// refuseUnclearablePartnerFields answers an explicit null on a field this
+// record cannot set to nothing, so it is not accepted and silently dropped.
+func refuseUnclearablePartnerFields(cleared []string) error {
+	for _, field := range cleared {
+		if !slices.Contains(partnerClearable, field) {
+			return &storekit.NotClearableError{Field: field}
+		}
+	}
+	return nil
 }
 
 // refuseMaskedPartnerSort refuses an order over a column this caller's role
