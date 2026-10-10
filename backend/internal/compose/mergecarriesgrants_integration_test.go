@@ -81,13 +81,13 @@ func TestACompanyMergeMovesAShareOntoTheSurvivor(t *testing.T) {
 	}
 	if n := c.count(t, `SELECT count(*) FROM audit_log
 		WHERE action = 'record_unshare' AND entity_type = 'company' AND entity_id = $1
-		  AND evidence->>'merged_into' = $2`, retired.UUID, survivor.UUID.String()); n != 1 {
+		  AND evidence->>'merged_into' = $2`, retired.UUID, survivor.String()); n != 1 {
 		t.Errorf("%d unshare rows on the retired company name the survivor, want 1", n)
 	}
 	if n := c.count(t, `SELECT count(*) FROM audit_log
 		WHERE action = 'record_share' AND entity_type = 'company' AND entity_id = $1
 		  AND before IS NULL AND after->>'access' = 'write'
-		  AND evidence->>'merged_from' = $2`, survivor.UUID, retired.UUID.String()); n != 1 {
+		  AND evidence->>'merged_from' = $2`, survivor.UUID, retired.String()); n != 1 {
 		t.Errorf("%d share rows on the survivor name the retired company, want 1", n)
 	}
 }
@@ -115,7 +115,7 @@ func TestACompanyMergeFoldsTwoSharesOfOneGrantee(t *testing.T) {
 	if n := c.count(t, `SELECT count(*) FROM audit_log
 		WHERE action = 'record_share' AND entity_type = 'company' AND entity_id = $1
 		  AND before->>'access' = 'read' AND after->>'access' = 'write'
-		  AND evidence->>'merged_from' = $2`, survivor.UUID, retired.UUID.String()); n != 1 {
+		  AND evidence->>'merged_from' = $2`, survivor.UUID, retired.String()); n != 1 {
 		t.Errorf("%d share rows record the fold on the survivor, want 1", n)
 	}
 	if n := c.count(t, `SELECT count(*) FROM audit_log

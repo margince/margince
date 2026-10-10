@@ -78,7 +78,10 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // 108 since settings.Store.DeleteRawTx: like SetRawTxReceipt beside it, it
 // gates on the object the setting's own declaration names, which the registry
 // resolves at run time.
-const dynamicObjectCeiling = 108
+//
+// 109 since Service.CarryGrantsTx: a merge carries the shares of a contact,
+// company or lead, and the gate names the record type the merge retires.
+const dynamicObjectCeiling = 109
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as
