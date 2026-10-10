@@ -5491,7 +5491,7 @@ export const vi = {
   "agents.connectedSub":
     "Ứng dụng khách MCP có thông tin xác thực riêng, giới hạn trong quyền truy cập đã duyệt.",
   "agents.noneConnected": "Chưa có ứng dụng khách MCP nào kết nối.",
-  "agents.connectedOn": "Kết nối {date}",
+  "agents.connectedOn": "Đã kết nối {date}",
   "agents.disconnect": "Ngắt kết nối",
   "agents.disconnectOpen": "Ngắt kết nối",
   "agents.disconnectNamed": "Ngắt kết nối {client}",
@@ -5499,6 +5499,7 @@ export const vi = {
   "agents.lapsed": "Thông tin xác thực đã hết hạn",
   "agents.renewing": "Đang gia hạn",
   "agents.expiredOn": "Đã hết hạn {date}",
+  "agents.renewsBy": "Gia hạn trước {date}",
   "agents.revokeGrantOpen": "Kết thúc kết nối",
   "agents.revokeGrantNamed": "Kết thúc kết nối với {client}",
   "agents.colClient": "Ứng dụng khách",
@@ -7940,7 +7941,6 @@ export const vi = {
   "prefs.undoExplicit":
     "Đăng ký lại là một lựa chọn đồng ý rõ ràng và không bao giờ tự động bật lại. Lưu bên dưới để ghi nhận sự đồng ý, hoặc bỏ thay đổi.",
 
-  "auto.tier.runs": "Tự chạy",
   "auto.tier.approval": "Cần duyệt",
   "auto.sub":
     "Quy tắc tự hành động. Quy tắc gắn “Cần duyệt” chuyển hành động vào Phê duyệt trước.",
@@ -7948,6 +7948,8 @@ export const vi = {
   "auto.catalog": "Thư viện khởi đầu",
   "auto.instances": "Tự động hóa đã cấu hình",
   "auto.use": "Dùng mẫu",
+  "auto.useNamed": "Dùng mẫu: {name}",
+  "auto.modeAuto": "Tự chạy",
   "auto.name": "Tên",
   "auto.create": "Tạo",
   "auto.createdPaused":
@@ -9211,6 +9213,7 @@ export const vi = {
   "aiusage.decisions.col.asked": "Lượt hỏi",
   "aiusage.decisions.col.passRate": "Tỷ lệ đạt",
   "aiusage.decisions.col.fallbackRate": "Tỷ lệ chuyển tiếp",
+  "aiusage.partlyPriced": "Một phần chưa có giá",
   "aiusage.decisions.reasonsFor": "Lý do chuyển tiếp cho tỷ lệ {rate}",
 
   "aibanner.degraded": "Đã đạt 80% hạn mức AI. Xem lại tính năng bị ảnh hưởng.",
@@ -9274,7 +9277,7 @@ export const vi = {
   "aicalls.outcome.retried": "Đã thử lại",
   "aicalls.outcome.failed": "Không thành công",
   "aicalls.model.afterDecision": "Mô hình quyết định, rồi {tier}",
-  "aicalls.filter.servedProvider": "Phục vụ bởi",
+  "aicalls.filter.servedProvider": "Nhà cung cấp phục vụ",
   "aicalls.sentinel.provider_quota": "Hết hạn mức",
   "aicalls.sentinel.provider_throttled": "Bị giới hạn tốc độ",
   "aicalls.sentinel.provider_refused": "Nhà cung cấp từ chối",
@@ -9283,6 +9286,11 @@ export const vi = {
   "aicalls.sentinel.output_withheld": "Câu trả lời bị giữ lại",
   "aicalls.sentinel.output_rejected": "Câu trả lời bị loại",
   "aicalls.sentinel.request_rejected": "Yêu cầu bị từ chối",
+  "aicalls.sentinel.budget_deferred": "Hoãn do ngân sách",
+  "aicalls.sentinel.budget_unavailable": "Không kiểm tra được ngân sách",
+  "aicalls.sentinel.metering_failed": "Đã trả lời, chưa ghi nhận mức dùng",
+  "aicalls.sentinel.request_failed": "Bị lỗi trước khi gửi",
+  "aicalls.sentinel.schema_invalid": "Câu trả lời sai định dạng",
   "aicalls.detail.source.response":
     "Nhà cung cấp đã nêu mô hình này trong phản hồi.",
   "aicalls.detail.source.echo":
@@ -9686,6 +9694,7 @@ export const vi = {
   "aiRouting.taskCount_other": "{count} tác vụ",
   "aiRouting.colTasks": "Tác vụ",
   "aiRouting.editNamed": "Sửa {name}",
+  "aiRouting.openNamed": "Mở {name}",
   "aiRouting.unkeyed.title": "Một số cấp không thể trả lời",
   "aiRouting.unkeyed.body":
     "Chưa có khóa cho {providers}. Thêm khóa trong mục Nhà cung cấp. Trước khi thêm, các mục sau không thể trả lời: {lanes}.",
@@ -12785,6 +12794,12 @@ export const vi = {
   "aiOutcome.gaveUp.unsure": "chưa đủ chắc chắn",
   "aiOutcome.gaveUp.offEnum": "trả lời ngoài các lựa chọn",
   "aiOutcome.gaveUp.invalid": "trả lời sai định dạng",
+  "aiOutcome.gaveUp.withheld": "câu trả lời bị giữ lại",
+  "aiOutcome.gaveUp.rejected": "yêu cầu bị từ chối",
+  "aiOutcome.gaveUp.notSent": "bị lỗi trước khi gửi",
+  "aiOutcome.gaveUp.deferred": "bị hoãn do ngân sách",
+  "aiOutcome.gaveUp.budgetUnavailable": "không kiểm tra được ngân sách",
+  "aiOutcome.gaveUp.meteringFailed": "đã trả lời, chưa ghi nhận mức dùng",
   "aiOutcome.latencyTitle": "Thời gian xử lý lượt gọi, so với thời gian chờ",
   "aiOutcome.latencyMarks":
     "● một nửa xong trong {p50} · ◆ 95% xong trong {p95}",

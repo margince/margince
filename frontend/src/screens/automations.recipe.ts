@@ -3,6 +3,7 @@
 
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { humanizeToken } from "./audit";
 
 // The catalog's trigger and action vocabularies, in the words a reader uses.
 // Both sets are closed on the server (catalog_triggers.go, catalog_actions.go).
@@ -29,7 +30,7 @@ const ACTION: Readonly<Record<string, MessageKey>> = {
 
 // A value newer than this client still reads as words rather than as a key.
 function spelledOut(raw: string): string {
-  return raw.replace(/^clock:/, "").replaceAll(/[._]/g, " ");
+  return humanizeToken(raw.replace(/^clock:/, ""));
 }
 
 export function triggerLabel(trigger: string, t: Translator): string {

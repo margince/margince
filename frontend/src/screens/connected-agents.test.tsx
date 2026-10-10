@@ -121,6 +121,7 @@ function backend(opts: {
   passports?: unknown[];
   connectorEnabled?: boolean;
   onDelete?: (id: string) => void;
+  keepRevoked?: boolean;
 }) {
   const passports = [...(opts.passports ?? [MINTED, CONNECTED])];
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -145,7 +146,12 @@ function backend(opts: {
       // fixture has to as well. A mock that kept serving the deleted row would
       // let a broken refetch — or a row that never leaves the list — pass.
       const at = passports.findIndex((p) => (p as { id: string }).id === id);
-      if (at !== -1) {
+      if (at !== -1 && opts.keepRevoked) {
+        passports[at] = {
+          ...(passports[at] as object),
+          revoked_at: "2026-08-03T09:00:00Z",
+        };
+      } else if (at !== -1) {
         passports.splice(at, 1);
       }
       return new Response(null, { status: 204 });
@@ -253,6 +259,25 @@ describe("ConnectedAgentsCard", () => {
     expect(screen.queryByText(/Expires 31\/12\/2026/)).toBeNull();
   });
 
+  // A renewable connection outlives its credential: its date is a renewal.
+  it("reads a live renewable connection's date as when it renews, not when it expires", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend({
+        passports: [
+          {
+            ...CONNECTED,
+            connection: { ...CONNECTED.connection, renewable: true },
+          },
+        ],
+      }),
+    );
+    render(<ConnectedAgentsCard />);
+    expect(await screen.findByText("Renews by 20/08/2036")).toBeTruthy();
+    expect(screen.getByText(/· Renews by 20\/08\/2036/)).toBeTruthy();
+    expect(screen.queryByText(/Expires 20\/08\/2036/)).toBeNull();
+  });
+
   it("leaves a minted passport out, however its label is spelled", async () => {
     vi.stubGlobal("fetch", backend({}));
     render(<ConnectedAgentsCard />);
@@ -358,7 +383,10 @@ describe("ConnectedAgentsCard", () => {
         ).toBeTruthy(),
       );
       expect(screen.getByText("Credential expired")).toBeTruthy();
-      expect(screen.getByText(/Expired 30\/07\/2026/)).toBeTruthy();
+      // The column and the folded caption both say it is over, never "Expires".
+      expect(screen.getAllByText(/^Expired 30\/07\/2026$/)).toHaveLength(1);
+      expect(screen.getByText(/· Expired 30\/07\/2026/)).toBeTruthy();
+      expect(screen.queryByText(/Expires 30\/07\/2026/)).toBeNull();
       await openActions("Claude Code");
       // No Disconnect: it would aim at a credential that is already gone. The
       // grant beneath it is still live, so the way to end that for good stays.
@@ -494,5 +522,34 @@ describe("the two passport cards on Your agents", () => {
     expect(
       document.querySelector('[data-testid="connection-pp-connection"]'),
     ).toBeTruthy();
+  });
+});
+
+describe("ConnectedAgentsCard focus after a disconnect", () => {
+  it("hands focus back to the ended connection's own row while it stays listed", async () => {
+    const second = {
+      ...CONNECTED,
+      id: "pp-second",
+      connection: { ...CONNECTED.connection, client_name: "Gemini CLI" },
+    };
+    vi.stubGlobal(
+      "fetch",
+      backend({ passports: [CONNECTED, second], keepRevoked: true }),
+    );
+    render(<ConnectedAgentsCard />);
+    await openActions("Gemini CLI");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Disconnect Gemini CLI" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-connection="pp-second"]'),
+    );
+    expect(screen.getByText("Disconnected")).toBeTruthy();
   });
 });

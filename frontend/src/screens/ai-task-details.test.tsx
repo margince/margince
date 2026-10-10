@@ -224,7 +224,7 @@ it("keeps a greyed Edit on a row with nothing to tune, saying where its model is
   };
   render(
     <LocaleProvider initial="en">
-      <AiFeatureTable rows={[embed]} onEdit={() => {}} />
+      <AiFeatureTable rows={[embed]} canManage onEdit={() => {}} />
     </LocaleProvider>,
   );
   const edit = screen.getByRole("button", {

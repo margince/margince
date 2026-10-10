@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
@@ -16,7 +16,6 @@ import {
   OverflowMenu,
   TextInput,
 } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import {
@@ -31,13 +30,12 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
-  problemMessageOf,
   QueryStates,
   resetToSignedOut,
   throwProblem,
-  unwrap,
   WriteRefused,
 } from "./common";
+import { usePassportRevoke } from "./passport-revoke";
 import { usePassports } from "./passports.queries";
 import { MintedPassport, PassportUses } from "./settings.passportuse";
 import "./settings.css";
@@ -53,8 +51,8 @@ function scopeLabelKey(scope: PassportScope): MessageKey {
   return `passport.scope.${scope}`;
 }
 
-// The revoke confirm hands focus back to the passport's name: the menu item
-// it was opened from is gone once the row reads as revoked.
+// The revoke confirm hands focus back to the passport's name: the row stays
+// listed as revoked, but the menu item it was opened from is gone.
 function passportAnchor(id: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-passport="${id}"]`);
 }
@@ -62,8 +60,6 @@ function passportAnchor(id: string): HTMLElement | null {
 export function PassportCard() {
   const t = useT();
   const [minting, setMinting] = useState(false);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  const revokingId = useRef("");
   // Metadata only: PassportSummary carries no token, so this list cannot
   // re-disclose one.
   const list = usePassports();
@@ -73,17 +69,10 @@ export function PassportCard() {
     (passport) => passport.connection == null,
   );
 
-  // Revoke is a hard DELETE, so it goes through a confirm.
-  const revoke = useMutation({
-    mutationFn: async (id: string) => {
-      unwrap(await api.DELETE("/passports/{id}", { params: { path: { id } } }));
-    },
-    onSuccess: async () => {
-      // Refetch before closing, so the row focus returns to already reads as
-      // revoked.
-      await list.refetch();
-      setConfirmId(null);
-    },
+  const revoke = usePassportRevoke({
+    verb: "settings.revoke",
+    question: "settings.revokeConfirm",
+    focusAfter: passportAnchor,
   });
 
   return (
@@ -101,13 +90,7 @@ export function PassportCard() {
       </PanelBody>
       <PanelGroupHead title={t("settings.passportsYours")} level="h3" />
       {list.isSuccess && minted.length > 0 ? (
-        <PassportTable
-          passports={minted}
-          onRevoke={(id) => {
-            revokingId.current = id;
-            setConfirmId(id);
-          }}
-        />
+        <PassportTable passports={minted} onRevoke={revoke.ask} />
       ) : (
         <PanelBody>
           <QueryStates query={list} pendingLabel={t("settings.passports")}>
@@ -124,22 +107,7 @@ export function PassportCard() {
         apiBaseUrl={list.data?.api_base_url}
         onMinted={() => list.refetch()}
       />
-      <ConfirmModal
-        open={confirmId != null}
-        onClose={() => {
-          setConfirmId(null);
-          revoke.reset();
-        }}
-        title={t("settings.revoke")}
-        confirmLabel={t("settings.revoke")}
-        confirmVariant="danger"
-        onConfirm={() => confirmId && revoke.mutate(confirmId)}
-        pending={revoke.isPending}
-        error={revoke.error ? problemMessageOf(revoke.error, t) : null}
-        returnFocusTo={() => passportAnchor(revokingId.current)}
-      >
-        <p>{t("settings.revokeConfirm")}</p>
-      </ConfirmModal>
+      {revoke.confirm}
     </Panel>
   );
 }
@@ -333,23 +301,25 @@ function MintDialog({
     }
   }, [minted]);
 
-  // Refused mid-flight: `mint.reset()` does not cancel the POST, and the token
-  // of a passport created after the close would be lost with the dialog.
-  const close = useCallback(() => {
-    if (mint.isPending) {
-      return;
-    }
+  const close = () => {
     onClose();
     setLabel("");
     setScopes(new Set(["read", "draft"]));
     mint.reset();
-  }, [mint, onClose]);
+  };
+  // Refused mid-flight, as `mint.reset()` does not cancel the POST. Once the
+  // token shows, Done is the only exit: anything else would lose it.
+  const dismiss = () => {
+    if (!mint.isPending && !mint.isSuccess) {
+      close();
+    }
+  };
 
   return (
     <Modal
       open={open}
-      onClose={close}
-      closeDisabled={mint.isPending}
+      onClose={dismiss}
+      closeDisabled={mint.isPending || mint.isSuccess}
       labelledBy={titleId}
       intent="form"
     >
@@ -422,7 +392,7 @@ function MintDialog({
           </Button>
         ) : (
           <>
-            <Button disabled={mint.isPending} onClick={close}>
+            <Button disabled={mint.isPending} onClick={dismiss}>
               {t("settings.mintCancel")}
             </Button>
             <Button

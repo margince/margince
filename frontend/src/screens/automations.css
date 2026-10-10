@@ -15,14 +15,6 @@
   display: none;
 }
 @container table-fold (width < 36rem) {
-  /* A cell holding only words for a screen reader takes no place on the line. */
-  td:has(> .sr-only:only-child) {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
   .auto-runs-figure {
     display: none;
   }

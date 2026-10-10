@@ -25,12 +25,6 @@
   padding-inline: var(--space-2);
 }
 
-code.aicalls-sentinel {
-  font: var(--fontBodySmall);
-  font-family: var(--fontFamilyMono);
-  color: var(--textSecondary);
-}
-
 /* Folded, every call keeps one shape: how long ago and the model on line two,
    the figures on line three. The exact moment stays in the time's title. */
 @container table-fold (width < 36rem) {

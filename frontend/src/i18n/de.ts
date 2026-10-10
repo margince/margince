@@ -5622,6 +5622,7 @@ export const de = {
   "agents.lapsed": "Zugangsdaten abgelaufen",
   "agents.renewing": "Wird erneuert",
   "agents.expiredOn": "Abgelaufen am {date}",
+  "agents.renewsBy": "Wird bis {date} erneuert",
   "agents.revokeGrantOpen": "Verbindung beenden",
   "agents.revokeGrantNamed": "Verbindung zu {client} beenden",
   "agents.colClient": "Client",
@@ -8111,7 +8112,6 @@ export const de = {
   "prefs.undoExplicit":
     "Ein erneutes Abonnieren ist eine ausdrückliche Einwilligung (Opt-in) und wird nie automatisch wieder eingeschaltet. Speichern Sie unten, um Ihre Einwilligung festzuhalten, oder verwerfen Sie die Änderung.",
 
-  "auto.tier.runs": "Läuft",
   "auto.tier.approval": "Freigabe erforderlich",
   "auto.sub":
     "Regeln handeln selbstständig. Eine Regel mit „Freigabe erforderlich“ schickt ihre Aktionen zuerst an die Freigaben.",
@@ -8120,6 +8120,8 @@ export const de = {
   "auto.catalog": "Vorlagenbibliothek",
   "auto.instances": "Eingerichtete Automatisierungen",
   "auto.use": "Vorlage verwenden",
+  "auto.useNamed": "Vorlage verwenden: {name}",
+  "auto.modeAuto": "Läuft selbstständig",
   "auto.name": "Name",
   "auto.create": "Anlegen",
   "auto.createdPaused":
@@ -9379,7 +9381,7 @@ export const de = {
   "aiusage.col.task": "Aufgabe",
   "aiTier.decide": "Entscheidungsmodell",
   "aiTier.local_small": "Lokal, klein",
-  "aiTier.cheap_cloud": "Cloud, Alltag",
+  "aiTier.cheap_cloud": "Alltags-Cloud",
   "aiTier.premium": "Premium",
   "aiTier.frontier": "Frontier",
   "aiTier.local_large": "Lokal, groß",
@@ -9407,6 +9409,7 @@ export const de = {
   "aiusage.decisions.col.asked": "Gefragt",
   "aiusage.decisions.col.passRate": "Bestanden",
   "aiusage.decisions.col.fallbackRate": "Rückfälle",
+  "aiusage.partlyPriced": "Teilweise bepreist",
   "aiusage.decisions.reasonsFor":
     "Rückfallgründe bei einer Rückfallrate von {rate}",
 
@@ -9482,10 +9485,15 @@ export const de = {
   "aicalls.sentinel.output_withheld": "Antwort zurückgehalten",
   "aicalls.sentinel.output_rejected": "Antwort verworfen",
   "aicalls.sentinel.request_rejected": "Anfrage abgelehnt",
+  "aicalls.sentinel.budget_deferred": "Wegen Budget zurückgestellt",
+  "aicalls.sentinel.budget_unavailable": "Budgetprüfung fehlgeschlagen",
+  "aicalls.sentinel.metering_failed": "Beantwortet, Verbrauch nicht erfasst",
+  "aicalls.sentinel.request_failed": "Vor dem Senden fehlgeschlagen",
+  "aicalls.sentinel.schema_invalid": "Antwort im falschen Format",
   "aicalls.detail.source.response":
     "Der Anbieter hat dieses Modell in seiner Antwort genannt.",
   "aicalls.detail.source.echo":
-    "Der Anbieter hat nur das angefragte Modell zurückgegeben, welches Modell geantwortet hat, ist nicht bestätigt.",
+    "Der Anbieter hat nur das angefragte Modell zurückgegeben. Welches Modell geantwortet hat, ist nicht bestätigt.",
   "aicalls.detail.source.configured":
     "Der Anbieter hat kein Modell genannt, daher steht hier das konfigurierte.",
 
@@ -9892,6 +9900,7 @@ export const de = {
   "aiRouting.taskCount_other": "{count} Aufgaben",
   "aiRouting.colTasks": "Aufgaben",
   "aiRouting.editNamed": "{name} bearbeiten",
+  "aiRouting.openNamed": "{name} öffnen",
   "aiRouting.unkeyed.title": "Einige Modellstufen können nicht antworten",
   "aiRouting.unkeyed.body":
     "Für {providers} ist kein Schlüssel hinterlegt. Füge einen unter Anbieter hinzu. Bis dahin können diese nicht antworten: {lanes}.",
@@ -13071,6 +13080,12 @@ export const de = {
   "aiOutcome.gaveUp.unsure": "nicht sicher genug",
   "aiOutcome.gaveUp.offEnum": "außerhalb der Auswahl beantwortet",
   "aiOutcome.gaveUp.invalid": "in falscher Form beantwortet",
+  "aiOutcome.gaveUp.withheld": "Antwort zurückgehalten",
+  "aiOutcome.gaveUp.rejected": "Anfrage abgelehnt",
+  "aiOutcome.gaveUp.notSent": "vor dem Senden fehlgeschlagen",
+  "aiOutcome.gaveUp.deferred": "wegen Budget zurückgestellt",
+  "aiOutcome.gaveUp.budgetUnavailable": "Budgetprüfung fehlgeschlagen",
+  "aiOutcome.gaveUp.meteringFailed": "beantwortet, Verbrauch nicht erfasst",
   "aiOutcome.latencyTitle": "Wie lange Aufrufe dauern, gemessen am Zeitlimit",
   "aiOutcome.latencyMarks":
     "● die Hälfte endet innerhalb von {p50} · ◆ 95 % innerhalb von {p95}",

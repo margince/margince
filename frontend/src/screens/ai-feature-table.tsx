@@ -28,9 +28,12 @@ export function AiFeatureTable({
   providers,
   canTrace = false,
   onEdit,
+  canManage = false,
 }: Readonly<{
   rows: Feature[];
   onEdit?: (row: Feature) => void;
+  // Without it a task's sheet opens read-only, so the verb says Open, not Edit.
+  canManage?: boolean;
   // Present for a reader who may see how the lanes answer.
   health?: Health;
   // Which providers refuse calls now, for a reader who may see it.
@@ -91,9 +94,8 @@ export function AiFeatureTable({
       rows={sorted}
       rowKey={(row) => row.task}
       rowTestId={(row) => `ai-task-row-${row.task}`}
-      onRowClick={(row) => {
-        if (row.defaults !== undefined) onEdit(row);
-      }}
+      rowOpens={(row) => row.defaults !== undefined}
+      onRowClick={onEdit}
       columns={[
         ...columns,
         {
@@ -104,7 +106,12 @@ export function AiFeatureTable({
           fold: "end",
           render: (row) => (
             <RowOpen
-              label={t("aiRouting.editNamed", { name: row.display_name })}
+              label={t(
+                canManage ? "aiRouting.editNamed" : "aiRouting.openNamed",
+                {
+                  name: row.display_name,
+                },
+              )}
               // The embeddings lane is not a task an admin tunes: it has no
               // ladder, thinking or timeout of its own.
               refusal={

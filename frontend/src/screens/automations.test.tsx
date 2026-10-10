@@ -124,7 +124,7 @@ async function openRowMenu(name = "Nudge stalled fleet deals") {
 // to it — the card behind it still carries the library the verb came from.
 async function openCreateDialog(index = 0): Promise<HTMLElement> {
   await userEvent.click(
-    screen.getAllByRole("button", { name: "Use template" })[index],
+    screen.getAllByRole("button", { name: /^Use template/ })[index],
   );
   return screen.getByRole("dialog");
 }
@@ -319,7 +319,9 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(
       within(confirmationRequired).getByText("Needs approval"),
     ).toBeTruthy();
-    expect(within(autoExecute).getByText("Runs").className).toBe("sr-only");
+    expect(within(autoExecute).getByText("Runs on its own").className).toBe(
+      "sr-only",
+    );
     // A colour alone says nothing to a reader who cannot see it apart.
     expect(within(autoExecute).queryByRole("img")).toBeNull();
   });
@@ -371,7 +373,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
         "Read-only: you do not have permission to change automations.",
       ),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Use template" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use template/ })).toBeNull();
     // No switch to flip, and the badge in its place so the state is still a
     // read this row answers.
     expect(screen.queryByRole("switch")).toBeNull();
@@ -406,7 +408,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     // no delete grant -> the destructive control is withheld
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
     // no create grant -> the catalog cannot be instantiated
-    expect(screen.queryByRole("button", { name: "Use template" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use template/ })).toBeNull();
   });
 
   it("offers deletion only with the delete grant, and nothing else with it", async () => {
@@ -423,7 +425,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(screen.getAllByRole("button", { name: "Delete" }).length).toBe(1);
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Use template" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use template/ })).toBeNull();
   });
 
   it("deleting asks first — the confirm is what writes, not the menu item", async () => {
@@ -582,7 +584,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     ).toBeNull();
     await waitFor(() =>
       expect(
-        screen.getAllByRole("button", { name: "Use template" }).length,
+        screen.getAllByRole("button", { name: /^Use template/ }).length,
       ).toBeGreaterThan(0),
     );
     expect(screen.getByRole("switch", { name: /is enabled$/ })).toBeTruthy();

@@ -50,22 +50,107 @@ export function tierRank(tier: string): number {
   return isTier(tier) ? TIER_ORDER.indexOf(tier) : TIER_ORDER.length;
 }
 
-const GAVE_UP: Readonly<Record<string, MessageKey>> = {
-  timeout: "aiOutcome.gaveUp.timeout",
-  provider_error: "aiOutcome.gaveUp.failed",
-  provider_throttled: "aiOutcome.gaveUp.throttled",
-  provider_quota: "aiOutcome.gaveUp.quota",
-  provider_refused: "aiOutcome.gaveUp.refused",
-  decision_error: "aiOutcome.gaveUp.failed",
-  decision_below_floor: "aiOutcome.gaveUp.unsure",
-  decision_off_enum: "aiOutcome.gaveUp.offEnum",
-  schema_invalid: "aiOutcome.gaveUp.invalid",
-  output_rejected: "aiOutcome.gaveUp.invalid",
+type CodeWords = Readonly<{
+  // Standing alone: a badge, a name over its code.
+  name: MessageKey;
+  // Inside a sentence, after a count: "3 timed out".
+  phrase: MessageKey;
+  // Not a failure: the call was served, or put off to run later.
+  warns?: true;
+}>;
+
+// Every code `classifyError` files on a call (backend ai/callstore.go), and the
+// reasons a decision walk gives up on. ai-decision-labels.test.ts reads the Go.
+const CALL_CODES: Readonly<Record<string, CodeWords>> = {
+  provider_error: {
+    name: "aicalls.sentinel.provider_error",
+    phrase: "aiOutcome.gaveUp.failed",
+  },
+  provider_quota: {
+    name: "aicalls.sentinel.provider_quota",
+    phrase: "aiOutcome.gaveUp.quota",
+  },
+  provider_throttled: {
+    name: "aicalls.sentinel.provider_throttled",
+    phrase: "aiOutcome.gaveUp.throttled",
+  },
+  provider_refused: {
+    name: "aicalls.sentinel.provider_refused",
+    phrase: "aiOutcome.gaveUp.refused",
+  },
+  timeout: {
+    name: "aicalls.sentinel.timeout",
+    phrase: "aiOutcome.gaveUp.timeout",
+  },
+  output_withheld: {
+    name: "aicalls.sentinel.output_withheld",
+    phrase: "aiOutcome.gaveUp.withheld",
+  },
+  output_rejected: {
+    name: "aicalls.sentinel.output_rejected",
+    phrase: "aiOutcome.gaveUp.invalid",
+  },
+  request_rejected: {
+    name: "aicalls.sentinel.request_rejected",
+    phrase: "aiOutcome.gaveUp.rejected",
+  },
+  request_failed: {
+    name: "aicalls.sentinel.request_failed",
+    phrase: "aiOutcome.gaveUp.notSent",
+  },
+  budget_deferred: {
+    name: "aicalls.sentinel.budget_deferred",
+    phrase: "aiOutcome.gaveUp.deferred",
+    warns: true,
+  },
+  budget_unavailable: {
+    name: "aicalls.sentinel.budget_unavailable",
+    phrase: "aiOutcome.gaveUp.budgetUnavailable",
+  },
+  metering_failed: {
+    name: "aicalls.sentinel.metering_failed",
+    phrase: "aiOutcome.gaveUp.meteringFailed",
+    warns: true,
+  },
+  decision_error: {
+    name: "aicalls.reason.decision_error",
+    phrase: "aiOutcome.gaveUp.failed",
+  },
+  decision_below_floor: {
+    name: "aicalls.reason.decision_below_floor",
+    phrase: "aiOutcome.gaveUp.unsure",
+  },
+  decision_off_enum: {
+    name: "aicalls.reason.decision_off_enum",
+    phrase: "aiOutcome.gaveUp.offEnum",
+  },
+  schema_invalid: {
+    name: "aicalls.sentinel.schema_invalid",
+    phrase: "aiOutcome.gaveUp.invalid",
+  },
 };
 
-export function gaveUpLabel(reason: string, t: T): string {
-  const key = GAVE_UP[reason];
-  return key ? t(key) : reason;
+export const KNOWN_CALL_CODES: readonly string[] = Object.keys(CALL_CODES);
+
+/** A code standing alone. The server adds codes, so an unknown one is some failure. */
+export function callCodeName(code: string, t: T): string {
+  const words = CALL_CODES[code];
+  return words ? t(words.name) : t("aicalls.outcome.failed");
+}
+
+/** Whether the code is one this screen has words for; an unknown one shows its code. */
+export function isKnownCallCode(code: string): boolean {
+  return Object.hasOwn(CALL_CODES, code);
+}
+
+export function callCodeTone(code: string): "warning" | "danger" {
+  return CALL_CODES[code]?.warns ? "warning" : "danger";
+}
+
+/** A code inside a sentence; an unknown one is quoted as sent. */
+export function gaveUpLabel(code: string, t: T): string {
+  const words = CALL_CODES[code];
+  return words ? t(words.phrase) : code;
 }
 
 // Why an attempt ran, where the answer is that the decision model before it did

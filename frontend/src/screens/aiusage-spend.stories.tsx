@@ -31,6 +31,7 @@ const DAYS = [
       line("owed_verdict", "cheap_cloud", 12, 48),
       line("owed_verdict", "premium", 2, 210),
       line("weekly_review", "premium", 4, 560),
+      line("weekly_review", "cheap_cloud", 3),
     ],
   },
   { date: "2026-07-21", tasks: [line("capture_classify", "decide", 30, 0)] },

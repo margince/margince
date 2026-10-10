@@ -5771,6 +5771,7 @@ export const en = {
   "agents.lapsed": "Credential expired",
   "agents.renewing": "Renewing",
   "agents.expiredOn": "Expired {date}",
+  "agents.renewsBy": "Renews by {date}",
   "agents.revokeGrantOpen": "End connection",
   "agents.revokeGrantNamed": "End connection to {client}",
   "agents.colClient": "Client",
@@ -8282,15 +8283,16 @@ export const en = {
   "prefs.undoExplicit":
     "Resubscribing is an explicit opt-in and is never switched back on automatically. Save below to record your consent, or discard.",
 
-  "auto.tier.runs": "Runs",
   "auto.tier.approval": "Needs approval",
   "auto.sub":
-    "Rules act on their own. A rule marked “needs approval” sends its actions to Approvals first.",
+    "Rules act on their own. A rule marked “Needs approval” sends its actions to Approvals first.",
   "auto.readOnly":
     "Read-only: you do not have permission to change automations.",
   "auto.catalog": "Starter library",
   "auto.instances": "Configured automations",
   "auto.use": "Use template",
+  "auto.useNamed": "Use template: {name}",
+  "auto.modeAuto": "Runs on its own",
   "auto.name": "Name",
   "auto.create": "Create",
   "auto.createdPaused": "Created paused. Nothing runs until it is enabled.",
@@ -9541,6 +9543,7 @@ export const en = {
   "aiusage.decisions.col.asked": "Asked",
   "aiusage.decisions.col.passRate": "Pass rate",
   "aiusage.decisions.col.fallbackRate": "Fallback rate",
+  "aiusage.partlyPriced": "Partly priced",
   "aiusage.decisions.reasonsFor": "Fallbacks by reason for {rate}",
 
   "aibanner.degraded": "80% of AI allowance reached. Review affected features.",
@@ -9613,6 +9616,11 @@ export const en = {
   "aicalls.sentinel.output_withheld": "Answer withheld",
   "aicalls.sentinel.output_rejected": "Answer rejected",
   "aicalls.sentinel.request_rejected": "Request rejected",
+  "aicalls.sentinel.budget_deferred": "Deferred by budget",
+  "aicalls.sentinel.budget_unavailable": "Budget check failed",
+  "aicalls.sentinel.metering_failed": "Answered, usage not recorded",
+  "aicalls.sentinel.request_failed": "Failed before sending",
+  "aicalls.sentinel.schema_invalid": "Answer in the wrong shape",
   "aicalls.detail.source.response":
     "The provider named this model in its reply.",
   "aicalls.detail.source.echo":
@@ -10014,6 +10022,7 @@ export const en = {
   "aiRouting.taskCount_other": "{count} tasks",
   "aiRouting.colTasks": "Tasks",
   "aiRouting.editNamed": "Edit {name}",
+  "aiRouting.openNamed": "Open {name}",
   "aiRouting.unkeyed.title": "Some tiers cannot answer",
   "aiRouting.unkeyed.body":
     "No key is held for {providers}. Add one under Providers. Until then these cannot answer: {lanes}.",
@@ -13188,6 +13197,12 @@ export const en = {
   "aiOutcome.gaveUp.unsure": "not sure enough",
   "aiOutcome.gaveUp.offEnum": "answered off the choices",
   "aiOutcome.gaveUp.invalid": "answered in the wrong shape",
+  "aiOutcome.gaveUp.withheld": "answer withheld",
+  "aiOutcome.gaveUp.rejected": "request rejected",
+  "aiOutcome.gaveUp.notSent": "failed before sending",
+  "aiOutcome.gaveUp.deferred": "deferred by budget",
+  "aiOutcome.gaveUp.budgetUnavailable": "budget check failed",
+  "aiOutcome.gaveUp.meteringFailed": "answered, usage not recorded",
   "aiOutcome.latencyTitle": "How long calls take, against the timeout",
   "aiOutcome.latencyMarks": "● half finish within {p50} · ◆ 95% within {p95}",
   "aiOutcome.timeout": "timeout",

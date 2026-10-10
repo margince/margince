@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import {
@@ -13,7 +12,6 @@ import {
   EmptyState,
   OverflowMenu,
 } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../design-system/passportselect";
@@ -22,14 +20,14 @@ import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, QueryStates, unwrap } from "./common";
+import { QueryGate, QueryStates } from "./common";
 import "./connected-agents.css";
 import "./settings-agents.css";
+import { usePassportRevoke } from "./passport-revoke";
 import { usePassports } from "./passports.queries";
 
-// A client that connects over MCP is issued its own credential at token
-// exchange. GET /passports lists it beside the minted passports; `connection`
-// tells the two apart, never the `oauth:` label prefix a human can also type.
+// GET /passports lists a connected client's credential beside the minted
+// passports; `connection` tells them apart, never the `oauth:` label prefix.
 
 type PassportSummary = components["schemas"]["PassportSummary"];
 type Connection = PassportSummary & {
@@ -269,6 +267,10 @@ function ClientName({
   );
 }
 
+const EXPIRED: MessageKey = "agents.expiredOn";
+const RENEWS: MessageKey = "agents.renewsBy";
+const EXPIRES: MessageKey = "settings.passportExpiresOn";
+
 // connected_at is a record date; the expiry is the holder's own deadline. A
 // renewing or revoked row shows no expiry: its badge carries the state.
 function useConnectionDates() {
@@ -277,18 +279,33 @@ function useConnectionDates() {
   const recordZone = useRecordZone();
   const connected = (connection: Connection) =>
     formatDate(connection.connection.connected_at, locale, recordZone);
-  const expires = (connection: Connection, state: ConnectionState) =>
-    connection.expires_at != null && !state.revoked && !state.renewing
-      ? formatDate(connection.expires_at, locale, viewerZone())
-      : "";
+  // A renewable connection outlives its credential, so its date is when the
+  // client must next renew, never when it stops working.
+  const deadline = (connection: Connection, state: ConnectionState) => {
+    if (connection.expires_at == null || state.revoked || state.renewing) {
+      return null;
+    }
+    const date = formatDate(connection.expires_at, locale, viewerZone());
+    if (state.lapsed) {
+      return { date, phrase: EXPIRED };
+    }
+    return { date, phrase: connection.connection.renewable ? RENEWS : EXPIRES };
+  };
+  // The column's heading already says Expires; the folded caption has none.
+  const expires = (connection: Connection, state: ConnectionState) => {
+    const due = deadline(connection, state);
+    if (due == null) {
+      return "";
+    }
+    return due.phrase === EXPIRES
+      ? due.date
+      : t(due.phrase, { date: due.date });
+  };
   const caption = (connection: Connection, state: ConnectionState) => {
-    const deadline = expires(connection, state);
+    const due = deadline(connection, state);
     return [
       t("agents.connectedOn", { date: connected(connection) }),
-      deadline &&
-        t(state.lapsed ? "agents.expiredOn" : "settings.passportExpiresOn", {
-          date: deadline,
-        }),
+      due && t(due.phrase, { date: due.date }),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -374,9 +391,7 @@ function ConnectionTable({
   );
 }
 
-// The soonest moment at which some row's status would change if nothing else
-// happened — the earliest still-future expiry among the live connections.
-// Null when nothing is pending, which is the ordinary case.
+// The earliest still-future expiry among the live connections, or null.
 function nextExpiry(
   connections: readonly Connection[],
   now: number,
@@ -388,61 +403,52 @@ function nextExpiry(
   return upcoming.length > 0 ? Math.min(...upcoming) : null;
 }
 
-// Re-render when a credential passes its expiry, because THIS list derives a
-// status from the clock and nothing else would notice. The app disables
-// refetchOnWindowFocus (main.tsx), so a settings tab left open would otherwise
-// keep reporting a connection as live indefinitely — the status is computed at
-// render, and without this nothing schedules another one.
-//
-// One timer at the nearest expiry, not a poll: the boundary is known exactly,
-// so waking for it is enough and waking every N seconds to check would be
-// waste. Re-running on `until` means each crossing schedules the next.
-function useClockAt(until: number | null) {
-  const [, setTick] = useState(0);
+// The clock this list reads, moved on when a credential passes its expiry:
+// the status is derived at render, and window focus refetches nothing.
+function useExpiryClock(connections: readonly Connection[]): number {
+  const [now, setNow] = useState(() => Date.now());
+  const until = nextExpiry(connections, now);
   useEffect(() => {
     if (until == null) {
       return;
     }
-    // setTimeout saturates past ~24.8 days (its delay is a signed 32-bit ms
-    // value) and would fire IMMEDIATELY, spinning. A passport lifetime reaches
-    // 30 days, so the far ones are simply not scheduled: nobody holds a tab
-    // open that long, and the next mount recomputes anyway.
     const delay = until - Date.now();
-    if (delay <= 0 || delay > 0x7fffffff) {
+    // Past ~24.8 days setTimeout fires at once; a tab is not left open that long.
+    if (delay > 0x7fffffff) {
       return;
     }
-    const timer = globalThis.setTimeout(() => setTick((n) => n + 1), delay);
+    if (delay <= 0) {
+      setNow(Date.now());
+      return;
+    }
+    const timer = globalThis.setTimeout(() => setNow(Date.now()), delay);
     return () => globalThis.clearTimeout(timer);
   }, [until]);
+  return now;
 }
 
 // Disconnect goes through the connection's grant: revoking the passport alone
 // would be undone by the client's next refresh.
 export function ConnectedAgentsCard() {
   const t = useT();
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  // Where the disconnect confirm hands focus: ending a connection removes its
-  // row, so focus lands on what the list still holds.
+  // Focus returns to the ended connection's row while it is still listed, and
+  // otherwise to what the list still holds.
   const emptyRegion = useRef<HTMLDivElement | null>(null);
   const list = usePassports();
-
-  const disconnect = useMutation({
-    mutationFn: async (id: string) => {
-      unwrap(await api.DELETE("/passports/{id}", { params: { path: { id } } }));
-    },
-    onSuccess: async () => {
-      // The refetched list first, so focus never lands on a row already gone.
-      await list.refetch();
-      setConfirmId(null);
-    },
+  const disconnect = usePassportRevoke({
+    verb: "agents.disconnect",
+    question: "agents.disconnectConfirm",
+    focusAfter: (id) =>
+      document.querySelector<HTMLElement>(`[data-connection="${id}"]`) ??
+      document.querySelector<HTMLElement>("[data-connection]") ??
+      emptyRegion.current,
   });
 
   // Read here rather than in the render prop: the expiry timer is a hook.
   const connections = (list.data?.data ?? []).filter(
     (passport): passport is Connection => Boolean(passport.connection),
   );
-  const now = Date.now();
-  useClockAt(nextExpiry(connections, now));
+  const now = useExpiryClock(connections);
 
   return (
     <Panel title={t("agents.connected")}>
@@ -453,7 +459,7 @@ export function ConnectedAgentsCard() {
         <ConnectionTable
           connections={connections}
           now={now}
-          onEnd={setConfirmId}
+          onEnd={disconnect.ask}
         />
       ) : (
         <PanelBody>
@@ -476,25 +482,7 @@ export function ConnectedAgentsCard() {
           <ConnectGuide />
         </Disclosure>
       </PanelBody>
-      <ConfirmModal
-        open={confirmId != null}
-        onClose={() => {
-          setConfirmId(null);
-          disconnect.reset();
-        }}
-        title={t("agents.disconnect")}
-        confirmLabel={t("agents.disconnect")}
-        confirmVariant="danger"
-        onConfirm={() => confirmId && disconnect.mutate(confirmId)}
-        pending={disconnect.isPending}
-        error={disconnect.error ? problemMessageOf(disconnect.error, t) : null}
-        returnFocusTo={() =>
-          document.querySelector<HTMLElement>("[data-connection]") ??
-          emptyRegion.current
-        }
-      >
-        <p>{t("agents.disconnectConfirm")}</p>
-      </ConfirmModal>
+      {disconnect.confirm}
     </Panel>
   );
 }

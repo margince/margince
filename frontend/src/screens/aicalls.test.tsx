@@ -309,13 +309,13 @@ it("says never called only when the trace answered and held no row", async () =>
 
 it("marks a failed call with one outcome badge and expands the attempt and payload detail", async () => {
   mount();
-  // An unknown failure code reads as some failure, never as the bare code.
+  // A code this build has no words for reads as some failure, its code under it.
   const row = await screen.findByTestId(`call-${summary.id}`);
   expect(
     within(row).getByText("Failed").closest(".badge")?.className,
   ).toContain("badge-danger");
   expect(within(row).queryByText("Retried")).toBeNull();
-  expect(within(row).queryByText("provider_unavailable")).toBeNull();
+  expect(within(row).getByText("provider_unavailable").tagName).toBe("CODE");
   const toggle = screen.getByRole("button", {
     name: /show attempts/i,
   });
@@ -426,6 +426,18 @@ it("marks a call that answered after a failed attempt as a warning", async () =>
   const row = await screen.findByTestId(`call-${summary.id}`);
   expect(
     within(row).getByText("Retried").closest(".badge")?.className,
+  ).toContain("badge-warning");
+});
+
+it("warns rather than fails on a call that was served but not metered", async () => {
+  mount(true, true, OPERATOR, {
+    call: { ...summary, degraded: false, error_sentinel: "metering_failed" },
+    attempts: RETRIED.attempts,
+  });
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(
+    within(row).getByText("Answered, usage not recorded").closest(".badge")
+      ?.className,
   ).toContain("badge-warning");
 });
 
@@ -550,7 +562,8 @@ it("says why the ladder answered after the decision model, and where it went", a
   // asked: the terminal row's binding is the rung that answered after it.
   const first = screen.getByText("#1").closest("li");
   expect(first?.textContent).toContain("Decision model");
-  expect(first?.textContent).toContain("jev_compatible/jev-classify");
+  expect(first?.textContent).toContain("jev-classify · Jev-compatible");
+  expect(first?.textContent).not.toContain("jev_compatible");
 });
 
 // The answer that did not stand is the one a floor is tuned from, so the
@@ -597,7 +610,9 @@ it("leaves the reason out of an attempt that had none", async () => {
   );
 
   const first = (await screen.findByText("#1")).closest("li");
-  expect(first?.textContent).toContain("jev_compatible/jev-classify · 600 ms");
+  expect(first?.textContent).toContain(
+    "jev-classify · Jev-compatible · 600 ms",
+  );
   expect(first?.textContent).not.toContain("—");
 });
 

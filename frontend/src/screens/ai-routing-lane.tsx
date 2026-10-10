@@ -13,7 +13,12 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { TierCallsLine } from "./ai-call-figures";
-import { DECIDE_RUNG, gaveUpLabel, tierLabel } from "./ai-decision-labels";
+import {
+  callCodeName,
+  DECIDE_RUNG,
+  gaveUpLabel,
+  tierLabel,
+} from "./ai-decision-labels";
 import type { ModelCatalogue, ModelLane } from "./ai-models";
 import { providerName } from "./ai-provider-names";
 import { laneGloss, priceLabel, servingSort } from "./ai-routing-lane-text";
@@ -112,6 +117,7 @@ export function TiersTable({
       rowKey={(row) => row.lane.name}
       rowTestId={(row) => row.lane.testId ?? `ai-routing-tier-${row.lane.name}`}
       onRowClick={opens ? (row) => opener(row)?.() : undefined}
+      rowOpens={(row) => opener(row) !== undefined}
       columns={[
         {
           key: "tier",
@@ -375,7 +381,7 @@ function HealthDot({
           )}
           {rung.last_sentinel && (
             <KeyedName
-              name={gaveUpLabel(rung.last_sentinel, t)}
+              name={callCodeName(rung.last_sentinel, t)}
               code={rung.last_sentinel}
             />
           )}

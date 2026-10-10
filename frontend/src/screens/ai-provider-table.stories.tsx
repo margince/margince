@@ -44,7 +44,7 @@ const USAGE = new Map([
   ["openai", use(["local_small"])],
 ]);
 
-function Table() {
+function Table({ canManage }: Readonly<{ canManage: boolean }>) {
   installFetchStub({
     "GET /me": () =>
       jsonResponse(meFixture({ allow: { ai_diagnostics: ["read"] } })),
@@ -81,6 +81,7 @@ function Table() {
               since: "2026-10-05T10:00:00Z",
             },
           ]}
+          canManage={canManage}
           onOpen={() => {}}
         />
       </Panel>
@@ -91,6 +92,7 @@ function Table() {
 const meta: Meta<typeof Table> = {
   title: "Settings/AI/AI models/Provider table",
   component: Table,
+  args: { canManage: true },
 };
 export default meta;
 type Story = StoryObj<typeof Table>;
@@ -111,6 +113,16 @@ export const Default: Story = {
 };
 
 export const Dark: Story = { globals: { theme: "dark" } };
+
+// A seat without the routing update grant opens a read-only sheet.
+export const ReadOnlySeat: Story = {
+  args: { canManage: false },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", {
+      name: "Open Google Gemini",
+    });
+  },
+};
 
 export const Phone: Story = {
   globals: { viewport: { value: "phone" } },

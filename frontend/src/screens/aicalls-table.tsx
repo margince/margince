@@ -11,10 +11,15 @@ import { useNow } from "../format/now";
 import { formatRelativeTime } from "../format/relativetime";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import { DECIDE_RUNG, tierLabel } from "./ai-decision-labels";
+import {
+  callCodeName,
+  callCodeTone,
+  DECIDE_RUNG,
+  isKnownCallCode,
+  tierLabel,
+} from "./ai-decision-labels";
 import { providerName } from "./ai-provider-names";
 import { CallDetailPanel } from "./aicalls-detail";
-import { sentinelLabel } from "./aicalls-sentinel";
 import "./aicalls.css";
 
 type CallSummary = components["schemas"]["AiCallSummary"];
@@ -32,8 +37,19 @@ function ladderAttempts(call: CallSummary): number {
 /** One badge, and only for a call that did not go as asked; a normal call carries none. */
 export function CallOutcome({ call }: Readonly<{ call: CallSummary }>) {
   const t = useT();
-  if (call.error_sentinel) {
-    return <Badge tone="danger">{sentinelLabel(call.error_sentinel, t)}</Badge>;
+  const code = call.error_sentinel;
+  if (code) {
+    const badge = (
+      <Badge tone={callCodeTone(code)}>{callCodeName(code, t)}</Badge>
+    );
+    return isKnownCallCode(code) ? (
+      badge
+    ) : (
+      <CellStack>
+        {badge}
+        <code className="keyed-name-key">{code}</code>
+      </CellStack>
+    );
   }
   if (call.degraded) {
     return <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>;
@@ -68,14 +84,12 @@ function callColumns(
       render: (call) => {
         const at = formatDateTime(call.occurred_at, locale, zone);
         return (
-          <time dateTime={call.occurred_at} title={at}>
-            <CellStack>
-              <span className="aicalls-time">{at}</span>
-              <span className="t-caption">
-                {formatRelativeTime(call.occurred_at, locale, new Date(now))}
-              </span>
-            </CellStack>
-          </time>
+          <CellStack>
+            <span className="aicalls-time">{at}</span>
+            <time dateTime={call.occurred_at} title={at} className="t-caption">
+              {formatRelativeTime(call.occurred_at, locale, new Date(now))}
+            </time>
+          </CellStack>
         );
       },
     },

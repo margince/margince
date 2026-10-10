@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useCan, useCanWrite } from "../app/capability";
+import { EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import { AiFeaturesWithheldPanel, useAiStatus } from "./ai-admin";
@@ -11,7 +12,7 @@ import { useAiHealth } from "./ai-health";
 import { useProviderHealth } from "./ai-provider-health";
 import { TaskSheet } from "./ai-task-sheet";
 import { PanelTitle } from "./ai-terms";
-import { QueryGate } from "./common";
+import { QueryStates } from "./common";
 
 // What each AI task runs on right now, under the bindings above it.
 //
@@ -40,17 +41,22 @@ export function AiTasksCard() {
       <PanelBody>
         <PanelIntro>{t("aiTasks.intro")}</PanelIntro>
       </PanelBody>
-      <QueryGate query={status} pendingLabel={t("aiTasks.title")}>
-        {(current) => (
-          <AiFeatureTable
-            rows={current.features}
-            health={health}
-            providers={providers}
-            canTrace={canDiagnose}
-            onEdit={(row) => setOpened(row.task)}
-          />
-        )}
-      </QueryGate>
+      {status.isSuccess && status.data.features.length > 0 ? (
+        <AiFeatureTable
+          rows={status.data.features}
+          health={health}
+          providers={providers}
+          canTrace={canDiagnose}
+          canManage={canManage}
+          onEdit={(row) => setOpened(row.task)}
+        />
+      ) : (
+        <PanelBody>
+          <QueryStates query={status} pendingLabel={t("aiTasks.title")}>
+            <EmptyState>{t("common.empty")}</EmptyState>
+          </QueryStates>
+        </PanelBody>
+      )}
       {/* Outside the gate, from the last good read: a failed refetch
           behind an open sheet must not take the draft in it away. */}
       {route ? (

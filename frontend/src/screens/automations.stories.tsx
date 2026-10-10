@@ -80,7 +80,7 @@ export const AdminCardReadOnly: Story = {
     const canvas = within(canvasElement);
     await canvas.findByTestId("template-no_activity_reminder");
     await expect(
-      canvas.queryByRole("button", { name: "Use template" }),
+      canvas.queryByRole("button", { name: /^Use template/ }),
     ).toBeNull();
   },
   render: () => <Card readOnly />,

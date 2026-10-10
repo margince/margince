@@ -38,7 +38,11 @@ function Tasks({ editable }: Readonly<{ editable: boolean }>) {
   return (
     <StoryProviders>
       <Panel title="AI tasks">
-        <AiFeatureTable rows={ROWS} onEdit={editable ? () => {} : undefined} />
+        <AiFeatureTable
+          rows={ROWS}
+          canManage
+          onEdit={editable ? () => {} : undefined}
+        />
       </Panel>
     </StoryProviders>
   );

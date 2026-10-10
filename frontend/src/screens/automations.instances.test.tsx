@@ -23,6 +23,7 @@ import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "./story-utils";
 
@@ -40,7 +41,7 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-function mount(allow: GrantSpec = OPERATOR) {
+function mount(allow: GrantSpec = OPERATOR, routes: RouteMap = {}) {
   installFetchStub({
     "GET /me": meRoute(allow),
     "GET /automations/catalog": () =>
@@ -50,6 +51,7 @@ function mount(allow: GrantSpec = OPERATOR) {
         data: configuredAutomations(RECORDED_AT),
         page: { next_cursor: null },
       }),
+    ...routes,
   });
   render(
     <StoryProviders>
@@ -120,30 +122,69 @@ describe("the configured automations table", () => {
   });
 });
 
+/** Records the If-Match of every PATCH the page sends. */
+function recordIfMatch(): (string | null)[] {
+  const stubbed = globalThis.fetch;
+  const sent: (string | null)[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init);
+    if (request.method === "PATCH") {
+      sent.push(request.headers.get("If-Match"));
+    }
+    return stubbed(input, init);
+  };
+  return sent;
+}
+
+const flipRecap = async (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(
+    within(await row("au-5")).getByRole("switch", {
+      name: "Post-meeting recap draft is enabled",
+    }),
+  );
+
 describe("a rule's switch", () => {
   it("pins the flip to the version the row was read at", async () => {
     const user = userEvent.setup();
     mount();
-    const stubbed = globalThis.fetch;
-    const sent: { method: string; ifMatch: string | null }[] = [];
-    globalThis.fetch = async (input, init) => {
-      const request = new Request(input, init);
-      sent.push({
-        method: request.method,
-        ifMatch: request.headers.get("If-Match"),
-      });
-      return stubbed(input, init);
-    };
-    await user.click(
-      within(await row("au-5")).getByRole("switch", {
-        name: "Post-meeting recap draft is enabled",
-      }),
-    );
+    const sent = recordIfMatch();
+    await flipRecap(user);
+    await waitFor(() => expect(sent).toEqual(["2"]));
+  });
+
+  it("reads the list again after a version_skew refusal, so the next flip carries the new version", async () => {
+    const user = userEvent.setup();
+    let version = 2;
+    const rules = () =>
+      configuredAutomations(RECORDED_AT).map((rule) =>
+        rule.id === "au-5" ? { ...rule, version } : rule,
+      );
+    mount(OPERATOR, {
+      "GET /automations": () =>
+        jsonResponse({ data: rules(), page: { next_cursor: null } }),
+      "PATCH /automations/au-5": () => {
+        if (version === 2) {
+          version = 3;
+          return jsonResponse(
+            { title: "Conflict", status: 409, code: "version_skew" },
+            409,
+          );
+        }
+        return jsonResponse({ ...rules()[4], status: "enabled" });
+      },
+    });
+    const sent = recordIfMatch();
+    await flipRecap(user);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
     await waitFor(() =>
-      expect(sent.filter((call) => call.method === "PATCH")).toEqual([
-        { method: "PATCH", ifMatch: "2" },
-      ]),
+      expect(
+        within(screen.getByTestId("automation-au-5"))
+          .getByRole("switch")
+          .getAttribute("aria-busy"),
+      ).not.toBe("true"),
     );
+    await flipRecap(user);
+    await waitFor(() => expect(sent).toEqual(["2", "3"]));
   });
 });
 
@@ -195,7 +236,9 @@ describe("the starter library", () => {
     const user = userEvent.setup();
     mount();
     const template = await screen.findByTestId("template-post_meeting_recap");
-    within(template).getByRole("button", { name: en["auto.use"] }).focus();
+    within(template)
+      .getByRole("button", { name: "Use template: Post-meeting recap draft" })
+      .focus();
     await user.keyboard("{Enter}");
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     await user.keyboard("{Escape}");

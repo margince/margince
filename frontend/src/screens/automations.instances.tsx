@@ -74,12 +74,14 @@ export function ConfiguredAutomations({
   canViewRuns,
   canEdit,
   canDelete,
+  focusAfterDelete,
 }: Readonly<{
   automations: Automation[];
   entryFor: (key: string) => CatalogEntry | undefined;
   canViewRuns: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  focusAfterDelete?: () => HTMLElement | null;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -94,12 +96,13 @@ export function ConfiguredAutomations({
       setEditing(shut);
     }
   }, [canEdit]);
+  // Settled, not only succeeded: a refusal such as version_skew means the list
+  // is stale, and only a fresh read gives the next write the right version.
   const edit = useMutation({
     mutationFn: patchAutomation,
-    onSuccess: () => {
-      setEditing(shut);
-      queryClient.invalidateQueries({ queryKey: ["automations"] });
-    },
+    onSuccess: () => setEditing(shut),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["automations"] }),
   });
   const toggle = (id: string, panel: keyof Inspecting) =>
     setInspecting((prior) => {
@@ -117,6 +120,7 @@ export function ConfiguredAutomations({
         canViewRuns={canViewRuns}
         canDelete={canDelete}
         inspecting={inspecting[automation.id] ?? CLOSED}
+        focusAfterDelete={focusAfterDelete}
         onToggle={(panel) => toggle(automation.id, panel)}
         onEdit={() => {
           edit.reset();
@@ -275,7 +279,7 @@ function Mode({ tier }: Readonly<{ tier?: CatalogEntry["tier"] }>) {
     return null;
   }
   return tier === "auto_execute" ? (
-    <span className="sr-only">{t("auto.tier.runs")}</span>
+    <span className="sr-only">{t("auto.modeAuto")}</span>
   ) : (
     <Badge tone="warning">{t("auto.tier.approval")}</Badge>
   );
@@ -342,7 +346,7 @@ function AutomationStatus({
   const queryClient = useQueryClient();
   const flip = useMutation({
     mutationFn: patchAutomation,
-    onSuccess: () =>
+    onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["automations"] }),
   });
   const enabled = automation.status === "enabled";
@@ -382,6 +386,7 @@ function AutomationVerbs({
   canViewRuns,
   canDelete,
   inspecting,
+  focusAfterDelete,
   onToggle,
   onEdit,
 }: Readonly<{
@@ -390,6 +395,7 @@ function AutomationVerbs({
   canViewRuns: boolean;
   canDelete: boolean;
   inspecting: Inspecting;
+  focusAfterDelete?: () => HTMLElement | null;
   onToggle: (panel: keyof Inspecting) => void;
   onEdit: () => void;
 }>) {
@@ -404,21 +410,26 @@ function AutomationVerbs({
         <>
           <Button
             variant={inspecting.runs ? "primary" : "ghost"}
-            aria-expanded={inspecting.runs}
+            aria-pressed={inspecting.runs}
             onClick={() => onToggle("runs")}
           >
             {t("auto.runs.open")}
           </Button>
           <Button
             variant={inspecting.preview ? "primary" : "ghost"}
-            aria-expanded={inspecting.preview}
+            aria-pressed={inspecting.preview}
             onClick={() => onToggle("preview")}
           >
             {t("auto.preview.open")}
           </Button>
         </>
       )}
-      {canDelete && <DeleteAutomationAction automation={automation} />}
+      {canDelete && (
+        <DeleteAutomationAction
+          automation={automation}
+          focusAfterDelete={focusAfterDelete}
+        />
+      )}
     </OverflowMenu>
   );
 }

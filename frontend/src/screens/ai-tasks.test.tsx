@@ -96,6 +96,59 @@ describe("AiTasksCard", () => {
     ).toBe(`#/settings/model-calls?task=${feature.task}`);
   });
 
+  it("offers Open, not Edit, to a seat that may not change routing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      withDiagnostics({
+        ai_routing: ["read"],
+        ai_budget: ["read"],
+        ai_diagnostics: ["read"],
+      }),
+    );
+    render(<AiTasksCard />);
+
+    const row = await screen.findByTestId(`ai-task-row-${feature.task}`);
+    expect(
+      within(row).getByRole("button", { name: `Open ${feature.display_name}` }),
+    ).toBeTruthy();
+  });
+
+  it("says there is nothing yet, inside the panel, rather than a bare header row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.includes("/ai/status")) {
+          return jsonResponse({ ...status, features: [] });
+        }
+        return withDiagnostics(EVERYTHING)(input, init);
+      }),
+    );
+    render(<AiTasksCard />);
+
+    const empty = await screen.findByText("Nothing here yet.");
+    expect(empty.closest(".panel-body")).not.toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("keeps a failed read inside the panel's padding", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.includes("/ai/status")) {
+          return jsonResponse({ status: 500, detail: "boom" }, 500);
+        }
+        return withDiagnostics(EVERYTHING)(input, init);
+      }),
+    );
+    render(<AiTasksCard />);
+
+    expect(
+      (await screen.findByRole("alert")).closest(".panel-body"),
+    ).not.toBeNull();
+  });
+
   it("refuses the embeddings row's verb with where its settings live", async () => {
     const embeddings = {
       ...feature,
@@ -126,6 +179,8 @@ describe("AiTasksCard", () => {
       name: "Edit Search and retrieval",
     });
     expect(verb).toHaveAccessibleDescription(/embedding model row/i);
+    expect(rows[1]).not.toHaveClass("rowlink");
+    expect(rows[0]).toHaveClass("rowlink");
     await user.click(within(rows[1]).getByText("Embedding model"));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -268,6 +323,24 @@ describe("the Model tiers card for a diagnostics-only reader", () => {
       await screen.findByText("No model calls in the last 24h."),
     ).toBeTruthy();
     expect(screen.queryByTestId(/^ai-routing-tier-/)).toBeNull();
+  });
+
+  it("keeps a failed health read inside the panel's padding", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.includes("/ai/health")) {
+          return jsonResponse({ status: 500, detail: "boom" }, 500);
+        }
+        return withDiagnostics(DIAGNOSTICS)(input, init);
+      }),
+    );
+    render(<AiRoutingCard />);
+
+    expect(
+      (await screen.findByRole("alert")).closest(".panel-body"),
+    ).not.toBeNull();
   });
 
   it("waits on the health read rather than showing nothing", async () => {

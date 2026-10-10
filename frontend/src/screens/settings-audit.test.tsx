@@ -172,6 +172,16 @@ describe("AuditLogCard", () => {
     }
   });
 
+  it("names the toggle in the same words the row shows, never the raw key", async () => {
+    vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
+    render(<AuditLogCard />);
+    expect(
+      await screen.findByRole("button", {
+        name: "Show change detail: create on onboarding wizard state",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("reads each entry under the column it belongs to", async () => {
     vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
     render(<AuditLogCard />);

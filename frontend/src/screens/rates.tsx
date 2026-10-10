@@ -458,7 +458,9 @@ function ModelPriceGroups({
         label={t("settings.rates.modelGroupLabel", { provider: group.name })}
         rows={group.prices}
         rowKey={(row) => `${row.model_id}/${row.effective_date}`}
-        rowTestId={(row) => `price-${group.provider}-${row.model_id}`}
+        rowTestId={(row) =>
+          `price-${group.provider}-${row.model_id}-${row.effective_date}`
+        }
         columns={columns}
       />
     </Fragment>

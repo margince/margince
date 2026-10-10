@@ -56,6 +56,11 @@ it("makes a table's scroll box reachable and named once it overflows", () => {
   const box = screen.getByRole("region", { name: "Products" });
   expect(box.className).toContain("table-scroll");
   expect(box.getAttribute("tabindex")).toBe("0");
+  // One name, the table's, which the region reads rather than repeats.
+  expect(box.getAttribute("aria-label")).toBeNull();
+  expect(box.getAttribute("aria-labelledby")).toBe(
+    screen.getByRole("table").id,
+  );
 });
 
 it("leaves a table that fits its box out of the tab order", () => {
@@ -91,6 +96,28 @@ it("marks a row as a link only where a click does something", async () => {
   await user.click(screen.getByText("Consulting Day"));
   expect(opened).toEqual(["Consulting Day"]);
   expect(container.querySelector("tbody tr")?.className).toBe("rowlink");
+});
+
+it("leaves a row it was told does not open without a pointer or a press", async () => {
+  const user = userEvent.setup();
+  const opened: string[] = [];
+  const rows = [{ name: "Consulting Day" }, { name: "Travel" }];
+  render(
+    <DataTable
+      label="Products"
+      columns={PRODUCT_COLUMNS}
+      rows={rows}
+      rowKey={(row) => row.name}
+      rowTestId={(row) => row.name}
+      onRowClick={(row) => opened.push(row.name)}
+      rowOpens={(row) => row.name !== "Travel"}
+    />,
+  );
+  expect(screen.getByTestId("Travel").className).toBe("");
+  expect(screen.getByTestId("Consulting Day").className).toBe("rowlink");
+  await user.click(screen.getByText("Travel"));
+  await user.click(screen.getByText("Consulting Day"));
+  expect(opened).toEqual(["Consulting Day"]);
 });
 
 it("leaves a press on a control in the row, or in a portal it opened, to that control", async () => {
@@ -414,13 +441,16 @@ const CALL_COLUMNS: DataTableColumn<Call>[] = [
   { key: "task", header: "Task", render: (call) => call.task },
 ];
 
+const TRACE: DataTableDetail<Call> = {
+  header: "Detail",
+  toggleLabel: (call) => `Show ${call.task}`,
+  render: (call) => <p>{call.trace}</p>,
+};
+
 function CallLog({
   fold,
-  detail,
-}: Readonly<{
-  fold?: boolean;
-  detail?: Partial<DataTableDetail<Call>>;
-}>) {
+  detail = TRACE,
+}: Readonly<{ fold?: boolean; detail?: DataTableDetail<Call> }>) {
   return (
     <DataTable
       label="Calls"
@@ -429,12 +459,7 @@ function CallLog({
       rows={CALLS}
       rowKey={(call) => call.id}
       rowTestId={(call) => `call-${call.id}`}
-      detail={{
-        header: "Detail",
-        toggleLabel: (call) => `Show ${call.task}`,
-        render: (call) => <p>{call.trace}</p>,
-        ...detail,
-      }}
+      detail={detail}
     />
   );
 }
@@ -471,6 +496,7 @@ it("leaves which rows are open to a caller that holds them", async () => {
   render(
     <CallLog
       detail={{
+        ...TRACE,
         expanded: new Set(["b"]),
         onToggle: (key) => toggled.push(key),
       }}
@@ -484,7 +510,7 @@ it("leaves which rows are open to a caller that holds them", async () => {
 
 it("gives a row with nothing to open no toggle and no pointer", async () => {
   const user = userEvent.setup();
-  render(<CallLog detail={{ has: (call) => call.id === "a" }} />);
+  render(<CallLog detail={{ ...TRACE, has: (call) => call.id === "a" }} />);
   expect(screen.queryByRole("button", { name: "Show Enrich" })).toBeNull();
   expect(screen.getByTestId("call-b").className).toBe("");
   expect(screen.getByTestId("call-a").className).toBe("rowlink");
@@ -495,7 +521,11 @@ it("gives a row with nothing to open no toggle and no pointer", async () => {
 it("points the toggle at the caller's element when nothing opens under the row", () => {
   render(
     <CallLog
-      detail={{ render: undefined, controls: (call) => `trace-${call.id}` }}
+      detail={{
+        header: "Detail",
+        toggleLabel: TRACE.toggleLabel,
+        controls: (call) => `trace-${call.id}`,
+      }}
     />,
   );
   const toggle = screen.getByRole("button", { name: "Show Triage" });
@@ -525,4 +555,33 @@ it("names the table itself, whether or not its box scrolls", () => {
     />,
   );
   expect(screen.getByRole("table", { name: "Products" })).toBeTruthy();
+});
+
+it("leaves a press on any control that keeps its own state to that control", async () => {
+  const user = userEvent.setup();
+  const opened: string[] = [];
+  const controls = [
+    <summary key="summary">Summary</summary>,
+    ...["switch", "menuitem", "checkbox", "tab"].map((controlRole) => (
+      <span key={controlRole} role={controlRole} tabIndex={0}>
+        {controlRole}
+      </span>
+    )),
+  ];
+  render(
+    <DataTable
+      label="Products"
+      columns={[
+        ...PRODUCT_COLUMNS,
+        { key: "controls", header: "Controls", render: () => controls },
+      ]}
+      rows={PRODUCT_ROWS}
+      rowKey={(row) => row.name}
+      onRowClick={(row) => opened.push(row.name)}
+    />,
+  );
+  for (const name of ["Summary", "switch", "menuitem", "checkbox", "tab"]) {
+    await user.click(screen.getByText(name));
+  }
+  expect(opened).toEqual([]);
 });

@@ -51,6 +51,13 @@ const CALLS: CallSummary[] = [
     calls_attempted: 3,
     error_sentinel: "provider_quota",
   },
+  {
+    ...call,
+    id: "call-4",
+    task: "draft_reply",
+    task_display_name: "Reply draft",
+    error_sentinel: "metering_failed",
+  },
 ];
 
 const DETAIL = {

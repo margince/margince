@@ -230,8 +230,8 @@ export const AgentsConnectorOff: Story = {
   }),
 };
 
-// Revoke is a hard DELETE: the row's menu opens a confirm, left open here so
-// the guarded state is what the render gate captures.
+// The row's menu opens the revoke confirm, left open here so the guarded
+// state is what the render gate captures.
 export const PassportRevokeConfirm: Story = {
   render: tab("agents", agentsTabRoutes),
   play: async ({ canvasElement }) => {

@@ -12,8 +12,7 @@
   text-align: end;
   font-variant-numeric: tabular-nums;
 }
-/* A figure's heading is a few words over a narrow column; wrapped, it stood
-   taller than the figures it names. */
+/* A figure's heading stays on one line, no taller than the figures it names. */
 .table th.datatable-end {
   white-space: nowrap;
 }
@@ -67,7 +66,8 @@
   /* Out of sight, still read: each folded cell is announced by its heading,
      and an empty cell keeps its place so the next one keeps its heading. */
   .table-scroll-fold > .table > thead,
-  .table-scroll-fold > .table > tbody > tr > :is(:empty, [data-fold="hide"]) {
+  .table-scroll-fold > .table > tbody > tr > :is(:empty, [data-fold="hide"]),
+  .table-scroll-fold > .table > tbody > tr > td:has(> .sr-only:only-child) {
     position: absolute;
     inline-size: 1px;
     block-size: 1px;

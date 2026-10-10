@@ -5,6 +5,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -335,6 +336,29 @@ describe("PassportCard — minting", () => {
     ).toBeDisabled();
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("keeps the token on screen through Escape, the backdrop and the X; Done is the way out", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", mintBackend());
+    const dialog = await openMintDialog(user);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Mint passport" }),
+    );
+    await within(dialog).findByText("mgp_live_0f3a91c4");
+
+    await user.keyboard("{Escape}");
+    const overlay = dialog.closest(".overlay");
+    if (overlay instanceof HTMLElement) {
+      await user.click(overlay);
+    }
+    expect(
+      within(dialog).getByRole("button", { name: "Close" }),
+    ).toBeDisabled();
+    expect(screen.getByText("mgp_live_0f3a91c4")).toBeTruthy();
+
+    await user.click(within(dialog).getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("starts clean on re-open rather than showing the last mint's token", async () => {

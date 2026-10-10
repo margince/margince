@@ -219,16 +219,16 @@ describe("the rate sheets", () => {
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
     const anthropicTable = within(card)
-      .getByTestId("price-anthropic-claude-opus-4-8")
+      .getByTestId("price-anthropic-claude-opus-4-8-2026-07-23")
       .closest("table");
     expect(
       anthropicTable?.contains(
-        within(card).getByTestId("price-anthropic-claude-haiku-4-5"),
+        within(card).getByTestId("price-anthropic-claude-haiku-4-5-2026-07-23"),
       ),
     ).toBe(true);
     expect(
       anthropicTable?.contains(
-        within(card).getByTestId("price-openai-gpt-5.2-mini"),
+        within(card).getByTestId("price-openai-gpt-5.2-mini-2026-07-01"),
       ),
     ).toBe(false);
     expect(within(card).queryByText(/Built-in test provider/)).toBeNull();
@@ -237,7 +237,9 @@ describe("the rate sheets", () => {
 
   it("sets the four prices against the end and dates each row in words", async () => {
     mount(RATE_READER);
-    const row = await screen.findByTestId("price-anthropic-claude-opus-4-8");
+    const row = await screen.findByTestId(
+      "price-anthropic-claude-opus-4-8-2026-07-23",
+    );
     for (const price of [/\$5\.00$/, /\$25\.00$/, /\$0\.50$/, /\$6\.25$/]) {
       expect(within(row).getByText(price).className).toContain("datatable-end");
     }

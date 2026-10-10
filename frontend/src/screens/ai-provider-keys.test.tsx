@@ -91,7 +91,7 @@ async function openSheet(
   await user.click(
     within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
       "button",
-      { name: /^Edit/ },
+      { name: /^(Edit|Open) / },
     ),
   );
   return screen.findByTestId(`ai-provider-key-${provider}`);
@@ -429,7 +429,7 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     within(await screen.findByTestId("ai-provider-row-gemini")).getByRole(
       "button",
-      { name: /^Edit/ },
+      { name: /^(Edit|Open) / },
     );
 
     // Refused, not hidden: an operator who must ask somebody else to rotate a

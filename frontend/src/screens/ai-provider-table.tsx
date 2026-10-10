@@ -46,12 +46,15 @@ export function ProviderTable({
   providers,
   usage,
   health,
+  canManage,
   onOpen,
 }: Readonly<{
   providers: readonly ProviderStatus[];
   usage: ReadonlyMap<string, ProviderUsage> | null;
   // Present for a reader who may see diagnostics.
   health: readonly ProviderHealthEntry[] | undefined;
+  // Without it the sheet opens read-only, so the verb says Open, not Edit.
+  canManage: boolean;
   onOpen: (provider: string) => void;
 }>) {
   const t = useT();
@@ -109,7 +112,12 @@ export function ProviderTable({
           fold: "end",
           render: (row) => (
             <RowOpen
-              label={t("aiRouting.editNamed", { name: row.name })}
+              label={t(
+                canManage ? "aiRouting.editNamed" : "aiRouting.openNamed",
+                {
+                  name: row.name,
+                },
+              )}
               onOpen={() => onOpen(row.status.provider)}
             />
           ),

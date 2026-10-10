@@ -214,8 +214,8 @@ function AuditLogTable({
         header: t("settings.auditColDetail"),
         toggleLabel: (entry) =>
           t("settings.auditExpandEntry", {
-            action: entry.action,
-            entity: entry.entity_type,
+            action: humanizeToken(entry.action),
+            entity: humanizeToken(entry.entity_type),
           }),
         render: (entry) => <AuditDetail entry={entry} />,
       }}

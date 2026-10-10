@@ -30,6 +30,8 @@ export type SpendRow = Readonly<{
   tokensOut: number;
   // Absent when the server priced none of the calls behind the line.
   cost?: number;
+  // Some calls behind a priced line had no rate, so the cost is short.
+  partlyPriced: boolean;
 }>;
 
 export function aggregate(days: AiUsage["days"]): UsageTask[] {
@@ -71,6 +73,8 @@ function line(task: UsageTask, subrow: boolean): SpendRow {
     tokensIn: task.tokens_in,
     tokensOut: task.tokens_out,
     cost: task.cost_est_minor,
+    partlyPriced:
+      task.cost_est_minor !== undefined && (task.unpriced_calls ?? 0) > 0,
   };
 }
 
@@ -98,6 +102,12 @@ function total(tiers: readonly UsageTask[]): SpendRow {
       priced.length === 0
         ? undefined
         : sum(priced, (tier) => tier.cost_est_minor ?? 0),
+    partlyPriced:
+      priced.length > 0 &&
+      tiers.some(
+        (tier) =>
+          tier.cost_est_minor === undefined || (tier.unpriced_calls ?? 0) > 0,
+      ),
   };
 }
 
@@ -181,7 +191,16 @@ function spendColumns(
       align: "end",
       // A line the server did not price is not a line that cost nothing.
       render: (row) =>
-        row.cost === undefined ? "—" : formatMoney(row.cost, currency, locale),
+        row.cost === undefined ? (
+          "—"
+        ) : (
+          <CellStack>
+            <span>{formatMoney(row.cost, currency, locale)}</span>
+            {row.partlyPriced && (
+              <span className="t-caption">{t("aiusage.partlyPriced")}</span>
+            )}
+          </CellStack>
+        ),
     },
   ];
 }

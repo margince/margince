@@ -185,7 +185,7 @@ async function open(
   await user.click(
     within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
       "button",
-      { name: /^Edit/ },
+      { name: /^(Edit|Open) / },
     ),
   );
   return screen.findByRole("dialog");
@@ -226,6 +226,15 @@ describe("the Providers list", () => {
     expect(
       await screen.findByRole("dialog", { name: "Google Gemini" }),
     ).toBeTruthy();
+  });
+
+  it("offers Open, not Edit, to a seat that may not change providers", async () => {
+    mount({ ai_routing: ["read"], ai_model_rate: ["read"] });
+    const gemini = await screen.findByTestId("ai-provider-row-gemini");
+    expect(
+      await within(gemini).findByRole("button", { name: "Open Google Gemini" }),
+    ).toBeTruthy();
+    expect(within(gemini).queryByRole("button", { name: /^Edit/ })).toBeNull();
   });
 });
 

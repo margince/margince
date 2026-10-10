@@ -115,6 +115,7 @@ export function AiProviderKeysCard() {
             <>
               <ProviderTable
                 providers={list.providers}
+                canManage={canManage}
                 usage={usage}
                 health={canDiagnose ? health?.providers : undefined}
                 onOpen={(provider) => {

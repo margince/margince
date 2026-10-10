@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
@@ -100,6 +100,8 @@ export function AutomationsAdmin() {
     setStaged((prior) => ({ entry, seq: (prior?.seq ?? 0) + 1, open: true }));
   };
 
+  const instancesHeading = useId();
+
   const entryFor = (key: string): CatalogEntry | undefined =>
     catalog.data?.data.find((entry) => entry.key === key);
 
@@ -113,8 +115,13 @@ export function AutomationsAdmin() {
             <PanelIntro>{t("auto.readOnly")}</PanelIntro>
           )}
         </PanelBody>
-        <PanelGroupHead title={t("auto.instances")} level="h3" />
+        <PanelGroupHead
+          title={t("auto.instances")}
+          level="h3"
+          id={instancesHeading}
+        />
         <InstancesSection
+          focusAfterDelete={() => focusable(instancesHeading)}
           instances={instances}
           me={me}
           entryFor={entryFor}
@@ -153,6 +160,7 @@ export function AutomationsAdmin() {
 // Without the read grant the section says it is withheld: an empty list would
 // claim the workspace runs no automations. Behind /me, so it is a settled denial.
 function InstancesSection({
+  focusAfterDelete,
   instances,
   me,
   entryFor,
@@ -160,6 +168,7 @@ function InstancesSection({
   canEdit,
   canDelete,
 }: Readonly<{
+  focusAfterDelete: () => HTMLElement | null;
   instances: QueryLike<{ data: Automation[] }>;
   me: QueryLike<unknown>;
   entryFor: (key: string) => CatalogEntry | undefined;
@@ -177,6 +186,7 @@ function InstancesSection({
         canViewRuns={canViewRuns}
         canEdit={canEdit}
         canDelete={canDelete}
+        focusAfterDelete={focusAfterDelete}
       />
     );
   }
@@ -271,7 +281,10 @@ function libraryColumns(
       align: "end",
       fold: "end",
       render: (entry) => (
-        <RowOpen label={t("auto.use")} onOpen={() => onUse(entry)} />
+        <RowOpen
+          label={t("auto.useNamed", { name: entry.name })}
+          onOpen={() => onUse(entry)}
+        />
       ),
     },
   ];
@@ -285,4 +298,11 @@ function OneLine({ text }: Readonly<{ text: string }>) {
       {tip.tip}
     </span>
   );
+}
+
+// A deleted row takes its menu with it, so focus lands on the list's heading.
+function focusable(id: string): HTMLElement | null {
+  const heading = document.getElementById(id);
+  heading?.setAttribute("tabindex", "-1");
+  return heading;
 }

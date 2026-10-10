@@ -29,7 +29,13 @@ import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
 import { PanelTitle, TermLegend } from "./ai-terms";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import {
+  problemMessageOf,
+  QueryGate,
+  QueryStates,
+  throwProblem,
+  useMe,
+} from "./common";
 import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 
@@ -122,28 +128,24 @@ function HealthOnly() {
   const me = useMe();
   return (
     <Panel title={<PanelTitle term="tier">{t("aiRouting.title")}</PanelTitle>}>
-      {canDiagnose ? (
-        <QueryGate query={health} pendingLabel={t("aiRouting.title")}>
-          {(read) =>
-            read.rungs.length === 0 ? (
-              <PanelBody>
-                <EmptyState>
-                  {t("aiHealth.noCalls", {
-                    hours: formatNumber(read.window_hours, locale),
-                  })}
-                </EmptyState>
-              </PanelBody>
-            ) : (
-              <TiersTable
-                lanes={[]}
-                health={read}
-                features={undefined}
-                catalogue={undefined}
-                canManage={false}
-              />
-            )
-          }
-        </QueryGate>
+      {canDiagnose && health.isSuccess && health.data.rungs.length > 0 ? (
+        <TiersTable
+          lanes={[]}
+          health={health.data}
+          features={undefined}
+          catalogue={undefined}
+          canManage={false}
+        />
+      ) : canDiagnose ? (
+        <PanelBody>
+          <QueryStates query={health} pendingLabel={t("aiRouting.title")}>
+            <EmptyState>
+              {t("aiHealth.noCalls", {
+                hours: formatNumber(health.data?.window_hours ?? 0, locale),
+              })}
+            </EmptyState>
+          </QueryStates>
+        </PanelBody>
       ) : (
         <PanelBody>
           <QueryGate query={me} pendingLabel={t("aiRouting.title")}>
