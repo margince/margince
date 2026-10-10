@@ -285,7 +285,8 @@ func withRecordSource(method, path string, body any) any {
 	if _, stated := fields["source"]; stated {
 		return body
 	}
-	withSource := maps.Clone(fields)
+	withSource := make(map[string]any, len(fields)+1)
+	maps.Copy(withSource, fields)
 	withSource["source"] = provenance.RecordSourceManual
 	return withSource
 }
