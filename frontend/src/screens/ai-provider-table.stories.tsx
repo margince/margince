@@ -99,10 +99,13 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const rows = await canvas.findAllByTestId(/^ai-provider-row-/);
-    await expect(rows[0]).toHaveAttribute(
-      "data-testid",
+    await expect(
+      rows.slice(0, 3).map((row) => row.getAttribute("data-testid")),
+    ).toEqual([
+      "ai-provider-row-anthropic",
       "ai-provider-row-openai",
-    );
+      "ai-provider-row-gemini",
+    ]);
     await canvas.findByText(/412 calls/);
   },
 };

@@ -35,7 +35,13 @@ const call: CallSummary = {
 
 const CALLS: CallSummary[] = [
   call,
-  { ...call, id: "call-2", calls_attempted: 2 },
+  {
+    ...call,
+    id: "call-2",
+    task: "stage_evidence_extract",
+    task_display_name: "Evidence extraction",
+    calls_attempted: 2,
+  },
   {
     ...call,
     id: "call-3",
@@ -75,7 +81,7 @@ function Calls() {
   installFetchStub({ "GET /ai/calls/call-1": () => jsonResponse(DETAIL) });
   return (
     <StoryProviders>
-      <Panel title="AI call trace">
+      <Panel title="AI call trace" className="aicalls-card">
         <CallTable calls={CALLS} captureEnabled={false} />
       </Panel>
     </StoryProviders>
