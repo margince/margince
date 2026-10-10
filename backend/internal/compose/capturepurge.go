@@ -176,10 +176,8 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 // purgeableContacts is what a seat's rule purge anonymises. Only this seat's
 // mail explains them, capture made them for this seat, and nobody worked on
 // them since. A contact somebody typed in is not this mailbox's to erase.
-func (p *CapturePurger) purgeableContacts(ctx context.Context, seat ids.UUID, rule capture.Exclusion) ([]ids.UUID, error) {
-	var minted []ids.UUID
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		var err error
+func (p *CapturePurger) purgeableContacts(ctx context.Context, seat ids.UUID, rule capture.Exclusion) (minted []ids.UUID, err error) {
+	err = database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		minted, err = purgeableContactsTx(ctx, tx, seat, rule)
 		return err
 	})
@@ -195,10 +193,14 @@ func purgeableContactsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, rule cap
 }
 
 // stillPurgeable asks the same question again for one contact, inside the
-// transaction that anonymises it.
+// transaction that anonymises it; only that contact pays the capture-origin check.
 func (p *CapturePurger) stillPurgeable(seat ids.UUID, rule capture.Exclusion) privacy.ContactStillPurgeable {
 	return func(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
-		minted, err := purgeableContactsTx(ctx, tx, seat, rule)
+		mailboxOnly, err := capture.SelectPurgeableContactsTx(ctx, tx, seat, rule.Kind, rule.Value, statutoryFloor())
+		if err != nil || !slices.Contains(mailboxOnly, id) {
+			return false, err
+		}
+		minted, err := contacts.CaptureMintedForSeatTx(ctx, tx, seat, []ids.UUID{id})
 		return slices.Contains(minted, id), err
 	}
 }
