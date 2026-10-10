@@ -2,78 +2,55 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Button, OverflowMenu } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { PanelBody } from "../design-system/panel";
+import type { DataTableColumn } from "../design-system/datatable";
 import { formatNumber } from "../format/format";
-import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { problemCodeOf, problemMessageOf } from "./common";
+import { type PluralTranslator, type Translator, useT } from "../i18n";
+import type { Locale } from "../i18n/locale";
 import "./leadvocab.css";
 
-// The contract promises the arrays. A body that lost one reads as the empty
-// list it claims, not as a crash in the render.
-export function rowsOf<Row>(
-  rows: readonly Row[] | null | undefined,
-): readonly Row[] {
-  return Array.isArray(rows) ? rows : [];
+// Folded, the column heading is out of sight, so the count says its unit.
+export function leadsColumn<Row>(
+  {
+    t,
+    plural,
+    locale,
+  }: Readonly<{ t: Translator; plural: PluralTranslator; locale: Locale }>,
+  count: (row: Row) => number,
+): DataTableColumn<Row> {
+  return {
+    key: "leads",
+    header: t("leadSources.colLeads"),
+    align: "end",
+    render: (row) => formatNumber(count(row), locale),
+    folded: (row) =>
+      plural("leadSources.leads", count(row), {
+        count: formatNumber(count(row), locale),
+      }),
+  };
 }
 
-/** A refused name write, split the way `NameDialog` draws it. */
-export function nameRefusal(
-  error: unknown,
-  t: (key: MessageKey) => string,
-  duplicate: MessageKey,
-): { problem: string | null; nameProblem: string | null } {
-  if (error === null || error === undefined) {
-    return { problem: null, nameProblem: null };
-  }
-  return problemCodeOf(error) === "conflict"
-    ? { problem: null, nameProblem: t(duplicate) }
-    : { problem: problemMessageOf(error, t), nameProblem: null };
-}
-
-// Folded, the column heading is out of sight, so the count reads as a sentence.
-export function VocabCount({
-  count,
-  unit,
-}: Readonly<{ count: number; unit: PluralBase }>) {
-  const { locale } = useLocale();
-  const plural = usePlural();
-  const figure = formatNumber(count, locale);
-  return (
-    <>
-      <span className="lead-vocab-figure">{figure}</span>
-      <span className="lead-vocab-sentence">
-        {plural(unit, count, { count: figure })}
-      </span>
-    </>
-  );
-}
-
-// Rename and Remove for one entry. A refused remove stays in the menu with its
-// reason in words, because the server would answer the delete with a 409.
-// A catalog with no delete passes no `onRemove`.
+// Rename and Remove for one lead source or reason. A refused remove stays in
+// the menu with its reason in words, as the server would answer it with a 409.
 export function VocabRowMenu({
   label,
   canEdit,
-  canRemove: mayRemove = false,
+  canRemove,
   refusal,
   onRename,
   onRemove,
 }: Readonly<{
   label: string;
   canEdit: boolean;
-  canRemove?: boolean;
+  canRemove: boolean;
   refusal?: string;
   onRename: () => void;
-  onRemove?: () => void;
+  onRemove: () => void;
 }>) {
   const t = useT();
-  const canRemove = mayRemove && onRemove !== undefined;
   if (!canEdit && !canRemove) return null;
   return (
     <span className="cell-actions">
-      <OverflowMenu label={t("leadSources.rowActions", { label })}>
+      <OverflowMenu label={t("table.rowActions", { name: label })}>
         {canEdit && (
           <Button onClick={onRename}>{t("leadSources.rename")}</Button>
         )}
@@ -84,26 +61,5 @@ export function VocabRowMenu({
         )}
       </OverflowMenu>
     </span>
-  );
-}
-
-// Said once for the whole card rather than on each refused control.
-export function VocabNotices({
-  readOnly = false,
-  error,
-}: Readonly<{ readOnly?: boolean; error: unknown }>) {
-  const t = useT();
-  if (!readOnly && error === undefined) return null;
-  return (
-    <PanelBody className="lead-vocab-notices">
-      {readOnly && (
-        <Callout kind="standing" title={t("leadSources.readOnlyTitle")} />
-      )}
-      {error !== undefined && (
-        <Callout kind="outcome" tone="danger" title={t("leadSources.notSaved")}>
-          {problemMessageOf(error, t)}
-        </Callout>
-      )}
-    </PanelBody>
   );
 }

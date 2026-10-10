@@ -165,7 +165,7 @@ export function OfferTemplatesAdmin() {
     verbs: "menu",
     cell: (tpl: OfferTemplate) => (
       <span className="cell-actions">
-        <OverflowMenu label={t("template.rowActions", { name: tpl.name })}>
+        <OverflowMenu label={t("table.rowActions", { name: tpl.name })}>
           {canUpdate && (
             <EditAction
               labelled
@@ -229,6 +229,7 @@ export function OfferTemplatesAdmin() {
       </PanelBody>
       <ListTable
         state={list}
+        hideShortPager
         unit="unit.offerTemplates"
         searchable={false}
         action={

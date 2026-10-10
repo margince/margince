@@ -26,6 +26,17 @@ export function criterionKindLabel(kind: string, t: Translator): string {
     : humanizeToken(kind);
 }
 
+export const CRITERION_KINDS: readonly CriterionKind[] =
+  Object.keys(CRITERION_KIND_LABEL).filter(isCriterionKind);
+
 function isCriterionKind(kind: string): kind is CriterionKind {
   return Object.hasOwn(CRITERION_KIND_LABEL, kind);
+}
+
+// The form offers kinds only through its select, so anything else is a broken form, not input.
+export function criterionKindOf(value: unknown): CriterionKind {
+  if (typeof value === "string" && isCriterionKind(value)) return value;
+  throw new Error(
+    `the criterion form sent ${JSON.stringify(value)}, which is not a kind`,
+  );
 }

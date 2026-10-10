@@ -156,7 +156,7 @@ func (s *Store) ListAcquisitionSources(ctx context.Context) ([]crmcontracts.Acqu
 
 // acquisitionDealCount renders the column counting the live deals that carry a
 // source, under the caller's own deal row scope. A caller who may not read
-// deals is answered NULL: a zero would claim no deal carries the source.
+// deals gets NULL, so the field is absent: a zero would claim no deal carries it.
 func acquisitionDealCount(ctx context.Context, args *[]any) (string, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); errors.Is(err, apperrors.ErrPermissionDenied) {
 		return "NULL::bigint", nil

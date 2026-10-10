@@ -139,6 +139,21 @@ var (
 	ErrSeatLimitReached = errors.New("seat limit reached")
 )
 
+// VersionSkewError is a lost version race whose message is written for the
+// reader. A plain wrap of ErrVersionSkew answers one generic reload sentence instead.
+type VersionSkewError struct {
+	Message string
+}
+
+func (e *VersionSkewError) Error() string { return e.Message }
+
+func (e *VersionSkewError) Unwrap() error { return ErrVersionSkew }
+
+// MessageFault answers the contract's version_skew code with the reader's message.
+func (e *VersionSkewError) MessageFault() (code, message string) {
+	return "version_skew", e.Message
+}
+
 // ErrUnsupportedBySoR is the declared capability gap a system-of-record
 // adapter answers with: a verb the frozen datasource seam names and this
 // adapter cannot serve (interfaces.md §0). A refusal, never a silent empty

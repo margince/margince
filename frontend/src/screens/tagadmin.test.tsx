@@ -53,6 +53,7 @@ function mount(
   words: readonly unknown[],
   grants: Record<string, string[]> = ADMIN,
   extra: RouteMap = {},
+  asked: URL[] = [],
 ) {
   installFetchStub({
     "GET /me": meRoute(grants as never),
@@ -63,6 +64,12 @@ function mount(
       }),
     ...extra,
   });
+  const routed = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    asked.push(new URL(url, "http://localhost"));
+    return routed(input, init);
+  };
   render(
     <StoryProviders>
       <ToastProvider>
@@ -80,7 +87,7 @@ async function openRowMenu(
   name: string,
 ) {
   const trigger = await screen.findByRole("button", {
-    name: translate("en", "tagAdmin.rowActions", { name }),
+    name: translate("en", "table.rowActions", { name }),
   });
   await user.click(trigger);
   const items = document.getElementById(
@@ -101,6 +108,19 @@ describe("the tag vocabulary card", () => {
   it("draws the workspace's words", async () => {
     mount([KEY_ACCOUNT]);
     expect(await screen.findByText("Key Account")).toBeInTheDocument();
+  });
+
+  // The list counts a word's records only when asked, and this card is the one reader that asks.
+  it("asks the list for each word's count and draws it", async () => {
+    const asked: URL[] = [];
+    mount([KEY_ACCOUNT], ADMIN, {}, asked);
+    expect(
+      await screen.findByText(
+        translate("en", "tagAdmin.usedBy_other", { count: "7" }),
+      ),
+    ).toBeInTheDocument();
+    const list = asked.find((url) => url.pathname.endsWith("/tags"));
+    expect(list?.searchParams.get("with_carried_by")).toBe("true");
   });
 
   // A retired word is restored HERE, so a list that hid it would leave the
@@ -132,7 +152,7 @@ describe("the tag vocabulary card", () => {
     ).toBeNull();
     expect(
       screen.queryByRole("button", {
-        name: translate("en", "tagAdmin.rowActions", { name: "Key Account" }),
+        name: translate("en", "table.rowActions", { name: "Key Account" }),
       }),
     ).toBeNull();
   });

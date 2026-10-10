@@ -16,6 +16,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
+import { NameDialog } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -339,14 +340,12 @@ export function CustomFieldsAdmin() {
   const toast = useToast();
   const [renaming, setRenaming] = useState<CustomField | null>(null);
   const [retiring, setRetiring] = useState<CustomField | null>(null);
-  const [renameLabel, setRenameLabel] = useState("");
   // The dialog stays MOUNTED so it can animate out, so `addSeq` is what gives
   // each open a builder of its own: it re-keys the form, which discards a
   // half-typed label rather than leaving it waiting under an object nobody
   // re-chose, and stops a second Confirm resubmitting a draft already created.
   const [adding, setAdding] = useState(false);
   const [addSeq, setAddSeq] = useState(0);
-  const renameId = useId();
   const addId = useId();
 
   const list = useQuery({
@@ -441,14 +440,11 @@ export function CustomFieldsAdmin() {
       toast.show(t("cf.renamed", { label: input.label }));
       setRenaming(null);
     },
-    onError: (error) => {
-      toast.show(problemMessageOf(error, t), { tone: "danger" });
-    },
   });
 
   const startRename = (field: CustomField) => {
+    rename.reset();
     setRenaming(field);
-    setRenameLabel(field.label);
   };
 
   const objectName = t(`cf.obj.${object}`);
@@ -576,49 +572,19 @@ export function CustomFieldsAdmin() {
         }}
       />
 
-      <Modal
+      <NameDialog
         open={renaming !== null}
         onClose={() => setRenaming(null)}
-        labelledBy={renameId}
-        intent="form"
-      >
-        <Heading size="large" id={renameId} className="t-h2 modal-title">
-          {t("cf.edit")}
-        </Heading>
-        <form
-          id={`${renameId}-form`}
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (renaming && !rename.isPending && renameLabel.trim() !== "") {
-              rename.mutate({ field: renaming, label: renameLabel.trim() });
-            }
-          }}
-        >
-          <Field label={t("cf.renamePrompt")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={renameLabel}
-                onChange={(event) => setRenameLabel(event.target.value)}
-              />
-            )}
-          </Field>
-        </form>
-        <div className="actions">
-          <Button variant="ghost" onClick={() => setRenaming(null)}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            form={`${renameId}-form`}
-            variant="primary"
-            disabled={rename.isPending || renameLabel.trim().length === 0}
-          >
-            {t("trust.save")}
-          </Button>
-        </div>
-      </Modal>
+        title={t("cf.edit")}
+        label={t("cf.renamePrompt")}
+        initial={renaming?.label ?? ""}
+        confirmLabel={t("trust.save")}
+        pending={rename.isPending}
+        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        onSave={(label) => {
+          if (renaming) rename.mutate({ field: renaming, label });
+        }}
+      />
     </Panel>
   );
 }

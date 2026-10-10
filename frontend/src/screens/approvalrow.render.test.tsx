@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ApprovalRow } from "./approvalrow";
 import type { Approval } from "./approvals.queries";
 import { isPreviewDoor, refusedPreview } from "./sendpermission.testkit";
@@ -241,5 +242,46 @@ describe("whether the staged mail may go", () => {
         ),
       ),
     ).toBe(false);
+  });
+});
+
+describe("a decision that lost its race", () => {
+  const skew = () =>
+    jsonResponse({ title: "Conflict", status: 409, code: "version_skew" }, 409);
+
+  it("asks for the staging again when its record moved", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => skew()),
+    );
+    render(<ApprovalRow approval={closeDateApproval()} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+
+    expect(await screen.findByText(en["decision.versionSkew"])).toBeVisible();
+  });
+
+  // Nobody stages a rate proposal by hand, so staging again is advice the
+  // reader cannot follow.
+  it("sends a rate proposal back to the refresh", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => skew()),
+    );
+    render(
+      <ApprovalRow
+        approval={closeDateApproval({
+          kind: "fx_rate_proposal",
+          summary: "Update the EUR rate",
+          proposed_change: { from_currency: "EUR", rate: "1.08" },
+          target_entity_type: "fx_rate",
+        })}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+
+    expect(await screen.findByText(en["decision.fxRateMoved"])).toBeVisible();
+    expect(screen.queryByText(en["decision.versionSkew"])).toBeNull();
   });
 });

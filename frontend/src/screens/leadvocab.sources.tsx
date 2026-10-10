@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
-import { api } from "../api/client";
+import { type FormEvent, useId, useRef, useState } from "react";
+import { rowsOf } from "../api/rows";
 import { useCanWrite } from "../app/capability";
 import { isOption } from "../app/options";
 import {
@@ -26,6 +25,8 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
+import { useSinglePress } from "../design-system/presslatch";
 import { Select } from "../design-system/select";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
@@ -38,22 +39,17 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
-import { LEAD_LIST_KEY } from "./leadkeys";
+import { problemMessageOf, QueryStates } from "./common";
 import {
   type DiscoveredLeadSource,
-  LEAD_SOURCES_KEY,
   type LeadSource,
   type LeadSourceIntent,
+  type SourcePatch,
   sourceKeyLabel,
   useLeadSources,
+  useSourceMutations,
 } from "./leadsources";
-import {
-  rowsOf,
-  VocabCount,
-  VocabNotices,
-  VocabRowMenu,
-} from "./leadvocab.rows";
+import { leadsColumn, VocabRowMenu } from "./leadvocab.rows";
 
 const INTENTS = ["high", "neutral", "low"] as const;
 
@@ -65,60 +61,6 @@ const intentLabel: Record<LeadSourceIntent, MessageKey> = {
 
 function intentOptions(t: Translator) {
   return INTENTS.map((value) => ({ value, label: t(intentLabel[value]) }));
-}
-
-type SourcePatch = {
-  id: string;
-  label?: string;
-  intent?: LeadSourceIntent;
-  active?: boolean;
-};
-type NewSource = { label: string; key?: string; intent: LeadSourceIntent };
-
-async function createSource(body: NewSource) {
-  return unwrap(await api.POST("/lead-sources", { body }));
-}
-
-async function patchSource({ id, ...body }: SourcePatch) {
-  return unwrap(
-    await api.PATCH("/lead-sources/{id}", { params: { path: { id } }, body }),
-  );
-}
-
-// One mutation per write, so a refusal speaks where it was asked. The dialogs
-// own create, rename and remove; the card owns adopt and the row controls.
-function useSourceMutations() {
-  const queryClient = useQueryClient();
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: LEAD_SOURCES_KEY });
-    // The leads list and its create form render labels off this list.
-    void queryClient.invalidateQueries({ queryKey: LEAD_LIST_KEY });
-  };
-  const create = useMutation({
-    mutationFn: createSource,
-    onSuccess: invalidate,
-  });
-  const adopt = useMutation({
-    mutationFn: createSource,
-    onSuccess: invalidate,
-  });
-  const update = useMutation({
-    mutationFn: patchSource,
-    onSuccess: invalidate,
-  });
-  const rename = useMutation({
-    mutationFn: patchSource,
-    onSuccess: invalidate,
-  });
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      unwrap(
-        await api.DELETE("/lead-sources/{id}", { params: { path: { id } } }),
-      );
-    },
-    onSuccess: invalidate,
-  });
-  return { create, adopt, update, rename, remove };
 }
 
 // Mounted only while open, so a half-typed source never waits under an intent
@@ -136,6 +78,7 @@ function AddSourceDialog({
   const [label, setLabel] = useState("");
   const [intent, setIntent] = useState<LeadSourceIntent>("neutral");
   const ready = label.trim() !== "";
+  const singlePress = useSinglePress(create.isPending);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="form">
       <Heading size="large" className="t-h2 modal-title" id={titleId}>
@@ -144,14 +87,14 @@ function AddSourceDialog({
       <form
         id={formId}
         className="form-stack"
-        onSubmit={(e) => {
+        onSubmit={singlePress((e: FormEvent) => {
           e.preventDefault();
           if (!ready || create.isPending) return;
           create.mutate(
             { label: label.trim(), intent },
             { onSuccess: onClose },
           );
-        }}
+        })}
       >
         {create.isError && (
           <Callout
@@ -251,14 +194,7 @@ function sourceColumns({
         </span>
       ),
     },
-    {
-      key: "leads",
-      header: t("leadSources.colLeads"),
-      align: "end",
-      render: (source) => (
-        <VocabCount count={source.lead_count ?? 0} unit="leadSources.leads" />
-      ),
-    },
+    leadsColumn({ t, plural, locale }, (source) => source.lead_count ?? 0),
     {
       key: "intent",
       header: t("leadSources.intent"),
@@ -323,6 +259,8 @@ function DiscoveredSources({
   onAdopt: (found: DiscoveredLeadSource, label: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const columns: DataTableColumn<DiscoveredLeadSource>[] = [
     {
       key: "name",
@@ -335,14 +273,7 @@ function DiscoveredSources({
         />
       ),
     },
-    {
-      key: "leads",
-      header: t("leadSources.colLeads"),
-      align: "end",
-      render: (found) => (
-        <VocabCount count={found.lead_count} unit="leadSources.leads" />
-      ),
-    },
+    leadsColumn({ t, plural, locale }, (found) => found.lead_count),
   ];
   if (canCreate) {
     columns.push({
@@ -392,6 +323,9 @@ export function LeadSourcesCard() {
   const [adding, setAdding] = useState(false);
   const [renaming, setRenaming] = useState<LeadSource | null>(null);
   const [removing, setRemoving] = useState<LeadSource | null>(null);
+  // The removed row takes its menu with it, so focus lands on the card's verb.
+  const removed = useRef(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
   const failure = [adopt, update].find((m) => m.isError);
   const administered = rowsOf(query.data?.data);
   const discovered = rowsOf(query.data?.discovered);
@@ -412,7 +346,7 @@ export function LeadSourcesCard() {
       title={t("leadSources.title")}
       titleAction={
         canCreate && (
-          <Button onClick={() => setAdding(true)}>
+          <Button ref={addVerb} onClick={() => setAdding(true)}>
             {t("leadSources.addOpen")}
           </Button>
         )
@@ -448,7 +382,12 @@ export function LeadSourcesCard() {
           }
         />
       )}
-      <VocabNotices readOnly={!canEdit} error={failure?.error} />
+      <PanelNotices
+        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        refused={
+          failure && { title: t("leadSources.notSaved"), error: failure.error }
+        }
+      />
       {adding && (
         <AddSourceDialog
           create={create}
@@ -482,6 +421,7 @@ export function LeadSourcesCard() {
           remove.reset();
           setRemoving(null);
         }}
+        returnFocusTo={() => (removed.current ? addVerb.current : null)}
         title={t("leadSources.removeTitle")}
         confirmLabel={t("leadSources.remove")}
         confirmVariant="danger"
@@ -489,7 +429,12 @@ export function LeadSourcesCard() {
         error={remove.isError ? problemMessageOf(remove.error, t) : null}
         onConfirm={() => {
           if (removing) {
-            remove.mutate(removing.id, { onSuccess: () => setRemoving(null) });
+            remove.mutate(removing.id, {
+              onSuccess: () => {
+                removed.current = true;
+                setRemoving(null);
+              },
+            });
           }
         }}
       >

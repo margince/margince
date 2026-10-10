@@ -66,7 +66,9 @@ function backend(
       source("partner", "Partner", { deal_count: 1 }),
     ];
     return jsonResponse({
-      data: counted ? rows : rows.map((row) => ({ ...row, deal_count: null })),
+      data: counted
+        ? rows
+        : rows.map((row) => ({ ...row, deal_count: undefined })),
     });
   });
 }
@@ -81,7 +83,7 @@ function wrote(calls: Call[], method: string, path: string, body: unknown) {
 }
 
 const actionsFor = (label: string) =>
-  en["leadSources.rowActions"].replace("{label}", label);
+  en["table.rowActions"].replace("{name}", label);
 
 beforeEach(() => {
   localStorage.setItem("margince.workspaceSlug", "acme");

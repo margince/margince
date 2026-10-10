@@ -54,8 +54,15 @@
 }
 /* A detail spans every column, so in a pinned table that scrolls it outgrows
    the box; its content pins to the box's start at the box's width instead. */
+/* Inline size alone where scroll-state is unknown: a browser drops the whole
+   declaration it cannot read, and the detail still needs the box's width. */
 .table-scroll-sticky:has(> .table > tbody > tr.datatable-detail) {
-  container: table-pinned / inline-size scroll-state;
+  container-type: inline-size;
+}
+@supports (container-type: scroll-state) {
+  .table-scroll-sticky:has(> .table > tbody > tr.datatable-detail) {
+    container-type: inline-size scroll-state;
+  }
 }
 .table-scroll-sticky > .table > tbody > tr.datatable-detail > td > * {
   --detailInset: var(--space-3);
@@ -78,7 +85,16 @@
 .table-scroll-fold {
   container: table-fold / inline-size;
 }
+.table-scroll-fold .datatable-folded {
+  display: none;
+}
 @container table-fold (width < 36rem) {
+  .table-scroll-fold .datatable-unfolded {
+    display: none;
+  }
+  .table-scroll-fold .datatable-folded {
+    display: inline;
+  }
   .table-scroll-fold > .table,
   .table-scroll-fold > .table > tbody {
     display: block;

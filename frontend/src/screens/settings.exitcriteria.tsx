@@ -9,7 +9,12 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { problemMessageOf, unwrap } from "./common";
 import { type CreateField, CreateRecordModal } from "./create";
-import { CRITERION_KIND_LABEL, type CriterionKind } from "./criterionkinds";
+import {
+  CRITERION_KIND_LABEL,
+  CRITERION_KINDS,
+  type CriterionKind,
+  criterionKindOf,
+} from "./criterionkinds";
 import { EditAction } from "./edit";
 
 type Criterion = components["schemas"]["StageExitCriterion"];
@@ -195,7 +200,7 @@ function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
           body: {
             key: values.key,
             label: values.label,
-            kind: values.kind as CriterionKind,
+            kind: criterionKindOf(values.kind),
             required: values.required !== "false",
             ...(values.hint ? { hint: values.hint } : {}),
           },
@@ -276,7 +281,7 @@ function CriterionRemove({
 }
 
 function kindOptions(t: ReturnType<typeof useT>) {
-  return (Object.keys(CRITERION_KIND_LABEL) as CriterionKind[]).map((kind) => ({
+  return CRITERION_KINDS.map((kind) => ({
     value: kind,
     label: t(CRITERION_KIND_LABEL[kind]),
   }));
@@ -345,7 +350,7 @@ function text(value: unknown): string {
 function criterionEditBody(values: Record<string, unknown>) {
   return {
     label: text(values.label),
-    kind: text(values.kind) as CriterionKind,
+    kind: criterionKindOf(text(values.kind)),
     required: text(values.required) !== "false",
     // An emptied hint is a CLEAR, which the contract spells as an explicit
     // null. Sending "" instead would store an empty string the reader cannot

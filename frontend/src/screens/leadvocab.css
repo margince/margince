@@ -14,25 +14,3 @@
 .lead-vocab-intent .select-control {
   inline-size: 10rem;
 }
-
-/* Folded, the column heading is out of sight, so the count reads as a
-   sentence that carries its unit instead of as a bare figure. */
-.lead-vocab-sentence {
-  display: none;
-}
-@container table-fold (width < 36rem) {
-  .lead-vocab-figure {
-    display: none;
-  }
-  .lead-vocab-sentence {
-    display: inline;
-  }
-}
-
-/* The card's band under the rows: the read-only posture and a refused write. */
-.lead-vocab-notices {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-}

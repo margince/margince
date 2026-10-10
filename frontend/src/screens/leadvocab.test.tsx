@@ -147,7 +147,7 @@ async function openMenu(
 ) {
   await user.click(
     await screen.findByRole("button", {
-      name: en["leadSources.rowActions"].replace("{label}", label),
+      name: en["table.rowActions"].replace("{name}", label),
     }),
   );
 }
@@ -267,6 +267,12 @@ describe("LeadSourcesCard", () => {
         ),
       ).toBe(true),
     );
+    // The row and its menu go, so focus lands on the card's own verb.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en["leadSources.addOpen"] }),
+      ).toHaveFocus(),
+    );
   });
 
   it("refuses removing a built-in in words beside the verb", async () => {
@@ -339,7 +345,7 @@ describe("LeadSourcesCard", () => {
     ).toBeNull();
     expect(
       screen.queryByRole("button", {
-        name: en["leadSources.rowActions"].replace("{label}", "Trade show"),
+        name: en["table.rowActions"].replace("{name}", "Trade show"),
       }),
     ).toBeNull();
     // Built-in changes nothing a reader can do, so it is not said.
@@ -362,6 +368,33 @@ describe("LeadDisqualifyReasonsCard", () => {
     await openMenu(user, "Bad timing");
     expect(screen.getByRole("button", { name: "Remove" })).toBeDisabled();
     expect(screen.getByText(en["leadReasons.builtInKept"])).toBeTruthy();
+  });
+
+  it("removes a reason and hands focus to the card's verb", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <LeadDisqualifyReasonsCard />
+      </Providers>,
+    );
+    await openMenu(user, "Went quiet");
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: "Remove" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en["leadReasons.newLabel"] }),
+      ).toHaveFocus(),
+    );
+    expect(
+      calls.some(
+        (c) =>
+          c.method === "DELETE" &&
+          c.url.endsWith("/lead-disqualify-reasons/src-r2"),
+      ),
+    ).toBe(true);
   });
 
   it("adds a reason through the header verb's dialog", async () => {

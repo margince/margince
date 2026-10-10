@@ -27,11 +27,11 @@ import (
 
 // listedTagReach reads the tag list as ctx and answers each tag's carried_by
 // by name.
-func listedTagReach(ctx context.Context, t *testing.T, store *collections.Store) map[string]*int {
+func listedTagReach(ctx context.Context, t *testing.T, store *collections.Store, params crmcontracts.ListTagsParams) map[string]*int {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/tags", nil).WithContext(ctx)
-	collections.NewHandlers(store).ListTags(rec, req, crmcontracts.ListTagsParams{})
+	collections.NewHandlers(store).ListTags(rec, req, params)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("tag list: status %d, body %s", rec.Code, rec.Body.String())
 	}
@@ -84,12 +84,38 @@ func TestTheTagListCountsOnlyWhatTheCallerMaySee(t *testing.T) {
 		{"a colleague", seat(e.Rep1, readsContacts), 1},
 		{"a seat that may not read contacts", seat(e.Rep2, map[string]principal.ObjectGrant{"tag": {Read: true}}), 0},
 	} {
-		reach := listedTagReach(c.reader, t, store)
+		reach := listedTagReach(c.reader, t, store, crmcontracts.ListTagsParams{WithCarriedBy: new(true)})
 		if got := reach[word.Name]; got == nil || *got != c.want {
 			t.Errorf("%s: carried_by = %s, want %d", c.name, countText(got), c.want)
 		}
 		if got := reach[unused.Name]; got == nil || *got != 0 {
 			t.Errorf("%s: an unused tag reads carried_by %s, want 0", c.name, countText(got))
+		}
+	}
+}
+
+// The count reads every tagging, so the pickers and filters that list the
+// words without it pay nothing for it.
+func TestTheTagListCountsNothingUnlessAsked(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	curator := tagCurator(e)
+	contact := e.SeedContact(t, "Tagged Contact", &e.Rep1)
+	word, err := store.CreateTag(curator, "Uncounted", nil, nil)
+	if err != nil {
+		t.Fatalf("creating the tag: %v", err)
+	}
+	if _, err := store.ApplyTag(curator, word.ID, "contact", contact); err != nil {
+		t.Fatalf("applying the tag: %v", err)
+	}
+	for name, asked := range map[string]*bool{"left off": nil, "false": new(false)} {
+		reach := listedTagReach(e.Admin(), t, store, crmcontracts.ListTagsParams{WithCarriedBy: asked})
+		got, listed := reach[word.Name]
+		if !listed {
+			t.Fatalf("with_carried_by %s: the tag is missing from the list", name)
+		}
+		if got != nil {
+			t.Errorf("with_carried_by %s: carried_by = %d, want absent", name, *got)
 		}
 	}
 }
@@ -156,6 +182,6 @@ func TestTheAcquisitionCatalogCountsTheLiveDealsTheCallerMaySee(t *testing.T) {
 	}
 	vocabularyOnly := seat(map[string]principal.ObjectGrant{"custom_field": {Read: true}})
 	if got := listedDealCounts(vocabularyOnly, t, e)[referral]; got != nil {
-		t.Errorf("a seat that may not read deals was told %d deals carry the source, want null", *got)
+		t.Errorf("a seat that may not read deals was told %d deals carry the source, want no count", *got)
 	}
 }

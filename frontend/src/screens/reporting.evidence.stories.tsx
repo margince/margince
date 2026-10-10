@@ -1,11 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
+import { en } from "../i18n/en";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
   reportingStoryEvaluation,
   reportingStoryRoutes,
 } from "./reporting.story-fixtures";
-import { installFetchStub, StoryProviders } from "./story-utils";
+import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Evidence" };
 export default meta;
@@ -58,5 +60,34 @@ export const EarlierDefinition: Story = {
         <Preview earlierDefinition />
       </StoryProviders>
     );
+  },
+};
+
+// The figures moved after the report loaded: the drawer says so and offers the
+// reload, never the record sentence a lost edit gets.
+export const StaleReading: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/evidence": () =>
+        jsonResponse(
+          { status: 409, code: "version_skew", title: "Conflict" },
+          409,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <Preview />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    await expect(
+      await dialog.findByText(en["reporting.evidenceStale"]),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: en["common.retry"] }),
+    ).toBeVisible();
   },
 };

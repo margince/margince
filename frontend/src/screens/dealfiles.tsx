@@ -239,7 +239,7 @@ function FileMenu({
   const captured = doc.origin !== undefined;
   return (
     <OverflowMenu
-      label={t("files.rowActions", { name: doc.attachment.filename })}
+      label={t("table.rowActions", { name: doc.attachment.filename })}
     >
       {captured && !doc.hidden ? (
         <Button

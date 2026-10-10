@@ -204,6 +204,8 @@ export const en = {
   "reporting.upper": "75th percentile",
   "reporting.data": "View chart as table",
   "reporting.evidence": "Evidence",
+  "reporting.evidenceStale":
+    "The figures changed after this report loaded. Retry to reload the report, then open the evidence again.",
   "reporting.details": "Details",
   "reporting.unavailable": "Unavailable",
   "reporting.restricted": "Restricted record",
@@ -1540,6 +1542,8 @@ export const en = {
   // (VOICE-RULE-5).
   "common.seatReadOnly":
     "This seat is read-only, so the request was refused. Ask an administrator to upgrade the seat.",
+  "common.versionSkew":
+    "This record changed after you opened it. Reload it to see the change, then make yours again.",
   "common.retry": "Retry",
   "common.empty": "Nothing here yet.",
   "common.saving": "Saving…",
@@ -1631,6 +1635,7 @@ export const en = {
   // of rows in hand is the only figure the client can state honestly.
   "table.range": "{first} to {last} of {count} {unit}",
   "table.pagination": "Pages",
+  "table.rowActions": "Actions for {name}",
   "table.page": "Page {number}",
   "table.prev": "Previous",
   "table.next": "Next",
@@ -2062,7 +2067,6 @@ export const en = {
   "access.downloads_other": "{count} documents downloaded",
   "access.linkRequested":
     "Asked for a new link {when}. Issue one and send it yourself.",
-  "access.rowActions": "Actions for {name}",
   "access.issueLink": "Issue new link",
   "access.changeCapability": "Change permissions",
   "access.revoke": "Revoke access",
@@ -3019,7 +3023,6 @@ export const en = {
   "tagAdmin.usedBy_one": "{count} record",
   "tagAdmin.usedBy_other": "{count} records",
   "tagAdmin.retired": "Retired",
-  "tagAdmin.rowActions": "Actions for {name}",
   "tagAdmin.retiredToast": "{name} retired",
   "tagAdmin.restoredToast": "{name} restored",
   "tags.archived": "archived",
@@ -3148,7 +3151,6 @@ export const en = {
   "leadSources.colActions": "Actions",
   "leadSources.leads_one": "{count} lead",
   "leadSources.leads_other": "{count} leads",
-  "leadSources.rowActions": "Actions for {label}",
   "leadSources.rename": "Rename",
   "leadSources.renameTitle": "Rename source",
   "leadSources.renameSave": "Save name",
@@ -3872,6 +3874,8 @@ export const en = {
   "decision.dismiss": "Dismiss",
   "decision.versionSkew":
     "This record changed after it was staged. Stage it again before deciding.",
+  "decision.fxRateMoved":
+    "The exchange rate changed after this was proposed, so it was not applied. Refresh the rates from their sources in Settings → Company profile for a current proposal.",
   "decision.reRead": "Reload",
   "decision.alreadyDecided": "Already decided. Nothing left to do.",
   "decision.expired": "Expired",
@@ -4623,7 +4627,6 @@ export const en = {
   "files.originUnknown": "an unknown sender",
   "files.uploaded": "Uploaded {when}",
   "files.hiddenBadge": "Hidden",
-  "files.rowActions": "Actions for {name}",
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
   "files.delete": "Delete",
@@ -5799,7 +5802,6 @@ export const en = {
   "agents.revokeGrantNamed": "End connection to {client}",
   "agents.colClient": "Client",
   "agents.colConnected": "Connected",
-  "agents.rowActions": "Actions for {client}",
   "agents.disconnectConfirm":
     "This ends the whole connection, not one credential. The agent loses access on its next call and cannot renew. Reconnecting requires approving access again.",
   "agents.connectHow": "Connect MCP client",
@@ -5836,7 +5838,6 @@ export const en = {
   "settings.passportNoExpiry": "No expiry",
   "settings.passportLastUsedOn": "Last used {date}",
   "settings.passportExpiresOn": "Expires {date}",
-  "settings.passportActions": "Actions for {name}",
   "settings.revokeNamed": "Revoke {name}",
   "settings.revokeConfirm":
     "The passport’s credential is invalidated immediately. The agent loses access on its next call.",
@@ -6232,7 +6233,6 @@ export const en = {
   "notice.unassigned": "Unassigned",
   "notice.recordUnavailable": "Record not available",
   "notice.dutyFor": "{rule} for {contact}",
-  "notice.rowActions": "Actions for {duty}",
   "notice.noAcquisition": "No acquisition evidence",
   "notice.acqOn": "{kind} on {date}",
   "notice.acqRecorded": "{kind}, recorded {date}",
@@ -8343,7 +8343,6 @@ export const en = {
   "auto.dateField.empty": "This object has no active date fields yet.",
   "auto.dateField.loadError": "Could not load date fields. Retry.",
   "auto.enabledFor": "{name} is enabled",
-  "auto.rowActions": "Actions for {name}",
   "auto.colMode": "Mode",
   "auto.colLastRun": "Last run",
   "auto.colRuns30": "Runs (30 days)",
@@ -8495,7 +8494,6 @@ export const en = {
     "Field “{label}” added. It appears on records and in filters, exports and the API.",
   "cf.edit": "Edit label",
   "cf.archive": "Archive field",
-  "cf.rowActions": "Actions for {label}",
   "cf.archived":
     "“{label}” archived. It is hidden from new records, kept in audit and history, and can be restored.",
   "cf.renamePrompt": "New label",
@@ -9278,7 +9276,6 @@ export const en = {
   "users.teamColumn": "Team",
   "users.teamMembersColumn": "Members",
   "users.teamParent": "Part of {name}",
-  "users.teamRowActions": "Actions for {name}",
   "users.teamRename": "Rename",
   "users.teamArchive": "Archive",
   "users.teamRenameTitle": "Rename team",
@@ -9294,6 +9291,8 @@ export const en = {
   "users.newTeamLabel": "New team",
   "users.newTeamOpen": "New team",
   "users.teamNameLabel": "Team name",
+  "users.teamDuplicate":
+    "A team with this name already exists. Choose another name.",
   "users.newTeamPlaceholder": "For example, DACH Sales",
   "users.createTeam": "Create team",
   "users.notArchived": "Team not archived",
@@ -9353,7 +9352,6 @@ export const en = {
   "users.invite": "Invite",
   "users.setRole": "Set role…",
   "users.setRoleFor": "Set role for {name}",
-  "users.rowActions": "Actions for {name}",
   "users.rolesHeld": "Holds {roles}. Choosing a role replaces all of them.",
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
@@ -9494,7 +9492,6 @@ export const en = {
   "product.activeFilterAll": "All",
   "product.inactive": "Inactive",
   "product.archived": "Archived",
-  "product.rowActions": "Actions for {name}",
   "product.status": "Status",
   "product.pricePerMonth": "per month",
   "product.pricePerQuarter": "per quarter",
@@ -9512,14 +9509,13 @@ export const en = {
     "Archive this template? Offers that already use it keep its layout. New offers cannot select it.",
   "template.name": "Name",
   "template.locale": "Language",
-  "template.isDefault": "Default for locale",
+  "template.isDefault": "Default for this language",
   "template.header": "Header text",
   "template.footer": "Footer text",
   "template.localeFilter": "Language",
   "template.localeFilterAll": "All languages",
   "template.localeDE": "German (DE)",
   "template.localeEN": "English (US)",
-  "template.rowActions": "Actions for {name}",
   "template.default": "Default",
 
   "tools.title": "Agent tools",
@@ -12760,7 +12756,7 @@ export const en = {
   "stageAutomation.cleanAcceptance": "Accepted",
   "stageAutomation.edits": "Edited",
   "stageAutomation.rejections": "Rejected",
-  "stageAutomation.unsafe": "Undone",
+  "stageAutomation.unsafe": "Undone or corrected",
   "stageAutomation.unsafeHint":
     "Moves someone reversed or whose evidence they marked wrong. A move counts once even if both happened.",
   "stageAutomation.observationDays": "Days observed",

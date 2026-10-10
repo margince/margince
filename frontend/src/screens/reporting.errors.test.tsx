@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en } from "../i18n/en";
 import { ReportingComparison } from "./reporting.comparison";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -163,10 +164,9 @@ it("refreshes stale live evidence rather than silently displaying new source row
       />
     </StoryProviders>,
   );
-  expect(
-    await screen.findByText("Refresh the evaluated reading"),
-  ).toBeVisible();
-  await user.click(screen.getAllByRole("button", { name: "Retry" })[0]);
+  expect(await screen.findByText(en["reporting.evidenceStale"])).toBeVisible();
+  expect(screen.queryByText("Refresh the evaluated reading")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Retry" }));
   await waitFor(() => expect(close).toHaveBeenCalledOnce());
 });
 

@@ -11,7 +11,7 @@ import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
-import { NameDialog } from "../design-system/namedialog";
+import { NameDialog, nameRefusal } from "../design-system/namedialog";
 import { useToast } from "../design-system/toast";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
@@ -245,6 +245,7 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
       toast.show(t("users.teamRenamed", { name }));
     },
   });
+  const renameRefused = nameRefusal(rename.error, t, "users.teamDuplicate");
   return (
     <>
       <Button
@@ -264,7 +265,8 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
         placeholder={t("users.newTeamPlaceholder")}
         confirmLabel={t("users.teamRenameSave")}
         pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        problem={renameRefused.problem}
+        nameProblem={renameRefused.nameProblem}
         onSave={(name) => rename.mutate({ id: team.id, name })}
       />
     </>
@@ -285,6 +287,7 @@ export function NewTeamAction() {
       qc.invalidateQueries({ queryKey: ["teams"] });
     },
   });
+  const createRefused = nameRefusal(create.error, t, "users.teamDuplicate");
   return (
     <>
       {/* Named for what it opens; the dialog's submit reads "Create team". */}
@@ -304,7 +307,8 @@ export function NewTeamAction() {
         placeholder={t("users.newTeamPlaceholder")}
         confirmLabel={t("users.createTeam")}
         pending={create.isPending}
-        problem={create.isError ? problemMessageOf(create.error, t) : null}
+        problem={createRefused.problem}
+        nameProblem={createRefused.nameProblem}
         onSave={(name) => create.mutate(name)}
       />
     </>

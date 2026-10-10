@@ -186,7 +186,7 @@ it("renames a role through its menu's dialog and retires one through its switch"
   render(<RecordRolesCard />);
   await user.click(
     await screen.findByRole("button", {
-      name: en["leadSources.rowActions"].replace("{label}", "Delivery lead"),
+      name: en["table.rowActions"].replace("{name}", "Delivery lead"),
     }),
   );
   await user.click(screen.getByRole("button", { name: "Rename" }));
@@ -242,10 +242,7 @@ it("leaves every control inert for a reader and says why", async () => {
   expect(screen.queryByRole("button", { name: "Add role" })).toBeNull();
   expect(
     screen.queryByRole("button", {
-      name: en["leadSources.rowActions"].replace(
-        "{label}",
-        "Technical contact",
-      ),
+      name: en["table.rowActions"].replace("{name}", "Technical contact"),
     }),
   ).toBeNull();
 });

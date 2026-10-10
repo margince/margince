@@ -127,9 +127,12 @@ describe("outcome review questions", () => {
     });
     const head = lossHead.closest<HTMLElement>(".panel-grouphead");
     if (!head) throw new Error("the template name is not a group head");
-    await user.click(
-      within(head).getByRole("button", { name: "Edit questions" }),
-    );
+    const edit = screen.getByRole("button", {
+      name: "Edit questions",
+      description: "Loss review",
+    });
+    expect(head.contains(edit)).toBe(true);
+    await user.click(edit);
 
     const dialog = await screen.findByRole("dialog");
     expect(

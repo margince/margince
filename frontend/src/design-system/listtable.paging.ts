@@ -214,3 +214,35 @@ export function usePaging<Row>(
     goto,
   };
 }
+
+/** Page numbers around the current one, which sits in the middle of them. */
+const PAGE_WINDOW = 3;
+
+/**
+ * A slot in the pager: a page to jump to, a gap where pages were skipped, or
+ * the room a gap would take.
+ */
+export type PagerSlot = number | "gap" | "room";
+
+/**
+ * What the pager shows: page one, then the current page between its two
+ * neighbours, with a gap for what the window skipped. Page one stays reachable
+ * because a lost reader goes back there. Next speaks for pages the cursor could
+ * still fetch, so a gap never means them. Six slots at every position, gap or
+ * bare room, so Next never slides out from under the reader between clicks.
+ */
+export function pagerSlots(current: number, lastPage: number): PagerSlot[] {
+  const first = Math.min(
+    Math.max(1, current - Math.floor(PAGE_WINDOW / 2)),
+    Math.max(1, lastPage - PAGE_WINDOW + 1),
+  );
+  const span = Math.min(PAGE_WINDOW, lastPage - first + 1);
+  const window = Array.from({ length: span }, (_, index) => first + index);
+  return [
+    first > 1 ? 1 : "room",
+    first > 2 ? "gap" : "room",
+    ...window,
+    ...Array.from({ length: PAGE_WINDOW - span }, () => "room" as const),
+    window[span - 1] < lastPage ? "gap" : "room",
+  ];
+}

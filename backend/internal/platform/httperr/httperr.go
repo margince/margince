@@ -353,8 +353,8 @@ func Classify(err error) (Fault, bool) {
 				f.Detail = m.sentinel.Error()
 				f.InfraCause = err
 			}
-			// A wrap around a lost race names the code path that lost it; the
-			// reader needs what happened and what to do.
+			// A plain wrap around a lost race names a code path. A message written
+			// for the reader is an apperrors.VersionSkewError, answered as a MessageFault above.
 			if m.sentinel == apperrors.ErrVersionSkew {
 				f.Detail = versionSkewDetail
 			}

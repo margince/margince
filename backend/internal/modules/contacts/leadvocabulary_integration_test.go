@@ -132,6 +132,16 @@ func TestLeadSourceGovernsHumanWritesAndTheScore(t *testing.T) {
 	if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(crawl.Id), UpdateLeadSourceInput{Active: &inactive}); err != nil {
 		t.Fatal(err)
 	}
+	// Reset keeps the source table; the adopted family is in use, so the store refuses its delete.
+	t.Cleanup(func() {
+		active := true
+		if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(crawl.Id), UpdateLeadSourceInput{Active: &active}); err != nil {
+			t.Errorf("reactivating crawl: %v", err)
+		}
+		if _, err := e.owner.Exec(context.Background(), `DELETE FROM lead_source WHERE key = 'connector:apollo'`); err != nil {
+			t.Errorf("removing the adopted connector family: %v", err)
+		}
+	})
 	email := "vocab@example.test"
 	var inactiveErr *InactiveLeadSourceError
 	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &email, Source: "crawl"}); !errors.As(err, &inactiveErr) {
@@ -437,6 +447,12 @@ func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create reason: %v", err)
 	}
+	// Reset keeps the reason table, so the row would outlive this test.
+	t.Cleanup(func() {
+		if err := e.store.DeleteLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id)); err != nil {
+			t.Errorf("removing the custom reason: %v", err)
+		}
+	})
 	if _, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " procurement FREEZE "}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a second spelling of a custom reason answered %v, want a conflict", err)
 	}

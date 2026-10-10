@@ -152,10 +152,12 @@ func fxPriorMatches(p fxRateProposal, prior string, found bool) error {
 	case found && p.ExpectedPriorRate != "" && sameRate(prior, p.ExpectedPriorRate):
 		return nil
 	case !found:
-		return fmt.Errorf("the %s rate the proposal was diffed against is no longer in force — re-run the refresh: %w",
-			p.FromCurrency, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"the %s rate the proposal was diffed against is no longer in force — re-run the refresh",
+			p.FromCurrency)}
 	default:
-		return fmt.Errorf("the %s rate changed since the proposal was diffed (now %s) — re-run the refresh: %w",
-			p.FromCurrency, prior, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"the %s rate changed since the proposal was diffed (now %s) — re-run the refresh",
+			p.FromCurrency, prior)}
 	}
 }

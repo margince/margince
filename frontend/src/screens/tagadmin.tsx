@@ -223,7 +223,7 @@ function TagMenu({
   }
   return (
     <span className="cell-actions">
-      <OverflowMenu label={t("tagAdmin.rowActions", { name: tag.name })}>
+      <OverflowMenu label={t("table.rowActions", { name: tag.name })}>
         {edits && (
           <Button aria-haspopup="dialog" onClick={onEdit}>
             {t("tagAdmin.edit")}

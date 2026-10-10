@@ -392,7 +392,7 @@ function TeamMenu({
   const t = useT();
   return (
     <span className="cell-actions">
-      <OverflowMenu label={t("users.teamRowActions", { name: team.name })}>
+      <OverflowMenu label={t("table.rowActions", { name: team.name })}>
         {verbs.canRename && <RenameTeamAction team={team} />}
         {verbs.canArchive && (
           <Button variant="danger" disabled={archiving} onClick={onArchive}>

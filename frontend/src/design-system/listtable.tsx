@@ -31,7 +31,7 @@ import {
   useColumnWidths,
   useFrozenEdge,
 } from "./listtable.layout";
-import { PAGE_SIZES, usePaging } from "./listtable.paging";
+import { PAGE_SIZES, pagerSlots, usePaging } from "./listtable.paging";
 import {
   applyView,
   clearAll,
@@ -212,9 +212,6 @@ function BulkBar<Row>({
   return <SelectionBar>{selection.bar}</SelectionBar>;
 }
 
-/** Page numbers around the current one, which sits in the middle of them. */
-const PAGE_WINDOW = 3;
-
 /** Narrow enough to tuck a column away, wide enough to still read a header. */
 const MIN_COLUMN_WIDTH = 72;
 
@@ -249,6 +246,7 @@ export function ListTable<Row>({
   footer,
   hasMore = false,
   onLoadMore,
+  hideShortPager = false,
   total: serverTotal,
   perPage: controlledPerPage,
   onPerPage,
@@ -375,6 +373,8 @@ export function ListTable<Row>({
    */
   hasMore?: boolean;
   onLoadMore?: () => void;
+  /** No pager while every row fits the smallest page size, so a size the reader picked can always be undone. */
+  hideShortPager?: boolean;
   /**
    * How many rows match on the server, when it counts them — the difference
    * between "1-25 of 8,372" and "1-25 of 200 loaded so far". Undefined means
@@ -539,16 +539,17 @@ export function ListTable<Row>({
       footer={
         <>
           {footer && <div className="lt-agg">{footer}</div>}
-          {!bodyOwnsPaging && (
-            <Pager
-              current={paging.current}
-              lastPage={paging.lastPage}
-              hasMore={hasMore}
-              perPage={paging.perPage}
-              onGoto={paging.goto}
-              onPerPage={paging.setPerPage}
-            />
-          )}
+          {!bodyOwnsPaging &&
+            !(hideShortPager && fitsOnePage(rows, serverTotal, hasMore)) && (
+              <Pager
+                current={paging.current}
+                lastPage={paging.lastPage}
+                hasMore={hasMore}
+                perPage={paging.perPage}
+                onGoto={paging.goto}
+                onPerPage={paging.setPerPage}
+              />
+            )}
         </>
       }
     >
@@ -887,7 +888,12 @@ function HeaderCell<Row>({
   if (!column.sort || !sort) {
     return (
       <th className={className} role="columnheader">
-        {column.header}
+        {/* A menu column's heading is read, never drawn: forced colours would show any ink. */}
+        {column.verbs === "menu" ? (
+          <span className="sr-only">{column.header}</span>
+        ) : (
+          column.header
+        )}
         {grip}
       </th>
     );
@@ -1084,44 +1090,12 @@ function DisplayMenu<Row>({
   );
 }
 
-/**
- * A slot in the pager: a page to jump to, a gap where pages were skipped, or
- * the room a gap would take.
- */
-export type PagerSlot = number | "gap" | "room";
-
-/**
- * What the pager shows: page one, then the current page between its two
- * neighbours, with gaps marking whatever was skipped between them.
- *
- * Page one is always reachable because it is where a reader who has lost their
- * place goes back to, and walking there one Prev at a time is not going back.
- * The rest is a window rather than every page: a strip that grew a number per
- * read would end up longer than the table it belongs to.
- *
- * A gap marks pages the window skipped and nothing else. Pages the cursor could
- * still fetch are Next's to speak for: marking those with the same dots would
- * give one symbol two meanings, and the reader cannot tell from a gap on the
- * last page whether numbers were hidden or merely never asked for.
- *
- * The slots are a fixed six wide at every position — a gap and the bare ROOM
- * for one are the same width — because a strip that changed width would slide
- * Next out from under the reader between one click and the next.
- */
-export function pagerSlots(current: number, lastPage: number): PagerSlot[] {
-  const first = Math.min(
-    Math.max(1, current - Math.floor(PAGE_WINDOW / 2)),
-    Math.max(1, lastPage - PAGE_WINDOW + 1),
-  );
-  const span = Math.min(PAGE_WINDOW, lastPage - first + 1);
-  const window = Array.from({ length: span }, (_, index) => first + index);
-  return [
-    first > 1 ? 1 : "room",
-    first > 2 ? "gap" : "room",
-    ...window,
-    ...Array.from({ length: PAGE_WINDOW - span }, () => "room" as const),
-    window[span - 1] < lastPage ? "gap" : "room",
-  ];
+function fitsOnePage(
+  rows: readonly unknown[],
+  total: number | undefined,
+  hasMore: boolean,
+): boolean {
+  return !hasMore && (total ?? rows.length) <= PAGE_SIZES[0];
 }
 
 /**

@@ -52,11 +52,6 @@
   margin: 0;
 }
 
-/* A list that fits one page has no pages to step through and no size to pick. */
-.listsection > .lt .lt-foot.single {
-  display: none;
-}
-
 /* A price with its period under it keeps the column's end edge, and on a
    phone card, where figures start at the label, its start edge. */
 .listsection td.lt-num .cell-stack {

@@ -163,7 +163,7 @@ describe("stage automation report", () => {
       "Accepted",
       "Edited",
       "Rejected",
-      "Undone",
+      "Undone or corrected",
       "Details",
     ]);
     // The transition is a name, read from the start like any name.
@@ -249,7 +249,7 @@ describe("stage automation report", () => {
       "Reviewed",
       "Accepted",
       "Edited",
-      "Undone",
+      "Undone or corrected",
       "Expired",
       "Days observed",
     ]);

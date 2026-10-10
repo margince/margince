@@ -206,6 +206,8 @@ export const de = {
   "reporting.upper": "75. Perzentil",
   "reporting.data": "Als Tabelle anzeigen",
   "reporting.evidence": "Belege",
+  "reporting.evidenceStale":
+    "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und öffne die Belege dann noch einmal.",
   "reporting.details": "Details",
   "reporting.unavailable": "Nicht verfügbar",
   "reporting.restricted": "Geschützter Datensatz",
@@ -1534,6 +1536,8 @@ export const de = {
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
     "Dieser Platz hat nur Lesezugriff, daher wurde die Anfrage abgelehnt. Lass den Platz von einem Admin hochstufen.",
+  "common.versionSkew":
+    "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
   "common.retry": "Erneut versuchen",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
@@ -1604,6 +1608,7 @@ export const de = {
 
   "table.range": "{unit} {first} bis {last} von {count}",
   "table.pagination": "Seiten",
+  "table.rowActions": "Aktionen für {name}",
   "table.page": "Seite {number}",
   "table.prev": "Zurück",
   "table.next": "Weiter",
@@ -2010,7 +2015,6 @@ export const de = {
   "access.downloads_other": "{count} Dokumente heruntergeladen",
   "access.linkRequested":
     "Hat am {when} einen neuen Link angefordert. Stelle einen aus und sende ihn selbst.",
-  "access.rowActions": "Aktionen für {name}",
   "access.issueLink": "Neuen Link ausstellen",
   "access.changeCapability": "Berechtigungen ändern",
   "access.revoke": "Zugang entziehen",
@@ -2961,7 +2965,6 @@ export const de = {
   "tagAdmin.usedBy_one": "{count} Datensatz",
   "tagAdmin.usedBy_other": "{count} Datensätze",
   "tagAdmin.retired": "Stillgelegt",
-  "tagAdmin.rowActions": "Aktionen für {name}",
   "tagAdmin.retiredToast": "{name} stillgelegt",
   "tagAdmin.restoredToast": "{name} wiederhergestellt",
   "tags.archived": "archiviert",
@@ -3092,7 +3095,6 @@ export const de = {
   "leadSources.colActions": "Aktionen",
   "leadSources.leads_one": "{count} Lead",
   "leadSources.leads_other": "{count} Leads",
-  "leadSources.rowActions": "Aktionen für {label}",
   "leadSources.rename": "Umbenennen",
   "leadSources.renameTitle": "Quelle umbenennen",
   "leadSources.renameSave": "Namen speichern",
@@ -3820,6 +3822,8 @@ export const de = {
   "decision.dismiss": "Ausblenden",
   "decision.versionSkew":
     "Der Datensatz wurde nach dem Vormerken geändert. Merke ihn erneut vor, bevor du entscheidest.",
+  "decision.fxRateMoved":
+    "Der Wechselkurs hat sich geändert, nachdem dieser Vorschlag erstellt wurde, deshalb wurde der Vorschlag nicht übernommen. Für einen aktuellen Vorschlag aktualisiere die Kurse unter Einstellungen → Unternehmensprofil aus ihren Quellen.",
   "decision.reRead": "Neu laden",
   "decision.alreadyDecided":
     "Bereits entschieden. Hier ist nichts mehr zu tun.",
@@ -4523,7 +4527,6 @@ export const de = {
   "files.originUnknown": "unbekanntem Absender",
   "files.uploaded": "Hochgeladen am {when}",
   "files.hiddenBadge": "Ausgeblendet",
-  "files.rowActions": "Aktionen für {name}",
   "files.hide": "An diesem Deal ausblenden",
   "files.unhide": "Wieder an diesem Deal anzeigen",
   "files.delete": "Löschen",
@@ -5650,7 +5653,6 @@ export const de = {
   "agents.revokeGrantNamed": "Verbindung zu {client} beenden",
   "agents.colClient": "Client",
   "agents.colConnected": "Verbunden",
-  "agents.rowActions": "Aktionen für {client}",
   "agents.disconnectConfirm":
     "Damit endet die gesamte Verbindung, nicht nur ein Satz Zugangsdaten. Der Agent verliert den Zugriff beim nächsten Aufruf und kann ihn nicht erneuern. Für eine neue Verbindung muss der Zugriff erneut freigegeben werden.",
   "agents.connectHow": "MCP-Client verbinden",
@@ -5688,7 +5690,6 @@ export const de = {
   "settings.passportNoExpiry": "Kein Ablauf",
   "settings.passportLastUsedOn": "Zuletzt genutzt am {date}",
   "settings.passportExpiresOn": "Läuft am {date} ab",
-  "settings.passportActions": "Aktionen für {name}",
   "settings.revokeNamed": "{name} widerrufen",
   "settings.revokeConfirm":
     "Die Zugangsdaten des Passports werden sofort ungültig. Der Agent verliert beim nächsten Aufruf den Zugriff.",
@@ -6076,7 +6077,6 @@ export const de = {
   "notice.unassigned": "Nicht zugewiesen",
   "notice.recordUnavailable": "Datensatz nicht verfügbar",
   "notice.dutyFor": "{rule} für {contact}",
-  "notice.rowActions": "Aktionen für {duty}",
   "notice.noAcquisition": "Kein Herkunftsnachweis",
   "notice.acqOn": "{kind} am {date}",
   "notice.acqRecorded": "{kind}, erfasst am {date}",
@@ -8175,7 +8175,6 @@ export const de = {
   "auto.dateField.loadError":
     "Datumsfelder wurden nicht geladen. Versuche es erneut.",
   "auto.enabledFor": "{name} ist aktiv",
-  "auto.rowActions": "Aktionen für {name}",
   "auto.colMode": "Modus",
   "auto.colLastRun": "Letzter Lauf",
   "auto.colRuns30": "Läufe (30 Tage)",
@@ -8329,7 +8328,6 @@ export const de = {
     "Feld „{label}“ hinzugefügt. Es erscheint in Datensätzen, Filtern, Exporten und der API.",
   "cf.edit": "Bezeichnung bearbeiten",
   "cf.archive": "Feld archivieren",
-  "cf.rowActions": "Aktionen für {label}",
   "cf.archived":
     "„{label}“ archiviert. Das Feld ist bei neuen Datensätzen ausgeblendet, bleibt in Audit-Log und Verlauf erhalten und lässt sich wiederherstellen.",
   "cf.renamePrompt": "Neue Bezeichnung",
@@ -9138,7 +9136,6 @@ export const de = {
   "users.teamColumn": "Team",
   "users.teamMembersColumn": "Mitglieder",
   "users.teamParent": "Teil von {name}",
-  "users.teamRowActions": "Aktionen für {name}",
   "users.teamRename": "Umbenennen",
   "users.teamArchive": "Archivieren",
   "users.teamRenameTitle": "Team umbenennen",
@@ -9154,6 +9151,8 @@ export const de = {
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",
   "users.teamNameLabel": "Teamname",
+  "users.teamDuplicate":
+    "Ein Team mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "users.newTeamPlaceholder": "Zum Beispiel DACH Sales",
   "users.createTeam": "Team anlegen",
   "users.notArchived": "Team nicht archiviert",
@@ -9213,7 +9212,6 @@ export const de = {
   "users.invite": "Einladen",
   "users.setRole": "Rolle festlegen…",
   "users.setRoleFor": "Rolle für {name} festlegen",
-  "users.rowActions": "Aktionen für {name}",
   "users.rolesHeld": "Hat {roles}. Eine Rollenauswahl ersetzt alle.",
   "users.deactivate": "Deaktivieren",
   "users.reactivate": "Reaktivieren",
@@ -9357,7 +9355,6 @@ export const de = {
   "product.activeFilterAll": "Alle",
   "product.inactive": "Inaktiv",
   "product.archived": "Archiviert",
-  "product.rowActions": "Aktionen für {name}",
   "product.status": "Status",
   "product.pricePerMonth": "pro Monat",
   "product.pricePerQuarter": "pro Quartal",
@@ -9376,14 +9373,13 @@ export const de = {
     "Diese Vorlage archivieren? Angebote, die sie bereits verwenden, behalten ihr Layout. Neue Angebote können sie nicht mehr auswählen.",
   "template.name": "Name",
   "template.locale": "Sprache",
-  "template.isDefault": "Standard für die Sprache",
+  "template.isDefault": "Standard für diese Sprache",
   "template.header": "Kopfzeilentext",
   "template.footer": "Fußzeilentext",
   "template.localeFilter": "Sprache",
   "template.localeFilterAll": "Alle Sprachen",
   "template.localeDE": "Deutsch (DE)",
   "template.localeEN": "Englisch (US)",
-  "template.rowActions": "Aktionen für {name}",
   "template.default": "Standard",
 
   "tools.title": "Agenten-Werkzeuge",
@@ -12621,7 +12617,7 @@ export const de = {
   "stageAutomation.cleanAcceptance": "Angenommen",
   "stageAutomation.edits": "Bearbeitet",
   "stageAutomation.rejections": "Abgelehnt",
-  "stageAutomation.unsafe": "Rückgängig",
+  "stageAutomation.unsafe": "Rückgängig gemacht oder korrigiert",
   "stageAutomation.unsafeHint":
     "Wechsel, die jemand rückgängig gemacht hat oder deren Beleg als falsch markiert wurde. Ein Wechsel zählt einmal, auch wenn beides geschah.",
   "stageAutomation.observationDays": "Beobachtete Tage",

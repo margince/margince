@@ -763,11 +763,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A row's "…" menu column. The header names it for a screen reader only, and
- * the cell lets the trigger's focus ring past its exact-fit edge. */
-.lt-table th.lt-rowmenu {
-  color: transparent;
-}
+/* A row's "…" menu column: the cell lets the trigger's focus ring past its
+ * exact-fit edge. */
 .lt-table td.lt-rowmenu {
   overflow: visible;
 }

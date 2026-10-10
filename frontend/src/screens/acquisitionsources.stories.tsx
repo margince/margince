@@ -55,9 +55,9 @@ const SOURCES = {
   ],
 };
 
-// A seat that may not read deals is sent null, never a zero.
+// A seat that may not read deals is sent no count, never a zero.
 const UNCOUNTED = {
-  data: SOURCES.data.map((row) => ({ ...row, deal_count: null })),
+  data: SOURCES.data.map((row) => ({ ...row, deal_count: undefined })),
 };
 
 const DUPLICATE = {

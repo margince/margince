@@ -218,7 +218,7 @@ function EndVerb({
   }
   return (
     <span className="cell-actions">
-      <OverflowMenu label={t("agents.rowActions", { client })}>
+      <OverflowMenu label={t("table.rowActions", { name: client })}>
         <Button
           variant={state.ended ? undefined : "danger"}
           aria-label={t(

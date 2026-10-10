@@ -142,7 +142,7 @@ An offer template is a PDF layout with your brand, in German or English. Each la
 ### How do I create an offer template?
 To create an offer template in Margince, open **Settings → Products and offers** and click **New template** in the **Offer templates** panel.
 1. Fill **Name** and choose the **Language** (German or English).
-2. Set **Default for locale** to Yes or No.
+2. Set **Default for this language** to Yes or No.
 3. If you like, fill **Header text** and **Footer text**. The PDF prints the header above the buyer and the footer at the end.
 Then pick the template on an offer with **Edit header** → **Template**.
 Also called: quote template, proposal layout, letterhead.

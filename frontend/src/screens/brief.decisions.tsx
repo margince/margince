@@ -33,9 +33,14 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
-import { approvalKindLabel } from "./approvalkind";
+import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
 import { commitTray } from "./brief.decisions.commit";
-import { problemMessageOf, provenanceOf, useViewerId } from "./common";
+import {
+  isVersionSkewOf,
+  problemMessageOf,
+  provenanceOf,
+  useViewerId,
+} from "./common";
 import { worklistLaneHref } from "./worklist.header";
 import { worklistKey } from "./worklist.queries";
 
@@ -61,6 +66,18 @@ function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
   };
+}
+
+// A verdict that lost a race answered a staging that has since moved. It gets
+// the Decisions row's words for its kind, not the lost-edit sentence.
+function verdictFailure(
+  error: unknown,
+  kind: string | null,
+  t: Translator,
+): string {
+  return isVersionSkewOf(error)
+    ? t(decisionSkewKey(kind))
+    : problemMessageOf(error, t);
 }
 
 /** The deck's vocabulary, in this surface's own words. */
@@ -186,7 +203,7 @@ export function DecisionsSection({
       if (result.failure) {
         // Reported after the outcomes that DID land, and as a failure: the tray
         // keeps what it still holds and the notice under it says what stopped.
-        const message = problemMessageOf(result.failure, t);
+        const message = verdictFailure(result.failure, result.failedKind, t);
         setFailure(message);
         toast.show(message, { tone: "danger", sticky: true });
         return;
@@ -211,7 +228,7 @@ export function DecisionsSection({
       ? "failed"
       : "idle";
   const notice = commit.isError
-    ? problemMessageOf(commit.error, t)
+    ? verdictFailure(commit.error, null, t)
     : (failure ?? (alreadyDecided ? t("decision.alreadyDecided") : null));
 
   return (

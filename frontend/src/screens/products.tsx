@@ -312,7 +312,7 @@ export function ProductsAdmin() {
     verbs: "menu",
     cell: (p: Product) => (
       <span className="cell-actions">
-        <OverflowMenu label={t("product.rowActions", { name: p.name })}>
+        <OverflowMenu label={t("table.rowActions", { name: p.name })}>
           {canUpdate && (
             <EditAction
               labelled
@@ -370,6 +370,7 @@ export function ProductsAdmin() {
       </PanelBody>
       <ListTable
         state={list}
+        hideShortPager
         unit="unit.products"
         action={
           canCreate ? (

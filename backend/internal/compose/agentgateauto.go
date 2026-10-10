@@ -204,9 +204,9 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 		if got, err := strconv.ParseInt(caller, 10, 64); err != nil || got == admitted {
 			return true
 		}
-		httperr.Write(w, r, fmt.Errorf(
-			"If-Match %s is not the version this record was read at (%d) — re-read it and retry: %w",
-			caller, admitted, apperrors.ErrVersionSkew))
+		httperr.Write(w, r, &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"If-Match %s is not the version this record was read at (%d) — re-read it and retry",
+			caller, admitted)})
 		return false
 	}
 	r.Header.Set(ifMatchHeader, strconv.FormatInt(admitted, 10))

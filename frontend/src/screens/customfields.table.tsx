@@ -176,7 +176,7 @@ function FieldMenu({
   }
   return (
     <span className="cell-actions">
-      <OverflowMenu label={t("cf.rowActions", { label: field.label })}>
+      <OverflowMenu label={t("table.rowActions", { name: field.label })}>
         <Button aria-haspopup="dialog" onClick={onRename}>
           {t("cf.edit")}
         </Button>

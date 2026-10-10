@@ -2,14 +2,24 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { rowsOf } from "../api/rows";
 import { useCanWrite } from "../app/capability";
-import { Button, EmptyState } from "../design-system/atoms";
+import { Button, EmptyState, OverflowMenu } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { KeyedName } from "../design-system/keyedname";
-import { NameDialog } from "../design-system/namedialog";
+import { NameDialog, nameRefusal } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { Switch } from "../design-system/switch";
-import { type Translator, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import {
+  type PluralTranslator,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
+import type { Locale } from "../i18n/locale";
 import {
   type AcquisitionSource,
   useAcquisitionSources,
@@ -17,21 +27,18 @@ import {
   useUpdateAcquisitionSource,
 } from "./acquisitionsources.queries";
 import { QueryStates } from "./common";
-import {
-  nameRefusal,
-  rowsOf,
-  VocabCount,
-  VocabNotices,
-  VocabRowMenu,
-} from "./leadvocab.rows";
 
 function sourceColumns({
   t,
+  plural,
+  locale,
   canEdit,
   onActive,
   onRename,
 }: Readonly<{
   t: Translator;
+  plural: PluralTranslator;
+  locale: Locale;
   canEdit: boolean;
   onActive: (source: AcquisitionSource, active: boolean) => void;
   onRename: (source: AcquisitionSource) => void;
@@ -48,10 +55,16 @@ function sourceColumns({
     align: "end",
     render: (source) =>
       typeof source.deal_count === "number" ? (
-        <VocabCount count={source.deal_count} unit="acqSources.deals" />
+        formatNumber(source.deal_count, locale)
       ) : (
         <DealsWithheld />
       ),
+    folded: (source) =>
+      typeof source.deal_count === "number"
+        ? plural("acqSources.deals", source.deal_count, {
+            count: formatNumber(source.deal_count, locale),
+          })
+        : undefined,
   };
   const active: DataTableColumn<AcquisitionSource> = {
     key: "active",
@@ -71,13 +84,16 @@ function sourceColumns({
     header: t("leadSources.colActions"),
     headerHidden: true,
     fold: "end",
-    render: (source) => (
-      <VocabRowMenu
-        label={source.label}
-        canEdit={canEdit}
-        onRename={() => onRename(source)}
-      />
-    ),
+    render: (source) =>
+      canEdit && (
+        <span className="cell-actions">
+          <OverflowMenu label={t("table.rowActions", { name: source.label })}>
+            <Button onClick={() => onRename(source)}>
+              {t("leadSources.rename")}
+            </Button>
+          </OverflowMenu>
+        </span>
+      ),
   };
   return [name, deals, active, verbs];
 }
@@ -102,6 +118,8 @@ type Naming =
 // stay resolvable, so the switch retires it from pickers instead.
 export function AcquisitionSourcesCard() {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
   const query = useAcquisitionSources();
@@ -122,6 +140,8 @@ export function AcquisitionSourcesCard() {
   };
   const columns = sourceColumns({
     t,
+    plural,
+    locale,
     canEdit,
     onActive: (source, active) =>
       update.mutate({ id: source.id, body: { active } }),
@@ -159,9 +179,13 @@ export function AcquisitionSourcesCard() {
           </QueryStates>
         </PanelBody>
       )}
-      <VocabNotices
-        readOnly={!canEdit}
-        error={update.isError ? update.error : undefined}
+      <PanelNotices
+        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        refused={
+          update.isError
+            ? { title: t("leadSources.notSaved"), error: update.error }
+            : undefined
+        }
       />
       <NameDialog
         open={namingOpen}

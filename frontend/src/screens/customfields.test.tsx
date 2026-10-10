@@ -177,7 +177,8 @@ const field = (over: Partial<CustomField> = {}): CustomField => ({
   ...over,
 });
 
-const menuName = (label: string) => translate("en", "cf.rowActions", { label });
+const menuName = (label: string) =>
+  translate("en", "table.rowActions", { name: label });
 
 // The row's own menu, so a test cannot pass by opening another row's.
 async function openFieldMenu(label: string) {

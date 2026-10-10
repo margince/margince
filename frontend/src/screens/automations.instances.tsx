@@ -404,7 +404,7 @@ function AutomationVerbs({
     return null;
   }
   return (
-    <OverflowMenu label={t("auto.rowActions", { name: automation.name })}>
+    <OverflowMenu label={t("table.rowActions", { name: automation.name })}>
       {canEdit && <Button onClick={onEdit}>{t("trust.edit")}</Button>}
       {canViewRuns && (
         <>

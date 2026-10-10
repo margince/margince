@@ -27,6 +27,13 @@ func TestDisqualifyReasonTwinsAreRenamedBeforeTheLabelIsHeldOnce(t *testing.T) {
 	if _, err := conn.Exec(ctx, `DROP INDEX lead_disqualify_reason_label_once`); err != nil {
 		t.Fatalf("restoring the schema the migration was written against: %v", err)
 	}
+	var seeded []string
+	// Reset keeps the reason table, so the twins would outlive this test.
+	t.Cleanup(func() {
+		if _, err := conn.Exec(ctx, `DELETE FROM lead_disqualify_reason WHERE id = ANY($1::uuid[])`, seeded); err != nil {
+			t.Errorf("removing the seeded twins: %v", err)
+		}
+	})
 	seed := func(label string, system bool, createdAt string) string {
 		t.Helper()
 		var id string
@@ -35,6 +42,7 @@ func TestDisqualifyReasonTwinsAreRenamedBeforeTheLabelIsHeldOnce(t *testing.T) {
 			RETURNING id::text`, label, system, createdAt).Scan(&id); err != nil {
 			t.Fatalf("seeding %q: %v", label, err)
 		}
+		seeded = append(seeded, id)
 		return id
 	}
 	builtIn := seed("Went silent", true, "2026-03-01T00:00:00Z")

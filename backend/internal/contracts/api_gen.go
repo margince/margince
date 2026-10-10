@@ -21897,7 +21897,7 @@ type AcquisitionSource struct {
 	Active    bool       `json:"active"`
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 
-	// DealCount Live deals carrying this key that the caller may see. Null when the caller may not read deals, because a zero would claim no deal carries it. Set on the list read; absent on the record a write answers.
+	// DealCount Live deals carrying this key that the caller may see. Absent when the caller may not read deals, because a zero would claim no deal carries it. Set on the list read; absent on the record a write answers.
 	DealCount *int               `json:"deal_count,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 
@@ -44753,7 +44753,7 @@ type SubscriptionConfirmationPageState string
 type Tag struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// CarriedBy How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read; absent on the record a write answers.
+	// CarriedBy How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read that asks `with_carried_by`; absent otherwise.
 	CarriedBy   *int               `json:"carried_by,omitempty"`
 	Color       *TagColor          `json:"color,omitempty"`
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
@@ -54705,6 +54705,9 @@ type UpdateStageExitCriterionParams struct {
 type ListTagsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+
+	// WithCarriedBy Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in the workspace, so a caller that only needs the words leaves it off.
+	WithCarriedBy *bool `form:"with_carried_by,omitempty" json:"with_carried_by,omitempty"`
 }
 
 // UpdateTagParams defines parameters for UpdateTag.
@@ -105507,6 +105510,19 @@ func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Reque
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "with_carried_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "with_carried_by", r.URL.Query(), &params.WithCarriedBy, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_carried_by"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_carried_by", Err: err})
 		}
 		return
 	}

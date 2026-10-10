@@ -242,7 +242,7 @@ function ParticipantRow({
         {revoked ? <Badge>{t("access.state.revokedBadge")}</Badge> : null}
         {mayManage && !revoked ? (
           <OverflowMenu
-            label={t("access.rowActions", { name: participant.full_name })}
+            label={t("table.rowActions", { name: participant.full_name })}
           >
             <Button variant="ghost" onClick={() => setConfirming("reissue")}>
               {t("access.issueLink")}

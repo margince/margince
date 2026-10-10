@@ -152,7 +152,7 @@ describe("OfferTemplatesAdmin", () => {
       return labels;
     };
     expect(await offered(/^Language/)).toEqual(["German (DE)", "English (US)"]);
-    expect(await offered(/^Default for locale/)).toEqual(["No", "Yes"]);
+    expect(await offered(/^Default for this language/)).toEqual(["No", "Yes"]);
   });
 
   it("surfaces a 409 offer_template_default_conflict detail verbatim on create", async () => {

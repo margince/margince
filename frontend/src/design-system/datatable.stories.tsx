@@ -583,3 +583,93 @@ export const RowDetailPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+// A pinned table that scrolls, with a row open. The detail spans every column,
+// so its content pins to the box's start at the box's width.
+export const PinnedWithDetailOpen: Story = {
+  render: () => (
+    <div style={{ maxWidth: 420 }}>
+      <Panel title="AI spend">
+        <DataTable
+          bleed
+          stickyFirst
+          label="Spend by task"
+          columns={USAGE_COLUMNS}
+          rows={DEMO_USAGE}
+          rowKey={(row) => row.id}
+          detail={{
+            header: "Detail",
+            toggleLabel: (row) => `Show the calls of ${row.task}`,
+            render: (row) => (
+              <p>
+                {row.task} ran {row.calls} calls this month, most of them inside
+                working hours.
+              </p>
+            ),
+          }}
+        />
+      </Panel>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const toggle = await within(canvasElement).findByRole("button", {
+      name: "Show the calls of Drafting a reply",
+    });
+    await userEvent.click(toggle);
+    const box = canvasElement.querySelector<HTMLElement>(
+      ".table-scroll-sticky",
+    );
+    const text = canvasElement.querySelector<HTMLElement>(
+      "tr.datatable-detail:not([hidden]) td > p",
+    );
+    if (box === null || text === null) {
+      throw new Error("the pinned table drew no open detail");
+    }
+    box.scrollLeft = box.scrollWidth;
+    await waitFor(() => expect(box.scrollLeft).toBeGreaterThan(0));
+    const frame = box.getBoundingClientRect();
+    const shown = text.getBoundingClientRect();
+    await expect(shown.left).toBeGreaterThanOrEqual(frame.left);
+    await expect(shown.right).toBeLessThanOrEqual(frame.right);
+  },
+};
+
+type DemoSource = { id: string; name: string; leads: number };
+const SOURCES: DemoSource[] = [
+  { id: "s1", name: "Trade show", leads: 12 },
+  { id: "s2", name: "Referral", leads: 1 },
+];
+
+// Folded, the heading is out of sight, so a figure says its unit through
+// `folded`; at full width the bare figure stands under its heading.
+export const FoldedFigurePhone: Story = {
+  render: () => (
+    <Panel title="Lead sources">
+      <DataTable<DemoSource>
+        bleed
+        fold
+        label="Lead sources"
+        rows={SOURCES}
+        rowKey={(row) => row.id}
+        columns={[
+          { key: "name", header: "Source", render: (row) => row.name },
+          {
+            key: "leads",
+            header: "Leads",
+            align: "end",
+            render: (row) => String(row.leads),
+            folded: (row) =>
+              row.leads === 1 ? "1 lead" : `${row.leads} leads`,
+          },
+        ]}
+      />
+    </Panel>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table", { name: "Lead sources" });
+    await expect(canvas.getByText("12 leads")).toBeVisible();
+  },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

@@ -42,7 +42,7 @@ export function useTagCatalog(enabled = true) {
     queryFn: async () => {
       return unwrap(
         await api.GET("/tags", {
-          params: { query: { include_archived: true } },
+          params: { query: { include_archived: true, with_carried_by: true } },
         }),
       );
     },

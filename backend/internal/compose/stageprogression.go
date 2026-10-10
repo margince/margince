@@ -377,8 +377,8 @@ func refuseAStaleAutomaticMove(
 		// a refusal of THIS row and carries on, which is right — the rule
 		// changed under a decision that had not landed yet, and every other
 		// card still deserves its pass.
-		return fmt.Errorf("the rule changed before this move landed (%s): %w",
-			verdict.Why, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"the rule changed before this move landed (%s)", verdict.Why)}
 	}
 	return nil
 }

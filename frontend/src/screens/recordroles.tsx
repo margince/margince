@@ -1,32 +1,34 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
+import { rowsOf } from "../api/rows";
 import { useCanWrite } from "../app/capability";
 import {
   Button,
   Checkbox,
   EmptyState,
   Field,
+  OverflowMenu,
   TextInput,
 } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { KeyedName } from "../design-system/keyedname";
-import { NameDialog } from "../design-system/namedialog";
+import {
+  NameDialog,
+  nameRefusal,
+  useRefusedName,
+} from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
+import { useSinglePress } from "../design-system/presslatch";
 import { Switch } from "../design-system/switch";
 import { INTL_LOCALE } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryStates } from "./common";
-import {
-  nameRefusal,
-  rowsOf,
-  VocabNotices,
-  VocabRowMenu,
-} from "./leadvocab.rows";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -109,13 +111,16 @@ function roleColumns({
       header: t("leadSources.colActions"),
       headerHidden: true,
       fold: "end",
-      render: (role) => (
-        <VocabRowMenu
-          label={role.label}
-          canEdit={canEdit}
-          onRename={() => onRename(role)}
-        />
-      ),
+      render: (role) =>
+        canEdit && (
+          <span className="cell-actions">
+            <OverflowMenu label={t("table.rowActions", { name: role.label })}>
+              <Button onClick={() => onRename(role)}>
+                {t("leadSources.rename")}
+              </Button>
+            </OverflowMenu>
+          </span>
+        ),
     },
   ];
 }
@@ -164,15 +169,17 @@ function AddRoleDialog({
 }>) {
   const t = useT();
   const [label, setLabel] = useState("");
-  const [sent, setSent] = useState<string | null>(null);
   const [recordTypes, setRecordTypes] = useState<AssignmentRecordType[]>([]);
   const [assigneeKinds, setAssigneeKinds] = useState<AssignmentSubjectKind[]>(
     [],
   );
   const name = label.trim();
   const refused = nameRefusal(create.error, t, "recordRoles.duplicate");
-  const nameProblem =
-    refused.nameProblem && name === sent ? refused.nameProblem : undefined;
+  const { refusedName: nameProblem, markSent } = useRefusedName(
+    name,
+    refused.nameProblem,
+  );
+  const singlePress = useSinglePress(create.isPending);
   const ready =
     name !== "" &&
     recordTypes.length > 0 &&
@@ -180,7 +187,7 @@ function AddRoleDialog({
     !nameProblem;
   const save = () => {
     if (!ready || create.isPending) return;
-    setSent(name);
+    markSent();
     create.mutate(
       {
         label: name,
@@ -204,10 +211,10 @@ function AddRoleDialog({
     >
       <form
         className="form-stack"
-        onSubmit={(event) => {
+        onSubmit={singlePress((event: FormEvent) => {
           event.preventDefault();
           save();
-        }}
+        })}
       >
         <Field
           label={t("recordRoles.addLabel")}
@@ -306,9 +313,13 @@ export function RecordRolesCard() {
           </QueryStates>
         </PanelBody>
       )}
-      <VocabNotices
-        readOnly={!canEdit}
-        error={update.isError ? update.error : undefined}
+      <PanelNotices
+        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        refused={
+          update.isError
+            ? { title: t("leadSources.notSaved"), error: update.error }
+            : undefined
+        }
       />
       {adding && (
         <AddRoleDialog

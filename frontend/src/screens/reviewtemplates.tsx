@@ -99,7 +99,9 @@ function TemplateGroup({
                 longer offered rather than meeting a name the product denies. */}
             {!template.active && <Badge>{t("reviewTemplates.retired")}</Badge>}
             {onEdit && (
-              <Button onClick={onEdit}>{t("reviewTemplates.edit")}</Button>
+              <Button aria-describedby={headId} onClick={onEdit}>
+                {t("reviewTemplates.edit")}
+              </Button>
             )}
           </span>
         }

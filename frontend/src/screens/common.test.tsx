@@ -191,8 +191,23 @@ describe("problemMessage", () => {
 
   it("keeps the server detail for an unrelated code even with a translator", () => {
     expect(
-      problemMessage({ code: "version_skew", detail: "record changed" }, t),
-    ).toBe("record changed");
+      problemMessage({ code: "conflict", detail: "name already taken" }, t),
+    ).toBe("name already taken");
+  });
+
+  it("says a lost version race in the reader's language", () => {
+    const german = (key: Parameters<typeof translate>[1]) =>
+      translate("de", key);
+    expect(
+      problemMessage(
+        {
+          code: "version_skew",
+          detail:
+            "This record changed after you opened it. Reload it to see the change, then make yours again.",
+        },
+        german,
+      ),
+    ).toBe(german("common.versionSkew"));
   });
 });
 

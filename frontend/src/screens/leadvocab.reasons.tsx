@@ -2,14 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
+import { rowsOf } from "../api/rows";
 import { useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { NameDialog } from "../design-system/namedialog";
+import { NameDialog, nameRefusal } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import {
@@ -26,13 +28,7 @@ import {
   type LeadDisqualifyReason,
   useLeadDisqualifyReasons,
 } from "./leadsources";
-import {
-  nameRefusal,
-  rowsOf,
-  VocabCount,
-  VocabNotices,
-  VocabRowMenu,
-} from "./leadvocab.rows";
+import { leadsColumn, VocabRowMenu } from "./leadvocab.rows";
 
 type ReasonPatch = { id: string; label?: string; active?: boolean };
 
@@ -123,14 +119,7 @@ function reasonColumns({
         </span>
       ),
     },
-    {
-      key: "leads",
-      header: t("leadSources.colLeads"),
-      align: "end",
-      render: (reason) => (
-        <VocabCount count={reason.lead_count ?? 0} unit="leadSources.leads" />
-      ),
-    },
+    leadsColumn({ t, plural, locale }, (reason) => reason.lead_count ?? 0),
     {
       key: "active",
       header: t("leadSources.colActive"),
@@ -181,6 +170,9 @@ export function LeadDisqualifyReasonsCard() {
   const [naming, setNaming] = useState<Naming>({ mode: "create" });
   const [namingOpen, setNamingOpen] = useState(false);
   const [removing, setRemoving] = useState<LeadDisqualifyReason | null>(null);
+  // The removed row takes its menu with it, so focus lands on the card's verb.
+  const removed = useRef(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
   const reasons = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
   const refused = nameRefusal(write.error, t, "leadReasons.duplicate");
@@ -206,7 +198,7 @@ export function LeadDisqualifyReasonsCard() {
       title={t("leadReasons.title")}
       titleAction={
         canCreate && (
-          <Button onClick={() => open({ mode: "create" })}>
+          <Button ref={addVerb} onClick={() => open({ mode: "create" })}>
             {t("leadReasons.newLabel")}
           </Button>
         )
@@ -232,9 +224,13 @@ export function LeadDisqualifyReasonsCard() {
           </QueryStates>
         </PanelBody>
       )}
-      <VocabNotices
-        readOnly={!canEdit}
-        error={update.isError ? update.error : undefined}
+      <PanelNotices
+        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        refused={
+          update.isError
+            ? { title: t("leadSources.notSaved"), error: update.error }
+            : undefined
+        }
       />
       <NameDialog
         open={namingOpen}
@@ -268,6 +264,7 @@ export function LeadDisqualifyReasonsCard() {
           remove.reset();
           setRemoving(null);
         }}
+        returnFocusTo={() => (removed.current ? addVerb.current : null)}
         title={t("leadReasons.removeTitle")}
         confirmLabel={t("leadSources.remove")}
         confirmVariant="danger"
@@ -275,7 +272,12 @@ export function LeadDisqualifyReasonsCard() {
         error={remove.isError ? problemMessageOf(remove.error, t) : null}
         onConfirm={() => {
           if (removing) {
-            remove.mutate(removing.id, { onSuccess: () => setRemoving(null) });
+            remove.mutate(removing.id, {
+              onSuccess: () => {
+                removed.current = true;
+                setRemoving(null);
+              },
+            });
           }
         }}
       >

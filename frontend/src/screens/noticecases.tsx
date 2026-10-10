@@ -426,7 +426,7 @@ function DutyMenu({
     return null;
   }
   return (
-    <OverflowMenu label={t("notice.rowActions", { duty: dutyName(row, t) })}>
+    <OverflowMenu label={t("table.rowActions", { name: dutyName(row, t) })}>
       {sendable && (
         <Button aria-haspopup="dialog" onClick={() => onSend(row)}>
           {t("noticeDuty.sendNotice")}

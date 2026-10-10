@@ -202,3 +202,57 @@ export function sourceFilterOptions(
     })),
   ];
 }
+
+export type SourcePatch = {
+  id: string;
+  label?: string;
+  intent?: LeadSourceIntent;
+  active?: boolean;
+};
+type NewSource = { label: string; key?: string; intent: LeadSourceIntent };
+
+async function createSource(body: NewSource) {
+  return unwrap(await api.POST("/lead-sources", { body }));
+}
+
+async function patchSource({ id, ...body }: SourcePatch) {
+  return unwrap(
+    await api.PATCH("/lead-sources/{id}", { params: { path: { id } }, body }),
+  );
+}
+
+// One mutation per write, so a refusal speaks where it was asked. The dialogs
+// own create, rename and remove; the card owns adopt and the row controls.
+export function useSourceMutations() {
+  const queryClient = useQueryClient();
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: LEAD_SOURCES_KEY });
+    // The leads list and its create form render labels off this list.
+    void queryClient.invalidateQueries({ queryKey: LEAD_LIST_KEY });
+  };
+  const create = useMutation({
+    mutationFn: createSource,
+    onSuccess: invalidate,
+  });
+  const adopt = useMutation({
+    mutationFn: createSource,
+    onSuccess: invalidate,
+  });
+  const update = useMutation({
+    mutationFn: patchSource,
+    onSuccess: invalidate,
+  });
+  const rename = useMutation({
+    mutationFn: patchSource,
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      unwrap(
+        await api.DELETE("/lead-sources/{id}", { params: { path: { id } } }),
+      );
+    },
+    onSuccess: invalidate,
+  });
+  return { create, adopt, update, rename, remove };
+}

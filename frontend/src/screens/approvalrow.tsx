@@ -30,7 +30,7 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import { approvalKindLabel } from "./approvalkind";
+import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import {
@@ -276,7 +276,8 @@ export function ApprovalRow({
 
   const problem =
     decide.error instanceof ProblemError ? decide.error.problem : null;
-  const skew = problem ? isVersionSkew(problem) : false;
+  const skewKey =
+    problem && isVersionSkew(problem) ? decisionSkewKey(approval.kind) : null;
   const alreadyDecided = problem ? isAlreadyDecided(problem) : false;
 
   // The draft is seeded with what the CONTROL will show, not with what the
@@ -396,7 +397,7 @@ export function ApprovalRow({
           )}
           <DecideOutcome
             decide={decide}
-            skew={skew}
+            skewKey={skewKey}
             alreadyDecided={alreadyDecided}
             onReRead={reRead}
           />

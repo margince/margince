@@ -329,9 +329,9 @@ open**, and how many **Expired**. An expired idea is one nobody answered in time
 not count as a no.
 
 The reviewed ones are split into **Accepted** (as proposed), **Edited**
-(accepted after edits), **Rejected**, and **Undone**. That last one is a move
-that was undone, or whose evidence they marked wrong. Those four are shown as a
-share of what was reviewed.
+(accepted after edits), **Rejected**, and **Undone or corrected**. That last
+one is a move that was undone, or whose evidence they marked wrong. Those four
+are shown as a share of what was reviewed.
 
 It also reports **Days observed**, from the first reviewed idea to the last. It
 says why that counts: "A good rate from one afternoon is not a track record."
@@ -342,7 +342,7 @@ each kind of evidence, such as a signed document, was accepted as proposed.
 
 ### How do I set up stage automation?
 To let Margince move deals between stages by itself, open **Settings** → **Stage automation** (in the **Sales** group). Switch a stage move on under **Transition rules**.
-1. Pick the pipeline and read each stage move's record: **Reviewed**, **Accepted**, **Rejected**, **Undone**, and **Days observed** in its details.
+1. Pick the pipeline and read each stage move's record. Check **Reviewed**, **Accepted**, **Rejected** and **Undone or corrected**, then **Days observed** in its details.
 2. Under **Transition rules**, turn on the stage move you trust.
 
 Nothing moves at once. Margince keeps suggesting moves for you to check until the record is good enough, then moves deals and tells you after. Changing a rule needs permission to edit pipelines. Also called: automatic stage moves, pipeline automation.

@@ -225,6 +225,7 @@ function TransitionRule({
               rule={suspended}
               pipelineId={pipelineId}
               transitionLabel={label}
+              transitionLabelId={props["aria-labelledby"]}
             />
           )}
           <Switch
@@ -277,10 +278,13 @@ function ResumeRule({
   rule,
   pipelineId,
   transitionLabel,
+  transitionLabelId,
 }: Readonly<{
   rule: TransitionPolicy;
   pipelineId: string;
   transitionLabel: string;
+  /** The row's name, so each "Resume" says which transition it starts. */
+  transitionLabelId: string;
 }>) {
   const t = useT();
   const [asking, setAsking] = useState(false);
@@ -305,7 +309,10 @@ function ResumeRule({
 
   return (
     <>
-      <Button onClick={() => setAsking(true)}>
+      <Button
+        aria-describedby={transitionLabelId}
+        onClick={() => setAsking(true)}
+      >
         {t("stageAutomation.resume")}
       </Button>
       <ConfirmModal

@@ -409,4 +409,36 @@ describe("stage automation rules", () => {
     expect(within(row).getByRole("button", { name: "Resume" })).toBeTruthy();
     expect(within(row).getByRole("switch")).toBeTruthy();
   });
+
+  it("says which transition each Resume starts again", async () => {
+    const suspendedAt = {
+      suspended_at: "2026-09-03T10:00:00Z",
+      suspended_reason: "too many moves were undone",
+    };
+    const { fetchStub } = rulesStub({
+      ...RULES,
+      data: [
+        { ...RULES.data[0], ...suspendedAt },
+        {
+          ...RULES.data[0],
+          id: "r2",
+          from_stage_id: "s2",
+          to_stage_id: "s3",
+          ...suspendedAt,
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchStub);
+    render(<StageAutomationCard />);
+
+    await screen.findAllByText(/too many moves were undone/);
+    for (const transition of [
+      "Discovery → Negotiation",
+      "Negotiation → Contract",
+    ]) {
+      expect(
+        screen.getByRole("button", { name: "Resume", description: transition }),
+      ).toBeTruthy();
+    }
+  });
 });

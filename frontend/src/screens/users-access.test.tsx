@@ -305,7 +305,7 @@ describe("AccessPreviewPanel", () => {
 async function archiveVia(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByRole("button", {
-      name: en["users.teamRowActions"].replace("{name}", "Nord"),
+      name: en["table.rowActions"].replace("{name}", "Nord"),
     }),
   );
   await user.click(
@@ -459,7 +459,7 @@ describe("TeamsCard", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: en["users.teamRowActions"].replace("{name}", "Nord"),
+        name: en["table.rowActions"].replace("{name}", "Nord"),
       }),
     );
     await user.click(
@@ -825,7 +825,7 @@ describe("TeamsCard membership", () => {
     ).toBeNull();
     expect(
       screen.queryByRole("button", {
-        name: en["users.teamRowActions"].replace("{name}", "Nord"),
+        name: en["table.rowActions"].replace("{name}", "Nord"),
       }),
     ).toBeNull();
   });
@@ -848,7 +848,7 @@ describe("TeamsCard membership", () => {
     await user.keyboard("{Escape}");
     await user.click(
       await screen.findByRole("button", {
-        name: en["users.teamRowActions"].replace("{name}", "Nord"),
+        name: en["table.rowActions"].replace("{name}", "Nord"),
       }),
     );
     expect(
@@ -877,7 +877,7 @@ describe("TeamsCard membership", () => {
     expect(screen.queryByText("Ada Inside")).toBeNull();
     expect(
       screen.queryByRole("button", {
-        name: en["users.teamRowActions"].replace("{name}", "Nord"),
+        name: en["table.rowActions"].replace("{name}", "Nord"),
       }),
     ).toBeNull();
     // Nothing in the user roster would be shown, so it is never walked.

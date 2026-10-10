@@ -36,7 +36,7 @@
 1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1436 frontend/src/design-system/listtable.test.tsx
 1356 frontend/src/app/agentrail.tsx
-1212 frontend/src/design-system/listtable.tsx
+1185 frontend/src/design-system/listtable.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
 1903 frontend/src/screens/contactpage.stories.tsx
 1232 frontend/src/screens/analytics.tsx
@@ -92,7 +92,7 @@
 795 frontend/src/screens/common.tsx
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
 850 frontend/src/screens/settingscatalog.ts
-624 frontend/src/screens/customfields.tsx
+590 frontend/src/screens/customfields.tsx
 922 frontend/src/screens/contactprovider.tsx
 887 frontend/src/screens/share.tsx
 848 frontend/src/screens/integrations-provider.tsx

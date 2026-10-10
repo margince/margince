@@ -19,8 +19,8 @@ import {
   type ListColumn,
   ListTable,
   type ListView,
-  pagerSlots,
 } from "./listtable";
+import { pagerSlots } from "./listtable.paging";
 import { pickOption } from "./select-testing";
 
 // The list surface (design-system/listtable.tsx) on its own props: the query

@@ -131,9 +131,9 @@ func ResolveWritePin(in WritePinInputs) (WritePin, error) {
 	if callerPin != nil {
 		disagrees := in.GateRead && *callerPin != admitted
 		if disagrees && !in.ApprovalSpent {
-			return WritePin{}, fmt.Errorf(
-				"version %d is not the version this record was read at (%d) — re-read it and retry: %w",
-				*callerPin, admitted, apperrors.ErrVersionSkew)
+			return WritePin{}, &apperrors.VersionSkewError{Message: fmt.Sprintf(
+				"version %d is not the version this record was read at (%d) — re-read it and retry",
+				*callerPin, admitted)}
 		}
 		return WritePin{
 			Version: *callerPin, Source: PinCaller,

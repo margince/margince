@@ -4,12 +4,12 @@
 import { useCanWrite } from "../app/capability";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import { QueryGate } from "./common";
 import { useLeadSettings, useUpdateLeadSettings } from "./leadsources";
-import { VocabNotices } from "./leadvocab.rows";
 
 // Every role reads these cards and only the custom_field write verbs change
 // them, so a control disables with the reason rather than hide.
@@ -84,7 +84,13 @@ export function LeadHandlingCard() {
         )}
       </QueryGate>
       {/* This card's rows are switches every seat may flip, so no posture. */}
-      <VocabNotices error={update.isError ? update.error : undefined} />
+      <PanelNotices
+        refused={
+          update.isError
+            ? { title: t("leadSources.notSaved"), error: update.error }
+            : undefined
+        }
+      />
     </Panel>
   );
 }
