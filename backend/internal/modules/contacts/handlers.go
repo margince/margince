@@ -159,7 +159,7 @@ func (h Handlers) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros 
 }
 
 // WithGrantCarrier wires the seam that carries the shares on a retiring record
-// onto the survivor — see grantcarry.go.
+// onto the survivor (grantcarry.go).
 func (h Handlers) WithGrantCarrier(carrier GrantCarrier) Handlers {
 	h.store = h.store.WithGrantCarrier(carrier)
 	return h

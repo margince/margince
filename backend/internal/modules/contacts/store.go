@@ -77,7 +77,7 @@ type Store struct {
 	consentCarrier ConsentSatelliteCarrier
 	introCarrier   IntroCarrier
 	// grantCarrier moves the shares on a retiring record; nil refuses a merge
-	// that would strand one — see grantcarry.go.
+	// that would strand one (grantcarry.go).
 	grantCarrier GrantCarrier
 }
 

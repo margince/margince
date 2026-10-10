@@ -7,7 +7,7 @@ package compose
 
 // A merge carries the shares on the retired record onto the survivor. A
 // grantee who held a share on both keeps one, with the higher access and the
-// later expiry, and every change is audited on the record it changed.
+// later expiry. Every change is audited on the record it changed.
 
 import (
 	"context"

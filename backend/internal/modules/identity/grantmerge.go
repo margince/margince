@@ -3,9 +3,9 @@
 
 package identity
 
-// A merge joins two records of one real contact, company or lead, so a share
+// A merge joins two records of one real contact, company or lead. A share
 // given on the retired record follows it onto the survivor. Contacts owns the
-// merge and asks for this inside its own transaction; identity owns the grant
+// merge and asks for this inside its own transaction. Identity owns the grant
 // rows and the audit shape every grant change is recorded in.
 
 import (
@@ -64,9 +64,9 @@ func grantsOnRecord(ctx context.Context, tx pgx.Tx, recordType string, recordID 
 }
 
 // carryGrant moves one grant, or folds it into the grant its grantee already
-// holds on the survivor. The write-identity lock is the one CreateRecordGrant
-// takes, so a share asserted on the survivor at the same moment cannot slip a
-// second row in under the unique key.
+// holds on the survivor. It takes the write-identity lock CreateRecordGrant
+// takes. A share asserted on the survivor at the same moment then waits instead
+// of adding a second row under the unique key.
 func carryGrant(ctx context.Context, tx pgx.Tx, retired grantRow, to ids.UUID, now time.Time) error {
 	onSurvivor := CreateGrantInput{
 		RecordType: retired.RecordType, RecordID: to,
@@ -86,7 +86,7 @@ func carryGrant(ctx context.Context, tx pgx.Tx, retired grantRow, to ids.UUID, n
 }
 
 // moveGrant re-points one grant at the survivor. It records an unshare on the
-// retired record and a share on the survivor, so each record's history says
+// retired record and a share on the survivor. Each record's history then says
 // who could reach it and when that changed.
 func moveGrant(ctx context.Context, tx pgx.Tx, retired grantRow, to ids.UUID) error {
 	moved, err := scanGrant(tx.QueryRow(ctx, `UPDATE record_grant SET record_id = $2, version = version + 1

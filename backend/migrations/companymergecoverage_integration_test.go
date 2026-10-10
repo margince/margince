@@ -53,8 +53,8 @@ var mergePathFiles = []string{
 // companyFKsTheMergeLeaves are the company-pointing columns the merge
 // deliberately does not move, each with the reason moving it would be wrong.
 //
-// gatekit reports an entry that stops matching, so a waiver cannot quietly
-// outlive the column it was written for.
+// gatekit reports an entry that stops matching, so a waiver cannot outlive the
+// column it was written for.
 var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"deal_suggestion.company_id":      "a suggestion is Deal Scout's reading of ONE company's evidence, fingerprinted over that company's id and held to one open suggestion per company, so a moved row could collide with the survivor's own and would hash differently from anything the survivor is offered. The merge archives the retired company instead, which the next scout pass reads as a suggestion that no longer stands (superseded); the evidence the merge relinks raises the survivor's own suggestion",
 	"tag_suggestion.company_id":       "a tag suggestion is the tag scout's reading of ONE record's evidence, held to one open suggestion per tag and record, so a moved row could collide with the survivor's own. The merge archives the retired company, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion",

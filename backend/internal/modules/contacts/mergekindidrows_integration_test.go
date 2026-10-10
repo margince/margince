@@ -5,8 +5,9 @@
 
 package contacts
 
-// What a merge does with the rows a reader owns about a record: an unsent
-// draft, a verdict on an AI claim, a notice and a plan line. The author of an inherited value is covered here too.
+// What a merge does with the rows a reader owns about a record. They are an
+// unsent draft, a verdict on an AI claim, a notice and a plan line. The author of an
+// inherited value is covered here too.
 
 import (
 	"context"
