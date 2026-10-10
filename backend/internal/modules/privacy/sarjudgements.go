@@ -16,19 +16,41 @@ package privacy
 
 import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
-// sarJudgementSections gather the conclusions, reached by the same two arms the
-// Art. 17 erasure reaches them by.
+// sarSubjectMessages is every activity a judgement about the subject can rest
+// on, and the one set all three sections below read from: linked to them, a
+// conversation they took part in (by contact, address or chat account), or
+// mail that named one of their addresses. A link alone misses the ordinary
+// shapes since ADR-0072 — a sender linked to nobody, a message filed only to
+// their company or deal, a second recipient on a thread — and the export would
+// then report itself complete while missing what we concluded about that mail.
 //
-// BOTH ARMS, and the second is the one that matters. A request carrying no
-// contact link is the ordinary shape since ADR-0072 — a deferred or
-// still-unsure sender produces activities linked to nobody — and the settlement
-// pass judges one happily, because its candidate read requires no link either.
-// An export walking links alone would hand the subject a package silently
-// missing the judgements about exactly that mail, while reporting itself
-// complete. The erasure and the export have to give one answer to "which of
-// these are this subject's", which is why both spell it with the same two
-// selectors.
+// Unlike the erasure selectors it keeps rows shared with another contact and
+// rows under a legal hold: those exclusions protect what erasure must not
+// destroy, and Art. 15 owes the subject access to both. $1 is the contact; $2
+// the subject's addresses, already lowercased by the contact_email CHECK.
+const sarSubjectMessages = `
+	SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1
+	UNION
+	SELECT ap.activity_id FROM activity_participant ap
+	  JOIN activity pa ON pa.id = ap.activity_id
+	 WHERE ap.contact_id = $1
+	    OR ap.address = ANY($2)
+	    OR (ap.channel_user_id IS NOT NULL AND (pa.channel_provider, ap.channel_user_id) IN (
+	        SELECT provider, channel_user_id FROM contact_channel_identity WHERE contact_id = $1))
+	UNION
+	SELECT m.id FROM activity m WHERE m.counterparty_email = ANY($2)
+	UNION
+	SELECT d.activity_id FROM comms_outbound d
+	 WHERE d.activity_id IS NOT NULL AND EXISTS (
+	       SELECT 1 FROM jsonb_array_elements_text(
+	                      d.recipients || d.cc || coalesce(d.bcc, '[]'::jsonb)) AS addr
+	        WHERE lower(addr) = ANY($2))`
+
+// sarJudgementSections gather the conclusions. Each section names both
+// arguments, because args REPLACES the default rather than adding to it: one
+// that passed only the contact would leave $2 unbound.
 func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, emails []string) []sarSection {
+	subject := []any{contactID, emails}
 	return []sarSection{
 		// What we concluded the subject's replies MEANT, and who concluded it.
 		// The history is exported rather than the activity's current column
@@ -47,8 +69,7 @@ func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 		          h.activity_id, a.occurred_at
 		   FROM activity_reply_verdict_history h
 		   JOIN activity a ON a.id = h.activity_id
-		   WHERE h.activity_id IN (
-		         SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`, nil},
+		   WHERE h.activity_id IN (` + sarSubjectMessages + `)`, subject},
 		// And what we concluded our own reply DID about what they asked. The
 		// `remaining` sentence travels: it is the one place the package can say
 		// we recorded an outstanding obligation TO the subject, and a settlement
@@ -64,13 +85,8 @@ func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 		   FROM activity_request_settlement s
 		   JOIN activity asked ON asked.id = s.request_activity_id
 		   LEFT JOIN activity answered ON answered.id = s.judged_through_activity_id
-		   WHERE s.request_activity_id IN (` + subjectOnlyActivities + `)
-		      OR s.request_activity_id IN (` + unlinkedSubjectMail + `)`,
-			// BOTH arguments, because args REPLACES the default rather than
-			// adding to it: a section naming its own list owns the whole list,
-			// and one that passed only the addresses would leave $1 holding an
-			// array where the selectors want the contact.
-			[]any{contactID, emails},
+		   WHERE s.request_activity_id IN (` + sarSubjectMessages + `)`,
+			subject,
 		},
 		// What a deal's stage ledger read out of the subject's messages. The
 		// criterion is named by its label, because a bare id tells the subject
@@ -81,7 +97,6 @@ func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 		          ev.source_id AS activity_id, c.label AS criterion
 		   FROM deal_stage_evidence ev
 		   JOIN stage_exit_criterion c ON c.id = ev.criterion_id
-		   WHERE ev.source_type = 'activity' AND ev.source_id IN (
-		         SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`, nil},
+		   WHERE ev.source_type = 'activity' AND ev.source_id IN (` + sarSubjectMessages + `)`, subject},
 	}
 }
