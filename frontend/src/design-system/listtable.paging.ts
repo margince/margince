@@ -224,8 +224,9 @@ const PAGE_WINDOW = 3;
  */
 export type PagerSlot = number | "gap" | "room";
 
-/** Page one stays reachable because a lost reader goes back there. Six slots at
- *  every position, so Next never slides out from under the reader between clicks. */
+/** Page one stays reachable because a lost reader goes back there. A gap marks
+ *  only skipped pages: Next speaks for pages the cursor could still fetch.
+ *  Six slots at every position, so Next never slides out between clicks. */
 export function pagerSlots(current: number, lastPage: number): PagerSlot[] {
   const first = Math.min(
     Math.max(1, current - Math.floor(PAGE_WINDOW / 2)),

@@ -194,7 +194,11 @@ export function LeadDisqualifyReasonsCard() {
   const done = { onSuccess: () => setNamingOpen(false) };
   return (
     <Panel
-      title={<span id={removal.titleId}>{t("leadReasons.title")}</span>}
+      title={
+        <span id={removal.titleId} tabIndex={-1}>
+          {t("leadReasons.title")}
+        </span>
+      }
       titleAction={
         canCreate && (
           <Button

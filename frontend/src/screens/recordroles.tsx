@@ -9,7 +9,6 @@ import {
   Checkbox,
   EmptyState,
   Field,
-  OverflowMenu,
   TextInput,
 } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
@@ -28,7 +27,8 @@ import { Switch } from "../design-system/switch";
 import { INTL_LOCALE } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryStates } from "./common";
+import { problemMessageOf, QueryStates } from "./common";
+import { vocabMenuColumn } from "./leadvocab.rows";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -81,7 +81,7 @@ function roleColumns({
   onActive: (role: RecordRole, active: boolean) => void;
   onRename: (role: RecordRole) => void;
 }>): DataTableColumn<RecordRole>[] {
-  const columns: DataTableColumn<RecordRole>[] = [
+  return [
     {
       key: "name",
       header: t("recordRoles.colRole"),
@@ -106,25 +106,15 @@ function roleColumns({
         />
       ),
     },
+    ...vocabMenuColumn(
+      t,
+      { canEdit, canRemove: false },
+      (role: RecordRole) => ({
+        label: role.label,
+        onRename: () => onRename(role),
+      }),
+    ),
   ];
-  if (canEdit) {
-    columns.push({
-      key: "verbs",
-      header: t("leadSources.colActions"),
-      headerHidden: true,
-      fold: "end",
-      render: (role) => (
-        <span className="cell-actions">
-          <OverflowMenu label={t("table.rowActions", { name: role.label })}>
-            <Button onClick={() => onRename(role)}>
-              {t("leadSources.rename")}
-            </Button>
-          </OverflowMenu>
-        </span>
-      ),
-    });
-  }
-  return columns;
 }
 
 function Choices<Value extends string>({
@@ -272,7 +262,6 @@ export function RecordRolesCard() {
   const [renaming, setRenaming] = useState<RecordRole | null>(null);
   const [renamingOpen, setRenamingOpen] = useState(false);
   const roles = rowsOf(query.data);
-  const refused = nameRefusal(rename.error, t, "recordRoles.duplicate");
   const columns = roleColumns({
     t,
     canEdit,
@@ -332,6 +321,7 @@ export function RecordRolesCard() {
           }}
         />
       )}
+      {/* A rename cannot collide: only the key is unique, and it never changes. */}
       <NameDialog
         open={renamingOpen}
         onClose={() => setRenamingOpen(false)}
@@ -340,8 +330,7 @@ export function RecordRolesCard() {
         initial={renaming?.label ?? ""}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
-        problem={refused.problem}
-        nameProblem={refused.nameProblem}
+        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
         onSave={(label) => {
           if (renaming) {
             rename.mutate(

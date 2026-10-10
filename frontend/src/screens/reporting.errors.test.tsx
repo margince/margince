@@ -193,6 +193,34 @@ it.each([undefined, "edition-september"])(
   },
 );
 
+it("says a stale export reloads the report, not that a record changed", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/evaluate.csv": () =>
+      jsonResponse(
+        {
+          status: 409,
+          code: "version_skew",
+          detail: "Refresh the evaluated reading",
+        },
+        409,
+      ),
+  });
+  render(
+    <StoryProviders>
+      <ReportingExportButton evaluation={reportingStoryEvaluation} />
+    </StoryProviders>,
+  );
+  await user.click(screen.getByRole("button", { name: "Export CSV" }));
+  expect(await screen.findByText(en["reporting.exportStale"])).toBeVisible();
+  expect(screen.queryByText(en["common.versionSkew"])).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() =>
+    expect(screen.queryByText(en["reporting.exportStale"])).toBeNull(),
+  );
+});
+
 it("shows a refused reporting setup instead of an empty editor", async () => {
   const user = userEvent.setup({ delay: null });
   installFetchStub({

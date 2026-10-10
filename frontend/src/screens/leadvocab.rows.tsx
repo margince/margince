@@ -36,7 +36,7 @@ type VocabRow = Readonly<{
   label: string;
   refusal?: string;
   onRename: () => void;
-  onRemove: () => void;
+  onRemove?: () => void;
 }>;
 
 // No column for a seat with neither verb, or every row ends in an empty cell.
@@ -112,9 +112,7 @@ export function useRemovalFocus() {
     returnFocusTo: (): HTMLElement | null => {
       if (!landed.current) return null;
       if (addVerb.current) return addVerb.current;
-      const title = document.getElementById(titleId);
-      title?.setAttribute("tabindex", "-1");
-      return title;
+      return document.getElementById(titleId);
     },
   };
 }

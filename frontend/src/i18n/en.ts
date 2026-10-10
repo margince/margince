@@ -206,6 +206,8 @@ export const en = {
   "reporting.evidence": "Evidence",
   "reporting.evidenceStale":
     "The figures changed after this report loaded. Retry to reload the report, then open the evidence again.",
+  "reporting.exportStale":
+    "The figures changed after this report loaded. Retry to reload the report, then export it again.",
   "reporting.details": "Details",
   "reporting.unavailable": "Unavailable",
   "reporting.restricted": "Restricted record",
@@ -3115,7 +3117,7 @@ export const en = {
   "leadSources.notSaved": "Change was not saved",
   "leadSources.notAdded": "Source was not added",
   "leadSources.duplicate":
-    "A source with this name already exists. Choose another name.",
+    "A source with this name or key already exists. Choose another name.",
   "leadSources.intentFor": "Intent of {label}",
   "leadSources.intent": "Intent",
   "leadSources.intent.high": "High intent",
@@ -3517,7 +3519,7 @@ export const en = {
   "acqSources.deals_other": "{count} deals",
   "acqSources.renameTitle": "Rename source",
   "acqSources.duplicate":
-    "A source with this name already exists. Choose another name.",
+    "A source with this name or key already exists. Choose another name.",
   "settings.page.reviewtemplates.sub":
     "Questions a rep answers when a deal is won or lost.",
   "settings.tab.reviewtemplates": "Outcome reviews",
@@ -3627,7 +3629,7 @@ export const en = {
   "recordRoles.heldBy.either": "Held by a colleague or a team",
   "recordRoles.renameTitle": "Rename role",
   "recordRoles.duplicate":
-    "A role with this name already exists. Choose another name.",
+    "A role with this name or key already exists. Choose another name.",
   "deal.acquisitionUnset": "Not set",
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",

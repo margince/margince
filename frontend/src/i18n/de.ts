@@ -208,6 +208,8 @@ export const de = {
   "reporting.evidence": "Belege",
   "reporting.evidenceStale":
     "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und öffne die Belege dann noch einmal.",
+  "reporting.exportStale":
+    "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und exportiere ihn dann noch einmal.",
   "reporting.details": "Details",
   "reporting.unavailable": "Nicht verfügbar",
   "reporting.restricted": "Geschützter Datensatz",
@@ -3059,7 +3061,7 @@ export const de = {
   "leadSources.notSaved": "Änderung nicht gespeichert",
   "leadSources.notAdded": "Quelle nicht hinzugefügt",
   "leadSources.duplicate":
-    "Eine Quelle mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
+    "Eine Quelle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
   "leadSources.intentFor": "Kaufinteresse von {label}",
   "leadSources.intent": "Kaufinteresse",
   "leadSources.intent.high": "Hohes Kaufinteresse",
@@ -3467,7 +3469,7 @@ export const de = {
   "acqSources.deals_other": "{count} Deals",
   "acqSources.renameTitle": "Quelle umbenennen",
   "acqSources.duplicate":
-    "Eine Quelle mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
+    "Eine Quelle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
   "settings.page.reviewtemplates.sub":
     "Fragen, die Vertriebsmitarbeitende zu einem gewonnenen oder verlorenen Deal beantworten.",
   "settings.tab.reviewtemplates": "Abschlussrückblicke",
@@ -3577,7 +3579,7 @@ export const de = {
   "recordRoles.heldBy.either": "Zuweisbar an ein Teammitglied oder ein Team",
   "recordRoles.renameTitle": "Rolle umbenennen",
   "recordRoles.duplicate":
-    "Eine Rolle mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
+    "Eine Rolle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
   "deal.acquisitionUnset": "Nicht festgelegt",
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",

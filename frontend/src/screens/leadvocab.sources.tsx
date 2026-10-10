@@ -331,7 +331,6 @@ export function LeadSourcesCard() {
   const [removing, setRemoving] = useState<LeadSource | null>(null);
   const removal = useRemovalFocus();
   const failure = [adopt, update].find((m) => m.isError);
-  const renameRefused = nameRefusal(rename.error, t, "leadSources.duplicate");
   const administered = rowsOf(query.data?.data);
   const discovered = rowsOf(query.data?.discovered);
   const columns = sourceColumns({
@@ -351,7 +350,11 @@ export function LeadSourcesCard() {
   });
   return (
     <Panel
-      title={<span id={removal.titleId}>{t("leadSources.title")}</span>}
+      title={
+        <span id={removal.titleId} tabIndex={-1}>
+          {t("leadSources.title")}
+        </span>
+      }
       titleAction={
         canCreate && (
           <Button ref={removal.addVerb} onClick={() => setAdding(true)}>
@@ -405,6 +408,7 @@ export function LeadSourcesCard() {
           }}
         />
       )}
+      {/* A rename cannot collide: only the key is unique, and it never changes. */}
       <NameDialog
         open={renaming !== null}
         onClose={() => setRenaming(null)}
@@ -413,8 +417,7 @@ export function LeadSourcesCard() {
         initial={renaming?.label ?? ""}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
-        problem={renameRefused.problem}
-        nameProblem={renameRefused.nameProblem}
+        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
         onSave={(label) => {
           if (renaming) {
             rename.mutate(

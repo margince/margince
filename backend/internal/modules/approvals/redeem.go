@@ -171,14 +171,14 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 }
 
 func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
-	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "The record"); err != nil {
+	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "record"); err != nil {
 		return err
 	}
 	// The SECOND row, where the proposal declared one. A tag merge names two
 	// words and the human judged both, so both have to still be what they were
 	// — the retired side has always been checked here, and the survivor being
 	// exempt is what let a rename slip between the card and the merge.
-	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "The second record")
+	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record")
 }
 
 // checkPin re-reads one pinned row and refuses if it has moved since the
@@ -197,7 +197,7 @@ func checkPin(
 	}
 	if current != *pinned {
 		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
-			"%s this approval names changed after it was approved (version %d, now %d), so nothing was changed. "+
+			"The %s this approval names changed after it was approved (version %d, now %d), so nothing was changed. "+
 				"Stage the change again for a fresh approval.", record, *pinned, current)}
 	}
 	return nil

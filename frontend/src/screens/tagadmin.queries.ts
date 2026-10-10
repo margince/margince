@@ -24,20 +24,11 @@ export type TagColorEdit = NonNullable<
   components["schemas"]["UpdateTagRequest"]["color"]
 >;
 
-/**
- * The whole vocabulary, ARCHIVED INCLUDED, for the admin card.
- *
- * The picker asks for live words only, because a retired one cannot be
- * applied. This card is where a retired word is restored, so a list that hid
- * them would leave the verb with nothing to act on — and an admin looking for
- * a word they archived last month would conclude it was deleted.
- */
+/** The whole vocabulary, archived words included, so the filter sentence can
+ *  tell a retired tag in a clause from a live one. */
 export function useTagCatalog(enabled = true) {
   return useQuery({
     queryKey: ["tags", "catalog"],
-    // Not asked at all without the grant: the settings entry opens on any of
-    // five data-model reads, so this card is mounted for seats that hold none
-    // of the tag ones, and the request could only answer 403.
     enabled,
     queryFn: async () => {
       return unwrap(

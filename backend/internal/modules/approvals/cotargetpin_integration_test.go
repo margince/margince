@@ -88,6 +88,12 @@ func TestRenamingTheWordAMergeFoldsIntoRefusesTheRedemption(t *testing.T) {
 		t.Fatalf("redeeming after the survivor was renamed = %v, want version skew — "+
 			"the human approved folding into one word and this would fold into another", err)
 	}
+	var skew *apperrors.VersionSkewError
+	want := "The second record this approval names changed after it was approved (version 1, now 2), " +
+		"so nothing was changed. Stage the change again for a fresh approval."
+	if !errors.As(err, &skew) || skew.Message != want {
+		t.Errorf("the refusal reads %v, want %q", err, want)
+	}
 }
 
 // The mirror: an untouched survivor redeems. Without this the case above is

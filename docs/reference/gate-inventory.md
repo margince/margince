@@ -423,6 +423,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `updateguard_test.go` | H2 | Every single-row-by-id UPDATE of a mutable entity carries a guard: the optimistic version (storekit.ApplyWithVersion / ApplyGuarded), a held row lock (LockRow / LockPair + ApplyLocked), an advisory lock, an in-statement FOR UPDATE, or a checked conditional write (the RowsAffected CAS shape). |
 | `updateguardcas_test.go` | H2 | What the by-id guard census counts as a compare-and-set, and the cases that only look like one. |
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |
+| `versionskewcopy_test.go` | H2 | Every apperrors.VersionSkewError message is a sentence its reader can act on. |
 | `writeauthority_test.go` | H2 | A path that changes a shareable record probes for write authority rather than for visibility, because a manual record grant is asymmetric between read and write. |
 | `writeliveness_test.go` | H2 | A write that targets one standing row of a table which can be archived either refuses an archived row, declares that it reaches one by design, or is ratified with a reason. |
 

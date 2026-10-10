@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { rowsOf } from "../api/rows";
 import { useCanWrite } from "../app/capability";
-import { Button, EmptyState, OverflowMenu } from "../design-system/atoms";
+import { Button, EmptyState } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { KeyedName } from "../design-system/keyedname";
 import { NameDialog, nameRefusal } from "../design-system/namedialog";
@@ -26,7 +26,8 @@ import {
   useCreateAcquisitionSource,
   useUpdateAcquisitionSource,
 } from "./acquisitionsources.queries";
-import { QueryStates } from "./common";
+import { problemMessageOf, QueryStates } from "./common";
+import { vocabMenuColumn } from "./leadvocab.rows";
 
 function sourceColumns({
   t,
@@ -79,22 +80,19 @@ function sourceColumns({
       />
     ),
   };
-  const verbs: DataTableColumn<AcquisitionSource> = {
-    key: "verbs",
-    header: t("leadSources.colActions"),
-    headerHidden: true,
-    fold: "end",
-    render: (source) => (
-      <span className="cell-actions">
-        <OverflowMenu label={t("table.rowActions", { name: source.label })}>
-          <Button onClick={() => onRename(source)}>
-            {t("leadSources.rename")}
-          </Button>
-        </OverflowMenu>
-      </span>
+  return [
+    name,
+    deals,
+    active,
+    ...vocabMenuColumn(
+      t,
+      { canEdit, canRemove: false },
+      (source: AcquisitionSource) => ({
+        label: source.label,
+        onRename: () => onRename(source),
+      }),
     ),
-  };
-  return canEdit ? [name, deals, active, verbs] : [name, deals, active];
+  ];
 }
 
 // A seat that may not read deals is sent no count, and a zero would claim none.
@@ -130,7 +128,14 @@ export function AcquisitionSourcesCard() {
   const [namingOpen, setNamingOpen] = useState(false);
   const sources = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
-  const refused = nameRefusal(write.error, t, "acqSources.duplicate");
+  // A rename cannot collide: only the key is unique, and it never changes.
+  const refused =
+    naming.mode === "rename"
+      ? {
+          problem: rename.isError ? problemMessageOf(rename.error, t) : null,
+          nameProblem: null,
+        }
+      : nameRefusal(create.error, t, "acqSources.duplicate");
   const open = (next: Naming) => {
     create.reset();
     rename.reset();

@@ -157,7 +157,7 @@ const addADuplicate: Story["play"] = async ({ canvasElement }) => {
   const dialog = within(await page.findByRole("dialog"));
   await userEvent.type(dialog.getByLabelText("Label"), "Partner{Enter}");
   await dialog.findByText(
-    "A source with this name already exists. Choose another name.",
+    "A source with this name or key already exists. Choose another name.",
   );
 };
 

@@ -72,9 +72,9 @@ func refuseAMoveTheGateDidNotAdmit(
 		return nil
 	}
 	return &apperrors.VersionSkewError{Message: fmt.Sprintf(
-		"A stage changed while this move ran: it now goes from a %s stage to a %s stage, "+
-			"so the deal was not moved. Read the pipeline's stages again, "+
-			"then repeat the call if the move still applies.",
+		"A stage changed while this move ran, so the deal was not moved. "+
+			"The move now goes from a stage marked %s to one marked %s. "+
+			"Read the pipeline's stages again, then repeat the call if the move still applies.",
 		source, target)}
 }
 

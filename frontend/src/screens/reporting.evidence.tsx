@@ -23,6 +23,7 @@ import {
   reportingQuery,
 } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
+import { reloadReportingFigures } from "./reporting.queries";
 
 export function ReportingEvidenceDrawer({
   evaluation,
@@ -175,14 +176,7 @@ export function ReportingEvidenceDrawer({
               actions={
                 <Button
                   onClick={() => {
-                    client.invalidateQueries({
-                      predicate: (query) =>
-                        [
-                          "reporting-evaluation",
-                          "reporting-live",
-                          "reporting-forecast",
-                        ].includes(String(query.queryKey[0])),
-                    });
+                    reloadReportingFigures(client);
                     onClose();
                   }}
                 >

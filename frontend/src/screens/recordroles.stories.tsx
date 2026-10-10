@@ -145,7 +145,7 @@ export const DuplicateRole: Story = {
     await userEvent.click(dialog.getByRole("checkbox", { name: "Colleague" }));
     await userEvent.click(dialog.getByRole("button", { name: "Add role" }));
     await dialog.findByText(
-      "A role with this name already exists. Choose another name.",
+      "A role with this name or key already exists. Choose another name.",
     );
   },
 };

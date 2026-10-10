@@ -203,7 +203,7 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 		if err != nil || got == admitted {
 			return true
 		}
-		httperr.Write(w, r, auth.StalePinError(got, admitted))
+		httperr.Write(w, r, auth.StalePinError(admitted, got))
 		return false
 	}
 	r.Header.Set(ifMatchHeader, strconv.FormatInt(admitted, 10))

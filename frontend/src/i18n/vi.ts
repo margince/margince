@@ -217,6 +217,8 @@ export const vi = {
   "reporting.evidence": "Bằng chứng",
   "reporting.evidenceStale":
     "Số liệu đã thay đổi sau khi tải báo cáo này. Chọn Thử lại để tải lại báo cáo, rồi mở lại phần bằng chứng.",
+  "reporting.exportStale":
+    "Số liệu đã thay đổi sau khi tải báo cáo này. Chọn Thử lại để tải lại báo cáo, rồi xuất lại.",
   "reporting.details": "Chi tiết",
   "reporting.unavailable": "Không khả dụng",
   "reporting.restricted": "Hồ sơ bị hạn chế",
@@ -2999,7 +3001,8 @@ export const vi = {
     "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này",
   "leadSources.notSaved": "Không thể lưu thay đổi",
   "leadSources.notAdded": "Không thể thêm nguồn",
-  "leadSources.duplicate": "Đã có nguồn mang tên này. Hãy chọn tên khác.",
+  "leadSources.duplicate":
+    "Đã có nguồn mang tên hoặc khóa này. Hãy chọn tên khác.",
   "leadSources.intentFor": "Ý định của {label}",
   "leadSources.intent": "Ý định",
   "leadSources.intent.high": "Ý định mua cao",
@@ -3397,7 +3400,8 @@ export const vi = {
   "acqSources.deals_one": "{count} deal",
   "acqSources.deals_other": "{count} deal",
   "acqSources.renameTitle": "Đổi tên nguồn",
-  "acqSources.duplicate": "Đã có nguồn mang tên này. Hãy chọn tên khác.",
+  "acqSources.duplicate":
+    "Đã có nguồn mang tên hoặc khóa này. Hãy chọn tên khác.",
   "settings.page.reviewtemplates.sub":
     "Câu hỏi nhân viên kinh doanh trả lời khi deal thắng hoặc thua.",
   "settings.tab.reviewtemplates": "Đánh giá kết quả",
@@ -3505,7 +3509,8 @@ export const vi = {
   "recordRoles.heldBy.team": "Giao cho nhóm",
   "recordRoles.heldBy.either": "Giao cho đồng nghiệp hoặc nhóm",
   "recordRoles.renameTitle": "Đổi tên vai trò",
-  "recordRoles.duplicate": "Đã có vai trò mang tên này. Hãy chọn tên khác.",
+  "recordRoles.duplicate":
+    "Đã có vai trò mang tên hoặc khóa này. Hãy chọn tên khác.",
   "deal.acquisitionUnset": "Chưa chọn",
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
