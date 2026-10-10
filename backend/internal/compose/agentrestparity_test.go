@@ -136,7 +136,7 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 // both-doors test. untestedDoorsCeiling is its size; both only go down.
 const untestedDoorsPath = "testdata/untested_tool_doors.txt"
 
-const untestedDoorsCeiling = 58
+const untestedDoorsCeiling = 34
 
 func untestedDoorsBaseline(t *testing.T) map[string]bool {
 	t.Helper()

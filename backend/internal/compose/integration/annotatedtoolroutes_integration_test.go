@@ -37,11 +37,18 @@ type twoDoors struct {
 
 func newTwoDoors(t *testing.T, slug string, scopes ...string) *twoDoors {
 	t.Helper()
+	return newTwoDoorsWith(t, slug, nil, scopes...)
+}
+
+// newTwoDoorsWith is newTwoDoors with more composition options, for a feature
+// an operator switches on.
+func newTwoDoorsWith(t *testing.T, slug string, more []compose.Option, scopes ...string) *twoDoors {
+	t.Helper()
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
-		return []compose.Option{
+		return append([]compose.Option{
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),
 			compose.WithBlobstore(blobstore.NewMemory()),
-		}
+		}, more...)
 	})
 	apptest.BootstrapWorkspaceSession(t, e, "Two Doors", slug+"@fable.test", "Admin")
 	bearer, _ := passportWithID(t, e, slug+" agent", scopes...)
