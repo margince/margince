@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Box, Check, ChevronDown, Copy } from "lucide-react";
-import { type MouseEvent, useId, useState } from "react";
+import { Box, Check, Copy } from "lucide-react";
+import { useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import { useCan } from "../app/capability";
 import { ENTITY, isEntityKind } from "../app/entity";
@@ -14,11 +14,11 @@ import {
   Badge,
   Disclosure,
   EmptyState,
-  TableScroll,
   TextInput,
 } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { useSettledValue } from "../design-system/debouncedsearch";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -46,7 +46,6 @@ import "./settings-audit.css";
 
 type Viewer = Readonly<{ id?: string; name?: string }>;
 
-const COLUMN_COUNT = 5;
 const RELATIVE_TICK_MS = 60_000;
 
 // The filters stay in a closed disclosure: a reader arrives to read what
@@ -170,113 +169,57 @@ function AuditLogEntries({
   );
 }
 
-// Not DataTable: its rows cannot carry a detail row spanning every column.
-// One tbody per entry keeps an entry and its detail one unit.
 function AuditLogTable({
   entries,
   viewer,
 }: Readonly<{ entries: readonly AuditLogEntry[]; viewer: Viewer }>) {
   const t = useT();
   const now = useNow(RELATIVE_TICK_MS);
+  const columns: DataTableColumn<AuditLogEntry>[] = [
+    {
+      key: "when",
+      header: t("settings.auditColWhen"),
+      render: (entry) => <AuditWhen at={entry.occurred_at} now={now} />,
+    },
+    {
+      key: "actor",
+      header: t("settings.auditActor"),
+      render: (entry) => <AuditActor entry={entry} viewer={viewer} />,
+    },
+    {
+      key: "action",
+      header: t("settings.auditAction"),
+      render: (entry) => (
+        <Badge tone={ACTION_TONE[entry.action] ?? "default"}>
+          {humanizeToken(entry.action)}
+        </Badge>
+      ),
+    },
+    {
+      key: "target",
+      header: t("settings.auditColTarget"),
+      fold: "title",
+      render: (entry) => <AuditTarget entry={entry} />,
+    },
+  ];
   return (
-    <TableScroll
-      label={t("settings.auditTrailLabel")}
+    <DataTable
       bleed
-      className="auditlog-scroll"
-    >
-      <table
-        className="table auditlog"
-        role={ROLE.table}
-        aria-label={t("settings.auditTrailLabel")}
-      >
-        <thead role={ROLE.rowgroup}>
-          <tr role={ROLE.row}>
-            <th role={ROLE.columnheader}>{t("settings.auditColWhen")}</th>
-            <th role={ROLE.columnheader}>{t("settings.auditActor")}</th>
-            <th role={ROLE.columnheader}>{t("settings.auditAction")}</th>
-            <th role={ROLE.columnheader}>{t("settings.auditColTarget")}</th>
-            <th role={ROLE.columnheader}>
-              <span className="sr-only">{t("settings.auditColDetail")}</span>
-            </th>
-          </tr>
-        </thead>
-        {entries.map((entry) => (
-          <AuditLogRow key={entry.id} entry={entry} viewer={viewer} now={now} />
-        ))}
-      </table>
-    </TableScroll>
-  );
-}
-
-// Spelled out because a folded row is laid out as flex, which drops the
-// native table role in Safari.
-const ROLE = {
-  table: "table",
-  rowgroup: "rowgroup",
-  row: "row",
-  columnheader: "columnheader",
-  cell: "cell",
-} as const;
-
-// A press on a control inside the row, or a drag that selected text to copy,
-// is not a request to open the entry.
-function pressOpensRow(event: MouseEvent<HTMLTableRowElement>): boolean {
-  const target = event.target;
-  if (target instanceof Element && target.closest("a, button")) {
-    return false;
-  }
-  return globalThis.getSelection?.()?.isCollapsed !== false;
-}
-
-function AuditLogRow({
-  entry,
-  viewer,
-  now,
-}: Readonly<{ entry: AuditLogEntry; viewer: Viewer; now: number }>) {
-  const t = useT();
-  const [expanded, setExpanded] = useState(false);
-  const detailId = useId();
-  const toggle = () => setExpanded((open) => !open);
-  return (
-    <tbody role={ROLE.rowgroup}>
-      <tr
-        className="auditlog-main"
-        role={ROLE.row}
-        onClick={(event) => pressOpensRow(event) && toggle()}
-      >
-        <td className="auditlog-when" role={ROLE.cell}>
-          <AuditWhen at={entry.occurred_at} now={now} />
-        </td>
-        <td className="auditlog-actor" role={ROLE.cell}>
-          <AuditActor entry={entry} viewer={viewer} />
-        </td>
-        <td className="auditlog-action" role={ROLE.cell}>
-          <Badge tone={ACTION_TONE[entry.action] ?? "default"}>
-            {humanizeToken(entry.action)}
-          </Badge>
-        </td>
-        <td className="auditlog-target" role={ROLE.cell}>
-          <AuditTarget entry={entry} />
-        </td>
-        <td className="auditlog-toggle" role={ROLE.cell}>
-          <IconAction
-            label={t("settings.auditExpandEntry", {
-              action: entry.action,
-              entity: entry.entity_type,
-            })}
-            icon={<ChevronDown aria-hidden className="expander-chevron" />}
-            disclosure={{ expanded, controls: detailId }}
-            onClick={toggle}
-          />
-        </td>
-      </tr>
-      {/* Mounted while closed so the toggle's aria-controls always resolves. */}
-      <tr className="auditlog-detail-row" role={ROLE.row} hidden={!expanded}>
-        <td colSpan={COLUMN_COUNT} id={detailId} role={ROLE.cell}>
-          {expanded && <AuditDetail entry={entry} />}
-        </td>
-      </tr>
-    </tbody>
+      fold
+      label={t("settings.auditTrailLabel")}
+      columns={columns}
+      rows={[...entries]}
+      rowKey={(entry) => entry.id}
+      detail={{
+        header: t("settings.auditColDetail"),
+        toggleLabel: (entry) =>
+          t("settings.auditExpandEntry", {
+            action: entry.action,
+            entity: entry.entity_type,
+          }),
+        render: (entry) => <AuditDetail entry={entry} />,
+      }}
+    />
   );
 }
 

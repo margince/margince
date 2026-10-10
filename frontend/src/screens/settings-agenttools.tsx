@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -10,7 +9,6 @@ import { dotTier } from "../app/autonomy";
 import { Badge, EmptyState, SearchField } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { IconAction } from "../design-system/iconaction";
 import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
@@ -132,11 +130,11 @@ function ToolTable({
 }>) {
   const t = useT();
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (tool: AgentTool) =>
+  const toggle = (name: string) =>
     setOpen((current) => {
       const next = new Set(current);
-      if (!next.delete(tool.name)) {
-        next.add(tool.name);
+      if (!next.delete(name)) {
+        next.add(name);
       }
       return next;
     });
@@ -189,24 +187,6 @@ function ToolTable({
         </CellStack>
       ),
     },
-    {
-      key: "detail",
-      header: t("tools.colDetail"),
-      headerHidden: true,
-      align: "end",
-      fold: "end",
-      render: (tool) => (
-        <IconAction
-          onClick={() => toggle(tool)}
-          label={t("tools.descriptionToggle", { tool: tool.title })}
-          icon={<ChevronDown aria-hidden className="expander-chevron" />}
-          disclosure={{
-            expanded: open.has(tool.name),
-            controls: descriptionId(tool),
-          }}
-        />
-      ),
-    },
   ];
   return (
     <DataTable
@@ -217,7 +197,14 @@ function ToolTable({
       rows={[...tools]}
       rowKey={(tool) => tool.name}
       rowTestId={(tool) => `tool-${tool.name}`}
-      onRowClick={toggle}
+      detail={{
+        header: t("tools.colDetail"),
+        toggleLabel: (tool) =>
+          t("tools.descriptionToggle", { tool: tool.title }),
+        expanded: open,
+        onToggle: toggle,
+        controls: descriptionId,
+      }}
     />
   );
 }
