@@ -57,11 +57,11 @@ func declaredEnumArgs(inputSchema json.RawMessage) []enumArg {
 func textWords(members []json.RawMessage) ([]string, bool) {
 	words := make([]string, 0, len(members))
 	for _, member := range members {
-		var word string
-		if json.Unmarshal(member, &word) != nil {
+		var word *string
+		if json.Unmarshal(member, &word) != nil || word == nil {
 			return nil, false
 		}
-		words = append(words, word)
+		words = append(words, *word)
 	}
 	return words, len(words) > 0
 }

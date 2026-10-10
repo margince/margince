@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -124,7 +125,7 @@ func joinArgRefusals(first, second error) error {
 	}
 	return &BadArgsError{
 		Cause:    fmt.Errorf("%w; %w", firstArgs.Cause, secondArgs.Cause),
-		Guidance: firstArgs.Guidance,
+		Guidance: strings.Join(slices.DeleteFunc([]string{firstArgs.Guidance, secondArgs.Guidance}, func(g string) bool { return g == "" }), "; "),
 	}
 }
 
