@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -27,7 +28,7 @@ func (w *csvWriters) isArchived(ctx context.Context, object string, id ids.UUID)
 		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.IncludeArchived)
 		return err == nil && contact.ArchivedAt != nil, err
 	default:
-		return false, fmt.Errorf("import: %q is not an importable object", object)
+		return false, fmt.Errorf("import: %q is not an importable object: %w", object, apperrors.ErrConflict)
 	}
 }
 

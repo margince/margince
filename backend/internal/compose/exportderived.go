@@ -20,9 +20,9 @@ var derivedExportColumns = map[string][]string{
 	string(recordTypeContact): {exportPrimaryEmail, exportPrimaryPhone},
 }
 
-// derivedColumnSQL renders a derived column for a row aliased t. It picks the
-// address the record page prints, and never a retired one.
-func derivedColumnSQL(table, column string) (string, bool) {
+// derivedColumnExpr is the expression for a derived column on a row aliased t.
+// It picks the address the record page prints, and never a retired one.
+func derivedColumnExpr(table, column string) (string, bool) {
 	if table != string(recordTypeContact) {
 		return "", false
 	}
@@ -30,11 +30,11 @@ func derivedColumnSQL(table, column string) (string, bool) {
 	case exportPrimaryEmail:
 		return `(SELECT pe.email FROM contact_email pe
 		          WHERE pe.contact_id = t.id AND pe.archived_at IS NULL` +
-			contacts.ReachableEmailOrder + ` LIMIT 1) AS ` + column, true
+			contacts.ReachableEmailOrder + ` LIMIT 1)`, true
 	case exportPrimaryPhone:
 		return `(SELECT pp.phone FROM contact_phone pp
 		          WHERE pp.contact_id = t.id AND pp.archived_at IS NULL` +
-			contactaddress.ReachablePhoneOrder + ` LIMIT 1) AS ` + column, true
+			contactaddress.ReachablePhoneOrder + ` LIMIT 1)`, true
 	default:
 		return "", false
 	}

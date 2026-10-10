@@ -280,8 +280,8 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 // happened is not something an erasure undoes, and a bundle missing the line
 // would answer "who touched this record" with a gap.
 func exportColumnSQL(table, column string, arg func(any) int) string {
-	if derived, ok := derivedColumnSQL(table, column); ok {
-		return derived
+	if derived, ok := derivedColumnExpr(table, column); ok {
+		return derived + " AS " + column
 	}
 	if table != "audit_log" || (column != "before" && column != "after") {
 		return "t." + column
