@@ -5,15 +5,11 @@
 
 package gates
 
-// A body field the contract types as nullable promises that null clears it. A
-// decoded pointer reads null and "not sent" the same way, so a handler that
-// never asks for the explicit nulls answers 200 and changes nothing.
-//
-// The census is the contract's: every PATCH and PUT whose JSON body has a
-// nullable property. Its handler must read the explicit nulls through
-// httperr.ClearedFields or httperr.PresentField, or sit in nullIgnoredByHandler
-// with the reason. A waiver whose handler now reads them fails, so the list can
-// only shrink.
+// A nullable body field promises that null clears it. A decoded pointer reads
+// null and "not sent" alike. So a PATCH or PUT with a nullable body field must
+// read the explicit nulls (httperr.ClearedFields or PresentField) in its
+// handler, or sit in nullIgnoredByHandler. A waiver for a handler that now
+// reads them fails, so the list can only shrink.
 
 import (
 	"os"
@@ -26,15 +22,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// nullIgnoredByHandler are the operations whose handler does not read explicit
-// nulls. Each is unconfirmed either way: the store may take every column from
-// the body, or it may drop a null. A null-clears test, or a read of the nulls
-// in the handler, removes the entry.
 const (
 	patchUnconfirmed = "the handler reads no explicit null and no test sends one; unconfirmed whether the store honours it"
 	putUnconfirmed   = "a replace: the store may take every column from the body; no test sends a null"
 )
 
+// nullIgnoredByHandler are the operations whose handler reads no explicit null.
+// A null-clears test, or a read of the nulls in the handler, removes the entry.
 var nullIgnoredByHandler = gatekit.Waive(map[string]string{
 	"UpdateAutomation":                patchUnconfirmed,
 	"UpdateContract":                  patchUnconfirmed,

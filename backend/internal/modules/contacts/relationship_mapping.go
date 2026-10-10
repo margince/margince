@@ -25,6 +25,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// The wire names of the two nullable dates a patch may clear.
+const (
+	wireStartedAt = "started_at"
+	wireEndedAt   = "ended_at"
+)
+
 // relationshipCreateInput maps the contract create body onto the store input.
 // Every endpoint the body declares travels, including project_id: which pair a
 // kind needs is the rel_*_shape CHECKs' rule, and dropping a field here turns
@@ -83,11 +89,11 @@ func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersi
 	}
 	for _, field := range cleared {
 		switch field {
-		case "role":
+		case fieldRole:
 			in.ClearRole = true
-		case "started_at":
+		case wireStartedAt:
 			in.ClearStartedAt = true
-		case "ended_at":
+		case wireEndedAt:
 			in.ClearEndedAt = true
 		default:
 			return UpdateRelationshipInput{}, &storekit.NotClearableError{Field: field}
