@@ -73,22 +73,10 @@ export function WonWithoutContractFact({
   // design system: one screen's free-text field is not a shape the shared
   // identity row owes everybody, and IdentityFact already takes a className for
   // exactly this.
-  return <IdentityFact className="deal-win-detail">{detail}</IdentityFact>;
+  return <IdentityFact className="deal-close-detail">{detail}</IdentityFact>;
 }
 
-/**
- * Why a lost deal was lost, on the head beside the `lost` badge it explains.
- *
- * The server requires a reason to close a deal as lost. Free text wraps
- * like the win detail does.
- */
-export function LostReasonFact({
-  deal,
-}: Readonly<{ deal: Partial<Pick<Deal, "status" | "lost_reason">> }>) {
-  if (deal.status !== "lost" || !deal.lost_reason) {
-    return null;
-  }
-  return (
-    <IdentityFact className="deal-win-detail">{deal.lost_reason}</IdentityFact>
-  );
+/** Why a lost deal was lost, beside the `lost` badge it explains. */
+export function LostReasonFact({ reason }: Readonly<{ reason: string }>) {
+  return <IdentityFact className="deal-close-detail">{reason}</IdentityFact>;
 }

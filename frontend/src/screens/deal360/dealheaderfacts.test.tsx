@@ -176,7 +176,7 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
       />,
     );
     expect(screen.getByText(long)).toBeInTheDocument();
-    expect(screen.getByText(long)).toHaveClass("deal-win-detail");
+    expect(screen.getByText(long)).toHaveClass("deal-close-detail");
     expect(screen.getByText("Qualified")).toBeInTheDocument();
   });
 
@@ -188,8 +188,11 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
       join(resolve(__dirname, ".."), "dealstatus.css"),
       "utf8",
     );
-    const rule = /\.deal-win-detail\s*\{([^}]*)\}/.exec(css);
-    expect(rule, ".deal-win-detail is gone from dealstatus.css").not.toBeNull();
+    const rule = /\.deal-close-detail\s*\{([^}]*)\}/.exec(css);
+    expect(
+      rule,
+      ".deal-close-detail is gone from dealstatus.css",
+    ).not.toBeNull();
     const body = rule?.[1] ?? "";
 
     expect(body).toMatch(/max-width:/);
@@ -201,7 +204,7 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     ]) {
       expect(
         body,
-        `.deal-win-detail clips its content (${clip.source}); the value is what a controller is shown`,
+        `.deal-close-detail clips its content (${clip.source}); the value is what a controller is shown`,
       ).not.toMatch(clip);
     }
   });

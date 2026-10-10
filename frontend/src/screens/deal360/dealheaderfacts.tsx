@@ -229,7 +229,7 @@ function ClosingFacts({ deal }: Readonly<{ deal: DealIdentity }>): ReactNode {
   if (deal.status === "lost" && deal.lost_reason) {
     return (
       <Fact label={t("deals.lostReason")}>
-        <LostReasonFact deal={deal} />
+        <LostReasonFact reason={deal.lost_reason} />
       </Fact>
     );
   }

@@ -8,7 +8,7 @@ type Stage = components["schemas"]["Stage"];
 /**
  * Every pipeline's stages in one ladder, the default pipeline first. A deal
  * report counts deals in all pipelines, so a row can name a stage outside the
- * default one. Positions are offset per pipeline to keep each ladder together.
+ * default one. Each stage's position becomes its place in the ladder.
  */
 export function stagesOfEveryPipeline(
   pipelines: readonly { is_default?: boolean; stages?: readonly Stage[] }[],
@@ -17,10 +17,9 @@ export function stagesOfEveryPipeline(
     ...pipelines.filter((pipeline) => pipeline.is_default),
     ...pipelines.filter((pipeline) => !pipeline.is_default),
   ];
-  return ordered.flatMap((pipeline, index) =>
-    (pipeline.stages ?? []).map((stage) => ({
-      ...stage,
-      position: index * 1000 + stage.position,
-    })),
-  );
+  return ordered
+    .flatMap((pipeline) =>
+      [...(pipeline.stages ?? [])].sort((a, z) => a.position - z.position),
+    )
+    .map((stage, place) => ({ ...stage, position: place }));
 }

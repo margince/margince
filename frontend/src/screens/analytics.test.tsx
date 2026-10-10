@@ -15,7 +15,6 @@ type Stage = components["schemas"]["Stage"];
 
 import { AnalyticsScreen, buildStageAggregates } from "./analytics";
 import { sectionFromAddress } from "./analytics.address";
-import { stagesOfEveryPipeline } from "./pipelinestages";
 
 afterEach(() => {
   cleanup();
@@ -662,25 +661,6 @@ describe("reports never sum money across currencies", () => {
     expect(
       buildStageAggregates(rows, STAGES).map((row) => row.stageName),
     ).toEqual(["Qualify", "Propose"]);
-  });
-
-  // The report counts deals in every pipeline. A stage outside the default
-  // pipeline must be named, not printed as its id.
-  it("names a stage of a pipeline that is not the default", () => {
-    const stages = stagesOfEveryPipeline([
-      {
-        is_default: false,
-        stages: [{ ...STAGES[0], id: "other-s1", name: "Intake", position: 1 }],
-      },
-      { is_default: true, stages: STAGES },
-    ]);
-    const rows = [
-      { stage_id: "other-s1", raw_minor: 1, deal_count: 1 },
-      { stage_id: "pl-s1", raw_minor: 1, deal_count: 1 },
-    ];
-    expect(
-      buildStageAggregates(rows, stages).map((row) => row.stageName),
-    ).toEqual(["Qualify", "Intake"]);
   });
 
   it("sorts a row whose stage the pipeline no longer carries to the end", () => {

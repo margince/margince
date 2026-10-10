@@ -305,9 +305,9 @@ function GroupReading({
       props.fields,
       props.record,
       t,
+      locale,
       props.maskedFields,
       props.readOnlyFields,
-      locale,
     );
   if (!canEdit) return <span title={reason}>{value || t("field.unset")}</span>;
   return (

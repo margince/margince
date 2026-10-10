@@ -10,8 +10,7 @@ const loaded = [{ id: "a", stage_id: "s1" }] as Parameters<
 >[1];
 
 describe("boardDealCount", () => {
-  // The header once counted the cards loaded so far while the columns stated
-  // the server's counts, so the two read 100 against 106.
+  // The header and the columns read one count, the server's.
   it("adds up the columns' own counts, not the loaded cards", () => {
     const totals = new Map([
       ["s1", { count: 77 }],

@@ -20,8 +20,6 @@ describe("groupValue for a figure beside its currency", () => {
       valueGroup,
       { amount: 150000000, currency: "JPY" },
       t,
-      [],
-      {},
       "en",
     );
     expect(shown).toBe("Value: JP¥150,000,000");
@@ -33,14 +31,12 @@ describe("groupValue for a figure beside its currency", () => {
       valueGroup,
       { amount: 1234.5, expected_arr: 12, currency: "EUR" },
       t,
-      [],
-      {},
       "en",
     );
     expect(shown).toBe("Value: €1,234.50 · Expected ARR: €12.00");
   });
 
-  it("keeps the plain reading when no locale or no currency is known", () => {
-    expect(groupValue(valueGroup, { amount: 5 }, t)).toBe("Value: 5");
+  it("keeps the plain reading when no currency is known", () => {
+    expect(groupValue(valueGroup, { amount: 5 }, t, "en")).toBe("Value: 5");
   });
 });

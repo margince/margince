@@ -50,7 +50,7 @@
    `anywhere` because the value is free text: an unbroken 400-character token is
    a thing a contact can type, and without it that one would push the line wider
    than the column instead of wrapping inside the max-width. */
-.deal-win-detail {
+.deal-close-detail {
   max-width: 22rem;
   overflow-wrap: anywhere;
 }

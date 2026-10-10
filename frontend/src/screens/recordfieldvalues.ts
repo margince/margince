@@ -37,9 +37,9 @@ export function groupValue(
   fields: CreateField[],
   record: Record<string, unknown>,
   t: ReturnType<typeof useT>,
+  locale: Locale,
   maskedFields: readonly string[] = [],
   readOnlyFields: Readonly<Record<string, string>> = {},
-  locale?: Locale,
 ): string {
   const values = prefillFromRecord(fields, record);
   const code = values.currency ?? "";
