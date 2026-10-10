@@ -233,14 +233,10 @@ func resolveWindow(
 	if kind != forecasting.PeriodWeek {
 		return forecasting.ResolvePeriod(kind, at, fiscalStart, zone)
 	}
-	// `at` is a real instant by the time it reaches here: a caller-supplied
-	// `as_of` DATE is anchored at midday UTC by forecasting.DayNamed before the
-	// transport hands it on, and a caller who sent none is asking about their
-	// own moment. So this converts through the zone like any instant, with no
-	// guess about which kind of value arrived — the guess was the bug, in both
-	// directions: reading every input as a date moved Monday morning in Tokyo
-	// back a week, and reading every input as an instant moved a named Monday
-	// in Los Angeles back a week.
+	// `at` is a real instant here. A caller's `as_of` date is anchored at midday
+	// UTC by forecasting.DayNamed, in the route and in the tool alike. So the
+	// week converts through the zone like any instant, with no guess about
+	// which kind of value arrived.
 	monday, err := weekly.WeekStartOf(ctx, tx, at)
 	if err != nil {
 		return forecasting.Period{}, err

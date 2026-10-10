@@ -137,6 +137,24 @@ type sharedInputCheck struct {
 	} `json:"sources"`
 }
 
+// A day named in as_of is the same day on both doors in a zone west of UTC.
+// There, midnight UTC on a quarter's first day is still the quarter before.
+// A door that skipped the midday anchor would answer the wrong quarter.
+func TestForecastRouteAndToolReadTheSameDayInAWesternZone(t *testing.T) {
+	d := newTwoDoors(t, "forecast-zone-doors", "read")
+	if status := d.e.Call(t, "PATCH", "/v1/installation/settings",
+		AnyMap{"timezone": "America/Los_Angeles"}, nil, nil); status != 200 {
+		t.Fatalf("setting the installation zone → %d", status)
+	}
+
+	got := sameRecords[sharedForecast](t, "forecast on a quarter's first day",
+		d.rest(t, "GET", "/v1/forecast?as_of=2036-04-01", nil),
+		d.tool(t, "forecast_readings", map[string]any{"as_of": "2036-04-01"}))
+	if got.PeriodStart != "2036-04-01" {
+		t.Errorf("the forecast for 2036-04-01 starts %s, want the quarter that begins that day", got.PeriodStart)
+	}
+}
+
 type sharedForecast struct {
 	PeriodStart  string `json:"period_start"`
 	PeriodEnd    string `json:"period_end"`
@@ -224,6 +242,20 @@ func TestReportingRoutesAnswerAsReadReporting(t *testing.T) {
 	if len(evaluation.Metrics) != 1 || evaluation.Metrics[0].ID != metric || len(evaluation.Context.MemberIDs) == 0 {
 		t.Errorf("the evaluation reads %+v, want the one metric asked for over a population", evaluation)
 	}
+
+	// A saved report and its editions. The edition, evidence and compare modes
+	// need a published edition, which only a scheduled run makes, so they are
+	// left to their own reporting tests.
+	saved := createdRecord(t, d.e, "/v1/analytics/reports", AnyMap{
+		"name": "Door report", "audience": "private",
+		"selection": AnyMap{"period": "this_month", "target_basis": "month", "close_window": "all_open", "metrics": []string{metric}},
+	})
+	sameDocument(t, "a saved report",
+		d.rest(t, "GET", "/v1/analytics/reports/"+saved, nil),
+		memberOf(t, d.tool(t, "read_reporting", map[string]any{"mode": "report", "id": saved}), "report"))
+	sameDocument(t, "a report's editions",
+		d.rest(t, "GET", "/v1/analytics/reports/"+saved+"/editions", nil),
+		memberOf(t, d.tool(t, "read_reporting", map[string]any{"mode": "editions", "id": saved}), "editions"))
 }
 
 type sharedEvaluation struct {
@@ -246,12 +278,26 @@ type sharedEvaluation struct {
 func TestAvailabilityRouteAnswersAsTheTool(t *testing.T) {
 	d := newTwoDoors(t, "availability-read-doors", "read")
 	from, to := "2036-03-03T08:00:00Z", "2036-03-03T18:00:00Z"
-	// The route also names the calendar backing; the free slots must agree.
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bea Booked"})
+	if status := d.e.Call(t, "POST", "/v1/bookings", AnyMap{
+		"start": "2036-03-03T10:00:00Z", "end": "2036-03-03T11:00:00Z", "subject": "Door booking",
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
+	}, nil, nil); status != 201 {
+		t.Fatalf("booking the hour → %d", status)
+	}
+
+	// The route also names the calendar backing; the free slots must agree and
+	// leave the booked hour out.
 	got := sameRecords[sharedSlots](t, "availability",
 		d.rest(t, "GET", "/v1/availability?from="+from+"&to="+to, nil),
 		d.tool(t, "check_availability", map[string]any{"from": from, "to": to}))
 	if len(got.Slots) == 0 {
-		t.Errorf("a working day with nothing booked offers no slot: %+v", got)
+		t.Fatalf("a working day with one booked hour offers no slot: %+v", got)
+	}
+	for _, slot := range got.Slots {
+		if slot.Start >= "2036-03-03T10:00:00Z" && slot.Start < "2036-03-03T11:00:00Z" {
+			t.Errorf("slot %+v overlaps the booked hour", slot)
+		}
 	}
 }
 

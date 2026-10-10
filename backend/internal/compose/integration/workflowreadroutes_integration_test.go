@@ -12,6 +12,7 @@ package integration
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -33,12 +34,36 @@ func TestApprovalRoutesAnswerAsTheirTools(t *testing.T) {
 		t.Fatalf("the won move staged %v, want one approval", staged)
 	}
 
-	bothDoorsName(t, "pending approvals",
-		d.rest(t, "GET", "/v1/approvals?status=pending", nil),
-		d.tool(t, "list_approvals", map[string]any{"status": "pending"}), staged[0], deal)
-	bothDoorsName(t, "one approval",
-		d.rest(t, "GET", "/v1/approvals/"+staged[0], nil),
-		d.tool(t, "read_approval", map[string]any{"staged_action_id": staged[0]}), staged[0], deal)
+	pending := d.rest(t, "GET", "/v1/approvals?status=pending", nil)
+	pendingTool := d.tool(t, "list_approvals", map[string]any{"status": "pending"})
+	bothDoorsName(t, "pending approvals", pending, pendingTool, staged[0], deal)
+	one := d.rest(t, "GET", "/v1/approvals/"+staged[0], nil)
+	oneTool := d.tool(t, "read_approval", map[string]any{"staged_action_id": staged[0]})
+	bothDoorsName(t, "one approval", one, oneTool, staged[0], deal)
+
+	// The ids are labelled differently on the two doors; the kind and the
+	// status the approval is in must be the same.
+	want := sharedApproval{Kind: "progress_deal", Status: "pending"}
+	if got := sameRecords[sharedApproval](t, "one approval", one, oneTool); got != want {
+		t.Errorf("the approval reads %+v, want %+v", got, want)
+	}
+	for door, answer := range map[string]json.RawMessage{"route": pending, "tool": pendingTool} {
+		var listed struct {
+			Data      []sharedApproval `json:"data"`
+			Approvals []sharedApproval `json:"approvals"`
+		}
+		if err := json.Unmarshal(answer, &listed); err != nil {
+			t.Fatalf("the %s's approvals do not decode: %v\n%s", door, err, answer)
+		}
+		if rows := slices.Concat(listed.Data, listed.Approvals); len(rows) != 1 || rows[0] != want {
+			t.Errorf("the %s lists %+v, want the one pending %+v", door, rows, want)
+		}
+	}
+}
+
+type sharedApproval struct {
+	Kind   string `json:"kind"`
+	Status string `json:"status"`
 }
 
 // A run of a CSV import reads the same on GET /imports/{id} and read_import_run,
@@ -49,9 +74,20 @@ func TestImportRoutesAnswerAsTheirTools(t *testing.T) {
 
 	bothDoorsName(t, "import run",
 		d.rest(t, "GET", "/v1/imports/"+run, nil), d.tool(t, "read_import_run", map[string]any{"run_id": run}), run)
-	bothDoorsName(t, "import report",
+	// The route also carries links; the run, its status and its counts must agree.
+	report := sameRecords[sharedImportReport](t, "import report",
 		d.rest(t, "GET", "/v1/imports/"+run+"/report", nil),
-		d.tool(t, "read_import_report", map[string]any{"run_id": run}), run)
+		memberOf(t, d.tool(t, "read_import_report", map[string]any{"run_id": run}), "report"))
+	if report.RunID != run || report.RowsRead != 1 {
+		t.Errorf("the import report reads %+v, want run %s with its 1 row", report, run)
+	}
+}
+
+type sharedImportReport struct {
+	RunID       string               `json:"run_id"`
+	Status      string               `json:"status"`
+	RowsRead    int                  `json:"rows_read"`
+	Disposition importDispositionDTO `json:"disposition"`
 }
 
 type listCreated struct {
@@ -59,7 +95,8 @@ type listCreated struct {
 }
 
 // A list finds, reads, shows its members, its history and why a member belongs
-// the same on its routes and on read_lists.
+// the same on its routes and on read_lists. Its preview mode has no passport
+// route: POST /filters/preview is human-only, so only the tool can run it.
 func TestListRoutesAnswerAsReadLists(t *testing.T) {
 	d := newTwoDoorsWith(t, "list-read-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
 	var list listCreated

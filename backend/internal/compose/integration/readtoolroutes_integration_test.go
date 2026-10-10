@@ -15,6 +15,8 @@ import (
 	"regexp"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 var uuidInDocument = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
@@ -112,20 +114,40 @@ func memberOf(t *testing.T, answer json.RawMessage, member string) json.RawMessa
 	return members[member]
 }
 
-// A contact, a company and a lead read the same on GET /<type>/{id} and
-// read_record, and list the same on GET /<type> and list_records.
+// Every type read_record and list_records serve reads and lists the same on
+// GET /<type>/{id}, GET /<type> and the tools. A partner is read by its
+// company's id, and seeding one is not cheap here. That type is left to its
+// own route tests.
 func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "record-read-doors", "read")
+	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Door Works"})
 	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Doris Door"})
 	lead := createdRecord(t, d.e, "/v1/leads", AnyMap{"source": "manual", "full_name": "Lena Lead"})
+	deal := openDeal(t, d.e, stages, "Door renewal")
+	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Door rollout", "company_id": company, "source": "manual"})
+	note := createdRecord(t, d.e, "/v1/activities", AnyMap{
+		"kind": "note", "source": "manual", "subject": "Door note",
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
+	})
 
-	for _, c := range []struct{ kind, route, id string }{
-		{"company", "companies", company}, {"contact", "contacts", contact}, {"lead", "leads", lead},
+	for _, c := range []struct {
+		kind, route, id string
+		listed          bool
+	}{
+		{"company", "companies", company, true},
+		{"contact", "contacts", contact, true},
+		{"lead", "leads", lead, true},
+		{"deal", "deals", deal, true},
+		{"project", "projects", project, true},
+		{"activity", "activities", note, false},
 	} {
 		sameDoorRecords(t, "read "+c.kind,
 			d.rest(t, "GET", "/v1/"+c.route+"/"+c.id, nil),
 			d.tool(t, "read_record", map[string]any{"record_type": c.kind, "id": c.id}), c.id)
+		if !c.listed {
+			continue
+		}
 		sameDoorRecords(t, "list "+c.kind,
 			d.rest(t, "GET", "/v1/"+c.route+"?limit=10", nil),
 			d.tool(t, "list_records", map[string]any{"record_type": c.kind, "limit": 10}), c.id)
@@ -168,7 +190,7 @@ func TestTagRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "tag-read-doors", "read")
 	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Tamsin Tagged"})
 	tag := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Door champion"})
-	createdID(t, d.e, "/v1/tags", AnyMap{"name": "Door other"})
+	other := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Door other"})
 	if status := d.e.Call(t, "POST", "/v1/tags/"+tag+"/apply",
 		AnyMap{"entity_type": "contact", "entity_id": contact}, nil, nil); status != 201 {
 		t.Fatalf("tagging the contact → %d", status)
@@ -178,9 +200,16 @@ func TestTagRoutesAnswerAsTheirTools(t *testing.T) {
 		d.rest(t, "GET", "/v1/tags/"+tag, nil), d.tool(t, "get_tag", map[string]any{"tag_id": tag}), tag)
 	sameDoorRecords(t, "the tags list",
 		d.rest(t, "GET", "/v1/tags", nil), d.tool(t, "list_tags", map[string]any{}), tag)
-	bothDoorsName(t, "a record's tags",
-		d.rest(t, "GET", "/v1/records/contact/"+contact+"/tags", nil),
-		d.tool(t, "get_record_tags", map[string]any{"record_type": "contact", "record_id": contact}), tag)
+	// The route names the tagger's user id and the tool only its name.
+	// So the answers are compared on the tag applied and the tag that was not.
+	rest := d.rest(t, "GET", "/v1/records/contact/"+contact+"/tags", nil)
+	tool := d.tool(t, "get_record_tags", map[string]any{"record_type": "contact", "record_id": contact})
+	bothDoorsName(t, "a record's tags", rest, tool, tag)
+	for door, answer := range map[string]json.RawMessage{"route": rest, "tool": tool} {
+		if slices.Contains(documentRecords(answer), other) {
+			t.Errorf("a record's tags: the %s names the tag the record does not carry", door)
+		}
+	}
 }
 
 // A project's page reads the same on GET /projects/{id}/360 and read_project_360.
@@ -188,10 +217,21 @@ func TestProjectPageRouteAnswersAsTheTool(t *testing.T) {
 	d := newTwoDoors(t, "project-page-doors", "read")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Door Projects"})
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Door rollout", "company_id": company, "source": "manual"})
+	stages := apptest.DiscoverSeededPipeline(t, d.e)
+	deal := createdRecord(t, d.e, "/v1/deals", AnyMap{
+		"name": "Door rollout deal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
+		"company_id": company, "project_id": project, "source": "manual",
+	})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Pia Stakeholder"})
+	createdRecord(t, d.e, "/v1/relationships", AnyMap{
+		"kind": "project_stakeholder", "contact_id": contact, "project_id": project, "source": "manual",
+	})
 
+	// The route also names history rows of its own. Both pages must carry the
+	// project, its company, its deal and its stakeholder.
 	bothDoorsName(t, "project page",
 		d.rest(t, "GET", "/v1/projects/"+project+"/360", nil),
-		d.tool(t, "read_project_360", map[string]any{"project_id": project}), project, company)
+		d.tool(t, "read_project_360", map[string]any{"project_id": project}), project, company, deal, contact)
 }
 
 // The roster and the transports read the same on GET /users and
@@ -199,6 +239,14 @@ func TestProjectPageRouteAnswersAsTheTool(t *testing.T) {
 func TestRosterAndTransportRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "roster-doors", "read")
 
+	// A second member and a deactivated one make the roster more than the
+	// signed-in admin, so both doors must agree on who is listed.
+	d.e.DescribeCompany(t)
+	createdID(t, d.e, "/v1/users", AnyMap{"email": "second@roster-doors.test", "display_name": "Second Member", "role": "rep"})
+	gone := createdID(t, d.e, "/v1/users", AnyMap{"email": "gone@roster-doors.test", "display_name": "Gone Member", "role": "rep"})
+	if status := d.e.Call(t, "POST", "/v1/users/"+gone+"/deactivate", AnyMap{}, nil, nil); status >= 400 {
+		t.Fatalf("deactivating a member → %d", status)
+	}
 	sameDoorRecords(t, "colleagues",
 		d.rest(t, "GET", "/v1/users", nil), d.tool(t, "list_colleagues", map[string]any{}))
 
