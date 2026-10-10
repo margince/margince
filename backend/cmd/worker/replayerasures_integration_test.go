@@ -25,7 +25,7 @@ import (
 
 const restoredAddress = "geloescht@betroffene.example"
 
-// The restore the replay exists for: the database went back to a point before
+// The restore the replay exists for. The database went back to a point before
 // an erasure, so the contact's rows came back and the suppression list lost
 // the entry. Only the journal in the object store still names the address.
 func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
@@ -70,7 +70,7 @@ func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
 	}
 }
 
-// Without the object store the journal cannot be read, and a pass over the
+// Without the object store the journal cannot be read. A pass over the
 // rolled-back list alone would report a clean run it cannot vouch for.
 func TestReplayErasuresRefusesToRunWithoutTheObjectStore(t *testing.T) {
 	e := integration.Setup(t)

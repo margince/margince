@@ -5,9 +5,9 @@ package main
 
 // `worker replay-erasures` re-erases the contacts a restore brought back.
 //
-// A subcommand rather than an endpoint or a job: an operator runs it from a
-// shell right after a restore, when the api may not be serving yet, and a
-// restored queue is itself restored state.
+// A subcommand rather than an endpoint or a job. An operator runs it from a
+// shell right after a restore, when the api may not be serving yet. A queued
+// job would read a queue that is itself restored state.
 
 import (
 	"context"
@@ -23,9 +23,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
-// runReplayErasures builds the same eraser the api erases with, from the same
-// environment, so the replay reaches attachment bytes, sealed link material
-// and provider originals as an Art. 17 erasure does.
+// runReplayErasures builds the eraser the api erases with, from the same
+// environment. The replay then reaches attachment bytes, sealed link material
+// and provider originals, as an Art. 17 erasure does.
 func runReplayErasures(
 	ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, env config.Lookup, args []string, stdout io.Writer,
 ) error {

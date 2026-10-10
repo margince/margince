@@ -25,16 +25,16 @@ import (
 // because the frontend-label census reads the argument at the call site.
 const erasureReplayActor = "erasure_replay"
 
-// ErrReplayNeedsObjectStore refuses a replay with no object store. The journal
-// lives there, and after a restore to a point before an erasure the database's
-// own list no longer names the subject, so a run without it would report a
-// clean pass it cannot vouch for.
+// ErrReplayNeedsObjectStore refuses a replay with no object store, where the
+// journal lives. After a restore to a point before an erasure, the database's
+// own list no longer names the subject. A run without the journal would report
+// a clean pass it cannot vouch for.
 var ErrReplayNeedsObjectStore = errors.New(
 	"the erasure replay needs the object store: set MARGINCE_BLOBSTORE_ENDPOINT or MARGINCE_BLOBSTORE_PATH as the api has them")
 
 // ReplayErasureSuppressions re-erases each live contact the suppression list
 // or its exported journal names, and reports how many it took. A contact the
-// eraser refuses, such as one under legal hold, does not stop the others; the
+// eraser refuses, such as one under legal hold, does not stop the others. The
 // refusals come back beside the count of what was done.
 func ReplayErasureSuppressions(
 	ctx context.Context, pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault,
