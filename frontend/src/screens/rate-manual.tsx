@@ -345,10 +345,13 @@ function inlineFrame(fields: ReactNode, actions: ReactNode) {
   );
 }
 
-// The vendors a price can be filed under: the chat adapters and the decision
-// ones, without the test adapter.
+/** Whether a vendor carries prices: every adapter but the built-in test one. */
+export function isPricedProvider(provider: string): boolean {
+  return provider !== "fake";
+}
+
 const PRICED_PROVIDERS: readonly string[] = [
-  ...PROVIDERS.filter((p) => p !== "fake"),
+  ...PROVIDERS.filter(isPricedProvider),
   ...DECISION_PROVIDERS,
 ];
 

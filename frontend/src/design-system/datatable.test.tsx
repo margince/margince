@@ -11,7 +11,11 @@ import userEvent from "@testing-library/user-event";
 import { createPortal } from "react-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { TableScroll } from "./atoms";
-import { DataTable, type DataTableColumn } from "./datatable";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableDetail,
+} from "./datatable";
 import { Heading } from "./heading";
 
 afterEach(() => {
@@ -399,4 +403,117 @@ it("gives a pinned cell an opaque ground at rest and under the pointer", () => {
   expect(css).toContain(
     ".table-scroll-sticky > .table > tbody > tr:hover > :first-child {\n  background: var(--bgHover);",
   );
+});
+
+const CALLS = [
+  { id: "a", task: "Triage", trace: "Two attempts" },
+  { id: "b", task: "Enrich", trace: "One attempt" },
+];
+type Call = (typeof CALLS)[number];
+const CALL_COLUMNS: DataTableColumn<Call>[] = [
+  { key: "task", header: "Task", render: (call) => call.task },
+];
+
+function CallLog({
+  fold,
+  detail,
+}: Readonly<{
+  fold?: boolean;
+  detail?: Partial<DataTableDetail<Call>>;
+}>) {
+  return (
+    <DataTable
+      label="Calls"
+      fold={fold}
+      columns={CALL_COLUMNS}
+      rows={CALLS}
+      rowKey={(call) => call.id}
+      rowTestId={(call) => `call-${call.id}`}
+      detail={{
+        header: "Detail",
+        toggleLabel: (call) => `Show ${call.task}`,
+        render: (call) => <p>{call.trace}</p>,
+        ...detail,
+      }}
+    />
+  );
+}
+
+// The toggle says what it opens and where, and the row under it spans the
+// table, so a detail is never squeezed into one column.
+it("opens a row's detail under it, from its toggle or a press anywhere on the row", async () => {
+  const user = userEvent.setup();
+  render(<CallLog />);
+  const toggle = screen.getByRole("button", { name: "Show Triage" });
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  const region = document.getElementById(
+    toggle.getAttribute("aria-controls") ?? "",
+  );
+  expect(region?.tagName).toBe("TD");
+  expect(region?.getAttribute("colspan")).toBe("2");
+  expect(region?.closest("tr")?.hidden).toBe(true);
+
+  await user.click(screen.getByText("Triage"));
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(region?.textContent).toBe("Two attempts");
+  expect(screen.getByTestId("call-a").className).toContain("datatable-open");
+  expect(screen.queryByText("One attempt")).toBeNull();
+
+  await user.click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(region?.textContent).toBe("");
+  toggle.focus();
+  await user.keyboard("{Enter}");
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+});
+
+it("leaves which rows are open to a caller that holds them", async () => {
+  const user = userEvent.setup();
+  const toggled: string[] = [];
+  render(
+    <CallLog
+      detail={{
+        expanded: new Set(["b"]),
+        onToggle: (key) => toggled.push(key),
+      }}
+    />,
+  );
+  expect(screen.getByText("One attempt")).toBeTruthy();
+  await user.click(screen.getByText("Triage"));
+  expect(toggled).toEqual(["a"]);
+  expect(screen.queryByText("Two attempts")).toBeNull();
+});
+
+it("gives a row with nothing to open no toggle and no pointer", async () => {
+  const user = userEvent.setup();
+  render(<CallLog detail={{ has: (call) => call.id === "a" }} />);
+  expect(screen.queryByRole("button", { name: "Show Enrich" })).toBeNull();
+  expect(screen.getByTestId("call-b").className).toBe("");
+  expect(screen.getByTestId("call-a").className).toBe("rowlink");
+  await user.click(screen.getByText("Enrich"));
+  expect(screen.queryByText("One attempt")).toBeNull();
+});
+
+// A row whose own cells open, as a clamped description does, draws no row
+// under it: the toggle names the element in the row instead.
+it("points the toggle at the caller's element when nothing opens under the row", () => {
+  render(
+    <CallLog
+      detail={{ render: undefined, controls: (call) => `trace-${call.id}` }}
+    />,
+  );
+  const toggle = screen.getByRole("button", { name: "Show Triage" });
+  expect(toggle.getAttribute("aria-controls")).toBe("trace-a");
+  expect(document.querySelector(".datatable-detail")).toBeNull();
+});
+
+it("keeps a folded row's toggle at the end of its first line", () => {
+  render(<CallLog fold />);
+  const toggle = screen.getByRole("button", { name: "Show Triage" });
+  expect(toggle.closest("td")?.getAttribute("data-fold")).toBe("end");
+  expect(
+    screen
+      .getByRole("columnheader", { name: "Detail" })
+      .querySelector(".sr-only"),
+  ).not.toBeNull();
 });

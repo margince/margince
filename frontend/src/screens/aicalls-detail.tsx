@@ -3,10 +3,13 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Card } from "../design-system/atoms";
-import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { formatDecimal, formatNumber, ordinalNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { attemptReasonLabel, tierLabel } from "./ai-decision-labels";
+import { providerName } from "./ai-provider-names";
+import { sentinelLabel } from "./aicalls-sentinel";
 import { ExportScenarioDialog } from "./aiexport";
 import { QueryStates, unwrap } from "./common";
 
@@ -24,6 +27,19 @@ function attemptBinding(
   return attempt.provider
     ? `${attempt.provider}/${attempt.model_id}`
     : (attempt.model_id ?? "");
+}
+
+const IDENTITY_SOURCE: Readonly<Record<string, MessageKey>> = {
+  response: "aicalls.detail.source.response",
+  echo: "aicalls.detail.source.echo",
+  configured: "aicalls.detail.source.configured",
+};
+
+// How far to trust the served model named above. A source this screen does
+// not know yet is shown as sent.
+function identitySource(source: string, t: Translator): string {
+  const key = IDENTITY_SOURCE[source];
+  return key ? t(key) : t("aicalls.detail.source", { source });
 }
 
 export function CallDetailPanel({
@@ -51,19 +67,15 @@ export function CallDetailPanel({
             {query.data.model_id
               ? t("aicalls.detail.identity", {
                   served: query.data.served_model,
-                  provider: query.data.provider,
+                  provider: providerName(query.data.provider, t),
                   configured: query.data.model_id,
                 })
               : t("aicalls.detail.identityNoModel", {
                   served: query.data.served_model,
-                  provider: query.data.provider,
+                  provider: providerName(query.data.provider, t),
                 })}
           </p>
-          <p>
-            {t("aicalls.detail.source", {
-              source: query.data.served_identity_source,
-            })}
-          </p>
+          <p>{identitySource(query.data.served_identity_source, t)}</p>
           <p>
             {query.data.context_scopes.length > 0
               ? t("aicalls.detail.context", {
@@ -71,11 +83,9 @@ export function CallDetailPanel({
                 })
               : t("aicalls.detail.contextNone")}
           </p>
-          {/* A bare h3 carries no class, and preflight leaves it at body size
-              and body weight — a heading only the document tree can see. The
-              eyebrow is the one spelling of a label over a block, and `as="h3"`
-              is what keeps it a real heading inside the card's own h2. */}
-          <Eyebrow as="h3">{t("aicalls.detail.attempts")}</Eyebrow>
+          <Heading size="xsmall" as="h4">
+            {t("aicalls.detail.attempts")}
+          </Heading>
           <ol>
             {query.data.attempts.map((attempt) => (
               <li key={attempt.attempt}>
@@ -118,7 +128,15 @@ export function CallDetailPanel({
                     ),
                   })}`}
                 {attempt.error_sentinel && (
-                  <Badge tone="danger">{attempt.error_sentinel}</Badge>
+                  <>
+                    {" "}
+                    <Badge tone="danger">
+                      {sentinelLabel(attempt.error_sentinel, t)}
+                    </Badge>{" "}
+                    <code className="aicalls-sentinel">
+                      {attempt.error_sentinel}
+                    </code>
+                  </>
                 )}
               </li>
             ))}

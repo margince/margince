@@ -8815,6 +8815,11 @@ export const de = {
   "settings.rates.colOutput": "Ausgabe $/M",
   "settings.rates.colCacheRead": "Cache-Lesen $/M",
   "settings.rates.colCacheWrite": "Cache-Schreiben $/M",
+  "settings.rates.colIn": "Eingabe",
+  "settings.rates.colOut": "Ausgabe",
+  "settings.rates.colCacheReadShort": "Cache lesen",
+  "settings.rates.colCacheWriteShort": "Cache schreiben",
+  "settings.rates.modelGroupLabel": "Preise von {provider}",
   "settings.voice.title": "Voice DNA",
   "settings.voice.intro":
     "Dein persönlicher Schreibstil prägt Entwürfe, die für dich geschrieben werden. Nur du siehst ihn, und er lernt nur aus Schreibproben, die du hinzufügst.",
@@ -9369,7 +9374,6 @@ export const de = {
   "aiusage.sub":
     "Bisherige Nutzung im gewählten Monat. Die Schätzungen sind unabhängig vom aktuellen Token-Kontingent und von der Rechnung deines Anbieters.",
   "aiusage.col.task": "Aufgabe",
-  "aiusage.col.tier": "Modellstufe",
   "aiTier.decide": "Entscheidungsmodell",
   "aiTier.local_small": "Lokal, klein",
   "aiTier.cheap_cloud": "Cloud, Alltag",
@@ -9379,9 +9383,10 @@ export const de = {
   "aiTier.embeddings": "Embedding-Modell",
   "aiusage.col.calls": "Aufrufe",
   "aiusage.col.cached": "Aus dem Cache",
-  "aiusage.col.tokensIn": "Tokens (Eingabe)",
-  "aiusage.col.tokensOut": "Tokens (Ausgabe)",
   "aiusage.col.cost": "Geschätzte Kosten",
+  "aiusage.col.tokens": "Tokens ein / aus",
+  "aiusage.days.label": "Aufrufe nach Tag",
+  "aiusage.days.col.day": "Tag",
   "aiusage.costNote":
     "Die Kosten sind Schätzungen auf Basis der konfigurierten Preise.",
   "aiusage.costPartial":
@@ -9424,12 +9429,11 @@ export const de = {
   "aicalls.col.when": "Zeitpunkt",
   "aicalls.col.task": "Aufgabe",
   "aicalls.col.model": "Modell",
-  "aicalls.col.tokens": "Tokens",
+  "aicalls.col.tokens": "Tokens ein / aus",
   "aicalls.col.latency": "Latenz",
   "aicalls.ms": "{value} ms",
   "aicalls.badge.cacheHit": "Cache-Treffer",
   "aicalls.badge.degraded": "Herabgestuft",
-  "aicalls.badge.retries": "Wiederholung ×{count}",
   "aicalls.badge.decision": "Entscheidungsmodell",
   "aicalls.reason.decision_below_floor":
     "Entscheidungsmodell unter seiner Konfidenzschwelle",
@@ -9446,7 +9450,6 @@ export const de = {
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
-  "aicalls.loadMore": "Mehr laden",
   "aicalls.empty": "Noch keine KI-Aufrufe aufgezeichnet.",
   "aicalls.detail.identity":
     "{served} über {provider} ausgeliefert (konfiguriert: {configured})",
@@ -9463,6 +9466,25 @@ export const de = {
   "aicalls.payload.off":
     "Die Erfassung der Nutzdaten ist ausgeschaltet. Setze ai.capture_payloads: true in margince.yaml, um Inhalte von Anfrage und Antwort aufzuzeichnen.",
   "aicalls.payload.none": "Für diesen Aufruf wurden keine Nutzdaten erfasst.",
+  "aicalls.col.outcome": "Ergebnis",
+  "aicalls.outcome.retried": "Wiederholt",
+  "aicalls.outcome.failed": "Fehlgeschlagen",
+  "aicalls.model.afterDecision": "Entscheidungsmodell, dann {tier}",
+  "aicalls.filter.servedProvider": "Ausgeliefert von",
+  "aicalls.sentinel.provider_quota": "Kontingent erschöpft",
+  "aicalls.sentinel.provider_throttled": "Gedrosselt",
+  "aicalls.sentinel.provider_refused": "Vom Anbieter abgelehnt",
+  "aicalls.sentinel.provider_error": "Anbieterfehler",
+  "aicalls.sentinel.timeout": "Zeitlimit überschritten",
+  "aicalls.sentinel.output_withheld": "Antwort zurückgehalten",
+  "aicalls.sentinel.output_rejected": "Antwort verworfen",
+  "aicalls.sentinel.request_rejected": "Anfrage abgelehnt",
+  "aicalls.detail.source.response":
+    "Der Anbieter hat dieses Modell in seiner Antwort genannt.",
+  "aicalls.detail.source.echo":
+    "Der Anbieter hat nur das angefragte Modell zurückgegeben, welches Modell geantwortet hat, ist nicht bestätigt.",
+  "aicalls.detail.source.configured":
+    "Der Anbieter hat kein Modell genannt, daher steht hier das konfigurierte.",
 
   "aiexport.button": "Als Zertifizierungsszenario exportieren",
   "aiexport.title": "Lauf als Zertifizierungsszenario exportieren",

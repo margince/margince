@@ -8965,6 +8965,11 @@ export const en = {
   "settings.rates.colOutput": "Output $/M",
   "settings.rates.colCacheRead": "Cache read $/M",
   "settings.rates.colCacheWrite": "Cache write $/M",
+  "settings.rates.colIn": "In",
+  "settings.rates.colOut": "Out",
+  "settings.rates.colCacheReadShort": "Cache read",
+  "settings.rates.colCacheWriteShort": "Cache write",
+  "settings.rates.modelGroupLabel": "{provider} prices",
   "settings.voice.title": "Voice DNA",
   "settings.voice.intro":
     "Your personal writing voice. It shapes drafts written for you, is visible only to you and learns only from samples you add.",
@@ -9505,7 +9510,6 @@ export const en = {
   "aiusage.sub":
     "Historical usage for the selected month. Estimates are separate from the live token allowance and from your provider bill.",
   "aiusage.col.task": "Task",
-  "aiusage.col.tier": "Tier",
   "aiTier.decide": "Decision model",
   "aiTier.local_small": "Small local",
   "aiTier.cheap_cloud": "Everyday cloud",
@@ -9515,9 +9519,10 @@ export const en = {
   "aiTier.embeddings": "Embedding model",
   "aiusage.col.calls": "Calls",
   "aiusage.col.cached": "Cached",
-  "aiusage.col.tokensIn": "Tokens in",
-  "aiusage.col.tokensOut": "Tokens out",
   "aiusage.col.cost": "Estimated cost",
+  "aiusage.col.tokens": "Tokens in / out",
+  "aiusage.days.label": "Calls by day",
+  "aiusage.days.col.day": "Day",
   "aiusage.costNote": "Costs are estimates at configured rates.",
   "aiusage.costPartial":
     "This total covers priced calls only: {calls} more had no configured rate, and their usage appears only in the token counts.",
@@ -9555,12 +9560,11 @@ export const en = {
   "aicalls.col.when": "When",
   "aicalls.col.task": "Task",
   "aicalls.col.model": "Model",
-  "aicalls.col.tokens": "Tokens",
+  "aicalls.col.tokens": "Tokens in / out",
   "aicalls.col.latency": "Latency",
   "aicalls.ms": "{value} ms",
   "aicalls.badge.cacheHit": "Cache hit",
   "aicalls.badge.degraded": "Degraded",
-  "aicalls.badge.retries": "Retry ×{count}",
   "aicalls.badge.decision": "Decision model",
   "aicalls.reason.decision_below_floor":
     "Decision model below its confidence floor",
@@ -9577,7 +9581,6 @@ export const en = {
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
-  "aicalls.loadMore": "Load more",
   "aicalls.empty": "No AI calls recorded yet.",
   "aicalls.detail.identity":
     "Served {served} via {provider} (configured: {configured})",
@@ -9594,6 +9597,25 @@ export const en = {
   "aicalls.payload.off":
     "Payload capture is off. Set ai.capture_payloads: true in margince.yaml to record request and response content.",
   "aicalls.payload.none": "No payload captured for this call.",
+  "aicalls.col.outcome": "Outcome",
+  "aicalls.outcome.retried": "Retried",
+  "aicalls.outcome.failed": "Failed",
+  "aicalls.model.afterDecision": "Decision model, then {tier}",
+  "aicalls.filter.servedProvider": "Served by",
+  "aicalls.sentinel.provider_quota": "Out of quota",
+  "aicalls.sentinel.provider_throttled": "Throttled",
+  "aicalls.sentinel.provider_refused": "Refused by provider",
+  "aicalls.sentinel.provider_error": "Provider failed",
+  "aicalls.sentinel.timeout": "Timed out",
+  "aicalls.sentinel.output_withheld": "Answer withheld",
+  "aicalls.sentinel.output_rejected": "Answer rejected",
+  "aicalls.sentinel.request_rejected": "Request rejected",
+  "aicalls.detail.source.response":
+    "The provider named this model in its reply.",
+  "aicalls.detail.source.echo":
+    "The provider echoed the requested model back, so what served the call is not confirmed.",
+  "aicalls.detail.source.configured":
+    "The provider named no model, so this is the configured one.",
 
   "aiexport.button": "Export certification scenario",
   "aiexport.title": "Export run as certification scenario",

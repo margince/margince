@@ -23,7 +23,6 @@
 const STANDALONE: readonly string[] = [
   "aiSettings.providers.missing",
   "aiSettings.providers.value",
-  "aicalls.badge.retries",
   "analytics.forecastPriced",
   "brief.focus.position",
   "brief.sentence.rest",

@@ -59,7 +59,6 @@
 510 frontend/src/screens/importflow.ts
 509 frontend/src/screens/voice-versions.tsx
 532 frontend/src/screens/leadpresentation.tsx
-536 frontend/src/screens/connected-agents.tsx
 535 frontend/src/screens/scheduledsends.tsx
 517 frontend/src/screens/worklist.queries.ts
 571 frontend/src/screens/capture-activity.tsx

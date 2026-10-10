@@ -61,6 +61,34 @@ const MODELS = {
       cache_write_per_mtok: "0",
       effective_date: "2026-07-23",
     },
+    {
+      provider: "anthropic",
+      model_id: "claude-haiku-4-5",
+      input_per_mtok: "1",
+      output_per_mtok: "5",
+      cache_read_per_mtok: "0.1",
+      cache_write_per_mtok: "1.25",
+      effective_date: "2026-08-01",
+    },
+    {
+      provider: "openai_compatible",
+      model_id: "google/gemini-3.1-flash-lite-preview-09-2026",
+      input_per_mtok: "0.075",
+      output_per_mtok: "0.3",
+      cache_read_per_mtok: "0.0001",
+      cache_write_per_mtok: "0",
+      effective_date: "2026-07-01",
+    },
+    // The built-in test adapter's row, which the sheet leaves out.
+    {
+      provider: "fake",
+      model_id: "",
+      input_per_mtok: "0",
+      output_per_mtok: "0",
+      cache_read_per_mtok: "0",
+      cache_write_per_mtok: "0",
+      effective_date: "2026-07-01",
+    },
   ],
 };
 
@@ -216,6 +244,23 @@ export const ModelPriceDialog: Story = {
     return (
       <StoryProviders>
         <RateSheets />
+      </StoryProviders>
+    );
+  },
+};
+
+// The model sheet alone in dark: one table per vendor under its name, the
+// figures against the end, the test adapter left out.
+export const ModelPricesDark: Story = {
+  globals: { theme: "dark" },
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /ai-model-rates": () => jsonResponse(MODELS),
+    });
+    return (
+      <StoryProviders>
+        <ModelCostsCard />
       </StoryProviders>
     );
   },

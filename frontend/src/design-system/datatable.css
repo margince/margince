@@ -12,6 +12,15 @@
   text-align: end;
   font-variant-numeric: tabular-nums;
 }
+/* A figure's heading is a few words over a narrow column; wrapped, it stood
+   taller than the figures it names. */
+.table th.datatable-end {
+  white-space: nowrap;
+}
+/* A figure with a caption under it keeps both lines on the column's end edge. */
+.table .datatable-end > .cell-stack {
+  align-items: flex-end;
+}
 /* The column that takes the spare width. A table sizes every other column to
    its content, so a bar in a column nobody grew collapses to nothing; the floor
    keeps a bar readable when the table is narrow and scrolls. */
@@ -21,9 +30,30 @@
 }
 /* Beside a growing column every other cell keeps its line: the growth is taken
    from the bar, never from a name folded onto two lines to make room for it. A
-   table too wide for its box scrolls inside it instead. */
-.table:has(.datatable-grow) :is(th, td):not(.datatable-grow) {
+   table too wide for its box scrolls inside it instead. An opened detail is
+   prose and wraps. */
+.table:has(.datatable-grow)
+  > *
+  > tr:not(.datatable-detail)
+  > :is(th, td):not(.datatable-grow) {
   white-space: nowrap;
+}
+
+/* detail: an open row and the row under it read as one entry, so the rule
+   between them goes and they light up together. */
+.table > tbody > tr.datatable-detail[hidden] {
+  display: none;
+}
+.table > tbody > tr.datatable-open > td,
+.table > tbody > tr:has(+ tr.datatable-detail[hidden]:last-child) > td {
+  border-bottom: 0;
+}
+.table > tbody > tr.datatable-detail > td {
+  padding-block-start: 0;
+}
+.table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
+.table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
+  background: var(--bgHover);
 }
 
 /* fold: the box is measured, not the viewport, because a settings rail or a
@@ -96,5 +126,33 @@
     margin-block-start: var(--space-1);
     font: var(--fontBodySmall);
     color: var(--textSecondary);
+  }
+}
+
+/* detail, folded: what opens runs the row's full width, under both its lines. */
+@container table-fold (width < 36rem) {
+  .table-scroll-fold > .table > tbody > tr.datatable-detail {
+    padding-block-start: 0;
+  }
+  .table-scroll-fold > .table > tbody > tr.datatable-open,
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr:has(+ tr.datatable-detail[hidden]:last-child) {
+    border-bottom: 0;
+  }
+  .table-scroll-fold > .table > tbody > tr.datatable-detail > td {
+    flex: 1 1 100%;
+  }
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr.datatable-open:hover
+    + tr.datatable-detail,
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr.datatable-open:has(+ tr.datatable-detail:hover) {
+    background: var(--bgHover);
   }
 }

@@ -8626,6 +8626,11 @@ export const vi = {
   "settings.rates.colOutput": "Đầu ra $/M",
   "settings.rates.colCacheRead": "Đọc cache $/M",
   "settings.rates.colCacheWrite": "Ghi cache $/M",
+  "settings.rates.colIn": "Vào",
+  "settings.rates.colOut": "Ra",
+  "settings.rates.colCacheReadShort": "Đọc cache",
+  "settings.rates.colCacheWriteShort": "Ghi cache",
+  "settings.rates.modelGroupLabel": "Giá của {provider}",
   "settings.voice.title": "Voice DNA",
   "settings.voice.intro":
     "Giọng văn riêng của bạn. Giọng văn này định hình bản nháp viết cho bạn, chỉ bạn thấy được và chỉ học từ văn mẫu bạn thêm vào.",
@@ -9174,7 +9179,6 @@ export const vi = {
   "aiusage.sub":
     "Mức sử dụng của tháng đã chọn. Số ước tính tách biệt với hạn mức token đang áp dụng và với hóa đơn của nhà cung cấp.",
   "aiusage.col.task": "Tác vụ",
-  "aiusage.col.tier": "Cấp",
   "aiTier.decide": "Mô hình quyết định",
   "aiTier.local_small": "Cục bộ nhỏ",
   "aiTier.cheap_cloud": "Đám mây thường ngày",
@@ -9184,9 +9188,10 @@ export const vi = {
   "aiTier.embeddings": "Mô hình embedding",
   "aiusage.col.calls": "Lượt gọi",
   "aiusage.col.cached": "Đã cache",
-  "aiusage.col.tokensIn": "Token vào",
-  "aiusage.col.tokensOut": "Token ra",
   "aiusage.col.cost": "Chi phí ước tính",
+  "aiusage.col.tokens": "Token vào / ra",
+  "aiusage.days.label": "Lượt gọi theo ngày",
+  "aiusage.days.col.day": "Ngày",
   "aiusage.costNote": "Chi phí là số ước tính theo mức giá đã cấu hình.",
   "aiusage.costPartial":
     "Tổng này chỉ gồm các lượt gọi có giá: {calls} lượt khác chưa cấu hình mức giá, và mức sử dụng của chúng chỉ hiện trong số token.",
@@ -9225,12 +9230,11 @@ export const vi = {
   "aicalls.col.when": "Thời điểm",
   "aicalls.col.task": "Tác vụ",
   "aicalls.col.model": "Mô hình",
-  "aicalls.col.tokens": "Token",
+  "aicalls.col.tokens": "Token vào / ra",
   "aicalls.col.latency": "Độ trễ",
   "aicalls.ms": "{value} ms",
   "aicalls.badge.cacheHit": "Trúng cache",
   "aicalls.badge.degraded": "Suy giảm",
-  "aicalls.badge.retries": "Thử lại ×{count}",
   "aicalls.badge.decision": "Mô hình quyết định",
   "aicalls.reason.decision_below_floor":
     "Mô hình quyết định dưới ngưỡng tin cậy",
@@ -9247,7 +9251,6 @@ export const vi = {
   "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Lượt gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
-  "aicalls.loadMore": "Tải thêm",
   "aicalls.empty": "Chưa ghi nhận lượt gọi AI nào.",
   "aicalls.detail.identity":
     "Mô hình phục vụ: {served} qua {provider} (đã cấu hình: {configured})",
@@ -9264,6 +9267,25 @@ export const vi = {
   "aicalls.payload.off":
     "Đang tắt ghi nội dung. Thiết lập ai.capture_payloads: true trong margince.yaml để ghi lại nội dung yêu cầu và phản hồi.",
   "aicalls.payload.none": "Không ghi lại nội dung cho lượt gọi này.",
+  "aicalls.col.outcome": "Kết quả",
+  "aicalls.outcome.retried": "Đã thử lại",
+  "aicalls.outcome.failed": "Không thành công",
+  "aicalls.model.afterDecision": "Mô hình quyết định, rồi {tier}",
+  "aicalls.filter.servedProvider": "Phục vụ bởi",
+  "aicalls.sentinel.provider_quota": "Hết hạn mức",
+  "aicalls.sentinel.provider_throttled": "Bị giới hạn tốc độ",
+  "aicalls.sentinel.provider_refused": "Nhà cung cấp từ chối",
+  "aicalls.sentinel.provider_error": "Nhà cung cấp bị lỗi",
+  "aicalls.sentinel.timeout": "Hết thời gian",
+  "aicalls.sentinel.output_withheld": "Câu trả lời bị giữ lại",
+  "aicalls.sentinel.output_rejected": "Câu trả lời bị loại",
+  "aicalls.sentinel.request_rejected": "Yêu cầu bị từ chối",
+  "aicalls.detail.source.response":
+    "Nhà cung cấp đã nêu mô hình này trong phản hồi.",
+  "aicalls.detail.source.echo":
+    "Nhà cung cấp chỉ trả lại tên mô hình đã yêu cầu, nên chưa xác nhận được mô hình nào đã phục vụ.",
+  "aicalls.detail.source.configured":
+    "Nhà cung cấp không nêu mô hình, nên đây là mô hình đã cấu hình.",
 
   "aiexport.button": "Xuất kịch bản kiểm định",
   "aiexport.title": "Xuất lần chạy thành kịch bản kiểm định",
