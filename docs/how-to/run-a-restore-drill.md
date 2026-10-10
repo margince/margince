@@ -33,15 +33,32 @@ when the restore starts. `--restored-to` must be RFC 3339 and must not lie in th
 Use your backup tool to restore the database into the spare database. Restore the object store to the same point
 in time. A database without its attachment files is half a restore.
 
+Leave out the `erasure-suppression/` prefix of the object store. It holds the erasure journal, and the replay below
+needs the newest copy. Copy that prefix from the live object store instead.
+
 Then bring the restored schema up to the running release:
 
 ```sh
 margince-migrate up --dsn "$SPARE_OWNER_DSN"
 ```
 
-No command yet replays the erasure suppression list against a restored database. A restore to a point before an
-erasure brings the erased contact's data back. For a drill, note this in `--note`. For a real restore, do not let users
-back in until the replay exists and has run.
+A restore to a point before an erasure brings the erased contact's data back. The database's own suppression list
+rolls back with it. The worker job `suppression_journal_export` copies that list to the object store every hour, and the
+`replay-erasures` command of the worker program erases again every live contact the list or that copy names.
+
+Run it against the spare database, with the object store and key vault settings the worker has:
+
+```sh
+export MARGINCE_DSN=postgres://...
+worker replay-erasures
+```
+
+The api does not need to be running. The command prints how many contacts it erased again. On a drill the answer is
+often zero, and zero is a valid result. A contact under legal hold is not erased; the command names it and exits with an
+error after it has erased the others. The command refuses to run without an object store, because the journal lives
+there.
+
+For a real restore, do not let users back in until `replay-erasures` has run without an error.
 
 ## 3. Check the restored copy
 

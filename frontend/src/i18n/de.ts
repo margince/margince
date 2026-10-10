@@ -891,6 +891,7 @@ export const de = {
   "systemJob.domain_triage": "Vorprüfung von Websites",
   "systemJob.employment_import_worker": "Import des Werdegangs",
   "systemJob.enabled_oidc_providers_read": "Lesen der Anmeldeanbieter",
+  "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.extension_inventory": "Erweiterungsbestand",
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",

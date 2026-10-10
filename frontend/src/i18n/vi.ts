@@ -869,6 +869,7 @@ export const vi = {
   "systemJob.domain_triage": "Phân loại trang web",
   "systemJob.employment_import_worker": "Nhập lịch sử công tác",
   "systemJob.enabled_oidc_providers_read": "Đọc nhà cung cấp đăng nhập",
+  "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",

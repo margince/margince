@@ -872,6 +872,7 @@ export const en = {
   "systemJob.domain_triage": "Website triage",
   "systemJob.employment_import_worker": "Employment history import",
   "systemJob.enabled_oidc_providers_read": "Sign-in provider read",
+  "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.extension_inventory": "Extension inventory",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",

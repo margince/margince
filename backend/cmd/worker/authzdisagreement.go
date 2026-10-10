@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -115,6 +116,8 @@ func runDatabaseSubcommand(ctx context.Context, pool *pgxpool.Pool, args []strin
 		return true, runAuthzDisagreement(ctx, pool, args[1:], stdout)
 	case "deal-key-names":
 		return true, runDealKeyNames(ctx, pool, args[1:], stdout)
+	case "replay-erasures":
+		return true, runReplayErasures(ctx, pool, config.FromOS, args[1:], stdout)
 	}
 	if args[0] == "reopen-parked" {
 		return true, runReopenParked(ctx, pool, args[1:], stdout)
