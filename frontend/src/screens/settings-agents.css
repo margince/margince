@@ -1,0 +1,77 @@
+/* The Agents page's three tables: passports, connected clients and tools. */
+
+/* A credential that is over. Struck, not dimmed: dimming takes the text under
+   the AA contrast floor, and an ended row is the one a reader must read. */
+.agents-ended {
+  text-decoration: line-through;
+}
+
+/* A fixed floor rather than the name's own width, so a long name truncates
+   instead of widening the table. */
+.agents-name {
+  display: grid;
+  gap: var(--space-1);
+  inline-size: 8.5rem;
+  min-inline-size: 100%;
+}
+/* A badge too wide to share the line wraps under the name, never squeezing it. */
+.agents-name-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-inline-size: 0;
+}
+.agents-name-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agents-name-line > .badge {
+  flex: none;
+}
+
+/* Capped, so five chips wrap two or three to a line instead of taking the
+   width the name needs. */
+.agents-scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  inline-size: max-content;
+  max-inline-size: 15rem;
+}
+
+/* The dates under the name, only once the row has folded and their own
+   columns are out of sight. */
+.agents-fold-caption {
+  display: none;
+}
+@container table-fold (width < 36rem) {
+  .agents-name {
+    inline-size: 0;
+  }
+  .agents-fold-caption {
+    display: block;
+  }
+}
+
+/* The text an agent selects a tool by: one line until its row is opened. */
+.tools-description {
+  color: var(--textSecondary);
+}
+.tools-description-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+/* A tier with the badge that says it cannot move. */
+.agents-tier {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

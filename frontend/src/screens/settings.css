@@ -82,28 +82,6 @@
   color: var(--warningText);
 }
 
-/* A RUN of small items inside one of a row's two columns: a passport's dates,
-   its masked token and scope chips, a tool's tier dot and its governance
-   badges, the autonomy row's dot beside the badge that says it cannot move.
-
-   ONE class, because these are the same object — several small things sharing a
-   line, wrapping when the card is narrow — and this sheet had grown two
-   spellings of it (`.passport-facts` at an 8px gap, `.tool-row-head` at 8 with
-   a 4px row gap) while a third cluster used the row's own 12px flex gap. Three
-   gaps for one relationship on one page is exactly what a reader reads as
-   "the spacing is different in every card".
-
-   Wrapping is not optional: an unwrapped flex line does not shrink, so a long
-   badge run pushed the card's scroll width out and the whole settings column
-   scrolled sideways. */
-.settings-run {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  row-gap: var(--space-1);
-}
-
 /* The profile block, borrowed from the record page's identity header
    (composed.css `.record-head`): the mark, then the name with its standing
    badges on the same line, then the two meta lines that qualify it. Three loose
@@ -152,11 +130,6 @@
   gap: var(--space-2);
   flex-wrap: wrap;
 }
-/* Struck, not dimmed: dimming a revoked row drops it under the AA contrast
-   floor (B-EP09.21), and the revoked row is the one a reader most needs. */
-.passport-struck {
-  text-decoration: line-through;
-}
 
 .criterion-rows {
   list-style: none;
@@ -196,40 +169,6 @@
   .criterion-verbs {
     justify-self: end;
   }
-}
-
-/* Tool console rows (AgentToolsCard). One tool is one SettingRow: the tool's
-   name IS the row's label, what it is for reads under it, and its governance
-   answers on the right in a `.settings-run` like every other cluster on the
-   page. The name and the written title used to share the label's line, which
-   made every row a PAIR of unrelated strings — "account_coverage  Relationship
-   coverage on a deal" — where the rows above it read as a label with a
-   description under it.
-
-   The name is the identifier an agent selects on, so it reads in the accent the
-   rest of the product gives an identifier. It is a machine identifier with no
-   spaces to break at, so it also has to be allowed to break inside itself
-   rather than set the row's minimum width. */
-.tool-name {
-  color: var(--accentText);
-  overflow-wrap: anywhere;
-}
-/* Struck, not dimmed. Dimming the row to 0.4 took it under the AA contrast
-   floor (B-EP09.21) — including the caption that is supposed to be the text
-   equivalent of the dimming, so the one part a reader needs most became the
-   hardest to read. */
-.tool-out-of-scope {
-  text-decoration: line-through;
-}
-/* The naming half's prose: the written title, the text an agent selects the
-   tool by, and — when a passport is selected that cannot reach it — the words
-   that say so. Lines, at the same interval the row already puts between a label
-   and its description, because they are three separate statements: run
-   together they read as one sentence that does not parse. */
-.tool-row-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
 }
 
 /* The settings home's page rows.

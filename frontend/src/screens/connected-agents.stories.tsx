@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { ConnectedAgentsCard } from "./connected-agents";
 import {
   installFetchStub,
@@ -10,17 +11,8 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Which OAuth clients are holding one of this contact's passports. A passport
-// with no `connection` is a minted credential nobody has redeemed, so it is not
-// a connection and does not appear here.
-//
-// Each connection is one `SettingRow` — the client's name on the left, its
-// state in the value slot, the verb that ends it on the right — and the connect
-// guide is a `Disclosure` at the foot of the same list. Which stories show the
-// guide OPEN is therefore not a story setting: it opens itself while nothing is
-// connected, because that is the one state in which it is the only thing on the
-// card to act on. So `Connected` is the closed case and `NoneConnected` /
-// `ConnectorNotEnabled` are the open ones.
+// The OAuth clients holding a credential of their own. The connect guide opens
+// itself only while nothing is connected, so `Connected` is the closed case.
 const CLAUDE = {
   id: "pp-1",
   label: "Claude Desktop",
@@ -97,27 +89,32 @@ export const ConnectorNotEnabled: Story = {
   render: story([], false),
 };
 
-// The roster in dark. The lapsed row is the case: it says "over" by striking its
-// facts through and putting a danger badge beside them, and the code deliberately
-// strikes rather than dims to hold an AA floor (B-EP09.21) — a rule written
-// against one set of token values and never once rendered against the other.
-// The `SettingList` hairline between the two rows is the other thing to read
-// here: it has to separate two connections without reading as heavier than the
-// disclosure rule under them.
+// The lapsed row in dark: struck, not dimmed, beside its danger badge.
 export const ConnectedDark: Story = {
   globals: { theme: "dark" },
   render: story([CLAUDE, LAPSED]),
 };
 
-// At 390px the row gives up its two columns and stacks (settingrow.css's own
-// breakpoint), which is the width the wrap used to go wrong at: the verb landed
-// BETWEEN the facts and the scope chips, so the chips read as belonging to the
-// control rather than to the connection above it, and the struck-through lapsed
-// row was where that misreading cost something. The chips now sit inside the
-// row's naming half, under the facts they qualify, so the stack cannot separate
-// them from the connection they describe.
+// At 390px each row folds: the client over its dates, the permissions under
+// them, and the menu at the end of the first line.
 export const ConnectedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story([CLAUDE, LAPSED]),
+};
+
+// Disconnect sits in the row's menu and still asks first.
+export const DisconnectConfirm: Story = {
+  render: story([CLAUDE, LAPSED]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Claude Desktop" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Disconnect Claude Desktop" }),
+    );
+    await body.findByRole("dialog");
+  },
 };
