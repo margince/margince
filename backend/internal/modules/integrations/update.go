@@ -31,6 +31,19 @@ type ConfigPatch struct {
 	Budgets          *[]PoolBudget
 }
 
+// refuseUnusablePatch refuses what no row can answer: a version below zero and
+// a patch that names no setting.
+func refuseUnusablePatch(p ConfigPatch, ifMatch int64) error {
+	if ifMatch < 0 {
+		return &NegativeVersionError{Version: ifMatch}
+	}
+	if p.Mode == nil && p.Preset == nil && p.Categories == nil && p.AutomaticCreate == nil &&
+		p.AutomaticImport == nil && p.RefreshAfterDays == nil && p.DailyRunLimit == nil && p.Budgets == nil {
+		return &EmptyConfigurationError{}
+	}
+	return nil
+}
+
 // UpdateConfig patches the saved policy. The new version affects FUTURE runs
 // only: a run already queued carries its own frozen snapshot, so widening the
 // categories here cannot retroactively authorize a purchase (PI-AC-2).
@@ -52,8 +65,8 @@ func (s *Store) UpdateConfig(ctx context.Context, name string, patch ConfigPatch
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionUpdate); err != nil {
 		return Connection{}, err
 	}
-	if ifMatch < 0 {
-		return Connection{}, &NegativeVersionError{Version: ifMatch}
+	if err := refuseUnusablePatch(patch, ifMatch); err != nil {
+		return Connection{}, err
 	}
 	desc, err := s.registry.Descriptor(name)
 	if err != nil {

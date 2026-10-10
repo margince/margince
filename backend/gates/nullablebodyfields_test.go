@@ -203,6 +203,19 @@ func bodyPropertyAdmitsNull(schemas, prop map[string]any) bool {
 // string that mentions a reader.
 func handlerCalls(t *testing.T) map[string]map[string]bool {
 	t.Helper()
+	return methodCalls(t, func(string) bool { return true })
+}
+
+// handlerTypeCalls is handlerCalls over the methods of a handler type only.
+// A service method sharing a handler's name is never credited to it.
+func handlerTypeCalls(t *testing.T) map[string]map[string]bool {
+	t.Helper()
+	return methodCalls(t, func(recv string) bool { return strings.HasSuffix(strings.ToLower(recv), "handlers") })
+}
+
+// methodCalls is handlerCalls over the methods whose receiver type accept admits.
+func methodCalls(t *testing.T, accept func(recv string) bool) map[string]map[string]bool {
+	t.Helper()
 	out := map[string]map[string]bool{}
 	err := filepath.WalkDir("internal", func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
@@ -217,7 +230,7 @@ func handlerCalls(t *testing.T) map[string]map[string]bool {
 		}
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Recv == nil || fn.Body == nil {
+			if !ok || fn.Recv == nil || fn.Body == nil || !accept(receiverTypeName(fn)) {
 				continue
 			}
 			if out[fn.Name.Name] == nil {

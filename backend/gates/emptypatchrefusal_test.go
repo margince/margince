@@ -5,9 +5,10 @@
 
 package gates
 
-// A request body whose schema says `minProperties` promises an empty object is
-// refused. An all-optional struct decodes `{}` like any real edit, so the
-// handler asks httperr.RequireAnyField, or sits in emptyBodyAccepted.
+// A request body whose schema, or one of its nested objects, says
+// `minProperties` promises an empty object is refused. An all-optional struct
+// decodes `{}` like any real edit, so the handler asks httperr.RequireAnyField,
+// or sits in emptyBodyAccepted with the layer that refuses it.
 
 import (
 	"sort"
@@ -17,8 +18,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// emptyBodyAccepted are the operations whose handler does not refuse `{}`.
-var emptyBodyAccepted = gatekit.Waive(map[string]string{})
+const (
+	storeRefusesEmpty  = "the store refuses a body with neither field, in words that name both"
+	configRefusesEmpty = "UpdateConfig refuses an empty configuration; the nested value objects are its settings"
+	selectionRefused   = "the nested bound is a category selection: ValidateSelection refuses an empty one"
+)
+
+// emptyBodyAccepted are the operations whose handler does not refuse `{}` itself.
+var emptyBodyAccepted = gatekit.Waive(map[string]string{
+	"UpdateVoiceProfile":       storeRefusesEmpty,
+	"UpdateVoiceCorpusSource":  storeRefusesEmpty,
+	"UpdateProviderConnection": configRefusesEmpty,
+	"ConnectProvider":          selectionRefused,
+})
 
 func TestEveryBodyThatBoundsItsPropertiesRefusesAnEmptyObject(t *testing.T) {
 	t.Parallel()
@@ -26,7 +38,9 @@ func TestEveryBodyThatBoundsItsPropertiesRefusesAnEmptyObject(t *testing.T) {
 	doc := loadContractDocument(t)
 	schemas := descendContract(t, doc, "components", "schemas")
 	ops := minPropertiesOperations(t, doc, schemas)
-	for _, handler := range []string{"UpdateRole", "UpdateWebhookSubscription", "UpdateVoiceProfile"} {
+	for _, handler := range []string{
+		"UpdateRole", "UpdateWebhookSubscription", "UpdateVoiceProfile", "UpdateVoiceCorpusSource", "UpdateProviderConnection",
+	} {
 		found := false
 		for _, op := range ops {
 			found = found || op.handler == handler
@@ -35,7 +49,7 @@ func TestEveryBodyThatBoundsItsPropertiesRefusesAnEmptyObject(t *testing.T) {
 			t.Fatalf("the census found %d operation(s) and not %s; the walk lost its subjects", len(ops), handler)
 		}
 	}
-	handlers := handlerCalls(t)
+	handlers := handlerTypeCalls(t)
 	var missing []string
 	for _, op := range ops {
 		calls, found := handlers[op.handler]
@@ -51,7 +65,7 @@ func TestEveryBodyThatBoundsItsPropertiesRefusesAnEmptyObject(t *testing.T) {
 	if len(missing) > 0 {
 		sort.Strings(missing)
 		t.Errorf("%d operation(s) bound their body's properties and never refuse an empty object:\n\t%s\n\n"+
-			"Call httperr.RequireAnyField after the decode, or record why the handler is exempt.",
+			"Call httperr.RequireAnyField after the decode, or record which layer refuses it.",
 			len(missing), strings.Join(missing, "\n\t"))
 	}
 }
@@ -59,7 +73,8 @@ func TestEveryBodyThatBoundsItsPropertiesRefusesAnEmptyObject(t *testing.T) {
 type minPropertiesOperation struct{ method, path, handler string }
 
 // minPropertiesOperations lists each operation whose JSON body schema carries
-// `minProperties`, with the handler method the generated router calls.
+// `minProperties`, at the top or in a nested object, with the handler method
+// the generated router calls.
 func minPropertiesOperations(t *testing.T, doc, schemas map[string]any) []minPropertiesOperation {
 	t.Helper()
 	var out []minPropertiesOperation
@@ -71,7 +86,7 @@ func minPropertiesOperations(t *testing.T, doc, schemas map[string]any) []minPro
 				continue
 			}
 			schema := bodySchema(op)
-			if schema == nil || resolveSchema(schemas, schema)["minProperties"] == nil {
+			if schema == nil || !boundsProperties(schemas, schema, map[string]bool{}) {
 				continue
 			}
 			id, _ := op["operationId"].(string)
@@ -85,4 +100,34 @@ func minPropertiesOperations(t *testing.T, doc, schemas map[string]any) []minPro
 		}
 	}
 	return out
+}
+
+// boundsProperties is whether the schema, a property under it or an allOf part
+// carries `minProperties`. seen guards a schema that refers back to itself.
+func boundsProperties(schemas, node map[string]any, seen map[string]bool) bool {
+	if ref, ok := node["$ref"].(string); ok {
+		name := strings.TrimPrefix(ref, "#/components/schemas/")
+		target, found := schemas[name].(map[string]any)
+		if !found || seen[name] {
+			return false
+		}
+		seen[name] = true
+		return boundsProperties(schemas, target, seen)
+	}
+	if node["minProperties"] != nil {
+		return true
+	}
+	props, _ := node["properties"].(map[string]any)
+	for _, prop := range props {
+		if p, ok := prop.(map[string]any); ok && boundsProperties(schemas, p, seen) {
+			return true
+		}
+	}
+	parts, _ := node["allOf"].([]any)
+	for _, part := range parts {
+		if p, ok := part.(map[string]any); ok && boundsProperties(schemas, p, seen) {
+			return true
+		}
+	}
+	return false
 }

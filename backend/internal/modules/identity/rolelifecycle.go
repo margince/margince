@@ -60,6 +60,7 @@ const customRoleKeyPrefix = "custom_"
 const (
 	roleEntity        = "role"
 	roleFieldName     = "name"
+	roleFieldCopyFrom = "copy_from"
 	roleFieldRowScope = "row_scope"
 	roleFieldArchived = "archived"
 )
@@ -85,6 +86,12 @@ func (s *Service) CreateRole(ctx context.Context, actor Identity, copyFrom, name
 	name, err = validRoleName(name)
 	if err != nil {
 		return roleRow{}, err
+	}
+	if copyFrom = strings.TrimSpace(copyFrom); copyFrom == "" {
+		return roleRow{}, &values.ParseError{
+			Field: roleFieldCopyFrom, Code: "required",
+			Message: "a new role is a copy: name the role to copy in copy_from",
+		}
 	}
 	var created roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {

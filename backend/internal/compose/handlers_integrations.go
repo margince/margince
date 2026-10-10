@@ -183,10 +183,6 @@ func (h integrationsHandlers) CreateContactEnrichmentRun(w http.ResponseWriter, 
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	if err := refuseUnnamedPurchase(body); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
 	run, err := h.runs.QueueRun(r.Context(), provider.QueueInput{
 		ContactID: id.String(),
 		Provider:  string(body.Provider),
@@ -217,20 +213,6 @@ func (h integrationsHandlers) GetContactEnrichmentRun(w http.ResponseWriter, r *
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, toProviderRun(run))
-}
-
-// refuseUnnamedPurchase refuses a paid run that leaves out what it buys.
-// An empty provider or list falls back to the connection's own choice. A
-// request meaning "none" would then spend the most.
-func refuseUnnamedPurchase(body crmcontracts.CreateContactEnrichmentRunRequest) error {
-	if strings.TrimSpace(string(body.Provider)) == "" {
-		return httperr.Validation("provider", "required", "name the provider to buy from")
-	}
-	if body.Categories != nil && len(*body.Categories) == 0 {
-		return httperr.Validation("categories", "empty",
-			"name at least one category, or leave categories out for the connection's own selection")
-	}
-	return nil
 }
 
 // requestedCategories converts the wire's optional list into the port's.

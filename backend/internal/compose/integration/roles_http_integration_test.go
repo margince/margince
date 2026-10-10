@@ -11,8 +11,10 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -181,6 +183,39 @@ func TestTheRoleEditorsRefusalsOverHTTP(t *testing.T) {
 	var restored roleWire
 	if status := e.Call(t, "POST", base+"/restore", nil, nil, &restored); status != http.StatusOK || restored.ArchivedAt != nil {
 		t.Errorf("restoring a live role -> %d %+v, want 200 and still live", status, restored)
+	}
+}
+
+// A refusal for a field the body left out names that field. The client then
+// knows which part of its request to fix, not which role is missing.
+func TestTheRoleEditorsMissingFieldRefusalsNameTheField(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
+	dropFieldSalesMasksAfter(t)
+
+	var created roleWire
+	if status := e.Call(t, "POST", "/v1/roles", map[string]any{"copy_from": "rep", "name": "Field sales"}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("create -> %d, want 201", status)
+	}
+	stale := map[string]string{"If-Match": strconv.FormatInt(created.Version, 10)}
+	for _, tc := range []struct {
+		name, method, path string
+		body               any
+		headers            map[string]string
+		field              string
+	}{
+		{"a create without copy_from", "POST", "/v1/roles", map[string]any{"name": "Ghost"}, nil, "copy_from"},
+		{"an update of no field", "PATCH", "/v1/roles/" + created.Key, map[string]any{}, stale, "body"},
+	} {
+		var raw json.RawMessage
+		if status := e.Call(t, tc.method, tc.path, tc.body, tc.headers, &raw); status != http.StatusUnprocessableEntity {
+			t.Errorf("%s -> %d, want 422", tc.name, status)
+			continue
+		}
+		if !strings.Contains(string(raw), `"field":"`+tc.field+`"`) {
+			t.Errorf("%s -> %s, want a refusal naming %q", tc.name, raw, tc.field)
+		}
 	}
 }
 

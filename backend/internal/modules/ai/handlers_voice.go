@@ -135,10 +135,6 @@ func (h Handlers) UpdateVoiceProfile(w http.ResponseWriter, r *http.Request, id 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := httperr.RequireAnyField(r); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
 	updated, err := h.voice.UpdateProfile(r.Context(), ids.UUID(id), UpdateVoiceProfileInput{
 		PersonalityMD: req.PersonalityMd, AutoLearningEnabled: req.AutoLearningEnabled, IfVersion: ifVersion,
 	})
@@ -270,10 +266,6 @@ func (h Handlers) UpdateVoiceCorpusSource(w http.ResponseWriter, r *http.Request
 	}
 	var req crmcontracts.UpdateVoiceCorpusSourceRequest
 	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	if err := httperr.RequireAnyField(r); err != nil {
-		httperr.Write(w, r, err)
 		return
 	}
 	in := UpdateSourceInput{Included: req.Included, IfVersion: ifVersion}

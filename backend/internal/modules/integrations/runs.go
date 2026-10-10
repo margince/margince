@@ -112,6 +112,12 @@ func (s *Store) QueueRun(ctx context.Context, in provider.QueueInput) (provider.
 	if s.enqueueSubmit == nil {
 		return provider.Run{}, errors.New("integrations: no submit enqueue is bound, so a queued run would never execute")
 	}
+	if !in.Trigger.Automatic() {
+		var err error
+		if in.Provider, err = namedPurchase(in); err != nil {
+			return provider.Run{}, err
+		}
+	}
 	name, err := s.resolveProvider(ctx, in.Provider)
 	if err != nil {
 		return provider.Run{}, err
