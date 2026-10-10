@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { unwrap } from "./common";
+import type { MutationOutcome } from "./undoableremoval";
 
 export type Tag = components["schemas"]["Tag"];
 /** The palette, from the contract rather than restated beside it. */
@@ -22,7 +23,6 @@ export type TagColor = NonNullable<Tag["color"]>;
 export type TagColorEdit = NonNullable<
   components["schemas"]["UpdateTagRequest"]["color"]
 >;
-export type TagDetail = components["schemas"]["TagDetail"];
 
 /**
  * The whole vocabulary, ARCHIVED INCLUDED, for the admin card.
@@ -43,27 +43,6 @@ export function useTagCatalog(enabled = true) {
       return unwrap(
         await api.GET("/tags", {
           params: { query: { include_archived: true } },
-        }),
-      );
-    },
-  });
-}
-
-/**
- * One tag with how much of the workspace carries it.
- *
- * Asked per tag rather than folded into the catalog: the counts are row-scoped
- * per record type, which is three joins the list read does not do for words
- * nobody has opened.
- */
-export function useTagDetail(tagID: string | undefined) {
-  return useQuery({
-    queryKey: ["tag", tagID],
-    enabled: Boolean(tagID),
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/tags/{id}", {
-          params: { path: { id: tagID as string } },
         }),
       );
     },
@@ -147,8 +126,11 @@ export function useUpdateTag() {
   });
 }
 
-/** Retire a word: it stops being offered, and stays on what already carries it. */
-export function useArchiveTag() {
+/**
+ * Retire a word: it stops being offered, and stays on what already carries it.
+ * `onSuccess` gets the id that restores it.
+ */
+export function useArchiveTag(outcome: MutationOutcome<string | null>) {
   const invalidate = useVocabularyInvalidation();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -157,12 +139,17 @@ export function useArchiveTag() {
           params: { path: { id } },
         }),
       );
+      return id;
     },
-    onSuccess: invalidate,
+    onError: outcome.onError,
+    onSuccess: (id) => {
+      invalidate();
+      outcome.onSuccess(id);
+    },
   });
 }
 
-export function useRestoreTag() {
+export function useRestoreTag(outcome: MutationOutcome<string>) {
   const invalidate = useVocabularyInvalidation();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -172,7 +159,11 @@ export function useRestoreTag() {
         }),
       );
     },
-    onSuccess: invalidate,
+    onError: outcome.onError,
+    onSuccess: (_, id) => {
+      invalidate();
+      outcome.onSuccess(id);
+    },
   });
 }
 
