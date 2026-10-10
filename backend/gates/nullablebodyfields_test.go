@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H1
+//gate:kind census H2
 
 package gates
 
-// A nullable body field promises that null clears it. A decoded pointer reads
-// null and "not sent" alike. So the handler of a PATCH or PUT with a nullable
-// body field must read explicit nulls (httperr.ClearedFields or PresentField)
-// somewhere, or sit in nullIgnoredByHandler. This proves the handler asks, not
-// that every field is cleared. A waiver for a handler that now asks fails.
+// The handler of a PATCH or PUT with a nullable body field processes explicit
+// nulls, by clearing or refusing the field. A decoded pointer reads a null and "not sent" alike. So the handler reads the
+// nulls through httperr.ClearedFields, NullKeys or PresentField, or sits in
+// nullIgnoredByHandler. This proves the handler asks, not what it does with the
+// answer. A waiver for a handler that now asks fails.
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -68,15 +72,15 @@ func TestEveryHandlerOfANullableBodyReadsExplicitNullsSomewhere(t *testing.T) {
 			t.Fatalf("the census found %d operation(s) and not %s with %s; the walk lost its subjects", len(ops), handler, field)
 		}
 	}
-	handlers := handlerSources(t)
+	handlers := handlerCalls(t)
 	var missing []string
 	for _, op := range ops {
-		source, found := handlers[op.handler]
+		calls, found := handlers[op.handler]
 		if !found {
 			t.Errorf("%s %s: no handler method %s was found, so the census cannot judge it", op.method, op.path, op.handler)
 			continue
 		}
-		if strings.Contains(source, "ClearedFields(") || strings.Contains(source, "PresentField(") {
+		if readsExplicitNulls(calls) {
 			continue
 		}
 		if nullIgnoredByHandler.Waived(t, op.handler) {
@@ -194,11 +198,12 @@ func bodyPropertyAdmitsNull(schemas, prop map[string]any) bool {
 	return slices.Contains(enum, nil)
 }
 
-// handlerSources maps each method name declared on a handler type to its
-// source, so a gate can ask what the method reads.
-func handlerSources(t *testing.T) map[string]string {
+// handlerCalls maps each method name declared on a type to the names of the
+// functions that method calls. A parsed call cannot be met by a comment or a
+// string that mentions a reader.
+func handlerCalls(t *testing.T) map[string]map[string]bool {
 	t.Helper()
-	out := map[string]string{}
+	out := map[string]map[string]bool{}
 	err := filepath.WalkDir("internal", func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
@@ -206,22 +211,19 @@ func handlerSources(t *testing.T) map[string]string {
 		if strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") || strings.Contains(path, "internal/contracts/") {
 			return nil
 		}
-		body, readErr := os.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
-		if readErr != nil {
-			return readErr
+		file, parseErr := gatekit.ParseFile(path, 0)
+		if parseErr != nil {
+			return parseErr
 		}
-		for _, chunk := range strings.Split(string(body), "\nfunc ")[1:] {
-			if !strings.HasPrefix(chunk, "(") {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil || fn.Body == nil {
 				continue
 			}
-			_, rest, ok := strings.Cut(chunk, ") ")
-			if !ok {
-				continue
+			if out[fn.Name.Name] == nil {
+				out[fn.Name.Name] = map[string]bool{}
 			}
-			name, _, ok := strings.Cut(rest, "(")
-			if ok {
-				out[name] += chunk
-			}
+			maps.Copy(out[fn.Name.Name], calledNames(fn))
 		}
 		return nil
 	})
@@ -229,4 +231,58 @@ func handlerSources(t *testing.T) map[string]string {
 		t.Fatalf("walking internal: %v", err)
 	}
 	return out
+}
+
+// calledNames names every function the body calls, by its last identifier.
+func calledNames(fn *ast.FuncDecl) map[string]bool {
+	calls := map[string]bool{}
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch callee := call.Fun.(type) {
+		case *ast.SelectorExpr:
+			calls[callee.Sel.Name] = true
+		case *ast.Ident:
+			calls[callee.Name] = true
+		}
+		return true
+	})
+	return calls
+}
+
+// readsExplicitNulls is whether the calls include a reader of a body's nulls.
+func readsExplicitNulls(calls map[string]bool) bool {
+	return calls["ClearedFields"] || calls["PresentField"] || calls["NullKeys"] || calls["NullKeysOf"]
+}
+
+// A reader named in a comment or a string is not a read.
+func TestAMentionOfAReaderIsNotACall(t *testing.T) {
+	t.Parallel()
+	const source = `package h
+
+func (h H) InAComment() {
+	// TODO: call httperr.ClearedFields(r) here
+}
+
+func (h H) InAString() {
+	_ = "httperr.PresentField(r, name)"
+}
+
+func (h H) Calls() {
+	_ = httperr.ClearedFields(r)
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "h.go", source, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{"InAComment": false, "InAString": false, "Calls": true}
+	for _, decl := range file.Decls {
+		fn := decl.(*ast.FuncDecl)
+		if got := readsExplicitNulls(calledNames(fn)); got != want[fn.Name.Name] {
+			t.Errorf("%s: reads = %v, want %v", fn.Name.Name, got, want[fn.Name.Name])
+		}
+	}
 }
