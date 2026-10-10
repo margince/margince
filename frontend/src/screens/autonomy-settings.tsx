@@ -155,8 +155,7 @@ const KIND_COPY: Readonly<
   },
 };
 
-// kindLabel is what the row calls this kind: its own words where the catalog
-// has them, and the contract's spelling made readable where it does not.
+// A kind the catalog has no words for reads as its key made readable.
 function kindLabel(kind: string, t: Translator): string {
   const copy = KIND_COPY[kind];
   if (copy) {

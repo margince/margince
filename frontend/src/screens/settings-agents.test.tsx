@@ -445,7 +445,6 @@ function revocablePassportsBackend(onDelete?: (id: string) => void) {
   });
 }
 
-// Revoke sits in the row's menu, so reaching it is two presses.
 async function openRevoke(
   user: ReturnType<typeof userEvent.setup>,
   name: string,

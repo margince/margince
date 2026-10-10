@@ -89,7 +89,6 @@ export const ConnectorNotEnabled: Story = {
   render: story([], false),
 };
 
-// The lapsed row in dark: struck, not dimmed, beside its danger badge.
 export const ConnectedDark: Story = {
   globals: { theme: "dark" },
   render: story([CLAUDE, LAPSED]),
@@ -103,7 +102,6 @@ export const ConnectedPhone: Story = {
   render: story([CLAUDE, LAPSED]),
 };
 
-// Disconnect sits in the row's menu and still asks first.
 export const DisconnectConfirm: Story = {
   render: story([CLAUDE, LAPSED]),
   play: async ({ canvasElement }) => {

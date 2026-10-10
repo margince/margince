@@ -5,7 +5,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AutonomyTiersCard } from "./settings-autonomytiers";
 import { StoryProviders } from "./story-utils";
 
-// The reference the tool rows are marked with: four tiers, nothing to change.
 const meta: Meta<typeof AutonomyTiersCard> = {
   title: "Settings/You/Agents/Autonomy tiers",
   component: AutonomyTiersCard,

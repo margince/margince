@@ -86,7 +86,6 @@ export const PassportsPhone: Story = {
 
 export const NoPassports: Story = { render: story([]) };
 
-// Revoke sits in the row's menu and still asks first.
 export const RevokeConfirm: Story = {
   render: story(PASSPORTS),
   play: async ({ canvasElement }) => {

@@ -237,8 +237,7 @@ function EndVerb({
   );
 }
 
-// The client's name, with the dates under it once the row has folded. The
-// name is the disconnect confirm's focus anchor, which is why it takes focus.
+// Focusable because the disconnect confirm hands focus back to a client name.
 function ClientName({
   connection,
   state,

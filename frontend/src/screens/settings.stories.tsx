@@ -344,7 +344,6 @@ export const AgentToolConsole: Story = {
   play: selectScoutPassport,
 };
 
-// The struck row and its badges against the dark ground.
 export const AgentToolConsoleDark: Story = {
   globals: { theme: "dark" },
   render: tab("agents", toolConsoleRoutes),
