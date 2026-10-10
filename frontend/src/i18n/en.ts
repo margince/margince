@@ -1353,6 +1353,8 @@ export const en = {
   "share.downgradeBody":
     "{name} has {from} access to this record and will keep only {to} access. The change is recorded in the audit trail.",
   "share.downgradeConfirm": "Reduce to {to}",
+  "share.versionSkew":
+    "Someone changed this access after you opened it, so it was not revoked. The list now shows the current access; revoke it again if you still want to.",
   "share.seatCeiling":
     "A read-only seat cannot hold write access. Upgrade the seat first, or grant read access.",
   "share.whoHasAccess": "Shared with",

@@ -13702,6 +13702,8 @@ export interface paths {
          * Revoke a manual record grant (human-only).
          * @description Deletes the grant; the subject loses the widened access immediately (the next query no longer
          *     matches the `OR EXISTS (record_grant …)` clause). Audited (`action: record_unshare`).
+         *     An `If-Match` naming a version the grant no longer holds answers `409 version_skew` and
+         *     deletes nothing: a re-assert since the caller read it changed what is being revoked.
          */
         delete: operations["revokeRecordGrant"];
         options?: never;
@@ -37375,7 +37377,7 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         CreateRecordGrantRequest: {
             /** @enum {string} */
@@ -64150,6 +64152,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
         };
     };
     listUsers: {

@@ -20228,6 +20228,8 @@ paths:
       description: |
         Deletes the grant; the subject loses the widened access immediately (the next query no longer
         matches the `OR EXISTS (record_grant …)` clause). Audited (`action: record_unshare`).
+        An `If-Match` naming a version the grant no longer holds answers `409 version_skew` and
+        deletes nothing: a re-assert since the caller read it changed what is being revoked.
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       x-agent-access: human-only   # the grant verbs reject any non-human principal
@@ -20247,6 +20249,7 @@ paths:
                     code: approval_required
                     detail: Revoking a share is confirm-first for an agent; supply an approval token.
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
 
   /users:
     get:
@@ -51003,7 +51006,7 @@ components:
     RecordGrant:
       type: object
       description: A manual per-record share (ADR-0039) — widens own/team/all base scope for one record.
-      required: [id, record_type, record_id, subject_type, subject_id, access, granted_by, created_at]
+      required: [id, record_type, record_id, subject_type, subject_id, access, granted_by, created_at, version]
       properties:
         id: { type: string, format: uuid }
         record_type: { type: string, enum: [deal, contact, company, lead, project] }

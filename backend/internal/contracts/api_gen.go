@@ -40798,7 +40798,7 @@ type RecordGrant struct {
 	// SubjectId app_user(id) or team(id) per subject_type.
 	SubjectId   openapi_types.UUID     `json:"subject_id"`
 	SubjectType RecordGrantSubjectType `json:"subject_type"`
-	Version     *int64                 `json:"version,omitempty"`
+	Version     int64                  `json:"version"`
 }
 
 // RecordGrantAccess 'write' also satisfies 'read'.
