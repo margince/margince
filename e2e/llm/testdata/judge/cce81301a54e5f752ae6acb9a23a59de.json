@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states that servicevertrag-signiert.pdf is stored as a file on the signing meeting Vertragsunterzeichnung Leitstand Goslar, and avoids all the negative conditions (only on project/company/person, saved as note, or no location stated).",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer tells the reader that the signed PDF is now stored as a file on the signing meeting (Vertragsunterzeichnung Leitstand Goslar). Answer no if it says the file was stored only on the project, the company or Katrin Albers, says it was saved as a note, or never says where the file was stored.",
+  "answer": "Done. servicevertrag-signiert.pdf is now stored as a file on the signing meeting, Vertragsunterzeichnung Leitstand Goslar, and filed against the contract Servicevertrag Leitstand Goslar (HST-2026-014), so finance will find it from the contract as well."
+}
