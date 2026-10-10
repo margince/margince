@@ -88,6 +88,19 @@ func readLeadDisqualifyReason(ctx context.Context, tx pgx.Tx, id ids.UUID, lock 
 	return out, err
 }
 
+// disqualifyReasonLabelOnce is the index holding one reason per label,
+// compared trimmed and case-folded, so "No budget" and " no budget " collide.
+const disqualifyReasonLabelOnce = "lead_disqualify_reason_label_once"
+
+// disqualifyLabelTaken answers the label index's violation as a 409 naming the
+// label, and passes any other error through.
+func disqualifyLabelTaken(err error, label string) error {
+	if constraint, ok := storekit.UniqueViolation(err); ok && constraint == disqualifyReasonLabelOnce {
+		return fmt.Errorf("a disqualification reason called %q already exists: %w", label, apperrors.ErrConflict)
+	}
+	return err
+}
+
 // UnknownDisqualifyReasonError refuses a reason that is not an active row:
 // the dialog lists active reasons, and the API agrees with the dialog.
 type UnknownDisqualifyReasonError struct{}
@@ -157,7 +170,7 @@ func (s *Store) CreateLeadDisqualifyReason(ctx context.Context, in CreateLeadDis
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO lead_disqualify_reason (id, label, sort_order) VALUES ($1, $2, $3)`,
 			id, label, in.SortOrder); err != nil {
-			return fmt.Errorf("insert lead disqualify reason: %w", err)
+			return disqualifyLabelTaken(fmt.Errorf("insert lead disqualify reason: %w", err), label)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "lead_disqualify_reason", id, nil, map[string]any{"label": label})
 		if err != nil {
@@ -207,19 +220,19 @@ func (s *Store) UpdateLeadDisqualifyReason(ctx context.Context, id ids.UUID, in 
 		if err != nil {
 			return err
 		}
-		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-			return err
-		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "lead_disqualify_reason", id, p.Before(), p.After())
-		if err != nil {
-			return err
-		}
 		// The label AFTER the patch: it is this reason's only identity, so an
 		// event carrying the old one would name something that no longer
 		// exists. readLeadDisqualifyReason below re-reads the row anyway.
 		label := before.Label
 		if in.Label != nil {
 			label = strings.TrimSpace(*in.Label)
+		}
+		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
+			return disqualifyLabelTaken(err, label)
+		}
+		auditID, err := storekit.Audit(ctx, tx, "update", "lead_disqualify_reason", id, p.Before(), p.After())
+		if err != nil {
+			return err
 		}
 		if err := emitLeadDisqualifyReasonChanged(ctx, tx, auditID, id, label,
 			crmcontracts.PublicEventLeadDisqualifyReasonChangedChangeUpdated); err != nil {

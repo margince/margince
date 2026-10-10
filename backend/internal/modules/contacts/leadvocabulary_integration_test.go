@@ -354,7 +354,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 		t.Errorf("lead_source.changed = %v, want %v", got, wantSources)
 	}
 
-	reason, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "No budget"})
+	reason, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "Procurement freeze"})
 	if err != nil {
 		t.Fatalf("create reason: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 	// The label FOLLOWS the rename here, where the source's key did not: a
 	// reason has no key, so the label is its identity and a stale one would
 	// name something that no longer exists.
-	wantReasons := []string{"created:No budget", "updated:Budget withdrawn", "deleted:Budget withdrawn"}
+	wantReasons := []string{"created:Procurement freeze", "updated:Budget withdrawn", "deleted:Budget withdrawn"}
 	slices.Sort(wantReasons)
 	if got := published("lead_disqualify_reason.changed"); !slices.Equal(got, wantReasons) {
 		t.Errorf("lead_disqualify_reason.changed = %v, want %v", got, wantReasons)
@@ -423,5 +423,29 @@ func TestDisqualifyWithNoPinIsUnconditioned(t *testing.T) {
 	}
 	if closed.Status != crmcontracts.LeadStatusDisqualified {
 		t.Errorf("status = %v, want disqualified", closed.Status)
+	}
+}
+
+// A label names one reason, compared trimmed and case-folded: two spellings of
+// one reason would split a report on why leads were dropped.
+func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
+	e := setupPromoteConsent(t)
+	if _, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " no budget "}); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a second spelling of the stock \"No budget\" answered %v, want a conflict", err)
+	}
+	custom, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "Procurement freeze"})
+	if err != nil {
+		t.Fatalf("create reason: %v", err)
+	}
+	if _, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " procurement FREEZE "}); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a second spelling of a custom reason answered %v, want a conflict", err)
+	}
+	taken := "No Budget"
+	if _, err := e.store.UpdateLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id), UpdateLeadDisqualifyReasonInput{Label: &taken}); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a rename onto a held label answered %v, want a conflict", err)
+	}
+	sortOrder := 5
+	if _, err := e.store.UpdateLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id), UpdateLeadDisqualifyReasonInput{SortOrder: &sortOrder}); err != nil {
+		t.Fatalf("a reorder that leaves the label alone: %v", err)
 	}
 }

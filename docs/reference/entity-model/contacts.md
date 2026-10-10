@@ -1094,6 +1094,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `lead_disqualify_reason_label_once`: `unique, btree (lower(btrim(label)))`
 - `lead_disqualify_reason_pkey`: `unique, btree (id)`
 
 **Triggers**

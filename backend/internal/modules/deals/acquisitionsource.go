@@ -127,24 +127,52 @@ func (s *Store) ListAcquisitionSources(ctx context.Context) ([]crmcontracts.Acqu
 	if err := auth.Require(ctx, acquisitionVocabularyObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
+	var args []any
+	dealCount, err := acquisitionDealCount(ctx, &args)
+	if err != nil {
+		return nil, err
+	}
 	var out []crmcontracts.AcquisitionSource
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			`SELECT `+acquisitionSourceColumns+` FROM deal_acquisition_source ORDER BY sort_order, label`)
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT `+acquisitionSourceColumns+`, `+dealCount+`
+			FROM deal_acquisition_source ORDER BY sort_order, label`, args...)
 		if err != nil {
 			return fmt.Errorf("list acquisition sources: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
-			source, err := scanAcquisitionSource(rows)
+			var count *int
+			source, err := scanAcquisitionSource(rows, &count)
 			if err != nil {
 				return err
 			}
+			source.DealCount = count
 			out = append(out, source)
 		}
 		return rows.Err()
 	})
 	return out, err
+}
+
+// acquisitionDealCount renders the column counting the live deals that carry a
+// source, under the caller's own deal row scope. A caller who may not read
+// deals is answered NULL: a zero would claim no deal carries the source.
+func acquisitionDealCount(ctx context.Context, args *[]any) (string, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); errors.Is(err, apperrors.ErrPermissionDenied) {
+		return "NULL::bigint", nil
+	} else if err != nil {
+		return "", err
+	}
+	arg := func(v any) int { *args = append(*args, v); return len(*args) }
+	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		scope = "true"
+	}
+	return `(SELECT count(*) FROM deal d
+	  WHERE d.archived_at IS NULL AND d.acquisition_source = deal_acquisition_source.key AND (` + scope + `))`, nil
 }
 
 // CreateAcquisitionSource adds a channel.
@@ -321,12 +349,14 @@ func readAcquisitionSourceForUpdate(ctx context.Context, tx pgx.Tx, id ids.UUID)
 	return out, nil
 }
 
-func scanAcquisitionSource(row pgx.Row) (crmcontracts.AcquisitionSource, error) {
+// scanAcquisitionSource reads the catalog projection, then any columns a read
+// selects after it into extra.
+func scanAcquisitionSource(row pgx.Row, extra ...any) (crmcontracts.AcquisitionSource, error) {
 	var out crmcontracts.AcquisitionSource
 	var id ids.UUID
 	var version int64
-	if err := row.Scan(&id, &out.Key, &out.Label, &out.SortOrder, &out.Active,
-		&out.System, &version, &out.CreatedAt, &out.UpdatedAt); err != nil {
+	dest := []any{&id, &out.Key, &out.Label, &out.SortOrder, &out.Active, &out.System, &version, &out.CreatedAt, &out.UpdatedAt}
+	if err := row.Scan(append(dest, extra...)...); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return out, apperrors.ErrNotFound
 		}

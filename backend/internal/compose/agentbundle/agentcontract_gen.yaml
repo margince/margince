@@ -2165,6 +2165,7 @@ paths:
               schema: {$ref: '#/components/schemas/StageAutomationReport'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /stage-automation/policies/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -13664,6 +13665,11 @@ components:
           type: boolean
           readOnly: true
           description: Seeded with the installation. Fully editable; it simply cannot be removed.
+        deal_count:
+          type: [integer, 'null']
+          readOnly: true
+          description: >-
+            Live deals carrying this key that the caller may see. Null when the caller may not read deals, because a zero would claim no deal carries it. Set on the list read; absent on the record a write answers.
         version: {type: integer, format: int64, readOnly: true}
         created_at: {type: string, format: date-time, readOnly: true}
         updated_at: {type: string, format: date-time, readOnly: true}
@@ -14335,6 +14341,11 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        carried_by:
+          type: integer
+          readOnly: true
+          description: >-
+            How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read; absent on the record a write answers.
     CreateTagRequest:
       type: object
       required: [name]
