@@ -10,15 +10,15 @@
   "totals": {
     "tools": 84,
     "resources": 9,
-    "tool_catalog_bytes": 264108,
+    "tool_catalog_bytes": 264189,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 66917,
+    "approx_wire_tokens_total": 66937,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 68727,
       "input_schema_bytes": 59625,
-      "output_schema_bytes": 114972,
+      "output_schema_bytes": 115053,
       "description_plus_input_schema_bytes": 128352
     }
   },
@@ -10013,6 +10013,12 @@
                   "format": "uuid",
                   "type": "string"
                 },
+                "sections_omitted": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "stakeholders": {
                   "items": {
                     "properties": {
@@ -10049,6 +10055,7 @@
                 "open_commitments",
                 "phase",
                 "project_id",
+                "sections_omitted",
                 "stakeholders"
               ],
               "type": "object"

@@ -77,9 +77,10 @@ func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 			return nil
 		}
 		rel := "internal/" + strings.TrimPrefix(filepath.ToSlash(strings.TrimPrefix(path, root)), "/")
-		// All of them, in one file, plus the active-status clause: that
-		// conjunction is the question, and any subset is a different one.
-		if !strings.Contains(text, "status = 'active'") {
+		// All of them, in one file, plus the active-status clause (spelled out
+		// or called through the shared live-member helper): that conjunction is
+		// the question, and any subset is a different one.
+		if !strings.Contains(text, "status = 'active'") && !strings.Contains(text, "workforce.LiveMemberSQL(") {
 			return nil
 		}
 		hits := []string{}

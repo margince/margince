@@ -7246,6 +7246,12 @@
             "type": "string",
             "format": "uuid"
           },
+          "sections_omitted": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "stakeholders": {
             "type": "array",
             "items": {
@@ -7282,6 +7288,7 @@
           "open_commitments",
           "phase",
           "project_id",
+          "sections_omitted",
           "stakeholders"
         ]
       },

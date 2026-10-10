@@ -26,6 +26,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strconv"
 	"time"
 
@@ -55,6 +56,10 @@ type HandoffFacts struct {
 	StakeholdersTruncated bool
 	OpenCommitments       []OpenCommitment
 	CommitmentsTruncated  bool
+	// SectionsOmitted names the lists this caller holds no grant to read. A
+	// list left out for that reason is not an empty one, so the absence claims
+	// below are withheld for it exactly as they are for a truncated read.
+	SectionsOmitted []string
 }
 
 // HandoffProject is the project row itself, carried across the seam with the
@@ -95,6 +100,13 @@ const (
 	gapUnpricedWonDeal      = "unpriced_won_deal"
 	gapOverdueCommitment    = "overdue_commitment"
 	gapAccountWithheld      = "account_withheld"
+)
+
+// The lists a handoff reads, spelled from the project page's own section
+// vocabulary: the page and the handoff name an omitted list the same way.
+var (
+	sectionDeals        = string(crmcontracts.Project360SectionDeals)
+	sectionStakeholders = string(crmcontracts.Project360SectionStakeholders)
 )
 
 // dealStatusWon is the one status that means something was sold, read from
@@ -167,6 +179,7 @@ func assembleHandoff(facts HandoffFacts, commitments []CommitmentItem) PreparedH
 		Stakeholders:    orEmpty(facts.Stakeholders),
 		AsOf:            facts.AsOf,
 		OpenCommitments: orEmpty(commitments),
+		SectionsOmitted: orEmpty(facts.SectionsOmitted),
 	}
 	out.Gaps = handoffGaps(out, facts)
 	return out
@@ -204,8 +217,10 @@ func handoffGaps(h PreparedHandoff, facts HandoffFacts) []HandoffGap {
 			"No target end date, so there is nothing to deliver against.",
 		})
 	}
-	gaps = append(gaps, stakeholderGaps(h.Stakeholders, facts.StakeholdersTruncated)...)
-	gaps = append(gaps, dealGaps(h.Deals, facts.DealsTruncated)...)
+	gaps = append(gaps, stakeholderGaps(h.Stakeholders,
+		facts.StakeholdersTruncated || slices.Contains(facts.SectionsOmitted, sectionStakeholders))...)
+	gaps = append(gaps, dealGaps(h.Deals,
+		facts.DealsTruncated || slices.Contains(facts.SectionsOmitted, sectionDeals))...)
 	if overdue := countOverdue(h.OpenCommitments); overdue > 0 {
 		gaps = append(gaps, HandoffGap{
 			gapOverdueCommitment, "activity.due_at",
@@ -217,8 +232,9 @@ func handoffGaps(h PreparedHandoff, facts HandoffFacts) []HandoffGap {
 }
 
 // stakeholderGaps judges the seats. `bounded` reports a read that stopped at
-// its cap: an empty page of a truncated read says nothing about whether a
-// contact exists, so the absence claim is withheld rather than asserted.
+// its cap or was left out for want of a grant: an empty page of either says
+// nothing about whether a contact exists, so the absence claim is withheld
+// rather than asserted.
 func stakeholderGaps(stakeholders []HandoffStakeholder, bounded bool) []HandoffGap {
 	if len(stakeholders) == 0 {
 		if bounded {

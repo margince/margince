@@ -32,8 +32,8 @@ import (
 // sessionObject is the table the session writes audit against.
 const sessionObject = "deal_room_session"
 
-// exchangeablePredicate is the one rule for "this credential admits its
-// bearer right now", spelled once so peek and exchange cannot disagree. The
+// exchangeablePredicate is the rule for "this credential admits its bearer
+// right now", which peek and exchange both apply. The
 // room's state is deliberately NOT part of it beyond `archived`: a paused or
 // closed room still exchanges, and the session then reports the state to the
 // authenticated buyer. Refusing here instead would make the anonymous edge an

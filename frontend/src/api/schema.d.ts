@@ -27568,6 +27568,8 @@ export interface components {
             phase: string;
             /** Format: uuid */
             project_id: string;
+            /** @description The lists the caller may not read, named as `GET /projects/{id}/360` names them. A list left out for that reason is withheld, not empty. */
+            sections_omitted: string[];
             stakeholders: {
                 /** Format: uuid */
                 contact_id: string;

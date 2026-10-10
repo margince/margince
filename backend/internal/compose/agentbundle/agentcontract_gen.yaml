@@ -11760,7 +11760,7 @@ components:
     ProjectHandoff:
       description: 'What `prepare_handoff` answers: the project, the deals it was sold through, the stakeholders, the open promises and the gaps.'
       type: object
-      required: [as_of, deals, gaps, name, open_commitments, phase, project_id, stakeholders]
+      required: [as_of, deals, gaps, name, open_commitments, phase, project_id, sections_omitted, stakeholders]
       properties:
         as_of: {type: string}
         company_id: {type: string, format: uuid}
@@ -11792,6 +11792,10 @@ components:
         owner_name: {type: string}
         phase: {type: string}
         project_id: {type: string, format: uuid}
+        sections_omitted:
+          type: array
+          description: The lists the caller may not read, named as `GET /projects/{id}/360` names them. A list left out for that reason is withheld, not empty.
+          items: {type: string}
         stakeholders:
           type: array
           items:

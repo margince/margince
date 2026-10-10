@@ -40514,6 +40514,9 @@ type ProjectHandoff struct {
 	OwnerName       *string             `json:"owner_name,omitempty"`
 	Phase           string              `json:"phase"`
 	ProjectId       openapi_types.UUID  `json:"project_id"`
+
+	// SectionsOmitted The lists the caller may not read, named as `GET /projects/{id}/360` names them. A list left out for that reason is withheld, not empty.
+	SectionsOmitted []string `json:"sections_omitted"`
 	Stakeholders    []struct {
 		ContactId openapi_types.UUID `json:"contact_id"`
 		Name      *string            `json:"name,omitempty"`

@@ -418,7 +418,6 @@ internal/modules/dealrooms/errors.go#const block at const codeTooLong
 internal/modules/dealrooms/errors.go#const codeRequired
 internal/modules/dealrooms/lifecycle.go#const block at const stateDraft
 internal/modules/dealrooms/store.go#const columnTitle
-internal/modules/dealrooms/store_public.go#const exchangeablePredicate
 internal/modules/deals/basecurrencyfreeze.go#var frozenRateTables
 internal/modules/deals/handlers.go#func WriteOfferError
 internal/modules/deals/listfilters.go#const block at const filterCompanyID

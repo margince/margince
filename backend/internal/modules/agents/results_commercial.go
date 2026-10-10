@@ -140,4 +140,8 @@ type PreparedHandoff struct {
 	// empty list means nothing was found missing, not that nothing was
 	// checked.
 	Gaps []HandoffGap `json:"gaps"`
+	// SectionsOmitted names the lists this caller may not read, as the project
+	// page does. Deals, stakeholders or open_commitments missing from the
+	// answer for that reason are withheld, not empty.
+	SectionsOmitted []string `json:"sections_omitted"`
 }

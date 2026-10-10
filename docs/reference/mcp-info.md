@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 84 |
 | Resources | 9 |
-| Tool catalog | 257.9 KB |
+| Tool catalog | 258.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66917 |
+| Approx. wire tokens | 66937 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 112.3 KB | 43% | **No**: a result's shape, never listed to a model |
+| Output schemas | 112.4 KB | 43% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 67.1 KB | 26% | Yes, every step |
 | Input schemas | 58.2 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
@@ -10992,6 +10992,12 @@ runs immediately; requires passport scope "read".)
           "format": "uuid",
           "type": "string"
         },
+        "sections_omitted": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "stakeholders": {
           "items": {
             "properties": {
@@ -11028,6 +11034,7 @@ runs immediately; requires passport scope "read".)
         "open_commitments",
         "phase",
         "project_id",
+        "sections_omitted",
         "stakeholders"
       ],
       "type": "object"
