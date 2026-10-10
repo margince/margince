@@ -3,11 +3,13 @@
 
 package compose
 
-import "github.com/margince/margince/backend/internal/modules/contacts"
+import (
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
+)
 
-// Columns an export computes from a child table. A contact's address and number
-// live on contact_email and contact_phone. Without them an export cannot feed a
-// mail merge.
+// Columns computed from child tables: a mail merge needs the contact's address
+// and number, which live on contact_email and contact_phone.
 const (
 	exportPrimaryEmail = "primary_email"
 	exportPrimaryPhone = "primary_phone"
@@ -18,9 +20,8 @@ var derivedExportColumns = map[string][]string{
 	"contact": {exportPrimaryEmail, exportPrimaryPhone},
 }
 
-// derivedColumnSQL renders a derived column for a row aliased t, or reports
-// that the column is a stored one. The address is the one the record page prints
-// (the shared reachable order), and a retired one is never offered.
+// derivedColumnSQL renders a derived column for a row aliased t. It picks the
+// address the record page prints, and never a retired one.
 func derivedColumnSQL(table, column string) (string, bool) {
 	if table != "contact" {
 		return "", false
@@ -32,8 +33,8 @@ func derivedColumnSQL(table, column string) (string, bool) {
 			contacts.ReachableEmailOrder + ` LIMIT 1) AS ` + column, true
 	case exportPrimaryPhone:
 		return `(SELECT pp.phone FROM contact_phone pp
-		          WHERE pp.contact_id = t.id AND pp.archived_at IS NULL
-		          ORDER BY pp.is_primary DESC, pp.position, pp.created_at LIMIT 1) AS ` + column, true
+		          WHERE pp.contact_id = t.id AND pp.archived_at IS NULL` +
+			contactaddress.ReachablePhoneOrder + ` LIMIT 1) AS ` + column, true
 	default:
 		return "", false
 	}

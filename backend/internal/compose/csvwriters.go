@@ -107,10 +107,9 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		// refused the shapes a client can send, so what reaches here is a stored
 		// mapping — and a run that already passed its dry run must not die at
 		// commit over a word.
-		contextTag: parseContextTag(settled.ContextTag),
-		nativeIDs:  map[string]ids.UUID{},
-		authors:    authorSeats{},
-
+		contextTag:       parseContextTag(settled.ContextTag),
+		nativeIDs:        map[string]ids.UUID{},
+		authors:          authorSeats{},
 		archivedBindings: map[string]bool{},
 	}
 }
@@ -138,6 +137,9 @@ func (w *csvWriters) Updated() int { return w.updated }
 // outside the reserved namespace is client-writable.
 func (w *csvWriters) Exists(ctx context.Context, object, externalID string) (bool, error) {
 	_, found, err := w.lookup(ctx, object, externalID)
+	if errors.Is(err, errBoundRecordArchived) {
+		return true, nil
+	}
 	return found, err
 }
 
@@ -185,6 +187,9 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 		return w.reconcile(ctx, target.id, row)
 	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
+	if errors.Is(err, errBoundRecordArchived) {
+		return migration.EnsureResult{Skipped: true, SkipReason: boundArchivedReason}, nil
+	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}

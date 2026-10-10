@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -12,10 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// isArchived reads the bound record with archived rows included, so a row-scope
-// miss still answers not-found rather than reading as archived.
-func (w *csvWriters) isArchived(ctx context.Context, id ids.UUID) (bool, error) {
-	switch w.object {
+// isArchived reads a record of the given object with archived rows included, so
+// a row-scope miss still answers not-found rather than reading as archived.
+func (w *csvWriters) isArchived(ctx context.Context, object string, id ids.UUID) (bool, error) {
+	switch object {
 	case migration.ObjectLead:
 		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.IncludeArchived)
 		return err == nil && lead.ArchivedAt != nil, err
@@ -26,11 +27,22 @@ func (w *csvWriters) isArchived(ctx context.Context, id ids.UUID) (bool, error) 
 		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.IncludeArchived)
 		return err == nil && contact.ArchivedAt != nil, err
 	default:
-		return false, fmt.Errorf("import: %q is not an importable object", w.object)
+		return false, fmt.Errorf("import: %q is not an importable object", object)
 	}
 }
 
+// errBoundRecordArchived reports a key whose record was archived by anything
+// other than a finished undo of the run that landed it.
+var errBoundRecordArchived = errors.New("the record this row landed as is archived")
+
+// boundArchivedReason is what a row is told when its record is archived.
+const boundArchivedReason = "this row's record was archived, so it is not updated; restore the record to update it"
+
 // lookup resolves an external id to the record an earlier run landed for it.
+//
+// A key whose run finished its undo, and whose record is archived, is free
+// again. Any other archived record keeps the key. A paused undo still pages its
+// rows, and a record archived by hand must not come back as a twin.
 func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids.UUID, bool, error) {
 	if object != w.object {
 		return ids.UUID{}, false, fmt.Errorf("import: this run carries %q, not %q", w.object, object)
@@ -38,23 +50,22 @@ func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids
 	if id, ok := w.nativeIDs[externalID]; ok {
 		return id, true, nil
 	}
-	id, found, err := w.identities.LookupIdentity(ctx, csvSourceSystem(), object, externalID)
+	binding, found, err := w.identities.LookupBinding(ctx, csvSourceSystem(), object, externalID)
+	if err != nil || !found {
+		return ids.UUID{}, false, err
+	}
+	archived, err := w.isArchived(ctx, object, binding.NativeID)
 	if err != nil {
 		return ids.UUID{}, false, err
 	}
-	if !found {
-		return id, false, nil
-	}
-	// A binding to an archived record names nothing a re-import can update, so
-	// the key counts as unlanded.
-	archived, err := w.isArchived(ctx, id)
-	if err != nil {
-		return ids.UUID{}, false, err
-	}
-	if archived {
+	switch {
+	case !archived:
+		w.nativeIDs[externalID] = binding.NativeID
+		return binding.NativeID, true, nil
+	case binding.RunStatus == migration.StatusUndone:
 		w.archivedBindings[externalID] = true
 		return ids.UUID{}, false, nil
+	default:
+		return binding.NativeID, true, errBoundRecordArchived
 	}
-	w.nativeIDs[externalID] = id
-	return id, true, nil
 }

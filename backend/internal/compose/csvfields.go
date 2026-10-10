@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -268,7 +269,7 @@ func canonicalFor(field, value string) string {
 	trimmed := strings.TrimSpace(value)
 	switch field {
 	case fieldEmail:
-		return strings.ToLower(trimmed)
+		return correspondence.Fold(trimmed)
 	case fieldDomain:
 		// Through the store's OWN parser, not an approximation of it. A
 		// spreadsheet's website column carries "https://www.acme.com/" where the

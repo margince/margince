@@ -559,7 +559,11 @@ func TestUploadRefusesAFileThatIsNotUTF8(t *testing.T) {
 	e := setupImportApp(t)
 	latin1 := "Email,Full Name\nrene@example.test,Ren\xe9 Dupont\n"
 
-	if _, status := uploadCSV(t, e, "contact", latin1); status != http.StatusUnprocessableEntity {
+	status, refusals := uploadRefusal(t, e, "contact", latin1)
+	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("upload of a Latin-1 file → %d, want 422", status)
+	}
+	if len(refusals) != 1 || refusals[0].Code != "not_utf8" || refusals[0].Field != "file" {
+		t.Fatalf("refusals = %+v, want one not_utf8 on file", refusals)
 	}
 }

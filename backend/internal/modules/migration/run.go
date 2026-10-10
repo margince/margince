@@ -190,6 +190,12 @@ func (s *RunStore) Latest(ctx context.Context, connector string) (Run, error) {
 	return run, nil
 }
 
+// Binding is a landed identity and the state of the run that landed it.
+type Binding struct {
+	NativeID  ids.UUID
+	RunStatus string
+}
+
 // LookupIdentity resolves an external id to the native row a previous
 // (or the current) run landed for it. The engine-owned map is the ONLY
 // authority for "already imported": the rows' own source/source_system
@@ -197,17 +203,25 @@ func (s *RunStore) Latest(ctx context.Context, connector string) (Run, error) {
 // would let a caller pre-plant a row under a source id and have the
 // import treat the real record as already landed.
 func (s *RunStore) LookupIdentity(ctx context.Context, sourceSystem, object, externalID string) (ids.UUID, bool, error) {
+	binding, found, err := s.LookupBinding(ctx, sourceSystem, object, externalID)
+	return binding.NativeID, found, err
+}
+
+// LookupBinding is LookupIdentity plus the status of the run that made the
+// binding, which decides whether the key may be taken over.
+func (s *RunStore) LookupBinding(ctx context.Context, sourceSystem, object, externalID string) (Binding, bool, error) {
 	if err := auth.Require(ctx, importRunObject, principal.ActionRead); err != nil {
-		return ids.UUID{}, false, err
+		return Binding{}, false, err
 	}
-	var id ids.UUID
+	var binding Binding
 	found := false
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			-- The workspace predicate is the lookup's own: tenant isolation
-			SELECT native_id FROM import_record_map
-			WHERE source_system = $1 AND object = $2 AND external_id = $3`,
-			sourceSystem, object, externalID).Scan(&id)
+			SELECT m.native_id, r.status FROM import_record_map m
+			  JOIN import_run r ON r.id = m.import_run_id
+			WHERE m.source_system = $1 AND m.object = $2 AND m.external_id = $3`,
+			sourceSystem, object, externalID).Scan(&binding.NativeID, &binding.RunStatus)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -218,9 +232,9 @@ func (s *RunStore) LookupIdentity(ctx context.Context, sourceSystem, object, ext
 		return nil
 	})
 	if err != nil {
-		return ids.UUID{}, false, err
+		return Binding{}, false, err
 	}
-	return id, found, nil
+	return binding, found, nil
 }
 
 // RecordIdentity records the external→native identity a run just landed.
@@ -246,17 +260,18 @@ func (s *RunStore) RecordIdentityTx(ctx context.Context, tx pgx.Tx, runID RunID,
 	return recordIdentityInTx(ctx, tx, runID, sourceSystem, object, externalID, nativeID)
 }
 
-// ReleaseIdentityTx drops a binding whose record is archived, in the caller's
-// transaction, so the key can be bound to the record that replaces it. The run
-// that made the old binding keeps its report; only the live map entry goes.
+// ReleaseIdentityTx drops a binding so its key can name a replacement record.
+// Only a finished undo frees a key: a paused one pages these rows by offset.
 func (s *RunStore) ReleaseIdentityTx(ctx context.Context, tx pgx.Tx, sourceSystem, object, externalID string) error {
 	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
-		DELETE FROM import_record_map
-		 WHERE source_system = $1 AND object = $2 AND external_id = $3`,
-		sourceSystem, object, externalID); err != nil {
+		DELETE FROM import_record_map m
+		 USING import_run r
+		 WHERE r.id = m.import_run_id AND r.status = $4
+		   AND m.source_system = $1 AND m.object = $2 AND m.external_id = $3`,
+		sourceSystem, object, externalID, StatusUndone); err != nil {
 		return fmt.Errorf("migration: releasing the %s %s identity: %w", object, externalID, err)
 	}
 	return nil

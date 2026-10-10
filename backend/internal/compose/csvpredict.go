@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -78,6 +79,9 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 		return w.reconcilePrediction(ctx, target.id, row)
 	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
+	if errors.Is(err, errBoundRecordArchived) {
+		return predictUnwritable, boundArchivedReason, nil
+	}
 	if err != nil {
 		return predictCreate, "", err
 	}
