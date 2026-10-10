@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -151,6 +152,8 @@ func TestOnboardingProposalSpeaksTheRequestedLocale(t *testing.T) {
 	unknown := crmcontracts.GetOnboardingCompanyProposalParamsLocale("fr")
 	if recorder := onboardingProposalRequest(engine, &unknown); recorder.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("unknown locale status = %d, body = %s", recorder.Code, recorder.Body.String())
+	} else if !strings.Contains(recorder.Body.String(), "en de vi") {
+		t.Fatalf("the refusal does not name every accepted locale: %s", recorder.Body.String())
 	}
 }
 

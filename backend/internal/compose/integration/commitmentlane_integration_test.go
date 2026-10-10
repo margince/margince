@@ -43,7 +43,7 @@ func seedPromise(
 	subject := "Rückfragen zum Angebot"
 	occurred := laneClock.AddDate(0, 0, -7)
 	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: &subject, OccurredAt: &occurred, Source: "manual",
+		Kind: "email", Subject: &subject, Body: &body, OccurredAt: &occurred, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 	})
 	if err != nil {

@@ -573,6 +573,7 @@ func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 	promise := func(body string, source ids.UUID) {
 		t.Helper()
+		e.WsExec(t, `UPDATE activity SET body = $2 WHERE id = $1`, source, body)
 		if _, err := e.Contacts.RecordConversationClaim(rep, contacts.ClaimInput{
 			ContactID: ContactIDOf(attendee), Kind: "commitment_theirs", Body: body,
 			ActivityID: source, Quote: body, Source: "manual",
