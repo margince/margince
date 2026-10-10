@@ -26,6 +26,7 @@ import {
   leadTerminalKey,
   leadWriteKeys,
 } from "./leadkeys";
+import { openTaskCountLabel } from "./leadopentasks";
 import { DisqualifyDialog } from "./leads.disqualify";
 import { QualifyDialog } from "./leads.qualify";
 import { sourceLabelFor } from "./leadsources";
@@ -232,9 +233,7 @@ function LeadCard({
         <span>
           {lead.next_task_subject ?? t("lead.noNextTask")}
           {lead.open_task_count
-            ? ` · ${t("lead.openTaskCount", {
-                count: formatNumber(lead.open_task_count, locale),
-              })}`
+            ? ` · ${openTaskCountLabel(locale, lead.open_task_count)}`
             : ""}
         </span>
       </span>

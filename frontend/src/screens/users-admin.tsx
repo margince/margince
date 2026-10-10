@@ -74,8 +74,9 @@ function MembersCard({
 }>) {
   const t = useT();
   const postureId = useId();
+  const members = useMembers();
   const read = withRoles(
-    useMembers(),
+    members,
     useAssignableRoles(canChangeRole),
     canChangeRole,
   );
@@ -92,6 +93,16 @@ function MembersCard({
     <Panel
       title={t("users.membersTitle")}
       titleAction={canInvite && <InviteAction canIssueLink={canIssueLink} />}
+      actions={
+        members.hasNextPage && (
+          <Button
+            pending={members.isFetchingNextPage}
+            onClick={() => members.fetchNextPage()}
+          >
+            {t("list.loadMore")}
+          </Button>
+        )
+      }
     >
       {posture && (
         <PanelBody>

@@ -81,6 +81,22 @@ function useResetOnNarrowing(narrowing: string, toFirstPage: () => void) {
   }, [narrowing]);
 }
 
+// An address can name a page past the rows in hand. A cursor read cannot jump,
+// so it walks on until the page is loaded or the rows run out.
+function useReachAskedPage(
+  short: boolean,
+  loaded: number,
+  loadMore: () => void,
+) {
+  // Re-armed by each arriving read; `loadMore` is re-made every render.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on rows in hand
+  useEffect(() => {
+    if (short) {
+      loadMore();
+    }
+  }, [short, loaded]);
+}
+
 /** What the caller passes to own the page or the page size. */
 export type PagingControl<Row> = Readonly<{
   rows: readonly Row[];
@@ -144,6 +160,11 @@ export function usePaging<Row>(
   const lastPage = Math.max(1, Math.ceil(control.rows.length / perPage));
   const current = Math.min(page, lastPage);
   const from = (current - 1) * perPage;
+  useReachAskedPage(
+    page > lastPage && control.hasMore,
+    control.rows.length,
+    () => control.onLoadMore?.(),
+  );
   useResetOnNarrowing(narrowingSignature({ ...narrowing, perPage }), () =>
     setPage(1),
   );

@@ -18,6 +18,7 @@ import {
   useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
+import { useCompleteTask } from "./taskcomplete";
 import { completeFailureKey } from "./taskwritefollowup";
 import {
   BriefAct,
@@ -842,57 +843,16 @@ function TaskComplete({
   const t = useT();
   const toast = useToast();
   const update = useTaskUpdate([worklistKey]);
-  // mutateAsync, not mutate: it answers a promise this closure owns, so the
-  // rejection is still catchable after the row has gone. `mutate`'s per-call
-  // callbacks hang off the component's observer and are dropped with it.
-  // The UNDO is pinned on the version the completion produced, not the one the
-  // row was drawn at: ticking the task moved it on, so re-sending the older
-  // number would be refused as skew by the write that has just succeeded.
-  const undo = (task: string, at: number | undefined) =>
-    update.mutateAsync({ id: task, version: at, body: { is_done: false } });
+  const complete = useCompleteTask(update);
   return (
     <Button
       variant="primary"
       pending={update.isPending}
+      // A rejected PATCH otherwise leaves the button idle with nothing on
+      // screen to say so, and the reader has no reason to try again.
       onClick={() =>
-        // The answer is spoken from this promise, not from per-call callbacks:
-        // the refetch that follows the write removes the row, and with it the
-        // observer they hang off.
-        update.mutateAsync({ id, version, body: { is_done: true } }).then(
-          // Undoable from the confirmation, the way every disposition
-          // beside it is. Done REMOVES the row, so a misclick otherwise
-          // costs the reader the only address they had for the task —
-          // they must remember what it was to find it again.
-          (completedAt) =>
-            toast.show(t("worklist.verb.completed"), {
-              action: {
-                kind: "undo",
-                label: t("worklist.verb.completeUndo"),
-                // The toast dismisses itself the moment the action is
-                // pressed, so a failed undo leaves the task done with the
-                // only way back already off the screen.
-                // The failure is reported from the mutationFn's own catch
-                // rather than from a per-call onError, and that is the
-                // whole reason this reads the way it does: the completion
-                // REMOVES the row, so by the time the reader presses Undo
-                // the component is unmounted and React Query has dropped
-                // the observer that per-call callbacks hang off. A refused
-                // undo then showed nothing at all — the reader pressed the
-                // one control that could undo their misclick, it failed,
-                // and the screen said nothing.
-                onAct: () => {
-                  undo(id, completedAt).catch(() =>
-                    toast.show(t("worklist.verb.completeUndoFailed"), {
-                      tone: "danger",
-                    }),
-                  );
-                },
-              },
-            }),
-          // A rejected PATCH otherwise leaves the button idle with nothing
-          // on screen to say so, and the reader has no reason to try again.
-          (error) =>
-            toast.show(t(completeFailureKey(error)), { tone: "danger" }),
+        complete(id, version).catch((error) =>
+          toast.show(t(completeFailureKey(error)), { tone: "danger" }),
         )
       }
     >
