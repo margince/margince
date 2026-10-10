@@ -18,7 +18,7 @@ func declaresNoArguments(t *testing.T, tool string, inputSchema json.RawMessage)
 	t.Helper()
 	var schema struct {
 		Properties           map[string]json.RawMessage `json:"properties"`
-		AdditionalProperties *bool                      `json:"additionalProperties"`
+		AdditionalProperties *bool                      `json:"additionalProperties"` //nolint:tagliatelle // JSON Schema's own key spelling
 	}
 	if err := json.Unmarshal(inputSchema, &schema); err != nil {
 		t.Fatalf("%s: inputSchema does not parse: %v", tool, err)

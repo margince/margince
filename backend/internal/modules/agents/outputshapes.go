@@ -287,12 +287,14 @@ func describeStruct(t reflect.Type) (*jsonSchema, error) {
 		if words, ok := field.Tag.Lookup("enum"); ok {
 			schema.Enum = strings.Split(words, ",")
 		}
-		var boundErr error
-		if schema.Minimum, boundErr = tagBound(field, "minimum"); boundErr != nil {
-			return boundErr
-		}
-		if schema.Maximum, boundErr = tagBound(field, "maximum"); boundErr != nil {
-			return boundErr
+		for tag, target := range map[string]**float64{"minimum": &schema.Minimum, "maximum": &schema.Maximum} {
+			bound, set, err := tagBound(field, tag)
+			if err != nil {
+				return err
+			}
+			if set {
+				*target = &bound
+			}
 		}
 		out.Properties[name] = schema
 		if !optional {
@@ -311,16 +313,16 @@ func describeStruct(t reflect.Type) (*jsonSchema, error) {
 }
 
 // tagBound reads a numeric `minimum` or `maximum` tag, nil when absent.
-func tagBound(field reflect.StructField, tag string) (*float64, error) {
+func tagBound(field reflect.StructField, tag string) (bound float64, set bool, err error) {
 	raw, ok := field.Tag.Lookup(tag)
 	if !ok {
-		return nil, nil
+		return 0, false, nil
 	}
-	bound, err := strconv.ParseFloat(raw, 64)
+	bound, err = strconv.ParseFloat(raw, 64)
 	if err != nil {
-		return nil, fmt.Errorf("%s: the %s tag %q is not a number", field.Name, tag, raw)
+		return 0, false, fmt.Errorf("%s: the %s tag %q is not a number", field.Name, tag, raw)
 	}
-	return &bound, nil
+	return bound, true, nil
 }
 
 // eachWireField visits the fields a struct puts on the wire, flattening
