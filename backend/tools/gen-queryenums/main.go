@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// Command gen-queryenums derives, from the contract, which query parameters
+// of which route are closed enums. The server refuses a value outside the
+// enum with one 422 that names the allowed values. A new enum parameter is
+// covered by being declared, with no handler code.
+package main
+
+import (
+	"errors"
+	"flag"
+	"fmt"
+	"go/format"
+	"log"
+	"os"
+	"sort"
+	"strings"
+
+	"github.com/getkin/kin-openapi/openapi3"
+)
+
+// routePrefix is the base path the generated router mounts every operation
+// under; the chi pattern a request matches carries it.
+const routePrefix = "/v1"
+
+type queryEnum struct {
+	Name   string
+	Values []string
+	// Array says the parameter carries a list; Explode says each member is its
+	// own key. Only an array that is not exploded travels as one joined value.
+	Array, Explode bool
+}
+
+func main() {
+	in := flag.String("in", "", "authoritative crm.yaml")
+	out := flag.String("out", "", "generated Go table")
+	flag.Parse()
+	if *in == "" || *out == "" {
+		log.Fatal("gen-queryenums: -in and -out are required")
+	}
+	doc, err := openapi3.NewLoader().LoadFromFile(*in)
+	if err != nil {
+		log.Fatalf("gen-queryenums: loading %s: %v", *in, err)
+	}
+	table, err := deriveTable(doc)
+	if err != nil {
+		log.Fatalf("gen-queryenums: %v", err)
+	}
+	formatted, err := format.Source([]byte(render(table)))
+	if err != nil {
+		log.Fatalf("gen-queryenums: formatting the generated table: %v", err)
+	}
+	if err := os.WriteFile(*out, formatted, 0o600); err != nil {
+		log.Fatalf("gen-queryenums: %v", err)
+	}
+	fmt.Printf("%d routes with enum query parameters generated\n", len(table))
+}
+
+// deriveTable maps "METHOD /v1/path" to the enum query parameters of that
+// operation, whatever its method: a DELETE takes a closed scope too.
+// An operation-level parameter replaces a path-level one of the same name.
+func deriveTable(doc *openapi3.T) (map[string][]queryEnum, error) {
+	table := map[string][]queryEnum{}
+	for path, item := range doc.Paths.Map() {
+		for method, op := range item.Operations() {
+			enums, err := enumsOf(item.Parameters, op.Parameters)
+			if err != nil {
+				return nil, fmt.Errorf("%s %s: %w", method, path, err)
+			}
+			if len(enums) > 0 {
+				table[method+" "+routePrefix+path] = enums
+			}
+		}
+	}
+	return table, nil
+}
+
+func enumsOf(pathLevel, opLevel openapi3.Parameters) ([]queryEnum, error) {
+	byName := map[string]*openapi3.Parameter{}
+	for _, params := range []openapi3.Parameters{pathLevel, opLevel} {
+		for _, ref := range params {
+			if ref != nil && ref.Value != nil && ref.Value.In == openapi3.ParameterInQuery {
+				byName[ref.Value.Name] = ref.Value
+			}
+		}
+	}
+	var out []queryEnum
+	for name, param := range byName {
+		values, array, err := enumValues(param.Schema)
+		if err != nil {
+			return nil, fmt.Errorf("query parameter %q: %w", name, err)
+		}
+		if len(values) > 0 {
+			// A form-style query parameter explodes unless it says otherwise.
+			explode := param.Explode == nil || *param.Explode
+			out = append(out, queryEnum{Name: name, Values: values, Array: array, Explode: explode})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
+}
+
+// enumValues reads the closed string set off a parameter's schema, or its
+// items when the parameter is an array. A set with a non-string member is not
+// a vocabulary this table can compare against. An enum under allOf, oneOf or
+// anyOf cannot be read, so it is refused. Skipping it would leave the
+// parameter unchecked, silently.
+func enumValues(ref *openapi3.SchemaRef) (values []string, array bool, err error) {
+	if ref == nil || ref.Value == nil {
+		return nil, false, nil
+	}
+	schema := ref.Value
+	if schema.Items != nil && schema.Items.Value != nil {
+		schema, array = schema.Items.Value, true
+	}
+	if hidesAnEnum(schema) {
+		return nil, false, errors.New("an enum reached through allOf, oneOf or anyOf; declare it on the schema itself")
+	}
+	values = make([]string, 0, len(schema.Enum))
+	for _, raw := range schema.Enum {
+		s, ok := raw.(string)
+		if !ok {
+			return nil, false, nil
+		}
+		values = append(values, s)
+	}
+	return values, array, nil
+}
+
+// hidesAnEnum reports an enum that sits under a composition keyword rather
+// than on the schema itself.
+func hidesAnEnum(schema *openapi3.Schema) bool {
+	if len(schema.Enum) > 0 {
+		return false
+	}
+	for _, group := range []openapi3.SchemaRefs{schema.AllOf, schema.OneOf, schema.AnyOf} {
+		for _, member := range group {
+			if member != nil && member.Value != nil && (len(member.Value.Enum) > 0 || hidesAnEnum(member.Value)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func render(table map[string][]queryEnum) string {
+	routes := make([]string, 0, len(table))
+	for route := range table {
+		routes = append(routes, route)
+	}
+	sort.Strings(routes)
+
+	var b strings.Builder
+	b.WriteString("// Code generated by tools/gen-queryenums from api/crm.yaml. DO NOT EDIT.\n\n")
+	b.WriteString("package compose\n\n")
+	b.WriteString("// queryEnumTable maps \"METHOD /v1/path\" to the query parameters the contract\n")
+	b.WriteString("// declares as closed enums, with the values each admits.\n")
+	b.WriteString("var queryEnumTable = map[string][]queryEnum{\n")
+	for _, route := range routes {
+		fmt.Fprintf(&b, "\t%q: {\n", route)
+		for _, e := range table[route] {
+			quoted := make([]string, len(e.Values))
+			for i, v := range e.Values {
+				quoted[i] = fmt.Sprintf("%q", v)
+			}
+			fmt.Fprintf(&b, "\t\t{Name: %q, Values: []string{%s}, Array: %t, Explode: %t},\n",
+				e.Name, strings.Join(quoted, ", "), e.Array, e.Explode)
+		}
+		b.WriteString("\t},\n")
+	}
+	b.WriteString("}\n")
+	return b.String()
+}

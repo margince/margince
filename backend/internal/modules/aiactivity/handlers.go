@@ -11,7 +11,6 @@ package aiactivity
 import (
 	"context"
 	"net/http"
-	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -61,11 +60,7 @@ func (h Handlers) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params
 		httperr.Unauthorized(w, r, "reading your AI activity needs an authenticated caller")
 		return
 	}
-	kinds, refusal := requestedKinds(params)
-	if refusal != nil {
-		httperr.Write(w, r, refusal)
-		return
-	}
+	kinds := requestedKinds(params)
 	now := h.now()
 	feed, err := h.store.Mine(r.Context(), startOfDay(now), kinds)
 	if err != nil {
@@ -87,55 +82,18 @@ func (h Handlers) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params
 }
 
 // requestedKinds is the caller's filter as the store takes it: nil for every
-// kind, a populated slice for the kinds a client draws, or a refusal.
-//
-// Two filters are REFUSED rather than served, and they are the same defect
-// reached through different doors: an empty list, and a list naming a kind this
-// contract has no word for. Both make the feed come back empty, and an empty
-// feed is the TRUE answer for an AI at rest — so serving either one reports
-// "nothing happened" about a question the server never actually asked. `?kinds=`
-// is what a client sends when its list went missing; `?kinds=summarise` is what
-// it sends when somebody typed the vocabulary by hand.
-//
-// The membership test is the CONTRACT's own generated Valid(), never a list
-// restated here: the generated binder does not check the enum (AiActivityKind
-// is a string type, and BindQueryParameterWithOptions binds anything into it),
-// so this is the only place the vocabulary is enforced — and a second copy of
-// it would be a second vocabulary the moment somebody edited one.
-func requestedKinds(params crmcontracts.GetMyAiActivityParams) (kinds []string, refusal error) {
+// kind, or the kinds a client draws. The vocabulary is enforced before the
+// handler runs, from the contract's own enum, so an empty or unknown kind never
+// reaches here.
+func requestedKinds(params crmcontracts.GetMyAiActivityParams) []string {
 	if params.Kinds == nil {
-		return nil, nil
-	}
-	// `?kinds=` — the literal shape a client sends when its list went missing —
-	// does NOT arrive as a zero-length slice. The generated binder splits the raw
-	// value and hands back one empty member, so a length check alone would route
-	// that case to "no kind by that name", which is true of the empty string and
-	// useless to the reader. Both spellings of "I asked for nothing" answer the
-	// same way, and it took a test through the real binder to notice that only
-	// one of them ever reached this branch.
-	if allBlank(*params.Kinds) {
-		return nil, httperr.Validation("kinds", "empty_filter",
-			"name at least one kind of AI work, or omit kinds entirely to receive every kind")
+		return nil
 	}
 	out := make([]string, 0, len(*params.Kinds))
 	for _, kind := range *params.Kinds {
-		if !kind.Valid() {
-			return nil, httperr.Validation("kinds", "unknown_kind",
-				"this server has no kind of AI work by that name, so the filter could only ever come back empty")
-		}
 		out = append(out, string(kind))
 	}
-	return out, nil
-}
-
-// allBlank reports a filter that names nothing: no members, or only empty ones.
-func allBlank(kinds []crmcontracts.AiActivityKind) bool {
-	for _, kind := range kinds {
-		if strings.TrimSpace(string(kind)) != "" {
-			return false
-		}
-	}
-	return true
+	return out
 }
 
 // startOfDay is midnight in the clock's own location, which is what "today"

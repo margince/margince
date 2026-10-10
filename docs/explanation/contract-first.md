@@ -30,6 +30,9 @@ runtime from the first day:
    names from there into the routing shape in `config/margince.schema.json`.
    So the runtime's task registry and the operator's config check both derive
    from that contract.
+5. `tools/gen-queryenums` lists every query parameter, on any method, that the
+   contract closes to a string enum (`internal/compose/queryenums_gen.go`). The
+   server answers 422 for a value outside the enum, so no handler needs its own check.
 
 ## Drift is merge-blocking
 

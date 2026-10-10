@@ -175,6 +175,8 @@ workspace/
 /backend/tools/gen-stubs/gen-stubs.exe
 /backend/tools/gen-agentpolicy/gen-agentpolicy
 /backend/tools/gen-agentpolicy/gen-agentpolicy.exe
+/backend/tools/gen-queryenums/gen-queryenums
+/backend/tools/gen-queryenums/gen-queryenums.exe
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-recordfields/gen-recordfields.exe
 /backend/tools/gen-perfdoc/gen-perfdoc
@@ -226,6 +228,7 @@ dump.rdb
 /backend/tools/gen-configschema/gen-configschema
 /backend/tools/gen-jobs/gen-jobs
 /backend/tools/gen-payloads/gen-payloads
+/backend/tools/gen-queryenums/gen-queryenums
 /backend/tools/gen-perfdoc/gen-perfdoc
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-stubs/gen-stubs
