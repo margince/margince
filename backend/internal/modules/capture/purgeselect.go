@@ -335,8 +335,10 @@ func ReleaseEveryImportTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) e
 	return nil
 }
 
-// SelectPurgeableContactsTx finds the contacts a purge may anonymise: those this
-// seat's capture minted from the mail being destroyed, whom nothing else holds.
+// SelectPurgeableContactsTx finds the contacts that only this seat's mail being
+// destroyed explains, whom nothing else holds. It is the mailbox half of the
+// answer. The purger narrows it with contacts.CaptureMintedForSeatTx to the
+// contacts capture created and no human worked on.
 //
 // "Nothing else holds them" is the whole rule, and it is deliberately
 // conservative. A contact the owner later linked to a deal, gave a second
@@ -349,7 +351,7 @@ func ReleaseEveryImportTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) e
 // because deleting it would cascade into records that legitimately reference it
 // and leave a colleague's deal pointing at nothing.
 func SelectPurgeableContactsTx(
-	ctx context.Context, tx pgx.Tx, user ids.UUID, kind, value string,
+	ctx context.Context, tx pgx.Tx, user ids.UUID, kind, value string, floor StatutoryFloor,
 ) ([]ids.UUID, error) {
 	if user == ids.Nil || value == "" {
 		return nil, nil
@@ -360,6 +362,7 @@ func SelectPurgeableContactsTx(
 	match, args := purgeMatchClause(user, kind, value)
 	match = strings.ReplaceAll(match, "a.counterparty_email", "pe.email")
 	outside := strings.ReplaceAll(match, "pe.email", "other.email")
+	shielded, args := floor.column(len(args), args)
 	// Four conditions, and every one of them is somebody else's claim on this
 	// record:
 	//
@@ -371,11 +374,6 @@ func SelectPurgeableContactsTx(
 	//     independently of this mailbox;
 	//   no import of this seat's own — then this seat's mail is not why the
 	//     record exists, and the rule has no standing over it.
-	//
-	// "capture minted them" is asked through the import row, not through
-	// contact.source: source carries the PROVIDER name (gmail, outlook), so a
-	// filter on the literal 'capture' would match nothing and silently
-	// anonymise no one.
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id
 		  FROM contact p
@@ -404,6 +402,13 @@ func SelectPurgeableContactsTx(
 		       JOIN activity ma ON ma.id = mine.activity_id
 		      WHERE lower(ma.counterparty_email) = lower(pe.email)
 		        AND mine.user_id <> $1)
+		   -- Mail the purge keeps (a hold, the statutory floor, an open request)
+		   -- still needs its sender on file, so the contact stays with it.
+		   AND NOT EXISTS (
+		     SELECT 1 FROM contact_email ke
+		       JOIN activity a ON lower(a.counterparty_email) = lower(ke.email)
+		      WHERE ke.contact_id = p.id
+		        AND (`+withheldReason(shielded, floor.shieldedAs())+`) <> '')
 		 ORDER BY p.id`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: selecting the contacts a purge may anonymise: %w", err)
