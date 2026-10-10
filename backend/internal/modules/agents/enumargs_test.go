@@ -41,8 +41,7 @@ func declaredEnums(t *testing.T, tool string, inputSchema json.RawMessage) []enu
 }
 
 // A word outside a declared vocabulary is refused by name on every tool that
-// declares one, and an empty string is not read as an absent argument. Without
-// it read_lists answered a made-up record type with an empty list.
+// declares one. An empty string is not taken for an absent argument.
 func TestEveryDeclaredVocabularyBindsTheToolThatDeclaresIt(t *testing.T) {
 	registry := idProbeDispatcher(t).registry
 	ctx := scopedAgentCtx(principal.ScopeRead, principal.ScopeDraft,

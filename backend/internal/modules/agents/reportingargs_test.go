@@ -46,9 +46,7 @@ func TestAReadReportingMistakeNamesTheArgumentAndTheFix(t *testing.T) {
 	}
 }
 
-// The words the schema advertises are the words the handler accepts: an enum
-// tag nothing reads, or a mode the handler would refuse, is a promise that
-// breaks on first use.
+// The modes the schema advertises are the modes the handler accepts.
 func TestTheAdvertisedReportingModesAreTheAcceptedOnes(t *testing.T) {
 	field, ok := reflect.TypeFor[ReportingRead]().FieldByName("Mode")
 	if !ok {

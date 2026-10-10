@@ -22,8 +22,7 @@ const (
 )
 
 // requireReportingArgs names the argument a read_reporting call got wrong. The
-// engine answered every one of these with a bare "invalid argument", which names
-// no mode and no field, so an agent could not correct itself.
+// engine's bare "invalid argument" names no mode and no field.
 func requireReportingArgs(in ReportingRead) error {
 	if !slices.Contains(reportingModes, in.Mode) {
 		return &BadArgsError{

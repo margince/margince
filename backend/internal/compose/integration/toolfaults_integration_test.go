@@ -5,9 +5,8 @@
 
 package integration
 
-// What a caller is told when it gets a tool argument or a passport scope wrong,
-// against real stores and the real HTTP stack: the mistake is named and the
-// caller is not told to retry or to bother an admin.
+// A wrong tool argument or a missing passport scope, against real stores and
+// the real HTTP stack. The caller is told what to fix, not to retry.
 
 import (
 	"encoding/json"

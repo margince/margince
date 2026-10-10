@@ -26,9 +26,8 @@ func declaresNoArguments(t *testing.T, tool string, inputSchema json.RawMessage)
 	return len(schema.Properties) == 0 && schema.AdditionalProperties != nil && !*schema.AdditionalProperties
 }
 
-// A tool that declares no arguments refuses one by name. Serving a misspelt or
-// misplaced member as though it were absent answers a question the caller did
-// not ask, in the shape of the right answer.
+// A tool that declares no arguments refuses one by name. Dropping a misspelt
+// member answers a question the caller did not ask.
 func TestEveryToolThatDeclaresNoArgumentsRefusesAMemberByName(t *testing.T) {
 	registry := idProbeDispatcher(t).registry
 	ctx := scopedAgentCtx(principal.ScopeRead, principal.ScopeDraft,

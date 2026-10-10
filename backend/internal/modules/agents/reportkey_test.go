@@ -12,9 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A report key outside the catalog is an argument the caller got wrong. Reading
-// it as a missing record sends an agent hunting for a record, while the list of
-// keys that would have worked sat behind the misleading sentence.
+// A report key outside the catalog is a wrong argument, not a missing record.
+// The refusal lists the keys that would have worked.
 func TestAnUnknownReportKeyIsRefusedAsTheArgumentItIs(t *testing.T) {
 	d := idProbeDispatcher(t)
 	ctx := scopedAgentCtx(principal.ScopeRead)

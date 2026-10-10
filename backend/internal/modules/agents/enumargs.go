@@ -3,15 +3,12 @@
 
 package agents
 
-// The closed vocabulary a tool's schema declares for a text argument, and its
-// enforcement: the sibling of numargs.go, at the same chokepoint and for the
-// same reason. An `enum` in a tools/list entry is the only list of words a
-// caller has, so a word outside it must be refused by name rather than read as
-// "nothing matches" (an empty list for a made-up record type) or accepted as
-// though it were absent (an empty string).
+// The closed vocabulary a tool's schema declares for a text argument, held at
+// the same chokepoint as numargs.go. An `enum` is the only list of words a
+// caller has. A word outside it is refused by name, not read as "nothing
+// matches" and not taken for an absent argument.
 //
-// Scope: top-level string properties, and top-level arrays of strings, that
-// declare an `enum`. A property whose vocabulary is not all text is skipped.
+// Top-level string properties and arrays of strings are covered.
 
 import (
 	"encoding/json"
@@ -64,8 +61,8 @@ func declaredEnumArgs(inputSchema json.RawMessage) []enumArg {
 // requireDeclaredEnums holds every supplied word to the vocabulary its tool
 // advertises for it.
 //
-// An ABSENT argument and an explicit null are legal, as for the bounds. An empty
-// string is NOT absent: it is a word, and not one of the declared ones.
+// An absent argument and an explicit null are legal, as for the bounds. An empty
+// string is a word that is not declared, so it is refused.
 func (r *Registry) requireDeclaredEnums(name string, args json.RawMessage) error {
 	r.mu.RLock()
 	enums := r.enumArgs[name]
@@ -92,8 +89,8 @@ func (r *Registry) requireDeclaredEnums(name string, args json.RawMessage) error
 	if len(refusals) == 0 {
 		return nil
 	}
-	// The vocabulary rides in Guidance, which is ours and unbounded: a long list
-	// in the bounded Cause would be cut off exactly when the caller needs it.
+	// The vocabulary rides in Guidance, which is ours and unbounded. A long list
+	// in the bounded Cause would be cut off when the caller needs it.
 	bad := &BadArgsError{Cause: errors.New(strings.Join(refusals, "; ")), Guidance: strings.Join(vocabularies, "; ")}
 	if len(fields) == 1 {
 		bad.Field = fields[0]
@@ -101,12 +98,9 @@ func (r *Registry) requireDeclaredEnums(name string, args json.RawMessage) error
 	return bad
 }
 
-// violation reports whether the supplied value is outside the vocabulary, and
-// how to say so. A value that is not text at all is left to the handler's own
-// decode, which names the type it wanted.
-//
-// The word is the caller's and is rendered quoted and bounded by BadArgsError;
-// the vocabulary is ours.
+// violation reports whether the supplied value is outside the vocabulary. A
+// value that is not text is left to the handler's own decode, which names the
+// type it wanted. The word is the caller's and BadArgsError bounds it.
 func (e enumArg) violation(raw json.RawMessage) (string, bool) {
 	if e.list {
 		var words []string

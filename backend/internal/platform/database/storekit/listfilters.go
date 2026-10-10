@@ -73,9 +73,9 @@ func (s FilterSet[I]) Apply(in *I, filters map[string]string) error {
 }
 
 // FilterError is a filter the caller got wrong: an unknown name, or an operand
-// of the wrong shape. It declares its own verdict (apperrors.FieldFault), so a
-// surface that never runs a module's HTTP mapper, such as the MCP tool door,
-// answers the caller's mistake instead of an internal fault with advice to retry.
+// of the wrong shape. It declares its own verdict (apperrors.FieldFault). The
+// MCP tool door runs no module HTTP mapper, so without it the mistake read as
+// an internal fault.
 type FilterError struct {
 	// Name is the filter the caller named, which is the field to correct.
 	Name   string

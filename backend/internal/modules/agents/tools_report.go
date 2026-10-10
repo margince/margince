@@ -268,9 +268,9 @@ func (t runReport) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 	return t.run(ctx, args.Report, args.Rest)
 }
 
-// requireServedReport refuses a key outside the catalog as the argument it is.
-// The engine's own refusal wraps not-found because the key is a path parameter
-// over REST, and the tool surface would read that as a missing record.
+// requireServedReport refuses a key outside the catalog as a wrong argument.
+// The engine's refusal wraps not-found, which the tool door words as a missing
+// record.
 func (t runReport) requireServedReport(report string) error {
 	if len(t.catalog) == 0 || slices.ContainsFunc(t.catalog, func(e ReportCatalogEntry) bool { return e.Report == report }) {
 		return nil

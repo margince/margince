@@ -58,8 +58,8 @@ func renderIndex(root *yaml.Node, ops []operation) []byte {
 }
 
 // permission is the passport permission a call needs. A read needs Read
-// records, which a passport can be made without: the gate refuses every read
-// of one that lacks it, whether or not the operation declares its scope.
+// records, which a passport can be made without. The gate refuses every read
+// of one that lacks it.
 func (op operation) permission() string {
 	if op.scope == "" && !op.mutating() {
 		return permissionNames["read"]
