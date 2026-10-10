@@ -268,13 +268,17 @@ func maskedRowSelects(ctx context.Context, tx pgx.Tx, table string, columns []st
 	}
 	selects := make([]string, len(columns))
 	for i, col := range columns {
+		source := "t." + col
+		if derived, ok := derivedColumnExpr(table, col); ok {
+			source = derived
+		}
 		switch {
 		case alwaysMasked[col]:
 			selects[i] = fmt.Sprintf("NULL AS %s", col)
 		case conditioned[col]:
-			selects[i] = fmt.Sprintf("CASE WHEN t.id = ANY($%d) THEN t.%s END AS %s", writablePos, col, col)
+			selects[i] = fmt.Sprintf("CASE WHEN t.id = ANY($%d) THEN %s END AS %s", writablePos, source, col)
 		default:
-			selects[i] = "t." + col
+			selects[i] = source + " AS " + col
 		}
 	}
 	return selects, args, nil

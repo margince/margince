@@ -225,6 +225,9 @@ func (w *csvWriters) employerFor(ctx context.Context, key string) (employerCandi
 // failed for an unknown reason is not an edge anybody should assume landed.
 func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
 	contactID, found, err := w.lookup(ctx, migration.ObjectContact, a.FromID)
+	if errors.Is(err, errBoundRecordArchived) {
+		found, err = false, nil
+	}
 	if err != nil {
 		return migration.AssocResult{}, err
 	}

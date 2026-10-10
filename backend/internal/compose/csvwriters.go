@@ -133,6 +133,9 @@ func (w *csvWriters) Updated() int { return w.updated }
 // outside the reserved namespace is client-writable.
 func (w *csvWriters) Exists(ctx context.Context, object, externalID string) (bool, error) {
 	_, found, err := w.lookup(ctx, object, externalID)
+	if errors.Is(err, errBoundRecordArchived) {
+		return true, nil
+	}
 	return found, err
 }
 
@@ -159,23 +162,6 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 	}, nil
 }
 
-func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids.UUID, bool, error) {
-	if object != w.object {
-		return ids.UUID{}, false, fmt.Errorf("import: this run carries %q, not %q", w.object, object)
-	}
-	if id, ok := w.nativeIDs[externalID]; ok {
-		return id, true, nil
-	}
-	id, found, err := w.identities.LookupIdentity(ctx, csvSourceSystem(), object, externalID)
-	if err != nil {
-		return ids.UUID{}, false, err
-	}
-	if found {
-		w.nativeIDs[externalID] = id
-	}
-	return id, found, nil
-}
-
 // Ensure lands one row: created the first time, updated when the file has
 // since changed, unchanged when it has not.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
@@ -197,6 +183,9 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 		return w.reconcile(ctx, target.id, row)
 	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
+	if errors.Is(err, errBoundRecordArchived) {
+		return migration.EnsureResult{Skipped: true, SkipReason: boundArchivedReason}, nil
+	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
