@@ -92,15 +92,13 @@ func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.Det
 		status := string(*params.Status)
 		in.Status = &status
 	}
-	if params.Limit != nil {
-		in.Limit = *params.Limit
-	}
+	in.Limit = storekit.ClampLimit(params.Limit)
 	if params.Cursor != nil {
 		in.Cursor = *params.Cursor
 	}
-	if (params.TargetEntityType == nil) != (params.TargetEntityId == nil) {
-		return ListInput{}, httperr.Validation("target_entity_type", "requires_pair",
-			"filtering by target needs both target_entity_type and target_entity_id; supply both or neither")
+	if err := httperr.RequirePair("target_entity_type", params.TargetEntityType,
+		"target_entity_id", params.TargetEntityId); err != nil {
+		return ListInput{}, err
 	}
 	if params.TargetEntityId != nil {
 		targetID := ids.UUID(*params.TargetEntityId)

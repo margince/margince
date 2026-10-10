@@ -82,6 +82,18 @@ func Validation(field, code, message string) *DetailedError {
 	}
 }
 
+// RequirePair refuses a filter that names half of a discriminated reference.
+// Ignoring the half would list rows the caller did not ask for. A type alone
+// matches every record of that type, and an id alone every type carrying it.
+// Both set or both absent answers nil.
+func RequirePair[A, B any](first string, a *A, second string, b *B) *DetailedError {
+	if (a == nil) == (b == nil) {
+		return nil
+	}
+	return Validation(first, "requires_pair",
+		"filtering by "+first+" needs "+second+" too: supply both or neither")
+}
+
 // RequireNonBlank is the one rule for a record's required name, on create and
 // edit alike. It answers the trimmed text, so what was accepted is what is stored.
 func RequireNonBlank(field, raw string) (string, error) {

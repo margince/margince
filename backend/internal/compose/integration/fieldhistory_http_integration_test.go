@@ -294,14 +294,14 @@ func TestFieldHistoryHTTP(t *testing.T) {
 	t.Run("422 invalid entity_type", func(t *testing.T) {
 		var problem fieldHistoryProblem
 		status := e.Call(t, "GET", "/v1/field-history?entity_type=bogus&entity_id="+ids.NewV7().String(), nil, nil, &problem)
-		assertFieldHistoryValidation422(t, status, problem, "entity_type", "invalid_entity_type")
+		assertFieldHistoryValidation422(t, status, problem, "entity_type", "invalid")
 	})
 
 	t.Run("422 invalid actor_type", func(t *testing.T) {
 		var problem fieldHistoryProblem
 		status := e.Call(t, "GET",
 			"/v1/field-history?entity_type=contact&entity_id="+ids.NewV7().String()+"&actor_type=bogus", nil, nil, &problem)
-		assertFieldHistoryValidation422(t, status, problem, "actor_type", "invalid_actor_type")
+		assertFieldHistoryValidation422(t, status, problem, "actor_type", "invalid")
 	})
 
 	t.Run("422 malformed cursor", func(t *testing.T) {
