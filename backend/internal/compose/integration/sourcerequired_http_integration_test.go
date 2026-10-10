@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestARecordCreateWithoutASourceIsRefusedOverHTTP(t *testing.T) {
@@ -22,15 +23,37 @@ func TestARecordCreateWithoutASourceIsRefusedOverHTTP(t *testing.T) {
 	contact := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Origin Contact", "source": "manual"})
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Origin Co", "source": "manual"})
 
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	dealID := apptest.CreateOpenDeal(t, e, stages)
+	roomlessDealID := createdID(t, e, "/v1/deals", AnyMap{
+		"name": "Roomless deal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "company_id": company, "source": "manual",
+	})
+	roomID := createdID(t, e, "/v1/deal-rooms", AnyMap{"deal_id": dealID, "title": "Origin room", "source": "manual"})
+
+	// A document needs a stored attachment to succeed, so it is only refused here.
 	creates := map[string]struct {
-		path string
-		body AnyMap
+		path        string
+		body        AnyMap
+		refusalOnly bool
 	}{
-		"lead":         {"/v1/leads", AnyMap{"full_name": "Lee Lead"}},
-		"relationship": {"/v1/relationships", AnyMap{"kind": "employment", "contact_id": contact, "company_id": company}},
-		"note":         {"/v1/activities", AnyMap{"kind": "note", "body": "no origin"}},
-		"task":         {"/v1/tasks", AnyMap{"subject": "no origin"}},
-		"product":      {"/v1/products", AnyMap{"name": "Seat", "unit_price_minor": 1000, "currency": "EUR"}},
+		"lead":         {"/v1/leads", AnyMap{"full_name": "Lee Lead"}, false},
+		"relationship": {"/v1/relationships", AnyMap{"kind": "employment", "contact_id": contact, "company_id": company}, false},
+		"note":         {"/v1/activities", AnyMap{"kind": "note", "body": "no origin"}, false},
+		"task":         {"/v1/tasks", AnyMap{"subject": "no origin"}, false},
+		"product":      {"/v1/products", AnyMap{"name": "Seat", "unit_price_minor": 1000, "currency": "EUR"}, false},
+		"offer":        {"/v1/deals/" + dealID + "/offers", AnyMap{"currency": "EUR"}, false},
+		"signal":       {"/v1/signals", AnyMap{"kind": "risk", "summary": "Quiet for three weeks"}, false},
+		"deal room":    {"/v1/deal-rooms", AnyMap{"deal_id": roomlessDealID, "title": "Second room"}, false},
+		"invitation": {
+			"/v1/deal-rooms/" + roomID + "/participants",
+			AnyMap{"full_name": "Laura Buyer", "email": "laura@buyer.example"},
+			false,
+		},
+		"document": {
+			"/v1/deal-rooms/" + roomID + "/documents",
+			AnyMap{"attachment_id": ids.NewV7().String(), "group_key": "proposal"},
+			true,
+		},
 	}
 	for name, create := range creates {
 		for label, stated := range map[string]AnyMap{"absent": {}, "empty": {"source": ""}, "spaces": {"source": "   "}} {
@@ -45,6 +68,9 @@ func TestARecordCreateWithoutASourceIsRefusedOverHTTP(t *testing.T) {
 					t.Errorf("POST %s refusal names %+v, want field source", create.path, refusal.Details.Errors)
 				}
 			})
+		}
+		if create.refusalOnly {
+			continue
 		}
 		t.Run(name+"/stated", func(t *testing.T) {
 			body := maps.Clone(create.body)

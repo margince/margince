@@ -11,9 +11,9 @@ package gates
 // encoding/json leaves an absent key at "" with no error, so a create that never
 // asks stores a row with no origin. The walk finds each body with a required
 // `source`, then a module function that mentions it and calls
-// httperr.RequireNonBlank("source", ...). A body with neither is a failure.
-// Blind spots: a function that mentions two bodies and guards one passes for both,
-// and a dropped error still counts as a call.
+// httperr.RequireNonBlank("source", req.Source). A body with neither fails.
+// Blind spots: a function naming two bodies and guarding one passes for both,
+// and a dropped error still counts.
 
 import (
 	"go/ast"
@@ -37,12 +37,16 @@ var unguardedSourceBodies = gatekit.Waive(map[string]string{
 		"came from, so an origin check would refuse a pin for the wrong reason",
 })
 
+// minSourceBodies is the count of such bodies today. A contract that drops one
+// lowers it in the same change, so a walk that loses bodies cannot pass.
+const minSourceBodies = 16
+
 func TestEveryContractBodyWithARequiredSourceIsRefusedWhenItNamesNone(t *testing.T) {
 	t.Parallel()
 	bodies := contractBodiesWithARequiredSource(t)
-	if len(bodies) < 10 {
-		t.Fatalf("only %d request bodies in %s require a source — the walk is reading the wrong shape",
-			len(bodies), generatedContract)
+	if len(bodies) < minSourceBodies {
+		t.Fatalf("only %d request bodies in %s require a source, want at least %d — the walk lost some",
+			len(bodies), generatedContract, minSourceBodies)
 	}
 	guarded := sourceGuardedBodiesUnder(t, "internal/modules")
 	if len(guarded) == 0 {
@@ -82,6 +86,11 @@ func inComment(req crmcontracts.CommentedRequest) {
 	_ = "httperr.RequireNonBlank(\"source\", req.Source)"
 }
 
+func wrongValue(req crmcontracts.WrongValueRequest) error {
+	_, err := httperr.RequireNonBlank("source", req.Title)
+	return err
+}
+
 func elsewhere() error {
 	_, err := httperr.RequireNonBlank("source", "x")
 	return err
@@ -95,7 +104,7 @@ func elsewhere() error {
 	if !got["GuardedRequest"] {
 		t.Errorf("a function that calls RequireNonBlank(\"source\") and takes the body was not credited: %v", got)
 	}
-	for _, name := range []string{"WrongFieldRequest", "NoCallRequest", "CommentedRequest"} {
+	for _, name := range []string{"WrongFieldRequest", "NoCallRequest", "CommentedRequest", "WrongValueRequest"} {
 		if got[name] {
 			t.Errorf("%s was credited without a RequireNonBlank(\"source\") call in its function", name)
 		}
@@ -181,6 +190,13 @@ func sourceGuardedBodies(file *ast.File) map[string]bool {
 	return out
 }
 
+// namesRequestSource reports a value read from a request's own Source field, so
+// a guard on another field under the label "source" does not count.
+func namesRequestSource(arg ast.Expr) bool {
+	sel, ok := arg.(*ast.SelectorExpr)
+	return ok && sel.Sel.Name == "Source"
+}
+
 // callsRequireNonBlankSource reports a real call, so a comment or a string that
 // spells it does not count.
 func callsRequireNonBlankSource(fn *ast.FuncDecl) bool {
@@ -194,7 +210,7 @@ func callsRequireNonBlankSource(fn *ast.FuncDecl) bool {
 		if !ok || sel.Sel.Name != "RequireNonBlank" {
 			return true
 		}
-		if lit, ok := call.Args[0].(*ast.BasicLit); ok {
+		if lit, ok := call.Args[0].(*ast.BasicLit); ok && len(call.Args) == 2 && namesRequestSource(call.Args[1]) {
 			if field, err := strconv.Unquote(lit.Value); err == nil && field == "source" {
 				found = true
 			}

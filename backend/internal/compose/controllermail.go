@@ -85,6 +85,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		Subject:   &subject,
 		Body:      &body,
 		Direction: &outbound,
+		Source:    systemActor,
 		// The installation writing to somebody about its own obligations is not
 		// that contact engaging, so it stays out of every last_activity_at.
 		Origin: activities.OriginSystemNotice,
