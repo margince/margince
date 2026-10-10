@@ -46,9 +46,9 @@ const evidenceKeyRetentionAction = "retention_action"
 // once so the tombstones a supervisory authority reads use one vocabulary.
 const (
 	evidenceKeyCause = "cause"
-	// The three causes a collateral tombstone can carry: an Art. 17 erasure of
-	// a subject, a retention sweep clearing a record on its own schedule, and a
-	// controller ending a restriction by hand.
+	// The four causes a collateral tombstone can carry. An Art. 17 erasure of
+	// a subject; a retention sweep clearing a record on its own schedule; a
+	// controller ending a restriction; hidden noise mail destroyed.
 	causeContactErasure = "contact_erasure"
 	causeRetention      = "retention"
 	// causeControllerRelease is the third: a restriction a controller ended by
@@ -56,9 +56,11 @@ const (
 	// and the collateral tombstones that release leaves behind both take their
 	// cause from here, so a supervisory authority reading the two sees one act.
 	causeControllerRelease = "controller_release"
-	evidenceKeyClass       = "class"
-	evidenceKeyBasis       = "basis"
-	evidenceKeyReason      = "reason"
+	// causeNoiseDisposition is the capture sweep destroying hidden noise mail.
+	causeNoiseDisposition = "noise_disposition"
+	evidenceKeyClass      = "class"
+	evidenceKeyBasis      = "basis"
+	evidenceKeyReason     = "reason"
 )
 
 // EraseContact removes the subject's PII in ONE transaction: contact row

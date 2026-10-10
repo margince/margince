@@ -35,6 +35,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -64,7 +67,10 @@ type CounterpartyVerdictEngine struct {
 	contacts   *contacts.Store
 	activities *activities.Store
 	approvals  *approvals.Service
-	brain      completer
+	// eraser destroys what hidden noise mail's text left behind when the
+	// redaction stage empties it: the same list every privacy arm runs.
+	eraser *privacy.Eraser
+	brain  completer
 	// triage queues the read that decides whether a domain a verdict just
 	// admitted deserves a company. A `real` answer creates the CONTACT; whether
 	// they have an employer is a separate question this engine does not answer.
@@ -99,6 +105,7 @@ func NewCounterpartyVerdictEngine(
 		contacts:   newCounterpartyStore(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		approvals:  approvals.NewService(InstallationDB(pool)),
+		eraser:     privacy.NewEraser(InstallationDB(pool)).WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))),
 		brain:      brain,
 		triage:     newDomainTriageTrigger(pool, log),
 		tagFiler:   newConnectorTagFiler(pool),
@@ -107,6 +114,14 @@ func NewCounterpartyVerdictEngine(
 		skipReservedDomains: lists.SkipReservedDomainProposals,
 		log:                 log,
 	}
+}
+
+// WithObjectStores returns an engine whose redaction stage also purges the
+// attachment bytes and the one-time link material behind the mail it destroys.
+func (e *CounterpartyVerdictEngine) WithObjectStores(blob blobstore.Store, vault keyvault.Vault) *CounterpartyVerdictEngine {
+	out := *e
+	out.eraser = e.eraser.WithBlobstore(blob).WithPayloadVault(privacyPayloads(vault))
+	return &out
 }
 
 // CanJudge reports whether a model lane was composed for this deployment. An

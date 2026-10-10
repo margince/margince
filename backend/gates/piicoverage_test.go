@@ -177,6 +177,8 @@ var piiTables = map[string]piiHandling{
 			// rather than the row. Same ruling as reply_verdict on the sibling
 			// eraser: a conclusion drawn from content does not outlive it.
 			"language = NULL",
+			// The classifier's reading of the reply, for the same reason.
+			"reply_verdict = NULL",
 		},
 		// Columns a sibling eraser clears and the sweep deliberately does not.
 		// counterparty_email and the channel identity are the same ruling: the

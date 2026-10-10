@@ -235,9 +235,8 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 		if err != nil {
 			return err
 		}
-		// ONE transaction for the whole destruction: the activity's text, the
-		// vectors derived from it, and the provider original behind it commit
-		// together or not at all.
+		// One transaction for the whole destruction. The activity's text and
+		// every copy derived from it commit together or not at all.
 		//
 		// Splitting them was not survivable. Once the activity's content is
 		// nulled it no longer looks like outstanding work, so a failure between
@@ -250,10 +249,10 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 			if err != nil {
 				return err
 			}
-			// Keyed on what was actually redacted, never on what was proposed: a
+			// Keyed on what was actually redacted, never on what was proposed. A
 			// message a human un-archived since the backlog was read keeps its
-			// content, and must keep its original with it.
-			if err := e.pending.PurgeRawCaptureTx(wsCtx, tx, done); err != nil {
+			// content, and must keep its copies with it.
+			if err := e.eraser.PurgeContentDerivedFromNoiseTx(wsCtx, tx, done); err != nil {
 				return err
 			}
 			redacted = len(done)

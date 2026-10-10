@@ -147,8 +147,8 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 		// language goes with the text: it was read from the body this statement
 		// is emptying, so keeping it would answer one question about content
 		// that no longer exists.
-		// source_author_name goes with it, for the reason erasuretimeline.go gives.
-		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, language = NULL, source_author_name = NULL, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
+		// source_author_name and the reply verdict go with it (erasuretimeline.go).
+		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
 		// Everything the text left behind — the verbatim provider original, the

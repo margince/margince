@@ -126,6 +126,21 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject, e.payloads)
 }
 
+// PurgeContentDerivedFromNoiseTx destroys everything the text of hidden noise
+// mail left behind, on the caller's transaction. The capture sweep nulls the
+// messages' own columns and calls this in the same transaction.
+//
+// Exported for that sweep because it lives in another module. It runs the same
+// list as every arm here, so a table added to that list reaches noise mail too.
+func (e *Eraser) PurgeContentDerivedFromNoiseTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	for _, id := range activityIDs {
+		if err := e.purgeContentDerivedFrom(ctx, tx, id, aNoiseVerdictHid); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // erasureAct is what one arm records on everything it destroys collaterally:
 // the reason a pending proposal was withdrawn, the reason an attachment was
 // destroyed, and the cause stamped on the audit evidence.
@@ -160,5 +175,12 @@ var (
 		approvalWithdrawal: ReleasedSourceWithdrawal,
 		collateralReason:   "controller release: the record's content was erased",
 		cause:              causeControllerRelease,
+	}
+	// aNoiseVerdictHid is the capture sweep destroying mail a noise verdict hid
+	// and nobody brought back within the undo window.
+	aNoiseVerdictHid = erasureAct{
+		approvalWithdrawal: NoiseSourceWithdrawal,
+		collateralReason:   "noise disposition: the content of the message was erased",
+		cause:              causeNoiseDisposition,
 	}
 )
