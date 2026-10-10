@@ -36,17 +36,29 @@ for (const width of [1280, 390]) {
 
     test("keeps the company name inside its card", async ({ page }) => {
       await openDealWithLongCompany(page, width);
-      const escaped = await page.getByText(LONG).evaluateAll((nodes, limit) => {
-        const edge = (node: Element) => {
+      const verdicts = await page.getByText(LONG).evaluateAll((nodes) =>
+        nodes.map((node) => {
           const range = document.createRange();
           range.selectNodeContents(node);
-          return range.getBoundingClientRect().right;
-        };
-        return nodes
-          .filter((node) => edge(node) > limit)
-          .map((node) => `${node.tagName}.${node.className}`);
-      }, width);
-      expect(escaped).toEqual([]);
+          const card = node.closest(".panel, .record-head");
+          return {
+            node: `${node.tagName}.${node.className}`,
+            card: card?.className ?? null,
+            past: card
+              ? range.getBoundingClientRect().right -
+                card.getBoundingClientRect().right
+              : null,
+          };
+        }),
+      );
+      expect(verdicts.length).toBeGreaterThan(0);
+      for (const verdict of verdicts) {
+        expect(verdict.card, `${verdict.node} has a card`).not.toBeNull();
+        expect(
+          verdict.past,
+          `${verdict.node} past ${verdict.card}`,
+        ).toBeLessThanOrEqual(0.5);
+      }
     });
   });
 }

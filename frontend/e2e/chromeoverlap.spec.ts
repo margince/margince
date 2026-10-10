@@ -67,5 +67,10 @@ test.describe("the rail footer at 1280 by 720", () => {
     await expect(figure).toBeVisible();
     const chevron = page.locator(".archev");
     expect(overlapArea(await rect(figure), await rect(chevron))).toBe(0);
+    // The suite runs in de-DE, whose scope word is the longer one. The chevron
+    // still ends inside the rail.
+    expect((await rect(chevron)).right).toBeLessThanOrEqual(
+      (await rect(page.locator(".rail"))).right,
+    );
   });
 });

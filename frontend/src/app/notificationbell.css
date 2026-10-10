@@ -13,11 +13,9 @@
   align-items: center;
 }
 
-/* The count, pinned above the glyph's shoulder. It only PLACES the badge; the
-   badge draws itself. A two-digit figure is twice the glyph's width, so a count
-   centred on the glyph's corner hid most of the bell; lifted by a step it
-   overlaps a sliver and the bell reads as a bell. `pointer-events: none` so the
-   figure is part of the target rather than a second one inside it. */
+/* The count sits above the glyph's shoulder and covers under a third of it.
+   It only PLACES the badge; the badge draws itself. `pointer-events: none` so
+   the figure is part of the target rather than a second one inside it. */
 .notifbell-count {
   position: absolute;
   top: calc(var(--space-2) * -1);
@@ -93,11 +91,6 @@ span.notifrow-subject {
 
 /* The words wear `.t-sub`; this only takes the paragraph margin off them. */
 .notifrow-body {
-  margin: 0;
-}
-
-/* The caption beneath a notice: when it was raised. */
-.notifrow-when {
   margin: 0;
 }
 

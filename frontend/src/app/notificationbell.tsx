@@ -313,7 +313,7 @@ function NoticeRow({
       {notice.body !== undefined && (
         <p className="notifrow-body t-sub">{notice.body}</p>
       )}
-      <time className="notifrow-when t-caption" dateTime={notice.created_at}>
+      <time className="t-caption" dateTime={notice.created_at}>
         {formatDateTime(notice.created_at, locale, viewerZone())}
       </time>
       {/* The verb is its own control rather than something the link does on its

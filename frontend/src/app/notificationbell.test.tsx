@@ -10,9 +10,16 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../format/format";
 import { type Locale, LocaleProvider } from "../i18n";
 import { meFixture } from "./mefixture";
 import { NotificationBell } from "./notificationbell";
+
+// The viewer's zone is the machine's in a test, so it is pinned.
+vi.mock("../format/timezone", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../format/timezone")>();
+  return { ...actual, viewerZone: () => "Europe/Berlin" };
+});
 
 // The chrome's notification centre: the count a reader sees without opening
 // anything, and the panel behind it.
@@ -260,7 +267,9 @@ describe("NotificationBell", () => {
     const [row] = await screen.findAllByRole("listitem");
     const when = row.querySelector("time");
     expect(when?.getAttribute("datetime")).toBe("2026-09-15T09:00:00Z");
-    expect(when?.textContent).toMatch(/2026|15/);
+    expect(when?.textContent).toBe(
+      formatDateTime("2026-09-15T09:00:00Z", "en", "Europe/Berlin"),
+    );
   });
 
   // The chrome's one dismissal, so the centre closes the way every other
