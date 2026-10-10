@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -162,8 +161,8 @@ func (s *Store) CreateSubscription(ctx context.Context, in CreateSubscriptionInp
 	if s.cipher == nil {
 		return Subscription{}, "", ErrNotConfigured
 	}
-	if !strings.HasPrefix(in.TargetURL, "https://") {
-		return Subscription{}, "", &BadInputError{Field: "target_url", Reason: "must be an https:// URL"}
+	if err := checkTargetURL(in.TargetURL); err != nil {
+		return Subscription{}, "", err
 	}
 	if err := validateEventTypes(in.EventTypes); err != nil {
 		return Subscription{}, "", err
