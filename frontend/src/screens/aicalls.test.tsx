@@ -157,6 +157,7 @@ function mount(
             page: { has_more: false },
             payload_capture_enabled: captureEnabled,
             tasks: [summary.task],
+            task_options: [{ task: summary.task }],
           };
       return new Response(JSON.stringify(body), {
         headers: { "Content-Type": "application/json" },
@@ -230,6 +231,7 @@ function tracePage(rows: unknown[]) {
         data: rows,
         page: { has_more: false },
         tasks: [],
+        task_options: [],
         payload_capture_enabled: false,
       }),
       { headers: { "Content-Type": "application/json" } },

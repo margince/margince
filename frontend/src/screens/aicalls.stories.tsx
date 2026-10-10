@@ -114,6 +114,12 @@ function list(
           page: { has_more: false },
           payload_capture_enabled: capture,
           tasks: ["capture_classify"],
+          task_options: [
+            {
+              task: "capture_classify",
+              display_name: "Message classification",
+            },
+          ],
         }),
       "GET /ai/calls/call-1": () => jsonResponse(trace),
     });
@@ -152,6 +158,12 @@ export const ListPaged: Story = {
           page: { has_more: true, next_cursor: "page-2" },
           payload_capture_enabled: true,
           tasks: ["capture_classify"],
+          task_options: [
+            {
+              task: "capture_classify",
+              display_name: "Message classification",
+            },
+          ],
         }),
       "GET /ai/calls/call-1": () => jsonResponse(detail),
     });

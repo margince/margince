@@ -154,6 +154,7 @@ function story(
           ],
           page: { next_cursor: null, has_more: false },
           tasks: ["company.enrich"],
+          task_options: [{ task: "company.enrich" }],
           payload_capture_enabled: false,
         }),
     });
