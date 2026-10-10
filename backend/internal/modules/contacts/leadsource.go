@@ -80,9 +80,9 @@ func (m SourceIntents) Of(source string) SourceIntent {
 // nothing else.
 func leadSourceClause(source string, arg func(any) int) string {
 	if _, isFamily := connectorFamily(source + ":x"); isFamily && strings.Count(source, ":") == 1 {
-		return storekit.SQLf("("+leadSourceColumn+" = $%d OR "+leadSourceColumn+
-			` LIKE replace(replace(replace($%d, '\', '\\'), '%%', '\%%'), '_', '\_') || ':%%')`,
-			arg(source), arg(source))
+		pos := arg(source)
+		return storekit.SQLf("("+leadSourceColumn+" = $%d OR "+leadSourceColumn+" LIKE %s || ':%%')",
+			pos, storekit.EscapeLikeSQL(fmt.Sprintf("$%d", pos)))
 	}
 	return storekit.SQLf(leadSourceColumn+" = $%d", arg(source))
 }

@@ -50,7 +50,7 @@ var whatsSlippingCopy = toolCopy{
 		"at_risk_relationships when the question is who a deal rests on rather than whether it " +
 		"is moving.",
 	Retain: "Keep each deal_id if you intend to act; draft_follow_ups_for works over this same " +
-		"ranked set without you re-deriving it.",
+		"ranked set at the default quiet_days without you re-deriving it.",
 }
 
 var reviewCommitmentsCopy = toolCopy{

@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__whats_slipping_this_week", "mcp__margince__list_records", "mcp__margince__read_record"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__whats_slipping_this_week", "input": {"quiet_days": 21}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Two deals have gone quiet. Körber Sensorik Rollout has slipped past the sixty-day line and needs a call today. Reply Deutschland Verlängerung has had nothing for 75 days."}

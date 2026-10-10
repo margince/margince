@@ -10,6 +10,7 @@ package privacy
 // or dropping a source here changes what the export owes the data subject.
 
 import (
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -401,7 +402,7 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		   FROM raw_capture rc
 		   WHERE EXISTS (SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1
 		                 AND rc.payload::text ILIKE
-		                     '%' || replace(replace(replace(pe.email, '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\')
+		                     '%' || ` + storekit.EscapeLikeSQL("pe.email") + ` || '%' ESCAPE '\')
 		      OR EXISTS (SELECT 1 FROM contact_channel_identity pci WHERE pci.contact_id = $1
 		                 AND rc.source_system = pci.provider
 		                 AND (rc.payload->'message'->'from'->>'id' = pci.channel_user_id

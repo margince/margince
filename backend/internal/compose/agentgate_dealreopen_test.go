@@ -281,7 +281,9 @@ func TestEveryDynamicTierRouteHasACommandThatAnswersItsTier(t *testing.T) {
 
 	checked := 0
 	for route, pol := range agentPolicies {
-		if pol.Access != accessTool || pol.Tier != tierDynamic {
+		// A registry-served route never reaches tierInput: Invoke asks the
+		// tool's own ResolverInput, as on the MCP door.
+		if pol.Access != accessTool || pol.Tier != tierDynamic || pol.ServedBy == servedByRegistry {
 			continue
 		}
 		checked++

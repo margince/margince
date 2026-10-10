@@ -26,7 +26,9 @@ const (
 	e2eLLMWritesDeclare = "writes: true"
 )
 
-var e2eWritesDeclaration = regexp.MustCompile(`(?m)^writes:\s*(\S+)\s*$`)
+// e2eWritesDeclaration mirrors the runner's `check.py --field writes`, which
+// this Go test cannot call; a trailing YAML comment is allowed as YAML allows it.
+var e2eWritesDeclaration = regexp.MustCompile(`(?m)^writes:\s*(\S+)\s*(?:#.*)?$`)
 
 // TestEveryWritingScenarioDeclaresThatItWrites holds the lane's reset decision
 // to the tools the scenario itself names.
@@ -77,6 +79,16 @@ func TestEveryWritingScenarioDeclaresThatItWrites(t *testing.T) {
 		}
 		read++
 		text := string(body)
+		// The runner refuses a case whose writes is anything but true or false.
+		writesValue := ""
+		if declared := e2eWritesDeclaration.FindStringSubmatch(text); len(declared) == 2 {
+			writesValue = declared[1]
+		}
+		if writesValue != "true" && writesValue != "false" {
+			t.Errorf("e2e/llm/scenarios/%s must declare writes: true or writes: false; the lane "+
+				"refuses to run it otherwise", entry.Name())
+			continue
+		}
 		reached := append(toolsInBlock(e2eMustCallBlock, e2eMustCallInline, text), toolsInBlock(e2eMayCallBlock, e2eMayCallInline, text)...)
 		var writes []string
 		for _, tool := range reached {
@@ -87,7 +99,7 @@ func TestEveryWritingScenarioDeclaresThatItWrites(t *testing.T) {
 		if len(writes) == 0 {
 			continue
 		}
-		if declared := e2eWritesDeclaration.FindStringSubmatch(text); len(declared) == 2 && declared[1] == "true" {
+		if writesValue == "true" {
 			continue
 		}
 		sort.Strings(writes)

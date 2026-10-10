@@ -8,6 +8,7 @@ import { CellStrip, type ListColumn } from "../design-system/listtable";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import type { useLocale, useT } from "../i18n";
+import { openTaskCountLabel } from "./leadopentasks";
 import {
   SlaBadge,
   StatusBadge,
@@ -103,9 +104,7 @@ export function leadColumns(
         <span>
           {lead.next_task_subject ?? t("lead.noNextTask")}
           {lead.open_task_count
-            ? ` · ${t("lead.openTaskCount", {
-                count: formatNumber(lead.open_task_count, locale),
-              })}`
+            ? ` · ${openTaskCountLabel(locale, lead.open_task_count)}`
             : ""}
           {lead.next_task_due_at
             ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, recordZone)}`

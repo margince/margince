@@ -1381,6 +1381,11 @@ leaves room for a file of about 6.2 MB. `attach_document` takes the smaller of t
 `uploads.attachment_mb`. You cannot change the 8 MiB or the 6.2 MB limit. A request over 8 MiB gets
 `413`, with the limit named.
 
+A passport's `POST /v1/attachments` takes the same file limit as `attach_document`. A file over that
+limit answers `422` on `file`. The agent gate reads the whole multipart body first, up to the tool's
+8 MiB, and a larger body answers `422` on `body` with code `too_large`. A human's upload keeps
+`uploads.attachment_mb`.
+
 Only one tool may use the 8 MiB body. Every other tool refuses input over 1 MiB before it runs,
 because `ToolSpec.MaxArgsBytes` starts at the JSON limit and only `attach_document` raises it.
 

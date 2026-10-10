@@ -440,7 +440,7 @@ func listRosterPage[T userRow | teamRow](
 		var rows pgx.Rows
 		var err error
 		if q != nil && *q != "" {
-			args := append(append([]any{}, spec.leadArgs...), "%"+*q+"%", after.createdAt, after.id, limit+1)
+			args := append(append([]any{}, spec.leadArgs...), "%"+storekit.EscapeLike(*q)+"%", after.createdAt, after.id, limit+1)
 			rows, err = tx.Query(ctx, spec.filtered, args...)
 		} else {
 			args := append(append([]any{}, spec.leadArgs...), after.createdAt, after.id, limit+1)

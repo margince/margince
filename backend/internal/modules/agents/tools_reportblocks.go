@@ -40,6 +40,7 @@ func (t describeReportBlocks) Spec() mcp.ToolSpec {
 		Description:   describeReportBlocksCopy.render(),
 		Instead:       describeReportBlocksCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "describeReportBlocks",
 		// No arguments. The grammar is the same for every caller — it is the
 		// engine's, not a workspace's — so a filter would only let one narrow
 		// what it already receives, at the cost of a name it could spell wrong.

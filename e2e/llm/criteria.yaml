@@ -494,3 +494,20 @@ cases:
       statement: >-
         The SVG logo is refused by the attachment store, and the answer says so
         instead of keeping it under another name or as a note.
+  case58_quiet_for_three_weeks:
+    1:
+      name: The window the user named is the window asked
+      statement: >-
+        Three weeks reaches the tool as 21 days, so the 45-day deal is in the
+        answer and is not described as past the product's sixty-day line.
+  case59_file_it_on_the_meeting_and_the_contract:
+    1:
+      name: The file is kept on the meeting it came from
+      statement: >-
+        The signed PDF lands on the signing meeting as the same bytes, and the
+        answer says it is there rather than on the project or the company.
+    2:
+      name: The file is filed against its contract
+      statement: >-
+        The same file carries the contract it is paper for, so finance finds it
+        from the contract, and the answer says so.

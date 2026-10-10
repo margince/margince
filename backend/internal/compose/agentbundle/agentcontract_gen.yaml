@@ -56,6 +56,25 @@ tags:
   - name: Bulk
     description: One change over a selection of contacts, companies or deals — previewed, confirmed by whoever asked for it, and applied record by record.
 paths:
+  /whoami:
+    get:
+      tags: [Identity]
+      operationId: getActingIdentity
+      security: [{bearerAuth: []}]
+      summary: Who this caller acts for.
+      description: |-
+        The answer the `whoami` agent tool gives, run by the same tool on both doors: the
+        acting human's id, name, email, language and timezone. A passport learns whom it
+        acts for; a session learns its own seat. `GET /me` is a session's fuller view of
+        itself and stays human-only.
+      responses:
+        '200':
+          description: The acting human.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActingIdentity'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /contacts/{id}/employment-import:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -701,6 +720,28 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /companies/{id}/intro-paths:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Companies]
+      operationId: listIntroPaths
+      security: [{bearerAuth: []}]
+      summary: The colleagues who could introduce you at this company, warmest first.
+      description: |-
+        The answer the `intro_path_to` agent tool gives, run by the same tool on both doors.
+        Each route names a contact at the company and the colleague who knows them, ranked
+        by how warm that relationship is. Warmth is computed over a bounded read of the
+        company's contacts; `candidates_truncated` says a warmer route may exist past it.
+      responses:
+        '200':
+          description: The introduction routes.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/IntroPaths'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /companies/{id}/graph:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1404,6 +1445,90 @@ paths:
                     details:
                       errors:
                         - {field: stage_id, code: stage_not_in_pipeline}
+  /deals/slipping:
+    get:
+      tags: [Deals]
+      operationId: listSlippingDeals
+      security: [{bearerAuth: []}]
+      summary: The open deals going quiet or past their expected close date, worst first.
+      description: |-
+        The answer the `whats_slipping_this_week` agent tool gives, run by the same tool on
+        both doors, so a passport here and over MCP gets the same deals for the same input.
+        Each deal carries the evidence that puts it on the list. A deal whose risk cannot be
+        evidenced from its own fields is left out rather than guessed.
+      parameters:
+        - name: quiet_days
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 365, default: 60}
+          description: Days without recorded activity after which an open deal counts as gone quiet.
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 50}
+          description: Cap the ranked list. Omit it for every evidenced deal.
+      responses:
+        '200':
+          description: The slipping deals, worst first.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SlippingDealList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/at-risk:
+    get:
+      tags: [Deals]
+      operationId: listAtRiskRelationships
+      security: [{bearerAuth: []}]
+      summary: The open deals whose relationships are going cold, and why.
+      description: |-
+        The answer the `at_risk_relationships` agent tool gives, run by the same tool on both
+        doors: the caller's open deals that rest on a single contact, have no engaged
+        champion, or are carried almost entirely by one colleague on our side. Each deal
+        carries the findings that put it on the list. The sweep reads the deals the caller
+        may see and stops at its cap; `truncated` says when it did.
+        `coverage_withheld` says a deal could not be judged because the caller may not read
+        its relationships, so it is missing from the list rather than clean.
+      responses:
+        '200':
+          description: The at-risk deals.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AtRiskRelationships'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /deals/follow-up-drafts:
+    post:
+      tags: [Deals]
+      operationId: draftDealFollowUps
+      security: [{bearerAuth: []}]
+      summary: Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+      description: |-
+        The answer the `draft_follow_ups_for` agent tool gives, run by the same tool on both
+        doors. The deals are the ones `GET /deals/slipping` lists at its default window, worst
+        first, up to `limit` (at most 25). Each draft lands on its deal's timeline as a draft
+        activity and is never sent. A deal whose risk cannot be evidenced gets no draft.
+
+        Needs the passport permission Draft messages.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DealFollowUpDraftRequest'}
+      responses:
+        '200':
+          description: The drafts written, one per deal.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealFollowUpDrafts'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1523,6 +1648,41 @@ paths:
                     code: approval_required
                     detail: Advancing to a closed-won stage is confirm-first; supply an approval token.
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/progress:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: progressDeal
+      security: [{bearerAuth: []}]
+      summary: Move a deal to a stage and note why, in one call.
+      description: |-
+        The answer the `progress_deal` agent tool gives, run by the same tool on both doors:
+        the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
+        timeline. The answer is the deal as it now stands and the note's activity id.
+
+        Needs the passport permission Change records.
+
+        May wait for a human to approve, depending on the change.
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProgressDealRequest'}
+      responses:
+        '200':
+          description: The deal at its new stage, and the note logged on it.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProgressDealResult'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/stakeholders:
     parameters:
@@ -1889,6 +2049,28 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+  /projects/{id}/handoff:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Projects]
+      operationId: prepareProjectHandoff
+      security: [{bearerAuth: []}]
+      summary: What delivery needs to take this project over.
+      description: |-
+        The answer the `prepare_handoff` agent tool gives, run by the same tool on both doors:
+        the project, the deals it was sold through, its stakeholders, the promises still
+        open, and the gaps a handoff should close first. It reads and writes nothing; moving
+        the project into delivery is a separate act.
+      responses:
+        '200':
+          description: The handoff brief.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProjectHandoff'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /projects/{id}/360:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3367,6 +3549,42 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+  /leads/{id}/qualify:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Leads]
+      operationId: qualifyLead
+      security: [{bearerAuth: []}]
+      summary: Fill a lead's empty qualification fields that its own data settles, and name the rest.
+      description: |-
+        The answer the `qualify_lead` agent tool gives, run by the same tool on both doors. A
+        field is filled only when it is empty and the lead's own data settles it, such as a
+        company name from a corporate email domain; each fill names its evidence. A value is
+        never overwritten. `gaps` lists the fields still empty, for a human to fill.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/QualifyLeadRequest'}
+      responses:
+        '200':
+          description: What was filled and what is still empty.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LeadQualification'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /leads/{id}/demote:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5311,6 +5529,224 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+  /query-vocabulary:
+    get:
+      tags: [Search]
+      operationId: describeQueryVocabulary
+      security: [{bearerAuth: []}]
+      summary: Everything a workspace query plan may say, for this caller.
+      description: |-
+        The answer the `describe_query_vocabulary` agent tool gives, run by the same tool on
+        both doors: the record types this caller can ask about, the fields each one names,
+        the operators each field admits, and the one relationship hop a plan may take. It
+        is the document `margince://schema/query` publishes, composed for the caller, so it
+        lists only what they can already read.
+      responses:
+        '200':
+          description: The query vocabulary for this caller.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QueryVocabulary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /catch-up:
+    get:
+      tags: [Search]
+      operationId: catchUpOnRecord
+      security: [{bearerAuth: []}]
+      summary: What has been going on with one record, in one cited picture.
+      description: |-
+        The answer the `catch_me_up_on` agent tool gives, run by the same tool on both doors:
+        the recent activity, open tasks and related records around one record, each with the
+        passages it rests on. Name the record by `record_id`, or by `record_name` as
+        `search_records` would find it; a name that matches more than one record is refused
+        with the candidates rather than guessed at.
+      parameters:
+        - $ref: '#/components/parameters/AnchorRecordType'
+        - $ref: '#/components/parameters/AnchorRecordId'
+        - $ref: '#/components/parameters/AnchorRecordName'
+        - $ref: '#/components/parameters/AnchorMaxItems'
+        - $ref: '#/components/parameters/AnchorProjectId'
+      responses:
+        '200':
+          description: The assembled picture.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentAssembledContext'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /meeting-prep:
+    get:
+      tags: [Search]
+      operationId: prepForMeeting
+      security: [{bearerAuth: []}]
+      summary: Get ready for a meeting about one record.
+      description: |-
+        The answer the `prep_for_meeting` agent tool gives, run by the same tool on both
+        doors. Given a meeting, the written brief a rep reads before it; given any other
+        record, the picture `GET /catch-up` assembles, plus the open items pulled out as the
+        things to raise. The record is named as `GET /catch-up` names it.
+      parameters:
+        - $ref: '#/components/parameters/AnchorRecordType'
+        - $ref: '#/components/parameters/AnchorRecordId'
+        - $ref: '#/components/parameters/AnchorRecordName'
+        - $ref: '#/components/parameters/AnchorMaxItems'
+        - $ref: '#/components/parameters/AnchorProjectId'
+      responses:
+        '200':
+          description: The meeting preparation.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MeetingPrep'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /commitments:
+    get:
+      tags: [Activities]
+      operationId: listOpenCommitments
+      security: [{bearerAuth: []}]
+      summary: The promises still open, overdue first.
+      description: |-
+        The answer the `review_commitments` agent tool gives, run by the same tool on both
+        doors: open tasks and the promises read from conversations, each with when it is
+        due and how far past it. Only what the caller may see is read.
+      parameters:
+        - name: assignee_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: Narrow to one owner's promises. Omit it for everyone's.
+        - name: project_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: Keep only promises filed under this project or under none.
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 50, default: 50}
+          description: Cap the set. 50 is also the ceiling.
+      responses:
+        '200':
+          description: The open commitments.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OpenCommitments'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /context-search:
+    get:
+      tags: [Search]
+      operationId: searchContext
+      security: [{bearerAuth: []}]
+      summary: The records most relevant to a description, ranked by meaning as well as words.
+      description: |-
+        The answer the `search_context` agent tool gives, run by the same tool on both doors.
+        The ranking is the top of an ordering, never every match, so `coverage` is never
+        `complete_exact`. A question with conditions on fields belongs to
+        `POST /workspace-queries`.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema: {type: string, maxLength: 1000}
+          description: What to look for, in your own words.
+        - name: record_types
+          in: query
+          schema:
+            type: array
+            items: {type: string, enum: [contact, company, deal, lead, project]}
+          description: Restrict the sweep to these types. Omit it to sweep all of them.
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 25}
+      responses:
+        '200':
+          description: The ranked records.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContextSearchResult'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /workspace-queries:
+    post:
+      tags: [Search]
+      operationId: queryWorkspace
+      security: [{bearerAuth: []}]
+      summary: Answer a query plan over the workspace's records.
+      description: |-
+        The answer the `query_workspace` agent tool gives, run by the same tool on both
+        doors. The plan is written in the grammar `GET /query-vocabulary` publishes for this
+        caller; a name outside it is refused by name. A POST because a plan does not fit a
+        query string. It reads and stores nothing.
+
+        Needs the passport permission Read records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WorkspaceQueryRequest'}
+      responses:
+        '200':
+          description: The rows the plan matched.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WorkspaceQueryResult'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /entity-resolutions:
+    post:
+      tags: [Search]
+      operationId: resolveEntities
+      security: [{bearerAuth: []}]
+      summary: Whether the contacts and companies in a payload are already records here.
+      description: |-
+        The answer the `resolve_entities` agent tool gives, run by the same tool on both
+        doors. Each candidate is matched by its keys (email, phone, domain) and its name;
+        only a match on a unique key can be acted on alone. A POST because a batch of
+        candidates does not fit a query string. It reads and stores nothing.
+
+        Needs the passport permission Read records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EntityResolutionRequest'}
+      responses:
+        '200':
+          description: The matches for each candidate, in the order sent.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EntityResolutionResult'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /record-fields:
+    get:
+      tags: [Search]
+      operationId: describeRecordFields
+      security: [{bearerAuth: []}]
+      summary: The fields a record create or update may write, for each record type.
+      description: |-
+        The answer the `describe_record_fields` agent tool gives, run by the same tool on
+        both doors: for each record type, the fields a `create_record` or `update_record`
+        body may name, their types and their closed vocabularies.
+      responses:
+        '200':
+          description: The record write vocabulary.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RecordFieldsVocabulary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /search:
     get:
       tags: [Search]
@@ -7226,6 +7662,43 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /analytics/runs/{run_id}/evidence-search:
+    post:
+      tags: [Reports]
+      operationId: searchReportEvidence
+      security: [{bearerAuth: []}]
+      summary: Which records behind a saved run carry the words, and which do not.
+      description: |-
+        The answer the `search_report_evidence` agent tool gives, run by the same tool on
+        both doors. The records a saved run measured, or one cell of them, are judged
+        against the words: the ones that carry them are cited, the ones that do not are
+        counterexamples, and the ones that cannot be judged are named as such. The share
+        is given only when every record the caller can read was judged.
+
+        Needs the passport permission Read records.
+
+        Runs at once.
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+          description: A saved run, as `POST /analytics/query` with `save` answers one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReportEvidenceSearchRequest'}
+      responses:
+        '200':
+          description: The evidence for and against.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ReportEvidenceResult'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /analytics/reports/render:
     post:
       tags: [Reports]
@@ -7260,6 +7733,130 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /analytics/vocabulary:
+    get:
+      tags: [Reports]
+      operationId: describeAnalyticsVocabulary
+      security: [{bearerAuth: []}]
+      summary: What an analytics query may name, for this caller.
+      description: |-
+        The answer the `describe_analytics_vocabulary` agent tool gives, run by the same
+        tool on both doors: the populations, their group keys and measures, and the functions
+        and operators `POST /analytics/query` takes, for this caller.
+      responses:
+        '200':
+          description: The analytics vocabulary.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AnalyticsVocabulary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /analytics/reports/blocks:
+    get:
+      tags: [Reports]
+      operationId: describeReportBlocks
+      security: [{bearerAuth: []}]
+      summary: The block grammar a report document is written in.
+      description: |-
+        The answer the `describe_report_blocks` agent tool gives, run by the same tool on
+        both doors: every block `POST /analytics/reports/render` accepts, and what each one
+        carries.
+      responses:
+        '200':
+          description: The report block grammar.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ReportBlockGrammar'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /analytics/reports/vocabulary:
+    get:
+      tags: [Reports]
+      operationId: describeReportVocabulary
+      security: [{bearerAuth: []}]
+      summary: The prebuilt reports, and the names each one's plan may use.
+      description: |-
+        The answer the `describe_report_vocabulary` agent tool gives, run by the same tool
+        on both doors: the document `margince://schema/reports` publishes.
+      responses:
+        '200':
+          description: The report vocabulary.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ReportVocabulary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /attachments:
+    get:
+      tags: [Attachments]
+      operationId: listAttachments
+      security: [{bearerAuth: []}]
+      summary: List the attachments hung off one entity (cursor-paginated metadata).
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: entity_type
+          in: query
+          required: true
+          schema: {type: string, enum: [contact, company, deal, activity, lead, project]}
+        - name: entity_id
+          in: query
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: A page of attachment metadata for the entity.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttachmentListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: List the attachments hung off one entity (cursor-paginated metadata).
+    post:
+      tags: [Attachments]
+      operationId: uploadAttachment
+      security: [{bearerAuth: []}]
+      summary: Upload a file and attach it to an entity.
+      description: |-
+        Multipart upload. The bytes are written to object storage; the row records the
+        metadata + object key. `captured_by` is server-stamped from the authenticated
+        principal, never the request. The parent entity must be visible to the caller
+        (a hidden or cross-tenant entity answers 404, never leaks existence).
+        The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
+        Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
+        answers 422 `unsupported_file_type`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [entity_type, entity_id, file]
+              properties:
+                contract_id:
+                  type: string
+                  format: uuid
+                  description: 'The agreement this document is about. Optional: most client paper is about no particular agreement.'
+                entity_type: {type: string, enum: [contact, company, deal, activity, lead, project]}
+                entity_id: {type: string, format: uuid}
+                file: {type: string, format: binary}
+      responses:
+        '201':
+          description: The stored attachment metadata.
+          headers:
+            Location: {schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Attachment'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/network:
     get:
       tags: [Contacts]
@@ -7281,6 +7878,37 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /deals/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Attachments]
+      operationId: listDealDocuments
+      security: [{bearerAuth: []}]
+      summary: The deal's Files area — its own uploads and the files of every message linked to it.
+      description: |-
+        Every attachment whose parent is the deal, plus every attachment of an activity
+        linked to the deal: that is where a captured email's files live, so without
+        this read an emailed contract is unreachable from the deal it is about.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: category
+          in: query
+          schema: {type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other]}
+        - name: include_hidden
+          in: query
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: The deal's documents.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealDocumentListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/status:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7359,6 +7987,43 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /companies/{id}/documents:
+    get:
+      tags: [Attachments]
+      operationId: listCompanyDocuments
+      security: [{bearerAuth: []}]
+      summary: Every document that rolls up to this account, pinned first.
+      description: |-
+        The account's library. A document reachable from a company may hang off a deal, a
+        contact, an activity or the company itself, and each of those has its own
+        visibility.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: category
+          in: query
+          schema: {type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other]}
+        - name: doc_state
+          in: query
+          schema: {type: string, enum: [draft, current, final, superseded]}
+        - name: pinned_only
+          in: query
+          schema: {type: boolean, default: false}
+        - name: contract_id
+          in: query
+          description: Only the paper filed against this agreement.
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The account's documents.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttachmentListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /imports:
     post:
       tags: [Import]
@@ -7637,6 +8302,33 @@ components:
         gate + approval staging. Human interactive sessions use `cookieAuth`, not this
         scheme.
   parameters:
+    AnchorRecordType:
+      name: record_type
+      in: query
+      required: true
+      schema: {type: string, enum: [contact, company, deal, lead, project, activity]}
+      description: The type of the record to build around.
+    AnchorRecordId:
+      name: record_id
+      in: query
+      schema: {type: string, format: uuid}
+      description: The record to build around. Give this or `record_name`, not both.
+    AnchorRecordName:
+      name: record_name
+      in: query
+      schema: {type: string}
+      description: >-
+        The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
+    AnchorMaxItems:
+      name: max_items
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 20}
+      description: Cap the items in each section.
+    AnchorProjectId:
+      name: project_id
+      in: query
+      schema: {type: string, format: uuid}
+      description: Keep only what is filed under this project or under none.
     ProfileFieldKey:
       name: field
       in: path
@@ -7751,6 +8443,13 @@ components:
         what makes an operation replay-safe** — an operation that omits it ignores the header rather
         than half-honouring it, so read this contract, not the client, to know which calls are safe
         to retry blind.
+    ToolIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      schema: {type: string, maxLength: 255}
+      description: |-
+        It is held for 24h per caller and tool, not per path: the same key on two records of one
+        tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
     ApprovalToken:
       name: X-Approval-Token
       in: header
@@ -10744,6 +11443,667 @@ components:
         source_kind: {type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.'}
         due_at: {type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.'}
         occurred_at: {type: string, format: date-time, description: 'When it was said.'}
+    ReportEvidenceSearchRequest:
+      type: object
+      description: What `search_report_evidence` takes beside the run the path names.
+      required: [query]
+      properties:
+        query: {type: string, maxLength: 1000, description: The words the evidence would carry.}
+        cell:
+          type: array
+          items: {}
+          description: >-
+            One cell's group key values, in the run's `group_by` order. Omit it to search every record the run measured.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 25
+          description: How many citations, counterexamples and abstentions to return, each.
+    WorkspaceQueryRequest:
+      type: object
+      description: What `query_workspace` takes.
+      required: [plan]
+      properties:
+        plan:
+          type: object
+          additionalProperties: true
+          description: A query plan, in the grammar `GET /query-vocabulary` publishes for this caller.
+    EntityResolutionRequest:
+      type: object
+      description: What `resolve_entities` takes.
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: {$ref: '#/components/schemas/EntityResolutionCandidate'}
+    EntityResolutionCandidate:
+      type: object
+      description: One contact or company named in a payload, by every key it carries.
+      required: [kind]
+      properties:
+        kind: {type: string, enum: [contact, company], description: Which record type this candidate is. Leads are not resolved.}
+        ref: {type: string, description: 'Your own label, echoed back on its answer so a batch lines up. Never stored.'}
+        name: {type: string, description: 'Full name for a contact, trading name for a company.'}
+        legal_name: {type: string, description: 'The registered company name, when it differs from the trading name. Read for a company only.'}
+        emails:
+          type: array
+          maxItems: 10
+          items: {type: string}
+          description: Every address on the payload. For a company each address also gives its domain, unless it is a consumer mail domain.
+        phones:
+          type: array
+          maxItems: 10
+          items: {type: string}
+          description: Phone numbers in E.164 form. One that does not normalize is ignored.
+        domains:
+          type: array
+          maxItems: 10
+          items: {type: string}
+          description: Company domains the payload claims. Read for a company only.
+    AgentRecordRef:
+      description: 'One record an agent answer rests on.'
+      type: object
+      required: [record_id, record_type]
+      properties:
+        record_id: {type: string, format: uuid}
+        record_type: {type: string}
+    AgentExcerpt:
+      description: 'A quoted passage and the field or record it was read from.'
+      type: object
+      required: [snippet, source]
+      properties:
+        snippet: {type: string}
+        source: {type: string}
+    AgentContextItem:
+      description: 'One record in an assembled picture, summarised, with the passages that put it there.'
+      type: object
+      required: [evidence, record_id, record_type, summary]
+      properties:
+        evidence: {type: array, items: {$ref: '#/components/schemas/AgentExcerpt'}}
+        occurred_at: {type: string}
+        record_id: {type: string, format: uuid}
+        record_type: {type: string}
+        summary: {type: string}
+    AgentContextSection:
+      description: 'One heading of an assembled picture: recent activity, open tasks, related records.'
+      type: object
+      required: [items, name]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/AgentContextItem'}}
+        name: {type: string}
+    AgentAssembledContext:
+      description: 'What `catch_me_up_on` answers: the record asked about and the sections assembled around it.'
+      type: object
+      required: [anchor, sections]
+      properties:
+        anchor: {$ref: '#/components/schemas/AgentRecordRef'}
+        sections: {type: array, items: {$ref: '#/components/schemas/AgentContextSection'}}
+    AgentGroundedLine:
+      description: 'One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.'
+      type: object
+      required: [evidence, text]
+      properties:
+        evidence: {type: array, items: {$ref: '#/components/schemas/AgentRecordRef'}}
+        nature: {type: string}
+        text: {type: string}
+    AgentPlay:
+      description: 'A named way the conversation can go and what to do then.'
+      type: object
+      required: [evidence, label, play]
+      properties:
+        evidence: {type: array, items: {$ref: '#/components/schemas/AgentRecordRef'}}
+        label: {type: string}
+        play: {type: string}
+    AgentCommitmentSubject:
+      description: 'A record a commitment is about.'
+      type: object
+      required: [entity_id, entity_type]
+      properties:
+        entity_id: {type: string, format: uuid}
+        entity_type: {type: string}
+        name: {type: string}
+    AgentCommitment:
+      description: 'One open promise: a task, or a promise read from a conversation, with when it is due.'
+      type: object
+      required: [about, source, state, subject]
+      properties:
+        about: {type: array, items: {$ref: '#/components/schemas/AgentCommitmentSubject'}}
+        assignee_id: {type: string, format: uuid}
+        assignee_name: {type: string}
+        claim_id: {type: string, format: uuid}
+        days_overdue: {type: integer}
+        due_at: {type: string}
+        quote: {type: string}
+        source: {type: string}
+        source_activity_id: {type: string, format: uuid}
+        state: {type: string}
+        subject: {type: string}
+        task_id: {type: string, format: uuid}
+    AgentRecord:
+      description: 'A record as the agent tool surface hands it over: its type, id, version and readable fields.'
+      type: object
+      required: [fields, id, record_type]
+      properties:
+        fields: {type: object, additionalProperties: true}
+        id: {type: string, format: uuid}
+        record_type: {type: string}
+        trust_tier: {type: string}
+        version: {type: integer}
+    AgentContextHit:
+      description: 'One ranked record and the passages that matched.'
+      type: object
+      required: [excerpts, record, score]
+      properties:
+        excerpts: {type: array, items: {$ref: '#/components/schemas/AgentExcerpt'}}
+        record: {$ref: '#/components/schemas/AgentRecord'}
+        score: {type: number}
+    AgentMeetingPlan:
+      description: 'What to do in the room, built over the same records as the brief.'
+      type: object
+      required: [advance, meeting_type, meeting_type_confidence, readiness]
+      properties:
+        advance:
+          type: object
+          required: [best, fallback, minimum]
+          properties:
+            best: {$ref: '#/components/schemas/AgentGroundedLine'}
+            fallback: {$ref: '#/components/schemas/AgentGroundedLine'}
+            minimum: {$ref: '#/components/schemas/AgentGroundedLine'}
+        company_arc:
+          type: array
+          items:
+            type: object
+            required: [from, summary, to]
+            properties:
+              from: {type: string}
+              summary: {$ref: '#/components/schemas/AgentGroundedLine'}
+              title: {type: string}
+              to: {type: string}
+        likely_asks:
+          type: array
+          items:
+            type: object
+            required: [basis, prepare, question, relevance]
+            properties:
+              basis: {$ref: '#/components/schemas/AgentGroundedLine'}
+              prepare: {type: string}
+              question: {type: string}
+              relevance: {type: string}
+        manager_coaching:
+          type: object
+          required: [failure_mode, focus, intervene_if, listen_for, watch_for]
+          properties:
+            failure_mode: {type: string}
+            focus: {type: string}
+            intervene_if: {type: string}
+            listen_for: {type: string}
+            paths: {type: array, items: {$ref: '#/components/schemas/AgentPlay'}}
+            watch_for: {type: string}
+        meeting_type: {type: string}
+        meeting_type_confidence: {type: string}
+        objective: {$ref: '#/components/schemas/AgentGroundedLine'}
+        objective_caveat: {type: string}
+        opening: {$ref: '#/components/schemas/AgentGroundedLine'}
+        questions:
+          type: array
+          items:
+            type: object
+            required: [ask, evidence, listen_for, why]
+            properties:
+              ask: {type: string}
+              evidence: {type: array, items: {$ref: '#/components/schemas/AgentRecordRef'}}
+              listen_for: {type: string}
+              why: {type: string}
+        readiness: {type: string}
+        scenarios: {type: array, items: {$ref: '#/components/schemas/AgentPlay'}}
+        top_risk:
+          type: object
+          required: [avoid, say, show, text]
+          properties:
+            avoid: {type: string}
+            say: {type: string}
+            show: {type: string}
+            text: {$ref: '#/components/schemas/AgentGroundedLine'}
+        unknowns:
+          type: array
+          items:
+            type: object
+            required: [kind, question]
+            properties:
+              kind: {type: string}
+              question: {type: string}
+    AgentMeetingBrief:
+      description: 'The written brief for the booked meeting the record leads to, when there is one.'
+      type: object
+      required: [activity_id, generated_at, generated_by, sections]
+      properties:
+        activity_id: {type: string, format: uuid}
+        generated_at: {type: string}
+        generated_by: {type: string}
+        plan: {$ref: '#/components/schemas/AgentMeetingPlan'}
+        project_id: {type: string, format: uuid}
+        sections:
+          type: array
+          items:
+            type: object
+            required: [kind, sentences]
+            properties:
+              kind: {type: string}
+              sentences: {type: array, items: {$ref: '#/components/schemas/AgentGroundedLine'}}
+    AgentQueryNote:
+      description: 'Why an answer is partial or shaped as it is. `code` is a machine key; `path` names the input it is about.'
+      type: object
+      required: [code, detail]
+      properties:
+        code: {type: string}
+        detail: {type: string}
+        path: {type: string}
+    AtRiskRelationships:
+      description: 'What `at_risk_relationships` answers: the deals whose relationships are going cold, and how much of the pipeline was read.'
+      type: object
+      required: [coverage_withheld, deals, deals_scanned, truncated]
+      properties:
+        coverage_withheld: {type: boolean}
+        deals:
+          type: array
+          items:
+            type: object
+            required: [deal_id, name, risks]
+            properties:
+              deal_id: {type: string, format: uuid}
+              name: {type: string}
+              risks:
+                type: array
+                items:
+                  type: object
+                  required: [kind, summary]
+                  properties:
+                    contact_ids: {type: array, items: {type: string, format: uuid}}
+                    contacts:
+                      type: array
+                      items:
+                        type: object
+                        required: [contact_id, name]
+                        properties:
+                          contact_id: {type: string, format: uuid}
+                          name: {type: string}
+                    days_since_touch: {type: integer}
+                    kind: {type: string}
+                    summary: {type: string}
+                    user_ids: {type: array, items: {type: string, format: uuid}}
+        deals_scanned: {type: integer}
+        truncated: {type: boolean}
+    MeetingPrep:
+      description: 'What `prep_for_meeting` answers: the assembled picture, the open items to act on, and the written brief when one exists.'
+      type: object
+      required: [briefing, meeting_focus]
+      properties:
+        brief: {$ref: '#/components/schemas/AgentMeetingBrief'}
+        briefing: {$ref: '#/components/schemas/AgentAssembledContext'}
+        meeting_focus:
+          type: array
+          items:
+            type: object
+            required: [record_id, summary]
+            properties:
+              record_id: {type: string, format: uuid}
+              summary: {type: string}
+    ProjectHandoff:
+      description: 'What `prepare_handoff` answers: the project, the deals it was sold through, the stakeholders, the open promises and the gaps.'
+      type: object
+      required: [as_of, deals, gaps, name, open_commitments, phase, project_id, stakeholders]
+      properties:
+        as_of: {type: string}
+        company_id: {type: string, format: uuid}
+        deals:
+          type: array
+          items:
+            type: object
+            required: [deal_id, name, status]
+            properties:
+              amount_minor: {type: integer}
+              currency: {type: string}
+              deal_id: {type: string, format: uuid}
+              name: {type: string}
+              status: {type: string}
+        description: {type: string}
+        gaps:
+          type: array
+          items:
+            type: object
+            required: [code, message, source]
+            properties:
+              code: {type: string}
+              message: {type: string}
+              source: {type: string}
+        key: {type: string}
+        name: {type: string}
+        open_commitments: {type: array, items: {$ref: '#/components/schemas/AgentCommitment'}}
+        owner_id: {type: string, format: uuid}
+        owner_name: {type: string}
+        phase: {type: string}
+        project_id: {type: string, format: uuid}
+        stakeholders:
+          type: array
+          items:
+            type: object
+            required: [contact_id]
+            properties:
+              contact_id: {type: string, format: uuid}
+              name: {type: string}
+              role: {type: string}
+        started_at: {type: string}
+        target_end_date: {type: string}
+    OpenCommitments:
+      description: 'What `review_commitments` answers: the open promises, overdue first, as of one instant.'
+      type: object
+      required: [as_of, commitments]
+      properties:
+        as_of: {type: string}
+        commitments: {type: array, items: {$ref: '#/components/schemas/AgentCommitment'}}
+    IntroPaths:
+      description: 'What `intro_path_to` answers: the colleagues who know someone at the company, warmest first.'
+      type: object
+      required: [candidates_truncated, company_id, routes]
+      properties:
+        candidates_truncated: {type: boolean}
+        company_id: {type: string, format: uuid}
+        routes:
+          type: array
+          items:
+            type: object
+            required: [contact_id, contact_name, display_name, interactions_90d, strength_bucket, user_id]
+            properties:
+              contact_id: {type: string, format: uuid}
+              contact_name: {type: string}
+              display_name: {type: string}
+              interactions_90d: {type: integer}
+              strength: {type: integer}
+              strength_bucket: {type: string}
+              user_id: {type: string, format: uuid}
+    ContextSearchResult:
+      description: 'What `search_context` answers: ranked records and the passages that matched.'
+      type: object
+      required: [coverage, hits, notes]
+      properties:
+        coverage: {type: string}
+        hits: {type: array, items: {$ref: '#/components/schemas/AgentContextHit'}}
+        notes: {type: array, items: {$ref: '#/components/schemas/AgentQueryNote'}}
+    ReportEvidenceResult:
+      description: 'What `search_report_evidence` answers: the records of a saved run that carry the words, those that do not, and the share.'
+      type: object
+      required: [abstentions, citations, counterexamples, coverage, notes, tally]
+      properties:
+        abstentions:
+          type: array
+          items:
+            type: object
+            required: [id, record_type]
+            properties:
+              id: {type: string, format: uuid}
+              record_type: {type: string}
+        citations: {type: array, items: {$ref: '#/components/schemas/AgentContextHit'}}
+        counterexamples: {type: array, items: {$ref: '#/components/schemas/AgentRecord'}}
+        coverage: {type: string}
+        notes: {type: array, items: {$ref: '#/components/schemas/AgentQueryNote'}}
+        prevalence:
+          type: object
+          nullable: true
+          description: Absent from the count unless `coverage` is `complete_exact`; a note says why.
+          required: [matched, of, share]
+          properties:
+            matched: {type: integer}
+            of: {type: integer}
+            share: {type: number}
+        tally:
+          type: object
+          required: [matched, unjudged, unmatched]
+          properties:
+            matched: {type: integer}
+            unjudged: {type: integer}
+            unmatched: {type: integer}
+    WorkspaceQueryResult:
+      description: 'What `query_workspace` answers: the rows the plan matched, the plan as run, and how complete the answer is.'
+      type: object
+      required: [coverage, executed_plan, limit, notes, rows]
+      properties:
+        coverage: {type: string}
+        executed_plan: {type: string}
+        limit: {type: integer}
+        notes: {type: array, items: {$ref: '#/components/schemas/AgentQueryNote'}}
+        rows:
+          type: array
+          items:
+            type: object
+            required: [evidence, record]
+            properties:
+              distance_km: {type: number}
+              evidence:
+                type: array
+                items:
+                  type: object
+                  required: [id, record_type, relation, title]
+                  properties:
+                    id: {type: string, format: uuid}
+                    record_type: {type: string}
+                    relation: {type: string}
+                    title: {type: string}
+                    trust_tier: {type: string}
+              owner:
+                type: object
+                required: [id, is_you]
+                properties:
+                  id: {type: string, format: uuid}
+                  is_you: {type: boolean}
+                  name: {type: string}
+              record: {$ref: '#/components/schemas/AgentRecord'}
+              score: {type: number}
+    EntityResolutionResult:
+      description: 'What `resolve_entities` answers: for each candidate, the records it matches and whether one match can be acted on.'
+      type: object
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            required: [decision, matches]
+            properties:
+              decision: {type: string}
+              matches:
+                type: array
+                items:
+                  type: object
+                  required: [confidence, matched_on, record]
+                  properties:
+                    confidence: {type: number}
+                    matched_on: {type: string}
+                    record: {$ref: '#/components/schemas/AgentRecord'}
+              ref: {type: string}
+    AnalyticsVocabulary:
+      description: 'What `describe_analytics_vocabulary` answers.'
+      type: object
+      required: [vocabulary]
+      properties:
+        vocabulary: {type: string}
+    RecordFieldsVocabulary:
+      description: 'What `describe_record_fields` answers.'
+      type: object
+      required: [fields]
+      properties:
+        fields: {type: object, additionalProperties: true}
+    ReportBlockGrammar:
+      description: 'What `describe_report_blocks` answers.'
+      type: object
+      required: [blocks]
+      properties:
+        blocks: {type: object, additionalProperties: true}
+    ReportVocabulary:
+      description: 'What `describe_report_vocabulary` answers.'
+      type: object
+      required: [vocabulary]
+      properties:
+        vocabulary: {type: object, additionalProperties: true}
+    ActingIdentity:
+      description: 'What `whoami` answers: the human this caller acts for.'
+      type: object
+      required: [acting_user_id, display_name, email, prose_language]
+      properties:
+        acting_user_id: {type: string, format: uuid}
+        display_name: {type: string}
+        email: {type: string}
+        locale: {type: string}
+        prose_language: {type: string}
+        timezone: {type: string}
+    QueryVocabulary:
+      type: object
+      description: What `describe_query_vocabulary` answers.
+      required: [vocabulary]
+      properties:
+        vocabulary:
+          type: object
+          additionalProperties: true
+          description: The query vocabulary document, as `margince://schema/query` publishes it.
+    SlippingDealList:
+      type: object
+      description: What `whats_slipping_this_week` answers, worst first.
+      required: [deals]
+      properties:
+        deals:
+          type: array
+          items: {$ref: '#/components/schemas/SlippingDeal'}
+    SlippingDeal:
+      type: object
+      description: >-
+        One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id, so the order is the same on every read of the same data.
+      required: [rank, deal_id, name, evidence]
+      properties:
+        rank: {type: integer, minimum: 1}
+        deal_id: {type: string, format: uuid}
+        name: {type: string}
+        amount_minor:
+          type: integer
+          format: int64
+          description: Absent for a deal that carries no amount yet.
+        currency: {type: string, description: 'Present when amount_minor is, and only then.'}
+        evidence:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/SlippingEvidence'}
+    SlippingEvidence:
+      type: object
+      description: One reason the deal is on the list, and the field or read it comes from.
+      required: [source, snippet]
+      properties:
+        source:
+          type: string
+          description: 'The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`.'
+        snippet: {type: string}
+    DealFollowUpDraftRequest:
+      type: object
+      description: What `draft_follow_ups_for` takes.
+      required: [segment]
+      additionalProperties: false
+      properties:
+        segment:
+          type: string
+          enum: [slipping]
+          description: The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 25
+          description: How many of the worst deals to draft for. Omit it for 25, the most one call writes.
+        idempotency_key: {type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.'}
+    DealFollowUpDrafts:
+      type: object
+      description: What `draft_follow_ups_for` answers.
+      required: [drafts, segment]
+      properties:
+        segment: {type: string}
+        drafts:
+          type: array
+          items: {$ref: '#/components/schemas/DealFollowUpDraft'}
+    DealFollowUpDraft:
+      type: object
+      description: One drafted follow-up, the activity it was saved as, and why the deal is on the list.
+      required: [deal_id, draft_activity_id, evidence, summary]
+      properties:
+        deal_id: {type: string, format: uuid}
+        draft_activity_id: {type: string, format: uuid}
+        summary: {type: string}
+        evidence: {type: array, items: {$ref: '#/components/schemas/AgentExcerpt'}}
+    ProgressDealRequest:
+      type: object
+      description: What `progress_deal` takes besides the deal, which the path names.
+      required: [to_stage_id]
+      additionalProperties: false
+      properties:
+        to_stage_id:
+          type: string
+          format: uuid
+          description: The stage to move to. Its semantic decides whether the move is confirm-first.
+        lost_reason:
+          type: string
+          description: Required when the stage closes the deal as lost.
+        won_without_contract_reason:
+          type: string
+          enum: [imported, purchase_order, verbal, renewal_by_email, other]
+          description: Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+        won_without_contract_detail:
+          type: string
+          maxLength: 500
+          description: What the reason was, required when it is `other`.
+        note:
+          type: string
+          description: Logged as a note on the deal's timeline after the move.
+        if_version:
+          type: integer
+          description: The deal's version the move was decided on. A deal that has changed since is refused.
+        approval_id:
+          type: string
+          format: uuid
+          description: The approval a human gave this exact call, on its retry.
+        idempotency_key: {type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.'}
+    ProgressDealResult:
+      type: object
+      description: What `progress_deal` answers.
+      required: [deal]
+      properties:
+        deal: {$ref: '#/components/schemas/AgentRecord'}
+        note_activity_id:
+          type: string
+          format: uuid
+          description: The note logged on the deal, absent when the call carried none.
+    QualifyLeadRequest:
+      type: object
+      description: What `qualify_lead` takes besides the lead, which the path names.
+      additionalProperties: false
+      properties:
+        idempotency_key: {type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.'}
+    LeadQualification:
+      type: object
+      description: What `qualify_lead` answers.
+      required: [filled, gaps, record_id]
+      properties:
+        record_id: {type: string, format: uuid, description: The lead.}
+        filled:
+          type: object
+          description: The fields this call filled, by name.
+          additionalProperties: {$ref: '#/components/schemas/LeadQualifiedField'}
+        gaps:
+          type: array
+          items: {type: string}
+          description: The qualification fields still empty, for a human to fill.
+    LeadQualifiedField:
+      type: object
+      description: The value a field was filled with and what it was read from.
+      required: [evidence, value]
+      properties:
+        value: {type: string}
+        evidence: {type: array, items: {$ref: '#/components/schemas/AgentExcerpt'}}
     DealCoverage:
       type: object
       required: [deal_id, stakeholders, our_side, risks, sections_omitted]
@@ -12928,6 +14288,40 @@ components:
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         created_at: {type: string, format: date-time}
+    AttachmentListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/Attachment'}}
+        page: {$ref: '#/components/schemas/PageInfo'}
+    DealDocument:
+      type: object
+      description: |-
+        One file in a deal's Files area: the attachment, whether it is hidden from this
+        deal, and where a captured file came from, so a reader can tell "the contract
+        Laura mailed on the 12th" from "the draft I uploaded".
+      required: [attachment, hidden]
+      properties:
+        attachment: {$ref: '#/components/schemas/Attachment'}
+        hidden: {type: boolean}
+        origin:
+          $ref: '#/components/schemas/DealDocumentOrigin'
+    DealDocumentOrigin:
+      type: object
+      description: Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal.
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: {type: string, format: uuid}
+        kind: {type: string, description: 'The activity kind the file arrived with: email, message, meeting.'}
+        subject: {type: [string, 'null']}
+        occurred_at: {type: string, format: date-time}
+        counterparty_email: {type: [string, 'null'], format: email}
+    DealDocumentListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/DealDocument'}}
+        page: {$ref: '#/components/schemas/PageInfo'}
     EmailDraft:
       type: object
       description: A drafted email (never sent by drafting). Send via /activities/{id}/send-email ().

@@ -30,15 +30,31 @@ run on their own and 🟡 ones stage for approval. Both stay inside the current 
 who granted the passport. Every call checks the credential again, so a revoked passport stops on the next tool call,
 not at the next login. What a passport holds: [authorization.md](authorization.md#what-a-passport-is).
 
-**Files reach a record from Surface A only.** `attach_document`
-carries the whole file in its input, and two places keep a call's input. An approval stores it in
-`approval.proposed_change`, and a run stores each step in `agent_run.trace`. So the tool is 🟢 with
-no staging path.
+A route marked `served_by: registry` runs its tool through `Registry.Invoke`, so the tool admits,
+stages and redeems the call as on MCP. On such a route the `Idempotency-Key` and `X-Approval-Token`
+headers become the tool's `idempotency_key` and `approval_id` (`internal/compose/toolroutes.go`), on
+the write routes that declare them. The key is then the tool's, held per caller and tool rather than
+per path. So one key on two records of one tool answers `409`, and a key spent over MCP replays on
+REST.
+
+**Files on MCP and REST.** A passport lists a record's files and uploads one over MCP
+(`list_documents`, `attach_document`) or over REST (`listAttachments`, `listCompanyDocuments`,
+`listDealDocuments`, `uploadAttachment`). An upload carries the whole file in its input, and two
+places keep a call's input. An approval stores it in `approval.proposed_change`, and a run stores each
+step in `agent_run.trace`. So an upload is 🟢 with no staging path on MCP or REST, and the REST gate
+refuses to stage one (`internal/compose/agentcommandauto.go`).
+
+MCP and REST take the same upload inputs: the parent record, which may be an `activity`, and an
+optional `contract_id`. The store checks the contract as it checks one a human names.
+
+`agents.AttachLimit` (`internal/modules/agents/tools_documents.go`) sets one file size limit for an
+agent on MCP and REST. It is what one MCP request carries inline, or the operator's attachment limit
+when that is smaller. A human's upload keeps the route's own limit. The routes that fetch, delete
+or hide a file stay human-only, so no tool or route returns a file's contents to an agent.
 
 `TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
-scheduled agent's tool list names any tool whose input bound is over 1 MiB. An agent can attach a
-file and list a record's files (`list_documents`); no tool can fetch a file or return its contents.
-The size and type bounds are in [configuration.md](../reference/configuration.md#uploads).
+scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds
+are in [configuration.md](../reference/configuration.md#uploads).
 
 ## The reason-act-observe loop (Surface B)
 

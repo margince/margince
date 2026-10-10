@@ -8443,6 +8443,21 @@ func (e DealCoverageRiskKind) Valid() bool {
 	}
 }
 
+// Defines values for DealFollowUpDraftRequestSegment.
+const (
+	DealFollowUpDraftRequestSegmentSlipping DealFollowUpDraftRequestSegment = "slipping"
+)
+
+// Valid indicates whether the value is a known member of the DealFollowUpDraftRequestSegment enum.
+func (e DealFollowUpDraftRequestSegment) Valid() bool {
+	switch e {
+	case DealFollowUpDraftRequestSegmentSlipping:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealLastEmailDirection.
 const (
 	DealLastEmailDirectionInbound  DealLastEmailDirection = "inbound"
@@ -9085,6 +9100,24 @@ const (
 func (e EnrichmentProposalStatus) Valid() bool {
 	switch e {
 	case EnrichmentProposalStatusStaged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntityResolutionCandidateKind.
+const (
+	EntityResolutionCandidateKindCompany EntityResolutionCandidateKind = "company"
+	EntityResolutionCandidateKindContact EntityResolutionCandidateKind = "contact"
+)
+
+// Valid indicates whether the value is a known member of the EntityResolutionCandidateKind enum.
+func (e EntityResolutionCandidateKind) Valid() bool {
+	switch e {
+	case EntityResolutionCandidateKindCompany:
+		return true
+	case EntityResolutionCandidateKindContact:
 		return true
 	default:
 		return false
@@ -12634,6 +12667,33 @@ func (e ProductBillingModel) Valid() bool {
 	case ProductBillingModelOneTime:
 		return true
 	case ProductBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProgressDealRequestWonWithoutContractReason.
+const (
+	ProgressDealRequestWonWithoutContractReasonImported       ProgressDealRequestWonWithoutContractReason = "imported"
+	ProgressDealRequestWonWithoutContractReasonOther          ProgressDealRequestWonWithoutContractReason = "other"
+	ProgressDealRequestWonWithoutContractReasonPurchaseOrder  ProgressDealRequestWonWithoutContractReason = "purchase_order"
+	ProgressDealRequestWonWithoutContractReasonRenewalByEmail ProgressDealRequestWonWithoutContractReason = "renewal_by_email"
+	ProgressDealRequestWonWithoutContractReasonVerbal         ProgressDealRequestWonWithoutContractReason = "verbal"
+)
+
+// Valid indicates whether the value is a known member of the ProgressDealRequestWonWithoutContractReason enum.
+func (e ProgressDealRequestWonWithoutContractReason) Valid() bool {
+	switch e {
+	case ProgressDealRequestWonWithoutContractReasonImported:
+		return true
+	case ProgressDealRequestWonWithoutContractReasonOther:
+		return true
+	case ProgressDealRequestWonWithoutContractReasonPurchaseOrder:
+		return true
+	case ProgressDealRequestWonWithoutContractReasonRenewalByEmail:
+		return true
+	case ProgressDealRequestWonWithoutContractReasonVerbal:
 		return true
 	default:
 		return false
@@ -19009,6 +19069,36 @@ func (e WrittenBy) Valid() bool {
 	}
 }
 
+// Defines values for AnchorRecordType.
+const (
+	AnchorRecordTypeActivity AnchorRecordType = "activity"
+	AnchorRecordTypeCompany  AnchorRecordType = "company"
+	AnchorRecordTypeContact  AnchorRecordType = "contact"
+	AnchorRecordTypeDeal     AnchorRecordType = "deal"
+	AnchorRecordTypeLead     AnchorRecordType = "lead"
+	AnchorRecordTypeProject  AnchorRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the AnchorRecordType enum.
+func (e AnchorRecordType) Valid() bool {
+	switch e {
+	case AnchorRecordTypeActivity:
+		return true
+	case AnchorRecordTypeCompany:
+		return true
+	case AnchorRecordTypeContact:
+		return true
+	case AnchorRecordTypeDeal:
+		return true
+	case AnchorRecordTypeLead:
+		return true
+	case AnchorRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureProvider.
 const (
 	CaptureProviderGcal        CaptureProvider = "gcal"
@@ -19819,6 +19909,36 @@ func (e SetCaptureSenderDecisionJSONBodyDecision) Valid() bool {
 	}
 }
 
+// Defines values for CatchUpOnRecordParamsRecordType.
+const (
+	CatchUpOnRecordParamsRecordTypeActivity CatchUpOnRecordParamsRecordType = "activity"
+	CatchUpOnRecordParamsRecordTypeCompany  CatchUpOnRecordParamsRecordType = "company"
+	CatchUpOnRecordParamsRecordTypeContact  CatchUpOnRecordParamsRecordType = "contact"
+	CatchUpOnRecordParamsRecordTypeDeal     CatchUpOnRecordParamsRecordType = "deal"
+	CatchUpOnRecordParamsRecordTypeLead     CatchUpOnRecordParamsRecordType = "lead"
+	CatchUpOnRecordParamsRecordTypeProject  CatchUpOnRecordParamsRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the CatchUpOnRecordParamsRecordType enum.
+func (e CatchUpOnRecordParamsRecordType) Valid() bool {
+	switch e {
+	case CatchUpOnRecordParamsRecordTypeActivity:
+		return true
+	case CatchUpOnRecordParamsRecordTypeCompany:
+		return true
+	case CatchUpOnRecordParamsRecordTypeContact:
+		return true
+	case CatchUpOnRecordParamsRecordTypeDeal:
+		return true
+	case CatchUpOnRecordParamsRecordTypeLead:
+		return true
+	case CatchUpOnRecordParamsRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCompaniesParamsCapturedByKind.
 const (
 	ListCompaniesParamsCapturedByKindAgent     ListCompaniesParamsCapturedByKind = "agent"
@@ -20209,6 +20329,33 @@ func (e SuppressContactJSONBodyKind) Valid() bool {
 	case SuppressContactJSONBodyKindMarketingObjection:
 		return true
 	case SuppressContactJSONBodyKindSubjectRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SearchContextParamsRecordTypes.
+const (
+	SearchContextParamsRecordTypesCompany SearchContextParamsRecordTypes = "company"
+	SearchContextParamsRecordTypesContact SearchContextParamsRecordTypes = "contact"
+	SearchContextParamsRecordTypesDeal    SearchContextParamsRecordTypes = "deal"
+	SearchContextParamsRecordTypesLead    SearchContextParamsRecordTypes = "lead"
+	SearchContextParamsRecordTypesProject SearchContextParamsRecordTypes = "project"
+)
+
+// Valid indicates whether the value is a known member of the SearchContextParamsRecordTypes enum.
+func (e SearchContextParamsRecordTypes) Valid() bool {
+	switch e {
+	case SearchContextParamsRecordTypesCompany:
+		return true
+	case SearchContextParamsRecordTypesContact:
+		return true
+	case SearchContextParamsRecordTypesDeal:
+		return true
+	case SearchContextParamsRecordTypesLead:
+		return true
+	case SearchContextParamsRecordTypesProject:
 		return true
 	default:
 		return false
@@ -20875,6 +21022,36 @@ func (e ListListsParamsSharing) Valid() bool {
 	case ListListsParamsSharingTeam:
 		return true
 	case ListListsParamsSharingWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrepForMeetingParamsRecordType.
+const (
+	PrepForMeetingParamsRecordTypeActivity PrepForMeetingParamsRecordType = "activity"
+	PrepForMeetingParamsRecordTypeCompany  PrepForMeetingParamsRecordType = "company"
+	PrepForMeetingParamsRecordTypeContact  PrepForMeetingParamsRecordType = "contact"
+	PrepForMeetingParamsRecordTypeDeal     PrepForMeetingParamsRecordType = "deal"
+	PrepForMeetingParamsRecordTypeLead     PrepForMeetingParamsRecordType = "lead"
+	PrepForMeetingParamsRecordTypeProject  PrepForMeetingParamsRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the PrepForMeetingParamsRecordType enum.
+func (e PrepForMeetingParamsRecordType) Valid() bool {
+	switch e {
+	case PrepForMeetingParamsRecordTypeActivity:
+		return true
+	case PrepForMeetingParamsRecordTypeCompany:
+		return true
+	case PrepForMeetingParamsRecordTypeContact:
+		return true
+	case PrepForMeetingParamsRecordTypeDeal:
+		return true
+	case PrepForMeetingParamsRecordTypeLead:
+		return true
+	case PrepForMeetingParamsRecordTypeProject:
 		return true
 	default:
 		return false
@@ -21744,6 +21921,16 @@ type AcquisitionSourceListResponse struct {
 	Data []AcquisitionSource `json:"data"`
 }
 
+// ActingIdentity What `whoami` answers: the human this caller acts for.
+type ActingIdentity struct {
+	ActingUserId  openapi_types.UUID `json:"acting_user_id"`
+	DisplayName   string             `json:"display_name"`
+	Email         string             `json:"email"`
+	Locale        *string            `json:"locale,omitempty"`
+	ProseLanguage string             `json:"prose_language"`
+	Timezone      *string            `json:"timezone,omitempty"`
+}
+
 // Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
 // **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
 // CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
@@ -22060,6 +22247,183 @@ type AdvanceProjectPhaseRequest struct {
 
 // AdvanceProjectPhaseRequestToPhase defines model for AdvanceProjectPhaseRequest.ToPhase.
 type AdvanceProjectPhaseRequestToPhase string
+
+// AgentAssembledContext What `catch_me_up_on` answers: the record asked about and the sections assembled around it.
+type AgentAssembledContext struct {
+	// Anchor One record an agent answer rests on.
+	Anchor   AgentRecordRef        `json:"anchor"`
+	Sections []AgentContextSection `json:"sections"`
+}
+
+// AgentCommitment One open promise: a task, or a promise read from a conversation, with when it is due.
+type AgentCommitment struct {
+	About            []AgentCommitmentSubject `json:"about"`
+	AssigneeId       *openapi_types.UUID      `json:"assignee_id,omitempty"`
+	AssigneeName     *string                  `json:"assignee_name,omitempty"`
+	ClaimId          *openapi_types.UUID      `json:"claim_id,omitempty"`
+	DaysOverdue      *int                     `json:"days_overdue,omitempty"`
+	DueAt            *string                  `json:"due_at,omitempty"`
+	Quote            *string                  `json:"quote,omitempty"`
+	Source           string                   `json:"source"`
+	SourceActivityId *openapi_types.UUID      `json:"source_activity_id,omitempty"`
+	State            string                   `json:"state"`
+	Subject          string                   `json:"subject"`
+	TaskId           *openapi_types.UUID      `json:"task_id,omitempty"`
+}
+
+// AgentCommitmentSubject A record a commitment is about.
+type AgentCommitmentSubject struct {
+	EntityId   openapi_types.UUID `json:"entity_id"`
+	EntityType string             `json:"entity_type"`
+	Name       *string            `json:"name,omitempty"`
+}
+
+// AgentContextHit One ranked record and the passages that matched.
+type AgentContextHit struct {
+	Excerpts []AgentExcerpt `json:"excerpts"`
+
+	// Record A record as the agent tool surface hands it over: its type, id, version and readable fields.
+	Record AgentRecord `json:"record"`
+	Score  float32     `json:"score"`
+}
+
+// AgentContextItem One record in an assembled picture, summarised, with the passages that put it there.
+type AgentContextItem struct {
+	Evidence   []AgentExcerpt     `json:"evidence"`
+	OccurredAt *string            `json:"occurred_at,omitempty"`
+	RecordId   openapi_types.UUID `json:"record_id"`
+	RecordType string             `json:"record_type"`
+	Summary    string             `json:"summary"`
+}
+
+// AgentContextSection One heading of an assembled picture: recent activity, open tasks, related records.
+type AgentContextSection struct {
+	Items []AgentContextItem `json:"items"`
+	Name  string             `json:"name"`
+}
+
+// AgentExcerpt A quoted passage and the field or record it was read from.
+type AgentExcerpt struct {
+	Snippet string `json:"snippet"`
+	Source  string `json:"source"`
+}
+
+// AgentGroundedLine One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+type AgentGroundedLine struct {
+	Evidence []AgentRecordRef `json:"evidence"`
+	Nature   *string          `json:"nature,omitempty"`
+	Text     string           `json:"text"`
+}
+
+// AgentMeetingBrief The written brief for the booked meeting the record leads to, when there is one.
+type AgentMeetingBrief struct {
+	ActivityId  openapi_types.UUID `json:"activity_id"`
+	GeneratedAt string             `json:"generated_at"`
+	GeneratedBy string             `json:"generated_by"`
+
+	// Plan What to do in the room, built over the same records as the brief.
+	Plan      *AgentMeetingPlan   `json:"plan,omitempty"`
+	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+	Sections  []struct {
+		Kind      string              `json:"kind"`
+		Sentences []AgentGroundedLine `json:"sentences"`
+	} `json:"sections"`
+}
+
+// AgentMeetingPlan What to do in the room, built over the same records as the brief.
+type AgentMeetingPlan struct {
+	Advance struct {
+		// Best One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+		Best AgentGroundedLine `json:"best"`
+
+		// Fallback One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+		Fallback AgentGroundedLine `json:"fallback"`
+
+		// Minimum One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+		Minimum AgentGroundedLine `json:"minimum"`
+	} `json:"advance"`
+	CompanyArc *[]struct {
+		From string `json:"from"`
+
+		// Summary One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+		Summary AgentGroundedLine `json:"summary"`
+		Title   *string           `json:"title,omitempty"`
+		To      string            `json:"to"`
+	} `json:"company_arc,omitempty"`
+	LikelyAsks *[]struct {
+		// Basis One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+		Basis     AgentGroundedLine `json:"basis"`
+		Prepare   string            `json:"prepare"`
+		Question  string            `json:"question"`
+		Relevance string            `json:"relevance"`
+	} `json:"likely_asks,omitempty"`
+	ManagerCoaching *struct {
+		FailureMode string       `json:"failure_mode"`
+		Focus       string       `json:"focus"`
+		InterveneIf string       `json:"intervene_if"`
+		ListenFor   string       `json:"listen_for"`
+		Paths       *[]AgentPlay `json:"paths,omitempty"`
+		WatchFor    string       `json:"watch_for"`
+	} `json:"manager_coaching,omitempty"`
+	MeetingType           string `json:"meeting_type"`
+	MeetingTypeConfidence string `json:"meeting_type_confidence"`
+
+	// Objective One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+	Objective       *AgentGroundedLine `json:"objective,omitempty"`
+	ObjectiveCaveat *string            `json:"objective_caveat,omitempty"`
+
+	// Opening One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+	Opening   *AgentGroundedLine `json:"opening,omitempty"`
+	Questions *[]struct {
+		Ask       string           `json:"ask"`
+		Evidence  []AgentRecordRef `json:"evidence"`
+		ListenFor string           `json:"listen_for"`
+		Why       string           `json:"why"`
+	} `json:"questions,omitempty"`
+	Readiness string       `json:"readiness"`
+	Scenarios *[]AgentPlay `json:"scenarios,omitempty"`
+	TopRisk   *struct {
+		Avoid string `json:"avoid"`
+		Say   string `json:"say"`
+		Show  string `json:"show"`
+
+		// Text One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.
+		Text AgentGroundedLine `json:"text"`
+	} `json:"top_risk,omitempty"`
+	Unknowns *[]struct {
+		Kind     string `json:"kind"`
+		Question string `json:"question"`
+	} `json:"unknowns,omitempty"`
+}
+
+// AgentPlay A named way the conversation can go and what to do then.
+type AgentPlay struct {
+	Evidence []AgentRecordRef `json:"evidence"`
+	Label    string           `json:"label"`
+	Play     string           `json:"play"`
+}
+
+// AgentQueryNote Why an answer is partial or shaped as it is. `code` is a machine key; `path` names the input it is about.
+type AgentQueryNote struct {
+	Code   string  `json:"code"`
+	Detail string  `json:"detail"`
+	Path   *string `json:"path,omitempty"`
+}
+
+// AgentRecord A record as the agent tool surface hands it over: its type, id, version and readable fields.
+type AgentRecord struct {
+	Fields     map[string]interface{} `json:"fields"`
+	Id         openapi_types.UUID     `json:"id"`
+	RecordType string                 `json:"record_type"`
+	TrustTier  *string                `json:"trust_tier,omitempty"`
+	Version    *int                   `json:"version,omitempty"`
+}
+
+// AgentRecordRef One record an agent answer rests on.
+type AgentRecordRef struct {
+	RecordId   openapi_types.UUID `json:"record_id"`
+	RecordType string             `json:"record_type"`
+}
 
 // AgentTool defines model for AgentTool.
 type AgentTool struct {
@@ -23620,6 +23984,11 @@ type AnalyticsScope struct {
 // AnalyticsScopeKind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
 type AnalyticsScopeKind string
 
+// AnalyticsVocabulary What `describe_analytics_vocabulary` answers.
+type AnalyticsVocabulary struct {
+	Vocabulary string `json:"vocabulary"`
+}
+
 // AnnotateBriefItem One finding about one queued deal.
 type AnnotateBriefItem struct {
 	// CitedEvidence What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
@@ -23981,6 +24350,28 @@ type AssuranceRunAccepted struct {
 
 // AssuranceRunAcceptedStatus defines model for AssuranceRunAccepted.Status.
 type AssuranceRunAcceptedStatus string
+
+// AtRiskRelationships What `at_risk_relationships` answers: the deals whose relationships are going cold, and how much of the pipeline was read.
+type AtRiskRelationships struct {
+	CoverageWithheld bool `json:"coverage_withheld"`
+	Deals            []struct {
+		DealId openapi_types.UUID `json:"deal_id"`
+		Name   string             `json:"name"`
+		Risks  []struct {
+			ContactIds *[]openapi_types.UUID `json:"contact_ids,omitempty"`
+			Contacts   *[]struct {
+				ContactId openapi_types.UUID `json:"contact_id"`
+				Name      string             `json:"name"`
+			} `json:"contacts,omitempty"`
+			DaysSinceTouch *int                  `json:"days_since_touch,omitempty"`
+			Kind           string                `json:"kind"`
+			Summary        string                `json:"summary"`
+			UserIds        *[]openapi_types.UUID `json:"user_ids,omitempty"`
+		} `json:"risks"`
+	} `json:"deals"`
+	DealsScanned int  `json:"deals_scanned"`
+	Truncated    bool `json:"truncated"`
+}
 
 // Attachment A file hung off an entity. Mirrors the `attachment` table: the row is the
 // system of record and the tenant anchor; the bytes live in object storage,
@@ -31237,6 +31628,13 @@ type ContextResponse struct {
 	Sections []ContextSection `json:"sections"`
 }
 
+// ContextSearchResult What `search_context` answers: ranked records and the passages that matched.
+type ContextSearchResult struct {
+	Coverage string            `json:"coverage"`
+	Hits     []AgentContextHit `json:"hits"`
+	Notes    []AgentQueryNote  `json:"notes"`
+}
+
 // ContextSection defines model for ContextSection.
 type ContextSection struct {
 	Items []ContextItem `json:"items"`
@@ -32806,6 +33204,35 @@ type DealDocumentOrigin struct {
 	Subject    *string   `json:"subject,omitempty"`
 }
 
+// DealFollowUpDraft One drafted follow-up, the activity it was saved as, and why the deal is on the list.
+type DealFollowUpDraft struct {
+	DealId          openapi_types.UUID `json:"deal_id"`
+	DraftActivityId openapi_types.UUID `json:"draft_activity_id"`
+	Evidence        []AgentExcerpt     `json:"evidence"`
+	Summary         string             `json:"summary"`
+}
+
+// DealFollowUpDraftRequest What `draft_follow_ups_for` takes.
+type DealFollowUpDraftRequest struct {
+	// IdempotencyKey Same key, same result. A key reused with other arguments is refused.
+	IdempotencyKey *string `json:"idempotency_key,omitempty"`
+
+	// Limit How many of the worst deals to draft for. Omit it for 25, the most one call writes.
+	Limit *int `json:"limit,omitempty"`
+
+	// Segment The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+	Segment DealFollowUpDraftRequestSegment `json:"segment"`
+}
+
+// DealFollowUpDraftRequestSegment The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+type DealFollowUpDraftRequestSegment string
+
+// DealFollowUpDrafts What `draft_follow_ups_for` answers.
+type DealFollowUpDrafts struct {
+	Drafts  []DealFollowUpDraft `json:"drafts"`
+	Segment string              `json:"segment"`
+}
+
 // DealLastEmail The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
 type DealLastEmail struct {
 	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
@@ -34115,6 +34542,53 @@ type EnrichmentProposal struct {
 
 // EnrichmentProposalStatus Always staged — accept via the approval inbox.
 type EnrichmentProposalStatus string
+
+// EntityResolutionCandidate One contact or company named in a payload, by every key it carries.
+type EntityResolutionCandidate struct {
+	// Domains Company domains the payload claims. Read for a company only.
+	Domains *[]string `json:"domains,omitempty"`
+
+	// Emails Every address on the payload. For a company each address also gives its domain, unless it is a consumer mail domain.
+	Emails *[]string `json:"emails,omitempty"`
+
+	// Kind Which record type this candidate is. Leads are not resolved.
+	Kind EntityResolutionCandidateKind `json:"kind"`
+
+	// LegalName The registered company name, when it differs from the trading name. Read for a company only.
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// Name Full name for a contact, trading name for a company.
+	Name *string `json:"name,omitempty"`
+
+	// Phones Phone numbers in E.164 form. One that does not normalize is ignored.
+	Phones *[]string `json:"phones,omitempty"`
+
+	// Ref Your own label, echoed back on its answer so a batch lines up. Never stored.
+	Ref *string `json:"ref,omitempty"`
+}
+
+// EntityResolutionCandidateKind Which record type this candidate is. Leads are not resolved.
+type EntityResolutionCandidateKind string
+
+// EntityResolutionRequest What `resolve_entities` takes.
+type EntityResolutionRequest struct {
+	Candidates []EntityResolutionCandidate `json:"candidates"`
+}
+
+// EntityResolutionResult What `resolve_entities` answers: for each candidate, the records it matches and whether one match can be acted on.
+type EntityResolutionResult struct {
+	Candidates []struct {
+		Decision string `json:"decision"`
+		Matches  []struct {
+			Confidence float32 `json:"confidence"`
+			MatchedOn  string  `json:"matched_on"`
+
+			// Record A record as the agent tool surface hands it over: its type, id, version and readable fields.
+			Record AgentRecord `json:"record"`
+		} `json:"matches"`
+		Ref *string `json:"ref,omitempty"`
+	} `json:"candidates"`
+}
 
 // ExcuseNoticeCase defines model for ExcuseNoticeCase.
 type ExcuseNoticeCase struct {
@@ -35869,6 +36343,21 @@ type IntroFallbackPolicy string
 // IntroNoteOrigin Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
 type IntroNoteOrigin string
 
+// IntroPaths What `intro_path_to` answers: the colleagues who know someone at the company, warmest first.
+type IntroPaths struct {
+	CandidatesTruncated bool               `json:"candidates_truncated"`
+	CompanyId           openapi_types.UUID `json:"company_id"`
+	Routes              []struct {
+		ContactId       openapi_types.UUID `json:"contact_id"`
+		ContactName     string             `json:"contact_name"`
+		DisplayName     string             `json:"display_name"`
+		Interactions90d int                `json:"interactions_90d"`
+		Strength        *int               `json:"strength,omitempty"`
+		StrengthBucket  string             `json:"strength_bucket"`
+		UserId          openapi_types.UUID `json:"user_id"`
+	} `json:"routes"`
+}
+
 // IntroRequest One rep's ask that a colleague open a door, and how it was answered.
 //
 // The three pieces of copy are three different messages and never one field. `internal_reason`
@@ -36556,6 +37045,18 @@ type LeadManualSignalListResponse struct {
 	Data []LeadManualSignal `json:"data"`
 }
 
+// LeadQualification What `qualify_lead` answers.
+type LeadQualification struct {
+	// Filled The fields this call filled, by name.
+	Filled map[string]LeadQualifiedField `json:"filled"`
+
+	// Gaps The qualification fields still empty, for a human to fill.
+	Gaps []string `json:"gaps"`
+
+	// RecordId The lead.
+	RecordId openapi_types.UUID `json:"record_id"`
+}
+
 // LeadQualificationEvidence The strongest genuine-engagement signal captured against this lead, derived from its
 // linked activities at read time: a held meeting over a booked one over an inbound reply.
 // What the qualify dialog shows as the reason and sends back as `trigger`; null when the
@@ -36568,6 +37069,12 @@ type LeadQualificationEvidence struct {
 
 // LeadQualificationEvidenceTrigger defines model for LeadQualificationEvidence.Trigger.
 type LeadQualificationEvidenceTrigger string
+
+// LeadQualifiedField The value a field was filled with and what it was read from.
+type LeadQualifiedField struct {
+	Evidence []AgentExcerpt `json:"evidence"`
+	Value    string         `json:"value"`
+}
 
 // LeadScoreEntry One point in the retained series — what the score was, and why.
 type LeadScoreEntry struct {
@@ -37851,6 +38358,19 @@ type MeetingPlanUnknown struct {
 // MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
 type MeetingPlanUnknownKind string
 
+// MeetingPrep What `prep_for_meeting` answers: the assembled picture, the open items to act on, and the written brief when one exists.
+type MeetingPrep struct {
+	// Brief The written brief for the booked meeting the record leads to, when there is one.
+	Brief *AgentMeetingBrief `json:"brief,omitempty"`
+
+	// Briefing What `catch_me_up_on` answers: the record asked about and the sections assembled around it.
+	Briefing     AgentAssembledContext `json:"briefing"`
+	MeetingFocus []struct {
+		RecordId openapi_types.UUID `json:"record_id"`
+		Summary  string             `json:"summary"`
+	} `json:"meeting_focus"`
+}
+
 // MeetingProposal defines model for MeetingProposal.
 type MeetingProposal struct {
 	CreatedAt       time.Time `json:"created_at"`
@@ -39011,6 +39531,12 @@ type OnboardingStateSourceMode string
 // OnboardingStateStep defines model for OnboardingState.Step.
 type OnboardingStateStep string
 
+// OpenCommitments What `review_commitments` answers: the open promises, overdue first, as of one instant.
+type OpenCommitments struct {
+	AsOf        string            `json:"as_of"`
+	Commitments []AgentCommitment `json:"commitments"`
+}
+
 // OpenDealRoomThreadRequest defines model for OpenDealRoomThreadRequest.
 type OpenDealRoomThreadRequest struct {
 	// Body The first comment.
@@ -39626,6 +40152,45 @@ type ProductListResponse struct {
 	Page PageInfo  `json:"page"`
 }
 
+// ProgressDealRequest What `progress_deal` takes besides the deal, which the path names.
+type ProgressDealRequest struct {
+	// ApprovalId The approval a human gave this exact call, on its retry.
+	ApprovalId *openapi_types.UUID `json:"approval_id,omitempty"`
+
+	// IdempotencyKey Same key, same result. A key reused with other arguments is refused.
+	IdempotencyKey *string `json:"idempotency_key,omitempty"`
+
+	// IfVersion The deal's version the move was decided on. A deal that has changed since is refused.
+	IfVersion *int `json:"if_version,omitempty"`
+
+	// LostReason Required when the stage closes the deal as lost.
+	LostReason *string `json:"lost_reason,omitempty"`
+
+	// Note Logged as a note on the deal's timeline after the move.
+	Note *string `json:"note,omitempty"`
+
+	// ToStageId The stage to move to. Its semantic decides whether the move is confirm-first.
+	ToStageId openapi_types.UUID `json:"to_stage_id"`
+
+	// WonWithoutContractDetail What the reason was, required when it is `other`.
+	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
+
+	// WonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+	WonWithoutContractReason *ProgressDealRequestWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
+}
+
+// ProgressDealRequestWonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+type ProgressDealRequestWonWithoutContractReason string
+
+// ProgressDealResult What `progress_deal` answers.
+type ProgressDealResult struct {
+	// Deal A record as the agent tool surface hands it over: its type, id, version and readable fields.
+	Deal AgentRecord `json:"deal"`
+
+	// NoteActivityId The note logged on the deal, absent when the call carried none.
+	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
+}
+
 // Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
 type Project struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -39919,6 +40484,39 @@ type ProjectFilingUndoDecision struct {
 
 	// Redacted True when the decision touched a project the caller cannot see; only its moment is shown.
 	Redacted *bool `json:"redacted,omitempty"`
+}
+
+// ProjectHandoff What `prepare_handoff` answers: the project, the deals it was sold through, the stakeholders, the open promises and the gaps.
+type ProjectHandoff struct {
+	AsOf      string              `json:"as_of"`
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+	Deals     []struct {
+		AmountMinor *int               `json:"amount_minor,omitempty"`
+		Currency    *string            `json:"currency,omitempty"`
+		DealId      openapi_types.UUID `json:"deal_id"`
+		Name        string             `json:"name"`
+		Status      string             `json:"status"`
+	} `json:"deals"`
+	Description *string `json:"description,omitempty"`
+	Gaps        []struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+		Source  string `json:"source"`
+	} `json:"gaps"`
+	Key             *string             `json:"key,omitempty"`
+	Name            string              `json:"name"`
+	OpenCommitments []AgentCommitment   `json:"open_commitments"`
+	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
+	OwnerName       *string             `json:"owner_name,omitempty"`
+	Phase           string              `json:"phase"`
+	ProjectId       openapi_types.UUID  `json:"project_id"`
+	Stakeholders    []struct {
+		ContactId openapi_types.UUID `json:"contact_id"`
+		Name      *string            `json:"name,omitempty"`
+		Role      *string            `json:"role,omitempty"`
+	} `json:"stakeholders"`
+	StartedAt     *string `json:"started_at,omitempty"`
+	TargetEndDate *string `json:"target_end_date,omitempty"`
 }
 
 // ProjectHealthAssessment One judgement of how a project is going, on the day it applies to. Assessments are never edited: a mistake is corrected by superseding the row, so what was said and when it was said both survive the correction.
@@ -40479,6 +41077,12 @@ type QualifyDealRequest struct {
 	StageId    *openapi_types.UUID `json:"stage_id,omitempty"`
 }
 
+// QualifyLeadRequest What `qualify_lead` takes besides the lead, which the path names.
+type QualifyLeadRequest struct {
+	// IdempotencyKey Same key, same result. A key reused with other arguments is refused.
+	IdempotencyKey *string `json:"idempotency_key,omitempty"`
+}
+
 // QualifyingEventRecord A recorded exchange, as it now stands on the contact.
 type QualifyingEventRecord struct {
 	Kind       QualifyingEventRecordKind `json:"kind"`
@@ -40488,6 +41092,12 @@ type QualifyingEventRecord struct {
 
 // QualifyingEventRecordKind defines model for QualifyingEventRecord.Kind.
 type QualifyingEventRecordKind string
+
+// QueryVocabulary What `describe_query_vocabulary` answers.
+type QueryVocabulary struct {
+	// Vocabulary The query vocabulary document, as `margince://schema/query` publishes it.
+	Vocabulary map[string]interface{} `json:"vocabulary"`
+}
 
 // QuickCaptureContactRequest One contact as a reader of their public profile can state them. Deliberately
 // flatter than CreateContactRequest: one email and one phone rather than the
@@ -40834,6 +41444,11 @@ type RecordConversationClaimRequest struct {
 
 	// SourceQuote The verbatim excerpt this was read from — never a summary of it.
 	SourceQuote string `json:"source_quote"`
+}
+
+// RecordFieldsVocabulary What `describe_record_fields` answers.
+type RecordFieldsVocabulary struct {
+	Fields map[string]interface{} `json:"fields"`
 }
 
 // RecordGrant A manual per-record share (ADR-0039) — widens own/team/all base scope for one record.
@@ -41362,6 +41977,11 @@ type ReportBlockKind string
 // ReportBlockSeverity Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
 type ReportBlockSeverity string
 
+// ReportBlockGrammar What `describe_report_blocks` answers.
+type ReportBlockGrammar struct {
+	Blocks map[string]interface{} `json:"blocks"`
+}
+
 // ReportCell Exactly one live saved-run cell, live catalog metric reference, or frozen edition metric reference.
 type ReportCell struct {
 	// Column Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick.
@@ -41442,6 +42062,42 @@ type ReportEditionReference struct {
 	Metric    ReportingMetricID  `json:"metric"`
 }
 
+// ReportEvidenceResult What `search_report_evidence` answers: the records of a saved run that carry the words, those that do not, and the share.
+type ReportEvidenceResult struct {
+	Abstentions []struct {
+		Id         openapi_types.UUID `json:"id"`
+		RecordType string             `json:"record_type"`
+	} `json:"abstentions"`
+	Citations       []AgentContextHit `json:"citations"`
+	Counterexamples []AgentRecord     `json:"counterexamples"`
+	Coverage        string            `json:"coverage"`
+	Notes           []AgentQueryNote  `json:"notes"`
+
+	// Prevalence Absent from the count unless `coverage` is `complete_exact`; a note says why.
+	Prevalence *struct {
+		Matched int     `json:"matched"`
+		Of      int     `json:"of"`
+		Share   float32 `json:"share"`
+	} `json:"prevalence,omitempty"`
+	Tally struct {
+		Matched   int `json:"matched"`
+		Unjudged  int `json:"unjudged"`
+		Unmatched int `json:"unmatched"`
+	} `json:"tally"`
+}
+
+// ReportEvidenceSearchRequest What `search_report_evidence` takes beside the run the path names.
+type ReportEvidenceSearchRequest struct {
+	// Cell One cell's group key values, in the run's `group_by` order. Omit it to search every record the run measured.
+	Cell *[]interface{} `json:"cell,omitempty"`
+
+	// Limit How many citations, counterexamples and abstentions to return, each.
+	Limit *int `json:"limit,omitempty"`
+
+	// Query The words the evidence would carry.
+	Query string `json:"query"`
+}
+
 // ReportMetricReference defines model for ReportMetricReference.
 type ReportMetricReference struct {
 	Metric    ReportingMetricID  `json:"metric"`
@@ -41516,6 +42172,11 @@ type ReportScope struct {
 
 // ReportScopeKind defines model for ReportScope.Kind.
 type ReportScopeKind string
+
+// ReportVocabulary What `describe_report_vocabulary` answers.
+type ReportVocabulary struct {
+	Vocabulary map[string]interface{} `json:"vocabulary"`
+}
 
 // ReportingBlockKind defines model for ReportingBlockKind.
 type ReportingBlockKind string
@@ -43755,6 +44416,32 @@ type SiteReadStarted struct {
 
 // SiteReadStartedStatus The joined dossier state when a read is already in flight.
 type SiteReadStartedStatus string
+
+// SlippingDeal One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id, so the order is the same on every read of the same data.
+type SlippingDeal struct {
+	// AmountMinor Absent for a deal that carries no amount yet.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// Currency Present when amount_minor is, and only then.
+	Currency *string            `json:"currency,omitempty"`
+	DealId   openapi_types.UUID `json:"deal_id"`
+	Evidence []SlippingEvidence `json:"evidence"`
+	Name     string             `json:"name"`
+	Rank     int                `json:"rank"`
+}
+
+// SlippingDealList What `whats_slipping_this_week` answers, worst first.
+type SlippingDealList struct {
+	Deals []SlippingDeal `json:"deals"`
+}
+
+// SlippingEvidence One reason the deal is on the list, and the field or read it comes from.
+type SlippingEvidence struct {
+	Snippet string `json:"snippet"`
+
+	// Source The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`.
+	Source string `json:"source"`
+}
 
 // SourceAuthor Who wrote a record in the system it was imported from, when that is not
 // whoever recorded it here.
@@ -48399,6 +49086,39 @@ type WorkspaceEmailDomainListResponse struct {
 	Data          []WorkspaceEmailDomain `json:"data"`
 }
 
+// WorkspaceQueryRequest What `query_workspace` takes.
+type WorkspaceQueryRequest struct {
+	// Plan A query plan, in the grammar `GET /query-vocabulary` publishes for this caller.
+	Plan map[string]interface{} `json:"plan"`
+}
+
+// WorkspaceQueryResult What `query_workspace` answers: the rows the plan matched, the plan as run, and how complete the answer is.
+type WorkspaceQueryResult struct {
+	Coverage     string           `json:"coverage"`
+	ExecutedPlan string           `json:"executed_plan"`
+	Limit        int              `json:"limit"`
+	Notes        []AgentQueryNote `json:"notes"`
+	Rows         []struct {
+		DistanceKm *float32 `json:"distance_km,omitempty"`
+		Evidence   []struct {
+			Id         openapi_types.UUID `json:"id"`
+			RecordType string             `json:"record_type"`
+			Relation   string             `json:"relation"`
+			Title      string             `json:"title"`
+			TrustTier  *string            `json:"trust_tier,omitempty"`
+		} `json:"evidence"`
+		Owner *struct {
+			Id    openapi_types.UUID `json:"id"`
+			IsYou bool               `json:"is_you"`
+			Name  *string            `json:"name,omitempty"`
+		} `json:"owner,omitempty"`
+
+		// Record A record as the agent tool surface hands it over: its type, id, version and readable fields.
+		Record AgentRecord `json:"record"`
+		Score  *float32    `json:"score,omitempty"`
+	} `json:"rows"`
+}
+
 // WrittenBy Which writer produced a piece of generated prose. `model` — the configured model
 // lane. `deterministic` — the structured fallback, used when no lane is configured
 // or the workspace's AI budget is exhausted. Never silently interchangeable: a
@@ -48407,6 +49127,21 @@ type WrittenBy string
 
 // AiWritten defines model for AiWritten.
 type AiWritten = bool
+
+// AnchorMaxItems defines model for AnchorMaxItems.
+type AnchorMaxItems = int
+
+// AnchorProjectId defines model for AnchorProjectId.
+type AnchorProjectId = openapi_types.UUID
+
+// AnchorRecordId defines model for AnchorRecordId.
+type AnchorRecordId = openapi_types.UUID
+
+// AnchorRecordName defines model for AnchorRecordName.
+type AnchorRecordName = string
+
+// AnchorRecordType defines model for AnchorRecordType.
+type AnchorRecordType string
 
 // ApprovalToken defines model for ApprovalToken.
 type ApprovalToken = string
@@ -48455,6 +49190,9 @@ type ProfileFieldKey string
 
 // Sort defines model for Sort.
 type Sort = string
+
+// ToolIdempotencyKey defines model for ToolIdempotencyKey.
+type ToolIdempotencyKey = string
 
 // VoiceProfileVersionNumber defines model for VoiceProfileVersionNumber.
 type VoiceProfileVersionNumber = int
@@ -49501,6 +50239,27 @@ type SetCaptureSenderDecisionJSONBody struct {
 // SetCaptureSenderDecisionJSONBodyDecision defines parameters for SetCaptureSenderDecision.
 type SetCaptureSenderDecisionJSONBodyDecision string
 
+// CatchUpOnRecordParams defines parameters for CatchUpOnRecord.
+type CatchUpOnRecordParams struct {
+	// RecordType The type of the record to build around.
+	RecordType CatchUpOnRecordParamsRecordType `form:"record_type" json:"record_type"`
+
+	// RecordId The record to build around. Give this or `record_name`, not both.
+	RecordId *AnchorRecordId `form:"record_id,omitempty" json:"record_id,omitempty"`
+
+	// RecordName The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
+	RecordName *AnchorRecordName `form:"record_name,omitempty" json:"record_name,omitempty"`
+
+	// MaxItems Cap the items in each section.
+	MaxItems *AnchorMaxItems `form:"max_items,omitempty" json:"max_items,omitempty"`
+
+	// ProjectId Keep only what is filed under this project or under none.
+	ProjectId *AnchorProjectId `form:"project_id,omitempty" json:"project_id,omitempty"`
+}
+
+// CatchUpOnRecordParamsRecordType defines parameters for CatchUpOnRecord.
+type CatchUpOnRecordParamsRecordType string
+
 // ListCommissionEntriesParams defines parameters for ListCommissionEntries.
 type ListCommissionEntriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -49532,6 +50291,18 @@ type DecideCommissionEntryParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// ListOpenCommitmentsParams defines parameters for ListOpenCommitments.
+type ListOpenCommitmentsParams struct {
+	// AssigneeId Narrow to one owner's promises. Omit it for everyone's.
+	AssigneeId *openapi_types.UUID `form:"assignee_id,omitempty" json:"assignee_id,omitempty"`
+
+	// ProjectId Keep only promises filed under this project or under none.
+	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
+
+	// Limit Cap the set. 50 is also the ceiling.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListCommunicationReviewsParams defines parameters for ListCommunicationReviews.
@@ -50737,6 +51508,19 @@ type RestoreContactProfileFieldParams struct {
 	ValueKey *string `form:"value_key,omitempty" json:"value_key,omitempty"`
 }
 
+// SearchContextParams defines parameters for SearchContext.
+type SearchContextParams struct {
+	// Query What to look for, in your own words.
+	Query string `form:"query" json:"query"`
+
+	// RecordTypes Restrict the sweep to these types. Omit it to sweep all of them.
+	RecordTypes *[]SearchContextParamsRecordTypes `form:"record_types,omitempty" json:"record_types,omitempty"`
+	Limit       *int                              `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// SearchContextParamsRecordTypes defines parameters for SearchContext.
+type SearchContextParamsRecordTypes string
+
 // CreateContractParams defines parameters for CreateContract.
 type CreateContractParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -51301,6 +52085,32 @@ type CreateDealParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// DraftDealFollowUpsParams defines parameters for DraftDealFollowUps.
+type DraftDealFollowUpsParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// ListSlippingDealsParams defines parameters for ListSlippingDeals.
+type ListSlippingDealsParams struct {
+	// QuietDays Days without recorded activity after which an open deal counts as gone quiet.
+	QuietDays *int `form:"quiet_days,omitempty" json:"quiet_days,omitempty"`
+
+	// Limit Cap the ranked list. Omit it for every evidenced deal.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ArchiveDealParams defines parameters for ArchiveDeal.
 type ArchiveDealParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -51435,6 +52245,23 @@ type CreateOfferParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ProgressDealParams defines parameters for ProgressDeal.
+type ProgressDealParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
 // RevertStageProgressionParams defines parameters for RevertStageProgression.
@@ -52002,6 +52829,23 @@ type PromoteLeadParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// QualifyLeadParams defines parameters for QualifyLead.
+type QualifyLeadParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
 // ReopenLeadParams defines parameters for ReopenLead.
 type ReopenLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -52181,6 +53025,27 @@ type SaveNotificationPreferenceJSONBody struct {
 	// interrupted.
 	Delivery NotificationDelivery `json:"delivery"`
 }
+
+// PrepForMeetingParams defines parameters for PrepForMeeting.
+type PrepForMeetingParams struct {
+	// RecordType The type of the record to build around.
+	RecordType PrepForMeetingParamsRecordType `form:"record_type" json:"record_type"`
+
+	// RecordId The record to build around. Give this or `record_name`, not both.
+	RecordId *AnchorRecordId `form:"record_id,omitempty" json:"record_id,omitempty"`
+
+	// RecordName The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
+	RecordName *AnchorRecordName `form:"record_name,omitempty" json:"record_name,omitempty"`
+
+	// MaxItems Cap the items in each section.
+	MaxItems *AnchorMaxItems `form:"max_items,omitempty" json:"max_items,omitempty"`
+
+	// ProjectId Keep only what is filed under this project or under none.
+	ProjectId *AnchorProjectId `form:"project_id,omitempty" json:"project_id,omitempty"`
+}
+
+// PrepForMeetingParamsRecordType defines parameters for PrepForMeeting.
+type PrepForMeetingParamsRecordType string
 
 // ListNoticesParams defines parameters for ListNotices.
 type ListNoticesParams struct {
@@ -54588,6 +55453,9 @@ type CreateReportingScheduleJSONRequestBody = ReportingScheduleInput
 // ExplainReportRunCellJSONRequestBody defines body for ExplainReportRunCell for application/json ContentType.
 type ExplainReportRunCellJSONRequestBody = ReportRunCell
 
+// SearchReportEvidenceJSONRequestBody defines body for SearchReportEvidence for application/json ContentType.
+type SearchReportEvidenceJSONRequestBody = ReportEvidenceSearchRequest
+
 // UpdateReportingScheduleJSONRequestBody defines body for UpdateReportingSchedule for application/json ContentType.
 type UpdateReportingScheduleJSONRequestBody = ReportingScheduleInput
 
@@ -54930,6 +55798,9 @@ type AcceptDealSuggestionJSONRequestBody = AcceptDealSuggestionRequest
 // CreateDealJSONRequestBody defines body for CreateDeal for application/json ContentType.
 type CreateDealJSONRequestBody = CreateDealRequest
 
+// DraftDealFollowUpsJSONRequestBody defines body for DraftDealFollowUps for application/json ContentType.
+type DraftDealFollowUpsJSONRequestBody = DealFollowUpDraftRequest
+
 // UpdateDealJSONRequestBody defines body for UpdateDeal for application/json ContentType.
 type UpdateDealJSONRequestBody = UpdateDealRequest
 
@@ -54941,6 +55812,9 @@ type CreateOfferJSONRequestBody = CreateOfferRequest
 
 // CreateDealOutcomeReviewJSONRequestBody defines body for CreateDealOutcomeReview for application/json ContentType.
 type CreateDealOutcomeReviewJSONRequestBody = CreateOutcomeReviewRequest
+
+// ProgressDealJSONRequestBody defines body for ProgressDeal for application/json ContentType.
+type ProgressDealJSONRequestBody = ProgressDealRequest
 
 // DisposeDedupeCandidateJSONRequestBody defines body for DisposeDedupeCandidate for application/json ContentType.
 type DisposeDedupeCandidateJSONRequestBody = DedupeDispositionRequest
@@ -54962,6 +55836,9 @@ type EmbedReindexStartJSONRequestBody = EmbedReindexStartRequest
 
 // BackfillEmploymentImportJSONRequestBody defines body for BackfillEmploymentImport for application/json ContentType.
 type BackfillEmploymentImportJSONRequestBody BackfillEmploymentImportJSONBody
+
+// ResolveEntitiesJSONRequestBody defines body for ResolveEntities for application/json ContentType.
+type ResolveEntitiesJSONRequestBody = EntityResolutionRequest
 
 // CreateFilteredExportJSONRequestBody defines body for CreateFilteredExport for application/json ContentType.
 type CreateFilteredExportJSONRequestBody = FilteredExportRequest
@@ -55058,6 +55935,9 @@ type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 
 // PromoteLeadJSONRequestBody defines body for PromoteLead for application/json ContentType.
 type PromoteLeadJSONRequestBody = PromoteLeadRequest
+
+// QualifyLeadJSONRequestBody defines body for QualifyLead for application/json ContentType.
+type QualifyLeadJSONRequestBody = QualifyLeadRequest
 
 // CreateListJSONRequestBody defines body for CreateList for application/json ContentType.
 type CreateListJSONRequestBody = CreateListRequest
@@ -55418,6 +56298,9 @@ type SetWeeklyPlanContractJSONRequestBody SetWeeklyPlanContractJSONBody
 
 // PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
 type PinWorklistRowJSONRequestBody = WorklistPinRequest
+
+// QueryWorkspaceJSONRequestBody defines body for QueryWorkspace for application/json ContentType.
+type QueryWorkspaceJSONRequestBody = WorkspaceQueryRequest
 
 // Getter for additional properties for AddDealRoomDocumentRequest. Returns the specified
 // element and whether it was found
@@ -66177,9 +67060,15 @@ type ServerInterface interface {
 	// Create reporting report
 	// (POST /analytics/reports)
 	CreateReportingReport(w http.ResponseWriter, r *http.Request)
+	// The block grammar a report document is written in.
+	// (GET /analytics/reports/blocks)
+	DescribeReportBlocks(w http.ResponseWriter, r *http.Request)
 	// Resolve a report document's figures for this reader.
 	// (POST /analytics/reports/render)
 	RenderAnalyticsReport(w http.ResponseWriter, r *http.Request)
+	// The prebuilt reports, and the names each one's plan may use.
+	// (GET /analytics/reports/vocabulary)
+	DescribeReportVocabulary(w http.ResponseWriter, r *http.Request)
 	// Archive reporting report
 	// (DELETE /analytics/reports/{id})
 	ArchiveReportingReport(w http.ResponseWriter, r *http.Request, id Id)
@@ -66213,6 +67102,9 @@ type ServerInterface interface {
 	// The records behind one cell of a saved run.
 	// (POST /analytics/runs/{run_id}/cells/explain)
 	ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
+	// Which records behind a saved run carry the words, and which do not.
+	// (POST /analytics/runs/{run_id}/evidence-search)
+	SearchReportEvidence(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
 	// Update reporting schedule
 	// (PATCH /analytics/schedules/{id})
 	UpdateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingScheduleParams)
@@ -66231,6 +67123,9 @@ type ServerInterface interface {
 	// Update reporting target
 	// (PATCH /analytics/targets/{id})
 	UpdateReportingTarget(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingTargetParams)
+	// What an analytics query may name, for this caller.
+	// (GET /analytics/vocabulary)
+	DescribeAnalyticsVocabulary(w http.ResponseWriter, r *http.Request)
 	// Approve every still-pending member of one bundle.
 	// (POST /approval-bundles/{bundle_id}/approve)
 	ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
@@ -66492,6 +67387,9 @@ type ServerInterface interface {
 	// The same ladder, opened from a row of the capture-activity window.
 	// (GET /capture/traces/{id})
 	ReadCaptureTracePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// What has been going on with one record, in one cited picture.
+	// (GET /catch-up)
+	CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams)
 	// List the workspace's messaging-channel connections.
 	// (GET /channel-connections)
 	ListChannelConnections(w http.ResponseWriter, r *http.Request)
@@ -66528,6 +67426,9 @@ type ServerInterface interface {
 	// Approve, pay, or void one entry.
 	// (POST /commissions/{id}/decide)
 	DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams)
+	// The promises still open, overdue first.
+	// (GET /commitments)
+	ListOpenCommitments(w http.ResponseWriter, r *http.Request, params ListOpenCommitmentsParams)
 	// Refused sends waiting on somebody who may decide them.
 	// (GET /communication-reviews)
 	ListCommunicationReviews(w http.ResponseWriter, r *http.Request, params ListCommunicationReviewsParams)
@@ -66636,6 +67537,9 @@ type ServerInterface interface {
 	// Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
 	// (GET /companies/{id}/hierarchy-rollup)
 	GetCompanyHierarchyRollup(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyHierarchyRollupParams)
+	// The colleagues who could introduce you at this company, warmest first.
+	// (GET /companies/{id}/intro-paths)
+	ListIntroPaths(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft the message asking a colleague to introduce you.
 	// (POST /companies/{id}/intro-request-draft)
 	DraftIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
@@ -66918,6 +67822,9 @@ type ServerInterface interface {
 	// Record that the calling human has now seen this contact — the baseline `since_last_visit` counts from.
 	// (POST /contacts/{id}/view-ack)
 	AcknowledgeContactView(w http.ResponseWriter, r *http.Request, id Id)
+	// The records most relevant to a description, ranked by meaning as well as words.
+	// (GET /context-search)
+	SearchContext(w http.ResponseWriter, r *http.Request, params SearchContextParams)
 	// Record an agreement (CONTRACT-WIRE-2).
 	// (POST /contracts)
 	CreateContract(w http.ResponseWriter, r *http.Request, params CreateContractParams)
@@ -67053,6 +67960,15 @@ type ServerInterface interface {
 	// Create a deal.
 	// (POST /deals)
 	CreateDeal(w http.ResponseWriter, r *http.Request, params CreateDealParams)
+	// The open deals whose relationships are going cold, and why.
+	// (GET /deals/at-risk)
+	ListAtRiskRelationships(w http.ResponseWriter, r *http.Request)
+	// Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+	// (POST /deals/follow-up-drafts)
+	DraftDealFollowUps(w http.ResponseWriter, r *http.Request, params DraftDealFollowUpsParams)
+	// The open deals going quiet or past their expected close date, worst first.
+	// (GET /deals/slipping)
+	ListSlippingDeals(w http.ResponseWriter, r *http.Request, params ListSlippingDealsParams)
 	// Archive (soft-delete) a deal.
 	// (DELETE /deals/{id})
 	ArchiveDeal(w http.ResponseWriter, r *http.Request, id Id, params ArchiveDealParams)
@@ -67095,6 +68011,9 @@ type ServerInterface interface {
 	// Write a review of how this deal's current closing went.
 	// (POST /deals/{id}/outcome-reviews)
 	CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request, id Id)
+	// Move a deal to a stage and note why, in one call.
+	// (POST /deals/{id}/progress)
+	ProgressDeal(w http.ResponseWriter, r *http.Request, id Id, params ProgressDealParams)
 	// Read the buying roles out of what this deal's contacts have written.
 	// (POST /deals/{id}/role-proposals)
 	ProposeDealRoles(w http.ResponseWriter, r *http.Request, id Id)
@@ -67152,6 +68071,9 @@ type ServerInterface interface {
 	// Administratively preview or apply one resumable batch of retained employment evidence.
 	// (POST /employment-import/backfill)
 	BackfillEmploymentImport(w http.ResponseWriter, r *http.Request)
+	// Whether the contacts and companies in a payload are already records here.
+	// (POST /entity-resolutions)
+	ResolveEntities(w http.ResponseWriter, r *http.Request)
 	// Export a filtered slice of one object (or a saved view / dynamic list) to an open format.
 	// (POST /exports)
 	CreateFilteredExport(w http.ResponseWriter, r *http.Request)
@@ -67383,6 +68305,9 @@ type ServerInterface interface {
 	// What promoting this lead would do — merge into an existing contact, or create one.
 	// (GET /leads/{id}/promote-preview)
 	PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id)
+	// Fill a lead's empty qualification fields that its own data settles, and name the rest.
+	// (POST /leads/{id}/qualify)
+	QualifyLead(w http.ResponseWriter, r *http.Request, id Id, params QualifyLeadParams)
 	// Put a disqualified lead back on the open ladder.
 	// (POST /leads/{id}/reopen)
 	ReopenLead(w http.ResponseWriter, r *http.Request, id Id, params ReopenLeadParams)
@@ -67518,6 +68443,9 @@ type ServerInterface interface {
 	// Choose the hours and days you are bookable.
 	// (PUT /me/working-hours)
 	SaveMyWorkingHours(w http.ResponseWriter, r *http.Request)
+	// Get ready for a meeting about one record.
+	// (GET /meeting-prep)
+	PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams)
 	// The notification centre — every notice addressed to the acting contact, newest first.
 	// (GET /notices)
 	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
@@ -67695,6 +68623,9 @@ type ServerInterface interface {
 	// Take a company off a project (archives the edge).
 	// (DELETE /projects/{id}/companies/{company_id})
 	RemoveProjectCompany(w http.ResponseWriter, r *http.Request, id Id, companyId openapi_types.UUID, params RemoveProjectCompanyParams)
+	// What delivery needs to take this project over.
+	// (GET /projects/{id}/handoff)
+	PrepareProjectHandoff(w http.ResponseWriter, r *http.Request, id Id)
 	// How this project has been going, newest judgement first.
 	// (GET /projects/{id}/health-assessments)
 	ListProjectHealthAssessments(w http.ResponseWriter, r *http.Request, id Id, params ListProjectHealthAssessmentsParams)
@@ -67806,6 +68737,12 @@ type ServerInterface interface {
 	// Reply in a thread as the buyer.
 	// (POST /public/rooms/threads/{threadId}/comments)
 	ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID)
+	// Everything a workspace query plan may say, for this caller.
+	// (GET /query-vocabulary)
+	DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request)
+	// The fields a record create or update may write, for each record type.
+	// (GET /record-fields)
+	DescribeRecordFields(w http.ResponseWriter, r *http.Request)
 	// List manual per-record grants, filtered by record or by subject (ADR-0039).
 	// (GET /record-grants)
 	ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams)
@@ -68259,6 +69196,9 @@ type ServerInterface interface {
 	// A team's week, frozen — what each member's week came to, and the one thing to raise.
 	// (GET /weekly-reviews/team)
 	GetTeamWeeklyReview(w http.ResponseWriter, r *http.Request, params GetTeamWeeklyReviewParams)
+	// Who this caller acts for.
+	// (GET /whoami)
+	GetActingIdentity(w http.ResponseWriter, r *http.Request)
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
@@ -68286,6 +69226,9 @@ type ServerInterface interface {
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
 	GetTeamBoard(w http.ResponseWriter, r *http.Request, params GetTeamBoardParams)
+	// Answer a query plan over the workspace's records.
+	// (POST /workspace-queries)
+	QueryWorkspace(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -68844,9 +69787,21 @@ func (_ Unimplemented) CreateReportingReport(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The block grammar a report document is written in.
+// (GET /analytics/reports/blocks)
+func (_ Unimplemented) DescribeReportBlocks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Resolve a report document's figures for this reader.
 // (POST /analytics/reports/render)
 func (_ Unimplemented) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The prebuilt reports, and the names each one's plan may use.
+// (GET /analytics/reports/vocabulary)
+func (_ Unimplemented) DescribeReportVocabulary(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68916,6 +69871,12 @@ func (_ Unimplemented) ExplainReportRunCell(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Which records behind a saved run carry the words, and which do not.
+// (POST /analytics/runs/{run_id}/evidence-search)
+func (_ Unimplemented) SearchReportEvidence(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Update reporting schedule
 // (PATCH /analytics/schedules/{id})
 func (_ Unimplemented) UpdateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingScheduleParams) {
@@ -68949,6 +69910,12 @@ func (_ Unimplemented) GetReportingTarget(w http.ResponseWriter, r *http.Request
 // Update reporting target
 // (PATCH /analytics/targets/{id})
 func (_ Unimplemented) UpdateReportingTarget(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingTargetParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What an analytics query may name, for this caller.
+// (GET /analytics/vocabulary)
+func (_ Unimplemented) DescribeAnalyticsVocabulary(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69474,6 +70441,12 @@ func (_ Unimplemented) ReadCaptureTracePipeline(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What has been going on with one record, in one cited picture.
+// (GET /catch-up)
+func (_ Unimplemented) CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the workspace's messaging-channel connections.
 // (GET /channel-connections)
 func (_ Unimplemented) ListChannelConnections(w http.ResponseWriter, r *http.Request) {
@@ -69543,6 +70516,12 @@ func (_ Unimplemented) GetCommissionEntry(w http.ResponseWriter, r *http.Request
 // Approve, pay, or void one entry.
 // (POST /commissions/{id}/decide)
 func (_ Unimplemented) DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The promises still open, overdue first.
+// (GET /commitments)
+func (_ Unimplemented) ListOpenCommitments(w http.ResponseWriter, r *http.Request, params ListOpenCommitmentsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69759,6 +70738,12 @@ func (_ Unimplemented) RefreshCompanyGrowthFit(w http.ResponseWriter, r *http.Re
 // Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
 // (GET /companies/{id}/hierarchy-rollup)
 func (_ Unimplemented) GetCompanyHierarchyRollup(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyHierarchyRollupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The colleagues who could introduce you at this company, warmest first.
+// (GET /companies/{id}/intro-paths)
+func (_ Unimplemented) ListIntroPaths(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -70326,6 +71311,12 @@ func (_ Unimplemented) AcknowledgeContactView(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The records most relevant to a description, ranked by meaning as well as words.
+// (GET /context-search)
+func (_ Unimplemented) SearchContext(w http.ResponseWriter, r *http.Request, params SearchContextParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Record an agreement (CONTRACT-WIRE-2).
 // (POST /contracts)
 func (_ Unimplemented) CreateContract(w http.ResponseWriter, r *http.Request, params CreateContractParams) {
@@ -70596,6 +71587,24 @@ func (_ Unimplemented) CreateDeal(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The open deals whose relationships are going cold, and why.
+// (GET /deals/at-risk)
+func (_ Unimplemented) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+// (POST /deals/follow-up-drafts)
+func (_ Unimplemented) DraftDealFollowUps(w http.ResponseWriter, r *http.Request, params DraftDealFollowUpsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The open deals going quiet or past their expected close date, worst first.
+// (GET /deals/slipping)
+func (_ Unimplemented) ListSlippingDeals(w http.ResponseWriter, r *http.Request, params ListSlippingDealsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Archive (soft-delete) a deal.
 // (DELETE /deals/{id})
 func (_ Unimplemented) ArchiveDeal(w http.ResponseWriter, r *http.Request, id Id, params ArchiveDealParams) {
@@ -70677,6 +71686,12 @@ func (_ Unimplemented) ListDealOutcomeReviews(w http.ResponseWriter, r *http.Req
 // Write a review of how this deal's current closing went.
 // (POST /deals/{id}/outcome-reviews)
 func (_ Unimplemented) CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move a deal to a stage and note why, in one call.
+// (POST /deals/{id}/progress)
+func (_ Unimplemented) ProgressDeal(w http.ResponseWriter, r *http.Request, id Id, params ProgressDealParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -70791,6 +71806,12 @@ func (_ Unimplemented) EmbedReindexStatus(w http.ResponseWriter, r *http.Request
 // Administratively preview or apply one resumable batch of retained employment evidence.
 // (POST /employment-import/backfill)
 func (_ Unimplemented) BackfillEmploymentImport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether the contacts and companies in a payload are already records here.
+// (POST /entity-resolutions)
+func (_ Unimplemented) ResolveEntities(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71256,6 +72277,12 @@ func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Fill a lead's empty qualification fields that its own data settles, and name the rest.
+// (POST /leads/{id}/qualify)
+func (_ Unimplemented) QualifyLead(w http.ResponseWriter, r *http.Request, id Id, params QualifyLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Put a disqualified lead back on the open ladder.
 // (POST /leads/{id}/reopen)
 func (_ Unimplemented) ReopenLead(w http.ResponseWriter, r *http.Request, id Id, params ReopenLeadParams) {
@@ -71523,6 +72550,12 @@ func (_ Unimplemented) GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
 // Choose the hours and days you are bookable.
 // (PUT /me/working-hours)
 func (_ Unimplemented) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get ready for a meeting about one record.
+// (GET /meeting-prep)
+func (_ Unimplemented) PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71880,6 +72913,12 @@ func (_ Unimplemented) RemoveProjectCompany(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// What delivery needs to take this project over.
+// (GET /projects/{id}/handoff)
+func (_ Unimplemented) PrepareProjectHandoff(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // How this project has been going, newest judgement first.
 // (GET /projects/{id}/health-assessments)
 func (_ Unimplemented) ListProjectHealthAssessments(w http.ResponseWriter, r *http.Request, id Id, params ListProjectHealthAssessmentsParams) {
@@ -72099,6 +73138,18 @@ func (_ Unimplemented) OpenBuyerRoomThread(w http.ResponseWriter, r *http.Reques
 // Reply in a thread as the buyer.
 // (POST /public/rooms/threads/{threadId}/comments)
 func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Everything a workspace query plan may say, for this caller.
+// (GET /query-vocabulary)
+func (_ Unimplemented) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The fields a record create or update may write, for each record type.
+// (GET /record-fields)
+func (_ Unimplemented) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -73008,6 +74059,12 @@ func (_ Unimplemented) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Who this caller acts for.
+// (GET /whoami)
+func (_ Unimplemented) GetActingIdentity(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
@@ -73059,6 +74116,12 @@ func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request
 // One row per teammate — who is carrying what, so a lead can see where to help.
 // (GET /worklist/team)
 func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request, params GetTeamBoardParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a query plan over the workspace's records.
+// (POST /workspace-queries)
+func (_ Unimplemented) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -77135,6 +78198,28 @@ func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// DescribeReportBlocks operation middleware
+func (siw *ServerInterfaceWrapper) DescribeReportBlocks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeReportBlocks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenderAnalyticsReport operation middleware
 func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
 
@@ -77148,6 +78233,28 @@ func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RenderAnalyticsReport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DescribeReportVocabulary operation middleware
+func (siw *ServerInterfaceWrapper) DescribeReportVocabulary(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeReportVocabulary(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -77649,6 +78756,40 @@ func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// SearchReportEvidence operation middleware
+func (siw *ServerInterfaceWrapper) SearchReportEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "run_id" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "run_id", chi.URLParam(r, "run_id"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "run_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchReportEvidence(w, r, runId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateReportingSchedule operation middleware
 func (siw *ServerInterfaceWrapper) UpdateReportingSchedule(w http.ResponseWriter, r *http.Request) {
 
@@ -77914,6 +79055,28 @@ func (siw *ServerInterfaceWrapper) UpdateReportingTarget(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateReportingTarget(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DescribeAnalyticsVocabulary operation middleware
+func (siw *ServerInterfaceWrapper) DescribeAnalyticsVocabulary(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeAnalyticsVocabulary(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -78348,6 +79511,8 @@ func (siw *ServerInterfaceWrapper) ListAttachments(w http.ResponseWriter, r *htt
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
@@ -78422,6 +79587,8 @@ func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *ht
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
@@ -80876,6 +82043,99 @@ func (siw *ServerInterfaceWrapper) ReadCaptureTracePipeline(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// CatchUpOnRecord operation middleware
+func (siw *ServerInterfaceWrapper) CatchUpOnRecord(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CatchUpOnRecordParams
+
+	// ------------- Required query parameter "record_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "record_type", r.URL.Query(), &params.RecordType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_name", r.URL.Query(), &params.RecordName, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_name", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "max_items" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "max_items", r.URL.Query(), &params.MaxItems, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "max_items"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "max_items", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "project_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "project_id", r.URL.Query(), &params.ProjectId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CatchUpOnRecord(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListChannelConnections operation middleware
 func (siw *ServerInterfaceWrapper) ListChannelConnections(w http.ResponseWriter, r *http.Request) {
 
@@ -81270,6 +82530,73 @@ func (siw *ServerInterfaceWrapper) DecideCommissionEntry(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DecideCommissionEntry(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListOpenCommitments operation middleware
+func (siw *ServerInterfaceWrapper) ListOpenCommitments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListOpenCommitmentsParams
+
+	// ------------- Optional query parameter "assignee_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "assignee_id", r.URL.Query(), &params.AssigneeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "assignee_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "assignee_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "project_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "project_id", r.URL.Query(), &params.ProjectId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOpenCommitments(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -82501,6 +83828,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyDocuments(w http.ResponseWriter, r
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
@@ -83374,6 +84703,40 @@ func (siw *ServerInterfaceWrapper) GetCompanyHierarchyRollup(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCompanyHierarchyRollup(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIntroPaths operation middleware
+func (siw *ServerInterfaceWrapper) ListIntroPaths(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIntroPaths(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -87176,6 +88539,73 @@ func (siw *ServerInterfaceWrapper) AcknowledgeContactView(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// SearchContext operation middleware
+func (siw *ServerInterfaceWrapper) SearchContext(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchContextParams
+
+	// ------------- Required query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_types" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_types", r.URL.Query(), &params.RecordTypes, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_types"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_types", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchContext(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateContract operation middleware
 func (siw *ServerInterfaceWrapper) CreateContract(w http.ResponseWriter, r *http.Request) {
 
@@ -89772,6 +91202,150 @@ func (siw *ServerInterfaceWrapper) CreateDeal(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListAtRiskRelationships operation middleware
+func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAtRiskRelationships(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DraftDealFollowUps operation middleware
+func (siw *ServerInterfaceWrapper) DraftDealFollowUps(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DraftDealFollowUpsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DraftDealFollowUps(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSlippingDeals operation middleware
+func (siw *ServerInterfaceWrapper) ListSlippingDeals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSlippingDealsParams
+
+	// ------------- Optional query parameter "quiet_days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "quiet_days", r.URL.Query(), &params.QuietDays, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "quiet_days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiet_days", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSlippingDeals(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchiveDeal operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveDeal(w http.ResponseWriter, r *http.Request) {
 
@@ -90193,6 +91767,8 @@ func (siw *ServerInterfaceWrapper) ListDealDocuments(w http.ResponseWriter, r *h
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
@@ -90534,6 +92110,83 @@ func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateDealOutcomeReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProgressDeal operation middleware
+func (siw *ServerInterfaceWrapper) ProgressDeal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ProgressDealParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProgressDeal(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -91209,6 +92862,28 @@ func (siw *ServerInterfaceWrapper) BackfillEmploymentImport(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.BackfillEmploymentImport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveEntities operation middleware
+func (siw *ServerInterfaceWrapper) ResolveEntities(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveEntities(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -94003,6 +95678,83 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// QualifyLead operation middleware
+func (siw *ServerInterfaceWrapper) QualifyLead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params QualifyLeadParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.QualifyLead(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ReopenLead operation middleware
 func (siw *ServerInterfaceWrapper) ReopenLead(w http.ResponseWriter, r *http.Request) {
 
@@ -95508,6 +97260,99 @@ func (siw *ServerInterfaceWrapper) SaveMyWorkingHours(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyWorkingHours(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PrepForMeeting operation middleware
+func (siw *ServerInterfaceWrapper) PrepForMeeting(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PrepForMeetingParams
+
+	// ------------- Required query parameter "record_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "record_type", r.URL.Query(), &params.RecordType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_name", r.URL.Query(), &params.RecordName, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_name", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "max_items" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "max_items", r.URL.Query(), &params.MaxItems, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "max_items"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "max_items", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "project_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "project_id", r.URL.Query(), &params.ProjectId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PrepForMeeting(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -98466,6 +100311,40 @@ func (siw *ServerInterfaceWrapper) RemoveProjectCompany(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// PrepareProjectHandoff operation middleware
+func (siw *ServerInterfaceWrapper) PrepareProjectHandoff(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PrepareProjectHandoff(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectHealthAssessments operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectHealthAssessments(w http.ResponseWriter, r *http.Request) {
 
@@ -99784,6 +101663,50 @@ func (siw *ServerInterfaceWrapper) ReplyBuyerRoomThread(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReplyBuyerRoomThread(w, r, threadId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DescribeQueryVocabulary operation middleware
+func (siw *ServerInterfaceWrapper) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeQueryVocabulary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DescribeRecordFields operation middleware
+func (siw *ServerInterfaceWrapper) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeRecordFields(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -106634,6 +108557,28 @@ func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// GetActingIdentity operation middleware
+func (siw *ServerInterfaceWrapper) GetActingIdentity(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetActingIdentity(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetWorklist operation middleware
 func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Request) {
 
@@ -106958,6 +108903,28 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTeamBoard(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// QueryWorkspace operation middleware
+func (siw *ServerInterfaceWrapper) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.QueryWorkspace(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -107357,7 +109324,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/analytics/reports", wrapper.CreateReportingReport)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/blocks", wrapper.DescribeReportBlocks)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/reports/render", wrapper.RenderAnalyticsReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/vocabulary", wrapper.DescribeReportVocabulary)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/analytics/reports/{id}", wrapper.ArchiveReportingReport)
@@ -107393,6 +109366,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/analytics/runs/{run_id}/cells/explain", wrapper.ExplainReportRunCell)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/runs/{run_id}/evidence-search", wrapper.SearchReportEvidence)
+	})
+	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/analytics/schedules/{id}", wrapper.UpdateReportingSchedule)
 	})
 	r.Group(func(r chi.Router) {
@@ -107409,6 +109385,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/analytics/targets/{id}", wrapper.UpdateReportingTarget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/vocabulary", wrapper.DescribeAnalyticsVocabulary)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approval-bundles/{bundle_id}/approve", wrapper.ApproveApprovalBundle)
@@ -107672,6 +109651,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/capture/traces/{id}", wrapper.ReadCaptureTracePipeline)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/catch-up", wrapper.CatchUpOnRecord)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-connections", wrapper.ListChannelConnections)
 	})
 	r.Group(func(r chi.Router) {
@@ -107706,6 +109688,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/commissions/{id}/decide", wrapper.DecideCommissionEntry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/commitments", wrapper.ListOpenCommitments)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/communication-reviews", wrapper.ListCommunicationReviews)
@@ -107814,6 +109799,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/hierarchy-rollup", wrapper.GetCompanyHierarchyRollup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/intro-paths", wrapper.ListIntroPaths)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/intro-request-draft", wrapper.DraftIntroRequest)
@@ -108098,6 +110086,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/contacts/{id}/view-ack", wrapper.AcknowledgeContactView)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/context-search", wrapper.SearchContext)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contracts", wrapper.CreateContract)
 	})
 	r.Group(func(r chi.Router) {
@@ -108233,6 +110224,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deals", wrapper.CreateDeal)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/at-risk", wrapper.ListAtRiskRelationships)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/follow-up-drafts", wrapper.DraftDealFollowUps)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/slipping", wrapper.ListSlippingDeals)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}", wrapper.ArchiveDeal)
 	})
 	r.Group(func(r chi.Router) {
@@ -108273,6 +110273,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/outcome-reviews", wrapper.CreateDealOutcomeReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/progress", wrapper.ProgressDeal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/role-proposals", wrapper.ProposeDealRoles)
@@ -108330,6 +110333,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/employment-import/backfill", wrapper.BackfillEmploymentImport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/entity-resolutions", wrapper.ResolveEntities)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/exports", wrapper.CreateFilteredExport)
@@ -108563,6 +110569,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/leads/{id}/promote-preview", wrapper.PreviewLeadPromotion)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/qualify", wrapper.QualifyLead)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/reopen", wrapper.ReopenLead)
 	})
 	r.Group(func(r chi.Router) {
@@ -108696,6 +110705,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/working-hours", wrapper.SaveMyWorkingHours)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/meeting-prep", wrapper.PrepForMeeting)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/notices", wrapper.ListNotices)
@@ -108875,6 +110887,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/projects/{id}/companies/{company_id}", wrapper.RemoveProjectCompany)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/projects/{id}/handoff", wrapper.PrepareProjectHandoff)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects/{id}/health-assessments", wrapper.ListProjectHealthAssessments)
 	})
 	r.Group(func(r chi.Router) {
@@ -108984,6 +110999,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/rooms/threads/{threadId}/comments", wrapper.ReplyBuyerRoomThread)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/query-vocabulary", wrapper.DescribeQueryVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/record-fields", wrapper.DescribeRecordFields)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-grants", wrapper.ListRecordGrants)
@@ -109439,6 +111460,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/weekly-reviews/team", wrapper.GetTeamWeeklyReview)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/whoami", wrapper.GetActingIdentity)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
 	})
 	r.Group(func(r chi.Router) {
@@ -109464,6 +111488,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/workspace-queries", wrapper.QueryWorkspace)
 	})
 
 	return r

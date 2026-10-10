@@ -62,6 +62,7 @@ type vocabulary struct {
 	recordType []string
 	tier       []string
 	scope      []string
+	servedBy   []string
 }
 
 func readVocabulary(schemas map[string]schemaNode) (vocabulary, error) {
@@ -74,6 +75,7 @@ func readVocabulary(schemas map[string]schemaNode) (vocabulary, error) {
 	var v vocabulary
 	for field, target := range map[string]*[]string{
 		"access": &v.access, "record_type": &v.recordType, "tier": &v.tier, "scope": &v.scope,
+		"served_by": &v.servedBy,
 	} {
 		prop, ok := declared.Properties[field]
 		if !ok || len(prop.Enum) == 0 {
@@ -148,6 +150,7 @@ func (v vocabulary) violations(policies []policy) []string {
 			{"x-mcp-tool.record_type", p.RecordType, v.recordType},
 			{"x-mcp-tool.tier", p.Tier, v.tier},
 			{"x-mcp-tool.scope", p.Scope, v.scope},
+			{"x-mcp-tool.served_by", p.ServedBy, v.servedBy},
 		} {
 			if check.value == "" || contains(check.allowed, check.value) {
 				continue
@@ -177,6 +180,8 @@ func renderVocabulary(v vocabulary) string {
 			"agentRecordType is the record an operation targets; the zero value means it declares none.", v.recordType},
 		{"agentScope", "scope",
 			"agentScope is the passport cap an operation consumes. Unlike the others it has no zero\n// value in practice: every tool operation declares one, so the gate never has to invent it.", v.scope},
+		{"agentServedBy", "servedBy",
+			"agentServedBy says who admits an agent's call; the zero value means the gate does.", v.servedBy},
 	} {
 		fmt.Fprintf(&b, "\n// %s\n//\n// Values are the closed set declared by components.schemas.%s in\n"+
 			"// api/crm.yaml; a value outside it fails generation.\ntype %s string\n\nconst (\n",

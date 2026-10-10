@@ -20,6 +20,8 @@ type AttachedDocument struct {
 	Checksum     string    `json:"checksum"`
 	CapturedBy   string    `json:"captured_by"`
 	CreatedAt    time.Time `json:"created_at"`
+	// ContractID is the agreement the file was filed against, absent for none.
+	ContractID *ids.UUID `json:"contract_id,omitempty"`
 }
 
 // DocumentPage is one page of a record's documents, newest first.

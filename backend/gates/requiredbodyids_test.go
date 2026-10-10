@@ -109,6 +109,9 @@ var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 	// lookup. Waived for the reason DataSubjectRequest is: the name heuristic
 	// cannot tell a served entity from a body.
 	"IntroRequest": "not a request body — the ask as served; every reference is a response, and the writes decode the *Input types",
+	// Served by the registry: the handler passes the raw body to
+	// Registry.Invoke, which refuses an absent required argument by name.
+	"ProgressDealRequest": "registry-served; never decoded into this type, and Invoke refuses an absent to_stage_id by name",
 })
 
 func TestEveryContractBodyWithARequiredIDIsAccountedFor(t *testing.T) {

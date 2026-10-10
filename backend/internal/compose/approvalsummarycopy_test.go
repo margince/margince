@@ -127,7 +127,8 @@ func TestTheGermanApprovalSummariesCarryNoDash(t *testing.T) {
 // The corpus is the policy table's mutating tool routes, not a list: a contract
 // change that makes a new verb stageable fails here rather than printing the
 // English verb on a German card. It runs both ways, so a verb that stops being
-// stageable cannot leave a dead word behind.
+// stageable cannot leave a dead word behind. A registry-served route stages
+// through its tool, as the MCP door does, so its method decides nothing here.
 func TestEveryStageableAgentActHasItsWordsInEveryLanguage(t *testing.T) {
 	for _, lang := range textlang.Shipped {
 		if lang == textlang.English {
@@ -137,7 +138,7 @@ func TestEveryStageableAgentActHasItsWordsInEveryLanguage(t *testing.T) {
 		reachedVerbs, reachedFrames := map[string]bool{}, map[string]bool{}
 		for route, pol := range agentPolicies {
 			method, _, _ := strings.Cut(route, " ")
-			if pol.Access != accessTool || !mutatingMethod(method) {
+			if pol.Access != accessTool || !mutatingMethod(method) || pol.ServedBy == servedByRegistry {
 				continue
 			}
 			if pol.RecordType == "" || !genericVerbs[pol.Tool] {

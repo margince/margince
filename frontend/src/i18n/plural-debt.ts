@@ -115,7 +115,6 @@ const PENDING: readonly string[] = [
   "embedreindex.entitiesPending",
   "jobs.deadTotal",
   "lead.boardCount",
-  "lead.openTaskCount",
   "lead.scoreSources",
   "ob.conv.recap.readTerminal",
   "ob.conv.voice.dimSentenceEvidence",

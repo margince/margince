@@ -81,6 +81,38 @@ function useResetOnNarrowing(narrowing: string, toFirstPage: () => void) {
   }, [narrowing]);
 }
 
+type Reach = Readonly<{
+  enabled: boolean;
+  /** The page asked for, and the last one the rows in hand fill. */
+  page: number;
+  lastPage: number;
+  loaded: number;
+  hasMore: boolean;
+  /** Bumped by each press that steps past the rows, so a failed read retries. */
+  asks: number;
+  loadMore: () => void;
+  setPage: (to: number) => void;
+}>;
+
+// The only loader for a page past the rows in hand, named by an address or
+// stepped onto with Next. A cursor read cannot jump, so it walks on until the
+// page is loaded. When the rows run out the address returns to the last page.
+function useReachAskedPage(reach: Reach) {
+  const past = reach.enabled && reach.page > reach.lastPage;
+  // Re-armed by each arriving read or press; the callbacks are re-made every render.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on rows and presses
+  useEffect(() => {
+    if (!past) {
+      return;
+    }
+    if (reach.hasMore) {
+      reach.loadMore();
+    } else if (reach.loaded > 0) {
+      reach.setPage(reach.lastPage);
+    }
+  }, [past, reach.loaded, reach.hasMore, reach.asks]);
+}
+
 /** What the caller passes to own the page or the page size. */
 export type PagingControl<Row> = Readonly<{
   rows: readonly Row[];
@@ -90,6 +122,8 @@ export type PagingControl<Row> = Readonly<{
   onPerPage?: (next: number) => void;
   hasMore: boolean;
   onLoadMore?: () => void;
+  /** False where a body outside the table owns the paging; default true. */
+  reachAsked?: boolean;
 }>;
 
 /** The rows the table slices out, and the pager's state. */
@@ -144,13 +178,24 @@ export function usePaging<Row>(
   const lastPage = Math.max(1, Math.ceil(control.rows.length / perPage));
   const current = Math.min(page, lastPage);
   const from = (current - 1) * perPage;
+  const [asks, setAsks] = useState(0);
+  useReachAskedPage({
+    enabled: control.reachAsked !== false,
+    page,
+    lastPage,
+    loaded: control.rows.length,
+    hasMore: control.hasMore,
+    asks,
+    loadMore: () => control.onLoadMore?.(),
+    setPage,
+  });
   useResetOnNarrowing(narrowingSignature({ ...narrowing, perPage }), () =>
     setPage(1),
   );
   const goto = (to: number) => {
-    // Stepping past what is loaded asks the server for the next cursor page.
-    if (to > lastPage && control.hasMore) {
-      control.onLoadMore?.();
+    // Stepping past what is loaded is answered by `useReachAskedPage`.
+    if (to > lastPage) {
+      setAsks((presses) => presses + 1);
     }
     setPage(Math.max(1, to));
     // The header is sticky and the body scrolls, so without this the reader

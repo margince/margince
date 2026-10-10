@@ -471,6 +471,7 @@ export function ListTable<Row>({
       onPerPage,
       hasMore,
       onLoadMore,
+      reachAsked: !bodyOwnsPaging,
     },
     {
       search: search?.value,
