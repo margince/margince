@@ -226,7 +226,7 @@ services:
     # build is the same server under the same `server /data` command. It runs
     # as uid 65532 by default; root keeps an existing volume, written by the
     # old root-run image, readable.
-    image: cgr.dev/chainguard/minio@sha256:bd014394a80898e68c149f2311fdf8d5a2c2f3bb2c33b9327ae6d02b4b065ae1
+    image: cgr.dev/chainguard/minio@sha256:7df55d002b698e4494a131b848dd553361bbe58b7e19f62d9623c29af1ba9ccf
     user: "0:0"
     environment:
       MINIO_ROOT_USER: minioadmin
