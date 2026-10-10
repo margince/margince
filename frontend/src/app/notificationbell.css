@@ -13,12 +13,12 @@
   align-items: center;
 }
 
-/* The count, pinned to the glyph's corner. It only PLACES the badge; the badge
-   draws itself. `pointer-events: none` so the figure is part of the target
-   rather than a second one inside it. */
+/* The count sits above the glyph's shoulder and covers under a third of it.
+   It only PLACES the badge; the badge draws itself. `pointer-events: none` so
+   the figure is part of the target rather than a second one inside it. */
 .notifbell-count {
   position: absolute;
-  top: -2px;
+  top: calc(var(--space-2) * -1);
   right: -2px;
   pointer-events: none;
 }
