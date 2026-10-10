@@ -13,8 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The contract requires `subject` and `body` on both send requests, so a body
-// that leaves either key out is refused before any send or schedule is staged.
 func TestASendWithoutASubjectOrBodyKeyIsRefusedBeforeItIsStaged(t *testing.T) {
 	h := Handlers{}
 	links := `,"links":[{"entity_type":"company","entity_id":"` + ids.NewV7().String() + `"}]`

@@ -167,10 +167,10 @@ func (c commsAdapter) send(
 	// A tool call that leaves a string out decodes to "", and the HTTP door
 	// refuses the missing keys, so this door refuses the blank ones.
 	if strings.TrimSpace(in.Subject) == "" {
-		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: "subject"}
+		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: activities.FieldSubject}
 	}
 	if strings.TrimSpace(in.Body) == "" {
-		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: "body"}
+		return agents.SendEmailResult{}, &activities.RequiredFieldError{Field: activities.FieldBody}
 	}
 	// FIRST, before the message is composed or a consent decision is recorded:
 	// a record this installation no longer holds is not one to file a send

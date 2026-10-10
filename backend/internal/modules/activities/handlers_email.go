@@ -270,6 +270,13 @@ func (c DraftContext) language() textlang.Lang {
 	return draftfloor.DefaultLang
 }
 
+// The wire names of the two fields every mail send requires, shared with the
+// agent door that refuses them blank.
+const (
+	FieldSubject = fieldSubject
+	FieldBody    = fieldBody
+)
+
 // requiredSent answers a send body that left out `subject` or `body`, which
 // both send requests require. An empty string is a value the caller chose.
 func requiredSent(w http.ResponseWriter, r *http.Request) bool {
