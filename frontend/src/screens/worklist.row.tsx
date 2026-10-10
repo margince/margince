@@ -843,18 +843,16 @@ function TaskComplete({
   const t = useT();
   const toast = useToast();
   const update = useTaskUpdate([worklistKey]);
-  const complete = useCompleteTask(update);
+  // A rejected PATCH otherwise leaves the button idle with nothing on screen
+  // to say so, and the reader has no reason to try again.
+  const complete = useCompleteTask(update, (error) =>
+    toast.show(t(completeFailureKey(error)), { tone: "danger" }),
+  );
   return (
     <Button
       variant="primary"
       pending={update.isPending}
-      // A rejected PATCH otherwise leaves the button idle with nothing on
-      // screen to say so, and the reader has no reason to try again.
-      onClick={() =>
-        complete(id, version).catch((error) =>
-          toast.show(t(completeFailureKey(error)), { tone: "danger" }),
-        )
-      }
+      onClick={() => complete(id, version)}
     >
       {t("tasks.complete")}
     </Button>

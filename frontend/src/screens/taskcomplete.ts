@@ -5,10 +5,14 @@ import type { useTaskUpdate } from "./taskactions";
 // Completing a task from any surface: the confirmation and its Undo are one
 // verb, so the Worklist and a record's task list cannot drift apart.
 //
-// Rejects with the write's error, so each caller says the failure in its own
-// place. The toast is raised from this promise, not from per-call callbacks:
-// the refetch after the write removes the row and the observer they hang off.
-export function useCompleteTask(update: ReturnType<typeof useTaskUpdate>) {
+// A failed write goes to `onFailure`; a caller that passes none draws it from
+// the mutation's own error. The toast is raised from this promise, not from
+// per-call callbacks: the refetch after the write removes the row and the
+// observer they hang off.
+export function useCompleteTask(
+  update: ReturnType<typeof useTaskUpdate>,
+  onFailure?: (error: unknown) => void,
+) {
   const t = useT();
   const toast = useToast();
   return (id: string, version: number | undefined) =>
@@ -37,5 +41,6 @@ export function useCompleteTask(update: ReturnType<typeof useTaskUpdate>) {
             },
           },
         }),
-      );
+      )
+      .catch((error) => onFailure?.(error));
 }

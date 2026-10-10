@@ -9,7 +9,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { navigate } from "../app/router";
-import { Badge, Button } from "../design-system/atoms";
+import { Badge } from "../design-system/atoms";
 import {
   type BoardColumn,
   type BoardRecord,
@@ -20,7 +20,7 @@ import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { LoadMoreButton, unwrap } from "./common";
 import {
   LEAD_STATUS_COUNTS_KEY,
   leadTerminalKey,
@@ -397,14 +397,8 @@ export function LeadBoard({
         variant="plain"
         columns={columns}
         columnExtras={(column) =>
-          column.stage === openTerminal && terminalRows.hasNextPage ? (
-            <Button
-              onClick={() => {
-                terminalRows.fetchNextPage();
-              }}
-            >
-              {t("list.loadMore")}
-            </Button>
+          column.stage === openTerminal ? (
+            <LoadMoreButton query={terminalRows} />
           ) : null
         }
         countLabel={(count) =>
@@ -476,7 +470,13 @@ export function LeadBoard({
           },
         })}
       />
-      {hasMore && <Button onClick={loadMore}>{t("list.loadMore")}</Button>}
+      <LoadMoreButton
+        query={{
+          hasNextPage: hasMore,
+          isFetchingNextPage: false,
+          fetchNextPage: loadMore,
+        }}
+      />
       {/* Keyed by lead so a half-filled deal block for one never carries to
           the next, the same reason the detail screen keys its pair. */}
       {pending?.dialog === "qualify" && (

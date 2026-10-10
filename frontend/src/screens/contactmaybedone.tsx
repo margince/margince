@@ -7,6 +7,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import { unwrap } from "./common";
 import { useClaimSettle, useTaskUpdate } from "./taskactions";
+import { useCompleteTask } from "./taskcomplete";
 
 // The verbs of a promise card that asks whether our last email kept it. The
 // server never closes the promise itself: Done is the reader's word for it,
@@ -29,6 +30,7 @@ export function MayBeDoneVerbs({
   const contactId = view.contact.id;
   const refresh = [["contact360", contactId]] as const;
   const task = useTaskUpdate(refresh);
+  const completeTask = useCompleteTask(task);
   const claim = useClaimSettle(refresh);
   const notYet = useMomentDismiss();
   const done = moment.recommended_action;
@@ -45,7 +47,7 @@ export function MayBeDoneVerbs({
     const version = view.next_steps?.data.find(
       (row) => row.id === question.promise_id,
     )?.version;
-    task.mutate({ id: question.promise_id, version, body: { is_done: true } });
+    completeTask(question.promise_id, version);
   };
   return (
     <>

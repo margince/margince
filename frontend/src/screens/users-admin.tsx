@@ -14,7 +14,7 @@ import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { formatRelativeTime } from "../format/relativetime";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { QueryStates, useMe } from "./common";
+import { LoadMoreButton, QueryStates, useMe } from "./common";
 import "./users-admin.css";
 import { useCan, useCanWrite } from "../app/capability";
 import { type AssignableRole, useAssignableRoles } from "./roles.queries";
@@ -93,16 +93,7 @@ function MembersCard({
     <Panel
       title={t("users.membersTitle")}
       titleAction={canInvite && <InviteAction canIssueLink={canIssueLink} />}
-      actions={
-        members.hasNextPage && (
-          <Button
-            pending={members.isFetchingNextPage}
-            onClick={() => members.fetchNextPage()}
-          >
-            {t("list.loadMore")}
-          </Button>
-        )
-      }
+      actions={members.hasNextPage && <LoadMoreButton query={members} />}
     >
       {posture && (
         <PanelBody>

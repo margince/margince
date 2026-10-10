@@ -149,10 +149,7 @@ export function TaskCompleteCheck({
         label={<span className="sr-only">{t("tasks.complete")}</span>}
         checked={false}
         disabled={pending}
-        onChange={() =>
-          // The failure is drawn below, from the mutation's own state.
-          complete(activityId, version).catch(() => undefined)
-        }
+        onChange={() => complete(activityId, version)}
       />
       {failed && <ErrorLine error={update.error} inline />}
     </>
@@ -184,15 +181,14 @@ export function TaskQuickActions({
   const recordZone = useRecordZone();
   const nextDue = snoozedDueAt(dueAt, recordZone);
   const pending = update.isPending && update.variables?.id === activityId;
+  const complete = useCompleteTask(update);
   return (
     <>
       {showComplete && (
         <Button
           variant="primary"
           disabled={pending}
-          onClick={() =>
-            update.mutate({ id: activityId, version, body: { is_done: true } })
-          }
+          onClick={() => complete(activityId, version)}
         >
           {t("tasks.complete")}
         </Button>
