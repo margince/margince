@@ -175,7 +175,9 @@ describe("AuditLogCard", () => {
   it("reads each entry under the column it belongs to", async () => {
     vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
     render(<AuditLogCard />);
-    const table = await screen.findByRole("table");
+    const table = await screen.findByRole("table", {
+      name: "Recorded actions",
+    });
     const headers = within(table)
       .getAllByRole("columnheader")
       .map((header) => header.textContent);

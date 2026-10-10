@@ -39,8 +39,6 @@
   white-space: nowrap;
 }
 
-/* detail: an open row and the row under it read as one entry, so the rule
-   between them goes and they light up together. */
 .table > tbody > tr.datatable-detail[hidden] {
   display: none;
 }
@@ -129,7 +127,6 @@
   }
 }
 
-/* detail, folded: what opens runs the row's full width, under both its lines. */
 @container table-fold (width < 36rem) {
   .table-scroll-fold > .table > tbody > tr.datatable-detail {
     padding-block-start: 0;

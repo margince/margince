@@ -16,7 +16,6 @@ type AiUsage = components["schemas"]["AiUsage"];
 type UsageTask = AiUsage["days"][number]["tasks"][number];
 type UsageDay = AiUsage["days"][number];
 
-/** One line of the spend table: a task's total, or one tier under a task run on several. */
 export type SpendRow = Readonly<{
   key: string;
   task: string;
@@ -227,7 +226,6 @@ export function SpendByTask({
   );
 }
 
-// Diagnostic, so it waits behind its own summary.
 export function CallsByDay({ days }: Readonly<{ days: readonly UsageDay[] }>) {
   const t = useT();
   const { locale } = useLocale();

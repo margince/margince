@@ -61,7 +61,7 @@ export function DataTable<Row>({
       stickyFirst={stickyFirst}
       className={fold ? "table-scroll-fold" : undefined}
     >
-      <table className="table" role={role("table")}>
+      <table className="table" role={role("table")} aria-label={label}>
         <thead role={role("rowgroup")}>
           <tr role={role("row")}>
             {columns.map((column) => (
@@ -132,24 +132,19 @@ export function DataTable<Row>({
   );
 }
 
-/**
- * A row that opens in place. With `render`, what it opens is a full-width row
- * under it; without, the caller's own cells read the open keys and `controls`
- * names the element they open. A chevron at the row's end toggles it, and so
- * does a press anywhere else on the row.
- */
+/** A row that opens in place: under it with `render`, or in its own cells by `controls`. */
 export type DataTableDetail<Row> = Readonly<{
-  /** The toggle column's heading: read, never drawn. */
+  /** The chevron column's heading: read, never drawn. */
   header: string;
-  /** The toggle's name. Name the row: a page of rows offers one toggle each. */
+  /** The chevron's name. Name the row: a page of rows offers one chevron each. */
   toggleLabel: (row: Row) => string;
   render?: (row: Row) => ReactNode;
-  /** A row with nothing to open draws no toggle and ignores a press. */
+  /** A row with nothing to open draws no chevron and ignores a press. */
   has?: (row: Row) => boolean;
   /** The open rows' keys, held by the caller together with `onToggle`. */
   expanded?: ReadonlySet<string>;
   onToggle?: (key: string) => void;
-  /** Without `render`: the id of what the toggle opens inside the row. */
+  /** Without `render`: the id of what the chevron opens inside the row. */
   controls?: (row: Row) => string;
 }>;
 

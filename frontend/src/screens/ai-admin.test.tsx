@@ -439,7 +439,7 @@ it("the task table says decision model first, and why another feature skips it",
   );
   const first = await openTaskDetails(user, "Classify correspondence");
   expect(first).toHaveTextContent(
-    "Decision model firstjev_compatiblejev-classify",
+    "Decision model firstJev-compatiblejev-classify",
   );
   // A feature the lane does not serve says why, in its own details.
   expect(await openTaskDetails(user, "Triage a site")).toHaveTextContent(

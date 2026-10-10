@@ -79,7 +79,6 @@ const MODELS = {
       cache_write_per_mtok: "0",
       effective_date: "2026-07-01",
     },
-    // The built-in test adapter's row, which the sheet leaves out.
     {
       provider: "fake",
       model_id: "",

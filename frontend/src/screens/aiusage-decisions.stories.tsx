@@ -22,7 +22,6 @@ const DECISIONS: components["schemas"]["AiDecisionSummary"][] = [
   { task: "capture_classify", asked: 3, decided: 3, fallbacks: {} },
 ];
 
-// In a pane, as the usage card stands it: the table bleeds to the pane's edge.
 const meta: Meta<typeof DecisionSummary> = {
   title: "Settings/AI/AI usage/Decision model",
   component: DecisionSummary,

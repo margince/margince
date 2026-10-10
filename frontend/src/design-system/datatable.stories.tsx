@@ -541,8 +541,6 @@ const RUNS: DemoRun[] = [
   },
 ];
 
-// `detail`: each row opens a full-width row under itself, from its trailing
-// chevron or a press anywhere else on the row.
 function RunsPanel() {
   return (
     <Panel title="Rule runs">

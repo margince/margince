@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* Settings → AI → the per-call trace. */
-
 /* The expanded call's detail card. Every block in it is a bare element under
  * the preflight reset, so the interval rides on the card, at `.form-stack`'s
  * own step, whichever of its payload branches renders. */

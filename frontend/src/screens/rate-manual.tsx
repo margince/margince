@@ -345,7 +345,6 @@ function inlineFrame(fields: ReactNode, actions: ReactNode) {
   );
 }
 
-/** Whether a vendor carries prices: every adapter but the built-in test one. */
 export function isPricedProvider(provider: string): boolean {
   return provider !== "fake";
 }

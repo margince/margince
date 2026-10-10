@@ -439,8 +439,6 @@ function CallLog({
   );
 }
 
-// The toggle says what it opens and where, and the row under it spans the
-// table, so a detail is never squeezed into one column.
 it("opens a row's detail under it, from its toggle or a press anywhere on the row", async () => {
   const user = userEvent.setup();
   render(<CallLog />);
@@ -494,8 +492,6 @@ it("gives a row with nothing to open no toggle and no pointer", async () => {
   expect(screen.queryByText("One attempt")).toBeNull();
 });
 
-// A row whose own cells open, as a clamped description does, draws no row
-// under it: the toggle names the element in the row instead.
 it("points the toggle at the caller's element when nothing opens under the row", () => {
   render(
     <CallLog
@@ -516,4 +512,17 @@ it("keeps a folded row's toggle at the end of its first line", () => {
       .getByRole("columnheader", { name: "Detail" })
       .querySelector(".sr-only"),
   ).not.toBeNull();
+});
+
+it("names the table itself, whether or not its box scrolls", () => {
+  stubBoxWidths(654, 654);
+  render(
+    <DataTable
+      label="Products"
+      columns={PRODUCT_COLUMNS}
+      rows={PRODUCT_ROWS}
+      rowKey={(row) => row.name}
+    />,
+  );
+  expect(screen.getByRole("table", { name: "Products" })).toBeTruthy();
 });

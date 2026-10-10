@@ -346,7 +346,6 @@ export const BrokerModelsAtSettingsWidth: Story = {
   },
 };
 
-// The same fixture at 390px, folded.
 export const BrokerModelsPhone: Story = {
   ...BrokerModelsAtSettingsWidth,
   globals: { viewport: { value: "phone" } },

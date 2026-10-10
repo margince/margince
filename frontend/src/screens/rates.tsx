@@ -398,7 +398,6 @@ export function ModelCostsCard() {
   );
 }
 
-// One table per vendor under its name, so the model column carries ids alone.
 function ModelPriceGroups({
   rows,
 }: Readonly<{ rows: readonly AiModelRate[] }>) {

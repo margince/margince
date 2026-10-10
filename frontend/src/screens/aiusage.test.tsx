@@ -138,7 +138,6 @@ it("shows estimated cost when present independently of the current allowance ban
   expect(note.textContent).toContain("€1.23");
 });
 
-// Figures stack into columns a reader runs an eye down, headings included.
 it("sets every figure against the end of its column", async () => {
   mount({
     budget: { ...budget, currency: "EUR" },
@@ -179,8 +178,6 @@ it("sets every figure against the end of its column", async () => {
   ).not.toContain("datatable-end");
 });
 
-// A task run on one tier is one line naming its tier; a task run on several
-// is its total, with a line per tier under it, so no task name repeats.
 it("groups the spend by task, with a line per tier only where a task ran on several", async () => {
   const line = (task: string, tier: string, calls: number) => ({
     task,

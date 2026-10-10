@@ -84,8 +84,6 @@ export const DaysOpen: Story = {
   },
 };
 
-// A task run on two tiers is its total with a line per tier under it; a task
-// run on one names its tier under its name.
 const grouped = [
   { ...task, cost_est_minor: 312 },
   { ...task, tier: "premium", calls: 3, tokens_in: 9400, cost_est_minor: 1890 },
