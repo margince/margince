@@ -152,6 +152,8 @@ func TestTheRoleEditorsRefusalsOverHTTP(t *testing.T) {
 	}{
 		{"a create body of the wrong shape", "POST", "/v1/roles", map[string]any{"copy_from": 7, "name": "X"}, nil, http.StatusBadRequest, ""},
 		{"a copy of an unknown role", "POST", "/v1/roles", map[string]any{"copy_from": "custom_nobody", "name": "Ghost"}, nil, http.StatusNotFound, "unknown_role"},
+		{"a create that names no role to copy", "POST", "/v1/roles", map[string]any{"name": "Ghost"}, nil, http.StatusUnprocessableEntity, "validation_error"},
+		{"an update that names no field", "PATCH", base, map[string]any{}, map[string]string{"If-Match": strconv.FormatInt(created.Version, 10)}, http.StatusUnprocessableEntity, "validation_error"},
 		{"an If-Match that is not a version", "PATCH", base, map[string]any{"name": "Y"}, map[string]string{"If-Match": "soon"}, http.StatusBadRequest, ""},
 		{"an update body of the wrong shape", "PATCH", base, map[string]any{"name": 7}, nil, http.StatusBadRequest, ""},
 		{"an update of an unknown role", "PATCH", "/v1/roles/custom_nobody", map[string]any{"name": "Y"}, nil, http.StatusNotFound, "unknown_role"},

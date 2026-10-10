@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -98,7 +99,13 @@ func (h Handlers) CreateRole(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	row, err := h.svc.CreateRole(r.Context(), actor, req.CopyFrom, req.Name)
+	copyFrom := strings.TrimSpace(req.CopyFrom)
+	if copyFrom == "" {
+		httperr.Write(w, r, httperr.Validation("copy_from", "required",
+			"a new role is a copy: name the role to copy in copy_from"))
+		return
+	}
+	row, err := h.svc.CreateRole(r.Context(), actor, copyFrom, req.Name)
 	if err != nil {
 		httperr.Write(w, r, roleEditRefusal(unknownRoleRefusal(err)))
 		return
@@ -118,6 +125,10 @@ func (h Handlers) UpdateRole(w http.ResponseWriter, r *http.Request, key string,
 	}
 	var req crmcontracts.UpdateRoleRequest
 	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := httperr.RequireAnyField(r); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	change := RoleChange{Name: req.Name}

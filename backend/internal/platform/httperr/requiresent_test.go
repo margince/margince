@@ -27,3 +27,20 @@ func TestRequireSentTellsAnOmittedKeyFromANull(t *testing.T) {
 		}
 	}
 }
+
+func TestRequireAnyFieldRefusesOnlyAnEmptyObject(t *testing.T) {
+	for body, refused := range map[string]bool{
+		`{}`:              true,
+		`{"a":null}`:      false,
+		`{"a":1,"b":"x"}`: false,
+	} {
+		r := httptest.NewRequest("PATCH", "/v1/things/1", strings.NewReader(body))
+		var into map[string]any
+		if !Decode(httptest.NewRecorder(), r, &into) {
+			t.Fatalf("%s: decode refused", body)
+		}
+		if err := RequireAnyField(r); (err != nil) != refused {
+			t.Errorf("%s: RequireAnyField = %v, want refused=%v", body, err, refused)
+		}
+	}
+}
