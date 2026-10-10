@@ -559,7 +559,7 @@ function ShareScreenBody({
     },
   });
 
-  const [revoking, setRevoking] = useState<RecordGrant | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const grantErrorMessage = grant.isError
     ? shareRefusalMessage(grant.error, t)
@@ -837,7 +837,7 @@ function ShareScreenBody({
                   </div>
                   <Button
                     variant="danger"
-                    onClick={() => setRevoking(g)}
+                    onClick={() => setRevokingId(g.id)}
                     data-testid="revoke-grant"
                   >
                     {t("share.revoke")}
@@ -850,9 +850,9 @@ function ShareScreenBody({
       </Panel>
 
       <RevokeGrantDialog
-        grant={revoking}
+        grant={grantsQuery.data?.find((g) => g.id === revokingId) ?? null}
         grantsKey={grantsKey}
-        onClose={() => setRevoking(null)}
+        onClose={() => setRevokingId(null)}
         returnFocusTo={returnFocusToSubject}
       />
 

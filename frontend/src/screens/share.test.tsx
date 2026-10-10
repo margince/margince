@@ -516,6 +516,38 @@ describe("ShareScreen", () => {
     await waitFor(() => expect(listReads).toBeGreaterThan(readsBefore));
   });
 
+  it("a revoke confirmed again after version_skew carries the version the list re-read", async () => {
+    const ifMatches: (string | null)[] = [];
+    let refreshed = false;
+    installBaseFetch({
+      "/record-grants/g-1": (request) => {
+        ifMatches.push(request.headers.get("If-Match"));
+        if (ifMatches.length === 1) {
+          refreshed = true;
+          return jsonResponse(
+            { title: "Conflict", status: 409, code: "version_skew" },
+            409,
+          );
+        }
+        return new Response(null, { status: 204 });
+      },
+      "/record-grants": () =>
+        jsonResponse({
+          data: [{ ...existingGrant, version: refreshed ? 2 : 1 }],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    const dialog = await confirmRevoke();
+    await within(dialog).findByText(/changed this access after you opened it/);
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Revoke" }),
+    );
+
+    await waitFor(() => expect(ifMatches).toEqual(["1", "2"]));
+  });
+
   it("renders honest copy (not a raw string) for a 403 approval_required grant response", async () => {
     installBaseFetch({
       "/record-grants": (request) => {
