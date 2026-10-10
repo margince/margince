@@ -153,6 +153,7 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 		in.NextStepDueAt = &req.NextStepDueAt.Time
 	}
 	in.ServedSegments = req.ServedSegments
+	in.Cleared = httperr.ClearedFields(r)
 	if req.GateMetrics != nil {
 		if staff, ok := (*req.GateMetrics)["certified_staff"].(float64); ok {
 			v, err := gateMetricInt16(staff, metricCertifiedStaff, 0, certifiedStaffCeiling)

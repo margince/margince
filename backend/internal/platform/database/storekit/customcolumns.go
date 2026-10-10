@@ -269,8 +269,11 @@ func SQLValue(c fieldcatalog.Column, v any) (any, bool) {
 	case fieldcatalog.TypeNumber:
 		return sqlNumber(v)
 	case fieldcatalog.TypeDate:
+		// The column parses any date text Postgres knows ("tomorrow",
+		// "infinity", day-first or month-first by locale), so only the ISO
+		// form the contract declares is bound.
 		s, ok := v.(string)
-		if !ok {
+		if !ok || !parsesAsKind(fieldcatalog.TypeDate, s) {
 			return nil, false
 		}
 		return s, true

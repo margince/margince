@@ -97,10 +97,15 @@ export function NewDealAction({
     { key: "expected_close_date", label: "create.expectedClose", type: "date" },
   ];
 
-  const createDeal = async (values: Record<string, string>) => {
+  const createDeal = async (
+    values: Record<string, string>,
+    _rows: unknown,
+    idempotencyKey: string,
+  ) => {
     const amount = values.amount?.trim();
     return unwrap(
       await api.POST("/deals", {
+        params: { header: { "Idempotency-Key": idempotencyKey } },
         body: {
           name: values.name.trim(),
           pipeline_id: pipeline.id,

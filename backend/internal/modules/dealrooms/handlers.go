@@ -160,6 +160,10 @@ func (h Handlers) SetDealRoomExpiry(w http.ResponseWriter, r *http.Request, id c
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	if err := httperr.RequireSent(r, "expires_at", "send expires_at: a time, or null to remove the expiry"); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	room, err := h.store.SetExpiry(r.Context(), pathID(id), req.ExpiresAt, ifVersion)
 	if err != nil {
 		httperr.Write(w, r, err)

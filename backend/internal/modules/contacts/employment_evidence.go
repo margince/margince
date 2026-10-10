@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // An episode retains the precision actually purchased. The first of a month
@@ -85,7 +86,7 @@ func employmentEpisodes(kind string, raw []byte) ([]employmentEvidence, error) {
 func preciseEmploymentDate(raw string) (string, *time.Time) {
 	for _, layout := range []string{time.DateOnly, "2006-01", time.RFC3339} {
 		date, err := time.Parse(layout, raw)
-		if err != nil {
+		if err != nil || !datasource.InstantInRange(date) {
 			continue
 		}
 		if layout == "2006-01" {

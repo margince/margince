@@ -30,10 +30,12 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 )
 
 // accountReachFiles are the two files that spell the walk.
@@ -81,6 +83,87 @@ func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 			}
 		}
 	}
+}
+
+// last_activity_of_company is a third spelling of the employment arm, in SQL
+// because a trigger folds it. Its bound is the walk's own rendered text, so a
+// company's stored clock and its timeline count the same mail.
+func TestTheStoredCompanyClockBoundsEmploymentLikeTheWalk(t *testing.T) {
+	t.Parallel()
+	body, ok := currentRecencyBodies(t)["last_activity_of_company"]
+	if !ok {
+		t.Fatal("no migration defines last_activity_of_company, so this gate checks nothing")
+	}
+	arms, unbounded := employmentArmsWithoutTheBound(body)
+	if arms == 0 {
+		t.Error("last_activity_of_company has no employment arm the gate can find, so it checks nothing")
+	}
+	for _, alias := range unbounded {
+		t.Errorf("last_activity_of_company's employment arm on %s does not carry %q, so mail from a "+
+			"contact's previous job sets the clock of the employer they have now. Replace the "+
+			"function in a new migration with the bound's current text.",
+			alias, employment.InPlaceAtSQL(alias, "a.occurred_at"))
+	}
+}
+
+func TestTheClockBoundCensusSeesEveryEmploymentArm(t *testing.T) {
+	t.Parallel()
+	bound := employment.InPlaceAtSQL("r", "a.occurred_at")
+	cases := []struct {
+		name      string
+		body      string
+		arms      int
+		unbounded []string
+	}{
+		{"bounded", "SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND " + bound, 1, nil},
+		{
+			"second arm under another alias, unbounded",
+			"SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND " + bound +
+				"\n UNION ALL\n SELECT 1 FROM relationship emp WHERE emp.kind='employment'", 2,
+			[]string{"emp"},
+		},
+		{
+			"bound only in a comment",
+			"SELECT 1 FROM relationship r WHERE r . kind\n = 'employment' -- AND " + bound, 1,
+			[]string{"r"},
+		},
+		{
+			"bound only in a block comment",
+			"SELECT 1 FROM relationship r WHERE r.kind = 'employment' /* AND " + bound + " */", 1,
+			[]string{"r"},
+		},
+	}
+	for _, tc := range cases {
+		arms, unbounded := employmentArmsWithoutTheBound(tc.body)
+		if arms != tc.arms || strings.Join(unbounded, ",") != strings.Join(tc.unbounded, ",") {
+			t.Errorf("%s: found %d arms, unbounded %v; want %d, %v", tc.name, arms, unbounded, tc.arms, tc.unbounded)
+		}
+	}
+}
+
+var (
+	sqlBlockComment   = regexp.MustCompile(`(?s)/\*.*?\*/`)
+	sqlUnionAll       = regexp.MustCompile(`(?i)\bUNION\s+ALL\b`)
+	employmentKindArm = regexp.MustCompile(`(?i)\b(\w+)\s*\.\s*kind\s*=\s*'employment'`)
+)
+
+// employmentArmsWithoutTheBound counts the employment arms of a function body
+// and names the alias of each arm that lacks employment.InPlaceAtSQL. Comments
+// are dropped first, so a bound that is only mentioned does not count.
+func employmentArmsWithoutTheBound(body string) (int, []string) {
+	code := stripSQLComments(sqlBlockComment.ReplaceAllString(body, " "))
+	arms := 0
+	var unbounded []string
+	for _, part := range sqlUnionAll.Split(code, -1) {
+		flat := normalizeSQL(part)
+		for _, m := range employmentKindArm.FindAllStringSubmatch(flat, -1) {
+			arms++
+			if !strings.Contains(flat, normalizeSQL(employment.InPlaceAtSQL(m[1], "a.occurred_at"))) {
+				unbounded = append(unbounded, m[1])
+			}
+		}
+	}
+	return arms, unbounded
 }
 
 // constText answers the string literal a named package-level constant holds.

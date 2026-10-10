@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { useSinglePress } from "../design-system/presslatch";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { type SavedView, useSaveView } from "./savedviews.queries";
@@ -56,6 +57,7 @@ export function ManageViewsButton({
 function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
   const t = useT();
   const { rename, remove } = useSaveView();
+  const singlePress = useSinglePress(rename.isPending);
   const [mode, setMode] = useState<RowMode>(null);
   // The failure belongs to the row that asked, and is cleared by the next
   // question: a refusal left under another row would name the wrong view.
@@ -78,7 +80,7 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
           {mode?.id === view.id && mode.kind === "rename" ? (
             <form
               className="savedviews-manage-edit"
-              onSubmit={(event) => {
+              onSubmit={singlePress((event) => {
                 event.preventDefault();
                 const name = mode.name.trim();
                 if (name === "") {
@@ -88,7 +90,7 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
                   { id: view.id, name, version: mode.version },
                   { onSuccess: () => setMode(null) },
                 );
-              }}
+              })}
             >
               <Field label={t("views.name")}>
                 {(control) => (

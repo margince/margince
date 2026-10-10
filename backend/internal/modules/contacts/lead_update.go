@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -66,7 +67,7 @@ func (e *ScoreOverrideReasonRequiredError) Error() string {
 
 // FieldFault refuses a score override with no stated reason.
 func (e *ScoreOverrideReasonRequiredError) FieldFault() (field, code, message string) {
-	return "score_override_reason", codeRequired, e.Error()
+	return leadScoreOverrideReasonField, codeRequired, e.Error()
 }
 
 // leadScoreField names the lead's own score input. Its own constant, not the
@@ -74,6 +75,10 @@ func (e *ScoreOverrideReasonRequiredError) FieldFault() (field, code, message st
 // reasons, and borrowing one for the other ties this wire contract to a change
 // made for a different feature.
 const leadScoreField = "score"
+
+// leadScoreOverrideReasonField names the written reason that goes with a score
+// override on the wire.
+const leadScoreOverrideReasonField = "score_override_reason"
 
 // ScoreOverrideWithoutScoreError is the mirror of
 // ScoreOverrideReasonRequiredError: a reason arrived with no score to attach it
@@ -103,7 +108,7 @@ func (e *ScoreOverrideReasonEmptyError) Error() string {
 
 // FieldFault refuses a score-override reason that is present but blank.
 func (e *ScoreOverrideReasonEmptyError) FieldFault() (field, code, message string) {
-	return "score_override_reason", "min_length", e.Error()
+	return leadScoreOverrideReasonField, "min_length", e.Error()
 }
 
 // ScoreOverrideClearConflictError rejects a null score arriving together
@@ -235,8 +240,20 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := ensureLeadUpdateAuthority(ctx, tx, id, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	// The lock comes before the read, so the before image is what the write
+	// replaces. A recompute landing in between would otherwise move
+	// score_computed under a clear that already captured the old value.
+	lock, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	current, err := readLead(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	// Checked here and not only by the write: a patch that turns out empty
+	// returns early, and a stale If-Match must still answer 409 then.
+	if err := ensureLeadVersion(current, in.IfVersion); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	// A client-supplied reference to a row-scoped record is a read of it.
@@ -267,7 +284,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if p.Empty() {
 		return current, nil
 	}
-	if err := p.ApplyGuarded(ctx, tx, "lead", id.UUID, in.IfVersion); err != nil {
+	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		if mapped, ok := leadUniqueViolation(err, in.Email); ok {
 			return crmcontracts.Lead{}, mapped
 		}
@@ -330,7 +347,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 // resumes recompute.
 func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Patch, bool, error) {
 	p := storekit.NewPatch()
-	if err := storekit.ApplyClears(p, in.Clear, clearableLeadColumns(current)); err != nil {
+	clears, scoreNamed := withoutScoreOverrideClears(in.Clear)
+	in.ClearScoreOverride = in.ClearScoreOverride || scoreNamed
+	if err := storekit.ApplyClears(p, clears, clearableLeadColumns(current)); err != nil {
 		return nil, false, err
 	}
 	if in.FullName != nil {
@@ -402,64 +421,13 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 	return p, resumeRecompute, nil
 }
 
-// applyScoreOverride folds the §3.1 sticky-override rules into the patch
-// and reports whether the caller must resume recompute (an override was
-// cleared). Setting `score` establishes/refreshes an override — it
-// requires a non-empty reason and captures the machine value into
-// score_computed the first time. An explicit JSON null on score or the
-// reason clears the override. A non-empty reason with no score amends
-// the note on an override already in force; an empty-string reason is
-// invalid input (the clear gesture is null, not "").
-func applyScoreOverride(p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) (resumeRecompute bool, err error) {
-	overrideInForce := current.ScoreOverrideReason != nil
-
-	switch {
-	case in.Score != nil:
-		reason := ""
-		if in.ScoreOverrideReason != nil {
-			reason = strings.TrimSpace(*in.ScoreOverrideReason)
-		}
-		if reason == "" {
-			return false, &ScoreOverrideReasonRequiredError{}
-		}
-		p.Set("score", current.Score, *in.Score)
-		p.Set("score_override_reason", current.ScoreOverrideReason, reason)
-		// Retain the last machine value the first time an override takes
-		// hold; if one is already in force, score_computed already holds it
-		// and the recompute keeps it fresh — don't clobber it with a human
-		// number.
-		if !overrideInForce {
-			p.Set("score_computed", current.ScoreComputed, current.Score)
-		}
-		return false, nil
-
-	case in.ClearScoreOverride:
-		if in.ScoreOverrideReason != nil {
-			return false, &ScoreOverrideClearConflictError{}
-		}
-		if !overrideInForce {
-			return false, nil // no override to clear — a no-op
-		}
-		p.Set("score_override_reason", current.ScoreOverrideReason, nil)
-		// Resume: score tracks the retained machine value, then recompute
-		// refines it from current signals.
-		if current.ScoreComputed != nil {
-			p.Set("score", current.Score, *current.ScoreComputed)
-		}
-		p.Set("score_computed", current.ScoreComputed, nil)
-		return true, nil
-
-	case in.ScoreOverrideReason != nil:
-		if strings.TrimSpace(*in.ScoreOverrideReason) == "" {
-			return false, &ScoreOverrideReasonEmptyError{}
-		}
-		if !overrideInForce {
-			return false, &ScoreOverrideWithoutScoreError{}
-		}
-		p.Set("score_override_reason", current.ScoreOverrideReason, strings.TrimSpace(*in.ScoreOverrideReason))
-		return false, nil
+// ensureLeadVersion refuses a write whose If-Match names a version the locked
+// row no longer has. No If-Match means the caller asked for no version check.
+func ensureLeadVersion(current crmcontracts.Lead, ifVersion *int64) error {
+	if ifVersion == nil || (current.Version != nil && *current.Version == *ifVersion) {
+		return nil
 	}
-	return false, nil
+	return apperrors.ErrVersionSkew
 }
 
 func stampStatusSetBy(ctx context.Context, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {

@@ -162,6 +162,7 @@ export async function resolveDealProject(
   values: Record<string, string>,
   companyId: string | null,
   t: (key: MessageKey) => string,
+  idempotencyKey?: string,
 ): Promise<string | null> {
   const picked = values.project_id?.trim() ?? "";
   if (picked !== NEW_PROJECT) {
@@ -172,6 +173,7 @@ export async function resolveDealProject(
   }
   const data = unwrap(
     await api.POST("/projects", {
+      params: { header: { "Idempotency-Key": idempotencyKey } },
       body: {
         name: values.new_project_name?.trim() ?? "",
         company_id: companyId,

@@ -4742,7 +4742,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
        AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE d.company_id = cid
     UNION ALL
-    -- Filed against a contact it currently employs.
+    -- Filed against a contact it currently employs, sent while they worked there.
     SELECT max(a.occurred_at)
       FROM relationship r
       JOIN activity_link l ON l.contact_id = r.contact_id
@@ -4752,6 +4752,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
        AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE r.company_id = cid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
+       AND coalesce(r.started_at::timestamp AT TIME ZONE 'UTC', r.first_observed_at, a.occurred_at) <= a.occurred_at
   ) arms
 
 public.last_activity_of_contact(cid uuid) secdef=false cfg=- acl=- 

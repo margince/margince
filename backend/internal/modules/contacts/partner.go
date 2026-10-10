@@ -101,6 +101,9 @@ type UpsertPartnerInput struct {
 	NextStep          *string
 	NextStepDueAt     *time.Time
 	ServedSegments    *[]string
+	// Cleared names the fields the caller sent as an explicit null; a nil
+	// pointer above means "leave it alone" and cannot say "clear it".
+	Cleared []string
 	// The fit-override pair is store-seam only: the contract exposes
 	// partner_fit_score/…_override_reason read-only, so no handler maps
 	// them — the invariant is pinned here for the future fit engine.
@@ -187,6 +190,9 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return crmcontracts.Partner{}, err
 	}
+	if err := refuseUnclearablePartnerFields(in.Cleared); err != nil {
+		return crmcontracts.Partner{}, err
+	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Partner{}, err
@@ -207,6 +213,11 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 		if _, err := storekit.LockRow(ctx, tx, "company", in.CompanyID.UUID, storekit.LiveOnly); err != nil {
 			return err
 		}
+		cleared, err := clearsTheCallerMayMake(ctx, tx, in.Cleared)
+		if err != nil {
+			return err
+		}
+		in.Cleared = cleared
 		// Before the upsert and under the lock: the statement coalesces every
 		// absent field onto its current value, so what the request actually
 		// moved is only knowable by comparing against the standing row.
@@ -295,13 +306,13 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 		ON CONFLICT (company_id) DO UPDATE SET
 		  partner_role = EXCLUDED.partner_role,
 		  cert_status = coalesce($3, partner.cert_status),
-		  margin_tier = coalesce($4, partner.margin_tier),
-		  certified_staff = coalesce($5, partner.certified_staff),
-		  retention_rate = coalesce($6, partner.retention_rate),
+		  margin_tier = CASE WHEN 'margin_tier' = ANY($15) THEN NULL ELSE coalesce($4, partner.margin_tier) END,
+		  certified_staff = CASE WHEN 'gate_metrics' = ANY($15) THEN 0 ELSE coalesce($5, partner.certified_staff) END,
+		  retention_rate = CASE WHEN 'gate_metrics' = ANY($15) THEN NULL ELSE coalesce($6, partner.retention_rate) END,
 		  relationship_stage = coalesce($8, partner.relationship_stage),
-		  next_step = coalesce($9, partner.next_step),
-		  next_step_due_at = coalesce($10, partner.next_step_due_at),
-		  served_segments = coalesce($11, partner.served_segments),
+		  next_step = CASE WHEN 'next_step' = ANY($15) THEN NULL ELSE coalesce($9, partner.next_step) END,
+		  next_step_due_at = CASE WHEN 'next_step_due_at' = ANY($15) THEN NULL ELSE coalesce($10, partner.next_step_due_at) END,
+		  served_segments = CASE WHEN 'served_segments' = ANY($15) THEN NULL ELSE coalesce($11, partner.served_segments) END,
 		  partner_fit_score = $12,
 		  partner_fit_score_computed = $13,
 		  partner_fit_override_reason = $14,
@@ -310,7 +321,7 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 		in.CompanyID, in.PartnerRole, in.CertStatus, in.MarginTier,
 		in.CertifiedStaff, in.RetentionRate, capturedBy,
 		in.RelationshipStage, in.NextStep, in.NextStepDueAt, segments,
-		fit.Score, fit.Computed, fit.OverrideReason)
+		fit.Score, fit.Computed, fit.OverrideReason, in.Cleared)
 	return scanPartner(row)
 }
 

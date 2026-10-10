@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // recordImportTx records that THIS seat's mailbox delivered this message.
@@ -56,10 +57,11 @@ func recordImportTx(
 	//
 	// provider_received_at is the provider's own arrival time in THIS seat's
 	// mailbox (connector.NormalizedRecord.ProviderReceivedAt), NULL when the
-	// transport stated none. It is what proves the mail was already held before
-	// the seat connected the mailbox (contacts.receivedBeforeConnectedTx).
+	// transport stated none or stated one outside the storable range. It is
+	// what proves the mail was already held before the seat connected the
+	// mailbox (contacts.receivedBeforeConnectedTx).
 	var received *time.Time
-	if !receivedAt.IsZero() {
+	if !receivedAt.IsZero() && datasource.InstantInRange(receivedAt) {
 		received = &receivedAt
 	}
 	if _, err := tx.Exec(ctx, `

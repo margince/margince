@@ -59,3 +59,45 @@ func TestTheSinkRecordsWhenTheProviderSaysTheMessageArrived(t *testing.T) {
 		t.Errorf("the import row says the message arrived at %v, want the provider's %v (not the Date header)", got, arrived)
 	}
 }
+
+// A Date line and an arrival time outside the storable range are times no
+// clock wrote. The activity falls back to the capture time, as for a message
+// with no Date at all. The import row records no arrival, as for a transport
+// that stated none. Stored as sent, either one fails every later read that
+// encodes it in a zone east of UTC.
+func TestTheSinkDropsATimestampNoZoneCanRender(t *testing.T) {
+	e := integration.Setup(t)
+	const addr = "rep1@ws.example"
+	raw := []byte(strings.Join([]string{
+		"From: Pat Counterparty <pat@counterparty.test>",
+		"To: " + addr,
+		"Subject: Aus der Zukunft",
+		"Date: Fri, 31 Dec 9999 23:00:00 +0000",
+		"Message-ID: <far-date@counterparty.test>",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"Anbei.",
+		"",
+	}, "\r\n"))
+	claimOwnAddress(t, e, e.Rep1, addr)
+	parsed, err := mailmap.Parse(raw, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := parsed.ToRecord("gmail", raw)
+	rec.ProviderReceivedAt = time.Date(9999, 12, 31, 12, 0, 0, 0, time.UTC)
+	capturedFrom := time.Now().UTC().Add(-time.Minute)
+	ref, err := capture.NewSink(e.DB()).Upsert(connectorCtx(e, "gmail", e.Rep1), rec)
+	if err != nil {
+		t.Fatalf("capturing the message: %v", err)
+	}
+
+	occurred := scalar[time.Time](t, e, `SELECT occurred_at FROM activity WHERE id = $1`, ref.ID)
+	if occurred.Before(capturedFrom) || occurred.After(time.Now().UTC().Add(time.Minute)) {
+		t.Errorf("the activity occurred at %v, want the capture time: the Date line names no instant a zone can render", occurred)
+	}
+	if noArrival := scalar[bool](t, e, `
+		SELECT provider_received_at IS NULL FROM capture_import WHERE activity_id = $1 AND user_id = $2`, ref.ID, e.Rep1); !noArrival {
+		t.Error("the import row stored an arrival time no zone can render, want none")
+	}
+}

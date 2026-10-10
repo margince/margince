@@ -448,6 +448,16 @@ func splitUnquoted(s string, sep byte) []string {
 	return parts
 }
 
+// RequireSent refuses a body that left out a field the contract makes required
+// but nullable. A null there clears the value and a missing key must not. Both
+// decode to a nil pointer, so only the raw body tells them apart.
+func RequireSent(r *http.Request, field, message string) error {
+	if _, sent := PresentField(r, field); !sent {
+		return Validation(field, "required", message)
+	}
+	return nil
+}
+
 // ClearedFields names the top-level keys the body sent as an explicit null.
 //
 // A nullable contract field decodes to a nil pointer whether the caller sent

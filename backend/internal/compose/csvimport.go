@@ -130,6 +130,9 @@ func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 func (h importHandlers) profileAndStore(
 	ctx context.Context, object string, body []byte,
 ) (crmcontracts.ImportSourceProfile, error) {
+	if err := migration.CheckUTF8(body); err != nil {
+		return crmcontracts.ImportSourceProfile{}, importProblem(err)
+	}
 	profile, err := migration.ProfileCSV(bytes.NewReader(body), migration.ProfileRowLimit)
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, importProblem(err)

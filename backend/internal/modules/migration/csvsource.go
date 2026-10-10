@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // The objects a delimited file may carry.
@@ -163,6 +164,15 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 	return out, nil
 }
 
+// identityOf is the spelling a row's key travels under: an email folds as the
+// contact store keys it, any other key is kept.
+func (s *CSVSource) identityOf(external string) string {
+	if s.mapping[s.sourceKey] == "email" {
+		return correspondence.Fold(external)
+	}
+	return external
+}
+
 // rowFrom builds one Row from one record, or reports why it cannot. A row with
 // no value in the source-key column can neither be recognized on a re-run nor
 // found by an undo, so it is disclosed rather than landed under an invented id.
@@ -187,7 +197,7 @@ func (s *CSVSource) rowFrom(line int, record []string, index map[string]int) (Ro
 		s.skip(line, fmt.Sprintf("the %q column is empty, so this row cannot be identified for re-import or undo", s.sourceKey))
 		return Row{}, false
 	}
-	return Row{ExternalID: external, Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
+	return Row{ExternalID: s.identityOf(external), Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
 }
 
 func (s *CSVSource) skip(line int, reason string) {

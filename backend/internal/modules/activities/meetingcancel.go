@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // auditFieldMeetingStatus is the audit image's key for the column this writes.
@@ -198,11 +199,11 @@ func writeMeetingCancellationTx(
 	// travels as its idempotency key, so a calendar resynced twice records one
 	// cancellation.
 	scheduledStart := &at
-	if at.IsZero() {
-		// An event whose start we could not read. The transition is still
-		// recorded — the meeting was cancelled either way — with no scheduled
-		// start rather than with the zero instant, which would file it at the
-		// beginning of history and count as a booking due in year one.
+	if at.IsZero() || !datasource.InstantInRange(at) {
+		// An event whose start we could not read, or could not store. The
+		// transition is still recorded, since the meeting was cancelled either
+		// way. It carries no scheduled start: the zero instant would file it at
+		// the beginning of history and count as a booking due in year one.
 		scheduledStart = nil
 	}
 	return recordMeetingTransition(ctx, tx, meetingTransition{

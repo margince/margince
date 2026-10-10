@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
+import { useIdempotencyKey } from "../api/idempotencykey";
 import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
@@ -19,6 +20,7 @@ import {
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { useSinglePress } from "../design-system/presslatch";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -33,7 +35,7 @@ import {
   KINDS_WITH_A_CONTACT,
 } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
-import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
+import { loggedActivityKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
 import { unwrap, useMe } from "./common";
 import "./logactivity.css";
@@ -161,6 +163,7 @@ export function LogActivityForm({
   const transcript = draft.kind === "meeting" && draft.asTranscript;
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
+  const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
   const log = useMutation({
     // Keyed on entityId, the record this form is open on, not the created
     // activity's own id: the reader wants the name of what the activity is
@@ -175,9 +178,11 @@ export function LogActivityForm({
       draft: ActivityDraft;
       zone: string;
       attendee: RecordPickerCandidate | null;
+      idempotencyKey: string;
     }) => {
       return unwrap(
         await api.POST("/activities", {
+          params: { header: { "Idempotency-Key": input.idempotencyKey } },
           body: activityRequestBody(
             input.draft,
             entityType,
@@ -190,31 +195,23 @@ export function LogActivityForm({
       );
     },
     onSuccess: (_data, input) => {
-      const keys =
-        input.draft.kind === "task"
-          ? taskWriteKeys(entityType, entityId)
-          : entityTimelineKeys(entityType, entityId);
-      for (const queryKey of keys) {
+      for (const queryKey of loggedActivityKeys(
+        input.draft.kind,
+        entityType,
+        entityId,
+        input.attendee?.id,
+      )) {
         queryClient.invalidateQueries({ queryKey });
-      }
-      // The attendee's OWN timeline too. The activity is filed against the
-      // contact, so the company screen this form sits on reaches it through the
-      // employer walk while the contact's page holds it directly — and a reader
-      // who logs a meeting here and opens the contact expects to find it.
-      if (input.attendee) {
-        for (const queryKey of entityTimelineKeys(
-          "contact",
-          input.attendee.id,
-        )) {
-          queryClient.invalidateQueries({ queryKey });
-        }
       }
       setDraft(freshDraft(input.zone));
       setAttendee(null);
+      renewKey();
       onLogged?.();
     },
   });
 
+  // Enter in a field submits past the Save button, so the form is latched too.
+  const singlePress = useSinglePress(log.isPending);
   const setField = (patch: Partial<ActivityDraft>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
@@ -241,10 +238,10 @@ export function LogActivityForm({
     <form
       id={formId}
       className="form-stack"
-      onSubmit={(event) => {
+      onSubmit={singlePress((event) => {
         event.preventDefault();
-        log.mutate({ draft, zone: recordZone, attendee });
-      }}
+        log.mutate({ draft, zone: recordZone, attendee, idempotencyKey });
+      })}
     >
       <div className="form-row">
         <Field label={t("log.kind")}>

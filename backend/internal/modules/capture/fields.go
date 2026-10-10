@@ -3,7 +3,10 @@
 
 package capture
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 // The typed Fields payloads a NormalizedRecord carries (the port keeps
 // Fields as any so the seam stays leaf-pure; the sink switches on these
@@ -62,4 +65,14 @@ type LeadFields struct {
 	// that contact's "owes a reply" lane and start their first-response clock,
 	// for somebody who has never written to anyone.
 	Unowned bool
+}
+
+// StorableDuration is seconds as activity.duration_seconds can hold it, or nil
+// when it is negative or past that int4 column. An event a sender wrote to run
+// for a century would otherwise fail the insert, and with it the whole sync.
+func StorableDuration(seconds *int) *int {
+	if seconds == nil || *seconds < 0 || *seconds > math.MaxInt32 {
+		return nil
+	}
+	return seconds
 }

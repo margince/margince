@@ -137,7 +137,7 @@ export function Switch({
   // them their write is going through and that they were never allowed to make
   // it, in the same row.
   const busy = pending === true && disabled !== true && !refused;
-  const singlePress = useSinglePress();
+  const singlePress = useSinglePress(pending);
 
   return (
     <div className="switchrow">
