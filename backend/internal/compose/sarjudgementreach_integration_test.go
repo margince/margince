@@ -5,9 +5,9 @@
 
 package compose
 
-// The access export's conclusions about a subject's messages, for the messages
-// no activity_link ties to them: a meeting they only attended, and a reply
-// filed to their employer alone.
+// What the access export concludes about messages no activity_link ties to the
+// subject. One is a meeting they only attended, one a reply filed to their
+// employer alone.
 
 import (
 	"testing"

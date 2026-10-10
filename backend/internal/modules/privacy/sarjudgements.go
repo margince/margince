@@ -16,18 +16,13 @@ package privacy
 
 import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
-// sarSubjectMessages is every activity a judgement about the subject can rest
-// on, and the one set all three sections below read from: linked to them, a
-// conversation they took part in (by contact, address or chat account), or
-// mail that named one of their addresses. A link alone misses the ordinary
-// shapes since ADR-0072 — a sender linked to nobody, a message filed only to
-// their company or deal, a second recipient on a thread — and the export would
-// then report itself complete while missing what we concluded about that mail.
+// sarSubjectMessages is the one set of activities all three sections read
+// from. It holds what links to the subject, what they took part in, and mail
+// that named one of their addresses. A link alone misses a message filed only
+// to their company or deal, or to nobody at all.
 //
-// Unlike the erasure selectors it keeps rows shared with another contact and
-// rows under a legal hold: those exclusions protect what erasure must not
-// destroy, and Art. 15 owes the subject access to both. $1 is the contact; $2
-// the subject's addresses, already lowercased by the contact_email CHECK.
+// It keeps rows shared with another contact or under a legal hold. Erasure
+// skips those to protect them; Art. 15 still owes the subject access to them.
 const sarSubjectMessages = `
 	SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1
 	UNION
