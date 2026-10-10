@@ -707,9 +707,8 @@ describe("filter menu", () => {
 });
 
 describe("a chip with an async search source", () => {
-  function chipWithSearch(
-    search: Extract<ListChip, { appliedName: unknown }>["search"],
-  ): readonly ListChip[] {
+  type SearchFn = Extract<ListChip, { appliedName: unknown }>["search"];
+  function chipWithSearch(search: SearchFn): readonly ListChip[] {
     return [
       {
         key: "company",
@@ -884,11 +883,12 @@ describe("views", () => {
   });
 });
 
-// A list screen is a table and nothing else, so its name belongs in the header
-// that already carries the tabs and the count, not on a line above the card.
-// What the tests hold is the ARITHMETIC of headings: exactly one h1 when a
-// title is given and none otherwise — the shell prints the heading for every
-// screen that passes none, and a surface drawing its own would name them twice.
+// A list screen is a table and nothing else, so the page's own name belongs in
+// the header that already carries the tabs and the count rather than on a line
+// of its own above the card. What the tests hold is the ARITHMETIC of headings:
+// exactly one h1 when a title is given, and none at all when it is not — the
+// shell prints the heading for every screen that does not pass one, and a
+// surface that drew its own unconditionally would name those pages twice.
 describe("the page's name in the header", () => {
   it("names the page in the header's own level-1 heading", () => {
     const { container } = render(

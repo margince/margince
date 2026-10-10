@@ -5,8 +5,8 @@ import { afterEach, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { type ListChip, ListSurface } from "./listsurface";
 
-// A searched chip has no options to look its value up in, so a value that
-// arrived in an address is named by what the caller read back, never by its id.
+// A searched chip has no options to look its value up in. A value that arrived
+// in an address is named by what the caller read back, not by its id.
 
 afterEach(cleanup);
 
@@ -30,7 +30,9 @@ function render(appliedName: string | undefined) {
         title="Deals"
         chips={[chip(appliedName)]}
         chosen={{ company_id: COMPANY_ID }}
-      />
+      >
+        <p>rows</p>
+      </ListSurface>
     </LocaleProvider>,
   );
 }

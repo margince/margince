@@ -39,8 +39,8 @@ export function dealSurfaceChips({
   retiredSuffix: string;
 }>): FilterSpec[] {
   return [
-    // Open, won or lost: the dial the company page's lost figure and the
-    // pipeline report's open counts link in with, so it has to show and clear.
+    // The dial the company page's lost figure and the pipeline report's open
+    // counts link in with. It shows and clears like any other.
     {
       key: "status",
       label: "deals.filterStatus",

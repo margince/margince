@@ -43,7 +43,7 @@ export type ListChip = {
       ) => Promise<readonly { value: string; label: string }[]>;
       /**
        * What to call the value now applied when nobody picked it in this
-       * session — one that arrived in an address. A searched chip has no
+       * session, one that arrived in an address. A searched chip has no
        * `options` to look it up in, so the caller reads the name and hands it
        * over (`undefined` falls back to the id). The key is required beside
        * `search`, so a chip that can be searched always says how it is read back.

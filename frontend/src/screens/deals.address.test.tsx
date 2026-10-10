@@ -16,11 +16,10 @@ import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "./dealsaddress";
 
 // A list opened from an address shows the view the address names.
 //
-// The company page's lost-deal figure and the pipeline report's open-deal count
-// both write `#/deals?company_id=…&status=…`; a link opened in a new tab has
-// no picked label and no session behind it, so the list has to carry every dial
-// the address names and the chip has to name its record the way a picked one
-// does.
+// The company page's lost figure and the pipeline report's open count both
+// write `#/deals?company_id=…&status=…`. A link opened in a new tab has no
+// picked label, so the list sends every dial the address names. The chip names
+// its record as a picked one does.
 //
 // Kept out of deals.test.tsx, which is long past its size ceiling.
 
@@ -115,7 +114,6 @@ function stubBackend(seen: Seen) {
           id: "u-me",
           email: "me@acme.test",
           display_name: "Me",
-          timezone: "UTC",
           status: "active",
           is_agent: false,
         },
@@ -147,9 +145,9 @@ afterEach(() => {
   localStorage.clear();
 });
 
-// A link may only name a dial the list sends on. The sample value of each is
-// typed by the dial union, so a dial added to the links without a sample here
-// does not compile, and one the list ignores fails the case below.
+// A link may only name a dial the list sends on. Each sample is typed by the
+// dial union, so a new dial without one does not compile. A dial the list
+// ignores fails the case below.
 const SAMPLE: Record<DealDial, string> = {
   stage_id: "s1",
   company_id: "c-nw",
