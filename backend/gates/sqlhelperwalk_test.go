@@ -117,6 +117,7 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 // arguments hidden. `inside` says the one thing the empty string could not.
 type helperScope struct {
 	qualifier string          // the local name the owning module is bound to, "" if not imported
+	other     string          // the local name of a second package that defines the same helper, "" if none or not imported
 	inside    bool            // this file IS the owning package
 	names     map[string]bool // the exported helper(s) that ARE the definition
 }
@@ -145,7 +146,8 @@ func (h helperScope) isOneDefinition(call *ast.CallExpr) bool {
 		return h.inside && named(f.Name)
 	case *ast.SelectorExpr:
 		pkg, ok := f.X.(*ast.Ident)
-		return ok && h.qualifier != "" && pkg.Name == h.qualifier && named(f.Sel.Name)
+		return ok && named(f.Sel.Name) &&
+			((h.qualifier != "" && pkg.Name == h.qualifier) || (h.other != "" && pkg.Name == h.other))
 	}
 	return false
 }

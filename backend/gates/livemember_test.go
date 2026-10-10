@@ -15,11 +15,12 @@ package gates
 // it. That is the false-uniqueness pair CLAUDE.md names: the next author greps,
 // finds a comment claiming the question is settled, and stops looking.
 //
-// identity owns app_user, so identity.LiveMemberSQL is the definition. This
-// gate judges STATEMENTS that read app_user, in two arms:
+// workforce.LiveMemberSQL is the definition, in the shared kernel so that every
+// module can call it; identity.LiveMemberSQL delegates to it. This gate judges
+// STATEMENTS that read app_user, in two arms:
 //
 //   - A statement constraining app_user's liveness must not name BOTH halves
-//     itself — it calls the helper, or it is ratified as unable to.
+//     itself — it calls the helper.
 //   - A statement naming ONE half without the other is the half-spelling, and
 //     it is the actual regression: deactivation sets status and leaves
 //     archived_at NULL, so `archived_at IS NULL` alone goes on offering a
@@ -56,39 +57,14 @@ const (
 	// is the one way this census must not break — it would read a smaller tree,
 	// report PASS, and leave no failing assertion to notice.
 	activatableMemberHelper = "ActivatableMemberSQL"
-	liveMemberOwner         = "internal/modules/identity/livemember.go"
-	identityPath            = "github.com/margince/margince/backend/internal/modules/identity"
+	// liveMemberOwner holds the one literal spelling. identity's own livemember.go
+	// delegates to it so its callers keep one name, and passes its alias through,
+	// which is the single call the literal-alias test must not judge.
+	liveMemberOwner    = "internal/shared/kernel/workforce/livemember.go"
+	liveMemberDelegate = "internal/modules/identity/livemember.go"
+	identityPath       = "github.com/margince/margince/backend/internal/modules/identity"
+	workforcePath      = "github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
-
-// cannotReachIdentity ratifies the statements that spell the predicate out
-// because the module DAG forbids them the helper.
-//
-// identity owns app_user and a module never imports a sibling (ADR-0054 §3).
-// compose may reach identity and now does — company360 and the extension-job seam
-// both call the helper — but seven statements sit in sibling modules, and the
-// predicate would have to move tier before they could adopt it. That is an
-// architecture decision with an owner rather than something to smuggle in here.
-//
-// Each entry is a FILE and not a package, which is narrower but NOT narrow
-// enough to say what an earlier version of this comment said: a new
-// hand-spelled copy added to one of these files is excused along with the ones
-// already there. The key ratifies the file. Splitting it finer would mean
-// keying on statement text, which changes with every whitespace edit and
-// ratifies nothing stable.
-var cannotReachIdentity = gatekit.Waive(map[string]string{
-	"internal/modules/activities/audience.go":          "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/activities/assignee.go":          "activities cannot import identity (ADR-0054 §3); the predicate must move tier first. This one asks a second question of the same row — whether the seat is an agent — which identity.LiveMemberSQL does not answer and which the assignee refusal is entirely about",
-	"internal/modules/dealrooms/store_public.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/dealrooms/room_write.go":         "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
-	"internal/modules/capture/owneridentitystore.go":   "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/capture/registry_connections.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first. This one is the poll's own refusal to read a departed seat's mailbox — the SECOND lock on it, beside the cascade that disconnects the connection on deactivation (identity/capturewithdrawal.go). It is deliberately both: the cascade is what ends the connection, and this is what makes a row the cascade missed — one written before it existed, or flipped back by hand — stop being polled anyway. A connection outliving its seat means a former colleague's mail keeps arriving, which is the one thing an operator who deactivated them is entitled to assume stopped",
-	"internal/modules/contacts/counterpartyname.go":    "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/contacts/domainadmissionlist.go": "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first. It decides which unanswered domain questions the operator's list carries: one whose owner can no longer sign in has no queue left to reach, so liveness is exactly the question being asked",
-	"internal/modules/contacts/leadrouting.go":         "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/contacts/linkedinmatch.go":       "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/surface.go":             "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/search/graphedge.go":             "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
-})
 
 // deliberatelyNotLiveness ratifies the half-spellings that are not answering
 // the workforce question at all.
@@ -160,7 +136,6 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	t.Parallel()
 	// A ratification that stops matching covers a site that has moved or been
 	// fixed, and leaving it in place quietly re-exempts whatever takes its name.
-	defer cannotReachIdentity.AssertAllMatched(t)
 	defer deliberatelyNotLiveness.AssertAllMatched(t)
 	defer namesTheSeatRatherThanOffersIt.AssertAllMatched(t)
 
@@ -179,7 +154,8 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 		}
 		scope := helperScope{
 			qualifier: importAliasOf(file, identityPath),
-			inside:    file.Name != nil && file.Name.Name == "identity",
+			other:     importAliasOf(file, workforcePath),
+			inside:    file.Name != nil && (file.Name.Name == "identity" || file.Name.Name == "workforce"),
 			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true},
 		}
 		for _, decl := range file.Decls {
@@ -195,14 +171,8 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 					// a compliant statement never reaches here — and excusing
 					// one that does would make calling the definition a licence
 					// to write a second predicate beside it.
-					if cannotReachIdentity.Waived(t, slash) {
-						continue
-					}
 					copies = append(copies, fmt.Sprintf("%s: %s", path, firstLiveMemberLine(sql)))
 				case "activatable-copy":
-					if cannotReachIdentity.Waived(t, slash) {
-						continue
-					}
 					activatableCopies = append(activatableCopies, fmt.Sprintf("%s: %s", path, firstLiveMemberLine(sql)))
 				case "half":
 					if deliberatelyNotLiveness.Waived(t, slash) ||
@@ -227,13 +197,13 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	}
 	if len(copies) > 0 {
 		t.Errorf("these statements spell \"someone who still works here\" out themselves:\n  %s\n\n"+
-			"identity.%s is the definition and identity owns app_user. compose may call it; a sibling "+
-			"module may not (ADR-0054 §3) and is ratified by name in this gate with that reason.",
-			strings.Join(copies, "\n  "), liveMemberHelper)
+			"workforce.%s is the definition, in the shared kernel so any module may call it "+
+			"(identity.%s delegates to it).",
+			strings.Join(copies, "\n  "), liveMemberHelper, liveMemberHelper)
 	}
 	if len(activatableCopies) > 0 {
 		t.Errorf("these statements spell \"may still become active\" out themselves:\n  %s\n\n"+
-			"identity.%s is the definition. Do NOT answer this by adding status = 'active': that is "+
+			"workforce.%s is the definition. Do NOT answer this by adding status = 'active': that is "+
 			"the set which EXCLUDES an invited member, and it would refuse an invitation its own link "+
 			"was minted to redeem.",
 			strings.Join(activatableCopies, "\n  "), activatableMemberHelper)
@@ -260,7 +230,7 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 		// A test drives the function with its own table, which is the point of
 		// a table: livemember_test.go passes tc.alias and injects into nothing,
 		// because the string it builds is compared rather than executed.
-		if strings.HasSuffix(path, "_test.go") {
+		if strings.HasSuffix(path, "_test.go") || filepath.ToSlash(path) == liveMemberDelegate {
 			continue
 		}
 		file, err := gatekit.ParseFile(path, 0)
@@ -626,6 +596,8 @@ type liveMemberProbe struct {
 	//   "identity" package identity — the one place a bare call is the helper's
 	//   "noimport" package probe, NOT importing identity — most of the tree,
 	//              and where a bare helper name is somebody else's function
+	//   "workforce" package probe, importing the shared kernel's helper — how a
+	//              sibling module that cannot import identity reaches it
 	mode string
 	src  string
 }
@@ -716,6 +688,15 @@ func read() string {
 	{"a write whose SET makes someone live", "", "", `
 func read() string {
 	return ` + "`" + `UPDATE app_user SET status = 'active' WHERE id = $1` + "`" + `
+}`},
+	{"the shared kernel's helper, called from a sibling module", "", "workforce", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + workforce.LiveMemberSQL("")
+}`},
+	{"the shared helper called, and both halves hand-written beside it", "copy", "workforce", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + workforce.LiveMemberSQL("") +
+		` + "`" + ` AND status = 'active' AND archived_at IS NULL` + "`" + `
 }`},
 	{"the helper called, and both halves hand-written beside it", "copy", "", `
 func read() string {
@@ -831,6 +812,9 @@ func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
 				head, scope = "package identity\n", helperScope{inside: true, names: names}
 			case "noimport":
 				scope = helperScope{names: names}
+			case "workforce":
+				scope = helperScope{other: "workforce", names: names}
+				head += "import (\n\t\"fmt\"\n\n\t\"" + workforcePath + "\"\n)\n"
 			default:
 				head += "import (\n\t\"fmt\"\n\n\t\"" + identityPath + "\"\n)\n"
 			}

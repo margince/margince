@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // InteractionEdge is one colleague's relationship with one contact, as the
@@ -229,25 +230,13 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 // a Limit emits, so an edge whose last evidence is limited is re-folded away.
 const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
 
-// liveMemberJoin carries a COPY of identity.LiveMemberSQL, not a second
-// opinion. A module never imports a sibling (ADR-0054 §3) and identity owns
-// app_user, so this read cannot ask the owner what "still works here" means; it
-// is ratified by name in TestOnlyOneSpellingOfALiveMember, which fails if the
-// two ever disagree.
-//
-// Both halves are load-bearing: deactivation sets status and leaves
-// archived_at NULL, so filtering on archived_at alone goes on offering a
-// departed colleague as a route in.
-const liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND u.status = 'active' AND u.archived_at IS NULL`
-
-// laterMemberJoin is the same rule asked about a SECOND edge in one statement:
-// has any live colleague spoken to this contact since. It is spelled out rather
-// than derived from liveMemberJoin because TestOnlyOneSpellingOfALiveMember
-// reads source text, and a predicate assembled at runtime is a predicate that
-// census cannot see — under-recognition being the one way that gate must not
-// break. Both spellings are ratified there by name, and it fails if either
-// stops naming both halves.
-const laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND lu.status = 'active' AND lu.archived_at IS NULL`
+// liveMemberJoin and laterMemberJoin join app_user on the shared definition of
+// "still works here". laterMemberJoin asks it of a SECOND edge in one
+// statement: has any live colleague spoken to this contact since.
+var (
+	liveMemberJoin  = `JOIN app_user u ON u.id = e.user_id AND ` + workforce.LiveMemberSQL("u")
+	laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND ` + workforce.LiveMemberSQL("lu")
+)
 
 // EdgesForContact answers "who on our team knows this contact".
 //

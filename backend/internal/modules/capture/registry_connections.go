@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -438,11 +439,9 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 			-- But the cost of the join is one predicate and the cost of
 			-- missing a row is that a former colleague's mail keeps arriving,
 			-- so the poll asks the question too. Same condition
-			-- seatLoginAddressTx reads one file over, and spelled here for
-			-- the same reason it is spelled there: capture cannot import
-			-- identity (ADR-0054 §3).
+			-- seatLoginAddressTx reads one file over.
 			JOIN app_user u ON u.id = c.user_id
-			 AND u.status = 'active' AND u.archived_at IS NULL
+			 AND `+workforce.LiveMemberSQL("u")+`
 			WHERE c.provider = $1 AND c.status IN ('connected','error') AND c.archived_at IS NULL
 			  AND COALESCE(s.next_sync_at, now()) <= now()`, name)
 		if err != nil {
