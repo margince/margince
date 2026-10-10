@@ -123,7 +123,6 @@ import { DealRoomTab } from "./deal360/dealroomtab";
 import { DealWatchCard } from "./deal360/dealwatchcard";
 import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
-import { boardDealCount, stageCount } from "./dealboardcount";
 import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { currencyBeside } from "./dealcurrency";
@@ -1144,7 +1143,10 @@ export function buildColumns(
         weightedMinor: stageTotals?.weightedMinor ?? null,
         currency: stageTotals?.currency ?? null,
         deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
-        count: stageCount(stageTotals, stageDeals.length),
+        // The true count, not the loaded page's — falls back to the page
+        // count while totals are still loading, so the column shows SOME
+        // number rather than a misleading 0.
+        count: stageTotals?.count ?? stageDeals.length,
         // Withheld totals hide the sum for their own reason, which is NOT the
         // mixed-currency one the column says by default.
         sumHidden:
@@ -2226,10 +2228,7 @@ export function DealsScreen({
           view === "board" &&
           dealsQuery.data &&
           t("board.count", {
-            count: formatNumber(
-              boardDealCount(stages, loadedDeals, stageTotalsQuery.data),
-              locale,
-            ),
+            count: formatNumber(loadedDeals.length, locale),
           })
         }
         // The pipeline picker is screen state, not a filter, so switching it

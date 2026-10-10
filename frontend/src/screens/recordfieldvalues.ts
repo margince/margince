@@ -128,7 +128,10 @@ function moneyPart(
   if (!locale) return undefined;
   if (field.key === "currency") return "";
   if (field.type !== "number" || !value) return undefined;
-  const shown = formatMoney(toMinorUnits(Number(value), code), code, locale);
+  const minor = toMinorUnits(Number(value), code);
+  const shown = Number.isFinite(minor)
+    ? formatMoney(minor, code, locale)
+    : `${value} ${code}`;
   return partCount > 2 ? `${fieldLabel(field, t)}: ${shown}` : shown;
 }
 

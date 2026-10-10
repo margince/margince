@@ -72,6 +72,18 @@ describe("the pipeline stage table", () => {
 });
 
 describe("stagesOfEveryPipeline", () => {
+  it("tells apart a stage name two pipelines share", () => {
+    const names = stagesOfEveryPipeline([
+      {
+        name: "Sales",
+        is_default: true,
+        stages: [stage("a", "pl", "Qualify", 1)],
+      },
+      { name: "Partners", stages: [stage("b", "o", "Qualify", 1)] },
+    ]).map((entry) => entry.name);
+    expect(names).toEqual(["Sales · Qualify", "Partners · Qualify"]);
+  });
+
   it("lists the default pipeline first and keeps each ladder in order", () => {
     const stages = stagesOfEveryPipeline([
       {

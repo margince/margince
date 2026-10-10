@@ -36,6 +36,16 @@ describe("groupValue for a figure beside its currency", () => {
     expect(shown).toBe("Value: €1,234.50 · Expected ARR: €12.00");
   });
 
+  it("keeps a figure the currency cannot hold readable, with its code", () => {
+    const shown = groupValue(
+      valueGroup,
+      { amount: 1.234, currency: "EUR" },
+      t,
+      "en",
+    );
+    expect(shown).toBe("Value: 1.234 EUR");
+  });
+
   it("keeps the plain reading when no currency is known", () => {
     expect(groupValue(valueGroup, { amount: 5 }, t, "en")).toBe("Value: 5");
   });
