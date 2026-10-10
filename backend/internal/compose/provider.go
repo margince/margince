@@ -48,10 +48,7 @@ func NewProvider(pool *pgxpool.Pool) *Provider {
 }
 
 // NewProviderFor is NewProvider over a handle whose workspace is already
-// decided. A server resolves the installation's singleton, which is what
-// NewProvider does for it; a suite that seeds a second workspace on purpose has
-// no singleton to resolve and names the one it means instead (ADR-0091 §9
-// step 3).
+// decided: a suite that seeds a second workspace names the one it means.
 func NewProviderFor(db *database.DB) *Provider {
 	pool := db.Pool()
 	return &Provider{
