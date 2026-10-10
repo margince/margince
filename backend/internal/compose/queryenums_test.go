@@ -160,9 +160,9 @@ func TestTheTableHoldsEveryEnumQueryParameterTheContractDeclares(t *testing.T) {
 	}
 }
 
-// contractEnumQueryParameters walks crm.yaml as plain YAML, resolving local
-// $refs by hand, and returns "METHOD /v1/path ?name" for each query parameter
-// whose schema (or array items) is an enum of strings.
+// contractEnumQueryParameters walks crm.yaml as plain YAML and resolves local
+// $refs by hand. It returns "METHOD /v1/path ?name" for each query parameter
+// whose schema, or array items, is an enum of strings.
 func contractEnumQueryParameters(t *testing.T) map[string]bool {
 	t.Helper()
 	raw, err := os.ReadFile(contractFile)
