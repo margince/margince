@@ -366,9 +366,8 @@ func readProtection(
 // evidenceSources zips the four parallel aggregates into one list.
 //
 // All four are aggregated over the same rows in the same order, so they are
-// the same length — but a short one is read as far as it goes rather than
-// panicking, because a card citing fewer sources is a smaller answer while a
-// panic in an unattended proposer is a lane that stops.
+// the same length. A short one is still read only as far as it goes. A card
+// citing fewer sources is a smaller answer, and a panic stops the proposer.
 func evidenceSources(types []string, ids []ids.UUID, snippets []string, gone []bool) []EvidenceSource {
 	n := min(len(types), len(ids), len(snippets), len(gone))
 	if n == 0 {

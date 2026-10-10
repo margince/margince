@@ -6,8 +6,8 @@
 package deals
 
 // Stage evidence outlives the record it was read from. The source pair has no
-// foreign key, so a hard delete of a cited activity goes through, and every
-// reader of the ledger reports the source as gone instead of failing on it.
+// foreign key, so a hard delete of a cited activity goes through. Every reader
+// of the ledger then reports the source as gone instead of failing on it.
 
 import (
 	"testing"

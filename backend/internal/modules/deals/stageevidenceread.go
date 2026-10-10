@@ -32,10 +32,10 @@ const evidenceColumns = `id, deal_id, criterion_id, source_type, source_id,
 	version, ` + evidenceSourceGone
 
 // evidenceSourceGone answers whether the record an evidence row (aliased ev)
-// was read from has been hard-deleted. The source pair has no foreign key on
-// purpose: the observation outlives its source, so readers report the source
-// as gone instead of failing on it. A source type this does not know reads as
-// gone, because nothing can open it.
+// was read from has been hard-deleted. The source pair has no foreign key, by
+// decision. The observation outlives its source, and readers report the source
+// as gone instead of failing on it. An unknown source type reads as gone,
+// because nothing can open it.
 const evidenceSourceGone = `CASE ev.source_type
 	WHEN 'activity' THEN NOT EXISTS (SELECT 1 FROM activity a WHERE a.id = ev.source_id)
 	WHEN 'contract' THEN NOT EXISTS (SELECT 1 FROM contract k WHERE k.id = ev.source_id)

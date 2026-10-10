@@ -132,8 +132,8 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 // column per branch, a split costs a table of the width minus one, so the split wins
 // only where the table is narrow and the vocabulary short.
 //
-// DECIDE is the honest one: pairs where what the reference MEANS is unsettled, so
-// no ending can be picked. OUTLIVES is the one that stays, and its reason is the whole
+// DECIDE marks pairs where what the reference MEANS is unsettled, so no ending
+// can be picked yet. OUTLIVES is the one that stays, and its reason is the whole
 // entry.
 var pairResolution = gatekit.Waive(map[string]string{
 	"deal_stage_evidence.source_id (source_type)":                        "OUTLIVES — evidence is refuted, never deleted, and a stage decision rests on it, so a cascade would erase the reason for that decision and a RESTRICT would block a hard delete of the activity or contract. The observation outlives its source, and the deals readers report a deleted source as source_missing instead of failing on it",
