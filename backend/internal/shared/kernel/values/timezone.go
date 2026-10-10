@@ -14,17 +14,19 @@ import (
 // every host.
 type Timezone struct{ name string }
 
+const zoneField = "timezone"
+
 func ParseTimezone(name string) (Timezone, error) {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" || trimmed == "Local" {
 		return Timezone{}, &ParseError{
-			Field: "timezone", Code: "timezone_malformed",
+			Field: zoneField, Code: "timezone_malformed",
 			Message: "an IANA zone name is required (e.g. Europe/Berlin)",
 		}
 	}
 	if _, err := time.LoadLocation(trimmed); err != nil {
 		return Timezone{}, &ParseError{
-			Field: "timezone", Code: "timezone_unknown",
+			Field: zoneField, Code: "timezone_unknown",
 			Message: trimmed + " is not a known IANA zone",
 		}
 	}
@@ -40,7 +42,7 @@ func ZoneName(name string) error {
 	}
 	if zone.String() != name {
 		return &ParseError{
-			Field: "timezone", Code: "timezone_malformed",
+			Field: zoneField, Code: "timezone_malformed",
 			Message: "an IANA zone name has no spaces around it",
 		}
 	}
