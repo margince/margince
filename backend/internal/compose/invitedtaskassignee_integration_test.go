@@ -38,7 +38,8 @@ func TestANamedInvitedColleagueMayBeGivenANewTask(t *testing.T) {
 
 	assignee := openapi_types.UUID(e.Rep3)
 	status, task := postActivity(e.Admin(), t, e, crmcontracts.CreateActivityRequest{
-		Kind: "task", Subject: &subject, DueAt: &due, AssigneeId: &assignee,
+		Source: "manual",
+		Kind:   "task", Subject: &subject, DueAt: &due, AssigneeId: &assignee,
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("POST /activities for an invited colleague answered %d, want 201", status)
@@ -77,7 +78,8 @@ func TestANamedInvitedColleagueMayBeGivenANewTask(t *testing.T) {
 	// A suspended seat stays refused on the HTTP door too.
 	e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep3)
 	if status, _ := postActivity(e.Admin(), t, e, crmcontracts.CreateActivityRequest{
-		Kind: "task", Subject: &subject, DueAt: &due, AssigneeId: &assignee,
+		Source: "manual",
+		Kind:   "task", Subject: &subject, DueAt: &due, AssigneeId: &assignee,
 	}); status == http.StatusCreated {
 		t.Errorf("POST /activities for a suspended seat answered 201")
 	}

@@ -56,12 +56,17 @@ func (h Handlers) CreateSignal(w http.ResponseWriter, r *http.Request, _ crmcont
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	in := CreateSignalInput{
 		Kind:       string(req.Kind),
 		RawRef:     req.RawRef,
 		Summary:    req.Summary,
 		DetectedAt: req.DetectedAt,
-		Source:     req.Source,
+		Source:     source,
 	}
 	if req.SourceChannel != nil {
 		in.SourceChannel = string(*req.SourceChannel)

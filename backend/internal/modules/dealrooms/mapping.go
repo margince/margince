@@ -20,6 +20,11 @@ func createInput(req crmcontracts.CreateDealRoomRequest) (CreateRoomInput, error
 	if req.Title == "" {
 		return CreateRoomInput{}, &fieldError{field: columnTitle, code: codeRequired, msg: "title is required"}
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateRoomInput{}, err
+	}
+	req.Source = source
 	if err := provenance.Refuse("source", req.Source); err != nil {
 		return CreateRoomInput{}, err
 	}
@@ -60,6 +65,11 @@ func updateInput(req crmcontracts.UpdateDealRoomRequest, ifVersion *int64) Updat
 // inviteInput maps the invite request, defaulting the capability to the least
 // that lets somebody read the room.
 func inviteInput(req crmcontracts.InviteDealRoomParticipantRequest) (InviteInput, error) {
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return InviteInput{}, err
+	}
+	req.Source = source
 	if err := provenance.Refuse("source", req.Source); err != nil {
 		return InviteInput{}, err
 	}

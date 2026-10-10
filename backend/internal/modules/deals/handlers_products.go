@@ -34,6 +34,11 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
 	in := CreateProductInput{
 		Name:           req.Name,
@@ -44,7 +49,7 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 		Currency:       req.Currency,
 		DefaultTaxRate: req.DefaultTaxRate,
 		Active:         req.Active,
-		Source:         req.Source,
+		Source:         source,
 
 		BillingModel:          billingModel,
 		BillingIntervalMonths: billingMonths,

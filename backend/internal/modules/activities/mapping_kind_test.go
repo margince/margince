@@ -19,7 +19,7 @@ import (
 
 func TestAnUnknownActivityKindIsRefusedAsAPicklistValue(t *testing.T) {
 	t.Parallel()
-	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "bogus"})
+	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Source: "manual", Kind: "bogus"})
 
 	invalid, ok := errors.AsType[*InvalidKindError](err)
 	if !ok {
@@ -38,7 +38,7 @@ func TestAnUnknownActivityKindIsRefusedAsAPicklistValue(t *testing.T) {
 // beside that check and must not swallow it.
 func TestAnAbsentActivityKindIsStillAMissingField(t *testing.T) {
 	t.Parallel()
-	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{})
+	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Source: "manual"})
 
 	required, ok := errors.AsType[*RequiredFieldError](err)
 	if !ok {
@@ -61,7 +61,7 @@ func TestEveryCreateDoorRefusesAnUnknownKind(t *testing.T) {
 	for name, door := range doors {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if _, err := door(crmcontracts.CreateActivityRequest{Kind: "bogus"}); !errorIsInvalidKind(err) {
+			if _, err := door(crmcontracts.CreateActivityRequest{Source: "manual", Kind: "bogus"}); !errorIsInvalidKind(err) {
 				t.Errorf("%s door: err = %v, want InvalidKindError", name, err)
 			}
 		})
@@ -73,7 +73,7 @@ func TestEveryCreateDoorRefusesAnUnknownKind(t *testing.T) {
 func TestADeclaredActivityKindStaysWritable(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []crmcontracts.CreateActivityRequestKind{"call", "email", "meeting", "message", "note", "task"} {
-		if _, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: kind}); errorIsInvalidKind(err) {
+		if _, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Source: "manual", Kind: kind}); errorIsInvalidKind(err) {
 			t.Errorf("kind %q was refused, and the contract declares it", kind)
 		}
 	}

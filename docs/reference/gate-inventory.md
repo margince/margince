@@ -332,6 +332,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `remediationnotbuyeractivity_test.go` | H2 | Remediation work must never read as buyer engagement. |
 | `reportasof_test.go` | H2 | A report's answer is labelled with the instant it was computed at. |
 | `requiredbodyids_test.go` | H3 | Every contract request body that declares a required id must be accounted for. |
+| `requiredsourcebodies_test.go` | H2 | Every contract request body that requires a `source` must be refused when it names none. |
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in every ordinary read path: lists, timelines, search, exports, embeddings, agent grounding. |
 | `retentionactionset_test.go` | H2 | One set of retention actions, spelled in three places. |
 | `rightscasewriters_test.go` | H2 | Every proposal a data subject sends opens a case somebody owes an answer to. |

@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -308,6 +309,11 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	if !req.Kind.Valid() {
 		return LogActivityInput{}, &InvalidKindError{Kind: string(req.Kind)}
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return LogActivityInput{}, err
+	}
+	req.Source = source
 	if err := refuseReservedProvenance(req, adm); err != nil {
 		return LogActivityInput{}, err
 	}

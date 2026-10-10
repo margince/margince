@@ -248,7 +248,11 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		row, err := p.store.CreateRelationship(ctx, relationshipCreateInput(req))
+		mapped, err := relationshipCreateInput(req)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		row, err := p.store.CreateRelationship(ctx, mapped)
 		// The edge's own id, not an endpoint's: the caller asked for a
 		// relationship and the read-back has to reach the row it created.
 		return edgeRef(row.ID), err

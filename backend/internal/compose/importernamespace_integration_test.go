@@ -100,7 +100,8 @@ func postLead(as context.Context, t *testing.T, e *integration.Env, req crmcontr
 func namespacedActivity() crmcontracts.CreateActivityRequest {
 	system := "mirror:hubspot"
 	return crmcontracts.CreateActivityRequest{
-		Kind: "email", Subject: new("Betreff"), SourceSystem: &system,
+		Source: "manual",
+		Kind:   "email", Subject: new("Betreff"), SourceSystem: &system,
 		SourceId: new("emails:900"),
 	}
 }

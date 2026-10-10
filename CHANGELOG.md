@@ -134,6 +134,10 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Fixed
 
+- **A create must name its source.** A lead, a relationship, a note, a task, an offer,
+  a product, a custom field and a signal are refused with a 422 naming `source` when
+  it is absent or blank, as a contact, a company and a deal already were. So are a
+  deal room, and the invitation or document added to one.
 - **An archived contact's unanswered message leaves the Worklist.** It no longer
   shows under "Customer waiting", in the queue's count, in a record's waiting
   filter or in the reply classifier's backlog. Restoring the contact brings it

@@ -74,7 +74,12 @@ func (h Handlers) CreateRelationship(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	rel, err := h.store.CreateRelationship(r.Context(), relationshipCreateInput(req))
+	in, err := relationshipCreateInput(req)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	rel, err := h.store.CreateRelationship(r.Context(), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

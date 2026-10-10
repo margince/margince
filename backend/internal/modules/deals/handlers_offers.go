@@ -149,13 +149,18 @@ func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 			return
 		}
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	in := CreateOfferInput{
 		Currency:       req.Currency,
 		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
 		IntroText:      req.IntroText,
 		TermsText:      req.TermsText,
 		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
-		Source:         req.Source,
+		Source:         source,
 	}
 	if req.ValidUntil != nil {
 		v := req.ValidUntil.Format("2006-01-02")

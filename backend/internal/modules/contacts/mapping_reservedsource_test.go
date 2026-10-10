@@ -26,6 +26,7 @@ import (
 func TestLeadCreateInputRefusesTheImporterNamespace(t *testing.T) {
 	reserved := "mirror:legacy_crm"
 	_, err := leadCreateInput(crmcontracts.CreateLeadRequest{
+		Source:       "manual",
 		SourceSystem: &reserved, SourceId: new("501"),
 	})
 	var refused *provenance.ReservedError
@@ -40,6 +41,7 @@ func TestLeadCreateInputRefusesTheImporterNamespace(t *testing.T) {
 func TestLeadCreateInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 	ordinary := "legacy_crm"
 	in, err := leadCreateInput(crmcontracts.CreateLeadRequest{
+		Source:       "manual",
 		SourceSystem: &ordinary, SourceId: new("501"),
 	})
 	if err != nil {
@@ -145,6 +147,7 @@ func TestTheRecordWiresRefuseTheImporterNamespaceOnSourceSystem(t *testing.T) {
 func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	namespaced := "mirror:hubspot"
 	in, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
+		Source:   "manual",
 		FullName: new("Imported"), SourceSystem: &namespaced, SourceId: new("501"),
 	})
 	if err != nil {
@@ -162,6 +165,7 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	} {
 		planted := engine
 		_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
+			Source:   "manual",
 			FullName: new("Planted"), SourceSystem: &planted, SourceId: new("planted"),
 		})
 		if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
@@ -183,6 +187,7 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	// is still refused, or the admission would have leaked to every caller.
 	var clientRefused *provenance.ReservedError
 	if _, err := leadCreateInput(crmcontracts.CreateLeadRequest{
+		Source:   "manual",
 		FullName: new("Planted"), SourceSystem: &namespaced, SourceId: new("501"),
 	}); !errors.As(err, &clientRefused) {
 		t.Errorf("the client door admitted the importer namespace: %v", err)
@@ -225,6 +230,7 @@ func TestALeadFromAContactNamesNoSourceSystem(t *testing.T) {
 	namespaced := "mirror:hubspot"
 	contact := openapi_types.UUID(ids.NewV7())
 	_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
+		Source:    "manual",
 		ContactId: &contact, SourceSystem: &namespaced, SourceId: new("501"),
 	})
 	if err == nil {

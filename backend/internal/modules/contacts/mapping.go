@@ -356,6 +356,11 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 			}
 		}
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateLeadInput{}, err
+	}
+	req.Source = source
 	// `source` is nobody's to forge, the importer included.
 	if err := provenance.Refuse("source", req.Source); err != nil {
 		return CreateLeadInput{}, err
