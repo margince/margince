@@ -6,8 +6,8 @@ import type { Translator } from "../i18n";
 
 type MovementBucket = components["schemas"]["ForecastMovementBucket"]["name"];
 
-// A Record over the contract's own union: a bucket the server adds fails the
-// build here until it has a word, instead of reaching a chart as its code key.
+// A Record over the contract's union. A new bucket fails the build here until
+// it has a word, so it never reaches a chart as its code key.
 const BUCKETS: Record<MovementBucket, true> = {
   new: true,
   pulled_in: true,

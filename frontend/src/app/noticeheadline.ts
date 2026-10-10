@@ -7,7 +7,7 @@ import type { Translator } from "../i18n";
 type NotificationClass = components["schemas"]["NotificationClass"];
 
 // A Record over the contract's union: a class the server adds fails the build
-// here until it has a place in the preference words this reads.
+// here until the preference words cover it.
 const CLASSES: Record<NotificationClass, true> = {
   automation: true,
   lead_sla: true,
@@ -27,10 +27,9 @@ const FIELD_PAIRS = /^[a-z][a-z0-9_]*=[^,]*(, [a-z][a-z0-9_]*=[^,]*)*$/;
 /**
  * What a notice is headed with.
  *
- * The server's subject is a sentence for most notices, and for a staged change
- * that has none it is the change's own fields. Those say nothing to a reader
- * who has not opened the notice, so the class (the words the preferences page
- * already uses) heads the row and the fields stay beneath as detail.
+ * The subject is a sentence for most notices. For a staged change with none, it
+ * is the change's own fields, which tell a reader nothing unopened. The class
+ * (the preferences page's words) heads the row and the fields stay as detail.
  */
 export function noticeHeadline(
   notice: Readonly<{ kind: string; subject: string }>,

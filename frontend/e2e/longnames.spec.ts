@@ -6,10 +6,9 @@ import { pageOverflow } from "./waits";
 /**
  * A name nobody broke into words stays inside the page that shows it.
  *
- * A company name copied from a URL is one unbroken run, and a flex or grid cell
- * sizes to its content unless told otherwise, so the run pushed the facts and
- * controls beside it off the window. jsdom lays nothing out, so only a browser
- * can see the box.
+ * A company name copied from a URL is one unbroken run. A flex or grid cell
+ * sizes to its content unless told otherwise, so the run pushed its neighbours
+ * off the window. Only a browser lays out the box; jsdom does not.
  */
 
 const LONG = `https://example.test/${"a".repeat(200)}`;

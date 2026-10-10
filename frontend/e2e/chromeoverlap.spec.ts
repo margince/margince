@@ -4,10 +4,9 @@ import { mockApi } from "./seed";
 /**
  * Two pieces of chrome that share a corner do not hide each other.
  *
- * The notification count is pinned to the bell's corner and the rail's chevron
- * ends the spend line. Both are placed by rules that only hold if a figure of
- * the widest realistic size still leaves the neighbour readable, and a box that
- * covers another is a fact about layout that jsdom cannot see.
+ * The notification count is pinned near the bell and the rail's chevron ends
+ * the spend line. Each placement must hold for the widest realistic figure.
+ * Whether one box covers another is a fact about layout that jsdom cannot see.
  */
 
 type Rect = { left: number; top: number; right: number; bottom: number };
