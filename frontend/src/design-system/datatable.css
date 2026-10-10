@@ -52,6 +52,26 @@
 .table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
   background: var(--bgHover);
 }
+/* A detail spans every column, so in a pinned table that scrolls it outgrows
+   the box; its content pins to the box's start at the box's width instead. */
+.table-scroll-sticky:has(> .table > tbody > tr.datatable-detail) {
+  container: table-pinned / inline-size scroll-state;
+}
+.table-scroll-sticky > .table > tbody > tr.datatable-detail > td > * {
+  --detailInset: var(--space-3);
+  position: sticky;
+  inset-inline-start: var(--detailInset);
+  max-inline-size: calc(100cqi - 2 * var(--detailInset));
+}
+.panel
+  > .table-scroll-bleed.table-scroll-sticky
+  > .table
+  > tbody
+  > tr.datatable-detail
+  > td
+  > * {
+  --detailInset: var(--padPanel);
+}
 
 /* fold: the box is measured, not the viewport, because a settings rail or a
    split pane narrows the column without the window moving. */

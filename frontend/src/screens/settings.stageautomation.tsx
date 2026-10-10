@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
@@ -5,8 +8,10 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { BusyMark, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { DataTable } from "../design-system/datatable";
-import { Panel, PanelBody } from "../design-system/panel";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { type Fact, FactList } from "../design-system/factlist";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import {
   formatFinePercent,
@@ -15,9 +20,12 @@ import {
 } from "../format/format";
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, unwrap } from "./common";
+import { criterionKindLabel } from "./criterionkinds";
 import { usePipelines } from "./pipelines.queries";
 import { StageRulesCard } from "./settings.stagerules";
+import "./settings.stageautomation.css";
 
 type TransitionRecord = components["schemas"]["StageTransitionRecord"];
 
@@ -84,59 +92,135 @@ export function StageAutomationCard() {
   // different span cannot be judged from these rows.
   const windowDays = report.data?.window_days ?? DEFAULT_WINDOW_DAYS;
   return (
-    <Panel title={t("stageAutomation.title")}>
-      <PanelBody>
-        <p>{t("stageAutomation.intro")}</p>
-        {(pipelines.data?.length ?? 0) > 1 && (
-          <Select
-            aria-label={t("stageAutomation.pipeline")}
-            value={chosen}
-            onChange={setPipelineId}
-            options={(pipelines.data ?? []).map((pipeline) => ({
-              value: pipeline.id,
-              label: pipeline.name,
-            }))}
-          />
-        )}
-        {rows.length === 0 ? (
-          <EmptyState>{t("stageAutomation.empty")}</EmptyState>
-        ) : (
+    <>
+      <Panel title={t("stageAutomation.title")}>
+        <PanelBody>
+          <PanelIntro>{t("stageAutomation.intro")}</PanelIntro>
+          {(pipelines.data?.length ?? 0) > 1 && (
+            <Select
+              aria-label={t("stageAutomation.pipeline")}
+              value={chosen}
+              onChange={setPipelineId}
+              options={(pipelines.data ?? []).map((pipeline) => ({
+                value: pipeline.id,
+                label: pipeline.name,
+              }))}
+            />
+          )}
+          {rows.length === 0 && (
+            <EmptyState>{t("stageAutomation.empty")}</EmptyState>
+          )}
+        </PanelBody>
+        {rows.length > 0 && (
           <>
             <DataTable
+              bleed
+              stickyFirst
               label={t("stageAutomation.title")}
               columns={reportColumns(t, locale)}
               rows={rows}
               rowKey={(row) => `${row.from_stage_id}-${row.to_stage_id}`}
+              detail={{
+                header: t("stageAutomation.detail"),
+                toggleLabel: (row) =>
+                  t("stageAutomation.detailFor", {
+                    transition: transitionName(row),
+                  }),
+                render: (row) => <TransitionDetail row={row} />,
+              }}
             />
-            {/* Four columns mean something other than what their heading
-                suggests, and a reader deciding whether to trust a transition
-                has to know which. Below the table rather than in tooltips: a
-                number you must hover to understand is one contacts read wrong
-                once and then stop reading. */}
-            <dl>
-              <dt>{t("stageAutomation.reviewed")}</dt>
-              <dd>{t("stageAutomation.reviewedHint")}</dd>
-              <dt>{t("stageAutomation.expired")}</dt>
-              <dd>{t("stageAutomation.expiredHint")}</dd>
-              <dt>{t("stageAutomation.unsafe")}</dt>
-              <dd>{t("stageAutomation.unsafeHint")}</dd>
-              <dt>{t("stageAutomation.observationDays")}</dt>
-              <dd>{t("stageAutomation.observationHint")}</dd>
-            </dl>
-            {/* The controls, after the evidence. Given the report's own rows
-                rather than fetching a second list of transitions: the two
-                would otherwise be able to disagree about which transitions
-                this pipeline has. */}
-            <StageRulesCard
-              pipelineId={chosen}
-              transitions={rows}
-              reportWindowDays={windowDays}
-            />
+            {/* The short headings spelled out in view: a number you must hover
+                to understand is one contacts read wrong once and stop reading. */}
+            <PanelBody>
+              <FactList facts={glossary(t)} />
+            </PanelBody>
           </>
         )}
-      </PanelBody>
-    </Panel>
+      </Panel>
+      {/* The controls, after the evidence. Given the report's own rows
+          rather than fetching a second list of transitions: the two
+          would otherwise be able to disagree about which transitions
+          this pipeline has. */}
+      {rows.length > 0 && (
+        <StageRulesCard
+          pipelineId={chosen}
+          transitions={rows}
+          reportWindowDays={windowDays}
+        />
+      )}
+    </>
   );
+}
+
+const GLOSSARY: readonly (readonly [string, MessageKey, MessageKey])[] = [
+  ["reviewed", "stageAutomation.reviewed", "stageAutomation.reviewedHint"],
+  ["clean", "stageAutomation.cleanAcceptance", "stageAutomation.acceptedHint"],
+  ["edits", "stageAutomation.edits", "stageAutomation.editedHint"],
+  ["unsafe", "stageAutomation.unsafe", "stageAutomation.unsafeHint"],
+  ["expired", "stageAutomation.expired", "stageAutomation.expiredHint"],
+  [
+    "observed",
+    "stageAutomation.observationDays",
+    "stageAutomation.observationHint",
+  ],
+];
+
+function glossary(t: Translator): Fact[] {
+  return GLOSSARY.map(([key, term, hint]) => ({
+    key,
+    term: t(term),
+    value: t(hint),
+  }));
+}
+
+// The counts beside the rates, and the evidence cut, behind the row's chevron.
+function TransitionDetail({ row }: Readonly<{ row: TransitionRecord }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const evidence: Fact[] =
+    row.evidence_kinds.length === 0
+      ? [
+          {
+            key: "evidence",
+            term: t("stageAutomation.evidenceKinds"),
+            value: "—",
+          },
+        ]
+      : row.evidence_kinds.map((kind) => ({
+          key: `evidence-${kind.kind}`,
+          term: criterionKindLabel(kind.kind, t),
+          value: t("stageAutomation.evidenceShare", {
+            accepted: formatNumber(kind.accepted_clean, locale),
+            reviewed: formatNumber(kind.reviewed, locale),
+          }),
+        }));
+  return (
+    <FactList
+      numeric
+      facts={[
+        {
+          key: "open",
+          term: t("stageAutomation.open"),
+          value: formatNumber(row.proposed, locale),
+        },
+        {
+          key: "expired",
+          term: t("stageAutomation.expired"),
+          value: formatNumber(row.expired, locale),
+        },
+        {
+          key: "observed",
+          term: t("stageAutomation.observationDays"),
+          value: formatNumber(row.observation_days, locale),
+        },
+        ...evidence,
+      ]}
+    />
+  );
+}
+
+function transitionName(row: TransitionRecord): string {
+  return `${row.from_stage_name} → ${row.to_stage_name}`;
 }
 
 /** The panel to draw when there is no report yet, or null when there is one. */
@@ -220,72 +304,54 @@ function unsafeCell(rate: number, reviewed: number, locale: Locale): string {
   return formatFinePercent(rate, locale);
 }
 
-function reportColumns(t: Translator, locale: Locale) {
+// Only the volume and the rates stand in columns, so the table fits its pane at desktop width.
+function reportColumns(
+  t: Translator,
+  locale: Locale,
+): DataTableColumn<TransitionRecord>[] {
+  const figure = (
+    key: string,
+    header: string,
+    render: (row: TransitionRecord) => string,
+  ): DataTableColumn<TransitionRecord> => ({
+    key,
+    header,
+    align: "end",
+    render,
+  });
   return [
     {
       key: "transition",
       header: t("stageAutomation.transition"),
-      render: (row: TransitionRecord) =>
-        `${row.from_stage_name} → ${row.to_stage_name}`,
+      render: (row) => (
+        <CellStack>
+          <span className="stageauto-transition">{transitionName(row)}</span>
+          {unanswered(row) && (
+            <span className="t-caption">
+              {t("stageAutomation.nothingReviewed")}
+            </span>
+          )}
+        </CellStack>
+      ),
     },
-    {
-      key: "reviewed",
-      header: t("stageAutomation.reviewed"),
-      render: (row: TransitionRecord) =>
-        row.reviewed === 0 && row.proposed > 0
-          ? t("stageAutomation.nothingReviewed")
-          : formatNumber(row.reviewed, locale),
-    },
-    {
-      key: "open",
-      header: t("stageAutomation.open"),
-      render: (row: TransitionRecord) => formatNumber(row.proposed, locale),
-    },
-    {
-      key: "expired",
-      header: t("stageAutomation.expired"),
-      render: (row: TransitionRecord) => formatNumber(row.expired, locale),
-    },
-    {
-      key: "clean",
-      header: t("stageAutomation.cleanAcceptance"),
-      render: (row: TransitionRecord) =>
-        rateCell(row.clean_acceptance_rate, row.reviewed, locale),
-    },
-    {
-      key: "edits",
-      header: t("stageAutomation.edits"),
-      render: (row: TransitionRecord) =>
-        rateCell(row.edit_rate, row.reviewed, locale),
-    },
-    {
-      key: "rejections",
-      header: t("stageAutomation.rejections"),
-      render: (row: TransitionRecord) =>
-        rateCell(row.rejection_rate, row.reviewed, locale),
-    },
-    {
-      key: "unsafe",
-      header: t("stageAutomation.unsafe"),
-      render: (row: TransitionRecord) =>
-        unsafeCell(row.unsafe_rate, row.reviewed, locale),
-    },
-    {
-      key: "observed",
-      header: t("stageAutomation.observationDays"),
-      render: (row: TransitionRecord) =>
-        formatNumber(row.observation_days, locale),
-    },
-    {
-      key: "evidence",
-      header: t("stageAutomation.evidenceKinds"),
-      render: (row: TransitionRecord) =>
-        row.evidence_kinds
-          .map(
-            (kind) =>
-              `${kind.kind} ${formatNumber(kind.accepted_clean, locale)}/${formatNumber(kind.reviewed, locale)}`,
-          )
-          .join(", ") || "—",
-    },
+    figure("reviewed", t("stageAutomation.reviewed"), (row) =>
+      unanswered(row) ? "—" : formatNumber(row.reviewed, locale),
+    ),
+    figure("clean", t("stageAutomation.cleanAcceptance"), (row) =>
+      rateCell(row.clean_acceptance_rate, row.reviewed, locale),
+    ),
+    figure("edits", t("stageAutomation.edits"), (row) =>
+      rateCell(row.edit_rate, row.reviewed, locale),
+    ),
+    figure("rejections", t("stageAutomation.rejections"), (row) =>
+      rateCell(row.rejection_rate, row.reviewed, locale),
+    ),
+    figure("unsafe", t("stageAutomation.unsafe"), (row) =>
+      unsafeCell(row.unsafe_rate, row.reviewed, locale),
+    ),
   ];
+}
+
+function unanswered(row: TransitionRecord): boolean {
+  return row.reviewed === 0 && row.proposed > 0;
 }
