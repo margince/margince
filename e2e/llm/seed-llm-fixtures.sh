@@ -1486,6 +1486,42 @@ if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'dail
   freeze_forecast
 fi
 
+# --- CASE 59: a signed contract to file on the meeting it was signed in -------
+#
+# THE PROJECT IS THE DOOR TO THE CONTRACT. An agent reads contracts only through
+# read_project_360, so the contract names the project, and the meeting is on the
+# project's timeline beside it: one read hands the run both ids it must file
+# against. The contract carries no value or dates, so no forecast, revenue or
+# board-pack figure another case asserts moves.
+#
+# A company, project and contact of their own, named after nothing another case
+# searches for. The meeting is with the contact and not the company, because a
+# meeting cannot be filed against a company (see case 9).
+harzer="$(company_id_by_name "Harzer Steuerungstechnik GmbH")"
+if [[ -z "$harzer" ]]; then
+  body="$(printf '{"display_name":"Harzer Steuerungstechnik GmbH","owner_id":"%s","industry":"Steuerungstechnik"}' "$me")"
+  harzer="$(create_or_die "/companies" "$body" "Harzer Steuerungstechnik GmbH")"
+fi
+albers="$(seed_contact "Katrin Albers" "katrin.albers@harzer-steuerung.test" "$me")"
+link_employment "$albers" "$harzer" "Katrin Albers at Harzer Steuerungstechnik"
+goslar="$(api GET "/projects?q=$(url_encode "Leitstand Goslar")&limit=50" | python3 -c 'import json,sys
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == "Leitstand Goslar":
+        print(row["id"]); break
+else:
+    print("")')"
+if [[ -z "$goslar" ]]; then
+  body="$(printf '{"name":"Leitstand Goslar","company_id":"%s","owner_id":"%s","source":"%s","description":"Neuer Leitstand für das Werk Goslar."}' \
+    "$harzer" "$me" "$FIXTURE_SOURCE")"
+  goslar="$(create_or_die "/projects" "$body" "the Leitstand Goslar project")"
+  body="$(printf '{"company_id":"%s","project_id":"%s","title":"Servicevertrag Leitstand Goslar","contract_number":"HST-2026-014"}' \
+    "$harzer" "$goslar")"
+  create_or_die "/contracts" "$body" "the Leitstand Goslar service contract" >/dev/null
+  body="$(printf '{"kind":"meeting","meeting_status":"held","occurred_at":"%s","subject":"Vertragsunterzeichnung Leitstand Goslar","body":"Servicevertrag mit Katrin Albers unterzeichnet.","source":"%s","links":[{"entity_type":"contact","entity_id":"%s"},{"entity_type":"project","entity_id":"%s"}]}' \
+    "$(days_ago 1)" "$FIXTURE_SOURCE" "$albers" "$goslar")"
+  create_or_die "/activities" "$body" "the Leitstand Goslar signing meeting" >/dev/null
+fi
+
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays

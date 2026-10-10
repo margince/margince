@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 84 |
 | Resources | 9 |
-| Tool catalog | 257.6 KB |
+| Tool catalog | 257.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66841 |
+| Approx. wire tokens | 66881 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 112.3 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 66.9 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 67.1 KB | 26% | Yes, every step |
 | Input schemas | 58.1 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
-| **Description + input schema** | **125.0 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **125.2 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -62,7 +62,7 @@ descriptions and input schemas are what each step pays for.
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.7 KB |
-| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.0 KB |
+| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.2 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
@@ -1380,14 +1380,15 @@ immediately; requires passport scope "read".)
 
 ```text
 Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the
-record's Documents tab — use it whenever the user wants a file kept on a record, and never save a
-file's text as a note instead. Up to 6.2 MB per file, or less where the workspace sets a smaller
-upload limit. Common document, image and email formats are accepted; any other kind is refused, and
-the refusal names the accepted ones. Tell the user about a refused file; never rename, convert or
-zip it to get it accepted. The file is stored, not read. It is filed against a contract only when
-you name contract_id. Use log_activity for what was said about the file, linked to the same record.
-Keep attachment_id to name the file to the user. (Governance: runs immediately; requires passport
-scope "write".)
+record's Documents tab, or on one activity such as the meeting it came from — use it whenever the
+user wants a file kept on a record, and never save a file's text as a note instead. Up to 6.2 MB per
+file, or less where the workspace sets a smaller upload limit. Common document, image and email
+formats are accepted; any other kind is refused, and the refusal names the accepted ones. Tell the
+user about a refused file; never rename, convert or zip it to get it accepted. The file is stored,
+not read. It is filed against a contract only when you name contract_id; read_project_360 lists a
+project's contracts with their ids. Use log_activity for what was said about the file, linked to the
+same record. Keep attachment_id to name the file to the user. (Governance: runs immediately;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -8399,10 +8400,11 @@ is_agent seat. (Governance: runs immediately; requires passport scope "read".)
 **List a record's documents**
 
 ```text
-List the files stored on a company, contact, deal, lead or project, newest first: name, type, size
-and who added them. It lists and never returns a file's contents. Check it before attaching a file
-again, so the record does not carry the same file twice. Keep next_cursor to read the next page.
-(Governance: runs immediately; requires passport scope "read".)
+List the files stored on a company, contact, deal, lead, project or activity, newest first: name,
+type, size, who added them and the contract each is filed against. It lists and never returns a
+file's contents. Check it before attaching a file again, so the record does not carry the same file
+twice. Keep next_cursor to read the next page. (Governance: runs immediately; requires passport
+scope "read".)
 ```
 
 <details><summary>Input schema</summary>

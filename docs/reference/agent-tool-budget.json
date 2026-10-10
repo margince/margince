@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 84,
     "system_frame_tokens": 586,
-    "tokens": 29742,
+    "tokens": 29782,
     "median_tool_tokens": 292,
-    "mean_tool_tokens": 353
+    "mean_tool_tokens": 354
   },
   "agents": [
     {
@@ -187,6 +187,10 @@
       "tokens": 401
     },
     {
+      "name": "attach_document",
+      "tokens": 397
+    },
+    {
       "name": "prep_for_meeting",
       "tokens": 394
     },
@@ -197,10 +201,6 @@
     {
       "name": "draft_email",
       "tokens": 385
-    },
-    {
-      "name": "attach_document",
-      "tokens": 369
     },
     {
       "name": "describe_report_vocabulary",
@@ -379,12 +379,12 @@
       "tokens": 183
     },
     {
-      "name": "list_channel_providers",
-      "tokens": 174
+      "name": "list_documents",
+      "tokens": 180
     },
     {
-      "name": "list_documents",
-      "tokens": 168
+      "name": "list_channel_providers",
+      "tokens": 174
     },
     {
       "name": "remove_tag",

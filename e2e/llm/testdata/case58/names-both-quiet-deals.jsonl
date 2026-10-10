@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__whats_slipping_this_week", "mcp__margince__list_records", "mcp__margince__read_record"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__whats_slipping_this_week", "input": {"quiet_days": 21}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Two deals have been quiet for three weeks or more. Reply Deutschland Verlängerung has had nothing since a mail 75 days ago. Körber Sensorik Rollout has been quiet for 45 days; it is still under the usual sixty-day line, so the default slipping list would not show it. I would call Reply first."}

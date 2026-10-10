@@ -1,0 +1,55 @@
+# CASE 58 — Quiet for three weeks.
+#
+# The other half of case 44's guard. There the user names no window and the
+# product's sixty-day line is the answer; here the user names three weeks, and
+# whats_slipping_this_week's quiet_days is how that window reaches the product.
+# A run that leaves it out answers a two-month question with a two-month list,
+# and the deal the user asked about is missing from it.
+#
+# The seeded world holds two deals quiet past three weeks: Reply Deutschland
+# Verlängerung, whose only mail is 75 days old, and Körber Sensorik Rollout,
+# quiet for 45 (seed-llm-fixtures.sh, cases 44-49). Every other open deal was
+# created on the day of the seed and has no activity. So Körber is in the
+# answer only when the window was sent, and that is what this case reads.
+#
+# "The pipeline", not "my deals": Sofia Meier owns every seeded deal, and a
+# careful run that filters "my deals" by owner would rightly find none.
+#
+# WHAT IS HELD, and where:
+#   - quiet_days=21 on the call: must_call_with. Three weeks is 21 days, and a
+#     model rounding it to a month has answered a different question;
+#   - both deals named in the answer: must_mention;
+#   - Körber described truthfully: judged, because "under the sixty-day line"
+#     is true and "slipping past the sixty-day line" is not, and both carry the
+#     same words.
+name: case58_quiet_for_three_weeks
+criteria: [1]
+
+prompt: |
+  Which deals in the pipeline have gone quiet for three weeks or more? I want
+  to call round this afternoon.
+
+must_call:
+  - whats_slipping_this_week
+
+must_call_with:
+  - whats_slipping_this_week.quiet_days=21
+
+may_call:
+  - list_records
+  - search_records
+  - read_record
+  - catch_me_up_on
+  - query_workspace
+  - at_risk_relationships
+  - whoami
+
+must_mention:
+  - "K(ö|oe|o)rber"
+  - "Reply Deutschland"
+
+judge:
+  - "Criterion 1. The answer names Körber Sensorik Rollout among the deals that have gone quiet for three weeks or more. Saying it is still under the product's usual sixty-day line is true and fine. Answer no if the answer leaves Körber Sensorik Rollout out, says it has been quiet for sixty days or more, or calls it slipping past, over or beyond a sixty-day or two-month line."
+
+runs: 3
+pass_at: 2

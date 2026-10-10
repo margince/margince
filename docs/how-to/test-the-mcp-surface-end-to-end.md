@@ -211,8 +211,19 @@ name fail the run, such as
 `ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
 A read that cannot be made (an error, a field the read does not carry, or a
 reader that fails) is a harness stop. The outcome goes at the end of the
-transcript as an `end_state` event. Only `company` can be read by name today;
-another type is one line in `endstate.py`.
+transcript as an `end_state` event. A `company` or a `project` can be read by
+name; another type is one line in `endstate.py`.
+
+An activity has no list of its own, so an entry names it by its whole subject
+on a project:
+
+```yaml
+must_end_with:
+  - activity "Vertragsunterzeichnung Leitstand Goslar" on project "Leitstand Goslar" documents=1
+```
+
+The reader finds the project by name and the activity on its timeline in
+`read_project_360`. A timeline that read cuts short is a harness stop.
 
 Two names in that place read the record's files, and not a field:
 
@@ -226,6 +237,16 @@ must_end_with:
 under a name that the glob matches. `documents` holds when the tab has that
 many files. A count catches a refused file that comes back inside an archive, which has
 new bytes and a new name. Both read every page of `list_documents`.
+
+```yaml
+must_end_with:
+  - activity "Vertragsunterzeichnung Leitstand Goslar" on project "Leitstand Goslar" document_contract=<sha256> Servicevertrag Leitstand Goslar
+```
+
+A third name, `document_contract`, holds when the one file with that checksum is filed against
+the contract of that whole title. The reader finds that contract in what
+`read_project_360` lists for the entry's project. An agent never writes a contract, so a project without
+one contract of that title is a harness stop.
 
 A note that copies a file's text never shows in the answer. So
 `must_not_call_with` reads each call itself. Each entry is `tool~regex`,
