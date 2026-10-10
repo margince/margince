@@ -10,16 +10,16 @@
   "totals": {
     "tools": 84,
     "resources": 9,
-    "tool_catalog_bytes": 263991,
+    "tool_catalog_bytes": 264108,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 66887,
+    "approx_wire_tokens_total": 66917,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 68727,
-      "input_schema_bytes": 59508,
+      "input_schema_bytes": 59625,
       "output_schema_bytes": 114972,
-      "description_plus_input_schema_bytes": 128235
+      "description_plus_input_schema_bytes": 128352
     }
   },
   "tools": {
@@ -13033,9 +13033,21 @@
               "type": "string"
             },
             "limit": {
+              "maximum": 100,
+              "minimum": 1,
               "type": "integer"
             },
             "mode": {
+              "enum": [
+                "catalog",
+                "evaluate",
+                "reports",
+                "report",
+                "editions",
+                "edition",
+                "evidence",
+                "compare"
+              ],
               "type": "string"
             },
             "reference": {

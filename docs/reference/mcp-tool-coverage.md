@@ -326,8 +326,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `forecast_readings` | 1.00 | 6 | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
-| `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `read_reporting` | 1.00 | 3 | `case49_who_can_introduce_us` |
+| `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |

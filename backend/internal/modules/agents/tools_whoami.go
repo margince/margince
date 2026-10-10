@@ -79,7 +79,10 @@ func (t whoami) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t whoami) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t whoami) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	who, err := t.read(ctx)
 	if err != nil {
 		return nil, err

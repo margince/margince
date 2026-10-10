@@ -130,6 +130,8 @@ func (e *reportEngine) Run(ctx context.Context, report string, req reportRequest
 	}
 	spec, ok := prebuiltReports[report]
 	if !ok {
+		// A 404 here: the key is a path parameter and the contract scopes 422 to
+		// the plan's fields. The tool door refuses the key at its schema enum.
 		return reportOutcome{}, &UnknownReportError{Report: report, Served: slices.Sorted(maps.Keys(prebuiltReports))}
 	}
 	return e.runSpec(ctx, report, spec, req)

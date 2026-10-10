@@ -28,7 +28,7 @@ type ReportingRead struct {
 	EvaluatedAt       time.Time                         `json:"evaluated_at,omitempty"`
 	FrameworkRevision int64                             `json:"framework_revision,omitempty"`
 	Cursor            *string                           `json:"cursor,omitempty"`
-	Limit             int                               `json:"limit,omitempty"`
+	Limit             int                               `json:"limit,omitempty" minimum:"1" maximum:"100"`
 }
 
 // ReportingAnswer preserves typed results across the MCP boundary.
@@ -66,6 +66,9 @@ func (t readReporting) Spec() mcp.ToolSpec {
 func (t readReporting) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var request ReportingRead
 	if err := decodeArgs(in, &request); err != nil {
+		return nil, err
+	}
+	if err := requireReportingIDs(request); err != nil {
 		return nil, err
 	}
 	noteDerivedContent(ctx)

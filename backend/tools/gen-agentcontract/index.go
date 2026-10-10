@@ -57,11 +57,12 @@ func renderIndex(root *yaml.Node, ops []operation) []byte {
 	return []byte(b.String())
 }
 
-// permission is the passport permission a call needs at the agent gate. A
-// read asks for none beyond the passport itself.
+// permission is the passport permission a call needs. A read needs Read
+// records, which a passport can be made without. The gate refuses every read
+// of one that lacks it.
 func (op operation) permission() string {
-	if !op.mutating() {
-		return "any"
+	if op.scope == "" && !op.mutating() {
+		return permissionNames["read"]
 	}
 	return permissionNames[op.scope]
 }

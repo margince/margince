@@ -4,9 +4,11 @@
 package storekit
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -106,6 +108,29 @@ func TestAMalformedOperandIsRefusedWithoutEchoingIt(t *testing.T) {
 				t.Errorf("the refusal echoes the caller's own operand back at them: %v", err)
 			}
 		})
+	}
+}
+
+// A filter refusal declares the filter as the field to fix, so a surface with
+// no module HTTP mapper reads the verdict off the error.
+func TestAFilterRefusalDeclaresTheFilterAsTheFieldToFix(t *testing.T) {
+	var in listInput
+	for _, filters := range []map[string]string{
+		{"owner_id": "not-a-uuid"},
+		{"tag": "vip"},
+	} {
+		err := probeFilters.Apply(&in, filters)
+
+		fault, ok := errors.AsType[apperrors.FieldFault](err)
+		if !ok {
+			t.Fatalf("%v is not a declared field fault, so a tool door reports it as internal", filters)
+		}
+		field, code, _ := fault.FieldFault()
+		for name := range filters {
+			if field != name || code != "invalid" {
+				t.Errorf("fault names %q/%q, want %q/invalid", field, code, name)
+			}
+		}
 	}
 }
 

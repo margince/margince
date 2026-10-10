@@ -5,10 +5,10 @@ package agents
 
 // The one decode a tool that takes NO arguments performs.
 //
-// Two tools have this shape — the query vocabulary's door and the report
-// vocabulary's — and both declare `{"type":"object","properties":{},
-// "additionalProperties":false}`. Spelled once here because the shape has two
-// traps and they were both getting re-derived per tool.
+// Every tool that declares `{"type":"object","properties":{},
+// "additionalProperties":false}` decodes through here; a registry-derived test
+// holds that. Spelled once because the shape has two traps and they were both
+// getting re-derived per tool.
 
 import (
 	"bytes"

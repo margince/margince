@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 84 |
 | Resources | 9 |
-| Tool catalog | 257.8 KB |
+| Tool catalog | 257.9 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66887 |
+| Approx. wire tokens | 66917 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 112.3 KB | 43% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 67.1 KB | 26% | Yes, every step |
-| Input schemas | 58.1 KB | 22% | Yes, every step |
+| Input schemas | 58.2 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
-| **Description + input schema** | **125.2 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **125.3 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -120,7 +120,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 4.0 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
-| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
+| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.3 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
@@ -14177,9 +14177,21 @@ schedules in Analytics. (Governance: runs immediately; requires passport scope "
       "type": "string"
     },
     "limit": {
+      "maximum": 100,
+      "minimum": 1,
       "type": "integer"
     },
     "mode": {
+      "enum": [
+        "catalog",
+        "evaluate",
+        "reports",
+        "report",
+        "editions",
+        "edition",
+        "evidence",
+        "compare"
+      ],
       "type": "string"
     },
     "reference": {

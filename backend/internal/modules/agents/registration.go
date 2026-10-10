@@ -135,6 +135,7 @@ func (r *Registry) Register(t mcp.Tool) {
 	// about them would be describing arguments no handler can be reached with.
 	r.idArgs[spec.Name] = declaredIDArgs(spec.InputSchema)
 	r.numArgs[spec.Name] = declaredNumBounds(spec.InputSchema)
+	r.enumArgs[spec.Name] = declaredEnumArgs(spec.InputSchema)
 	r.requiredArgs[spec.Name] = declaredRequired(spec.InputSchema)
 }
 
