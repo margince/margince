@@ -57,6 +57,27 @@ export function dealStatusLabel(value: string): MessageKey | undefined {
   return status && DEAL_STATUS_LABEL[status];
 }
 
+const ENUM_DIALS: Readonly<
+  Record<string, (value: string | undefined) => string | undefined>
+> = { status: dealStatusFilter, forecast_category: forecastCategoryFilter };
+
+// The filters minus any enum dial holding a value the wire does not admit. The
+// row a reader sees and the request the list sends then cannot disagree. The
+// same object comes back when nothing is dropped.
+export function admittedDealFilters(
+  filters: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
+  const stale = Object.entries(ENUM_DIALS).filter(
+    ([key, admit]) => key in filters && admit(filters[key]) === undefined,
+  );
+  if (stale.length === 0) {
+    return filters;
+  }
+  return Object.fromEntries(
+    Object.entries(filters).filter(([key]) => !stale.some(([s]) => s === key)),
+  );
+}
+
 // What the company chip calls a company nobody picked in this session, one the
 // address named. A read still out says so. A failed read does not print the id
 // as though it were the answer. A company the reader cannot open stays applied

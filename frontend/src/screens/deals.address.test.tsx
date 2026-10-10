@@ -191,6 +191,25 @@ describe("the deals list opened from an address", () => {
     );
   });
 
+  it.each([
+    ["status", "closed", "Status"],
+    ["forecast_category", "slipped", "Forecast"],
+  ])(
+    "drops %s=%s, which the wire does not admit, from row and request",
+    async (dial, value, chip) => {
+      window.location.hash = `#/deals?${dial}=${value}&view=table`;
+      const seen = noneSeen();
+      vi.stubGlobal("fetch", stubBackend(seen));
+      render();
+
+      await waitFor(() => expect(seen.dealUrls.length).toBeGreaterThan(0));
+      expect(seen.dealUrls.at(-1)?.includes(`${dial}=`)).toBe(false);
+      expect(
+        screen.queryByRole("group", { name: new RegExp(`^${chip}:`) }),
+      ).toBeNull();
+    },
+  );
+
   it("widens when the status row is deleted", async () => {
     window.location.hash = "#/deals?status=open&view=table";
     const seen = noneSeen();

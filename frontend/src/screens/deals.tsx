@@ -127,6 +127,7 @@ import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { currencyBeside } from "./dealcurrency";
 import {
+  admittedDealFilters,
   dealStatusFilter,
   forecastCategoryFilter,
   useAppliedCompanyName,
@@ -1758,15 +1759,15 @@ function useDealScreenDials({
     }),
     [],
   );
-  const query = useMemo(
-    () =>
-      listQueryFromParams(
-        withoutScreenDials(params, DEAL_SCREEN_DIALS),
-        opening,
-        true,
-      ),
-    [params, opening],
-  );
+  const query = useMemo(() => {
+    const read = listQueryFromParams(
+      withoutScreenDials(params, DEAL_SCREEN_DIALS),
+      opening,
+      true,
+    );
+    const filters = admittedDealFilters(read.filters);
+    return filters === read.filters ? read : { ...read, filters };
+  }, [params, opening]);
   const setQuery = (update: SetStateAction<ListQuery>) => {
     const live = currentParams();
     const next =
