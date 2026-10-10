@@ -693,6 +693,10 @@
   cursor: pointer;
   text-align: left;
   text-decoration: none;
+  /* The name is the user's text and may be one unbroken run (a pasted URL).
+     `anywhere`, not `break-word`: only it lowers the min-content size, so a
+     flex or grid parent can shrink instead of being pushed off the page. */
+  overflow-wrap: anywhere;
 }
 .entity-link:hover {
   text-decoration: underline;
