@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-// A caller who leaves closes the connection under the work, so a later read on
-// it fails with an error that carries no context error at all. The request's
-// own cancellation is what says the caller left.
+// A caller who leaves closes the connection under the work. A later read on it
+// fails with an error that carries no context error. The request's own
+// cancellation is what says the caller left.
 func TestACallerWhoLeftIsNotAServerFaultWhateverTheErrorSays(t *testing.T) {
 	var logged bytes.Buffer
 	restore := slog.Default()

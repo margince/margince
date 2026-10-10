@@ -50,14 +50,14 @@ const knowledgeIngestActor = "agent:knowledge-ingest"
 const knowledgeIngestMaxAttempts = 3
 
 // knowledgeIngestSnoozeWindow is how long an ingest waits out a cause that
-// clears by itself before it counts as failed: an AI provider rate limiting
-// this installation, or a rollout whose older worker does not ship a page the
-// new release added. Neither is what the attempt budget is for; the window is
-// what stops one that never clears holding a document in `running`.
+// clears by itself before it counts as failed. Two are known: an AI provider
+// rate limiting this installation, and an older worker mid-rollout that does
+// not ship a page. The window stops one that never clears holding a document
+// in `running`.
 const knowledgeIngestSnoozeWindow = time.Hour
 
 // knowledgeIngestSnoozeWait is how long one snooze lasts. The provider's own
-// Retry-After is not carried by the error, so this is a pause past the usual
+// Retry-After is not carried by the error. So this is a pause past the usual
 // burst limit, and long enough for a rollout to replace a worker.
 const knowledgeIngestSnoozeWait = time.Minute
 

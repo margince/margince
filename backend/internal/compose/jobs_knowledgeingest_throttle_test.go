@@ -49,9 +49,9 @@ func TestAThrottledIngestWaitsOutTheProviderForABoundedTime(t *testing.T) {
 	}
 }
 
-// A rollout can hand a page the new release added to a worker that does not
-// ship it yet. That clears when a newer worker takes the job, so it waits for a
-// bounded time and does not spend the attempts that mark a document failed.
+// A rollout can hand a page the new release added to a worker that lacks it.
+// That clears when a newer worker takes the job. It waits for a bounded time
+// and spends none of the attempts that mark a document failed.
 func TestAHandbookPageAnOlderWorkerDoesNotShipWaitsForANewerOne(t *testing.T) {
 	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	gone := fmt.Errorf("%q: %w", "meetings-and-booking.md", knowledge.ErrHandbookPageGone)

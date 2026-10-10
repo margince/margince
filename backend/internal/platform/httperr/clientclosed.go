@@ -15,11 +15,11 @@ import (
 const statusClientClosedRequest = 499
 
 // callerLeft is true when the request's own context was canceled. The error
-// need not say so: pgx closes the connection under a canceled read, and the
-// next read on it fails with a "conn closed" that carries no context error.
-// A deadline the server set ends the context with DeadlineExceeded, and a
-// canceled context deeper in the work while the caller still waits leaves the
-// request context live, so neither qualifies.
+// need not say so. pgx closes the connection under a canceled read, and the
+// next read on it fails with a "conn closed" that names no context error.
+// A server deadline ends the context with DeadlineExceeded. A cancel deeper in
+// the work while the caller waits leaves the request context live. Neither
+// qualifies.
 func callerLeft(r *http.Request) bool {
 	return errors.Is(r.Context().Err(), context.Canceled)
 }
