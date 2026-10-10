@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ourPromiseNotYetATask is an open promise of ours that no task holds yet.
@@ -62,7 +63,7 @@ func (s *Store) RecordConversationClaimTx(
 // validateClaim names a malformed claim before any authority question, so a
 // caller's own omission is not reported as a permission problem.
 func validateClaim(in ClaimInput) error {
-	if in.Body == "" {
+	if !values.HasVisibleText(in.Body) {
 		return httperr.Validation("body", "required",
 			"a claim says something; an empty one is not a claim")
 	}
@@ -72,7 +73,7 @@ func validateClaim(in ClaimInput) error {
 	if err := httperr.RequireBodyID("source_activity_id", in.ActivityID); err != nil {
 		return err
 	}
-	if in.Quote == "" {
+	if !values.HasVisibleText(in.Quote) {
 		return httperr.Validation("source_quote", "required",
 			"a claim carries the words it was read from — an ungrounded claim is dropped, never stored")
 	}
@@ -91,6 +92,9 @@ func recordClaimInTx(
 	}
 	// Live, not merely visible: a claim must not quote an archived message.
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, in.ActivityID); err != nil {
+		return crmcontracts.ConversationClaim{}, false, err
+	}
+	if err := requireQuoteInActivity(ctx, tx, in); err != nil {
 		return crmcontracts.ConversationClaim{}, false, err
 	}
 	fingerprint := claimFingerprint(in)
@@ -134,6 +138,22 @@ func recordClaimInTx(
 		Status:           crmcontracts.ConversationClaimStatusOpen,
 		DueAt:            in.DueAt,
 	}, true, nil
+}
+
+// requireQuoteInActivity refuses a claim whose quote is not in the message it
+// cites. A quote nobody can find in what was written grounds nothing, and it
+// would read as trustworthy as one that does.
+func requireQuoteInActivity(ctx context.Context, tx pgx.Tx, in ClaimInput) error {
+	var subject, body string
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(subject, ''), COALESCE(body, '') FROM activity WHERE id = $1`,
+		in.ActivityID).Scan(&subject, &body); err != nil {
+		return fmt.Errorf("read the message a claim cites: %w", err)
+	}
+	if values.Quoted(body, in.Quote) || values.Quoted(subject, in.Quote) {
+		return nil
+	}
+	return httperr.Validation("source_quote", "not_in_source",
+		"source_quote is not in the message the claim cites; quote its words as written")
 }
 
 // filedClaim reads back the claim an earlier reading filed for this evidence.

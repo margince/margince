@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -102,6 +103,16 @@ func RequireNonBlank(field, raw string) (string, error) {
 		return "", Validation(field, "required", field+" is required")
 	}
 	return name, nil
+}
+
+// RequireWithin refuses text longer than limit characters. The contract counts
+// characters, not bytes, so a German or Vietnamese sentence is not refused for
+// its accents.
+func RequireWithin(field, text string, limit int) error {
+	if utf8.RuneCountInString(text) > limit {
+		return Validation(field, "too_long", fmt.Sprintf("%s holds at most %d characters", field, limit))
+	}
+	return nil
 }
 
 // RefuseNull refuses a PATCH that sent a required field as an explicit null.

@@ -401,11 +401,11 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 		// zero/negative line is not a real offer line, and a decimal the
 		// store's stricter parser would reject (ratFromDecimal) must drop
 		// HERE rather than error the whole AddStagedOfferLines batch below.
-		quantity, qty, ok := validDecimal(c.Quantity, 0, 1e12)
-		if !ok || qty <= 0 {
+		quantity, ok := validDecimal(c.Quantity)
+		if !ok {
 			continue
 		}
-		taxRate, _, ok := validDecimal(c.TaxRate, 0, 100)
+		taxRate, ok := validDecimal(c.TaxRate)
 		if !ok {
 			continue
 		}
@@ -418,6 +418,11 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 		}
 		if err := d.resolvePrice(ctx, c, snippet, currency, &line); err != nil {
 			return nil, err
+		}
+		// The store's own figures check: a line it would refuse is dropped
+		// here and never errors the whole batch.
+		if deals.CheckStagedLine(line) != nil {
+			continue
 		}
 		out = append(out, line)
 	}

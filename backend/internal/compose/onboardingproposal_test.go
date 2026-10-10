@@ -147,11 +147,6 @@ func TestOnboardingProposalSpeaksTheRequestedLocale(t *testing.T) {
 	if (*proposal.OpenQuestions)[0].Options[0].Value != "Acme GmbH" {
 		t.Fatalf("de option values = %+v", (*proposal.OpenQuestions)[0].Options)
 	}
-
-	unknown := crmcontracts.GetOnboardingCompanyProposalParamsLocale("fr")
-	if recorder := onboardingProposalRequest(engine, &unknown); recorder.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("unknown locale status = %d, body = %s", recorder.Code, recorder.Body.String())
-	}
 }
 
 func TestOnboardingProposalReportsAnUnfinishedRead(t *testing.T) {

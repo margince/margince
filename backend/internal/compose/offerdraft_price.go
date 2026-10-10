@@ -92,24 +92,19 @@ func (d offerDrafter) resolvePrice(ctx context.Context, c offerLineCandidate, sn
 // (500) instead of dropping the one bad line — this mirrors the store's
 // acceptance exactly so nothing that passes here can fail there. Returns
 // the original string (the seam below wants the exact decimal text, not
-// a re-rendered float), the parsed value for the caller's own bound
-// checks, and whether it passed.
-func validDecimal(s string, lo, hi float64) (string, float64, bool) {
+// a re-rendered float) and whether it parsed. The ranges are the store's:
+// deals.CheckStagedLine judges them.
+func validDecimal(s string) (string, bool) {
 	s = strings.TrimSpace(s)
 	for _, r := range s {
 		if (r < '0' || r > '9') && r != '.' && r != '-' {
-			return "", 0, false
+			return "", false
 		}
 	}
-	rat, ok := new(big.Rat).SetString(s)
-	if !ok {
-		return "", 0, false
+	if _, ok := new(big.Rat).SetString(s); !ok {
+		return "", false
 	}
-	v, _ := rat.Float64()
-	if v < lo || v > hi {
-		return "", 0, false
-	}
-	return s, v, true
+	return s, true
 }
 
 // priceEvidencedInSnippet is the conversation-price rung's evidence

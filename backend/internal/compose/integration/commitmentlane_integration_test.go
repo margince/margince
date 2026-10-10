@@ -49,14 +49,11 @@ func seedPromise(
 	if err != nil {
 		t.Fatalf("logging the message the promise was made in: %v", err)
 	}
-	claim, err := contacts.NewStore(e.DB()).RecordConversationClaim(e.Admin(), contacts.ClaimInput{
+	claim := e.RecordClaim(e.Admin(), t, contacts.ClaimInput{
 		ContactID: ids.From[ids.ContactKind](contactID), Kind: "commitment_ours",
 		Body: body, ActivityID: ids.UUID(message.Id), Quote: body, DueAt: due,
 		Source: "manual",
 	})
-	if err != nil {
-		t.Fatalf("recording the promise: %v", err)
-	}
 	return ids.UUID(claim.Id)
 }
 

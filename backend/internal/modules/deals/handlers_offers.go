@@ -87,15 +87,15 @@ func lineInputRow(in crmcontracts.OfferLineItemInput) OfferLineInputRow {
 		ProductID:      idArg[ids.ProductKind](in.ProductId),
 		Description:    in.Description,
 		Unit:           in.Unit,
-		Quantity:       formatQuantity(in.Quantity),
+		Quantity:       wireDecimal(in.Quantity),
 		UnitPriceMinor: in.UnitPriceMinor,
 	}
 	if in.DiscountPct != nil {
-		v := formatPct(*in.DiscountPct)
+		v := wireDecimal(*in.DiscountPct)
 		row.DiscountPct = &v
 	}
 	if in.TaxRate != nil {
-		v := formatPct(*in.TaxRate)
+		v := wireDecimal(*in.TaxRate)
 		row.TaxRate = &v
 	}
 	model, months := billingClassificationOf(in.BillingModel, in.BillingIntervalMonths)
@@ -274,15 +274,15 @@ func (h Handlers) UpdateOfferLineItem(w http.ResponseWriter, r *http.Request, id
 		UnitPriceMinor: req.UnitPriceMinor,
 	}
 	if req.Quantity != nil {
-		v := formatQuantity(*req.Quantity)
+		v := wireDecimal(*req.Quantity)
 		in.Quantity = &v
 	}
 	if req.DiscountPct != nil {
-		v := formatPct(*req.DiscountPct)
+		v := wireDecimal(*req.DiscountPct)
 		in.DiscountPct = &v
 	}
 	if req.TaxRate != nil {
-		v := formatPct(*req.TaxRate)
+		v := wireDecimal(*req.TaxRate)
 		in.TaxRate = &v
 	}
 	// The classification is written whenever the caller names EITHER half, so

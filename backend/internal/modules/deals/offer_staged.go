@@ -139,6 +139,14 @@ func (s *Store) AddStagedOfferLines(ctx context.Context, offerID ids.OfferID, li
 	return out, nil
 }
 
+// CheckStagedLine judges the figures of a drafted line by the limits every
+// other line holds, so a drafter can drop one the store would refuse.
+func CheckStagedLine(in StagedOfferLineInput) error {
+	return checkLineFigures(OfferLineInput{
+		Quantity: in.Quantity, UnitPriceMinor: in.UnitPriceMinor, DiscountPct: zeroPct, TaxRate: in.TaxRate,
+	})
+}
+
 // insertStagedOfferLine validates one AI-drafted line, inserts it, and
 // builds the returned OfferLineItem straight from the values just
 // written — a second read-back would only re-derive what this function
@@ -157,6 +165,9 @@ func insertStagedOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, 
 		return crmcontracts.OfferLineItem{}, &UngroundedPriceNotZeroError{UnitPriceMinor: in.UnitPriceMinor}
 	}
 
+	if err := CheckStagedLine(in); err != nil {
+		return crmcontracts.OfferLineItem{}, err
+	}
 	const unit, discount = "unit", "0.00"
 	fig, err := LineTotals(OfferLineInput{
 		Quantity: in.Quantity, UnitPriceMinor: in.UnitPriceMinor, DiscountPct: discount, TaxRate: in.TaxRate,

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -113,7 +114,7 @@ func (s *Store) CreateCorpus(ctx context.Context, in NewCorpus) (crmcontracts.Kn
 		return crmcontracts.KnowledgeCorpus{}, err
 	}
 	if in.Description != nil {
-		if err := checkCorpusLength("description", *in.Description, maxCorpusDescription); err != nil {
+		if err := httperr.RequireWithin("description", *in.Description, maxCorpusDescription); err != nil {
 			return crmcontracts.KnowledgeCorpus{}, err
 		}
 	}
@@ -181,7 +182,7 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 		in.TopicStatement = &topic
 	}
 	if in.Description != nil {
-		if err := checkCorpusLength("description", *in.Description, maxCorpusDescription); err != nil {
+		if err := httperr.RequireWithin("description", *in.Description, maxCorpusDescription); err != nil {
 			return crmcontracts.KnowledgeCorpus{}, err
 		}
 	}

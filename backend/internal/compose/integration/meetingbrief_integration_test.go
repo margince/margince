@@ -573,12 +573,10 @@ func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 	promise := func(body string, source ids.UUID) {
 		t.Helper()
-		if _, err := e.Contacts.RecordConversationClaim(rep, contacts.ClaimInput{
+		e.RecordClaim(rep, t, contacts.ClaimInput{
 			ContactID: ContactIDOf(attendee), Kind: "commitment_theirs", Body: body,
 			ActivityID: source, Quote: body, Source: "manual",
-		}); err != nil {
-			t.Fatalf("record claim %q: %v", body, err)
-		}
+		})
 	}
 	promise("send the rack inventory", mail("Rack decommissioning", &migration))
 	promise("confirm the cutover window", mail("ERP cutover plan", &erp))
