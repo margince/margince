@@ -515,3 +515,55 @@ func contactTitle(t *testing.T, e *apptest.AppEnv, email string) string {
 	t.Fatalf("no imported contact carries the address %s", email)
 	return ""
 }
+
+// A file whose contacts an undone import made can be staged and run again. The
+// undo archived them, so their addresses are free to be created once more.
+func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
+	e := setupImportApp(t)
+	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
+	const file = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Analyst\n"
+
+	first, status := uploadCSV(t, e, "contact", file)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "contact", first.SourceRef, mapping)
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", s)
+	}
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); s != http.StatusAccepted {
+		t.Fatalf("undo → %d, want 202", s)
+	}
+
+	again, status := uploadCSV(t, e, "contact", file)
+	if status != http.StatusOK {
+		t.Fatalf("second upload → %d, want 200", status)
+	}
+	rerun, rerunStatus := createRunWithMapping(t, e, "contact", again.SourceRef, mapping)
+	if rerunStatus != http.StatusAccepted {
+		t.Fatalf("staging the file again → %d, want 202", rerunStatus)
+	}
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+		t.Fatalf("approve the second run → %d, want 202", s)
+	}
+	if got := importedContactCount(t, e); got != 1 {
+		t.Fatalf("contacts after the second run = %d, want 1", got)
+	}
+}
+
+// A Latin-1 file is refused at the upload with a 422 that names the file.
+func TestUploadRefusesAFileThatIsNotUTF8(t *testing.T) {
+	e := setupImportApp(t)
+	latin1 := "Email,Full Name\nrene@example.test,Ren\xe9 Dupont\n"
+
+	status, refusals := uploadRefusal(t, e, "contact", latin1)
+	if status != http.StatusUnprocessableEntity {
+		t.Fatalf("upload of a Latin-1 file → %d, want 422", status)
+	}
+	if len(refusals) != 1 || refusals[0].Code != "not_utf8" || refusals[0].Field != "file" {
+		t.Fatalf("refusals = %+v, want one not_utf8 on file", refusals)
+	}
+}

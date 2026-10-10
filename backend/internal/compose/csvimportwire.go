@@ -217,6 +217,8 @@ func importProblem(err error) error {
 	switch {
 	case errors.Is(err, migration.ErrHeaderInvalid):
 		return httperr.Validation("file", "header_unusable", err.Error())
+	case errors.Is(err, migration.ErrNotUTF8):
+		return httperr.Validation("file", "not_utf8", err.Error())
 	case errors.Is(err, migration.ErrSourceUnreadable):
 		return httperr.Validation("file", "unreadable", err.Error())
 	case errors.Is(err, migration.ErrObjectNotInSource):

@@ -1328,6 +1328,8 @@ export const vi = {
   "share.downgradeBody":
     "{name} đang có quyền {from} với hồ sơ này và sẽ chỉ còn quyền {to}. Thay đổi này được ghi vào nhật ký hoạt động.",
   "share.downgradeConfirm": "Giảm xuống {to}",
+  "share.versionSkew":
+    "Ai đó đã thay đổi quyền truy cập này sau khi bạn mở nó, nên quyền chưa bị thu hồi. Danh sách hiện hiển thị quyền truy cập hiện tại; hãy thu hồi lại nếu bạn vẫn muốn.",
   "share.seatCeiling":
     "Tài khoản chỉ xem không thể có quyền ghi. Nâng cấp tài khoản trước, hoặc cấp quyền đọc.",
   "share.whoHasAccess": "Đã chia sẻ với",

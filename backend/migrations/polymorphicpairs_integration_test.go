@@ -16,7 +16,9 @@ package migrations_test
 // corpus is derived rather than listed. SHAPE gives each branch a foreign key column of
 // its own. activity_link, dedupe_candidate and provider_run replaced the id with them.
 // record_grant and others keep the id and derive the keys from it as stored generated
-// columns. A validated CHECK holds them to one key per row. SPLIT gives each branch its
+// columns. assurance_task_item has a trigger fill plain key columns instead,
+// because a generated column would rewrite its history. A validated CHECK holds
+// them to one key per row. SPLIT gives each branch its
 // own table, taking the discriminator with it. A pair that OUTLIVES its record by
 // design stays, and owes a reason instead.
 //
@@ -134,8 +136,7 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 // no ending can be picked. OUTLIVES is the one that stays, and its reason is the whole
 // entry.
 var pairResolution = gatekit.Waive(map[string]string{
-	"deal_stage_evidence.source_id (source_type)":                        "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
-	"assurance_task_item.subject_id (subject_kind)":                      "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
+	"deal_stage_evidence.source_id (source_type)":                        "DECIDE — evidence is refuted, never deleted, so a cascade would erase the reason for an earlier stage decision. RESTRICT (an activity or contract with evidence cannot be hard-deleted) or OUTLIVES (the pair outlives its source) is still to be chosen",
 	"activity_audience_member.subject_id (subject_type)":                 "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
 	"ai_call.subject_id (subject_type)":                                  "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
 	"ai_feedback.subject_id (subject_type)":                              "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
@@ -207,5 +208,56 @@ func readShapeFacts(ctx context.Context, t *testing.T, conn *pgx.Conn, pair poly
 	if err != nil {
 		t.Fatalf("reading the generated keys of %s: %v", pair.table, err)
 	}
+	readTriggerFilledFacts(ctx, t, conn, &facts)
 	return facts
+}
+
+// readTriggerFilledFacts reads what a trigger-filled key is judged by. That is
+// each single-column foreign key, and the NOT NULL booleans a marker can be. It
+// is also each `BEFORE` row trigger, with its function source.
+func readTriggerFilledFacts(ctx context.Context, t *testing.T, conn *pgx.Conn, facts *shapeFacts) {
+	t.Helper()
+	table := facts.pair.table
+	facts.foreignKeys = catalogRows(ctx, t, conn, table, `
+		SELECT a.attname, fk.confrelid::regclass::text, fk.confdeltype = 'c', fk.convalidated
+		  FROM pg_constraint fk
+		  JOIN pg_attribute a ON a.attrelid = fk.conrelid AND fk.conkey = ARRAY[a.attnum]
+		 WHERE fk.conrelid = $1::regclass AND fk.contype = 'f'`,
+		func(row pgx.CollectableRow) (foreignKey, error) {
+			var fk foreignKey
+			err := row.Scan(&fk.column, &fk.references, &fk.cascades, &fk.validated)
+			return fk, err
+		})
+	facts.flags = catalogRows(ctx, t, conn, table, `
+		SELECT attname FROM pg_attribute
+		 WHERE attrelid = $1::regclass AND attnum > 0 AND NOT attisdropped
+		   AND attnotnull AND atttypid = 'boolean'::regtype`, pgx.RowTo[string])
+	// tgtype bits: 1 row, 2 before, 4 insert, 16 update.
+	facts.triggers = catalogRows(ctx, t, conn, table, `
+		SELECT tg.tgtype & 4 <> 0, tg.tgtype & 16 <> 0, tg.tgqual IS NOT NULL,
+		       cardinality(tg.tgattr::int2[]) > 0, tg.tgenabled::text, p.prosrc
+		  FROM pg_trigger tg JOIN pg_proc p ON p.oid = tg.tgfoid
+		 WHERE tg.tgrelid = $1::regclass AND NOT tg.tgisinternal AND tg.tgtype & 3 = 3`,
+		func(row pgx.CollectableRow) (rowTrigger, error) {
+			var trigger rowTrigger
+			err := row.Scan(&trigger.onInsert, &trigger.onUpdate, &trigger.qualified,
+				&trigger.columns, &trigger.enabled, &trigger.source)
+			return trigger, err
+		})
+}
+
+// catalogRows runs one catalog query about table and collects its rows.
+func catalogRows[T any](
+	ctx context.Context, t *testing.T, conn *pgx.Conn, table, query string, scan pgx.RowToFunc[T],
+) []T {
+	t.Helper()
+	rows, err := conn.Query(ctx, query, table)
+	if err != nil {
+		t.Fatalf("reading the catalog of %s: %v", table, err)
+	}
+	got, err := pgx.CollectRows(rows, scan)
+	if err != nil {
+		t.Fatalf("reading the catalog of %s: %v", table, err)
+	}
+	return got
 }

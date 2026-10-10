@@ -57,11 +57,7 @@ func displayNameIsCapturesGuessTx(ctx context.Context, tx pgx.Tx, contactID ids.
 // captureGuessedDisplayNamesTx is the one statement that says whether a
 // contact's display name may be replaced, for one contact (only) or for a page.
 //
-// Origin comes from captured_by, stamped once at create. Every capture sink
-// runs as a `connector:` principal; the verdict and accept paths run as the two
-// actors above. Every other door stamps something else and is left alone. Two
-// connector doors are not capture: the vCard ingest copies a curated card, and
-// an import names its system in source_system.
+// Origin is capturedOriginSQL, which the mailbox purge reads too.
 //
 // Any later audit row naming full_name protects the name, unless capture or the
 // repair wrote it. A human or an agent chose it, by update or by restore.
@@ -83,9 +79,7 @@ func captureGuessedDisplayNamesTx(
 		       SELECT btrim(coalesce($7::text, p.first_name, '')) AS first,
 		              btrim(coalesce($8::text, p.last_name, '')) AS last) n
 		 WHERE ($1::uuid IS NULL OR p.id = $1)
-		   AND (p.captured_by LIKE 'connector:%' OR p.captured_by IN ($2, $3))
-		   AND p.source IS DISTINCT FROM $4
-		   AND p.source_system IS NULL
+		   AND `+capturedOriginSQL("$2", "$3", "$4")+`
 		   AND (NOT $5 OR (n.first <> '' AND n.last <> ''))
 		   AND NOT (n.first <> '' AND n.last <> ''
 		            AND strpos(lower(p.full_name), lower(n.first)) > 0
@@ -95,8 +89,7 @@ func captureGuessedDisplayNamesTx(
 		        WHERE a.entity_type = 'contact' AND a.entity_id = p.id
 		          AND a.action <> 'create'
 		          AND (a.after ? 'full_name' OR a.before ? 'full_name')
-		          AND a.actor_id NOT LIKE 'connector:%'
-		          AND a.actor_id NOT IN ($2, $3, $9))
+		          AND NOT `+captureWriterSQL("a.actor_id", "$2", "$3", "$9")+`)
 		 ORDER BY p.id
 		 LIMIT $6`,
 		only, CaptureVerdictActor, CaptureAcceptActor, vcardSource, needPair, limit,
