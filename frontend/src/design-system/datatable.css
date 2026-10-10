@@ -18,7 +18,7 @@
   white-space: nowrap;
 }
 /* A figure with a caption under it keeps both lines on the column's end edge. */
-.table .datatable-end > .cell-stack {
+.table .datatable-end .cell-stack {
   align-items: flex-end;
 }
 /* The column that takes the spare width. A table sizes every other column to

@@ -65,16 +65,19 @@ function callColumns(
     {
       key: "when",
       header: t("aicalls.col.when"),
-      render: (call) => (
-        <CellStack>
-          <time dateTime={call.occurred_at} className="aicalls-time">
-            {formatDateTime(call.occurred_at, locale, zone)}
+      render: (call) => {
+        const at = formatDateTime(call.occurred_at, locale, zone);
+        return (
+          <time dateTime={call.occurred_at} title={at}>
+            <CellStack>
+              <span className="aicalls-time">{at}</span>
+              <span className="t-caption">
+                {formatRelativeTime(call.occurred_at, locale, new Date(now))}
+              </span>
+            </CellStack>
           </time>
-          <span className="t-caption">
-            {formatRelativeTime(call.occurred_at, locale, new Date(now))}
-          </span>
-        </CellStack>
-      ),
+        );
+      },
     },
     {
       key: "task",
@@ -91,10 +94,12 @@ function callColumns(
       key: "model",
       header: t("aicalls.col.model"),
       render: (call) => (
-        <CellStack>
-          <code className="aicalls-model">{call.served_model}</code>
-          <span className="t-caption">{rungCaption(call, t)}</span>
-        </CellStack>
+        <span className="aicalls-model-line">
+          <CellStack>
+            <code className="aicalls-model">{call.served_model}</code>
+            <span className="t-caption">{rungCaption(call, t)}</span>
+          </CellStack>
+        </span>
       ),
     },
     {
@@ -102,23 +107,28 @@ function callColumns(
       header: t("aicalls.col.tokens"),
       align: "end",
       render: (call) => (
-        <CellStack>
-          <span>
-            {formatNumber(call.tokens_in, locale)} /{" "}
-            {formatNumber(call.tokens_out, locale)}
-          </span>
-          {call.cache_hit && (
-            <span className="t-caption">{t("aicalls.badge.cacheHit")}</span>
-          )}
-        </CellStack>
+        <span className="aicalls-figure">
+          <CellStack>
+            <span>
+              {formatNumber(call.tokens_in, locale)} /{" "}
+              {formatNumber(call.tokens_out, locale)}
+            </span>
+            {call.cache_hit && (
+              <span className="t-caption">{t("aicalls.badge.cacheHit")}</span>
+            )}
+          </CellStack>
+        </span>
       ),
     },
     {
       key: "latency",
       header: t("aicalls.col.latency"),
       align: "end",
-      render: (call) =>
-        t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) }),
+      render: (call) => (
+        <span className="aicalls-figure">
+          {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
+        </span>
+      ),
     },
     {
       key: "outcome",

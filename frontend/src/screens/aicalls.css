@@ -30,3 +30,37 @@ code.aicalls-sentinel {
   font-family: var(--fontFamilyMono);
   color: var(--textSecondary);
 }
+
+/* Folded, every call keeps one shape: how long ago and the model on line two,
+   the figures on line three. The exact moment stays in the time's title. */
+@container table-fold (width < 36rem) {
+  .aicalls-card .aicalls-time {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .aicalls-card td:has(> .aicalls-model-line) {
+    flex: 1 1 0%;
+  }
+  .aicalls-card td:is(:has(> time), :has(> .aicalls-model-line)) {
+    align-self: baseline;
+  }
+  /* One run of text, so a long rung wraps under the model, not past it. */
+  .aicalls-model-line > .cell-stack {
+    display: inline;
+  }
+  .aicalls-model-line > .cell-stack > * {
+    margin-inline-end: var(--space-2);
+  }
+  .aicalls-card td:has(> .aicalls-figure) {
+    order: 5;
+  }
+  .aicalls-card tr:not(.datatable-detail)::before {
+    content: "";
+    flex-basis: 100%;
+    order: 4;
+  }
+}

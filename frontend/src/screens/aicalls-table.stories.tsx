@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
 import { CallTable } from "./aicalls-table";
@@ -94,6 +94,20 @@ export const OutcomesDark: Story = { globals: { theme: "dark" } };
 export const OutcomesPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findAllByRole("row");
+    for (const row of canvasElement.querySelectorAll(
+      "tbody tr:not([hidden])",
+    )) {
+      const box = (selector: string) =>
+        row.querySelector(selector)?.closest("td")?.getBoundingClientRect();
+      const model = box(".aicalls-model-line");
+      const figures = box(".aicalls-figure");
+      await expect(figures?.top).toBeGreaterThanOrEqual(model?.bottom ?? 0);
+      const exact = row.querySelector(".aicalls-time")?.getBoundingClientRect();
+      await expect(exact?.width).toBeLessThanOrEqual(1);
+    }
+  },
 };
 export const Opened: Story = {
   play: async ({ canvasElement }) => {
