@@ -46,6 +46,7 @@ type policy struct {
 	RecordType string // x-mcp-tool record_type ("" when the tool is not record-typed)
 	Tier       string // x-mcp-tool tier: auto_execute | confirmation_required | dynamic
 	Scope      string // x-mcp-tool scope: the passport cap the operation consumes
+	ServedBy   string // x-mcp-tool served_by: "registry" when the handler runs the tool itself
 }
 
 func main() {
@@ -116,6 +117,7 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 					RecordType string `yaml:"record_type"`
 					Tier       string `yaml:"tier"`
 					Scope      string `yaml:"scope"`
+					ServedBy   string `yaml:"served_by"`
 				} `yaml:"x-mcp-tool"`
 				AgentAccess string `yaml:"x-agent-access"`
 			}
@@ -135,6 +137,7 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 				p.RecordType = op.MCPTool.RecordType
 				p.Tier = op.MCPTool.Tier
 				p.Scope = op.MCPTool.Scope
+				p.ServedBy = op.MCPTool.ServedBy
 				if p.Tool == "" || (p.Tier != "auto_execute" && p.Tier != "confirmation_required" && p.Tier != "dynamic") {
 					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool needs a verb and an auto_execute|confirmation_required|dynamic tier", httpMethod, path, op.OperationID))
 					continue
@@ -217,6 +220,7 @@ type agentPolicy struct {
 	RecordType agentRecordType // the record the operation targets; zero when it declares none
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
+	ServedBy   agentServedBy   // servedByRegistry: the handler's tool call admits it, not the gate
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated
@@ -224,8 +228,13 @@ type agentPolicy struct {
 var agentPolicies = map[string]agentPolicy{
 `)
 	for _, p := range policies {
-		fmt.Fprintf(&b, "\t%q: {Op: %q, Access: %q, Tool: %q, RecordType: %q, Tier: %q, Scope: %q},\n",
+		fmt.Fprintf(&b, "\t%q: {Op: %q, Access: %q, Tool: %q, RecordType: %q, Tier: %q, Scope: %q",
 			p.Route, p.Op, p.Access, p.Tool, p.RecordType, p.Tier, p.Scope)
+		// Written only where declared, so the marker stands out in the table.
+		if p.ServedBy != "" {
+			fmt.Fprintf(&b, ", ServedBy: %q", p.ServedBy)
+		}
+		b.WriteString("},\n")
 	}
 	b.WriteString("}\n")
 	return b.String()

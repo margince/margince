@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 84,
     "system_frame_tokens": 586,
-    "tokens": 29643,
+    "tokens": 29701,
     "median_tool_tokens": 292,
-    "mean_tool_tokens": 352
+    "mean_tool_tokens": 353
   },
   "agents": [
     {
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 84,
-      "tokens": 5183,
-      "listing_tokens": 2760,
-      "step_schema_tokens": 1837,
-      "percent_of_ceiling": 15,
-      "headroom_tokens": 18027,
+      "tokens": 5292,
+      "listing_tokens": 2818,
+      "step_schema_tokens": 1888,
+      "percent_of_ceiling": 16,
+      "headroom_tokens": 17918,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -271,6 +271,10 @@
       "tokens": 273
     },
     {
+      "name": "whats_slipping_this_week",
+      "tokens": 269
+    },
+    {
       "name": "list_approvals",
       "tokens": 268
     },
@@ -321,10 +325,6 @@
     {
       "name": "create_task",
       "tokens": 221
-    },
-    {
-      "name": "whats_slipping_this_week",
-      "tokens": 211
     },
     {
       "name": "at_risk_relationships",

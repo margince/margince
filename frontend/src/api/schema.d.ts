@@ -3240,6 +3240,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/slipping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open deals going quiet or past their expected close date, worst first.
+         * @description The answer the `whats_slipping_this_week` agent tool gives, run by the same tool on
+         *     both doors, so a passport here and over MCP gets the same deals for the same input.
+         *     Each deal carries the evidence that puts it on the list. A deal whose risk cannot be
+         *     evidenced from its own fields is left out rather than guessed.
+         *
+         *     A deal is on the list when it has had no recorded activity for longer than
+         *     `quiet_days`, or when its expected close date has passed. `quiet_days` defaults to
+         *     60, the product-wide stalled threshold. The home screen's quiet-deals lane asks at
+         *     19 days. Only the deals the caller may see are read.
+         */
+        get: operations["listSlippingDeals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}": {
         parameters: {
             query?: never;
@@ -26799,6 +26827,31 @@ export interface components {
              */
             occurred_at: string;
         };
+        /** @description What `whats_slipping_this_week` answers, worst first. */
+        SlippingDealList: {
+            deals: components["schemas"]["SlippingDeal"][];
+        };
+        /** @description One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id, so the order is the same on every read of the same data. */
+        SlippingDeal: {
+            rank: number;
+            /** Format: uuid */
+            deal_id: string;
+            name: string;
+            /**
+             * Format: int64
+             * @description Absent for a deal that carries no amount yet.
+             */
+            amount_minor?: number;
+            /** @description Present when amount_minor is, and only then. */
+            currency?: string;
+            evidence: components["schemas"]["SlippingEvidence"][];
+        };
+        /** @description One reason the deal is on the list, and the field or read it comes from. */
+        SlippingEvidence: {
+            /** @description The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`. */
+            source: string;
+            snippet: string;
+        };
         DealCoverage: {
             /** Format: uuid */
             deal_id: string;
@@ -35807,6 +35860,11 @@ export interface components {
              * @enum {string}
              */
             scope?: "read" | "draft" | "write" | "send" | "enrich";
+            /**
+             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. Absent means the operation's own handler runs and the gate admits it.
+             * @enum {string}
+             */
+            served_by?: "registry";
         };
         /**
          * @description EXACTLY ONE input source (B-E01.2b/.13): `url` (fetch+parse a website, ADR-0006), `text` (the
@@ -48285,6 +48343,34 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listSlippingDeals: {
+        parameters: {
+            query?: {
+                /** @description Days without recorded activity after which an open deal counts as gone quiet. */
+                quiet_days?: number;
+                /** @description Cap the ranked list. Omit it for every evidenced deal. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The slipping deals, worst first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlippingDealList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getDeal: {

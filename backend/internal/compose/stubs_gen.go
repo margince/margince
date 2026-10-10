@@ -1559,6 +1559,10 @@ func (stubs) CreateDeal(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "CreateDeal")
 }
 
+func (stubs) ListSlippingDeals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSlippingDealsParams) {
+	httperr.NotImplemented(w, r, "ListSlippingDeals")
+}
+
 func (stubs) ArchiveDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveDealParams) {
 	httperr.NotImplemented(w, r, "ArchiveDeal")
 }

@@ -4894,6 +4894,42 @@ paths:
                       errors:
                         - { field: stage_id, code: stage_not_in_pipeline }
 
+  /deals/slipping:
+    get:
+      tags: [Deals]
+      operationId: listSlippingDeals
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The open deals going quiet or past their expected close date, worst first.
+      description: |
+        The answer the `whats_slipping_this_week` agent tool gives, run by the same tool on
+        both doors, so a passport here and over MCP gets the same deals for the same input.
+        Each deal carries the evidence that puts it on the list. A deal whose risk cannot be
+        evidenced from its own fields is left out rather than guessed.
+
+        A deal is on the list when it has had no recorded activity for longer than
+        `quiet_days`, or when its expected close date has passed. `quiet_days` defaults to
+        60, the product-wide stalled threshold. The home screen's quiet-deals lane asks at
+        19 days. Only the deals the caller may see are read.
+      x-mcp-tool: { verb: whats_slipping_this_week, record_type: deal, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - name: quiet_days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 60 }
+          description: Days without recorded activity after which an open deal counts as gone quiet.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50 }
+          description: Cap the ranked list. Omit it for every evidenced deal.
+      responses:
+        '200':
+          description: The slipping deals, worst first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SlippingDealList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -37907,6 +37943,42 @@ components:
         source_kind: { type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.' }
         due_at: { type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.' }
         occurred_at: { type: string, format: date-time, description: 'When it was said.' }
+    SlippingDealList:
+      type: object
+      description: What `whats_slipping_this_week` answers, worst first.
+      required: [deals]
+      properties:
+        deals:
+          type: array
+          items: { $ref: '#/components/schemas/SlippingDeal' }
+    SlippingDeal:
+      type: object
+      description: >-
+        One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id,
+        so the order is the same on every read of the same data.
+      required: [rank, deal_id, name, evidence]
+      properties:
+        rank: { type: integer, minimum: 1 }
+        deal_id: { type: string, format: uuid }
+        name: { type: string }
+        amount_minor:
+          type: integer
+          format: int64
+          description: Absent for a deal that carries no amount yet.
+        currency: { type: string, description: 'Present when amount_minor is, and only then.' }
+        evidence:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/SlippingEvidence' }
+    SlippingEvidence:
+      type: object
+      description: One reason the deal is on the list, and the field or read it comes from.
+      required: [source, snippet]
+      properties:
+        source:
+          type: string
+          description: 'The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`.'
+        snippet: { type: string }
     DealCoverage:
       type: object
       required: [deal_id, stakeholders, our_side, risks, sections_omitted]
@@ -49252,6 +49324,16 @@ components:
             emitting a zero. It is what an operation with no registered MCP tool is
             admitted under, and for one that has a tool the generator holds the two
             equal — so a verb cannot mean `enrich` on MCP and `write` on REST.
+        served_by:
+          type: string
+          enum: [registry]
+          description: >-
+            registry — the operation's handler runs the tool through the tool registry, the
+            entry the MCP door uses, which admits the call itself: scope, seat, tier,
+            approval, retry key and volume budget. The REST admission gate passes such an
+            operation through untouched, because admitting it there as well would charge an
+            agent twice and stage a confirm-first call twice. Absent means the operation's
+            own handler runs and the gate admits it.
 
     # ---- AI: cold-start ----
     ColdStartRequest:

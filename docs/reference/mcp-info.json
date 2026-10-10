@@ -10,16 +10,16 @@
   "totals": {
     "tools": 84,
     "resources": 9,
-    "tool_catalog_bytes": 263311,
+    "tool_catalog_bytes": 263543,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 66717,
+    "approx_wire_tokens_total": 66775,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 68490,
-      "input_schema_bytes": 59163,
+      "description_bytes": 68516,
+      "input_schema_bytes": 59369,
       "output_schema_bytes": 114876,
-      "description_plus_input_schema_bytes": 127653
+      "description_plus_input_schema_bytes": 127885
     }
   },
   "tools": {
@@ -16512,13 +16512,20 @@
           "readOnlyHint": true,
           "title": "What's slipping this week"
         },
-        "description": "Answer \"what is slipping?\": the deals going quiet or running past their expected close date, ranked worst first, each with the evidence that says so. It reports only deals whose risk can be evidenced from their own fields — a deal nobody can point at a reason for is absent rather than guessed — and it is scoped to the deals the caller may see. Use run_report for the pipeline as a whole (totals, counts, breakdowns), and at_risk_relationships when the question is who a deal rests on rather than whether it is moving. Keep each deal_id if you intend to act; draft_follow_ups_for works over this same ranked set without you re-deriving it. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer \"what is slipping?\": the deals going quiet or running past their expected close date, ranked worst first, each with the evidence that says so. It reports only deals whose risk can be evidenced from their own fields — a deal nobody can point at a reason for is absent rather than guessed — and it is scoped to the deals the caller may see. Use run_report for the pipeline as a whole (totals, counts, breakdowns), and at_risk_relationships when the question is who a deal rests on rather than whether it is moving. Keep each deal_id if you intend to act; draft_follow_ups_for works over this same ranked set at the default quiet_days without you re-deriving it. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "limit": {
               "description": "Cap the ranked set; omit for the full evidenced set",
               "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "quiet_days": {
+              "default": 60,
+              "description": "Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold",
+              "maximum": 365,
               "minimum": 1,
               "type": "integer"
             }

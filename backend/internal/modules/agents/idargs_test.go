@@ -309,8 +309,8 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterIntentTools(r, inertRetriever{}, nil, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
-		func(context.Context) ([]SlippingDeal, error) { return nil, errSeamReached },
-		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", errSeamReached })
+		func(context.Context, int) ([]SlippingDeal, error) { return nil, errSeamReached },
+		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", errSeamReached }, testStalledDays)
 	RegisterCommitmentTool(r, func(context.Context, CommitmentQuery) (CommitmentSweep, error) {
 		return CommitmentSweep{}, errSeamReached
 	})

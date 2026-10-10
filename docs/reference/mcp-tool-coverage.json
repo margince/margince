@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 4,
     "never_driven": 29,
     "permitted_but_never_required": 24,
-    "tokens_served_but_never_driven": 8670,
+    "tokens_served_but_never_driven": 8728,
     "use_case_cases": 32,
     "acceptance_criteria_named": 78,
     "tools_added_by_shipped_units": 0,
@@ -1934,6 +1934,24 @@
       "measured_by_model": {}
     },
     {
+      "name": "whats_slipping_this_week",
+      "tokens": 269,
+      "agents": [
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case44_chase_what_is_slipping"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "measured_by_model": {}
+    },
+    {
       "name": "prepare_handoff",
       "tokens": 267,
       "agents": [],
@@ -2028,24 +2046,6 @@
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [
         "deal_health"
-      ],
-      "measured_by_model": {}
-    },
-    {
-      "name": "whats_slipping_this_week",
-      "tokens": 211,
-      "agents": [
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case44_chase_what_is_slipping"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
       ],
       "measured_by_model": {}
     },

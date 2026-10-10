@@ -55,7 +55,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			p, ok := principal.Actor(ctx)
-			if !ok || p.Type != principal.PrincipalAgent {
+			if !ok || p.Type != principal.PrincipalAgent || servedByTheRegistry(r) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -102,6 +102,14 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 			})
 		})
 	}
+}
+
+// servedByTheRegistry reports a route whose handler runs its tool through
+// Registry.Invoke, which admits the call itself. Admitting it here too would
+// charge the agent twice and stage a confirm-first call twice.
+func servedByTheRegistry(r *http.Request) bool {
+	pattern := chi.RouteContext(r.Context()).RoutePattern()
+	return agentPolicies[r.Method+" "+pattern].ServedBy == servedByRegistry
 }
 
 // refuseAgentRead answers a NON-mutating agent call: its governance class

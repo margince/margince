@@ -93,7 +93,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 4 |
 | … **no case requires** | 29 |
 | … of those, permitted somewhere but never required | 24 |
-| Prompt tokens spent on tools no case requires | 8670 |
+| Prompt tokens spent on tools no case requires | 8728 |
 | Use cases | 32 |
 | Acceptance criteria the cases declare, each with a statement | 78 |
 
@@ -486,6 +486,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `forecast_input_checks` | 324 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers`, `case45_move_the_deal_on`, `case50_what_moved_my_quarter` | - |
 | `read_record` | 292 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `describe_analytics_vocabulary` | 286 | - | `case49_who_can_introduce_us`, `case7_ask_for_a_number` | - |
+| `whats_slipping_this_week` | 269 | `agent_loop` | `case44_chase_what_is_slipping` | `overnight_at_risk_sweep` |
 | `prepare_handoff` | 267 | - | `case41_close_the_project` | - |
 | `describe_query_vocabulary` | 266 | - | `case4_use_the_moment` | - |
 | `company_coverage` | 246 | - | `case5_before_the_meeting` | - |
@@ -493,7 +494,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `relink_thread` | 240 | - | `case48_that_whole_thread_is_filed_wrong` | - |
 | `decide_approval_bundle` | 235 | - | - | - |
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | - |
-| `whats_slipping_this_week` | 211 | `agent_loop` | `case44_chase_what_is_slipping` | `overnight_at_risk_sweep` |
 | `list_input_checks` | 209 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | - |
 | `read_brief` | 205 | `agent_loop` | - | `morning_brief` |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |

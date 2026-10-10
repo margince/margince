@@ -56,8 +56,8 @@ spends it on every run of every agent.
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 84 | 2760 | 1837 | 5183 | 15% | 18027 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29643 |  |  | 90% |  |  |  |
+| `overnight_at_risk_sweep` | 7 | 7 of 84 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29701 |  |  | 90% |  |  |  |
 
 ### `morning_brief`
 
@@ -94,8 +94,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 5183 tokens on every step (2760 listing, 1837 step schema), leaving
-18027 of its budget and 27585 tokens of the
+Attaches 7 tools and pays 5292 tokens on every step (2818 listing, 1888 step schema), leaving
+17918 of its budget and 27476 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 292 tokens, mean 352, across 84 served tools.
+Median 292 tokens, mean 353, across 84 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -200,6 +200,7 @@ listing once. Read a row as what that tool costs a menu.
 | `archive_record` | 289 |  |
 | `describe_analytics_vocabulary` | 286 |  |
 | `draft_follow_ups_for` | 273 |  |
+| `whats_slipping_this_week` | 269 |  |
 | `list_approvals` | 268 |  |
 | `prepare_handoff` | 267 |  |
 | `describe_query_vocabulary` | 266 |  |
@@ -213,7 +214,6 @@ listing once. Read a row as what that tool costs a menu.
 | `qualify_lead` | 229 |  |
 | `apply_tag` | 226 |  |
 | `create_task` | 221 |  |
-| `whats_slipping_this_week` | 211 |  |
 | `at_risk_relationships` | 209 |  |
 | `disqualify_lead` | 209 |  |
 | `list_input_checks` | 209 |  |

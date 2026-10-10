@@ -77,6 +77,16 @@ const (
 	scopeEnrich agentScope = "enrich"
 )
 
+// agentServedBy says who admits an agent's call; the zero value means the gate does.
+//
+// Values are the closed set declared by components.schemas.AgentAdmissionPolicy in
+// api/crm.yaml; a value outside it fails generation.
+type agentServedBy string
+
+const (
+	servedByRegistry agentServedBy = "registry"
+)
+
 // agentPolicy is one contract operation's admission class for AGENT
 // (Passport) principals (ADR-0055): either the MCP tool verb whose tier
 // governs it on every transport, or an x-agent-access marker. The gate
@@ -93,6 +103,7 @@ type agentPolicy struct {
 	RecordType agentRecordType // the record the operation targets; zero when it declares none
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
+	ServedBy   agentServedBy   // servedByRegistry: the handler's tool call admits it, not the gate
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated
@@ -287,6 +298,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/deal-rooms/{id}/threads":                                       {Op: "listDealRoomThreads", Access: "tool", Tool: "search_records", RecordType: "deal_room_thread", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deal-suggestions":                                              {Op: "listDealSuggestions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/deals":                                                         {Op: "listDeals", Access: "tool", Tool: "list_records", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/deals/slipping":                                                {Op: "listSlippingDeals", Access: "tool", Tool: "whats_slipping_this_week", RecordType: "deal", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/deals/{id}":                                                    {Op: "getDeal", Access: "tool", Tool: "read_record", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/deals/{id}/documents":                                          {Op: "listDealDocuments", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/deals/{id}/offers":                                             {Op: "listDealOffers", Access: "tool", Tool: "search_records", RecordType: "offer", Tier: "auto_execute", Scope: "read"},

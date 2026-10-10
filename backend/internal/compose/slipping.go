@@ -35,24 +35,26 @@ import (
 // the tool is a triage set, not an exhaustive report (run_report is).
 const slippingScanLimit = 50
 
-// slippingLister serves the formulas-§8 candidate set: stalled open
-// deals plus open deals whose expected close date is already past.
+// slippingLister serves the candidate set at the window the tool asks for. It
+// holds the open deals quiet that long and those past their expected close.
 func slippingLister(pool *pgxpool.Pool) agents.SlippingLister {
-	return quietDealLister(pool, deals.StalledThresholdDays)
+	return func(ctx context.Context, quietDays int) ([]agents.SlippingDeal, error) {
+		return quietDealLister(pool, quietDays)(ctx)
+	}
 }
 
-// quietDealLister is slippingLister with the idle window named by the caller.
+// quietDealLister is the candidate set at one idle window.
 //
 // ONE candidate set, two patiences. The tool surface asks at the stalled
-// threshold, because "slipping" is the product-wide status; the morning queue
-// asks at the shorter window, because a queue that only speaks after two months
-// is reporting rather than warning. Both run this function, so a change to how
-// a candidate is built or evidenced reaches both — a second at-risk predicate
-// beside this one is the failure this shape exists to prevent.
+// threshold unless its caller names a window. The morning queue asks at the
+// shorter window, because a queue that only speaks after two months is
+// reporting rather than warning. Both run this function, so a change to how a
+// candidate is built or evidenced reaches both. A second at-risk predicate
+// beside this one is the failure this shape prevents.
 //
 // Deals whose expected close date has passed join the set at ANY window: an
 // overdue close is late whatever the idle clock says.
-func quietDealLister(pool *pgxpool.Pool, quietForDays int) agents.SlippingLister {
+func quietDealLister(pool *pgxpool.Pool, quietForDays int) func(context.Context) ([]agents.SlippingDeal, error) {
 	scan := quietDealScan(pool, quietForDays)
 	return func(ctx context.Context) ([]agents.SlippingDeal, error) {
 		candidates, _, err := scan(ctx)
@@ -135,6 +137,11 @@ func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() t
 			if !admitted[candidate.DealID] && !candidate.CloseOverdue {
 				continue
 			}
+			// Stalled means quiet at the window asked for, so the tool can
+			// evidence that idle claim. The row's own flag is the 60-day
+			// answer, which also holds at any shorter window.
+			candidate.Stalled = admitted[candidate.DealID] ||
+				(candidate.Stalled && quietForDays <= deals.StalledThresholdDays)
 			seen[candidate.DealID] = true
 			out = append(out, candidate)
 		}

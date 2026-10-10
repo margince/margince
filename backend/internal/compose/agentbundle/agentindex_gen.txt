@@ -78,6 +78,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /deals` | listDeals | List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads. | any | at once |
 | `POST /deals` | createDeal | Create a deal. | Change records | at once |
+| `GET /deals/slipping` | listSlippingDeals | The open deals going quiet or past their expected close date, worst first. | any | at once |
 | `GET /deals/{id}` | getDeal | Get a deal by id (the 360 record). | any | at once |
 | `PATCH /deals/{id}` | updateDeal | Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. | Change records | at once |
 | `DELETE /deals/{id}` | archiveDeal | Archive (soft-delete) a deal. | Change records | at once |

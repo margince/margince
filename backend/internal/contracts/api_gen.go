@@ -43699,6 +43699,32 @@ type SiteReadStarted struct {
 // SiteReadStartedStatus The joined dossier state when a read is already in flight.
 type SiteReadStartedStatus string
 
+// SlippingDeal One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id, so the order is the same on every read of the same data.
+type SlippingDeal struct {
+	// AmountMinor Absent for a deal that carries no amount yet.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// Currency Present when amount_minor is, and only then.
+	Currency *string            `json:"currency,omitempty"`
+	DealId   openapi_types.UUID `json:"deal_id"`
+	Evidence []SlippingEvidence `json:"evidence"`
+	Name     string             `json:"name"`
+	Rank     int                `json:"rank"`
+}
+
+// SlippingDealList What `whats_slipping_this_week` answers, worst first.
+type SlippingDealList struct {
+	Deals []SlippingDeal `json:"deals"`
+}
+
+// SlippingEvidence One reason the deal is on the list, and the field or read it comes from.
+type SlippingEvidence struct {
+	Snippet string `json:"snippet"`
+
+	// Source The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`.
+	Source string `json:"source"`
+}
+
 // SourceAuthor Who wrote a record in the system it was imported from, when that is not
 // whoever recorded it here.
 //
@@ -51239,6 +51265,15 @@ type CreateDealParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ListSlippingDealsParams defines parameters for ListSlippingDeals.
+type ListSlippingDealsParams struct {
+	// QuietDays Days without recorded activity after which an open deal counts as gone quiet.
+	QuietDays *int `form:"quiet_days,omitempty" json:"quiet_days,omitempty"`
+
+	// Limit Cap the ranked list. Omit it for every evidenced deal.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ArchiveDealParams defines parameters for ArchiveDeal.
@@ -66993,6 +67028,9 @@ type ServerInterface interface {
 	// Create a deal.
 	// (POST /deals)
 	CreateDeal(w http.ResponseWriter, r *http.Request, params CreateDealParams)
+	// The open deals going quiet or past their expected close date, worst first.
+	// (GET /deals/slipping)
+	ListSlippingDeals(w http.ResponseWriter, r *http.Request, params ListSlippingDealsParams)
 	// Archive (soft-delete) a deal.
 	// (DELETE /deals/{id})
 	ArchiveDeal(w http.ResponseWriter, r *http.Request, id Id, params ArchiveDealParams)
@@ -70533,6 +70571,12 @@ func (_ Unimplemented) ListDeals(w http.ResponseWriter, r *http.Request, params 
 // Create a deal.
 // (POST /deals)
 func (_ Unimplemented) CreateDeal(w http.ResponseWriter, r *http.Request, params CreateDealParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The open deals going quiet or past their expected close date, worst first.
+// (GET /deals/slipping)
+func (_ Unimplemented) ListSlippingDeals(w http.ResponseWriter, r *http.Request, params ListSlippingDealsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89712,6 +89756,60 @@ func (siw *ServerInterfaceWrapper) CreateDeal(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListSlippingDeals operation middleware
+func (siw *ServerInterfaceWrapper) ListSlippingDeals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSlippingDealsParams
+
+	// ------------- Optional query parameter "quiet_days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "quiet_days", r.URL.Query(), &params.QuietDays, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "quiet_days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiet_days", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSlippingDeals(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchiveDeal operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveDeal(w http.ResponseWriter, r *http.Request) {
 
@@ -108171,6 +108269,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals", wrapper.CreateDeal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/slipping", wrapper.ListSlippingDeals)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}", wrapper.ArchiveDeal)
