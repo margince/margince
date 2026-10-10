@@ -763,6 +763,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A row's "…" menu column. The header names it for a screen reader only, and
+ * the cell lets the trigger's focus ring past its exact-fit edge. */
+.lt-table th.lt-rowmenu {
+  color: transparent;
+}
+.lt-table td.lt-rowmenu {
+  overflow: visible;
+}
+
 /* The identity column stays put while the rest scrolls sideways: with enough
  * columns to need scrolling, a row whose name has scrolled away is a row you
  * can no longer tell apart. It carries its own background because the cells it
@@ -1136,6 +1145,23 @@
   /* A number in a stack belongs beside its label, not against the far edge. */
   .lt-table td.lt-num {
     text-align: left;
+  }
+
+  /* The "…" sits beside the card's heading rather than on a labelled line. */
+  .lt-table tbody tr:has(> td.lt-rowmenu) {
+    position: relative;
+  }
+  .lt-table tbody td.lt-rowmenu {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    padding: 0;
+  }
+  .lt-table td.lt-rowmenu::before {
+    content: none;
+  }
+  .lt-table tr:has(> td.lt-rowmenu) td.lt-identity {
+    padding-right: calc(var(--controlHeight) + var(--space-2));
   }
 
   /* Cards are already tight; the density control governs the desktop grid. */

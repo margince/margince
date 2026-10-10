@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { meFixture } from "../app/mefixture";
 import { ProductsAdmin } from "./products";
 import {
@@ -31,6 +32,42 @@ const product = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
+// One of each billing and status, so every Price, Billing and Status cell shows.
+const catalogue = [
+  { ...product, billing_model: "one_time" },
+  {
+    ...product,
+    id: "p-2",
+    name: "Support Plan",
+    sku: "SUP-M",
+    unit_price_minor: 9900,
+    billing_model: "recurring",
+    billing_interval_months: 1,
+  },
+  {
+    ...product,
+    id: "p-3",
+    name: "Annual Licence",
+    sku: null,
+    unit_price_minor: 1200000,
+    billing_model: "recurring",
+    billing_interval_months: 12,
+    active: false,
+  },
+  {
+    ...product,
+    id: "p-4",
+    name: "Legacy Workshop",
+    archived_at: "2026-06-02T08:00:00Z",
+  },
+];
+
+const catalogueRead = () =>
+  jsonResponse({
+    data: catalogue,
+    page: { next_cursor: null, has_more: false },
+  });
+
 // Every story here needs a principal, because the screen's write affordances are
 // gated on product grants now. The stub REFUSES to answer an unrouted `GET /me`
 // rather than guessing one — so without
@@ -41,44 +78,64 @@ const AUTHORING_ME = () =>
     meFixture({ allow: { product: ["read", "create", "update", "delete"] } }),
   );
 
+function renderCatalogue() {
+  installFetchStub({ "GET /me": AUTHORING_ME, "GET /products": catalogueRead });
+  return (
+    <StoryProviders>
+      <ProductsAdmin />
+    </StoryProviders>
+  );
+}
+
+// One page of rows: no pager and no page-size control under them.
 export const List: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": AUTHORING_ME,
-      "GET /products": () =>
-        jsonResponse({
-          data: [product],
-          page: { next_cursor: null, has_more: false },
-        }),
-    });
-    return (
-      <StoryProviders>
-        <ProductsAdmin />
-      </StoryProviders>
-    );
+  render: renderCatalogue,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("row", { name: /Support Plan/ });
+    await expect(
+      canvas.getByRole("navigation", { name: "Pages", hidden: true }),
+    ).not.toBeVisible();
   },
 };
-// The catalogue table at 390px. Every settings page takes the whole page column,
-// which is what a table needs and what a phone has none of. Seven values per row (name, SKU, unit, price, tax, active, the row verbs) have
-// to end up either wrapped or inside a scroller, and no story has drawn this
-// table narrow enough to say which.
+
+export const RowMenu: Story = {
+  render: renderCatalogue,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Support Plan" }),
+    );
+    await within(document.body).findByRole("button", {
+      name: "Archive product",
+    });
+  },
+};
+
+// The billing choices read as words, never as their catalog keys.
+export const NewProductBilling: Story = {
+  render: renderCatalogue,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "New product" }),
+    );
+    const form = within(await within(document.body).findByRole("dialog"));
+    await userEvent.click(
+      form.getByRole("combobox", { name: /^Billing period/ }),
+    );
+    await within(document.body).findByRole("option", { name: "Quarterly" });
+  },
+};
+// At 390px each row is a card: the name heads it and the "…" sits beside it.
 export const ListPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: () => {
-    installFetchStub({
-      "GET /me": AUTHORING_ME,
-      "GET /products": () =>
-        jsonResponse({
-          data: [product],
-          page: { next_cursor: null, has_more: false },
-        }),
+  render: renderCatalogue,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", {
+      name: "Actions for Support Plan",
     });
-    return (
-      <StoryProviders>
-        <ProductsAdmin />
-      </StoryProviders>
-    );
   },
 };
 export const Empty: Story = {

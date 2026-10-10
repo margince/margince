@@ -2,12 +2,15 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import { Badge } from "../design-system/atoms";
+import { Badge, OverflowMenu } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
+import { KeyedName } from "../design-system/keyedname";
 import type { ListColumn } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatMoney } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
-import { useLocale, useT } from "../i18n";
+import { type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";
 import { billingOf, billingPatchOf } from "./billingclassification";
 import { unwrap, useMe } from "./common";
@@ -63,52 +66,130 @@ export async function searchProductCandidates(
   return data.data.map((p) => ({ id: p.id, name: p.name }));
 }
 
-const PRODUCT_FIELDS: CreateField[] = [
-  { key: "name", label: "product.name", required: true },
-  { key: "sku", label: "product.sku" },
-  { key: "description", label: "product.description" },
-  { key: "unit", label: "product.unit", placeholder: "day" },
-  {
-    key: "unit_price",
-    label: "product.unitPrice",
-    type: "number",
-    required: true,
-  },
-  {
-    key: "currency",
-    label: "product.currency",
-    type: "select",
-    required: true,
-    options: ["EUR", "USD", "GBP", "CHF"].map((c) => ({ value: c, label: c })),
-  },
-  { key: "default_tax_rate", label: "product.taxRate", type: "number" },
-  {
-    // The empty option is a real answer here, and the one every product
-    // written before this field existed carries: nobody has said whether this
-    // price repeats. It is offered first so that leaving the form alone keeps
-    // saying that, rather than quietly asserting a one-off price.
-    key: "billing_model",
-    label: "product.billingModel",
-    type: "select",
-    options: [
-      { value: "", label: "product.billingUnclassified" },
-      { value: "one_time", label: "product.billingOneTime" },
-      { value: "recurring", label: "product.billingRecurring" },
-    ],
-  },
-  {
-    key: "billing_interval_months",
-    label: "product.billingInterval",
-    type: "select",
-    options: [
-      { value: "", label: "product.billingNoInterval" },
-      { value: "1", label: "product.billingMonthly" },
-      { value: "3", label: "product.billingQuarterly" },
-      { value: "6", label: "product.billingHalfYearly" },
-      { value: "12", label: "product.billingYearly" },
-    ],
-  },
-];
+// Built per render: option labels are shown as given, so they arrive translated.
+function productFields(t: Translator): CreateField[] {
+  return [
+    { key: "name", label: "product.name", required: true },
+    { key: "sku", label: "product.sku" },
+    { key: "description", label: "product.description" },
+    { key: "unit", label: "product.unit", placeholder: "day" },
+    {
+      key: "unit_price",
+      label: "product.unitPrice",
+      type: "number",
+      required: true,
+    },
+    {
+      key: "currency",
+      label: "product.currency",
+      type: "select",
+      required: true,
+      options: ["EUR", "USD", "GBP", "CHF"].map((c) => ({
+        value: c,
+        label: c,
+      })),
+    },
+    { key: "default_tax_rate", label: "product.taxRate", type: "number" },
+    {
+      // The empty option is a real answer, and every product written before
+      // this field existed carries it: nobody has said whether the price
+      // repeats. It comes first, so a form left alone keeps saying that
+      // instead of asserting a one-off price.
+      key: "billing_model",
+      label: "product.billingModel",
+      type: "select",
+      options: [
+        { value: "", label: t("product.billingUnclassified") },
+        { value: "one_time", label: t("product.billingOneTime") },
+        { value: "recurring", label: t("product.billingRecurring") },
+      ],
+    },
+    {
+      key: "billing_interval_months",
+      label: "product.billingInterval",
+      type: "select",
+      options: [
+        { value: "", label: t("product.billingNoInterval") },
+        ...BILLING_MONTHS.map((months) => ({
+          value: String(months),
+          label: t(CADENCE[months]),
+        })),
+      ],
+    },
+  ];
+}
+
+type BillingMonths = NonNullable<Product["billing_interval_months"]>;
+
+const BILLING_MONTHS: readonly BillingMonths[] = [1, 3, 6, 12];
+
+const CADENCE: Readonly<Record<BillingMonths, MessageKey>> = {
+  1: "product.billingMonthly",
+  3: "product.billingQuarterly",
+  6: "product.billingHalfYearly",
+  12: "product.billingYearly",
+};
+
+const PRICE_PER: Readonly<Record<BillingMonths, MessageKey>> = {
+  1: "product.pricePerMonth",
+  3: "product.pricePerQuarter",
+  6: "product.pricePerHalfYear",
+  12: "product.pricePerYear",
+};
+
+function billingLabel(p: Product, t: Translator): string {
+  if (p.billing_model === "one_time") {
+    return t("product.billingOneTime");
+  }
+  if (p.billing_model !== "recurring") {
+    return t("product.billingUnclassified");
+  }
+  return p.billing_interval_months
+    ? t(CADENCE[p.billing_interval_months])
+    : t("product.billingRecurring");
+}
+
+// The period under the amount, not after it: a 110px price column clips both.
+function ProductPrice({ product }: Readonly<{ product: Product }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const amount = formatMoney(
+    product.unit_price_minor,
+    product.currency,
+    locale,
+  );
+  const months = product.billing_interval_months;
+  if (product.billing_model !== "recurring" || !months) {
+    return amount;
+  }
+  return (
+    <CellStack>
+      <span>{amount}</span>
+      <span className="t-caption">{t(PRICE_PER[months])}</span>
+    </CellStack>
+  );
+}
+
+// Only a status that differs from the usual one is drawn.
+function ProductStatus({ product }: Readonly<{ product: Product }>) {
+  const t = useT();
+  if (product.archived_at) {
+    return <Badge>{t("product.archived")}</Badge>;
+  }
+  return product.active ? null : <Badge>{t("product.inactive")}</Badge>;
+}
+
+function editableProduct(p: Product) {
+  return {
+    ...p,
+    unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
+    billing_model: p.billing_model ?? "",
+    billing_interval_months:
+      p.billing_interval_months == null
+        ? ""
+        : String(p.billing_interval_months),
+  };
+}
 
 // text narrows one value off the edit form's Record<string, unknown> without
 // asserting: a field the reader left alone is absent, not an empty string, and
@@ -140,7 +221,6 @@ function toMinor(major: string | undefined, currency: string): number {
  */
 export function ProductsAdmin() {
   const t = useT();
-  const { locale } = useLocale();
   // One grant per affordance, each named for the request it actually issues:
   // New POSTs, Edit PATCHes, Archive DELETEs. `useCanWrite` rather than `useCan`
   // because all three mutate, and the licensing seat is clamped on the HTTP
@@ -160,6 +240,7 @@ export function ProductsAdmin() {
     initialSort: "name",
     paramScope: "products",
   });
+  const fields = productFields(t);
 
   const createProduct = async (values: Record<string, string>) => {
     return unwrap(
@@ -225,54 +306,47 @@ export function ProductsAdmin() {
   // width-taking, column-picker-listed strip of nothing, which reads as a table
   // that lost its buttons rather than as a permission — so the column goes,
   // exactly as the custom-fields table drops its own.
-  const rowActions: ListColumn<Product> = {
+  const rowMenu: ListColumn<Product> = {
     key: "actions",
     header: t("table.actions"),
-    // Two labelled buttons, not a value: the column is sized by the verbs in
-    // it rather than by a share of a 720px settings column, which is what had
-    // this cell handing the reader half an "Edit product" and a red sliver of
-    // "Archive product" (listtable.tsx, COLUMN_SIZES.verbs).
-    verbs: true,
+    verbs: "menu",
     cell: (p: Product) => (
-      <div className="listsection-rowverbs">
-        {canUpdate && (
-          <EditAction
-            label={t("product.edit")}
-            savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-            invalidate="products"
-            recordKey="product"
-            record={{
-              ...p,
-              unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
-              billing_model: p.billing_model ?? "",
-              billing_interval_months:
-                p.billing_interval_months == null
-                  ? ""
-                  : String(p.billing_interval_months),
-            }}
-            update={updateProduct(p)}
-            fields={PRODUCT_FIELDS}
-          />
-        )}
-        {canArchive && (
-          <ArchiveAction
-            label={t("product.archive")}
-            confirmText={t("product.archiveConfirm")}
-            archivedMessage={t("record.archiveDone", { name: p.name })}
-            invalidate="products"
-            recordKey="product"
-            onArchived={() => list.refetch()}
-            archive={async () => {
-              const data = unwrap(
-                await api.DELETE("/products/{id}", {
-                  params: { path: { id: p.id } },
-                }),
-              );
-              return data ?? p;
-            }}
-          />
-        )}
-      </div>
+      <span className="cell-actions">
+        <OverflowMenu label={t("product.rowActions", { name: p.name })}>
+          {canUpdate && (
+            <EditAction
+              labelled
+              label={t("product.edit")}
+              savedMessage={(saved) =>
+                t("record.saveDone", { name: saved.name })
+              }
+              invalidate="products"
+              recordKey="product"
+              record={editableProduct(p)}
+              update={updateProduct(p)}
+              fields={fields}
+            />
+          )}
+          {canArchive && (
+            <ArchiveAction
+              label={t("product.archive")}
+              confirmText={t("product.archiveConfirm")}
+              archivedMessage={t("record.archiveDone", { name: p.name })}
+              invalidate="products"
+              recordKey="product"
+              onArchived={() => list.refetch()}
+              archive={async () => {
+                const data = unwrap(
+                  await api.DELETE("/products/{id}", {
+                    params: { path: { id: p.id } },
+                  }),
+                );
+                return data ?? p;
+              }}
+            />
+          )}
+        </OverflowMenu>
+      </span>
     ),
   };
 
@@ -308,7 +382,7 @@ export function ProductsAdmin() {
               screen="settings"
               stay
               create={createProduct}
-              fields={PRODUCT_FIELDS}
+              fields={fields}
             />
           ) : undefined
         }
@@ -317,40 +391,29 @@ export function ProductsAdmin() {
             key: "name",
             header: t("product.name"),
             sort: "name",
-            cell: (p: Product) => p.name,
+            cell: (p: Product) =>
+              p.sku ? <KeyedName name={p.name} code={p.sku} /> : p.name,
             fixed: true,
-          },
-          {
-            key: "sku",
-            header: t("product.sku"),
-            sort: "sku",
-            cell: (p: Product) => p.sku ?? "",
           },
           {
             key: "price",
             header: t("product.unitPrice"),
             sort: "unit_price_minor",
-            cell: (p: Product) => (
-              <span className="t-num">
-                {formatMoney(p.unit_price_minor, p.currency, locale)}
-              </span>
-            ),
+            cell: (p: Product) => <ProductPrice product={p} />,
             numeric: true,
           },
           {
-            key: "active",
-            header: t("product.active"),
-            sort: "active",
-            cell: (p: Product) =>
-              p.archived_at ? (
-                <Badge tone="danger">{t("product.archived")}</Badge>
-              ) : p.active ? (
-                <Badge tone="success">{t("product.active")}</Badge>
-              ) : (
-                <Badge>{t("product.inactive")}</Badge>
-              ),
+            key: "billing",
+            header: t("product.billingModel"),
+            cell: (p: Product) => billingLabel(p, t),
           },
-          ...(canUpdate || canArchive ? [rowActions] : []),
+          {
+            key: "status",
+            header: t("product.status"),
+            sort: "active",
+            cell: (p: Product) => <ProductStatus product={p} />,
+          },
+          ...(canUpdate || canArchive ? [rowMenu] : []),
         ]}
         rowKey={(p) => p.id}
         chips={[

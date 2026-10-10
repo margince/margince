@@ -88,12 +88,11 @@ export type ListColumn<Row> = {
    */
   fixed?: boolean;
   /**
-   * This column holds the row's VERBS, not a value. It is then sized by the
-   * buttons in it rather than by a share of the table's width — a share the
-   * page happens to have room for is not a width two translated labels fit
-   * in, and a verb the reader can only half read is a verb they cannot use.
+   * This column holds the row's VERBS, sized by its buttons rather than by a
+   * share of the width. A verb read in half cannot be used. "menu" is one "…"
+   * trigger, whose header only assistive technology reads.
    */
-  verbs?: boolean;
+  verbs?: boolean | "menu";
   /** Starts unticked in the Display menu: offered rather than drawn. */
   initiallyHidden?: boolean;
 };
@@ -844,7 +843,7 @@ function EmptyRow({
  */
 function cellClass<Row>(column: ListColumn<Row>): string | undefined {
   const names = [
-    column.numeric ? "lt-num" : "",
+    column.numeric ? "lt-num" : column.verbs === "menu" ? "lt-rowmenu" : "",
     column.fixed ? "lt-identity" : "",
   ].filter(Boolean);
   return names.length > 0 ? names.join(" ") : undefined;

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { meFixture } from "../app/mefixture";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import {
@@ -26,6 +27,21 @@ const template = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
+const templatesRead = () =>
+  jsonResponse({
+    data: [
+      template,
+      {
+        ...template,
+        id: "t-2",
+        name: "Plain EN",
+        locale: "en-US",
+        is_default: false,
+      },
+    ],
+    page: { next_cursor: null, has_more: false },
+  });
+
 // Every story here needs a principal, because the screen's write affordances are
 // gated on offer template grants now. The stub REFUSES to answer an unrouted `GET /me`
 // rather than guessing one — so without
@@ -38,21 +54,49 @@ const AUTHORING_ME = () =>
     }),
   );
 
+function renderTemplates() {
+  installFetchStub({
+    "GET /me": AUTHORING_ME,
+    "GET /offer-templates": templatesRead,
+  });
+  return (
+    <StoryProviders>
+      <OfferTemplatesAdmin />
+    </StoryProviders>
+  );
+}
+
 export const List: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": AUTHORING_ME,
-      "GET /offer-templates": () =>
-        jsonResponse({
-          data: [template],
-          page: { next_cursor: null, has_more: false },
-        }),
-    });
-    return (
-      <StoryProviders>
-        <OfferTemplatesAdmin />
-      </StoryProviders>
+  render: renderTemplates,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("row", { name: /Plain EN/ });
+  },
+};
+
+export const RowMenu: Story = {
+  render: renderTemplates,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Standard DE" }),
     );
+    await within(document.body).findByRole("button", {
+      name: "Archive template",
+    });
+  },
+};
+
+// The language and the default read as words in the form, not as codes.
+export const NewTemplateLanguage: Story = {
+  render: renderTemplates,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "New template" }),
+    );
+    const form = within(await within(document.body).findByRole("dialog"));
+    await userEvent.click(form.getByRole("combobox", { name: /^Language/ }));
+    await within(document.body).findByRole("option", { name: "English (US)" });
   },
 };
 export const Empty: Story = {
@@ -86,35 +130,14 @@ export const LoadError: Story = {
   },
 };
 
-// The list at 390px, which is the one width ListTable's own devices all have to
-// answer at once. `.lt-head` wraps, and at this width the count takes its own
-// line above the New action; the locale filter chip sits under it; the table is
-// `table-layout: fixed` with a `--lt-floor` min-width, so past that floor the
-// BODY scrolls sideways under a stuck header while the pinned name column casts
-// its shadow over what passes beneath. What to check is that the sideways scroll
-// stays inside `.lt-scroll` — the surface may scroll, the page may not — and that
-// the columns clip with ellipses rather than the row growing to fit.
-//
-// Storybook applies the viewport from the MANAGER, by resizing the preview
-// iframe — so the fe-uat capture, which loads a bare iframe.html, renders this at
-// the harness's own width and its PNG is NOT a picture of a phone. Review it in
-// Storybook, or by narrowing the browser.
+// At 390px each row is a card: the name heads it and the "…" sits beside it.
 export const ListPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: () => {
-    installFetchStub({
-      "GET /me": AUTHORING_ME,
-      "GET /offer-templates": () =>
-        jsonResponse({
-          data: [template],
-          page: { next_cursor: null, has_more: false },
-        }),
+  render: renderTemplates,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", {
+      name: "Actions for Standard DE",
     });
-    return (
-      <StoryProviders>
-        <OfferTemplatesAdmin />
-      </StoryProviders>
-    );
   },
 };
