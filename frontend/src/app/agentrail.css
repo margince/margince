@@ -280,13 +280,16 @@
    The TYPE is the row's own (`.t-caption .t-num` on `.arlast`), so nothing here
    sizes it: this rule places the two readings and nothing else. */
 .arspend {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-1);
-  min-width: 0;
+  /* Out of the box tree, so the figure, the scope and the chevron are the
+     row's own flex items. As a flex box of its own it shrank below the
+     figure's width and the figure ran out under the chevron. */
+  display: contents;
   white-space: nowrap;
 }
 /* The figure is never the thing that gets shortened: the scope beside it is. */
+.arspend > b {
+  flex: none;
+}
 .arspend > .arscope {
   min-width: 0;
   flex: 0 1 auto;
