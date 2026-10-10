@@ -4,6 +4,9 @@
 package compose
 
 import (
+	"os"
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -68,6 +71,90 @@ func restParityProblems(tool, openAPIOp string, byID map[string]passportOperatio
 		}
 	}
 	return problems
+}
+
+// A registry-served route answers the tool's own JSON, which the shape gate
+// holds. A route that keeps its own shape (GET /attachments behind
+// list_documents) can still drift from the tool's records, so some both-doors
+// integration test must call that tool through twoDoors and compare the two.
+func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
+	ops, _ := passportOperations(t)
+	byID := map[string]passportOperation{}
+	for _, op := range ops {
+		byID[op.id] = op
+	}
+	sources, err := filepath.Glob("integration/*_test.go")
+	if err != nil || len(sources) == 0 {
+		t.Fatalf("no integration test sources found (%v) — this sweep checked nothing", err)
+	}
+	called := map[string]bool{}
+	for _, path := range sources {
+		src, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatalf("reading %s: %v", path, readErr)
+		}
+		for _, m := range bothDoorsToolCall.FindAllStringSubmatch(string(src), -1) {
+			called[m[1]] = true
+		}
+	}
+
+	untested := untestedDoorsBaseline(t)
+	extensionTools := composedToolNames()
+	ownShape := 0
+	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
+		if extensionTools[spec.Name] || !keepsItsOwnShape(spec.OpenAPIOp, byID) {
+			continue
+		}
+		ownShape++
+		listed := untested[spec.Name]
+		delete(untested, spec.Name)
+		switch {
+		case !called[spec.Name] && !listed:
+			t.Errorf("%s runs on %s, which answers in its own shape, and no integration test calls "+
+				"it through twoDoors to compare the records both doors give", spec.Name, spec.OpenAPIOp)
+		case called[spec.Name] && listed:
+			t.Errorf("%s now has a both-doors test; remove it from %s", spec.Name, untestedDoorsPath)
+		}
+	}
+	if ownShape == 0 {
+		t.Fatal("no tool runs on a route of its own shape — the census found nothing to hold")
+	}
+	for name := range untested {
+		t.Errorf("%s is in %s but is no tool on a route of its own shape; remove it", name, untestedDoorsPath)
+	}
+}
+
+// untestedDoorsPath lists the tools that ran on a route of their own shape
+// before this gate existed and still lack a both-doors test. It only shrinks.
+const untestedDoorsPath = "testdata/untested_tool_doors.txt"
+
+func untestedDoorsBaseline(t *testing.T) map[string]bool {
+	t.Helper()
+	src, err := os.ReadFile(untestedDoorsPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", untestedDoorsPath, err)
+	}
+	names := map[string]bool{}
+	for line := range strings.SplitSeq(string(src), "\n") {
+		if name := strings.TrimSpace(line); name != "" && !strings.HasPrefix(name, "#") {
+			names[name] = true
+		}
+	}
+	return names
+}
+
+var bothDoorsToolCall = regexp.MustCompile(`\.tool\(t, "([a-z0-9_]+)"`)
+
+// keepsItsOwnShape reports a tool any of whose operations is not served by the
+// registry.
+func keepsItsOwnShape(openAPIOp string, byID map[string]passportOperation) bool {
+	for id := range strings.SplitSeq(openAPIOp, "/") {
+		op, known := byID[id]
+		if known && agentPolicies[op.method+" "+op.route].ServedBy != servedByRegistry {
+			return true
+		}
+	}
+	return false
 }
 
 func passportCalls(op passportOperation) bool {
