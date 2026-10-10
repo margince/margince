@@ -1,9 +1,7 @@
 {
-  "scenario": "case57_put_it_on_the_file",
+  "scenario": "case58_quiet_for_three_weeks",
   "criteria": [
-    1,
-    2,
-    3
+    1
   ],
   "passed": 3,
   "runs": 3,
@@ -14,10 +12,10 @@
   "search": "semantic",
   "self_judged": false,
   "usage": {
-    "input_tokens": 83112,
-    "output_tokens": 3921,
+    "input_tokens": 65860,
+    "output_tokens": 2725,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 348544,
+    "cache_read_input_tokens": 283904,
     "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
