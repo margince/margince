@@ -3,12 +3,7 @@
 
 package knowledge
 
-import (
-	"fmt"
-	"unicode/utf8"
-
-	"github.com/margince/margince/backend/internal/platform/httperr"
-)
+import "github.com/margince/margince/backend/internal/platform/httperr"
 
 // The contract's caps on a corpus's text, in characters.
 const (
@@ -26,13 +21,5 @@ func requireCorpusText(field, raw string, limit int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return text, checkCorpusLength(field, text, limit)
-}
-
-// checkCorpusLength refuses text past limit characters.
-func checkCorpusLength(field, text string, limit int) error {
-	if utf8.RuneCountInString(text) > limit {
-		return httperr.Validation(field, "too_long", fmt.Sprintf("%s holds at most %d characters", field, limit))
-	}
-	return nil
+	return text, httperr.RequireWithin(field, text, limit)
 }

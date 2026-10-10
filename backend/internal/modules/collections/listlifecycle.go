@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -41,7 +42,7 @@ var ErrListArchived = fmt.Errorf("an archived list is read-only: restore it firs
 // UpdateList changes a list's name, purpose, filter, sharing, team or steward,
 // and records the new definition as a revision.
 func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInput) (listRow, error) {
-	if err := s.checkUpdate(ctx, id, in); err != nil {
+	if err := s.checkUpdate(ctx, id, &in); err != nil {
 		return listRow{}, err
 	}
 	var out listRow
@@ -78,16 +79,24 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 	return out, err
 }
 
-// checkUpdate refuses an update before its transaction opens: no version, an
-// unknown sharing, or a filter the list cannot hold. The filter is judged
-// against the list's own record type here because SegmentEngine reads the
-// custom-field catalogue on its own connection.
-func (s *Store) checkUpdate(ctx context.Context, id ids.ListID, in UpdateListInput) error {
+// checkUpdate refuses an update before its transaction opens: no version, a
+// blank name, an unknown sharing, or a filter the list cannot hold. It stores
+// the trimmed name, as a new list does. The filter is judged against the
+// list's own record type here because SegmentEngine reads the custom-field
+// catalogue on its own connection.
+func (s *Store) checkUpdate(ctx context.Context, id ids.ListID, in *UpdateListInput) error {
 	if err := auth.Require(ctx, listObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	if in.IfVersion == nil {
 		return &BadInputError{Field: versionField, Reason: "name the version you read, so a change nobody saw is not overwritten"}
+	}
+	if in.Name != nil {
+		name, err := httperr.RequireNonBlank(nameField, *in.Name)
+		if err != nil {
+			return err
+		}
+		in.Name = &name
 	}
 	if in.Sharing != nil {
 		if err := checkSharing(*in.Sharing); err != nil {

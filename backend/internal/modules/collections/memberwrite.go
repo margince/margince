@@ -40,6 +40,9 @@ const (
 
 const noteField = "note"
 
+// maxMemberNote is the contract's cap on a membership note, in characters.
+const maxMemberNote = 500
+
 // MemberChange names one record to add to or remove from a Shortlist, with
 // the note its author left and why the change was made.
 type MemberChange struct {
@@ -168,6 +171,11 @@ func (s *Store) RemoveMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID
 func admitMemberChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, change MemberChange) error {
 	if err := httperr.RequireBodyID(entityIDField, change.EntityID); err != nil {
 		return err
+	}
+	if change.Note != nil {
+		if err := httperr.RequireWithin(noteField, *change.Note, maxMemberNote); err != nil {
+			return err
+		}
 	}
 	switch change.Reason {
 	case ReasonChosen, ReasonBulk, ReasonAutomation:
