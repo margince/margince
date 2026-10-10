@@ -77,6 +77,12 @@ func TestEveryWritingScenarioDeclaresThatItWrites(t *testing.T) {
 		}
 		read++
 		text := string(body)
+		// The runner refuses a case whose writes is not exactly true or false.
+		if declared := e2eWritesDeclaration.FindStringSubmatch(text); len(declared) != 2 ||
+			(declared[1] != "true" && declared[1] != "false") {
+			t.Errorf("e2e/llm/scenarios/%s must declare writes: true or writes: false; the lane "+
+				"refuses to run it otherwise", entry.Name())
+		}
 		reached := append(toolsInBlock(e2eMustCallBlock, e2eMustCallInline, text), toolsInBlock(e2eMayCallBlock, e2eMayCallInline, text)...)
 		var writes []string
 		for _, tool := range reached {

@@ -170,9 +170,28 @@ print("")' "$email"
 # written nothing, and the first evidence was an assistant finding an empty CRM.
 # A fixture that fails must fail loudly — the run is worthless either way, and
 # only one of the two says why.
+# The source every fixture row is stamped with. Free-form on the write side, and
+# worth spending: a row a reader finds in a failing transcript says which lane
+# put it there.
+FIXTURE_SOURCE="seed:llm-fixtures"
+
+# with_source adds FIXTURE_SOURCE to a record's create body that names none,
+# because every record create requires a source.
+with_source() {
+  local path="$1" body="$2"
+  case "$path" in
+    /companies|/contacts|/relationships|/deals|/projects|/tasks|/activities) ;;
+    *) printf '%s' "$body"; return 0 ;;
+  esac
+  printf '%s' "$body" | FIXTURE_SOURCE="$FIXTURE_SOURCE" python3 -c 'import json,os,sys
+row=json.load(sys.stdin)
+row.setdefault("source", os.environ["FIXTURE_SOURCE"])
+print(json.dumps(row, ensure_ascii=False))'
+}
+
 create_or_die() {
   local path="$1" body="$2" what="$3" response id
-  response="$(api POST "$path" "$body")"
+  response="$(api POST "$path" "$(with_source "$path" "$body")")"
   id="$(printf '%s' "$response" | python3 -c 'import json,sys
 try: print(json.load(sys.stdin).get("id",""))
 except Exception: print("")')"
@@ -509,11 +528,6 @@ print("")' "$email"
 days_ahead() {
   date -u -v+"$1"d '+%Y-%m-%d' 2>/dev/null || date -u -d "$1 days" '+%Y-%m-%d'
 }
-
-# The source every fixture row is stamped with. Free-form on the write side, and
-# worth spending: a row a reader finds in a failing transcript says which lane
-# put it there.
-FIXTURE_SOURCE="seed:llm-fixtures"
 
 # --- CASE 8: two proposals waiting for a human decision ---------------------
 #

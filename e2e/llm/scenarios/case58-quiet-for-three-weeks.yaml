@@ -24,6 +24,7 @@
 #     same words.
 name: case58_quiet_for_three_weeks
 criteria: [1]
+writes: false
 
 prompt: |
   Which deals in the pipeline have gone quiet for three weeks or more? I want
