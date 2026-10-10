@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/project360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -127,14 +128,14 @@ func TestTheHandoffShowsTheProjectAsItsPageDoes(t *testing.T) {
 
 func TestTheHandoffCutsEachListWhereThePageDoes(t *testing.T) {
 	e := integration.Setup(t)
-	scene := seedHandoffScene(t, e, 27)
+	scene := seedHandoffScene(t, e, project360.SectionLimit+2)
 	facts, err := handoffReader(e.Pool)(e.Admin(), scene.project.UUID)
 	if err != nil {
 		t.Fatalf("read the handoff: %v", err)
 	}
-	if len(facts.Deals) != 25 || !facts.DealsTruncated {
-		t.Errorf("the handoff lists %d deals (truncated %v), want the page's 25 with the cut reported",
-			len(facts.Deals), facts.DealsTruncated)
+	if len(facts.Deals) != project360.SectionLimit || !facts.DealsTruncated {
+		t.Errorf("the handoff lists %d deals (truncated %v), want the page's %d with the cut reported",
+			len(facts.Deals), facts.DealsTruncated, project360.SectionLimit)
 	}
 }
 
@@ -180,7 +181,7 @@ func TestAHandoffWithoutTheDealGrantNamesTheOmittedList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a caller without the deal grant was refused the handoff: %v", err)
 	}
-	want := []string{string(crmcontracts.Project360SectionDeals)}
+	want := []crmcontracts.Project360Section{crmcontracts.Project360SectionDeals}
 	if !slices.Equal(facts.SectionsOmitted, want) || len(facts.Deals) != 0 {
 		t.Errorf("omitted %v with deals %v, want %v named and no deals listed", facts.SectionsOmitted, facts.Deals, want)
 	}

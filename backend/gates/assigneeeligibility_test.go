@@ -157,7 +157,7 @@ func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 		t.Fatal("AssigneeEligibleSQL is gone from assignscope.go: the rule it holds has moved and this gate has not")
 	}
 	for _, half := range []string{
-		"status = 'active'", "archived_at IS NULL", "NOT %[1]s.is_agent",
+		"workforce.LiveMemberSQL(alias)", "NOT %[2]s.is_agent",
 		"seat_type <> 'read'", "ownerPredicate",
 	} {
 		if !strings.Contains(body, half) {

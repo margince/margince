@@ -29159,9 +29159,9 @@ type CompanyGraph struct {
 	// RootId The account the graph is centred on — the node carrying `root: true`.
 	RootId openapi_types.UUID `json:"root_id"`
 
-	// SignalRoute The route in the account's most recent open signal proposes: which signal, and
-	// which contact is the way in. It is not the best introduction to the account, which
-	// `GET /companies/{id}/intro-paths` answers. The contact is ranked exactly as
+	// SignalRoute The route the account's most recent open signal proposes: which signal, and
+	// which contact is the way in. It is not an introduction path: `GET /companies/{id}/intro-paths`
+	// answers who should introduce us. The contact is ranked exactly as
 	// `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
 	// the card and the warm room can never name different contacts.
 	//
@@ -29307,11 +29307,11 @@ type CompanyGraphNode struct {
 	// a client draws the node's monogram or its token-coloured circle instead.
 	LogoUrl *string `json:"logo_url,omitempty"`
 
-	// OnSignalRoute This contact is the route in the active signal's warm-intro path proposes.
+	// OnSignalRoute This contact is the route the account's most recent open signal proposes.
 	// At most one node carries it, and only when `signal_route` at the top level is
 	// present. Absent on every other node — there is nothing to say about them.
-	// It is not the best introduction to the account: `GET /companies/{id}/intro-paths`
-	// answers that, by ranking the colleagues who know someone there.
+	// It is not an introduction path: `GET /companies/{id}/intro-paths` answers who
+	// should introduce us, by ranking the colleagues who know someone there.
 	OnSignalRoute *bool `json:"on_signal_route,omitempty"`
 
 	// Root This node is the account the graph is centred on. Exactly one node carries
@@ -29340,9 +29340,9 @@ type CompanyGraphNodeKind string
 // CompanyGraphNodeStrengthBucket The server's band for `strength` — the same vocabulary `RelationshipStrength.bucket` uses. Never re-derived from the score by a client.
 type CompanyGraphNodeStrengthBucket string
 
-// CompanyGraphSignalRoute The route in the account's most recent open signal proposes: which signal, and
-// which contact is the way in. It is not the best introduction to the account, which
-// `GET /companies/{id}/intro-paths` answers. The contact is ranked exactly as
+// CompanyGraphSignalRoute The route the account's most recent open signal proposes: which signal, and
+// which contact is the way in. It is not an introduction path: `GET /companies/{id}/intro-paths`
+// answers who should introduce us. The contact is ranked exactly as
 // `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
 // the card and the warm room can never name different contacts.
 //
@@ -40516,7 +40516,7 @@ type ProjectHandoff struct {
 	ProjectId       openapi_types.UUID  `json:"project_id"`
 
 	// SectionsOmitted The lists the caller may not read, named as `GET /projects/{id}/360` names them. A list left out for that reason is withheld, not empty.
-	SectionsOmitted []string `json:"sections_omitted"`
+	SectionsOmitted []Project360Section `json:"sections_omitted"`
 	Stakeholders    []struct {
 		ContactId openapi_types.UUID `json:"contact_id"`
 		Name      *string            `json:"name,omitempty"`

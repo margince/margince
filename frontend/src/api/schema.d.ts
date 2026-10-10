@@ -25777,11 +25777,11 @@ export interface components {
              */
             strength_bucket?: null | "none" | "weak" | "moderate" | "strong";
             /**
-             * @description This contact is the route in the active signal's warm-intro path proposes.
+             * @description This contact is the route the account's most recent open signal proposes.
              *     At most one node carries it, and only when `signal_route` at the top level is
              *     present. Absent on every other node — there is nothing to say about them.
-             *     It is not the best introduction to the account: `GET /companies/{id}/intro-paths`
-             *     answers that, by ranking the colleagues who know someone there.
+             *     It is not an introduction path: `GET /companies/{id}/intro-paths` answers who
+             *     should introduce us, by ranking the colleagues who know someone there.
              */
             on_signal_route?: boolean;
             /**
@@ -27569,7 +27569,7 @@ export interface components {
             /** Format: uuid */
             project_id: string;
             /** @description The lists the caller may not read, named as `GET /projects/{id}/360` names them. A list left out for that reason is withheld, not empty. */
-            sections_omitted: string[];
+            sections_omitted: components["schemas"]["Project360Section"][];
             stakeholders: {
                 /** Format: uuid */
                 contact_id: string;
@@ -28201,9 +28201,9 @@ export interface components {
             strength_bucket?: "none" | "weak" | "moderate" | "strong" | null;
         };
         /**
-         * @description The route in the account's most recent open signal proposes: which signal, and
-         *     which contact is the way in. It is not the best introduction to the account, which
-         *     `GET /companies/{id}/intro-paths` answers. The contact is ranked exactly as
+         * @description The route the account's most recent open signal proposes: which signal, and
+         *     which contact is the way in. It is not an introduction path: `GET /companies/{id}/intro-paths`
+         *     answers who should introduce us. The contact is ranked exactly as
          *     `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
          *     the card and the warm room can never name different contacts.
          *

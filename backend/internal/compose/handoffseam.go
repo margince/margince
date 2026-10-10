@@ -9,7 +9,6 @@ package compose
 
 import (
 	"context"
-	"slices"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -67,11 +66,7 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 func handoffFacts(res project360.Result) agents.HandoffFacts {
 	page := res.Page
 	facts := agents.HandoffFacts{AsOf: page.AsOf, Project: handoffProject(page.Project)}
-	for _, section := range page.SectionsOmitted {
-		if slices.Contains(handoffSections, section) {
-			facts.SectionsOmitted = append(facts.SectionsOmitted, string(section))
-		}
-	}
+	facts.SectionsOmitted = page.SectionsOmitted
 	if page.Deals != nil {
 		facts.DealsTruncated = page.Deals.Page.HasMore
 		for _, d := range page.Deals.Data {

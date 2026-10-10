@@ -3,14 +3,18 @@
 
 package agents
 
-import "testing"
+import (
+	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+)
 
 // A list the caller may not read is not an empty list. The answer names it and
 // withholds the absence claim, as it does for a list cut at its bound.
 func TestAListTheCallerMayNotReadIsNamedAndSupportsNoAbsenceClaim(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
-		section string
+		section crmcontracts.Project360Section
 		omit    func(*HandoffFacts)
 		gap     string
 	}{
@@ -22,7 +26,7 @@ func TestAListTheCallerMayNotReadIsNamedAndSupportsNoAbsenceClaim(t *testing.T) 
 		if _, raised := gapNamed(prepared(t, facts), tc.gap); !raised {
 			t.Fatalf("%s: an empty list the caller MAY read raised no %q, so the withholding below proves nothing", tc.name, tc.gap)
 		}
-		facts.SectionsOmitted = []string{tc.section}
+		facts.SectionsOmitted = []crmcontracts.Project360Section{tc.section}
 		out := prepared(t, facts)
 		if _, raised := gapNamed(out, tc.gap); raised {
 			t.Errorf("%s: %q was raised over a list the caller may not read", tc.name, tc.gap)

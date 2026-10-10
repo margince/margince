@@ -2,12 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package workforce is what "someone who still works here" means, in one place
-// every module can reach.
-//
-// identity owns app_user and a module never imports a sibling. So each module
-// that joined app_user spelled the pair out itself. The definition is a domain
-// rule with no state, which is what the shared kernel holds. identity delegates
-// here so its callers keep one name. stdlib only, as the tier requires.
+// every module can reach. identity's helpers delegate here. stdlib only.
 package workforce
 
 import "fmt"

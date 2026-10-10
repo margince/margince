@@ -217,12 +217,20 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	}
 }
 
+// aliasHandedDown ratifies a file whose rule takes the table alias as its own
+// parameter and hands it to the helper. The literal is then at that rule's
+// callers, which pass a compile-time alias of their own.
+var aliasHandedDown = gatekit.Waive(map[string]string{
+	"internal/platform/auth/assignscope.go": "AssigneeEligibleSQL takes the alias its callers choose and hands it to the helper",
+})
+
 // TestEveryLiveMemberAliasIsALiteral holds the one thing LiveMemberSQL cannot
 // hold itself: its argument is formatted into the statement as an identifier,
 // not bound as a parameter, so a caller that passed request input would inject.
 // Every call site names a table alias it wrote itself, and this says so.
 func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 	t.Parallel()
+	defer aliasHandedDown.AssertAllMatched(t)
 	fset := gatekit.SourceFileSet()
 	var findings []string
 	calls := 0
@@ -269,6 +277,9 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 			}
 			calls++
 			if lit, ok := call.Args[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				return true
+			}
+			if aliasHandedDown.Waived(t, filepath.ToSlash(path)) {
 				return true
 			}
 			findings = append(findings, fmt.Sprintf("%s:%d", path, fset.Position(call.Pos()).Line))
@@ -318,6 +329,16 @@ func liveMemberVerdict(sql string) string {
 	if bareActivatablePredicate(sql) {
 		return "activatable-copy"
 	}
+	// The pair beside seat columns, in a statement that never names app_user
+	// because its alias is a parameter. Auth's assignee rule had this shape, and
+	// a table-keyed walk cannot reach it.
+	if verdict := unnamedSeatVerdict(sql); verdict != "" {
+		return verdict
+	}
+	// The pair negated, as a select-list flag: "this seat has left".
+	if negatedLivenessCopy(sql) {
+		return "copy"
+	}
 	// Judged BEFORE the halves, because the two questions overlap and the wrong
 	// answer here is actively harmful. A hand-spelled activatable pair carries
 	// `archived_at IS NULL` without `status = 'active'`, so the halves below
@@ -354,6 +375,42 @@ func activatableCopy(sql string) bool {
 		appUserColumn(prefix, `status\s+IN\s+\(\s*'active'\s*,\s*'invited'\s*\)`).MatchString(sql)
 	archived := appUserColumn(prefix, `archived_at\s+IS\s+NULL`).MatchString(sql)
 	return invitedOrActive && archived && offersAUser(sql)
+}
+
+// seatOnlyColumn names columns of a seat row. A statement carrying one reads a
+// seat whether or not it says app_user.
+var (
+	seatOnlyColumn = regexp.MustCompile(`(?i)\b(?:is_agent|seat_type)\b`)
+	anyStatusLive  = regexp.MustCompile(`(?i)\bstatus\s*=\s*'active'`)
+	anyStatusIn    = regexp.MustCompile(`(?i)\bstatus\s+IN\s+\(\s*'(?:invited|active)'\s*,\s*'(?:invited|active)'\s*\)`)
+	anyArchivedNil = regexp.MustCompile(`(?i)\barchived_at\s+IS\s+NULL`)
+)
+
+// unnamedSeatVerdict judges a statement that never names app_user but carries a
+// seat column beside a liveness pair on some alias. A rule written for a
+// caller-chosen alias does. Another table with the same two column names
+// carries no seat-only column, so it is not reported.
+func unnamedSeatVerdict(sql string) string {
+	if readsAppUser.MatchString(sql) || !seatOnlyColumn.MatchString(sql) || !anyArchivedNil.MatchString(sql) {
+		return ""
+	}
+	switch {
+	case anyStatusLive.MatchString(sql):
+		return "copy"
+	case anyStatusIn.MatchString(sql):
+		return "activatable-copy"
+	}
+	return ""
+}
+
+// negatedLivenessCopy reports the pair written the other way round, on
+// app_user's own columns: `status <> 'active' OR archived_at IS NOT NULL`. It
+// is a second spelling of the helper's predicate and drifts from it.
+func negatedLivenessCopy(sql string) bool {
+	sql = stripAssignments(sql)
+	prefix := appUserPrefix(sql)
+	return appUserColumn(prefix, `status\s*(?:<>|!=)\s*'active'`).MatchString(sql) &&
+		appUserColumn(prefix, `archived_at\s+IS\s+NOT\s+NULL`).MatchString(sql)
 }
 
 // bareLivenessPredicate matches the shape that started all of this: the pair
@@ -420,7 +477,8 @@ func appUserStatements(decl ast.Decl, owner helperScope) []string {
 			return false
 		}
 		text, ok := flattenSQL(n, seen, owner)
-		if !ok || (!readsAppUser.MatchString(text) && !bareLivenessPredicate(text) && !bareActivatablePredicate(text)) {
+		if !ok || (!readsAppUser.MatchString(text) && !bareLivenessPredicate(text) && !bareActivatablePredicate(text) &&
+			unnamedSeatVerdict(text) == "") {
 			return true
 		}
 		out = append(out, text)
@@ -688,6 +746,24 @@ func read() string {
 	{"a write whose SET makes someone live", "", "", `
 func read() string {
 	return ` + "`" + `UPDATE app_user SET status = 'active' WHERE id = $1` + "`" + `
+}`},
+	{"the pair beside seat columns with no app_user token", "copy", "", `
+func read() string {
+	return ` + "`" + `%[1]s.status = 'active' AND %[1]s.archived_at IS NULL
+		AND NOT %[1]s.is_agent AND %[1]s.seat_type <> 'read'` + "`" + `
+}`},
+	{"the invited-or-active pair beside seat columns with no app_user token", "activatable-copy", "", `
+func read() string {
+	return ` + "`" + `u.status IN ('active', 'invited') AND u.archived_at IS NULL AND NOT u.is_agent` + "`" + `
+}`},
+	{"another table's status and archived_at pair is not a seat", "", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM voice_profile_version WHERE status = 'active' AND archived_at IS NULL` + "`" + `
+}`},
+	{"the pair negated as a select-list flag", "copy", "", `
+func read() string {
+	return ` + "`" + `SELECT COALESCE(u.status <> 'active' OR u.archived_at IS NOT NULL, false)
+		  FROM record_assignment a LEFT JOIN app_user u ON u.id = a.user_id` + "`" + `
 }`},
 	{"the shared kernel's helper, called from a sibling module", "", "workforce", `
 func read() string {

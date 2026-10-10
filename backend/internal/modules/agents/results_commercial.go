@@ -15,6 +15,7 @@ package agents
 import (
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -143,5 +144,5 @@ type PreparedHandoff struct {
 	// SectionsOmitted names the lists this caller may not read, as the project
 	// page does. Deals, stakeholders or open_commitments missing from the
 	// answer for that reason are withheld, not empty.
-	SectionsOmitted []string `json:"sections_omitted"`
+	SectionsOmitted []crmcontracts.Project360Section `json:"sections_omitted"`
 }

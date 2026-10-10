@@ -59,7 +59,7 @@ type HandoffFacts struct {
 	// SectionsOmitted names the lists this caller holds no grant to read. Such
 	// a list is not an empty one, so the absence claims below are withheld for
 	// it, as for a truncated read.
-	SectionsOmitted []string
+	SectionsOmitted []crmcontracts.Project360Section
 }
 
 // HandoffProject is the project row itself, carried across the seam with the
@@ -104,9 +104,9 @@ const (
 
 // The lists a handoff reads, spelled from the project page's own section
 // vocabulary: the page and the handoff name an omitted list the same way.
-var (
-	sectionDeals        = string(crmcontracts.Project360SectionDeals)
-	sectionStakeholders = string(crmcontracts.Project360SectionStakeholders)
+const (
+	sectionDeals        = crmcontracts.Project360SectionDeals
+	sectionStakeholders = crmcontracts.Project360SectionStakeholders
 )
 
 // dealStatusWon is the one status that means something was sold, read from
