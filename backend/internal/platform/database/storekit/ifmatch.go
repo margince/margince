@@ -20,11 +20,19 @@ import (
 // version is ErrVersionSkew and a gone row is ErrNotFound, as in ApplyGuarded.
 // No If-Match means the caller asked for no check.
 func EnsureIfMatch(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, ifVersion *int64) error {
+	return EnsureIfMatchIn(ctx, tx, table, id, ifVersion, LiveOnly)
+}
+
+// EnsureIfMatchIn is EnsureIfMatch against a chosen archive filter, for a
+// repeat archive that answers with the row it already archived.
+func EnsureIfMatchIn(
+	ctx context.Context, tx pgx.Tx, table string, id ids.UUID, ifVersion *int64, archived ArchivedFilter,
+) error {
 	if ifVersion == nil {
 		return nil
 	}
 	var version int64
-	err := tx.QueryRow(ctx, SQLf(`SELECT version FROM %s WHERE id = $1%s`, table, liveClause(LiveOnly)), id).
+	err := tx.QueryRow(ctx, SQLf(`SELECT version FROM %s WHERE id = $1%s`, table, liveClause(archived)), id).
 		Scan(&version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
