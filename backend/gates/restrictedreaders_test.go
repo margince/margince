@@ -613,7 +613,9 @@ func activitySQLIn(value ast.Expr) (string, bool) {
 }
 
 // packageBindingNames maps each package-level var or const to the identifiers
-// its value names.
+// its value names. It reads values as activityFragmentsIn does. A value-less
+// const spec repeats the one before it. Names pair with values by index when
+// their counts agree.
 func packageBindingNames(files []*ast.File) map[string]map[string]bool {
 	out := map[string]map[string]bool{}
 	for _, file := range files {
@@ -622,27 +624,44 @@ func packageBindingNames(files []*ast.File) map[string]map[string]bool {
 			if !isGen || (gen.Tok != token.VAR && gen.Tok != token.CONST) {
 				continue
 			}
+			var carried []ast.Expr
 			for _, spec := range gen.Specs {
 				value, isValue := spec.(*ast.ValueSpec)
 				if !isValue {
 					continue
 				}
-				named := map[string]bool{}
-				for _, expr := range value.Values {
-					ast.Inspect(expr, func(node ast.Node) bool {
-						if ident, isIdent := node.(*ast.Ident); isIdent {
-							named[ident.Name] = true
-						}
-						return true
-					})
+				values := value.Values
+				switch {
+				case len(values) > 0:
+					carried = values
+				case gen.Tok == token.CONST:
+					values = carried
 				}
-				for _, name := range value.Names {
-					out[name.Name] = named
+				for i, name := range value.Names {
+					bound := values
+					if len(values) == len(value.Names) {
+						bound = values[i : i+1]
+					}
+					out[name.Name] = identifiersIn(bound)
 				}
 			}
 		}
 	}
 	return out
+}
+
+// identifiersIn collects the identifiers the expressions name.
+func identifiersIn(exprs []ast.Expr) map[string]bool {
+	named := map[string]bool{}
+	for _, expr := range exprs {
+		ast.Inspect(expr, func(node ast.Node) bool {
+			if ident, isIdent := node.(*ast.Ident); isIdent {
+				named[ident.Name] = true
+			}
+			return true
+		})
+	}
+	return named
 }
 
 // namesReaching widens a fragment's names to every package-level binding that
@@ -689,6 +708,11 @@ func unguardedNamers(graph map[string]*graphFunc, names []string, dim activityDi
 	for key, entry := range graph {
 		mentions := false
 		for _, name := range names {
+			// A local of the same name is the function's own value, not the
+			// package binding that carries the fragment.
+			if entry.shadowed[name] {
+				continue
+			}
 			if entry.reads[name] || entry.calls[name] {
 				mentions = true
 			}
@@ -871,7 +895,8 @@ func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
 // A fragment that reaches its query through another constant is still judged
 // at the function that runs it. The planted package names the activity
 // fragment directly only in a guarded function, and runs it unguarded through
-// a second constant. Following direct names alone reads that as clean.
+// other constants. Following direct names alone reads that as clean. A local
+// that shadows an alias, and a sibling bound beside the alias, are not namers.
 func TestARestrictedReaderCensusFollowsAFragmentThroughAConstant(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -879,8 +904,14 @@ func TestARestrictedReaderCensusFollowsAFragmentThroughAConstant(t *testing.T) {
 	source := "package planted\n\n" +
 		"const sourceProbe = `EXISTS (SELECT 1 FROM activity a WHERE a.id = ev.source_id)`\n\n" +
 		"const columns = `id, ` + sourceProbe\n\n" +
+		"const (\n\taliasProbe = sourceProbe\n\trepeated\n)\n\n" +
+		"const used, unrelated = sourceProbe, `SELECT 1`\n\n" +
 		"func guarded(q func(string)) { q(`SELECT ` + sourceProbe + ` AND a.restricted_at IS NULL`) }\n\n" +
-		"func unguarded(q func(string)) { q(`SELECT ` + columns + ` FROM deal_stage_evidence ev`) }\n"
+		"func unguarded(q func(string)) { q(`SELECT ` + columns + ` FROM deal_stage_evidence ev`) }\n\n" +
+		"func viaRepeated(q func(string)) { q(repeated) }\n\n" +
+		"func viaUsed(q func(string)) { q(used) }\n\n" +
+		"func viaUnrelated(q func(string)) { q(unrelated) }\n\n" +
+		"func shadowing(q func(string)) { columns := `SELECT 1`; q(columns) }\n"
 	if err := os.WriteFile(planted, []byte(source), 0o600); err != nil {
 		t.Fatalf("planting the package: %v", err)
 	}
@@ -890,10 +921,13 @@ func TestARestrictedReaderCensusFollowsAFragmentThroughAConstant(t *testing.T) {
 	}
 	offenders := unguardedActivityReaders(packageCallGraph(t, dir),
 		packageBindingNames(parsePackageFiles(t, dir)), file, heldDimension)
-	if !slices.ContainsFunc(offenders, func(o string) bool { return strings.HasPrefix(o, "unguarded:") }) {
-		t.Fatalf("offenders = %v, want the function that runs the fragment through columns", offenders)
-	}
-	if slices.ContainsFunc(offenders, func(o string) bool { return strings.HasPrefix(o, "guarded:") }) {
-		t.Errorf("offenders = %v, the guarded namer is reported too", offenders)
+	for namer, want := range map[string]bool{
+		"unguarded": true, "viaRepeated": true, "viaUsed": true,
+		"guarded": false, "viaUnrelated": false, "shadowing": false,
+	} {
+		got := slices.ContainsFunc(offenders, func(o string) bool { return strings.HasPrefix(o, namer+":") })
+		if got != want {
+			t.Errorf("%s reported = %v, want %v (offenders %v)", namer, got, want, offenders)
+		}
 	}
 }
