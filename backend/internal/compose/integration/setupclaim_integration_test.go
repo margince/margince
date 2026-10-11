@@ -209,7 +209,7 @@ func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
 	srv, token, owner := unprovisionedServerWithOwner(t)
 
 	body := `{"setup_token":"` + token + `","company_name":"Zurich Co","timezone":"Europe/Zurich",` +
-		`"base_currency":"CHF","base_language":"de",` +
+		`"base_currency":"CHF","base_language":"de","country":"",` +
 		`"admin_email":"ops@zurich.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, body); got != http.StatusCreated {
 		t.Fatalf("claiming with CHF and German answered %d, want 201", got)
@@ -234,7 +234,7 @@ func TestAClaimWithAWeakPasswordIsRefusedAsValidation(t *testing.T) {
 	srv, token := unprovisionedServer(t)
 
 	body := `{"setup_token":"` + token + `","company_name":"Weak Co","timezone":"Europe/Berlin",` +
-		`"base_currency":"EUR","base_language":"en",` +
+		`"base_currency":"EUR","base_language":"en","country":"",` +
 		`"admin_email":"ops@weak.test","admin_name":"Ops","admin_password":""}`
 	if got := claimStatus(t, srv, body); got != http.StatusUnprocessableEntity {
 		t.Fatalf("an empty admin password answered %d, want 422 — this is the field the caller must fix, not a server fault", got)
