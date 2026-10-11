@@ -40,16 +40,23 @@ func (s *Store) requestDeadlineTx(ctx context.Context, tx pgx.Tx, kind string, r
 // RequestDeadline answers the deadline a request of this kind received at
 // received would get, for the form that files one. Gated like the queue it
 // fills: the deadline is shown only to whoever may file the request.
-func (s *Store) RequestDeadline(ctx context.Context, kind string, received time.Time) (time.Time, string, error) {
+//
+// received goes through receivedAtFor, so the preview refuses what filing
+// refuses.
+func (s *Store) RequestDeadline(ctx context.Context, kind string, stated *time.Time) (time.Time, string, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
 		return time.Time{}, "", err
 	}
 	if err := subjectrightsrules.RequestKind(kind).Validate(); err != nil {
 		return time.Time{}, "", &ValidationError{Field: fieldKind, Reason: "not a request kind"}
 	}
+	received, err := receivedAtFor(stated, time.Now())
+	if err != nil {
+		return time.Time{}, "", err
+	}
 	var due time.Time
 	var rule string
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		due, rule, err = s.requestDeadlineTx(ctx, tx, kind, received)
 		return err

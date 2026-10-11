@@ -455,7 +455,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// here is answered there rather than sitting in a second queue nobody
 		// reads.
 		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)}).
-		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryOf)).
+		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision)).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)

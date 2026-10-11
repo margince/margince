@@ -39011,7 +39011,7 @@ export interface components {
             subject_ref: string;
             /**
              * Format: date-time
-             * @description When the request arrived. Absent means now. A time in the future is refused with 422 naming `received_at`.
+             * @description When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.
              */
             received_at?: string;
             /**
@@ -63914,7 +63914,7 @@ export interface operations {
         parameters: {
             query: {
                 kind: "access" | "rectify" | "erasure";
-                /** @description When the request arrived. Absent means now. */
+                /** @description When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`. */
                 received_at?: string;
             };
             header?: never;

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -67,11 +66,7 @@ func (h Handlers) CreateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 // GetDataSubjectRequestDeadline answers the deadline the request form shows
 // before filing, from the resolver the filing itself uses.
 func (h Handlers) GetDataSubjectRequestDeadline(w http.ResponseWriter, r *http.Request, params crmcontracts.GetDataSubjectRequestDeadlineParams) {
-	received := time.Now()
-	if params.ReceivedAt != nil {
-		received = *params.ReceivedAt
-	}
-	due, rule, err := h.store.RequestDeadline(r.Context(), string(params.Kind), received)
+	due, rule, err := h.store.RequestDeadline(r.Context(), string(params.Kind), params.ReceivedAt)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

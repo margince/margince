@@ -20,8 +20,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
@@ -225,7 +227,13 @@ func correspondenceClassOf(pack jurisdiction.Pack) jurisdiction.RetentionClass {
 // in the transaction that changes it. A change that keeps or raises the floor
 // writes nothing. The stored carry keeps the strictest class ever in force,
 // and its Before moves to now, so mail captured until now stays bound.
+//
+// Every change asks `retention_policy:update`, not only one that writes a
+// carry: a jurisdiction change decides what may be destroyed either way.
 func CarryOnChangeTx(ctx context.Context, tx pgx.Tx, store *settings.Store, from, to jurisdiction.Code, now time.Time) error {
+	if err := auth.Require(ctx, retentionPolicyObject, principal.ActionUpdate); err != nil {
+		return err
+	}
 	oldFloor, err := floorFor(from, now)
 	if err != nil {
 		return err

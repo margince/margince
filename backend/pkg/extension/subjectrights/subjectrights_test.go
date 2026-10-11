@@ -43,6 +43,11 @@ func TestARuleSetIsRefusedWhenItCannotBeApplied(t *testing.T) {
 			"no period and no hours",
 		},
 		{
+			"hours past a year",
+			Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), Deadlines: map[RequestKind]Deadline{Access: {Hours: 24*366 + 1}}},
+			"longer than a year",
+		},
+		{
 			"negative hours",
 			Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), Deadlines: map[RequestKind]Deadline{Access: {Hours: -1}}},
 			"reaches back",

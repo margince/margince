@@ -32,6 +32,17 @@ func SeedCountryOnce(ctx context.Context, pool *pgxpool.Pool, code string) (stor
 	return stored, err
 }
 
+// CountryForDecision reads the jurisdiction for a transaction that destroys
+// or holds records under its floor. It keeps the country stable until that
+// transaction ends. A jurisdiction change waits for it. It waits for a change
+// already in flight, and then reads the new value.
+func CountryForDecision(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
+	if err := settings.ShareLockForDecision(ctx, tx, Country.Key()); err != nil {
+		return "", err
+	}
+	return CountryOf(ctx, tx)
+}
+
 // StoredCountry reads the installation's jurisdiction outside any request, for
 // the boot check.
 func StoredCountry(ctx context.Context, pool *pgxpool.Pool) (jurisdiction.Code, error) {

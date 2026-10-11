@@ -89,13 +89,24 @@ func handelsbriefShielded(currentArg, carriedArg int) string {
 // window the restriction would pin — that gap would be a record neither
 // erased nor held.
 //
-// A row that occurred before the carried floor's change time is held to the
-// later of the two window ends. With no carried floor the second arm is NULL,
-// which GREATEST ignores.
+// A row that occurred or was captured before the carried floor's change time
+// is held to the later of the two window ends. The capture time counts too,
+// because a provider's date header can be later than the day the mail arrived.
+// With no carried floor the second arm is NULL, which GREATEST ignores.
 func floorWindowEnd(currentArg, carriedArg int) string {
 	return fmt.Sprintf(`GREATEST(%s,
-		           CASE WHEN a.occurred_at < ($%d::jsonb->>'before')::timestamptz THEN %s END)`,
+		           CASE WHEN a.occurred_at < ($%[2]d::jsonb->>'before')::timestamptz
+		                  OR a.created_at < ($%[2]d::jsonb->>'before')::timestamptz THEN %[3]s END)`,
 		windowEndUnder(currentArg), carriedArg, windowEndUnder(carriedArg))
+}
+
+// rawCaptureUnshielded keeps the provider original, aliased `r`, of an activity
+// the floor shields. A held message keeps its original as evidence, the same
+// as it keeps its row.
+func rawCaptureUnshielded(currentArg, carriedArg int) string {
+	return `NOT EXISTS (SELECT 1 FROM activity a
+		  WHERE a.source_system = r.source_system AND a.source_id = r.source_id
+		    AND ` + handelsbriefShielded(currentArg, carriedArg) + `)`
 }
 
 // windowEndUnder is one floor's window end over the activity aliased `a`.

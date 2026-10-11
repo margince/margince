@@ -227,7 +227,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// controller placing a litigation hold, which reads as "no such record"
 		// rather than as "this installation cannot hold one".
 		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)).
-			WithCountry(identity.CountryOf).
+			WithCountry(identity.CountryForDecision).
 			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
 			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
 			WithRecordLabeler(newAttentionNames(InstallationDB(pool))),

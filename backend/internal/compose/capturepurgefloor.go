@@ -28,7 +28,7 @@ import (
 // is returned too, so a receipt names the floor the selection used rather than
 // resolving its own.
 func purgeFloorTx(ctx context.Context, tx pgx.Tx) (capture.StatutoryFloor, privacy.FloorPolicy, error) {
-	policy, err := privacy.ResolveFloorPolicy(ctx, tx, identity.CountryOf)
+	policy, err := privacy.ResolveFloorPolicy(ctx, tx, identity.CountryForDecision)
 	if err != nil {
 		return capture.StatutoryFloor{}, privacy.FloorPolicy{}, err
 	}

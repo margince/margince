@@ -32258,7 +32258,7 @@ type CreateDataSubjectRequest struct {
 	DueAt *time.Time                   `json:"due_at,omitempty"`
 	Kind  CreateDataSubjectRequestKind `json:"kind"`
 
-	// ReceivedAt When the request arrived. Absent means now. A time in the future is refused with 422 naming `received_at`.
+	// ReceivedAt When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.
 	ReceivedAt *time.Time `json:"received_at,omitempty"`
 	SubjectRef string     `json:"subject_ref"`
 }
@@ -52043,7 +52043,7 @@ type CreateDataSubjectRequestParams struct {
 type GetDataSubjectRequestDeadlineParams struct {
 	Kind GetDataSubjectRequestDeadlineParamsKind `form:"kind" json:"kind"`
 
-	// ReceivedAt When the request arrived. Absent means now.
+	// ReceivedAt When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.
 	ReceivedAt *time.Time `form:"received_at,omitempty" json:"received_at,omitempty"`
 }
 

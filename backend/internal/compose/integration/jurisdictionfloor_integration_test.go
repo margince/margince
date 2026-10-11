@@ -11,6 +11,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"maps"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -236,5 +238,68 @@ func TestBootRefusesAStoredJurisdictionWithNoPack(t *testing.T) {
 	err := compose.RequireCompiledInCountry(context.Background(), e.Pool)
 	if err == nil || !strings.Contains(err.Error(), `"zj"`) || !strings.Contains(err.Error(), "zq") {
 		t.Fatalf("boot with zj stored → %v, want a refusal naming zj and the compiled-in packs", err)
+	}
+}
+
+// A jurisdiction change waits for a transaction that resolved the floor to
+// destroy under it. The change cannot commit between that transaction's read
+// and its write; once it ends, the change lands and the next read sees it.
+func TestAJurisdictionChangeWaitsForADestroyInFlight(t *testing.T) {
+	f := newFloorFixture(t)
+	ctx := context.Background()
+	destroying, err := f.e.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := destroying.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back the destroying transaction: %v", err)
+		}
+	})
+	if _, err := privacy.ResolveFloorPolicy(ctx, destroying, identity.CountryForDecision); err != nil {
+		t.Fatal(err)
+	}
+	waiting, cancel := context.WithTimeout(f.governor(), 300*time.Millisecond)
+	defer cancel()
+	code := "zk"
+	if _, err := compose.NewInstallationSettingsFor(f.e.Pool).UpdateInstallation(waiting, identity.InstallationPatch{Country: &code}); err == nil {
+		t.Fatal("the jurisdiction changed while a destroying transaction held the floor it read")
+	}
+	if err := destroying.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	f.setCountry(t, "zk")
+	if got := f.policy(t).Selected; got != "zk" {
+		t.Fatalf("after the destroy ended, the floor reads %q, want the new zk", got)
+	}
+}
+
+// The carry binds mail captured before the change even when its own date is
+// later, as a provider's date header can be.
+func TestTheCarryBindsMailCapturedBeforeTheChange(t *testing.T) {
+	f := newFloorFixture(t)
+	f.setCountry(t, "zk")
+	f.exec(t, `UPDATE setting SET value = jsonb_set(value, '{before}', to_jsonb(now() - interval '200 days'))
+		WHERE key = 'privacy.retention_floor_carry'`)
+	late := f.mail(t, 150)
+	f.exec(t, `UPDATE activity SET created_at = now() - interval '300 days' WHERE id = $1`, late)
+	f.retentionPass(t)
+	if f.erased(t, late) {
+		t.Fatal("mail captured before the change was erased because its date header is later — the carry missed it")
+	}
+}
+
+// Every jurisdiction change asks the retention grant, even one that weakens
+// nothing: the change decides what may be destroyed.
+func TestAJurisdictionChangeNeedsTheRetentionGrant(t *testing.T) {
+	f := newFloorFixture(t)
+	settingsOnly := f.e.As(f.e.AdminUser, nil, principal.Permissions{
+		RowScope: principal.RowScopeAll,
+		Objects:  map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
+	})
+	code := "zq"
+	_, err := compose.NewInstallationSettingsFor(f.e.Pool).UpdateInstallation(settingsOnly, identity.InstallationPatch{Country: &code})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a change to an equal floor without retention_policy:update → %v, want permission denied", err)
 	}
 }

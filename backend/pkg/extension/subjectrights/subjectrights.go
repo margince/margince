@@ -56,12 +56,18 @@ type Deadline struct {
 	Hours  int
 }
 
+// maxHours bounds an hours deadline at a year, far below what time.Duration
+// can hold, so Due cannot overflow.
+const maxHours = 24 * 366
+
 // Validate refuses a deadline that holds neither unit or both.
 func (d Deadline) Validate() error {
 	hasPeriod := d.Period != (jurisdiction.Period{})
 	switch {
 	case d.Hours < 0:
 		return fmt.Errorf("a deadline of %d hours reaches back in time", d.Hours)
+	case d.Hours > maxHours:
+		return fmt.Errorf("a deadline of %d hours is longer than a year; state it as a calendar period", d.Hours)
 	case hasPeriod && d.Hours > 0:
 		return errors.New("a deadline names both a calendar period and hours; a law counts in one of them")
 	case !hasPeriod && d.Hours == 0:

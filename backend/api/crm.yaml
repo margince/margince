@@ -18403,7 +18403,7 @@ paths:
         applies. Gated like the queue, on `privacy_request` read.
       parameters:
         - { name: kind, in: query, required: true, schema: { type: string, enum: [access, rectify, erasure] } }
-        - { name: received_at, in: query, required: false, schema: { type: string, format: date-time }, description: 'When the request arrived. Absent means now.' }
+        - { name: received_at, in: query, required: false, schema: { type: string, format: date-time }, description: 'When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.' }
       responses:
         '200':
           description: The computed deadline.
@@ -53004,7 +53004,7 @@ components:
         received_at:
           type: string
           format: date-time
-          description: 'When the request arrived. Absent means now. A time in the future is refused with 422 naming `received_at`.'
+          description: 'When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.'
         due_at:
           type: string
           format: date-time

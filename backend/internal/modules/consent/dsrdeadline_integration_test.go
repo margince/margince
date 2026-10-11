@@ -133,3 +133,20 @@ func TestTheDeadlinePreviewMatchesTheFiling(t *testing.T) {
 		t.Fatalf("preview %s/%s, filing %s/%v; want one answer", preview.DueAt, preview.Rule, filed.DueAt, filed.DueRule)
 	}
 }
+
+// The preview refuses what filing refuses: a request cannot have arrived
+// tomorrow.
+func TestTheDeadlinePreviewRefusesAFutureArrival(t *testing.T) {
+	e := setupDSR(t)
+	tomorrow := time.Now().Add(24 * time.Hour)
+	r, err := http.NewRequestWithContext(e.ctx, http.MethodGet, "/v1/data-subject-requests/deadline", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := e.sendDSR(http.MethodGet, "", func(w http.ResponseWriter, _ *http.Request) {
+		e.handlers().GetDataSubjectRequestDeadline(w, r, crmcontracts.GetDataSubjectRequestDeadlineParams{Kind: "access", ReceivedAt: &tomorrow})
+	})
+	if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldReceivedAt {
+		t.Fatalf("preview for tomorrow → %d %s, want 422 naming received_at", w.Code, w.Body)
+	}
+}
