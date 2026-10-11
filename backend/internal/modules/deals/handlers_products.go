@@ -86,11 +86,17 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
-	// `not_specified` is how a caller says "nobody has classified this",
-	// because a JSON null cannot: the generated field is a pointer, so a null
-	// and an omitted field both arrive as nil and an omitted field has to keep
-	// meaning "leave it alone". Translated to the pair of nulls the column
-	// holds, here at the edge, so the store speaks in stored values only.
+	// `not_specified` is how a caller says "nobody has classified this".
+	//
+	// Not because a null cannot be read. httperr tells an explicit null from an
+	// absent field, and the clear list below rests on that.
+	//
+	// It is because product_billing_shape ties billing_model to
+	// billing_interval_months. One sentinel moves the pair, and a null on
+	// either half alone would name a state the CHECK refuses.
+	//
+	// Translated to the pair of nulls the column holds, here at the edge, so
+	// the store speaks in stored values only.
 	if billingModel != nil && *billingModel == string(crmcontracts.UpdateProductRequestBillingModelNotSpecified) {
 		billingModel, billingMonths = nil, nil
 	}
@@ -103,6 +109,7 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 		Currency:       req.Currency,
 		DefaultTaxRate: req.DefaultTaxRate,
 		Active:         req.Active,
+		Clear:          httperr.ClearedFields(r),
 		IfVersion:      ifVersion,
 
 		// A PATCH addresses the classification when it names either half.

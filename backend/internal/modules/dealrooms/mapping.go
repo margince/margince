@@ -4,6 +4,7 @@
 package dealrooms
 
 import (
+	"slices"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -49,15 +50,30 @@ func createInput(req crmcontracts.CreateDealRoomRequest) (CreateRoomInput, error
 // between "leave this alone" (outer nil) and "clear it" (inner nil), which a
 // single pointer cannot express and which matters for every nullable column
 // here — a steward and an expiry are both legitimately set back to nothing.
-func updateInput(req crmcontracts.UpdateDealRoomRequest, ifVersion *int64) UpdateRoomInput {
+// updateInput maps the request onto the store's three-state fields.
+//
+// The store already tells absent from null through a double pointer. The outer
+// one says the caller named the field, the inner carries the value.
+//
+// Only the mapping was missing the null case, so a cleared field arrived as a
+// nil request pointer and read as "leave it alone".
+func updateInput(req crmcontracts.UpdateDealRoomRequest, cleared []string, ifVersion *int64) UpdateRoomInput {
 	in := UpdateRoomInput{Title: req.Title, IfVersion: ifVersion}
 	if req.WelcomeMessage != nil {
 		in.WelcomeMessage = &req.WelcomeMessage
+	}
+	if slices.Contains(cleared, "welcome_message") {
+		var none *string
+		in.WelcomeMessage = &none
 	}
 	if req.StewardUserId != nil {
 		u := ids.From[ids.UserKind](ids.UUID(*req.StewardUserId))
 		p := &u
 		in.StewardUserID = &p
+	}
+	if slices.Contains(cleared, "steward_user_id") {
+		var none *ids.UserID
+		in.StewardUserID = &none
 	}
 	return in
 }

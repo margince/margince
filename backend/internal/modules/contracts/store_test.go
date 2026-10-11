@@ -4,6 +4,7 @@
 package contracts
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -66,7 +68,10 @@ func TestUnderContractUsesOneAsOfParameter(t *testing.T) {
 func TestPatchBuilderCarriesEveryRequestField(t *testing.T) {
 	full := fullUpdateRequest()
 
-	patch := contractPatch(sampleContract(), full)
+	patch, err := contractPatch(sampleContract(), full, nil)
+	if err != nil {
+		t.Fatalf("building the patch: %v", err)
+	}
 
 	// UpdateContractRequest has thirteen settable fields; every one must
 	// produce an assignment.
@@ -78,7 +83,10 @@ func TestPatchBuilderCarriesEveryRequestField(t *testing.T) {
 // An empty patch body changes nothing and must not manufacture a write — a
 // version bump on a no-op would invalidate every other client's If-Match.
 func TestAnEmptyPatchSetsNothing(t *testing.T) {
-	patch := contractPatch(sampleContract(), crmcontracts.UpdateContractRequest{})
+	patch, err := contractPatch(sampleContract(), crmcontracts.UpdateContractRequest{}, nil)
+	if err != nil {
+		t.Fatalf("building the patch: %v", err)
+	}
 
 	if !patch.Empty() {
 		t.Errorf("an empty request produced assignments: %v", patch.After())
@@ -90,7 +98,10 @@ func TestAnEmptyPatchSetsNothing(t *testing.T) {
 // matching event. A future contract edit that added them here would route
 // around both.
 func TestTheAssertedTransitionsAreNotPatchable(t *testing.T) {
-	patch := contractPatch(sampleContract(), fullUpdateRequest())
+	patch, err := contractPatch(sampleContract(), fullUpdateRequest(), nil)
+	if err != nil {
+		t.Fatalf("building the patch: %v", err)
+	}
 
 	for _, column := range []string{"status", "cancellation_notice_on", "cancellation_effective_on", "superseded_by_id"} {
 		if _, set := patch.After()[column]; set {
@@ -148,5 +159,41 @@ func fullUpdateRequest() crmcontracts.UpdateContractRequest {
 		Title: &title, ValueMinor: &value, Currency: &currency, ValueBasis: &basis,
 		StartsOn: &day, EndsOn: &day, RenewalOn: &day, SignedOn: &day,
 		AutoRenew: &autoRenew, NoticePeriodDays: &notice,
+	}
+}
+
+// A field sent as null is cleared, and a field the contract cannot do without
+// is refused by name.
+//
+// An absent field means "leave it alone" and a null means "empty it".
+//
+// Both arrived as a nil pointer, so twelve nullable columns could not be
+// emptied and the request answered 200 with the old value still stored.
+func TestANullClearsAContractFieldAndRefusesTheOnesItCannot(t *testing.T) {
+	cleared, err := contractPatch(sampleContract(), crmcontracts.UpdateContractRequest{},
+		[]string{"contract_number", "signed_on", "payment_term_days"})
+	if err != nil {
+		t.Fatalf("clearing three nullable fields: %v", err)
+	}
+	for _, column := range []string{"contract_number", "signed_on", "payment_term_days"} {
+		value, set := cleared.After()[column]
+		if !set {
+			t.Errorf("%q was not written, so the null left the stored value in place", column)
+			continue
+		}
+		if value != nil {
+			t.Errorf("%q was written as %v, want nil", column, value)
+		}
+	}
+
+	// title is NOT NULL: the column cannot hold the absence, so the refusal
+	// names the field rather than letting the write reach the constraint.
+	_, err = contractPatch(sampleContract(), crmcontracts.UpdateContractRequest{}, []string{"title"})
+	notClearable, ok := errors.AsType[*storekit.NotClearableError](err)
+	if !ok {
+		t.Fatalf("clearing title → %v, want NotClearableError", err)
+	}
+	if field, code, _ := notClearable.FieldFault(); field != "title" || code != "field_not_clearable" {
+		t.Errorf("fault = (%q, %q), want (title, field_not_clearable)", field, code)
 	}
 }

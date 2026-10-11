@@ -127,7 +127,9 @@ type UpdateProductInput struct {
 	Classified            bool
 	BillingModel          *string
 	BillingIntervalMonths *int
-	IfVersion             *int64
+	// Clear are the fields the caller sent as an explicit null.
+	Clear     []string
+	IfVersion *int64
 }
 
 func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdateProductInput) (crmcontracts.Product, error) {
@@ -170,8 +172,28 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 
 // buildProductPatch folds the caller's sparse product edit into a patch —
 // every set field carries its before/after image for the audit trail.
+// descriptionColumn is named because the clear map and the patch both spell it.
+const descriptionColumn = "description"
+
+// clearableProductColumns are the product's independently nullable columns.
+//
+// The billing classification is absent, because product_billing_shape ties
+// billing_model to billing_interval_months.
+//
+// Clearing one of them alone names a state the CHECK refuses. `not_specified`
+// moves the pair together and stays the way to say nobody has classified it.
+func clearableProductColumns(current crmcontracts.Product) map[string]storekit.Clearable {
+	return map[string]storekit.Clearable{
+		"sku":             {Column: "sku", Current: current.Sku},
+		descriptionColumn: {Column: descriptionColumn, Current: current.Description},
+	}
+}
+
 func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
+	if err := storekit.ApplyClears(p, in.Clear, clearableProductColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.Name != nil {
 		name, err := httperr.RequireNonBlank("name", *in.Name)
 		if err != nil {

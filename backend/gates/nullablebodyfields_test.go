@@ -35,23 +35,24 @@ const (
 // nullIgnoredByHandler are the operations whose handler reads no explicit null.
 // A null-clears test, or a read of the nulls in the handler, removes the entry.
 var nullIgnoredByHandler = gatekit.Waive(map[string]string{
+	// These two decode the body as raw JSON and read each key's presence in a
+	// helper of their own.
+	//
+	// A census of named httperr calls cannot see that.
+	"EditWeeklyPlanCommitment": "decodes map[string]json.RawMessage and reads presence per key " +
+		"in commitmentField; an explicit null clears there.",
+	"SetWeeklyPlanContract": "decodes map[string]json.RawMessage and reads presence per key " +
+		"in contractField; an explicit null clears there.",
+
 	"UpdateAutomation":                patchUnconfirmed,
-	"UpdateContract":                  typedPointers,
-	"UpdateDealRoom":                  patchUnconfirmed,
-	"UpdateOffer":                     typedPointers,
 	"UpdateOfferLineItem":             patchUnconfirmed,
-	"UpdateProduct":                   typedPointers,
 	"UpdateSignal":                    patchUnconfirmed,
-	"EditWeeklyPlanCommitment":        patchUnconfirmed,
 	"PutAnchorCompany":                putUnconfirmed,
 	"SetConnectorContextTag":          putUnconfirmed,
 	"SetConnectorSignatureEnrichment": putUnconfirmed,
-	"SetDealRoomExpiry":               putUnconfirmed,
 	"SetLeadManualSignal":             putUnconfirmed,
 	"SaveMailDraft":                   putUnconfirmed,
-	"SaveMyGreetingName":              putUnconfirmed,
 	"PutOnboardingState":              putUnconfirmed,
-	"SetWeeklyPlanContract":           putUnconfirmed,
 })
 
 func TestEveryHandlerOfANullableBodyReadsExplicitNullsSomewhere(t *testing.T) {
@@ -265,9 +266,18 @@ func calledNames(fn *ast.FuncDecl) map[string]bool {
 	return calls
 }
 
-// readsExplicitNulls is whether the calls include a reader of a body's nulls.
+// readsExplicitNulls answers whether a handler distinguishes an absent field
+// from a null one.
+//
+// RequireSent and RefuseNull count because they are built on the same two
+// readers. RequireSent asks PresentField whether the key arrived, and
+// RefuseNull asks ClearedFields whether it arrived as null.
+//
+// Leaving them out marked five operations unconfirmed that already read the
+// distinction.
 func readsExplicitNulls(calls map[string]bool) bool {
-	return calls["ClearedFields"] || calls["PresentField"] || calls["NullKeys"] || calls["NullKeysOf"]
+	return calls["ClearedFields"] || calls["PresentField"] || calls["NullKeys"] ||
+		calls["NullKeysOf"] || calls["RequireSent"] || calls["RefuseNull"]
 }
 
 // A reader named in a comment or a string is not a read.
