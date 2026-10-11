@@ -342,11 +342,11 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			err = r.joinJobsToContract(served(declared), r.jobs)
 		}
-	case "Jurisdictions", "Messaging":
-		// Recognized and deliberately skipped: both are passive policy the
-		// core consults — a jurisdiction pack's retention floors and a rule
-		// set's messaging obligations — never a governed operation an operator
-		// resolves, so neither contributes a manifest entry.
+	case "Jurisdictions", "Messaging", "SubjectRights", "Documents":
+		// Recognized and deliberately skipped: all four are passive policy or
+		// inert content the core consults — retention floors, messaging rules,
+		// request deadlines and compliance documents — never a governed
+		// operation an operator resolves, so none contributes a manifest entry.
 		//
 		// SKIPPED HERE IS NOT UNCHECKED. Messaging rules decide whether a
 		// message may go out, so what holds them is nearer the use and sees

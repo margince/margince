@@ -18,7 +18,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
+	"github.com/margince/margince/backend/internal/shared/ports/subjectrightsrules"
 	"github.com/margince/margince/backend/pkg/extension"
+	pubdocs "github.com/margince/margince/backend/pkg/extension/compliancedocs"
 )
 
 // preflightJurisdictions checks one unit's declared packs for grammar,
@@ -58,6 +60,9 @@ func preflightMessagingRules(e extension.Extension, messagingCodes map[jurisdict
 		if err := r.Validate(); err != nil {
 			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
 		}
+		if err := requireOwnPack(e, "messaging rules", r.Jurisdiction); err != nil {
+			return err
+		}
 		if owner, dup := messagingCodes[r.Jurisdiction]; dup {
 			return fmt.Errorf("compose: extensions %q and %q both declare messaging rules for jurisdiction %q",
 				owner, e.Name, r.Jurisdiction)
@@ -72,6 +77,58 @@ func preflightMessagingRules(e extension.Extension, messagingCodes map[jurisdict
 				e.Name, r.Jurisdiction)
 		}
 		messagingCodes[r.Jurisdiction] = e.Name
+	}
+	return nil
+}
+
+// requireOwnPack refuses a declaration for a jurisdiction the same unit does
+// not carry a pack for. One unit owns everything for one code, so the admin
+// page can show a jurisdiction's floors, rules, deadlines and documents as one
+// unit's word rather than a mix of several.
+func requireOwnPack(e extension.Extension, what string, code jurisdiction.Code) error {
+	for _, p := range e.Jurisdictions {
+		if p.Code() == code {
+			return nil
+		}
+	}
+	return fmt.Errorf("compose: extension %q declares %s for jurisdiction %q but carries no jurisdiction pack for it", e.Name, what, code)
+}
+
+// preflightSubjectRights checks one unit's request deadlines the way
+// preflightMessagingRules checks its messaging rules: grammar, a second set for
+// one code, a collision with a core registration, and the unit's own pack.
+func preflightSubjectRights(e extension.Extension, codes map[jurisdiction.Code]extension.Name) error {
+	for _, r := range e.SubjectRights {
+		if err := r.Validate(); err != nil {
+			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+		if err := requireOwnPack(e, "subject-rights rules", r.Jurisdiction); err != nil {
+			return err
+		}
+		if owner, dup := codes[r.Jurisdiction]; dup {
+			return fmt.Errorf("compose: extensions %q and %q both declare subject-rights rules for jurisdiction %q",
+				owner, e.Name, r.Jurisdiction)
+		}
+		if _, taken := subjectrightsrules.For(r.Jurisdiction); taken {
+			return fmt.Errorf("compose: extension %q declares subject-rights rules for jurisdiction %q, which the core already registers",
+				e.Name, r.Jurisdiction)
+		}
+		codes[r.Jurisdiction] = e.Name
+	}
+	return nil
+}
+
+// preflightDocuments checks one unit's documents. Pack codes are unique across
+// units, so the unit's own-pack rule also keeps two units from shipping
+// documents under one code.
+func preflightDocuments(e extension.Extension) error {
+	if err := pubdocs.ValidateSet(e.Documents); err != nil {
+		return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+	}
+	for _, d := range e.Documents {
+		if err := requireOwnPack(e, "document "+d.ID, d.Jurisdiction); err != nil {
+			return err
+		}
 	}
 	return nil
 }
