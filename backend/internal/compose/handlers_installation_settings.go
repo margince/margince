@@ -12,8 +12,8 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"

@@ -22,16 +22,31 @@ func TestARuleSetIsRefusedWhenItCannotBeApplied(t *testing.T) {
 	}{
 		{"bad code", Rules{Jurisdiction: "DE", Version: 1}, "alpha-2"},
 		{"no version", Rules{Jurisdiction: "zz"}, "version 0"},
-		{"uncited deadline", Rules{Jurisdiction: "zz", Version: 1,
-			Deadlines: map[RequestKind]Deadline{Access: {Hours: 72}}}, "cite no instrument"},
-		{"unknown kind", Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(),
-			Deadlines: map[RequestKind]Deadline{"portability": {Hours: 72}}}, "not one the request queue carries"},
-		{"both units", Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(),
-			Deadlines: map[RequestKind]Deadline{Access: {Hours: 72, Period: jurisdiction.Period{Months: 1}}}}, "both"},
-		{"no unit", Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(),
-			Deadlines: map[RequestKind]Deadline{Access: {}}}, "no period and no hours"},
-		{"negative hours", Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(),
-			Deadlines: map[RequestKind]Deadline{Access: {Hours: -1}}}, "reaches back"},
+		{
+			"uncited deadline",
+			Rules{Jurisdiction: "zz", Version: 1, Deadlines: map[RequestKind]Deadline{Access: {Hours: 72}}},
+			"cite no instrument",
+		},
+		{
+			"unknown kind",
+			Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), Deadlines: map[RequestKind]Deadline{"portability": {Hours: 72}}},
+			"not one the request queue carries",
+		},
+		{
+			"both units",
+			Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), Deadlines: map[RequestKind]Deadline{Access: {Hours: 72, Period: jurisdiction.Period{Months: 1}}}},
+			"both",
+		},
+		{
+			"no unit",
+			Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), Deadlines: map[RequestKind]Deadline{Access: {}}},
+			"no period and no hours",
+		},
+		{
+			"negative hours",
+			Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), Deadlines: map[RequestKind]Deadline{Access: {Hours: -1}}},
+			"reaches back",
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			err := c.rules.Validate()
@@ -40,8 +55,10 @@ func TestARuleSetIsRefusedWhenItCannotBeApplied(t *testing.T) {
 			}
 		})
 	}
-	ok := Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(),
-		Deadlines: map[RequestKind]Deadline{Access: {Hours: 72}, Erasure: {Period: jurisdiction.Period{Months: 1}}}}
+	ok := Rules{
+		Jurisdiction: "zz", Version: 1, Instruments: cited(),
+		Deadlines: map[RequestKind]Deadline{Access: {Hours: 72}, Erasure: {Period: jurisdiction.Period{Months: 1}}},
+	}
 	if err := ok.Validate(); err != nil {
 		t.Fatalf("a cited set with one deadline per unit is refused: %v", err)
 	}

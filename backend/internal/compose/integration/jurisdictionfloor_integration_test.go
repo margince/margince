@@ -34,7 +34,6 @@ type noFloorPack struct{}
 
 func (noFloorPack) Code() jurisdiction.Code { return "zk" }
 
-//nolint:ireturn // jurisdiction.Pack declares this method returning the interface.
 func (noFloorPack) Retention() jurisdiction.Retention { return nil }
 
 func init() { jurisdiction.Register(noFloorPack{}) }

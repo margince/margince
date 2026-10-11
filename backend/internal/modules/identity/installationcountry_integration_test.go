@@ -20,7 +20,6 @@ type countryTestPack struct{}
 
 func (countryTestPack) Code() jurisdiction.Code { return "zz" }
 
-//nolint:ireturn // jurisdiction.Pack declares this method returning the interface.
 func (countryTestPack) Retention() jurisdiction.Retention { return nil }
 
 func init() { jurisdiction.Register(countryTestPack{}) }

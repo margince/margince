@@ -51,13 +51,33 @@ func TestADeclarationForAnotherUnitsJurisdictionIsRefused(t *testing.T) {
 		unit extension.Extension
 		want string
 	}{
-		{"messaging", extension.Extension{Name: "stray-msg", Version: "0.0.1",
-			Messaging: []messagingrules.Rules{{Jurisdiction: "zo", Version: 1}}}, "messaging rules"},
-		{"subject rights", extension.Extension{Name: "stray-rights", Version: "0.0.1",
-			SubjectRights: []subjectrightsrules.Rules{{Jurisdiction: "zo", Version: 1}}}, "subject-rights rules"},
-		{"documents", extension.Extension{Name: "stray-docs", Version: "0.0.1",
-			Documents: []pubdocs.Document{{Jurisdiction: "zo", ID: "x", Title: "X", Language: "en",
-				Audience: pubdocs.Operator, Kind: pubdocs.Record, Body: []byte("x"), MediaType: "text/markdown"}}}, "document x"},
+		{
+			name: "messaging",
+			unit: extension.Extension{
+				Name: "stray-msg", Version: "0.0.1",
+				Messaging: []messagingrules.Rules{{Jurisdiction: "zo", Version: 1}},
+			},
+			want: "messaging rules",
+		},
+		{
+			name: "subject rights",
+			unit: extension.Extension{
+				Name: "stray-rights", Version: "0.0.1",
+				SubjectRights: []subjectrightsrules.Rules{{Jurisdiction: "zo", Version: 1}},
+			},
+			want: "subject-rights rules",
+		},
+		{
+			name: "documents",
+			unit: extension.Extension{
+				Name: "stray-docs", Version: "0.0.1",
+				Documents: []pubdocs.Document{{
+					Jurisdiction: "zo", ID: "x", Title: "X", Language: "en",
+					Audience: pubdocs.Operator, Kind: pubdocs.Record, Body: []byte("x"), MediaType: "text/markdown",
+				}},
+			},
+			want: "document x",
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			err := RegisterExtensions(composableAll([]extension.Extension{c.unit}), nil, nil)

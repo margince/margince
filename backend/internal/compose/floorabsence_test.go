@@ -30,16 +30,34 @@ func TestTheBootLineTellsTheFourFloorCasesApart(t *testing.T) {
 		posture privacy.FloorPosture
 		want    []string
 	}{
-		{"not set", privacy.FloorPosture{Known: true, Class: "commercial_correspondence", Keep: sixYears.Keep, Packs: []string{"de", "vn"}},
-			[]string{"level=INFO", "no jurisdiction selected", "strictest compiled-in"}},
-		{"set, no floor", privacy.FloorPosture{Selected: "vn", Packs: []string{"de", "vn"}},
-			[]string{"level=WARN", "selected jurisdiction's pack declares none", "jurisdiction=vn"}},
-		{"set, with floor", privacy.FloorPosture{Selected: "de", Known: true, Class: "commercial_correspondence", Keep: sixYears.Keep},
-			[]string{"level=INFO", "in force", "jurisdiction=de"}},
-		{"carried", privacy.StatutoryFloorPosture(privacy.FloorPolicy{Selected: "vn", Carried: &privacy.CarriedFloor{Class: sixYears, Before: time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)}}),
-			[]string{"carried retention floor", "binds_until=2032-03-01"}},
-		{"nothing compiled in", privacy.FloorPosture{},
-			[]string{"level=WARN", "no jurisdiction packs compiled in"}},
+		{
+			name:    "not set",
+			posture: privacy.FloorPosture{Known: true, Class: "commercial_correspondence", Keep: sixYears.Keep, Packs: []string{"de", "vn"}},
+			want:    []string{"level=INFO", "no jurisdiction selected", "strictest compiled-in"},
+		},
+		{
+			name:    "set, no floor",
+			posture: privacy.FloorPosture{Selected: "vn", Packs: []string{"de", "vn"}},
+			want:    []string{"level=WARN", "selected jurisdiction's pack declares none", "jurisdiction=vn"},
+		},
+		{
+			name:    "set, with floor",
+			posture: privacy.FloorPosture{Selected: "de", Known: true, Class: "commercial_correspondence", Keep: sixYears.Keep},
+			want:    []string{"level=INFO", "in force", "jurisdiction=de"},
+		},
+		{
+			name: "carried",
+			posture: privacy.StatutoryFloorPosture(privacy.FloorPolicy{
+				Selected: "vn",
+				Carried:  &privacy.CarriedFloor{Class: sixYears, Before: time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)},
+			}),
+			want: []string{"carried retention floor", "binds_until=2032-03-01"},
+		},
+		{
+			name:    "nothing compiled in",
+			posture: privacy.FloorPosture{},
+			want:    []string{"level=WARN", "no jurisdiction packs compiled in"},
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			line := announced(c.posture)

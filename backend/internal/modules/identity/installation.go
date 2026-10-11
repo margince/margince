@@ -43,6 +43,9 @@ var ErrMultipleWorkspaces = errors.New("identity: more than one active workspace
 // every binary of this installation must agree on it.
 const installationLockKey = int64(0x4d61726761_0001) // "Marga"+1
 
+// countryUnchosen is the refusal code of a claim that chose no jurisdiction.
+const countryUnchosen = "required"
+
 // InstallationBootstrap is the creation input for the singleton company.
 //
 // It arrives one of two ways and never both: from the deployment
@@ -217,7 +220,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 		return ids.WorkspaceID{}, err
 	}
 	if origin == originClaimed && in.Country == nil {
-		return ids.WorkspaceID{}, settings.InvalidValue{Setting: Country.Key(), Code: "required", Reason: "choose a jurisdiction, or no jurisdiction pack"}
+		return ids.WorkspaceID{}, settings.InvalidValue{Setting: Country.Key(), Code: countryUnchosen, Reason: "choose a jurisdiction, or no jurisdiction pack"}
 	}
 	hash, err := password.Hash(boot.AdminPassword)
 	if err != nil {

@@ -32,8 +32,9 @@ func init() {
 	})
 }
 
-func (e *dsrEnv) underJurisdiction(code jurisdiction.Code) Handlers {
-	country := InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return code, nil })
+// underDeadlinePack is the handlers with the installation set to zd.
+func (e *dsrEnv) underDeadlinePack() Handlers {
+	country := InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return deadlinePack, nil })
 	return e.handlers().WithInstallationCountry(country)
 }
 
@@ -66,11 +67,11 @@ func TestAManualRequestGetsTheComputedDeadline(t *testing.T) {
 			status, gdpr.DueAt, gdpr.DueRule, gdpr.DueOverridden)
 	}
 
-	status, pack, _ := e.file(t, e.underJurisdiction(deadlinePack), `{"kind":"access","subject_ref":"b@dsr.test","received_at":"`+at+`"}`)
+	status, pack, _ := e.file(t, e.underDeadlinePack(), `{"kind":"access","subject_ref":"b@dsr.test","received_at":"`+at+`"}`)
 	if status != http.StatusCreated || !pack.DueAt.Equal(received.Add(72*time.Hour)) || pack.DueRule == nil || *pack.DueRule != "zd v3" {
 		t.Fatalf("zd access → %d due %s rule %v; want 72 hours under zd v3", status, pack.DueAt, pack.DueRule)
 	}
-	status, fallback, _ := e.file(t, e.underJurisdiction(deadlinePack), `{"kind":"rectify","subject_ref":"c@dsr.test","received_at":"`+at+`"}`)
+	status, fallback, _ := e.file(t, e.underDeadlinePack(), `{"kind":"rectify","subject_ref":"c@dsr.test","received_at":"`+at+`"}`)
 	if status != http.StatusCreated || fallback.DueRule == nil || *fallback.DueRule != "gdpr" {
 		t.Fatalf("a kind the pack declares nothing for → %d rule %v; want the GDPR fallback", status, fallback.DueRule)
 	}
@@ -82,7 +83,7 @@ func TestADeadlineLaterThanTheComputedOneIsRefused(t *testing.T) {
 	e := setupDSR(t)
 	received := time.Now().UTC().Add(-time.Hour)
 	late := received.Add(73 * time.Hour).Format(time.RFC3339)
-	status, _, field := e.file(t, e.underJurisdiction(deadlinePack),
+	status, _, field := e.file(t, e.underDeadlinePack(),
 		`{"kind":"access","subject_ref":"late@dsr.test","received_at":"`+received.Format(time.RFC3339)+`","due_at":"`+late+`"}`)
 	if status != http.StatusUnprocessableEntity || field != fieldDueAt {
 		t.Fatalf("a due_at past the 72-hour deadline → %d naming %q, want 422 naming due_at", status, field)
@@ -93,7 +94,7 @@ func TestADeadlineLaterThanTheComputedOneIsRefused(t *testing.T) {
 	}
 
 	early := received.Add(24 * time.Hour).Truncate(time.Second)
-	status, stored, _ := e.file(t, e.underJurisdiction(deadlinePack),
+	status, stored, _ := e.file(t, e.underDeadlinePack(),
 		`{"kind":"access","subject_ref":"early@dsr.test","received_at":"`+received.Format(time.RFC3339)+`","due_at":"`+early.Format(time.RFC3339)+`"}`)
 	if status != http.StatusCreated || !stored.DueAt.Equal(early) || !stored.DueOverridden {
 		t.Fatalf("an earlier due_at → %d due %s overridden %v; want it stored and marked overridden", status, stored.DueAt, stored.DueOverridden)
@@ -115,7 +116,7 @@ func TestARequestReceivedInTheFutureIsRefused(t *testing.T) {
 func TestTheDeadlinePreviewMatchesTheFiling(t *testing.T) {
 	e := setupDSR(t)
 	received := time.Date(2026, time.March, 31, 12, 0, 0, 0, time.UTC)
-	h := e.underJurisdiction(deadlinePack)
+	h := e.underDeadlinePack()
 	r, err := http.NewRequestWithContext(e.ctx, http.MethodGet, "/v1/data-subject-requests/deadline", nil)
 	if err != nil {
 		t.Fatal(err)

@@ -82,8 +82,8 @@ func (h installationSettingsHandlers) DownloadJurisdictionDocument(w http.Respon
 		return
 	}
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: doc.MediaType, Filename: documentFilename(*doc), Size: int64(len(doc.Body))},
-		Body:     io.NopCloser(bytes.NewReader(doc.Body)),
+		ContentType: doc.MediaType, Filename: documentFilename(*doc), Size: int64(len(doc.Body)),
+		Body: io.NopCloser(bytes.NewReader(doc.Body)),
 	}, "jurisdiction document "+doc.ID)
 }
 
