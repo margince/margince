@@ -32304,6 +32304,8 @@ export interface components {
              * @description Lowercased; lead-internal dedupe key.
              */
             email?: string | null;
+            /** @description E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes. */
+            phone?: string | null;
             /** @description Normalized LinkedIn profile URL; the exact-match dedupe key. */
             linkedin_url?: string | null;
             title?: string | null;
@@ -32437,6 +32439,8 @@ export interface components {
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
+            /** @description E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes. */
+            phone?: string | null;
             /** @description Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads. */
             linkedin_url?: string | null;
             title?: string | null;
@@ -32480,6 +32484,8 @@ export interface components {
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
+            /** @description E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes. */
+            phone?: string | null;
             title?: string | null;
             company_name?: string | null;
             /** @description Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK. */

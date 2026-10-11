@@ -47,7 +47,6 @@ import {
   unwrap,
   useMe,
 } from "./common";
-import type { CreateField } from "./create";
 import { EntityRef, useEntityName } from "./entityref";
 import { useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
@@ -65,6 +64,7 @@ import { LeadDealsProjectsTab, LeadRail } from "./leadraillinks";
 import { LeadReadings } from "./leadreadings";
 import { ACTION_PARAM, CALL_ACTION } from "./leads.address";
 import { DisqualifyDialog } from "./leads.disqualify";
+import { leadEditFields, mapLeadUpdate } from "./leads.form";
 import { QualifyDialog } from "./leads.qualify";
 import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
@@ -125,37 +125,6 @@ function promotionTriggerLabel(
       return null;
   }
 }
-
-function stringField(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-// Status and score use their domain actions; Details sends only submitted identity fields.
-export function mapLeadUpdate(
-  values: Record<string, unknown>,
-): UpdateLeadRequest {
-  const field = (key: string) =>
-    Object.hasOwn(values, key)
-      ? stringField(values[key]).trim() || null
-      : undefined;
-  return {
-    full_name: field("full_name"),
-    email: field("email"),
-    title: field("title"),
-    company_name: field("company_name"),
-    source: stringField(values.source).trim() || undefined,
-    candidate_company_key: field("candidate_company_key"),
-    project_id: field("project_id"),
-    owner_id: stringField(values.owner_id).trim() || undefined,
-  };
-}
-
-const leadEditFields: CreateField[] = [
-  { key: "full_name", label: "create.fullName", required: true },
-  { key: "email", label: "create.email", type: "email" },
-  { key: "title", label: "create.contactTitle" },
-  { key: "company_name", label: "create.companyName" },
-];
 
 // The decision-maker title pattern the score uses (formulas §3.1). Mirrored
 // here ONLY to say why a title earned nothing; the score itself is computed

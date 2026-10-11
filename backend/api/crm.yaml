@@ -44183,6 +44183,7 @@ components:
         id: { type: string, format: uuid }
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email, description: Lowercased; lead-internal dedupe key. }
+        phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL; the exact-match dedupe key.' }
         title: { type: [string, 'null'] }
         company_name: { type: [string, 'null'], description: Free text; there is no foreign key to a company. }
@@ -44298,6 +44299,7 @@ components:
       properties:
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.' }
         title: { type: [string, 'null'] }
         company_name: { type: [string, 'null'] }
@@ -44335,6 +44337,7 @@ components:
       properties:
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         title: { type: [string, 'null'] }
         company_name: { type: [string, 'null'] }
         candidate_company_key: { type: [string, 'null'], description: 'Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.' }

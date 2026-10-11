@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 298 |
-| Columns | 3558 |
+| Columns | 3559 |
 | Foreign keys | 498 |
 | Owning areas | 36 |
 
@@ -44,7 +44,7 @@ Ranked by how many foreign keys point at them.
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 33 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 24 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 37 | 17 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
@@ -297,7 +297,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 37 | 17 |
+| [`lead`](contacts.md#lead) | contacts | 38 | 17 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 8 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |

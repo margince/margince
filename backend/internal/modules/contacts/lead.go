@@ -23,8 +23,12 @@ import (
 )
 
 type CreateLeadInput struct {
-	FullName            *string
-	Email               *string
+	FullName *string
+	Email    *string
+	// Phone is E.164 by the time it reaches the column, normalised through the
+	// same values.ParsePhone a contact's number goes through. One number, like
+	// the one email beside it: a lead is a single enquiry until it is promoted.
+	Phone               *string
 	Title               *string
 	CompanyName         *string
 	CandidateCompanyKey *string
@@ -198,7 +202,8 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 		return crmcontracts.Lead{}, false, err
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, "create", "lead", id.UUID, nil, map[string]any{"email": in.Email, leadCompanyColumn: in.CompanyName})
+	auditID, err := storekit.Audit(ctx, tx, "create", "lead", id.UUID, nil,
+		map[string]any{leadEmailColumn: in.Email, leadPhoneColumn: in.Phone, leadCompanyColumn: in.CompanyName})
 	if err != nil {
 		return crmcontracts.Lead{}, false, fmt.Errorf("audit lead create: %w", err)
 	}
@@ -231,14 +236,14 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.FromContactID,
+		in.FromContactID, in.Phone,
 	})
 	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   from_contact_id`+authorCols+cfCols+`)
-		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16`+authorHolders+cfHolders+`)`,
+		                   from_contact_id, phone`+authorCols+cfCols+`)
+		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17`+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Race behind the pre-checks: the constraint name tells an
@@ -278,6 +283,14 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 		}
 		normalized := parsed.String()
 		in.Email = &normalized
+	}
+	if in.Phone != nil {
+		parsed, err := values.ParsePhone(*in.Phone)
+		if err != nil {
+			return CreateLeadInput{}, err
+		}
+		normalized := parsed.String()
+		in.Phone = &normalized
 	}
 	if in.LinkedInURL != nil {
 		normalized, err := NormalizeLinkedInURL(*in.LinkedInURL)

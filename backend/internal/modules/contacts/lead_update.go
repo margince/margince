@@ -29,6 +29,7 @@ type UpdateLeadInput struct {
 	Trail               storekit.AuditTrail
 	FullName            *string
 	Email               *string
+	Phone               *string
 	Title               *string
 	CompanyName         *string
 	CandidateCompanyKey *string
@@ -364,6 +365,13 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 			return nil, false, err
 		}
 		p.Set("email", current.Email, parsed.String())
+	}
+	if in.Phone != nil {
+		parsed, err := values.ParsePhone(*in.Phone)
+		if err != nil {
+			return nil, false, err
+		}
+		p.Set(leadPhoneColumn, current.Phone, parsed.String())
 	}
 	if in.Title != nil {
 		p.Set("title", current.Title, *in.Title)

@@ -407,6 +407,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		email := string(*req.Email)
 		in.Email = &email
 	}
+	in.Phone = req.Phone
 	if req.Status != nil {
 		in.Status = string(*req.Status)
 	}
@@ -465,6 +466,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		email := string(*req.Email)
 		in.Email = &email
 	}
+	in.Phone = req.Phone
 	if req.Status != nil {
 		s := string(*req.Status)
 		in.Status = &s

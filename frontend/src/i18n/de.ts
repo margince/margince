@@ -1047,6 +1047,7 @@ export const de = {
   "history.field.nudge_dismissal": "Hinweis ausgeblendet",
   "history.field.override_category": "Kategorie der Freigabe",
   "history.field.overrides_carried": "Übernommene Freigaben",
+  "history.field.phone": "Telefonnummer",
   "history.field.phones": "Telefonnummern",
   "history.field.invitation_status": "Einladungsstatus",
   "history.field.proposal_status": "Status des Terminvorschlags",

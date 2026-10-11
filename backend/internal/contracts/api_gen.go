@@ -32480,8 +32480,11 @@ type CreateLeadRequest struct {
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
 	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
-	ProjectId   *openapi_types.UUID `json:"project_id,omitempty"`
-	Source      string              `json:"source"`
+
+	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
+	Phone     *string             `json:"phone,omitempty"`
+	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+	Source    string              `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -37127,6 +37130,9 @@ type Lead struct {
 	// OpenTaskCount Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118).
 	OpenTaskCount *int                `json:"open_task_count,omitempty"`
 	OwnerId       *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
+	Phone *string `json:"phone,omitempty"`
 
 	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
 	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
@@ -46319,6 +46325,9 @@ type UpdateLeadRequest struct {
 	// already write the row. To take an unowned lead for yourself, prefer
 	// `POST /records/lead/{id}/claim`, which is the same act with a version precondition.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
+	Phone *string `json:"phone,omitempty"`
 
 	// ProjectId The body of work this lead belongs to; carries no same-company guard (a lead has no company).
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
@@ -59758,6 +59767,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -59887,6 +59904,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -62353,6 +62377,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -62709,6 +62741,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -65788,6 +65827,14 @@ func (a *UpdateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -65887,6 +65934,13 @@ func (a UpdateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 

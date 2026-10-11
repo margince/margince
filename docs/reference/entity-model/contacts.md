@@ -978,7 +978,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-37 columns · primary key `(id)` · referenced by 17 foreign keys
+38 columns · primary key `(id)` · referenced by 17 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -995,6 +995,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `linkedin_url` | `text` |  | Normalized LinkedIn profile URL; the exact-match dedupe key. |
 | `merged_into_id` | `uuid` |  | Set when this lead was merged away into another, and null otherwise. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
+| `phone` | `text` |  | E.164, as a contact's number is. |
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |

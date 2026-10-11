@@ -1020,6 +1020,7 @@ export const vi = {
   "history.field.nudge_dismissal": "Đã bỏ qua lời nhắc",
   "history.field.override_category": "Loại ghi đè",
   "history.field.overrides_carried": "Ghi đè đã chuyển",
+  "history.field.phone": "Số điện thoại",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
   "history.field.invitation_status": "Trạng thái lời mời",
   "history.field.proposal_status": "Trạng thái đề xuất cuộc họp",

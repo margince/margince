@@ -1021,6 +1021,7 @@ export const en = {
   "history.field.nudge_dismissal": "Nudge dismissed",
   "history.field.override_category": "Override category",
   "history.field.overrides_carried": "Overrides carried",
+  "history.field.phone": "Phone",
   "history.field.phones": "Phone numbers",
   "history.field.invitation_status": "Invitation status",
   "history.field.proposal_status": "Meeting proposal status",
