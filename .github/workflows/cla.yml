@@ -96,8 +96,7 @@ jobs:
             Thank you for your contribution. Before we can merge it, every author
             of a commit in this pull request needs to accept the
             [Margince Contributor License Agreement, version 1.0](${{ steps.document.outputs.url }}).
-            Please read it first. You keep the copyright in your work; the licensing section of
-            [CONTRIBUTING.md](https://github.com/margince/margince/blob/main/CONTRIBUTING.md)
+            Please read it first. You keep the copyright in your work; [LICENSING.md](https://github.com/margince/margince/blob/main/LICENSING.md)
             explains why we ask. To accept, post the sentence below as a comment
             on this pull request, exactly as written. One acceptance covers every later contribution.
             If you contribute on behalf of your employer, your acceptance does not bind

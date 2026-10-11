@@ -8,6 +8,10 @@ same rules as the code our own agents write.
 The [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) covers how we work together. It adds one rule:
 to send more code than you can explain wastes the time of the reviewers.
 
+## Accept the agreement
+
+You accept [CLA.md](CLA.md) before your first change merges; [LICENSING.md](LICENSING.md) says why.
+
 ## You answer for your change
 
 **You are accountable for every line you send.** You must explain every line. We expect you

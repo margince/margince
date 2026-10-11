@@ -233,6 +233,7 @@ jobs:
               - 'README.md'
               - 'CHANGELOG.md'
               - 'CLA.md'
+              - 'LICENSING.md'
               - 'CODE_OF_CONDUCT.md'
               - 'CONTRIBUTING.md'
               - 'SECURITY.md'

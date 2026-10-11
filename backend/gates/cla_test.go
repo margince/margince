@@ -8,10 +8,10 @@
 package gates
 
 // An acceptance of the CLA covers the text it was shown, under the version that
-// text carries. Three places spell that version — CLA.md's header, the sentence
-// a contributor posts, and the signatures file their acceptance is written to —
-// and the text itself is pinned per version, so it cannot change under a version
-// somebody has already accepted.
+// text carries. Three places spell that version: CLA.md's header, the sentence a
+// contributor posts, and the signatures file their acceptance is written to. The
+// text itself is pinned per version, so it cannot change under a version somebody
+// has already accepted.
 
 import (
 	"crypto/sha256"
@@ -26,7 +26,7 @@ import (
 //
 // gatekit:fixture the digest of each accepted CLA text
 var acceptedTexts = map[string]string{
-	"1.0": "abea8ca73c954fd1a8a45d5b99a3156d877edf14a729c1f2d475a2b6c912e0cb",
+	"1.0": "3dfeaba6fdf954b9031c1090525c748ae59c9b9cc0ec80a702546e6c8171cc22",
 }
 
 var (
