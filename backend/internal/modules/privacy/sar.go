@@ -255,7 +255,11 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, contactID, emails, leads, identities)
+		authored, err := subjectAuthoredMessages(ctx, tx, contactID, emails, identities)
+		if err != nil {
+			return err
+		}
+		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
 
 		subject, err := rowMaps(ctx, tx, `
 			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
@@ -467,9 +471,10 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 	return out, rows.Err()
 }
 
-// subjectStrings runs a one-column text query into a slice.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID) ([]string, error) {
-	rows, err := tx.Query(ctx, query, contactID.UUID)
+// subjectStrings runs a one-column text query into a slice. The contact is $1,
+// and any further arguments follow it.
+func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID, more ...any) ([]string, error) {
+	rows, err := tx.Query(ctx, query, append([]any{contactID.UUID}, more...)...)
 	if err != nil {
 		return nil, err
 	}

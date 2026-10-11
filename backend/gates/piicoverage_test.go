@@ -520,6 +520,7 @@ var sarAssemblyFiles = []string{
 var sarReachedButNotAssembly = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/scheduledsends.go":    "reached because sarmessages.go calls loweredAddresses, a string helper living here. Its own SQL is the queued-send scrub's, on the erasure path",
 	"internal/modules/privacy/erasure_approvals.go": "reached because sarmessages.go calls addressPatterns, likewise. Its SQL erases staged proposals and discloses nothing",
+	"internal/modules/privacy/erasure_channels.go":  "reached because sarjudgements.go calls channelIdentityPairs, a pairing helper living here. Its SQL reads and erases the subject's channel identities on the erasure path",
 	"internal/modules/privacy/erasure_consent.go":   "reached because sarcommunication.go calls lowerAll, likewise. Its SQL revokes consent capabilities, which are other contacts' secrets rather than this subject's data",
 })
 

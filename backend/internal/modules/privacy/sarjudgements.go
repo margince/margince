@@ -14,38 +14,88 @@ package privacy
 // on a footing of their own: a subject is entitled to know not only what they
 // wrote but what we decided it meant, and which classifier decided it.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/ids"
+import (
+	"context"
+	"fmt"
 
-// sarSubjectMessages is the one set of activities all three sections read
-// from. It holds what links to the subject, what they took part in, and mail
-// that named one of their addresses. A link alone misses a message filed only
-// to their company or deal, or to nobody at all.
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// subjectAuthoredMessages resolves, once per export, the activities linked to
+// the subject or WRITTEN by them: the `from` participant, or the inbound sender.
+// A Cc is not the author and does not earn the verdict on another's request.
 //
-// It keeps rows shared with another contact or under a legal hold. Erasure
-// skips those to protect them; Art. 15 still owes the subject access to them.
-const sarSubjectMessages = `
-	SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1
-	UNION
-	SELECT ap.activity_id FROM activity_participant ap
-	  JOIN activity pa ON pa.id = ap.activity_id
-	 WHERE ap.contact_id = $1
-	    OR ap.address = ANY($2)
-	    OR (ap.channel_user_id IS NOT NULL AND (pa.channel_provider, ap.channel_user_id) IN (
-	        SELECT provider, channel_user_id FROM contact_channel_identity WHERE contact_id = $1))
-	UNION
-	SELECT m.id FROM activity m WHERE m.counterparty_email = ANY($2)
-	UNION
-	SELECT d.activity_id FROM comms_outbound d
-	 WHERE d.activity_id IS NOT NULL AND EXISTS (
-	       SELECT 1 FROM jsonb_array_elements_text(
-	                      d.recipients || d.cc || coalesce(d.bcc, '[]'::jsonb)) AS addr
-	        WHERE lower(addr) = ANY($2))`
+// It drops an address or account a different live contact also holds, by the
+// erasure's rival rule. Shared and legally held rows stay in: Art. 15 owes them.
+func subjectAuthoredMessages(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, identities []ids.UUID) ([]ids.UUID, error) {
+	ownEmails, err := subjectStrings(ctx, tx,
+		`SELECT addr FROM unnest($2::text[]) AS addr EXCEPT `+rivalHeldEmails, contactID, emails)
+	if err != nil {
+		return nil, fmt.Errorf("reading the subject's own addresses for the export: %w", err)
+	}
+	providers, accounts, err := subjectOwnChannelAccounts(ctx, tx, contactID, identities)
+	if err != nil {
+		return nil, err
+	}
+	// One arm per index, so each can use its own: the link, the participant's
+	// contact, lower(address), and counterparty_email. No index covers
+	// channel_user_id. That arm scans chat participants, as the
+	// InteractionParticipation section already does on every export.
+	rows, err := tx.Query(ctx, `
+		SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1
+		UNION
+		SELECT ap.activity_id FROM activity_participant ap WHERE ap.role = 'from' AND ap.contact_id = $1
+		UNION
+		SELECT ap.activity_id FROM activity_participant ap
+		 WHERE ap.role = 'from' AND ap.address IS NOT NULL AND lower(ap.address) = ANY($2)
+		UNION
+		SELECT ap.activity_id FROM activity_participant ap JOIN activity a ON a.id = ap.activity_id
+		 WHERE ap.role = 'from' AND ap.channel_user_id IS NOT NULL
+		   AND (a.channel_provider, ap.channel_user_id) IN (
+		         SELECT provider, account FROM unnest($3::text[], $4::text[]) AS t(provider, account))
+		UNION
+		SELECT m.id FROM activity m
+		 WHERE m.direction = 'inbound' AND m.counterparty_email IS NOT NULL AND m.counterparty_email = ANY($2)`,
+		contactID, ownEmails, providers, accounts)
+	if err != nil {
+		return nil, fmt.Errorf("reading the messages the subject wrote for the export: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
 
-// sarJudgementSections gather the conclusions. Each section names both
-// arguments, because args REPLACES the default rather than adding to it: one
-// that passed only the contact would leave $2 unbound.
-func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, emails []string) []sarSection {
-	subject := []any{contactID, emails}
+// subjectOwnChannelAccounts reads the chat accounts of every identity the
+// subject is, minus any a different live contact also holds.
+func subjectOwnChannelAccounts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, identities []ids.UUID) ([]string, []string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT provider, channel_user_id FROM contact_channel_identity WHERE contact_id = ANY($1)`, identities)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reading the subject's chat accounts for the export: %w", err)
+	}
+	held, err := pgx.CollectRows(rows, pgx.RowToStructByPos[channelIdentity])
+	if err != nil {
+		return nil, nil, err
+	}
+	providers, accounts := channelIdentityPairs(held)
+	rows, err = tx.Query(ctx, `
+		SELECT provider, account FROM unnest($2::text[], $3::text[]) AS t(provider, account)
+		EXCEPT `+rivalHeldChannelAccounts, contactID, providers, accounts)
+	if err != nil {
+		return nil, nil, fmt.Errorf("dropping chat accounts another contact holds: %w", err)
+	}
+	own, err := pgx.CollectRows(rows, pgx.RowToStructByPos[channelIdentity])
+	if err != nil {
+		return nil, nil, err
+	}
+	providers, accounts = channelIdentityPairs(own)
+	return providers, accounts, nil
+}
+
+// sarJudgementSections gather the conclusions. Each reads the one message set
+// subjectAuthoredMessages resolved, as $1.
+func sarJudgementSections(pkg *SARPackage, authored []ids.UUID) []sarSection {
+	messages := []any{authored}
 	return []sarSection{
 		// What we concluded the subject's replies MEANT, and who concluded it.
 		// The history is exported rather than the activity's current column
@@ -64,7 +114,7 @@ func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 		          h.activity_id, a.occurred_at
 		   FROM activity_reply_verdict_history h
 		   JOIN activity a ON a.id = h.activity_id
-		   WHERE h.activity_id IN (` + sarSubjectMessages + `)`, subject},
+		   WHERE h.activity_id = ANY($1)`, messages},
 		// And what we concluded our own reply DID about what they asked. The
 		// `remaining` sentence travels: it is the one place the package can say
 		// we recorded an outstanding obligation TO the subject, and a settlement
@@ -80,18 +130,21 @@ func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 		   FROM activity_request_settlement s
 		   JOIN activity asked ON asked.id = s.request_activity_id
 		   LEFT JOIN activity answered ON answered.id = s.judged_through_activity_id
-		   WHERE s.request_activity_id IN (` + sarSubjectMessages + `)`,
-			subject,
+		   WHERE s.request_activity_id = ANY($1)`,
+			messages,
 		},
 		// What a deal's stage ledger read out of the subject's messages. The
+		// snippet quotes the message, so it is withheld wherever the body is. The
 		// criterion is named by its label, because a bare id tells the subject
 		// nothing about what the claim was for. A refuted claim travels too: a
 		// conclusion withdrawn later was still held about them.
-		{&pkg.StageEvidence, `SELECT ev.snippet, ev.commitment, ev.met, ev.confidence,
+		{&pkg.StageEvidence, `SELECT CASE WHEN ` + sarContentDisclosed + ` THEN ev.snippet END AS snippet,
+		          ` + sarContentDisclosed + ` AS content_disclosed, ev.commitment, ev.met, ev.confidence,
 		          ev.author_side, ev.extracted_by, ev.observed_at, ev.refuted_at,
 		          ev.source_id AS activity_id, c.label AS criterion
 		   FROM deal_stage_evidence ev
 		   JOIN stage_exit_criterion c ON c.id = ev.criterion_id
-		   WHERE ev.source_type = 'activity' AND ev.source_id IN (` + sarSubjectMessages + `)`, subject},
+		   JOIN activity a ON a.id = ev.source_id
+		   WHERE ev.source_type = 'activity' AND ev.source_id = ANY($1)`, messages},
 	}
 }

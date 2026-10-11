@@ -19,7 +19,7 @@ import (
 // query set is compliance-critical — adding or dropping a source changes what
 // the export owes the data subject. It is assembled chapter by chapter, and the
 // order the chapters concatenate in is the order the export runs them in.
-func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities []ids.UUID) []sarSection {
+func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored []ids.UUID) []sarSection {
 	sections := sarIdentitySections(pkg)
 	sections = append(sections, sarReportingSections(pkg))
 	sections = append(sections, sarRecordSections(pkg)...)
@@ -27,7 +27,7 @@ func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, lead
 	sections = append(sections, sarConsentSections(pkg)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
-	sections = append(sections, sarJudgementSections(pkg, contactID, emails)...)
+	sections = append(sections, sarJudgementSections(pkg, authored)...)
 	return append(sections, sarProvenanceSections(pkg)...)
 }
 
@@ -159,10 +159,10 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 		// which mailboxes hold it — and its subject and body are withheld
 		// pending a release by one of those mailbox owners.
 		{&pkg.Activities, `SELECT a.id, a.kind, a.occurred_at, a.source_system,
-		       a.audience = 'workspace' AS content_disclosed,
-		       CASE WHEN a.audience = 'workspace' THEN a.subject END AS subject,
-		       CASE WHEN a.audience = 'workspace' THEN a.body END AS body,
-		       CASE WHEN a.audience = 'workspace' THEN NULL
+		       ` + sarContentDisclosed + ` AS content_disclosed,
+		       CASE WHEN ` + sarContentDisclosed + ` THEN a.subject END AS subject,
+		       CASE WHEN ` + sarContentDisclosed + ` THEN a.body END AS body,
+		       CASE WHEN ` + sarContentDisclosed + ` THEN NULL
 		            ELSE substring(a.captured_by from '([0-9a-f-]{36})$')
 		       END AS withheld_from_mailbox_of
 		   FROM activity a JOIN activity_link l ON l.activity_id = a.id
@@ -175,7 +175,7 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 		      at.content_type, at.byte_size, at.created_at,
 		      CASE WHEN at.entity_type <> 'activity' THEN at.filename
 		           WHEN EXISTS (SELECT 1 FROM activity a
-		                         WHERE a.id = at.entity_id AND a.audience = 'workspace')
+		                         WHERE a.id = at.entity_id AND ` + sarContentDisclosed + `)
 		           THEN at.filename
 		      END AS filename
 		   FROM attachment at
@@ -184,6 +184,10 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 		            SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1))`, nil},
 	}
 }
+
+// sarContentDisclosed is the export's one rule for whether an activity's (alias
+// `a`) own content travels: only workspace-audience mail.
+const sarContentDisclosed = `a.audience = 'workspace'`
 
 // sarRawCaptureLink correlates one raw_capture row to the activities read from
 // it, and is spelled once because the clause below asks it four times — twice
@@ -390,14 +394,14 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// NOT EXISTS.
 		{&pkg.RawCapture, `SELECT rc.source_system, rc.source_id, rc.received_at,
 		       (EXISTS (SELECT 1 FROM activity a
-		                 WHERE ` + sarRawCaptureLink + ` AND a.audience = 'workspace')
+		                 WHERE ` + sarRawCaptureLink + ` AND ` + sarContentDisclosed + `)
 		        AND NOT EXISTS (SELECT 1 FROM activity a
-		                         WHERE ` + sarRawCaptureLink + ` AND a.audience <> 'workspace')
+		                         WHERE ` + sarRawCaptureLink + ` AND NOT ` + sarContentDisclosed + `)
 		       ) AS content_disclosed,
 		       CASE WHEN EXISTS (SELECT 1 FROM activity a
-		                          WHERE ` + sarRawCaptureLink + ` AND a.audience = 'workspace')
+		                          WHERE ` + sarRawCaptureLink + ` AND ` + sarContentDisclosed + `)
 		             AND NOT EXISTS (SELECT 1 FROM activity a
-		                              WHERE ` + sarRawCaptureLink + ` AND a.audience <> 'workspace')
+		                              WHERE ` + sarRawCaptureLink + ` AND NOT ` + sarContentDisclosed + `)
 		            THEN rc.payload END AS payload
 		   FROM raw_capture rc
 		   WHERE EXISTS (SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1
