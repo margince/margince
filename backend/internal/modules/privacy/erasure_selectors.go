@@ -54,8 +54,8 @@ var subjectOnlyActivities = `
 // subjectOnlyDestroyable narrows subjectOnlyActivities to the rows a
 // contact-erase may actually destroy: subject-only AND not shielded by the
 // statutory correspondence floor. $1 is the contact; $2/$3 are the floor
-// policy (FloorPolicy.sqlArgs) — the SAME pins the retention
-// activity selectors pass — so the contact-erase cascade can never destroy a
+// policy (FloorPolicy.sqlArgs), the pins the retention activity selectors pass.
+// So the contact-erase cascade can never destroy a
 // Handelsbrief younger than the floor the nightly evaluator refuses to touch
 // (a GoBD floor bypass, F-012). With no jurisdiction floor compiled in the
 // predicate reduces to a no-op, so a non-DE install erases exactly as before.

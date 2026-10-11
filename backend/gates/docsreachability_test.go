@@ -17,10 +17,10 @@ package gates
 // compliance pack, which is the paperwork a customer signs before an installation
 // may read employee mail. Nothing was broken; it was simply unfindable.
 //
-// The walk is transitive on purpose, so a subtree may keep its own hub page —
+// The walk is transitive, so a subtree may keep its own hub page:
 // docs/handbook/README.md and docs/compliance/README.md both index their own
-// trees, and a flat "is this basename mentioned in the index" check would either
-// force every page into the root index or accept a filename that appears in some
+// trees. A flat "is this basename in the index" check would force every page
+// into the root index. Or it would accept a filename that appears in some
 // unrelated sentence. Reachability is the property that actually matters to a
 // reader, and it is the one derived from the tree rather than from a list here.
 //

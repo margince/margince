@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package compliancedocs carries the documents a jurisdiction pack ships on
-// the published extension surface: the templates, reading copies and records
-// an installation under that law reads, downloads and reviews.
+// Package compliancedocs carries the documents a jurisdiction pack ships, on
+// the published extension surface. They are the templates, reading copies and
+// records an installation under that law reads and reviews.
 //
 // A document is inert content. The core serves the selected jurisdiction's
 // documents on the admin page and never interprets them.

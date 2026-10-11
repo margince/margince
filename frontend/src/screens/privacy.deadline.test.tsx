@@ -17,9 +17,8 @@ import { LocaleProvider } from "../i18n";
 import { PrivacyInboxCard } from "./privacy";
 import { dueAtOf, earlierDueTooLate } from "./privacy.deadline";
 
-// The deadline of a manual subject request: the server computes it, the form
-// shows it, and the form sends a date only when the officer chose an earlier
-// one.
+// The deadline of a manual subject request. The server computes it and the form
+// shows it. The form sends a date only when the officer chose an earlier one.
 
 const ZONE = "America/New_York";
 const COMPUTED = { due_at: "2026-08-15T14:00:00Z", rule: "gdpr" };

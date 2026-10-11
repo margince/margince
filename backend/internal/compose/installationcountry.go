@@ -24,9 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
-// configuredCountry is the file's country for a fresh bootstrap, or nil when
-// the file names none, so an omitted key seeds nothing and the screen can
-// still choose.
+// configuredCountry is the file's country for a fresh bootstrap. It is nil when
+// the file names none, so the screen can still choose.
 func configuredCountry(cfg deployconfig.Config) *string {
 	if cfg.Workspace.Country == "" {
 		return nil
@@ -53,9 +52,9 @@ func seedConfiguredCountry(ctx context.Context, pool *pgxpool.Pool, log *slog.Lo
 }
 
 // RequireCompiledInCountry refuses the boot when the stored jurisdiction names
-// a pack this build does not carry. It reads the STORED value, after seeding,
-// because a pack dropped from a later build would otherwise leave the
-// installation selecting a jurisdiction that applies nothing. Both the api and
+// a pack this build does not carry. It reads the stored value, after seeding.
+// A pack dropped from a later build would otherwise leave a selection that
+// applies nothing. Both the api and
 // the worker call it, after RegisterExtensions.
 func RequireCompiledInCountry(ctx context.Context, pool *pgxpool.Pool) error {
 	code, err := identity.StoredCountry(ctx, pool)

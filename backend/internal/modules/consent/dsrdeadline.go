@@ -6,8 +6,8 @@ package consent
 // When a data-subject request must be answered, and which rule says so.
 //
 // The installation's selected jurisdiction decides. Its pack may declare a
-// deadline per request kind; a kind it leaves out, and an installation with no
-// jurisdiction selected, get the GDPR month (Art. 12(3)).
+// deadline per request kind. A kind it leaves out gets the GDPR month
+// (Art. 12(3)), and so does an installation with no jurisdiction selected.
 
 import (
 	"context"

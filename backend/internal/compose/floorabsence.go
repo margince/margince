@@ -5,11 +5,9 @@ package compose
 
 // Saying at boot which correspondence floor this installation applies.
 //
-// The floor decides what may be destroyed, and the one moment an operator
-// reliably reads output is the one where the process says what it is. So the
-// four cases are told apart: no jurisdiction selected, one selected whose pack
-// declares no floor, one selected with a floor, and a carried floor still
-// binding older mail.
+// The floor decides what may be destroyed, and an operator reads the boot
+// output. So it tells four cases apart. No jurisdiction is selected; one is,
+// with no floor; one is, with a floor; a carried floor binds older mail.
 
 import (
 	"context"
@@ -43,9 +41,8 @@ func announceStatutoryFloorFrom(pool *pgxpool.Pool, log *slog.Logger) {
 	announceStatutoryFloor(log, privacy.StatutoryFloorPosture(policy))
 }
 
-// announceStatutoryFloor reports one posture. WARN when no floor binds new
-// mail, because nothing is then destroyed on a statutory schedule; INFO
-// otherwise, so the line also records WHICH floor this installation applies.
+// announceStatutoryFloor reports one posture. It warns when no floor binds new
+// mail. Otherwise it logs at info, which records the floor in force.
 func announceStatutoryFloor(log *slog.Logger, posture privacy.FloorPosture) {
 	if log == nil {
 		return

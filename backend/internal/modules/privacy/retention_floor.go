@@ -148,13 +148,13 @@ var handelsbriefArm = `a.retention_class IS NOT NULL
 		          WHERE pl.activity_id = a.id AND pl.entity_type = 'project'))`
 
 // statutoryCorrespondenceFloor is the strictest compiled-in pack's
-// commercial-correspondence class — the floor an installation with no selected
-// jurisdiction applies (floorFor). The floors are calendar periods with a
-// declared ANCHOR, never day counts: a Years*365 conversion would shorten a
-// statutory floor across leap years, and ignoring a calendar-year-end anchor
-// (§147(4) AO) would erase a January document almost a year early. Strictness
-// is compared as ProtectedSince at ref: mixed-unit periods and mixed anchors
-// only order against an instant. The zero class means no pack declares one.
+// commercial-correspondence class. An installation with no selected
+// jurisdiction applies it (floorFor). The floors are calendar periods with an
+// anchor, never day counts. A Years*365 conversion would shorten a floor
+// across leap years. Ignoring a calendar-year-end anchor would erase a January
+// document almost a year early. Strictness is compared as ProtectedSince at
+// ref, because mixed-unit periods only order against an instant. The zero
+// class means no pack declares one.
 func statutoryCorrespondenceFloor(ref time.Time) jurisdiction.RetentionClass {
 	floor := jurisdiction.RetentionClass{}
 	for _, pack := range jurisdiction.Applicable() {
@@ -167,8 +167,8 @@ func statutoryCorrespondenceFloor(ref time.Time) jurisdiction.RetentionClass {
 }
 
 // StrictestClass names what kept a shielded message: the stricter of the
-// current and the carried floor, so a purge can tell the owner WHICH rule kept
-// their mail rather than only that something did.
+// current and the carried floor. So a purge tells the owner which rule kept
+// their mail.
 //
 // The class name and the period, and no citation: the packs carry neither a
 // section number nor a statute name. The handbook is where the citation

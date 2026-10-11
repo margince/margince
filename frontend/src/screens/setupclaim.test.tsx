@@ -88,8 +88,8 @@ describe("SetupClaimScreen", () => {
     expect(body.country).toBe("de");
   });
 
-  // No silent default: the root of an installation is not created under a law
-  // nobody chose, and choosing no pack is sent as the empty code.
+  // No silent default: an installation is not created under a law nobody
+  // chose. Choosing no pack is sent as the empty code.
   it("waits for a jurisdiction, and sends no pack as an empty code", async () => {
     const user = userEvent.setup();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(

@@ -82,14 +82,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 	}
 	subject := ids.From[ids.ContactKind](contactID)
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := requireErasableContact(ctx, tx, subject); err != nil {
-			return err
-		}
-		// The statutory correspondence floor the retention engine applies to
-		// its activity selectors applies here too: erasing the contact a
-		// Handelsbrief hangs off must not destroy the correspondence itself
-		// below its floor.
-		floor, err := ResolveFloorPolicy(ctx, tx, e.country)
+		floor, err := e.erasableUnderFloor(ctx, tx, subject)
 		if err != nil {
 			return err
 		}

@@ -3,9 +3,9 @@
 
 package identity
 
-// The installation's jurisdiction at boot: seeding it from the deployment file
-// into an installation that has none, and reading what is stored so the boot
-// can refuse a code this build cannot answer.
+// The installation's jurisdiction at boot. The deployment file seeds it into an
+// installation that has none. The boot reads what is stored, to refuse a code
+// this build cannot answer.
 
 import (
 	"context"

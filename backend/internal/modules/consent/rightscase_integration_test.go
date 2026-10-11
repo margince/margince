@@ -171,8 +171,8 @@ func TestTheDeadlineIsOneCalendarMonthFromReceipt(t *testing.T) {
 	if len(cases) != 1 {
 		t.Fatalf("%d case(s), want 1", len(cases))
 	}
-	// Computed HERE rather than through subjectrightsrules.GDPR, which is the
-	// function under test: asserting a value against the code that produced it
+	// Computed here rather than through subjectrightsrules.GDPR, the function
+	// under test. Asserting a value against the code that produced it
 	// passes whatever that code does. Substituting thirty days for one calendar
 	// month left the earlier spelling of this test green.
 	received := cases[0].received

@@ -3,9 +3,9 @@ import type { components } from "../api/schema";
 import { JurisdictionReading } from "./settings.jurisdiction";
 import { StoryProviders, stubWithSession } from "./story-utils";
 
-// Settings → Governance → Jurisdiction. The reading is rendered directly: every
-// state worth looking at is a state of the jurisdiction, and stubbing the query
-// to reach it would put the fetch on trial instead of the page.
+// Settings → Governance → Jurisdiction. The reading is rendered directly. Every
+// state worth looking at is a state of the jurisdiction, and a stubbed query
+// would put the fetch on trial instead of the page.
 
 type Jurisdiction = components["schemas"]["InstallationJurisdiction"];
 

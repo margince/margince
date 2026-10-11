@@ -371,9 +371,9 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 	return s.GetInstallation(ctx)
 }
 
-// changeCountryTx runs the country-change hook before the new value is
-// written, under the setting's write lock, so the hook reads the country the
-// change replaces and no second change interleaves.
+// changeCountryTx runs the country-change hook under the setting's write lock,
+// before the new value is written. So the hook reads the country being
+// replaced, and no second change interleaves.
 func (s *InstallationSettingsStore) changeCountryTx(ctx context.Context, tx pgx.Tx, next *string) error {
 	if next == nil {
 		return nil

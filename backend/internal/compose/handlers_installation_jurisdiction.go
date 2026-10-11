@@ -6,10 +6,9 @@ package compose
 // The jurisdiction page: which pack applies, what it puts in force, and the
 // documents it ships.
 //
-// Composed here because the answer spans the extension registry (which unit
-// ships the pack), privacy (the floor policy), the messaging and
-// subject-rights registries, and identity (the stored selection), and no
-// module may import the others. A later agent tool calls assembleJurisdiction
+// Composed here because the answer spans the extension registry, privacy, the
+// messaging and subject-rights registries, and identity. No module may import
+// the others. A later agent tool calls assembleJurisdiction
 // rather than building the answer again.
 
 import (
@@ -203,9 +202,8 @@ func messagingOf(code jurisdiction.Code) *crmcontracts.JurisdictionMessagingRule
 	return out
 }
 
-// deadlinesFor lists the deadline per kind the selection gives, the same
-// lookup the request writers make: the pack's own where it declares one, the
-// GDPR month otherwise.
+// deadlinesFor lists the deadline per kind the selection gives. It is the
+// lookup the request writers make: the pack's own, or the GDPR month.
 func deadlinesFor(code jurisdiction.Code) []crmcontracts.JurisdictionDeadline {
 	out := make([]crmcontracts.JurisdictionDeadline, 0, len(requestKinds))
 	for _, kind := range requestKinds {

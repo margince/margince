@@ -82,9 +82,9 @@ func preflightMessagingRules(e extension.Extension, messagingCodes map[jurisdict
 }
 
 // requireOwnPack refuses a declaration for a jurisdiction the same unit does
-// not carry a pack for. One unit owns everything for one code, so the admin
-// page can show a jurisdiction's floors, rules, deadlines and documents as one
-// unit's word rather than a mix of several.
+// not carry a pack for. One unit owns everything for one code. So the admin
+// page shows a jurisdiction's floors, rules, deadlines and documents as one
+// unit's word.
 func requireOwnPack(e extension.Extension, what string, code jurisdiction.Code) error {
 	for _, p := range e.Jurisdictions {
 		if p.Code() == code {
@@ -94,9 +94,9 @@ func requireOwnPack(e extension.Extension, what string, code jurisdiction.Code) 
 	return fmt.Errorf("compose: extension %q declares %s for jurisdiction %q but carries no jurisdiction pack for it", e.Name, what, code)
 }
 
-// preflightSubjectRights checks one unit's request deadlines the way
-// preflightMessagingRules checks its messaging rules: grammar, a second set for
-// one code, a collision with a core registration, and the unit's own pack.
+// preflightSubjectRights checks one unit's request deadlines as
+// preflightMessagingRules checks messaging rules. It refuses bad grammar, a
+// second set for one code, a core collision, and a code with no own pack.
 func preflightSubjectRights(e extension.Extension, codes map[jurisdiction.Code]extension.Name) error {
 	for _, r := range e.SubjectRights {
 		if err := r.Validate(); err != nil {

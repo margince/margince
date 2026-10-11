@@ -11,9 +11,9 @@ import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 
 // The deadline a manual subject request gets. The server computes it from the
-// installation's jurisdiction and the day the request arrived; the form shows
-// that date and its rule, and sends a date of its own only when the officer
-// deliberately picks an earlier one.
+// installation's jurisdiction and the day the request arrived. The form shows
+// that date and its rule. It sends a date only when the officer picks an
+// earlier one.
 
 type DsrKind = components["schemas"]["CreateDataSubjectRequest"]["kind"];
 type RequestDeadline = components["schemas"]["RequestDeadline"];
@@ -39,9 +39,8 @@ export function receivedAtOf(
 
 /**
  * due_at for a draft. Absent unless the officer picked a day, and never later
- * than the computed deadline: the end of the picked day can pass an exact
- * 72-hour deadline, so a day that ends after it sends the deadline itself,
- * which the server stores as not overridden.
+ * than the computed deadline. The end of the picked day can pass an exact
+ * 72-hour deadline. Such a day sends nothing, and the computed deadline holds.
  */
 export function dueAtOf(
   draft: DeadlineDraft,

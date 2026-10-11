@@ -79,10 +79,9 @@ const GDPRRule = "gdpr"
 // Held by TestOneCalendarMonthFollowsTheShortMonths.
 var GDPR = Deadline{Period: jurisdiction.Period{Months: 1}}
 
-// Resolve is the one lookup every request writer and the admin page make:
-// the deadline a jurisdiction gives one kind, and the rule that names it. A
-// jurisdiction that declares no deadline for the kind, and an empty code, get
-// the GDPR month.
+// Resolve is the lookup every request writer and the admin page make: the
+// deadline a jurisdiction gives one kind, and the rule that names it. A kind
+// the jurisdiction declares nothing for gets the GDPR month, as does no code.
 func Resolve(code jurisdiction.Code, kind RequestKind) (Deadline, string) {
 	if code == "" {
 		return GDPR, GDPRRule

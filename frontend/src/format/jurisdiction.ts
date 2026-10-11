@@ -28,8 +28,8 @@ export type CalendarPeriod = Readonly<{
 
 /**
  * The calendar parts of an ISO 8601 date period ("P6Y", "P1M", "P1Y6M2D").
- * Null for anything else: the server spells periods only this way, so another
- * shape is a value to show as written rather than to guess at.
+ * Null for anything else. The server spells periods only this way, so another
+ * shape is shown as written.
  */
 export function parsePeriod(iso: string): CalendarPeriod | null {
   const match = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?$/.exec(iso);

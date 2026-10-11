@@ -676,17 +676,17 @@ export const SETTINGS_PAGES = [
     // Installation: both retention endpoints the card writes are
     // installation-wide, so what this page destroys, it destroys everywhere.
     scope: "installation",
-    // `contact` is NOT an arm, though the purposes card reads through it:
+    // `contact` is not an arm, though the purposes card reads through it:
     // every seeded role holds `contact:read`, so it would open the page to the
-    // whole workspace. The purposes LIST stays gated on `contact` server-side
-    // because the Contact 360 reads it; a card narrower than its page
+    // whole workspace. The purposes list stays gated on `contact` server-side,
+    // because the Contact 360 reads it. A card narrower than its page
     // withholds itself. `consent_config` alone buys no read
     // (consent/store.go ListPurposes is on `contact`).
     requires: anyOf(
       reads("retention_policy"),
       reads("privacy_request"),
-      // The consent vocabulary, as a PAIR: `contact:read` is what the purposes
-      // endpoint asks, and `consent_config` is whose vocabulary it is, the one
+      // The consent vocabulary, as a pair. `contact:read` is what the purposes
+      // endpoint asks. `consent_config` is whose vocabulary it is, and the one
       // read management holds on this page.
       allOf(reads("contact"), reads("consent_config")),
     ),

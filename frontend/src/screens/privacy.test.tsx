@@ -871,9 +871,8 @@ describe("opening a DSR (G-2)", () => {
       ).toHaveLength(1),
     );
     const posts = sent.filter((s) => s.key === "POST /data-subject-requests");
-    // toEqual, not objectContaining: proves subject_ref is the picked uuid —
-    // never "Anna Weber" — and that no due date rode along: the server
-    // computes it.
+    // toEqual, not objectContaining: subject_ref is the picked uuid, never
+    // "Anna Weber", and no due date rode along, because the server computes it.
     expect(posts[0]?.body).toEqual({
       kind: "erasure",
       subject_ref: "3fa85f64-5717-4562-b3fc-2c963f66afa6",

@@ -7,10 +7,9 @@ package privacy
 // destructive decision and handed to every statement that decides.
 //
 // The installation selects one jurisdiction. Unset keeps the strictest floor
-// of every compiled-in pack, because a zero floor shields nothing and an
-// upgrade must not expose mail the floor protected the day before. A change to
-// a weaker floor carries the old one for mail already held, so a jurisdiction
-// change never shortens retention of something captured under the old law.
+// of every compiled-in pack, because a zero floor shields nothing. A new
+// release must not expose mail the floor kept the day before. A change to a
+// weaker floor carries the old one for mail already held.
 
 import (
 	"context"
@@ -72,6 +71,16 @@ func (s *RetentionService) refuseIfShieldedNow(ctx context.Context, tx pgx.Tx, i
 		return errKeptByFloor
 	}
 	return nil
+}
+
+// erasableUnderFloor refuses a contact the erasure may not touch, then
+// resolves the floor the cascade applies. Erasing the contact a Handelsbrief
+// hangs off must not destroy the correspondence below its floor.
+func (e *Eraser) erasableUnderFloor(ctx context.Context, tx pgx.Tx, subject ids.ContactID) (FloorPolicy, error) {
+	if err := requireErasableContact(ctx, tx, subject); err != nil {
+		return FloorPolicy{}, err
+	}
+	return ResolveFloorPolicy(ctx, tx, e.country)
 }
 
 // CarriedFloor is a floor still binding the mail that occurred before Before.
@@ -215,7 +224,7 @@ func correspondenceClassOf(pack jurisdiction.Pack) jurisdiction.RetentionClass {
 // CarryOnChangeTx records the floor a jurisdiction change is about to weaken,
 // in the transaction that changes it. A change that keeps or raises the floor
 // writes nothing. The stored carry keeps the strictest class ever in force,
-// and its Before moves to now, so mail captured up to this change stays bound.
+// and its Before moves to now, so mail captured until now stays bound.
 func CarryOnChangeTx(ctx context.Context, tx pgx.Tx, store *settings.Store, from, to jurisdiction.Code, now time.Time) error {
 	oldFloor, err := floorFor(from, now)
 	if err != nil {
@@ -246,10 +255,10 @@ func CarryOnChangeTx(ctx context.Context, tx pgx.Tx, store *settings.Store, from
 	return store.SetRawTx(ctx, tx, RetentionFloorCarry.Key(), raw)
 }
 
-// sqlArgs renders the policy as the two positional arguments floorWindowEnd
-// reads, as JSON: the current floor, and the carried floor or NULL. Built by
-// hand because every field is a fixed-grammar token (an ISO 8601 period, a
-// bool, an RFC 3339 instant), so the encoding has no failure to report.
+// sqlArgs renders the policy as the two JSON arguments floorWindowEnd reads:
+// the current floor, and the carried floor or NULL. Built by hand because each
+// field is an ISO 8601 period, a bool or an RFC 3339 instant. So the encoding
+// has no failure to report.
 func (p FloorPolicy) sqlArgs() (current string, carried *string) {
 	current = fmt.Sprintf(`{"keep":%q,"year_end":%t}`, p.Current.Keep.String(), p.Current.Anchor == jurisdiction.AnchorCalendarYearEnd)
 	if p.Carried != nil {

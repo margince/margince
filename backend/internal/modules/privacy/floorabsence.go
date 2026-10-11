@@ -5,10 +5,10 @@ package privacy
 
 // What this installation can say about the floor it applies.
 //
-// Four cases, and an operator needs to tell them apart: no jurisdiction is
-// selected (the strictest compiled-in floor holds); one is selected and its
-// pack declares no floor; one is selected with a floor; and, beside any of
-// these, a carried floor from an earlier jurisdiction still binding older mail.
+// An operator needs to tell four cases apart. No jurisdiction is selected, and
+// the strictest compiled-in floor holds. One is selected whose pack declares no
+// floor. One is selected with a floor. And beside any of these, a carried floor
+// from an earlier jurisdiction may still bind older mail.
 
 import (
 	"time"

@@ -2,15 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package de is the German jurisdiction pack (ADR-0042) as a stable-tier
-// extension — the ADR-0120 migration pilot: the first first-party unit
-// shipping enabled-by-default in the vanilla tree (its directory under
-// extensions/ IS the enablement). It ships the GoBD statutory retention
-// classes, the outbound-messaging rules, the request deadline and the
-// compliance documents an employer signs. The XRechnung/ZUGFeRD fiscal
-// formats return to the seam when their work package lands; the CRA
-// documents are the maker's duty and live in docs/compliance/cra.
-// Core code never contains a jurisdiction string — this unit is
-// where Germany lives. The product ships no scraping-based enrichment; the
+// extension, the first first-party unit enabled by default in the vanilla
+// tree. Its directory under extensions/ is the enablement. It ships the GoBD
+// statutory retention classes, the outbound-messaging rules, the request
+// deadline and the compliance documents an employer signs. The
+// XRechnung/ZUGFeRD fiscal formats return to the seam when their work package
+// lands. The CRA documents are the maker's duty and live in
+// docs/compliance/cra. Core code never contains a jurisdiction string, so
+// this unit is where Germany lives. The product ships no scraping-based enrichment; the
 // legal position behind that is a whitepaper kept with the company's business
 // material, not in this tree.
 package de

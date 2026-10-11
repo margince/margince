@@ -22,8 +22,8 @@ import (
 // privacy spells once.
 //
 // Commercial correspondence inside its legal retention window is not the
-// owner's to destroy, and a purge that ignored the floor would be the one
-// destructive path in the tree that bypasses it. Capture cannot import privacy,
+// owner's to destroy. A purge that ignored the floor would be the one path that
+// destroys past it. Capture cannot import privacy,
 // so the predicate travels rather than being written a second time. The policy
 // is returned too, so a receipt names the floor the selection used rather than
 // resolving its own.

@@ -41,8 +41,8 @@ var documentEntries = []documentEntry{
 }
 
 // documents reads every listed file. A listed file that is not embedded is a
-// build defect, so it panics at the first boot rather than shipping a page
-// that lists a document it cannot serve.
+// build defect, so it panics at the first boot. A page must not list a
+// document it cannot serve.
 func documents() []compliancedocs.Document {
 	out := make([]compliancedocs.Document, 0, len(documentEntries))
 	for _, entry := range documentEntries {

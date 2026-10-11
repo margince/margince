@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package subjectrights carries the data-subject-request contract of the
-// published extension surface: a pack states how long its jurisdiction gives a
-// controller to answer each kind of request, and the core stamps the deadline.
+// published extension surface. A pack states how long its jurisdiction gives a
+// controller to answer each kind of request. The core stamps the deadline.
 //
-// Like messaging rules, a rule set is DATA the core reads. A pack never
-// computes a deadline itself, so there is one place that turns a declared
-// period into a date and every jurisdiction gets the same month-end handling.
+// Like messaging rules, a rule set is data the core reads. A pack never
+// computes a deadline itself. So one function turns a period into a date, and
+// every jurisdiction gets the same month-end handling.
 //
 // These types are frozen published API from their first external consumer;
 // they evolve additively or through versioned successors, never in place
@@ -49,8 +49,8 @@ func (k RequestKind) Validate() error {
 }
 
 // Deadline is how long a controller has to answer, counted from receipt. It
-// holds exactly one of a calendar period and a number of hours: some laws count
-// months, and some count hours, and neither converts to the other.
+// holds one of a calendar period and a number of hours, never both. Some laws
+// count months and some count hours, and neither converts to the other.
 type Deadline struct {
 	Period jurisdiction.Period
 	Hours  int
@@ -76,7 +76,7 @@ func (d Deadline) Validate() error {
 //
 // Months add with the day CLAMPED to the target month's last day: one month
 // after 31 January is 28 February, never 3 March as time.AddDate would say.
-// Days and hours then add exactly.
+// Days and hours then add as they are.
 func (d Deadline) Due(received time.Time) time.Time {
 	if d.Hours > 0 {
 		return received.Add(time.Duration(d.Hours) * time.Hour)
