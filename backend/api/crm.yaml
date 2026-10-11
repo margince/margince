@@ -18370,7 +18370,7 @@ paths:
       operationId: createDataSubjectRequest
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention/erasure (B-EP07.13/.16).
+      summary: Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
       description: |
         The server computes the deadline from `received_at` under the installation's
         jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).

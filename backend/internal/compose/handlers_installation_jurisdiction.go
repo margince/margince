@@ -9,8 +9,8 @@ package compose
 // Composed here because the answer spans the extension registry (which unit
 // ships the pack), privacy (the floor policy), the messaging and
 // subject-rights registries, and identity (the stored selection), and no
-// module may import the others. One assembler reads them all, so a later agent
-// tool asks the same function and cannot give a second answer.
+// module may import the others. A later agent tool calls assembleJurisdiction
+// rather than building the answer again.
 
 import (
 	"bytes"
@@ -111,7 +111,7 @@ func gatedCountry(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
 	return jurisdiction.Code(code), err
 }
 
-// assembleJurisdiction is the one reader of what a selection puts in force.
+// assembleJurisdiction reads what a selection puts in force.
 func assembleJurisdiction(ctx context.Context, tx pgx.Tx, code jurisdiction.Code) (crmcontracts.InstallationJurisdiction, error) {
 	policy, err := privacy.ResolveFloorPolicy(ctx, tx, gatedCountry)
 	if err != nil {

@@ -116,6 +116,8 @@ var erasureColumnBaseline = map[string][]string{
 	// prose a colleague typed and can name or quote the subject.
 	"data_subject_request": {
 		"channel",
+		// The rule set the deadline came from: "gdpr" or "<code> v<N>".
+		"due_rule",
 		"kind",
 		"receipt_reference",
 		"status",

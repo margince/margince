@@ -199,6 +199,7 @@ var erasureCascadeFiles = []string{
 var reachedButNotCascade = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
 	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
+	"internal/modules/privacy/floorpolicy.go":          "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
 	"internal/modules/privacy/retentionscope.go":       "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
 	"internal/modules/privacy/erasure_tombstone.go":    "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
 	"internal/modules/privacy/scheduledsends.go":       "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",

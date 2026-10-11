@@ -12516,7 +12516,7 @@ export interface paths {
         get: operations["listDataSubjectRequests"];
         put?: never;
         /**
-         * Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention/erasure (B-EP07.13/.16).
+         * Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
          * @description The server computes the deadline from `received_at` under the installation's
          *     jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
          *
