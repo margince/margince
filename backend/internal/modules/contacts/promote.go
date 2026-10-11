@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -130,13 +131,23 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 		return PromoteOutcome{}, err
 	}
 
-	var out PromoteOutcome
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = s.promoteLeadTx(ctx, tx, id, in, by, active)
-		return err
-	})
-	return out, err
+	// The retry is outside the transaction, so a restart rolls back every
+	// write of the attempt it replaces. A move is caught before the first one.
+	for range promoteAttempts {
+		var out PromoteOutcome
+		err = s.tx(ctx, func(tx pgx.Tx) error {
+			candidate, err := s.promoteCandidate(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			out, err = s.promoteLeadTx(ctx, tx, id, in, by, active, candidate)
+			return err
+		})
+		if _, moved := errors.AsType[*promoteTargetMovedError](err); !moved {
+			return out, err
+		}
+	}
+	return PromoteOutcome{}, apperrors.ErrConflict
 }
 
 // carryLeadConsent carries the promoted lead's consent onto the contact it
@@ -322,7 +333,11 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 // minted the twin. The exact-email answer is unchanged; a near-match still
 // creates (DEDUPE_FUZZY_AUTOMERGE is pinned never) and now leaves the pair on
 // the review queue instead of nothing at all.
-func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, merged *bool) (ids.ContactID, map[string]any, error) {
+//
+// locked is the contact the caller locked before the lead. A match on any
+// other contact answers promoteTargetMovedError, because locking it now would
+// take the lead's lock before the contact's.
+func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, merged *bool) (ids.ContactID, map[string]any, error) {
 	candidate, err := s.leadContactCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.ContactID{}, nil, err
@@ -336,6 +351,9 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 		return ids.ContactID{}, nil, err
 	}
 	if match.Decision == DecisionExactCollision {
+		if match.ContactID != locked {
+			return ids.ContactID{}, nil, &promoteTargetMovedError{}
+		}
 		// Merging CHANGES the matched contact — the lead's fields land on it —
 		// and returns it, so the probe asks for write authority and the refusal
 		// still discloses nothing: a match the promoter cannot change answers a
