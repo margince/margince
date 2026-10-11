@@ -51783,6 +51783,9 @@ components:
           type: object
           additionalProperties: true
           description: Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
+        reason:
+          type: string
+          description: Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
 
     ApprovalListResponse:
       type: object

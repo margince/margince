@@ -52,7 +52,7 @@ type mergeTagArgs struct {
 	source, target ids.UUID
 }
 
-func (s stubTags) CreateTag(_ context.Context, name string, color *string) (Tag, error) {
+func (s stubTags) CreateTag(_ context.Context, name string, color, _ *string) (Tag, error) {
 	if s.created != nil {
 		*s.created = createTagArgs{name: name, color: color}
 	}

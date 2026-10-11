@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 84,
     "system_frame_tokens": 586,
-    "tokens": 29817,
+    "tokens": 29825,
     "median_tool_tokens": 292,
     "mean_tool_tokens": 354
   },
@@ -367,16 +367,16 @@
       "tokens": 193
     },
     {
+      "name": "create_tag",
+      "tokens": 191
+    },
+    {
       "name": "list_pipelines",
       "tokens": 191
     },
     {
       "name": "intro_path_to",
       "tokens": 187
-    },
-    {
-      "name": "create_tag",
-      "tokens": 183
     },
     {
       "name": "list_documents",

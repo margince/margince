@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -94,8 +95,8 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}
-		for _, m := range bothDoorsToolCall.FindAllStringSubmatch(string(src), -1) {
-			called[m[1]] = true
+		for _, name := range toolsAskedOnBothDoors(string(src)) {
+			called[name] = true
 		}
 	}
 
@@ -118,7 +119,51 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 
 // bothDoorsToolCall finds a tool asked through the tool door of twoDoors: asked
 // to run (`tool`) or asked where the door must refuse or stage (`toolRefused`).
+// A seeding call is spelled `toolSeed`, which this does not match.
 var bothDoorsToolCall = regexp.MustCompile(`\.tool(?:Refused)?\(t, "([a-z0-9_]+)"`)
+
+// bothDoorsComparison finds a call that compares what two doors returned or
+// left. A file that has none compares nothing, so its tool calls prove nothing.
+var bothDoorsComparison = regexp.MustCompile(`\b(?:sameEffect|sameStaged|sameStored|sameIDs|sameDoorRecords|bothDoorsName)\(|sameRecords\[`)
+
+// toolsAskedOnBothDoors names the tools a test file asks through the tool door,
+// when the file also compares the two doors. A call in a comment is no call.
+func toolsAskedOnBothDoors(src string) []string {
+	var code []string
+	for line := range strings.SplitSeq(src, "\n") {
+		if !strings.HasPrefix(strings.TrimSpace(line), "//") {
+			code = append(code, line)
+		}
+	}
+	text := strings.Join(code, "\n")
+	if !bothDoorsComparison.MatchString(text) {
+		return nil
+	}
+	var names []string
+	for _, m := range bothDoorsToolCall.FindAllStringSubmatch(text, -1) {
+		names = append(names, m[1])
+	}
+	return names
+}
+
+func TestTheBothDoorsCensusCountsOnlyCallsInATestThatCompares(t *testing.T) {
+	compared := "func TestX(t *testing.T) {\n\tsameRecords[T](t, \"x\", d.rest(), d.tool(t, \"read_a\", nil))\n}\n"
+	cases := map[string]struct {
+		src  string
+		want []string
+	}{
+		"a call beside a comparison":             {compared, []string{"read_a"}},
+		"a refusal beside a comparison":          {"d.toolRefused(t, \"merge_tags\", nil)\nd.sameStaged(t)\n", []string{"merge_tags"}},
+		"a call in a comment":                    {"// d.tool(t, \"read_b\", nil)\nd.sameEffect(t)\n", nil},
+		"a call in a file that compares nothing": {"d.tool(t, \"read_c\", nil)\n", nil},
+		"a seeding call":                         {"d.toolSeed(t, \"create_record\", nil)\nd.sameEffect(t)\n", nil},
+	}
+	for name, c := range cases {
+		if got := toolsAskedOnBothDoors(c.src); !slices.Equal(got, c.want) {
+			t.Errorf("%s: the census reads %v, want %v", name, got, c.want)
+		}
+	}
+}
 
 // keepsItsOwnShape reports a tool any of whose operations is not served by the
 // registry.

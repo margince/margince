@@ -355,8 +355,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
+| `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `remove_tag` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |

@@ -39,6 +39,7 @@ func TestLeadLifecycleWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	restLost, toolLost := lead("Rest Lost", "lost-rest@doors.test"), lead("Tool Lost", "lost-tool@doors.test")
 	d.restPinned(t, "DELETE", "/v1/leads/"+restLost, AnyMap{}, versionOf(t, d.storedLead(t, restLost)))
 	d.tool(t, "disqualify_lead", map[string]any{"lead_id": toolLost})
+	sameStored(t, "disqualify", d.storedLead(t, restLost), d.storedLead(t, toolLost), restLost, toolLost, "full_name", "email")
 	disqualified := sameRecords[sharedLead](t, "disqualify", d.storedLead(t, restLost), d.storedLead(t, toolLost))
 	if disqualified.Status != "disqualified" {
 		t.Errorf("the disqualified lead is %q, want disqualified", disqualified.Status)
@@ -49,6 +50,7 @@ func TestLeadLifecycleWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	restPromoted := d.restPinned(t, "POST", "/v1/leads/"+restWon+"/promote", AnyMap{"trigger": "human_qualify"},
 		versionOf(t, d.storedLead(t, restWon)))
 	toolPromoted := d.tool(t, "promote_lead", map[string]any{"lead_id": toolWon, "trigger": "human_qualify"})
+	sameStored(t, "promote", d.storedLead(t, restWon), d.storedLead(t, toolWon), restWon, toolWon, "full_name", "email")
 	promoted := sameRecords[sharedLead](t, "promote", d.storedLead(t, restWon), d.storedLead(t, toolWon))
 	if promoted.Status != "promoted" {
 		t.Errorf("the promoted lead is %q, want promoted (route %s, tool %s)", promoted.Status, restPromoted, toolPromoted)
@@ -58,6 +60,7 @@ func TestLeadLifecycleWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	d.restPinned(t, "POST", "/v1/leads/"+restWon+"/demote", AnyMap{"reason": "Promoted by mistake"},
 		versionOf(t, d.storedLead(t, restWon)))
 	d.tool(t, "demote_lead", map[string]any{"lead_id": toolWon, "reason": "Promoted by mistake"})
+	sameStored(t, "demote", d.storedLead(t, restWon), d.storedLead(t, toolWon), restWon, toolWon, "full_name", "email")
 	demoted := sameRecords[sharedLead](t, "demote", d.storedLead(t, restWon), d.storedLead(t, toolWon))
 	if demoted.Status == "promoted" {
 		t.Errorf("the demoted lead is still %q", demoted.Status)
@@ -82,6 +85,7 @@ func TestAdvanceWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 
 	d.restPinned(t, "POST", "/v1/deals/"+viaREST+"/advance", AnyMap{"to_stage_id": next}, versionOf(t, storedDeal(viaREST)))
 	d.tool(t, "advance_deal", map[string]any{"deal_id": viaTool, "to_stage_id": next, "if_version": versionOf(t, storedDeal(viaTool))})
+	sameStored(t, "advance deal", storedDeal(viaREST), storedDeal(viaTool), viaREST, viaTool, "name")
 	moved := sameRecords[sharedStage](t, "advance deal", storedDeal(viaREST), storedDeal(viaTool))
 	if moved.StageID != next {
 		t.Errorf("the advanced deal is at stage %s, want %s", moved.StageID, next)
@@ -96,6 +100,7 @@ func TestAdvanceWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	storedProject := func(id string) json.RawMessage { return d.restStatus(t, "GET", "/v1/projects/"+id, nil, http.StatusOK) }
 	d.restPinned(t, "POST", "/v1/projects/"+restProject+"/advance", AnyMap{"to_phase": "pursuing"}, versionOf(t, storedProject(restProject)))
 	d.tool(t, "advance_project_phase", map[string]any{"project_id": toolProject, "to_phase": "pursuing", "if_version": versionOf(t, storedProject(toolProject))})
+	sameStored(t, "advance project", storedProject(restProject), storedProject(toolProject), restProject, toolProject, "name", "key")
 	phased := sameRecords[sharedStage](t, "advance project", storedProject(restProject), storedProject(toolProject))
 	if phased.Phase != "pursuing" {
 		t.Errorf("the advanced project is in phase %q, want pursuing", phased.Phase)
@@ -164,7 +169,27 @@ func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 			t.Errorf("activity %s is linked to %v after a staged batch, want it left on %s", id, got, from)
 		}
 	}
-	d.sameStagedKind(t, "relink batch", toRest, toTool)
+	d.sameStaged(t, "relink batch", toRest, toTool, "Batch To Rest", "Batch To Tool")
+
+	// Once a human approves, the retry carrying the approval moves the activity,
+	// and the two doors leave the same rows.
+	approvalREST, approvalTool := d.stagedApprovalOn(t, toRest), d.stagedApprovalOn(t, toTool)
+	d.approveAsHuman(t, approvalREST)
+	d.approveAsHuman(t, approvalTool)
+	d.restStatusWith(t, "POST", "/v1/activities/relink-bulk", AnyMap{
+		"activity_ids": []string{restA}, "entity_type": "contact", "entity_id": toRest, "replace_existing_of_type": true,
+	}, d.withApproval(approvalREST), http.StatusOK)
+	d.tool(t, "relink_activities", map[string]any{
+		"activity_ids": []string{toolA}, "entity_type": "contact", "entity_id": toTool, "replace_existing_of_type": true,
+		"approval_id": approvalTool,
+	})
+	if got := linkedTo(restA); len(got) != 1 || got[0] != toRest {
+		t.Errorf("activity %s is linked to %v after the approved batch, want only %s", restA, got, toRest)
+	}
+	if got := linkedTo(toolA); len(got) != 1 || got[0] != toTool {
+		t.Errorf("activity %s is linked to %v after the approved batch, want only %s", toolA, got, toTool)
+	}
+	d.sameEffect(t, "relink batch", restA, toolA, "subject")
 
 	// A whole-conversation move stages nothing on either door: both refuse it
 	// with one shared refusal.
@@ -172,8 +197,8 @@ func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	restStatus := d.e.Call(t, "POST", "/v1/activities/relink-thread", AnyMap{
 		"thread_key": "doors-thread", "entity_type": "contact", "entity_id": toRest,
 	}, d.bearer, &threadRefusal)
-	if restStatus == http.StatusOK {
-		t.Fatalf("a thread move over REST was accepted")
+	if restStatus != http.StatusUnprocessableEntity {
+		t.Fatalf("a thread move over REST → %d, want 422", restStatus)
 	}
 	toolRefusal := d.toolRefused(t, "relink_thread", map[string]any{
 		"thread_key": "doors-thread", "entity_type": "contact", "entity_id": toTool,

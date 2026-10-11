@@ -164,17 +164,17 @@ func tagUpdateFrom(req crmcontracts.UpdateTagRequest) TagUpdate {
 		out.Color = &color
 	}
 	if req.Description != nil {
-		description := tagDescriptionOrNone(req.Description)
+		description := TagDescriptionOrNone(req.Description)
 		out.Description = &description
 	}
 	return out
 }
 
-// tagDescriptionOrNone reads a wire description as the column holds it. The
-// contract's empty string is not a description, it is the absence of one, and
-// create and update share this so a tag's description cannot depend on which
+// TagDescriptionOrNone reads a wire description as the column holds it. The
+// contract's empty string is not a description, it is the absence of one.
+// Create and update share this, so a tag's description cannot depend on which
 // door wrote it.
-func tagDescriptionOrNone(description *string) *string {
+func TagDescriptionOrNone(description *string) *string {
 	if description == nil || *description == "" {
 		return nil
 	}

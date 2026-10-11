@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 258.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66937 |
+| Approx. wire tokens | 66945 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 112.4 KB | 43% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 67.1 KB | 26% | Yes, every step |
-| Input schemas | 58.2 KB | 22% | Yes, every step |
+| Input schemas | 58.3 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
-| **Description + input schema** | **125.3 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **125.4 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -72,7 +72,7 @@ descriptions and input schemas are what each step pays for.
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
-| [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
+| [`create_tag`](#create_tag) | Create a tag |  |  | 2.0 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.1 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
@@ -3889,6 +3889,9 @@ passport scope "write".)
         "lime",
         "orange"
       ],
+      "type": "string"
+    },
+    "description": {
       "type": "string"
     },
     "idempotency_key": {

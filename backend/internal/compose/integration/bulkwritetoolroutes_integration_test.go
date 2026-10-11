@@ -26,11 +26,12 @@ type sharedBulk struct {
 }
 
 // A tag put on two contacts in one bulk change is the same change on either
-// door. The count is the same, nothing is skipped, and each record gets one
-// audit row naming the agent.
+// door. The count is the same, nothing is skipped, and the tag's audit rows
+// name the agent. Each door has its own tag, because the rows sit on the tag.
 func TestBulkUpdateRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "bulk-write-doors", "read", "write")
-	tag := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Spring list", "color": "lime"})
+	tagREST := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Spring rest", "color": "lime"})
+	tagTool := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Spring tool", "color": "lime"})
 	seed := func(names ...string) (items []map[string]any, records []string) {
 		for _, name := range names {
 			id := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": name, "source": "manual"})
@@ -43,21 +44,24 @@ func TestBulkUpdateRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 	toolItems, viaTool := seed("Bulk Tool One", "Bulk Tool Two")
 
 	rest := d.restStatus(t, "POST", "/v1/bulk/execute", AnyMap{
-		"record_type": "contact", "verb": "add_tag", "tag_id": tag, "items": restItems,
+		"record_type": "contact", "verb": "add_tag", "tag_id": tagREST, "items": restItems,
 	}, http.StatusOK)
 	tool := d.tool(t, "bulk_update_records", map[string]any{
-		"mode": "execute", "record_type": "contact", "verb": "add_tag", "tag_id": tag, "items": toolItems,
+		"mode": "execute", "record_type": "contact", "verb": "add_tag", "tag_id": tagTool, "items": toolItems,
 	})
 	changed := sameRecords[sharedBulk](t, "bulk", rest, tool)
 	if changed.Changed != 2 || len(changed.Skipped) != 0 {
 		t.Errorf("the bulk change changed %d and skipped %d, want 2 and none", changed.Changed, len(changed.Skipped))
 	}
 	for i := range viaREST {
-		d.sameEffect(t, "bulk tag", viaREST[i], viaTool[i])
-		if carried := d.tagsOn(t, viaTool[i]); len(carried) != 1 || carried[0] != tag {
+		if carried := d.tagsOn(t, viaREST[i]); len(carried) != 1 || carried[0] != tagREST {
+			t.Errorf("contact %s carries %v after the bulk change, want the tag", viaREST[i], carried)
+		}
+		if carried := d.tagsOn(t, viaTool[i]); len(carried) != 1 || carried[0] != tagTool {
 			t.Errorf("contact %s carries %v after the bulk change, want the tag", viaTool[i], carried)
 		}
 	}
+	d.sameEffect(t, "bulk tag", tagREST, tagTool, "name")
 }
 
 // A Shortlist made, renamed and given a member over either door is the same
@@ -83,13 +87,13 @@ func TestChangeListsLeavesTheSameOnEitherDoor(t *testing.T) {
 	if made.ListType != "static" || made.Purpose == nil || *made.Purpose != "Spring outreach" {
 		t.Errorf("the made list is %+v, want a static one with its purpose", made)
 	}
-	d.sameEffect(t, "create", viaREST, viaTool)
+	d.sameEffect(t, "create", viaREST, viaTool, "name")
 
 	d.restStatus(t, "POST", "/v1/lists/"+viaREST+"/members", AnyMap{"entity_type": "contact", "entity_id": member, "note": "Met in spring"}, http.StatusCreated)
 	d.tool(t, "change_lists", map[string]any{
 		"mode": "add_member", "list_id": viaTool, "entity_type": "contact", "record_id": member, "note": "Met in spring",
 	})
-	d.sameEffect(t, "add member", viaREST, viaTool)
+	d.sameEffect(t, "add member", viaREST, viaTool, "name")
 }
 
 // Folding one contact into another runs on either door: the source is archived
@@ -118,6 +122,7 @@ func TestMergeRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 			t.Errorf("contact %s is merged into %q, want %s", pair[0], read.MergedIntoID, pair[1])
 		}
 	}
-	d.sameEffect(t, "merge", restSource, toolSource)
-	d.sameEffect(t, "merge survivor", restSurvivor, toolSurvivor)
+	// The merge records its audit row on the source and raises its event naming
+	// both records.
+	d.sameEffect(t, "merge", restSource, toolSource, "full_name")
 }

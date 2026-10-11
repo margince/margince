@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 84 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29817 |  |  | 90% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29825 |  |  | 91% |  |  |  |
 
 ### `morning_brief`
 
@@ -224,9 +224,9 @@ listing once. Read a row as what that tool costs a menu.
 | `who_knows` | 197 |  |
 | `data_coverage` | 195 |  |
 | `list_colleagues` | 193 |  |
+| `create_tag` | 191 |  |
 | `list_pipelines` | 191 |  |
 | `intro_path_to` | 187 |  |
-| `create_tag` | 183 |  |
 | `list_documents` | 180 |  |
 | `list_channel_providers` | 174 |  |
 | `remove_tag` | 166 |  |

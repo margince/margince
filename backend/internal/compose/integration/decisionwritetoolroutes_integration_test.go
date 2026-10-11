@@ -25,7 +25,7 @@ func filedPair(t *testing.T, d *twoDoors, name, phone string) string {
 		"phones": []AnyMap{{"phone": phone, "phone_type": "mobile", "is_primary": true}},
 	})
 	var made createdWithFollowups
-	raw := d.tool(t, "create_record", map[string]any{
+	raw := d.toolSeed(t, "create_record", map[string]any{
 		"record_type": "contact",
 		"fields": map[string]any{
 			"full_name": name + " Brandt",
@@ -121,20 +121,19 @@ func TestDecideApprovalLeavesTheSameOnEitherDoor(t *testing.T) {
 	approveREST, approveTool := stage("Approve via rest"), stage("Approve via tool")
 	rejectREST, rejectTool := stage("Reject via rest"), stage("Reject via tool")
 
-	// Only a rejection takes a reason over REST; an approval records none.
-	decider.restStatus(t, "POST", "/v1/approvals/"+approveREST+"/approve", AnyMap{}, http.StatusOK)
-	decider.tool(t, "decide_approval", map[string]any{"staged_action_id": approveTool, "decision": "approve"})
-	if rest, tool := decider.decisionOn(t, approveREST), decider.decisionOn(t, approveTool); rest != tool || rest.Status != "approved" {
-		t.Errorf("an approval left %+v over REST and %+v over the tool, want the same approved decision", rest, tool)
+	decider.restStatus(t, "POST", "/v1/approvals/"+approveREST+"/approve", AnyMap{"reason": "Checked with the owner"}, http.StatusOK)
+	decider.tool(t, "decide_approval", map[string]any{"staged_action_id": approveTool, "decision": "approve", "reason": "Checked with the owner"})
+	if rest, tool := decider.decisionOn(t, approveREST), decider.decisionOn(t, approveTool); rest != tool || rest.Status != "approved" || rest.DecisionReason != "Checked with the owner" {
+		t.Errorf("an approval left %+v over REST and %+v over the tool, want the same approved decision with its reason", rest, tool)
 	}
-	decider.sameEffect(t, "approve", approveREST, approveTool)
+	decider.sameEffect(t, "approve", approveREST, approveTool, "summary", "diff_hash")
 
 	decider.restStatus(t, "POST", "/v1/approvals/"+rejectREST+"/reject", AnyMap{"reason": "Not this quarter"}, http.StatusOK)
 	decider.tool(t, "decide_approval", map[string]any{"staged_action_id": rejectTool, "decision": "reject", "reason": "Not this quarter"})
 	if rest, tool := decider.decisionOn(t, rejectREST), decider.decisionOn(t, rejectTool); rest != tool || rest.Status != "rejected" {
 		t.Errorf("a rejection left %+v over REST and %+v over the tool, want the same rejected decision", rest, tool)
 	}
-	decider.sameEffect(t, "reject", rejectREST, rejectTool)
+	decider.sameEffect(t, "reject", rejectREST, rejectTool, "summary", "diff_hash")
 }
 
 // sharedRun is the run as the route reads it back. The tool answers a preview

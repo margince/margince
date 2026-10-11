@@ -136,9 +136,9 @@ func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crm
 			httperr.Write(w, r, httperr.Validation("edited_payload", "malformed_json", marshalErr.Error()))
 			return
 		}
-		a, err = h.svc.DecideEdited(r.Context(), approvalID, edited)
+		a, err = h.svc.DecideEditedFor(r.Context(), approvalID, edited, req.Reason)
 	} else {
-		a, err = h.svc.Decide(r.Context(), approvalID, true, nil)
+		a, err = h.svc.Decide(r.Context(), approvalID, true, req.Reason)
 	}
 	if err != nil {
 		writeErr(w, r, err)

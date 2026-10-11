@@ -148,10 +148,7 @@ func TestAPassportListsAndUploadsFilesOverREST(t *testing.T) {
 		{"deal", deal, "/v1/deals/" + deal + "/documents"},
 		{"deal", deal, "/v1/attachments?entity_type=deal&entity_id=" + deal},
 	} {
-		rest, tool := d.restFileIDs(t, tc.path), d.toolFileIDs(t, tc.entityType, tc.entityID)
-		if !slices.Equal(rest, tool) {
-			t.Errorf("GET %s lists %v, list_documents lists %v", tc.path, rest, tool)
-		}
+		sameIDs(t, "GET "+tc.path+" against list_documents", d.restFileIDs(t, tc.path), d.toolFileIDs(t, tc.entityType, tc.entityID))
 	}
 	if company := d.restFileIDs(t, "/v1/companies/"+company+"/documents"); len(company) != 2 || !slices.Contains(company, uploaded) {
 		t.Errorf("the company's library lists %v, want the human's file and the agent's %s", company, uploaded)
@@ -345,6 +342,7 @@ func TestAFileOnAMeetingAndAContractLandsAlikeOnBothDoors(t *testing.T) {
 	if rest != tool {
 		t.Errorf("the REST upload landed as\n%+v\nattach_document as\n%+v", rest, tool)
 	}
+	d.sameEffect(t, "attach", attachmentIDOf(t, raw), viaTool.AttachmentID, "filename", "storage_key", "content_hash", "sha256", "size_bytes")
 	if want := (filedRow{EntityType: "activity", EntityID: meeting, ContractID: contract}); rest.EntityType != want.EntityType ||
 		rest.EntityID != want.EntityID || rest.ContractID != want.ContractID {
 		t.Errorf("the upload landed on %s %s against contract %q, want the meeting against %s",

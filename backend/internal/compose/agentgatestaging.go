@@ -148,13 +148,25 @@ func redeemIfPresented(w http.ResponseWriter, r *http.Request, next http.Handler
 	// forward as the request's own If-Match makes the store re-check it
 	// inside the transaction that actually mutates, where a concurrent write
 	// loses to the version compare instead of to timing.
-	if redemption.pinned {
+	if redemption.pinned && !refusesAPin(pol.Op) {
 		r.Header.Set(ifMatchHeader, strconv.FormatInt(redemption.pin, 10))
 	}
 	// WithContext shares the header map set just above, so the pin travels with
 	// the released request.
 	next.ServeHTTP(w, r.WithContext(redemption.released))
 	return true, true
+}
+
+const (
+	opRelinkActivities = "relinkActivities"
+	opRelinkThread     = "relinkThread"
+)
+
+// refusesAPin names the operations whose handler answers any If-Match with 422,
+// because one version cannot condition the many activities they move. The
+// approval's own pin still binds the redemption, inside the approvals engine.
+func refusesAPin(op string) bool {
+	return op == opRelinkActivities || op == opRelinkThread
 }
 
 // stageRefusal stages the refused call as a pending approval and answers
@@ -194,6 +206,8 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 		DiffHash:       diffHash,
 		TargetType:     target.TargetType,
 		TargetID:       target.TargetID,
+		CoTargetType:   target.CoTargetType,
+		CoTargetID:     target.CoTargetID,
 		Summary:        restSummary(commands.summaryCopy(ctx), pol, r, body),
 	})
 	if sErr != nil {

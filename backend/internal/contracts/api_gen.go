@@ -24206,6 +24206,9 @@ type ApprovalListResponse struct {
 type ApproveRequest struct {
 	// EditedPayload Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
 	EditedPayload *map[string]interface{} `json:"edited_payload,omitempty"`
+
+	// Reason Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
+	Reason *string `json:"reason,omitempty"`
 }
 
 // AssignLeadOutcome What happened to one named lead.

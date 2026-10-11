@@ -77,4 +77,31 @@ func TestDecideApprovalBundleLeavesTheSameOnEitherDoor(t *testing.T) {
 	if !slices.Equal(rest, tool) || rest[0].Status != "rejected" {
 		t.Errorf("a rejected bundle came to %+v over REST and %+v over the tool, want the same rejected members", rest, tool)
 	}
+
+	// Each member's decision is one audit row and one event naming the agent.
+	membersOf := func(bundle string) []string {
+		rows, err := d.e.Owner.Query(t.Context(), `SELECT id::text FROM approval WHERE bundle_id = $1 ORDER BY id`, bundle)
+		if err != nil {
+			t.Fatalf("reading the members of %s: %v", bundle, err)
+		}
+		defer rows.Close()
+		var out []string
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				t.Fatal(err)
+			}
+			out = append(out, id)
+		}
+		return out
+	}
+	for _, pair := range [][2]string{{approveREST.String(), approveTool.String()}, {rejectREST.String(), rejectTool.String()}} {
+		viaREST, viaTool := membersOf(pair[0]), membersOf(pair[1])
+		if len(viaREST) != stagedPerBundle || len(viaTool) != stagedPerBundle {
+			t.Fatalf("the bundles hold %d and %d members, want %d each", len(viaREST), len(viaTool), stagedPerBundle)
+		}
+		for i := range viaREST {
+			d.sameEffect(t, "bundle member", viaREST[i], viaTool[i])
+		}
+	}
 }

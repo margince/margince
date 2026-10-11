@@ -71,10 +71,16 @@ func (s *Service) Decide(ctx context.Context, id ids.ApprovalID, approve bool, r
 // principal, so the stores' own RBAC and row-scope gates cannot be relied on
 // to re-check what the human wrote.
 func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited json.RawMessage) (row, error) {
+	return s.DecideEditedFor(ctx, id, edited, nil)
+}
+
+// DecideEditedFor is DecideEdited with the approver's reason, which is recorded
+// with the decision as a rejection's is.
+func (s *Service) DecideEditedFor(ctx context.Context, id ids.ApprovalID, edited json.RawMessage, reason *string) (row, error) {
 	if len(edited) == 0 {
 		return row{}, &InvalidEditError{Cause: errors.New("empty payload")}
 	}
-	return s.recordDecision(ctx, id, true, nil, edited, decidedByContact)
+	return s.recordDecision(ctx, id, true, reason, edited, decidedByContact)
 }
 
 // decider says whether a contact answered this or the product applied it under

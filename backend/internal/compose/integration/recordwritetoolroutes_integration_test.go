@@ -6,7 +6,7 @@
 package integration
 
 // The record writes an agent makes: create_record, update_record,
-// archive_record, merge_records, log_activity and create_task. Each test asks
+// archive_record, log_activity and create_task. Each test asks
 // both doors for the same change on two equal records. It compares the stored
 // records and the audit and outbox rows each door left.
 
@@ -76,9 +76,10 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 		"record_type": "contact", "fields": map[string]any{"full_name": "Tool Tamsin", "title": "Buyer", "source": "manual"},
 	})
 	viaREST, viaTool := anIDIn(t, restMade), anIDIn(t, toolMade)
+	sameStored(t, "create", d.storedContact(t, viaREST), d.storedContact(t, viaTool), viaREST, viaTool, "full_name")
 	sameRecords[sharedContact](t, "create", d.storedContact(t, viaREST), d.storedContact(t, viaTool))
-	left := d.sameEffect(t, "create", viaREST, viaTool)
-	if !strings.HasPrefix(left.Audit[0], "create/agent/") {
+	left := d.sameEffect(t, "create", viaREST, viaTool, "full_name")
+	if !strings.HasPrefix(left.Audit[0], "create | agent | ") {
 		t.Errorf("the creation left %v, want a create row naming the agent", left.Audit)
 	}
 
@@ -88,15 +89,16 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 		"record_type": "contact", "id": viaTool, "fields": map[string]any{"title": "Head of Buying"},
 		"if_version": versionOf(t, d.storedContact(t, viaTool)),
 	})
+	sameStored(t, "update", d.storedContact(t, viaREST), d.storedContact(t, viaTool), viaREST, viaTool, "full_name")
 	edited := sameRecords[sharedContact](t, "update", d.storedContact(t, viaREST), d.storedContact(t, viaTool))
 	if edited.Title == nil || *edited.Title != "Head of Buying" {
 		t.Errorf("the edited contact carries title %v, want the new one", edited.Title)
 	}
-	d.sameEffect(t, "update", viaREST, viaTool)
+	d.sameEffect(t, "update", viaREST, viaTool, "full_name")
 
 	d.restPinned(t, "DELETE", "/v1/contacts/"+viaREST, nil, versionOf(t, d.storedContact(t, viaREST)))
 	d.tool(t, "archive_record", map[string]any{"record_type": "contact", "id": viaTool})
-	d.sameEffect(t, "archive", viaREST, viaTool)
+	d.sameEffect(t, "archive", viaREST, viaTool, "full_name")
 }
 
 type sharedActivity struct {
@@ -124,6 +126,7 @@ func TestLogActivityAndCreateTaskLeaveTheSameOnEitherDoor(t *testing.T) {
 	stored := func(id string) json.RawMessage {
 		return d.restStatus(t, "GET", "/v1/activities/"+id, nil, http.StatusOK)
 	}
+	sameStored(t, "note", stored(noteREST), stored(noteTool), noteREST, noteTool)
 	logged := sameRecords[sharedActivity](t, "note", stored(noteREST), stored(noteTool))
 	if logged.Kind != "note" || logged.Body == nil || *logged.Body != "Wants a quote by Friday" {
 		t.Errorf("the logged note is %+v, want the note with its text", logged)
@@ -137,6 +140,7 @@ func TestLogActivityAndCreateTaskLeaveTheSameOnEitherDoor(t *testing.T) {
 		"subject": "Send the quote", "due_at": "2036-04-01T09:00:00Z", "links": link,
 	})
 	taskREST, taskTool := anIDIn(t, restTask), anIDIn(t, toolTask)
+	sameStored(t, "task", stored(taskREST), stored(taskTool), taskREST, taskTool)
 	filed := sameRecords[sharedActivity](t, "task", stored(taskREST), stored(taskTool))
 	if filed.Kind != "task" {
 		t.Errorf("the filed task is a %q, want a task", filed.Kind)

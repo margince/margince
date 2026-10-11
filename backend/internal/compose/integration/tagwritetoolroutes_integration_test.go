@@ -59,7 +59,7 @@ func (d *twoDoors) tagsOn(t *testing.T, contact string) []string {
 			TagID string `json:"tag_id"`
 		} `json:"tags"`
 	}
-	raw := d.tool(t, "get_record_tags", map[string]any{"record_type": "contact", "record_id": contact})
+	raw := d.toolSeed(t, "get_record_tags", map[string]any{"record_type": "contact", "record_id": contact})
 	if err := json.Unmarshal(raw, &carried); err != nil {
 		t.Fatalf("the tags of %s do not decode: %v\n%s", contact, err, raw)
 	}
@@ -76,9 +76,13 @@ func (d *twoDoors) tagsOn(t *testing.T, contact string) []string {
 func TestCreateAndUpdateTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "tag-write-doors", "read", "write")
 
-	rest := d.restStatus(t, "POST", "/v1/tags", AnyMap{"name": "Rest conference", "color": "teal"}, http.StatusCreated)
-	tool := d.tool(t, "create_tag", map[string]any{"name": "Tool conference", "color": "teal"})
-	made := sameRecords[sharedTag](t, "create", rest, tool)
+	rest := d.restStatus(t, "POST", "/v1/tags", AnyMap{"name": "Rest conference", "color": "teal", "description": "Met at the spring show"}, http.StatusCreated)
+	tool := d.tool(t, "create_tag", map[string]any{"name": "Tool conference", "color": "teal", "description": "Met at the spring show"})
+	// The tool answers the word without its text, so the answers are compared on
+	// the colour and the stored tags below on everything.
+	made := sameRecords[struct {
+		Color *string `json:"color"`
+	}](t, "create", rest, tool)
 	if made.Color == nil || *made.Color != "teal" {
 		t.Errorf("the coined tag carries colour %v, want teal", made.Color)
 	}
@@ -86,19 +90,24 @@ func TestCreateAndUpdateTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	if viaREST.Name != "Rest conference" || viaTool.Name != "Tool conference" {
 		t.Errorf("the answers name %q and %q", viaREST.Name, viaTool.Name)
 	}
-	left := d.sameEffect(t, "create", viaREST.ID, viaTool.ID)
-	if !strings.HasPrefix(left.Audit[0], "create/agent/") {
+	sameStored(t, "create", d.storedTag(t, viaREST.ID), d.storedTag(t, viaTool.ID), viaREST.ID, viaTool.ID, "name")
+	if stored := sameRecords[sharedTag](t, "create", d.storedTag(t, viaREST.ID), d.storedTag(t, viaTool.ID)); stored.Description == nil || *stored.Description != "Met at the spring show" {
+		t.Errorf("the coined tag stores description %v, want the text both doors were given", stored.Description)
+	}
+	left := d.sameEffect(t, "create", viaREST.ID, viaTool.ID, "name")
+	if !strings.HasPrefix(left.Audit[0], "create | agent | ") {
 		t.Errorf("the coining left %v, want a create row naming the agent", left.Audit)
 	}
 
 	edit := map[string]any{"color": "rose", "description": "Spring push"}
 	d.restStatus(t, "PATCH", "/v1/tags/"+viaREST.ID, edit, http.StatusOK)
 	d.tool(t, "update_tag", with(edit, "tag_id", viaTool.ID))
+	sameStored(t, "update", d.storedTag(t, viaREST.ID), d.storedTag(t, viaTool.ID), viaREST.ID, viaTool.ID, "name")
 	edited := sameRecords[sharedTag](t, "update", d.storedTag(t, viaREST.ID), d.storedTag(t, viaTool.ID))
 	if edited.Color == nil || *edited.Color != "rose" || edited.Description == nil || *edited.Description != "Spring push" {
 		t.Errorf("the edited tag carries colour %v and text %v, want rose and the new text", edited.Color, edited.Description)
 	}
-	d.sameEffect(t, "update", viaREST.ID, viaTool.ID)
+	d.sameEffect(t, "update", viaREST.ID, viaTool.ID, "name")
 
 	blank := map[string]any{"color": "none", "description": ""}
 	d.restStatus(t, "PATCH", "/v1/tags/"+viaREST.ID, blank, http.StatusOK)
@@ -111,36 +120,50 @@ func TestCreateAndUpdateTagLeaveTheSameOnEitherDoor(t *testing.T) {
 
 // A tag put on a contact and taken off again leaves the same rows on either
 // door. The route answers a handle that puts the tagging back, and the tool
-// answers the state. So the two are compared on what each left behind.
+// answers the state. So the two are compared on what each left behind. The rows
+// sit on the tag, so each door has its own.
 func TestApplyAndRemoveTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "tagging-write-doors", "read", "write")
-	tag := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Key account", "color": "amber"})
+	tagREST := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Key account rest", "color": "amber"})
+	tagTool := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Key account tool", "color": "amber"})
 	viaREST := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Rest Tagged", "source": "manual"})
 	viaTool := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Tool Tagged", "source": "manual"})
 
-	d.restStatus(t, "POST", "/v1/tags/"+tag+"/apply", AnyMap{"entity_type": "contact", "entity_id": viaREST}, http.StatusCreated)
-	d.tool(t, "apply_tag", map[string]any{"tag_id": tag, "record_type": "contact", "record_id": viaTool})
-	for _, contact := range []string{viaREST, viaTool} {
-		if carried := d.tagsOn(t, contact); len(carried) != 1 || carried[0] != tag {
-			t.Errorf("contact %s carries %v, want the one tag applied", contact, carried)
-		}
+	d.restStatus(t, "POST", "/v1/tags/"+tagREST+"/apply", AnyMap{"entity_type": "contact", "entity_id": viaREST}, http.StatusCreated)
+	d.tool(t, "apply_tag", map[string]any{"tag_id": tagTool, "record_type": "contact", "record_id": viaTool})
+	if carried := d.tagsOn(t, viaREST); len(carried) != 1 || carried[0] != tagREST {
+		t.Errorf("contact %s carries %v, want the one tag applied", viaREST, carried)
 	}
-	d.sameEffect(t, "apply", viaREST, viaTool)
+	if carried := d.tagsOn(t, viaTool); len(carried) != 1 || carried[0] != tagTool {
+		t.Errorf("contact %s carries %v, want the one tag applied", viaTool, carried)
+	}
+	d.sameEffect(t, "apply", tagREST, tagTool, "name")
 
 	var handle struct {
 		AuditID string `json:"audit_id"`
 	}
-	restOff := d.restStatus(t, "DELETE", "/v1/tags/"+tag+"/apply", AnyMap{"entity_type": "contact", "entity_id": viaREST}, http.StatusOK)
+	restOff := d.restStatus(t, "DELETE", "/v1/tags/"+tagREST+"/apply", AnyMap{"entity_type": "contact", "entity_id": viaREST}, http.StatusOK)
 	if err := json.Unmarshal(restOff, &handle); err != nil || handle.AuditID == "" {
 		t.Errorf("the route answered no undo handle (%v): %s", err, restOff)
 	}
-	d.tool(t, "remove_tag", map[string]any{"tag_id": tag, "record_type": "contact", "record_id": viaTool})
+	d.tool(t, "remove_tag", map[string]any{"tag_id": tagTool, "record_type": "contact", "record_id": viaTool})
 	for _, contact := range []string{viaREST, viaTool} {
 		if carried := d.tagsOn(t, contact); len(carried) != 0 {
 			t.Errorf("contact %s still carries %v after the removal", contact, carried)
 		}
 	}
-	d.sameEffect(t, "remove", viaREST, viaTool)
+	d.sameEffect(t, "remove", tagREST, tagTool, "name")
+
+	// A tag the workspace does not hold is a 404 over REST and already-removed
+	// over the tool, which asks for the state and finds it true. That is accepted.
+	var absent struct {
+		Applied bool `json:"applied"`
+	}
+	unknown := d.tool(t, "remove_tag", map[string]any{"tag_name": "No such tag", "record_type": "contact", "record_id": viaTool})
+	if err := json.Unmarshal(unknown, &absent); err != nil || absent.Applied {
+		t.Errorf("the tool answered %s for a tag name the workspace lacks, want applied false (%v)", unknown, err)
+	}
+	d.restStatus(t, "DELETE", "/v1/tags/"+viaTool+"/apply", AnyMap{"entity_type": "contact", "entity_id": viaTool}, http.StatusNotFound)
 }
 
 // Folding one tag into another is confirm-first for an agent. Each door stages
@@ -156,8 +179,20 @@ func TestMergeTagsStagesTheSameApprovalOnEitherDoor(t *testing.T) {
 		t.Fatalf("a merge over REST → %d %q, want 403 approval_required", status, refusal.Code)
 	}
 	d.toolRefused(t, "merge_tags", map[string]any{"tag_id": viaTool, "into_tag_id": into})
-	card := d.sameStagedKind(t, "merge", viaREST, viaTool)
+	card := d.sameStaged(t, "merge", viaREST, viaTool, "Conf 26 rest", "Conf 26 tool")
 	if card.Kind != "merge_tags" || card.Status != "pending" {
 		t.Errorf("the staged approval is %+v, want a pending merge_tags one", card)
 	}
+
+	// Once a human approves, the retry carrying the approval runs the merge, and
+	// the two doors leave the same rows.
+	approvalREST, approvalTool := d.stagedApprovalOn(t, viaREST), d.stagedApprovalOn(t, viaTool)
+	d.approveAsHuman(t, approvalREST)
+	d.approveAsHuman(t, approvalTool)
+	var merged json.RawMessage
+	if status := d.e.Call(t, "POST", "/v1/tags/"+viaREST+"/merge", AnyMap{"into_tag_id": into}, d.withApproval(approvalREST), &merged); status != http.StatusOK {
+		t.Fatalf("the approved merge over REST → %d %s", status, merged)
+	}
+	d.tool(t, "merge_tags", map[string]any{"tag_id": viaTool, "into_tag_id": into, "approval_id": approvalTool})
+	d.sameEffect(t, "merge", viaREST, viaTool, "name", "summary")
 }

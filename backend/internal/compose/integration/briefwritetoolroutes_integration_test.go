@@ -58,7 +58,7 @@ func TestAnnotateBriefLeavesTheSameOnEitherDoor(t *testing.T) {
 	var read struct {
 		Items []briefItemRef `json:"items"`
 	}
-	if err := json.Unmarshal(d.tool(t, "read_brief", map[string]any{}), &read); err != nil || len(read.Items) != 3 {
+	if err := json.Unmarshal(d.toolSeed(t, "read_brief", map[string]any{}), &read); err != nil || len(read.Items) != 3 {
 		t.Fatalf("the brief holds %d items (%v), want the 3 seeded deals", len(read.Items), err)
 	}
 	finding := func(item briefItemRef) map[string]any {
@@ -84,9 +84,14 @@ func TestAnnotateBriefLeavesTheSameOnEitherDoor(t *testing.T) {
 	if len(added) == 0 {
 		t.Fatalf("an annotated item carries no member the untouched one lacks: %v", viaREST)
 	}
-	for _, key := range added {
-		if got, want := string(viaTool[key]), string(viaREST[key]); got != want {
-			t.Errorf("member %s reads %s on the tool's item and %s on the route's", key, got, want)
+	itemJSON := func(item map[string]json.RawMessage) json.RawMessage {
+		raw, err := json.Marshal(item)
+		if err != nil {
+			t.Fatal(err)
 		}
+		return raw
 	}
+	// The two items are different deals at different ranks, so everything else
+	// they carry, the finding included, must read alike.
+	sameStored(t, "annotation", itemJSON(viaREST), itemJSON(viaTool), byRest.ItemID, byTool.ItemID, "rank")
 }

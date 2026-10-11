@@ -10,16 +10,16 @@
   "totals": {
     "tools": 84,
     "resources": 9,
-    "tool_catalog_bytes": 264189,
+    "tool_catalog_bytes": 264221,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 66937,
+    "approx_wire_tokens_total": 66945,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 68727,
-      "input_schema_bytes": 59625,
+      "input_schema_bytes": 59657,
       "output_schema_bytes": 115053,
-      "description_plus_input_schema_bytes": 128352
+      "description_plus_input_schema_bytes": 128384
     }
   },
   "tools": {
@@ -3381,6 +3381,9 @@
                 "lime",
                 "orange"
               ],
+              "type": "string"
+            },
+            "description": {
               "type": "string"
             },
             "idempotency_key": {

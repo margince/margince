@@ -27,7 +27,7 @@ type sharedDraft struct {
 // subject and the same body, greeting included.
 func TestDraftEmailAnswersAsItsRouteDoes(t *testing.T) {
 	d := newTwoDoors(t, "draft-write-doors", "read", "write", "draft")
-	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Draft Pat", "source": "manual"})
+	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Pat Draft", "source": "manual"})
 	mail := createdID(t, d.e, "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Quote?", "body": "Can you send a quote", "source": "manual",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
@@ -36,7 +36,7 @@ func TestDraftEmailAnswersAsItsRouteDoes(t *testing.T) {
 	drafted := sameRecords[sharedDraft](t, "draft",
 		d.restStatus(t, "POST", "/v1/activities/"+mail+"/draft-email", AnyMap{"intent": "Quote by Friday"}, http.StatusOK),
 		d.tool(t, "draft_email", map[string]any{"activity_id": mail, "intent": "Quote by Friday"}))
-	if drafted.Subject != "Re: Quote?" || !strings.Contains(drafted.Body, "Quote by Friday") {
+	if drafted.Subject != "Re: Quote?" || !strings.Contains(drafted.Body, "Quote by Friday") || !strings.Contains(drafted.Body, "Hi Pat") {
 		t.Errorf("the draft is %+v, want a reply to the thread carrying the intent", drafted)
 	}
 }
@@ -65,15 +65,18 @@ func TestBookMeetingLeavesTheSameOnEitherDoor(t *testing.T) {
 	stored := func(id string) json.RawMessage {
 		return d.restStatus(t, "GET", "/v1/activities/"+id, nil, http.StatusOK)
 	}
+	sameStored(t, "booking", stored(viaREST), stored(viaTool), viaREST, viaTool, "subject", "occurred_at")
 	booked := sameRecords[sharedMeeting](t, "booking", stored(viaREST), stored(viaTool))
 	if booked.Kind != "meeting" || booked.MeetingStatus != "booked" || booked.DurationSeconds != 1800 {
 		t.Errorf("the booked meeting is %+v, want a booked half-hour meeting", booked)
 	}
-	d.sameEffect(t, "booking", viaREST, viaTool)
+	d.sameEffect(t, "booking", viaREST, viaTool, "subject")
 }
 
 // A send to someone who has not consented is refused the same way on either
 // door. That holds for a reply and for a first message, and nothing is sent.
+// Only the refusal is compared: a permitted email goes out through a connected
+// mailbox, and the harness has none to stand in for it.
 func TestSendsAreRefusedAlikeOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "send-write-doors", "read", "write", "send")
 	contact := createdID(t, d.e, "/v1/contacts", AnyMap{

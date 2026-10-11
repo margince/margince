@@ -37907,6 +37907,8 @@ export interface components {
             edited_payload?: {
                 [key: string]: unknown;
             };
+            /** @description Why, in the approver's own words. Recorded with the decision, as a rejection's reason is. */
+            reason?: string;
         };
         ApprovalListResponse: {
             data: components["schemas"]["Approval"][];
