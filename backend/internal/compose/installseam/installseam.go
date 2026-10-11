@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -48,5 +49,8 @@ func Deals() deals.Installation {
 		// approvals owns the pending proposals that follow a deal to its new
 		// owner, so the hand-over lives there and the edge is injected here.
 		FollowOwner: approvals.FollowDealOwnerInTx,
+		// contracts owns the contract row rule, which stage evidence asks
+		// before it calls a cited contract openable.
+		ContractVisible: contracts.VisibleClause,
 	}
 }

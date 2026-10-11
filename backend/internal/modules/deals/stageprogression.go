@@ -110,6 +110,10 @@ type ProposedCriterion struct {
 	// EvidenceIDs are the ledger rows behind it, so a reviewer can open what
 	// the claim rests on rather than taking the tick on trust.
 	EvidenceIDs []ids.UUID `json:"evidence_ids"`
+	// CitedSourceIDs are the records the card cites for it. They are hashed
+	// with the rest, so a source that stops opening changes the proposal and
+	// the next reading supersedes the card instead of joining it.
+	CitedSourceIDs []ids.UUID `json:"cited_source_ids,omitempty"`
 }
 
 // StageProgressionIdentity is what makes a fresher read supersede a stale card

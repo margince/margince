@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -63,13 +64,13 @@ type ProgressionCriterion struct {
 }
 
 // EvidenceSource is one claim's pointer back to the record it was read from,
-// with the fragment it rests on. Gone is true when that record has been
-// deleted since, so a reader does not cite something nobody can open.
+// with the fragment it rests on. Missing is true when the reader cannot open
+// that record, deleted or hidden, so nothing cites a pointer that opens nothing.
 type EvidenceSource struct {
 	SourceType string
 	SourceID   ids.UUID
 	Snippet    string
-	Gone       bool
+	Missing    bool
 }
 
 // ErrNoNextStage is the ordinary outcome for a deal already on its pipeline's
@@ -82,7 +83,7 @@ var ErrNoNextStage = errors.New("deals: this deal is on the last open stage of i
 // installation setting, the per-transition policy row and the measured rates,
 // and the caller reads all three in the transaction that will apply the move.
 // Passing them in keeps this function's answer a function of what it read.
-func ReadStageProgressionFacts(
+func (s *Store) ReadStageProgressionFacts(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID, autopilot AutopilotFacts, now time.Time,
 ) (StageProgressionFacts, error) {
 	var out StageProgressionFacts
@@ -100,7 +101,7 @@ func ReadStageProgressionFacts(
 	}
 	out.ToStageID, out.ToName = next.id, next.name
 
-	criteria, err := readProgressionCriteria(ctx, tx, where.stageID, dealID)
+	criteria, err := s.readProgressionCriteria(ctx, tx, where.stageID, dealID)
 	if err != nil {
 		return out, err
 	}
@@ -215,16 +216,22 @@ func nextOpenStage(ctx context.Context, tx pgx.Tx, from dealStanding) (stageRef,
 // authorship rule is the bar, so a buyer-authored claim beats a seller's, and
 // among equals the most recent observation. A criterion settled by one good
 // claim is settled whatever weaker claims sit beside it.
-func readProgressionCriteria(
+func (s *Store) readProgressionCriteria(
 	ctx context.Context, tx pgx.Tx, stageID ids.StageID, dealID ids.DealID,
 ) ([]ProgressionCriterion, error) {
-	rows, err := tx.Query(ctx, `
+	args := []any{stageID, dealID}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	missing, err := s.sourceMissingSQL(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT c.id, c.key, c.label, c.required, c.kind,
 		       coalesce(e.met, false), coalesce(e.author_side, ''),
 		       coalesce(e.commitment, ''), e.confidence,
 		       coalesce(e.contradicted, false), coalesce(e.ids, '{}'),
 		       coalesce(e.source_types, '{}'), coalesce(e.source_ids, '{}'),
-		       coalesce(e.snippets, '{}'), coalesce(e.sources_gone, '{}')
+		       coalesce(e.snippets, '{}'), coalesce(e.sources_missing, '{}')
 		  FROM stage_exit_criterion c
 		  LEFT JOIN LATERAL (
 		      SELECT bool_or(v.met) AS met,
@@ -250,18 +257,18 @@ func readProgressionCriteria(
 		             array_agg(v.source_type ORDER BY v.id) AS source_types,
 		             array_agg(v.source_id ORDER BY v.id) AS source_ids,
 		             array_agg(coalesce(v.snippet, '') ORDER BY v.id) AS snippets,
-		             array_agg(v.source_gone ORDER BY v.id) AS sources_gone
+		             array_agg(v.source_missing ORDER BY v.id) AS sources_missing
 		        FROM (
 		            SELECT ev.*,
 		                   CASE WHEN ev.author_side = 'buyer' THEN 0 ELSE 1 END AS rank,
-		                   `+evidenceSourceGone+` AS source_gone
+		                   %s AS source_missing
 		              FROM deal_stage_evidence ev
 		             WHERE ev.criterion_id = c.id AND ev.deal_id = $2
 		               AND ev.refuted_at IS NULL AND ev.met
 		        ) v
 		  ) e ON true
 		 WHERE c.stage_id = $1 AND c.archived_at IS NULL
-		 ORDER BY c."position"`, stageID, dealID)
+		 ORDER BY c."position"`, missing), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the stage's criteria and their evidence: %w", err)
 	}
@@ -273,14 +280,14 @@ func readProgressionCriteria(
 		var kind, authorSide, commitment string
 		var sourceTypes, snippets []string
 		var sourceIDs []ids.UUID
-		var sourcesGone []bool
+		var sourcesMissing []bool
 		if err := rows.Scan(&c.CriterionID, &c.Key, &c.Label, &c.Required, &kind,
 			&c.Met, &authorSide, &commitment, &c.Confidence,
 			&c.Contradicted, &c.EvidenceIDs,
-			&sourceTypes, &sourceIDs, &snippets, &sourcesGone); err != nil {
+			&sourceTypes, &sourceIDs, &snippets, &sourcesMissing); err != nil {
 			return nil, fmt.Errorf("scan a criterion's standing: %w", err)
 		}
-		c.Sources = evidenceSources(sourceTypes, sourceIDs, snippets, sourcesGone)
+		c.Sources = evidenceSources(sourceTypes, sourceIDs, snippets, sourcesMissing)
 		c.Kind = CriterionKind(kind)
 		c.AuthorSide = AuthorSide(authorSide)
 		c.Commitment = commitment
@@ -368,15 +375,15 @@ func readProtection(
 // All four are aggregated over the same rows in the same order, so they are
 // the same length. A short one is still read only as far as it goes. A card
 // citing fewer sources is a smaller answer, and a panic stops the proposer.
-func evidenceSources(types []string, ids []ids.UUID, snippets []string, gone []bool) []EvidenceSource {
-	n := min(len(types), len(ids), len(snippets), len(gone))
+func evidenceSources(types []string, ids []ids.UUID, snippets []string, missing []bool) []EvidenceSource {
+	n := min(len(types), len(ids), len(snippets), len(missing))
 	if n == 0 {
 		return nil
 	}
 	out := make([]EvidenceSource, 0, n)
 	for i := range n {
 		out = append(out, EvidenceSource{
-			SourceType: types[i], SourceID: ids[i], Snippet: snippets[i], Gone: gone[i],
+			SourceType: types[i], SourceID: ids[i], Snippet: snippets[i], Missing: missing[i],
 		})
 	}
 	return out

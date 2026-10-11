@@ -123,7 +123,7 @@ func (s *Store) RecordStageEvidence(
 		if err != nil {
 			return err
 		}
-		if out, err = readEvidence(ctx, tx, id); err != nil {
+		if out, err = s.readEvidence(ctx, tx, id); err != nil {
 			return err
 		}
 		if !written {
@@ -163,7 +163,7 @@ func (s *Store) RefuteStageEvidence(
 		if err != nil {
 			return err
 		}
-		before, err := readEvidence(ctx, tx, id)
+		before, err := s.readEvidence(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ func (s *Store) RefuteStageEvidence(
 		if err != nil {
 			return fmt.Errorf("audit stage evidence refutation: %w", err)
 		}
-		if out, err = readEvidence(ctx, tx, id); err != nil {
+		if out, err = s.readEvidence(ctx, tx, id); err != nil {
 			return err
 		}
 		return emitEvidenceChanged(ctx, tx, auditID, dealID)
@@ -220,7 +220,7 @@ func (s *Store) ListStageEvidence(
 			return err
 		}
 		var err error
-		out, err = readDealEvidence(ctx, tx, dealID)
+		out, err = s.readDealEvidence(ctx, tx, dealID)
 		return err
 	})
 	return out, err

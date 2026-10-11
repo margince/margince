@@ -198,12 +198,14 @@ func TestEveryReaderOfTheActivityTableComposesTheAudience(t *testing.T) {
 	defer audienceReadersAdmitted.AssertAllMatched(t)
 	subjects := audienceReaderScope.Files(t)
 	graphs := map[string]map[string]*graphFunc{}
+	bindings := map[string]map[string]map[string]bool{}
 	for _, src := range subjects {
 		dir := path.Dir(src.Path)
 		if _, done := graphs[dir]; !done {
 			graphs[dir] = packageCallGraph(t, dir)
+			bindings[dir] = packageBindingNames(parsePackageFiles(t, dir))
 		}
-		for _, offender := range unguardedActivityReaders(graphs[dir], src.File, audienceDimension) {
+		for _, offender := range unguardedActivityReaders(graphs[dir], bindings[dir], src.File, audienceDimension) {
 			if audienceReadersAdmitted.Waived(t, src.Path+":"+strings.SplitN(offender, ":", 2)[0]) {
 				continue
 			}

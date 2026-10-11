@@ -366,7 +366,7 @@ func readsAnActivitysContent(text string) bool {
 // see rather than a route that carries nothing. A reader guarded only through
 // such a call reports red and is ratified by name, which is the direction that
 // asks a human instead of assuming one.
-func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim activityDimension) []string {
+func unguardedActivityReaders(graph map[string]*graphFunc, bindings map[string]map[string]bool, file *ast.File, dim activityDimension) []string {
 	var offenders []string
 	for _, decl := range file.Decls {
 		// The read is looked for in the declaration's whole text, not literal by
@@ -404,7 +404,7 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim a
 			// counting a sibling's namer as evidence that the fragment is
 			// composed somewhere.
 			for _, fragment := range activityFragmentsIn(decl) {
-				for _, namer := range unguardedNamers(graph, fragment.names, dim) {
+				for _, namer := range unguardedNamers(graph, namesReaching(bindings, fragment.names), dim) {
 					offenders = append(offenders, namer+": "+gatekit.FirstLineOf(fragment.sql))
 				}
 			}
@@ -609,6 +609,70 @@ func activitySQLIn(value ast.Expr) (string, bool) {
 	return found, found != ""
 }
 
+// packageBindingNames maps each package-level var or const to the identifiers
+// its value names.
+func packageBindingNames(files []*ast.File) map[string]map[string]bool {
+	out := map[string]map[string]bool{}
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			gen, isGen := decl.(*ast.GenDecl)
+			if !isGen || (gen.Tok != token.VAR && gen.Tok != token.CONST) {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				value, isValue := spec.(*ast.ValueSpec)
+				if !isValue {
+					continue
+				}
+				named := map[string]bool{}
+				for _, expr := range value.Values {
+					ast.Inspect(expr, func(node ast.Node) bool {
+						if ident, isIdent := node.(*ast.Ident); isIdent {
+							named[ident.Name] = true
+						}
+						return true
+					})
+				}
+				for _, name := range value.Names {
+					out[name.Name] = named
+				}
+			}
+		}
+	}
+	return out
+}
+
+// namesReaching widens a fragment's names to every package-level binding that
+// names one of them, at any depth. A function that runs the fragment through
+// another constant (`columns = "id, " + fragment`) assembles the same query as
+// one that names it, and without this it is no namer at all.
+func namesReaching(bindings map[string]map[string]bool, names []string) []string {
+	reached := map[string]bool{}
+	for _, name := range names {
+		reached[name] = true
+	}
+	for grew := true; grew; {
+		grew = false
+		for binding, named := range bindings {
+			if reached[binding] {
+				continue
+			}
+			for name := range named {
+				if reached[name] {
+					reached[binding], grew = true, true
+					break
+				}
+			}
+		}
+	}
+	out := make([]string, 0, len(reached))
+	for name := range reached {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
 // unguardedNamers are the functions that assemble a query from this fragment
 // and reach no exclusion, sorted so a failure reads the same on every run.
 //
@@ -658,6 +722,7 @@ func TestEveryReaderOfTheActivityTableExcludesRestrictedRows(t *testing.T) {
 	defer restrictedReadersAdmitted.AssertAllMatched(t)
 	subjects := activityReaderScope.Files(t)
 	graphs := map[string]map[string]*graphFunc{}
+	bindings := map[string]map[string]map[string]bool{}
 	for _, src := range subjects {
 		dir := path.Dir(src.Path)
 		if _, done := graphs[dir]; !done {
@@ -667,8 +732,9 @@ func TestEveryReaderOfTheActivityTableExcludesRestrictedRows(t *testing.T) {
 			// alone would follow the call, find no body, and report exactly like
 			// a helper that excludes nothing.
 			graphs[dir] = packageCallGraph(t, dir)
+			bindings[dir] = packageBindingNames(parsePackageFiles(t, dir))
 		}
-		for _, offender := range unguardedActivityReaders(graphs[dir], src.File, heldDimension) {
+		for _, offender := range unguardedActivityReaders(graphs[dir], bindings[dir], src.File, heldDimension) {
 			if restrictedReadersAdmitted.Waived(t, src.Path+":"+strings.SplitN(offender, ":", 2)[0]) {
 				continue
 			}

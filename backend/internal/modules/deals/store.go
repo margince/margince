@@ -114,6 +114,9 @@ type Installation struct {
 	// FollowOwner hands a deal's pending proposals to its new owner, in the
 	// transaction that reassigns it (ownerfollow.go).
 	FollowOwner FollowOwner
+	// ContractVisible is the contracts module's row rule, which stage
+	// evidence asks before it calls a cited contract openable.
+	ContractVisible ContractVisibleClause
 }
 
 // EnsurePartner answers whether a company may be named as a deal's
@@ -164,6 +167,9 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.FollowOwner == nil {
 		i.FollowOwner = refusingFollowOwner()
+	}
+	if i.ContractVisible == nil {
+		i.ContractVisible = refusingContractVisible()
 	}
 	return i
 }

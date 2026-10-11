@@ -44566,9 +44566,11 @@ type StageEvidence struct {
 	// SourceLines 1-based transcript lines, when the claim quotes one.
 	SourceLines *[]int `json:"source_lines,omitempty"`
 
-	// SourceMissing True when the activity or contract `source_id` names has been
-	// deleted. The observation stays on the ledger, because a stage
-	// decision may rest on it, but `source_id` then opens nothing.
+	// SourceMissing True when the caller cannot open the activity or contract
+	// `source_id` names: it was deleted, or it is not visible to them.
+	// The two read the same, so this never tells a hidden record from a
+	// missing one. The observation stays on the ledger either way,
+	// because a stage decision may rest on it.
 	SourceMissing bool `json:"source_missing"`
 
 	// SourceType What kind of record the observation was read from.
