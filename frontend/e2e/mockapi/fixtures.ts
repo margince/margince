@@ -870,6 +870,65 @@ export const aiCalls = {
   tasks: ["capture_classify", "enrich", "summarize"],
 };
 
+// The German pack selected, with its classes, rule set and one document, so
+// the page draws every section rather than the empty states alone.
+export const installationJurisdiction: components["schemas"]["InstallationJurisdiction"] =
+  {
+    selected: "de",
+    available: [
+      {
+        code: "de",
+        unit_name: "de",
+        unit_version: "1.0.0",
+        description: "German jurisdiction pack.",
+        correspondence_floor: {
+          name: "commercial_correspondence",
+          keep: "P6Y",
+          from_year_end: true,
+        },
+      },
+      {
+        code: "vn",
+        unit_name: "vn",
+        unit_version: "1.0.0",
+        description: "Vietnamese jurisdiction pack.",
+      },
+    ],
+    unit: {
+      code: "de",
+      unit_name: "de",
+      unit_version: "1.0.0",
+      description: "German jurisdiction pack.",
+    },
+    retention_classes: [
+      { name: "commercial_correspondence", keep: "P6Y", from_year_end: true },
+    ],
+    floor: {
+      known: true,
+      class: "commercial_correspondence",
+      keep: "P6Y",
+      from_year_end: true,
+      packs: ["de", "vn"],
+    },
+    messaging: { version: 1, instruments: [] },
+    deadlines: [
+      { kind: "access", rule: "de v1", period: "P1M" },
+      { kind: "rectify", rule: "de v1", period: "P1M" },
+      { kind: "erasure", rule: "de v1", period: "P1M" },
+    ],
+    documents: [
+      {
+        id: "mitarbeiterinformation",
+        title: "Mitarbeiterinformation zur Erfassung von E-Mail-Korrespondenz",
+        language: "de",
+        audience: "employee",
+        kind: "template",
+        media_type: "text/markdown",
+        size_bytes: 4474,
+      },
+    ],
+  };
+
 // A queue with something waiting, a dispatcher beside it, and one dead job.
 // The dead count raises the card's alert, which an all-zero fixture would
 // leave unmeasured.

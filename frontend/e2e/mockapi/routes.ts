@@ -21,6 +21,7 @@ import {
   automationCatalog,
   brandt,
   captureActivity,
+  installationJurisdiction,
   jobHealth,
   knowledgeCorpora,
   passports,
@@ -272,6 +273,11 @@ export const routes: readonly MockRoute[] = [
     handle: reply(knowledgeCorpora),
   },
   { path: "/installation/license", handle: ai.license },
+  {
+    method: "GET",
+    path: "/installation/jurisdiction",
+    handle: reply(installationJurisdiction),
+  },
   {
     path: "/me/ai-activity",
     when: (state) => state.options.agentRunning === true,
