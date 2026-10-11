@@ -170,7 +170,7 @@ func (d *twoDoors) effectOf(t *testing.T, entity string, differ map[string]bool)
 		t.Fatal(err)
 	}
 	events, err := d.e.Owner.Query(t.Context(),
-		`SELECT stream, envelope::text FROM event_outbox WHERE envelope::text LIKE '%' || $1 || '%' AND envelope->'actor'->>'type' = 'agent' ORDER BY seq`, entity)
+		`SELECT stream, envelope::text FROM event_outbox WHERE envelope->'entity'->>'id' = $1::text AND envelope->'actor'->>'type' = 'agent' ORDER BY seq`, entity)
 	if err != nil {
 		t.Fatalf("reading the outbox rows of %s: %v", entity, err)
 	}
