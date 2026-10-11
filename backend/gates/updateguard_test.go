@@ -121,6 +121,7 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
 	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/collections:ArchiveSavedView":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",

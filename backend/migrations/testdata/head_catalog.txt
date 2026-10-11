@@ -2692,11 +2692,14 @@ public.confirm_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd
 public.confirm_token.confirm_token_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
 public.confirm_token.confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text, 'privacy_notice'::text])))
+public.confirm_token.confirm_token_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.confirm_token.confirm_token_lead_is_only_told CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice'::text)))
+public.confirm_token.confirm_token_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.confirm_token.confirm_token_pkey PRIMARY KEY (id)
 public.confirm_token.confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.confirm_token.confirm_token_purpose_is_consents CHECK (((kind = 'consent_confirmation'::text) = (purpose_id IS NOT NULL)))
 public.confirm_token.consumed_at timestamp with time zone gen=- def=-
-public.confirm_token.contact_id uuid NOT NULL gen=- def=-
+public.confirm_token.contact_id uuid gen=- def=-
 public.confirm_token.delivered_to text NOT NULL gen=- def=-
 public.confirm_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.confirm_token.fetch_count integer NOT NULL gen=- def=0
@@ -2704,6 +2707,7 @@ public.confirm_token.first_fetched_at timestamp with time zone gen=- def=-
 public.confirm_token.id uuid NOT NULL gen=- def=uuidv7()
 public.confirm_token.issued_at timestamp with time zone NOT NULL gen=- def=now()
 public.confirm_token.kind text NOT NULL gen=- def='record_confirmation'::text
+public.confirm_token.lead_id uuid gen=- def=-
 public.confirm_token.opened_at timestamp with time zone gen=- def=-
 public.confirm_token.purpose_id uuid gen=- def=-
 public.confirm_token.question_key text gen=- def=-
@@ -4652,10 +4656,12 @@ public.intro_request_for_contact CREATE INDEX intro_request_for_contact ON publi
 public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
 public.intro_request_pkey CREATE UNIQUE INDEX intro_request_pkey ON public.intro_request USING btree (id)
 public.ix_confirm_token_contact CREATE INDEX ix_confirm_token_contact ON public.confirm_token USING btree (contact_id)
+public.ix_confirm_token_lead CREATE INDEX ix_confirm_token_lead ON public.confirm_token USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.ix_contact_confirm_submission_contact CREATE INDEX ix_contact_confirm_submission_contact ON public.contact_confirm_submission USING btree (contact_id)
 public.ix_contact_confirm_submission_open CREATE INDEX ix_contact_confirm_submission_open ON public.contact_confirm_submission USING btree (submitted_at) WHERE (resolved_at IS NULL)
 public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
+public.ix_lead_privacy_notice_approval CREATE INDEX ix_lead_privacy_notice_approval ON public.lead_privacy_notice USING btree (approval_id) WHERE (approval_id IS NOT NULL)
 public.knowledge_chunk acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.knowledge_chunk.archived_at timestamp with time zone gen=- def=-
 public.knowledge_chunk.chunk_hash text NOT NULL gen=- def=-
@@ -4893,6 +4899,27 @@ public.lead_manual_signal.superseded_at timestamp with time zone gen=- def=-
 public.lead_manual_signal.superseded_by text gen=- def=-
 public.lead_manual_signal_pkey CREATE UNIQUE INDEX lead_manual_signal_pkey ON public.lead_manual_signal USING btree (id)
 public.lead_pkey CREATE UNIQUE INDEX lead_pkey ON public.lead USING btree (id)
+public.lead_privacy_notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.lead_privacy_notice.approval_id uuid gen=- def=-
+public.lead_privacy_notice.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.lead_privacy_notice.delivery_id uuid gen=- def=-
+public.lead_privacy_notice.failed_at timestamp with time zone gen=- def=-
+public.lead_privacy_notice.failure text gen=- def=-
+public.lead_privacy_notice.id uuid NOT NULL gen=- def=uuidv7()
+public.lead_privacy_notice.lead_id uuid gen=- def=-
+public.lead_privacy_notice.lead_privacy_notice_approval_id_fkey FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE SET NULL
+public.lead_privacy_notice.lead_privacy_notice_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE SET NULL
+public.lead_privacy_notice.lead_privacy_notice_failed_shape CHECK (((state = 'failed'::text) = ((failure IS NOT NULL) AND (failed_at IS NOT NULL))))
+public.lead_privacy_notice.lead_privacy_notice_failure CHECK (((failure IS NULL) OR (failure = ANY (ARRAY['no_address'::text, 'collision'::text, 'refused'::text, 'bounced'::text]))))
+public.lead_privacy_notice.lead_privacy_notice_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE SET NULL
+public.lead_privacy_notice.lead_privacy_notice_pkey PRIMARY KEY (id)
+public.lead_privacy_notice.lead_privacy_notice_state CHECK ((state = ANY (ARRAY['queued'::text, 'failed'::text])))
+public.lead_privacy_notice.locale text gen=- def=-
+public.lead_privacy_notice.queued_at timestamp with time zone gen=- def=-
+public.lead_privacy_notice.state text NOT NULL gen=- def=-
+public.lead_privacy_notice.template_key text NOT NULL gen=- def=-
+public.lead_privacy_notice.template_version integer NOT NULL gen=- def=-
+public.lead_privacy_notice_pkey CREATE UNIQUE INDEX lead_privacy_notice_pkey ON public.lead_privacy_notice USING btree (id)
 public.lead_score_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead_score_history.computed_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_score_history.factors jsonb NOT NULL gen=- def=-
@@ -7152,6 +7179,8 @@ public.uq_forecast_snapshot_period_close_workspace CREATE UNIQUE INDEX uq_foreca
 public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.lead USING btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))
 public.uq_lead_from_contact_live CREATE UNIQUE INDEX uq_lead_from_contact_live ON public.lead USING btree (from_contact_id) WHERE ((from_contact_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
+public.uq_lead_privacy_notice_delivery CREATE UNIQUE INDEX uq_lead_privacy_notice_delivery ON public.lead_privacy_notice USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
+public.uq_lead_privacy_notice_lead CREATE UNIQUE INDEX uq_lead_privacy_notice_lead ON public.lead_privacy_notice USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
 public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)

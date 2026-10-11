@@ -57,4 +57,7 @@ var pipelineEventTypes = map[string]struct{}{
 	"tag_suggestion.accepted":   {},
 	"tag_suggestion.dismissed":  {},
 	"tag_suggestion.superseded": {},
+	// A website lead's notice names a lead who may be deleted for want of it.
+	"lead_privacy_notice.created": {},
+	"lead_privacy_notice.failed":  {},
 }

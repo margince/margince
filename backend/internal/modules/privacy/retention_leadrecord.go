@@ -93,6 +93,10 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 		`DELETE FROM communication_basis WHERE lead_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's communication bases: %w", err)
 	}
+	// A website lead's notice link carries the address it was sent to.
+	if _, err := tx.Exec(ctx, `DELETE FROM confirm_token WHERE lead_id = $1`, id); err != nil {
+		return fmt.Errorf("clear the lead's notice links: %w", err)
+	}
 	// A SUPPRESSION IS DETACHED, NOT DELETED, exactly as the contact arm detaches
 	// it. An anonymized subject may lawfully come back — re-captured from the
 	// same mailbox — and an objection deleted with them means they come back

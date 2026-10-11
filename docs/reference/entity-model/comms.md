@@ -6,7 +6,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 ## comms_outbound
 
-41 columns · primary key `(id)` · referenced by 3 foreign keys
+41 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

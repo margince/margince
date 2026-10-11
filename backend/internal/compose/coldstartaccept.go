@@ -42,8 +42,11 @@ import (
 // log is installed for the same reason and on the same service: a bundle member
 // whose effect fails AFTER its decision committed is reported to the client by
 // outcome alone, so this is the process that has to carry the cause.
-func approvalsHandlersWithEffects(pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger) approvals.Handlers {
-	return approvals.NewHandlers(approvalsServiceWithEffects(pool).WithVolumeReleaser(volume).WithLogger(log))
+// notices is the lane a website lead is told through, installed here alone.
+func approvalsHandlersWithEffects(
+	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger, notices *siteLeadNoticeLane,
+) approvals.Handlers {
+	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log))
 }
 
 // approvalsServiceWithEffects is the registration list itself, split from the
@@ -51,14 +54,22 @@ func approvalsHandlersWithEffects(pool *pgxpool.Pool, volume approvals.VolumeRel
 // standing up an HTTP surface. Every kind registered here must carry a
 // decision-grant mapping (TestEveryRegisteredEffectKindHasADecisionGrantMapping).
 func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
+	return approvalsServiceTelling(pool, &siteLeadNoticeLane{})
+}
+
+// approvalsServiceTelling is approvalsServiceWithEffects with the lane a website
+// lead is told through. An empty lane refuses every site lead, which is right
+// for the services that only stage.
+func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
 	svc := approvals.NewService(InstallationDB(pool)).
 		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
 	store := newCounterpartyStore(pool)
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, store))
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, store))
-	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{})))
-	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck())
+	svc.WithEffect(siteLeadProposalKind,
+		siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{}), pool, notices))
+	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck(notices))
 	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))

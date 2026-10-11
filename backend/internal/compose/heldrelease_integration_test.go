@@ -321,7 +321,7 @@ func TestApplySendPathRegistersTheHeldDraftRelease(t *testing.T) {
 	// configuration exists — and then the send path applied over it. That
 	// ordering IS the thing under test.
 	srv := Server{
-		approvalsHandlers:  approvalsHandlersWithEffects(e.Pool, nil, slog.New(slog.NewTextHandler(io.Discard, nil))),
+		approvalsHandlers:  approvalsHandlersWithEffects(e.Pool, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), &siteLeadNoticeLane{}),
 		activitiesHandlers: newActivitiesHandlers(e.Pool),
 		send: SendPath{
 			Delivery:      NewDeliveryStager(e.Pool, inserter),

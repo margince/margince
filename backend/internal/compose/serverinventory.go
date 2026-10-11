@@ -317,14 +317,14 @@ type Server struct {
 	mfaSigner         identity.MFAChallengeSigner
 	mfaSignerUnusable bool
 
-	// The three parts of the lane the installation's own mail rides, each
-	// supplied by a different option (WithOperatorMail, WithPublicBaseURL,
-	// WithControllerMail) and joined by rewireConfirmationLane. Held rather
-	// than assembled on arrival because options compose in any order, so no one
-	// of them can assume the others have run.
+	// The three parts of the lane the installation's own mail rides. Each comes
+	// from its own option (WithOperatorMail, WithPublicBaseURL, WithControllerMail),
+	// and rewireConfirmationLane joins them in any order. siteLeadNotices is that
+	// lane, as the site-lead accept sees it.
 	controllerRelay comms.ControllerRelay
 	confirmLinkBase string
 	confirmRunner   *jobs.Runner
+	siteLeadNotices *siteLeadNoticeLane
 
 	// captureConfig is the deployment's capture suppression-list config
 	// (CAP-PARAM-5/6, ADR-0072), injected by WithCaptureConfig. The options

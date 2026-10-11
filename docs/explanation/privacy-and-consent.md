@@ -410,6 +410,43 @@ a decision only a human makes: a named user who holds `activity.update`, with a 
 To keep data too long is something a privacy authority may question later, while destroyed data
 cannot come back. So the undo is narrow, and the database refuses what the writer refuses.
 
+## A website lead is told before it is kept
+
+A site read can name somebody on a company's team page. Accepting them as a lead
+also sends them the Art. 14 privacy notice, before any other message. It is the
+same `privacy_notice` controller mail a contact gets, in the installation's mail
+language. Its link opens the same disclosure page.
+
+- **One transaction.** Spending the approval, the lead's capture and the
+  staged notice commit together. When the notice cannot be given, the capture is
+  undone and the record of why commits in its place
+  (`sendArticle14Notice` in `internal/compose/siteleadnotice.go`). A failure of
+  the transaction itself commits nothing, so deciding again retries it.
+- **A published address is required.** Somebody whose page printed no address is
+  never kept.
+- **An address another lead holds keeps nothing.** The website's copy is not
+  stored and no merge is proposed. The existing lead is left as it is.
+- **A failed notice deletes the lead.** No address, a refused send or a hard bounce
+  deletes the lead, its notice mail and its captured original. The contact's entry
+  in the site read is removed, and the accepted proposal is emptied
+  (`privacy.EraseUntoldLeadTx`).
+- **A lead waits for its notice.** It cannot be made a contact or claimed until
+  its notice has been sent for 72 hours without a bounce.
+- **The proof row names nobody.** `lead_privacy_notice` records the wording
+  version, the language, the delivery and the outcome. After a failure it is the
+  only record left, apart from rows under a statutory hold.
+
+A notice mail under a statutory hold stays until the hold ends. Ending a hold
+clears the delivery the same way an erasure does, which empties its recipients.
+
+The lane stays closed until a reviewed wording is named. `siteLeadNoticeReviewed`
+holds the `privacy_notice` version that passed legal review, and zero means none
+has. Staging, the check before a decision and the accept step all ask
+`siteLeadLaneRefusal`.
+`TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path
+stops calling the notice step. It also fails when the reviewed version is not the
+version the build sends.
+
 ## Where the code lives
 
 | | |
@@ -425,6 +462,7 @@ cannot come back. So the undo is narrow, and the database refuses what the write
 | Refused sends and who directed one | `internal/modules/consent/review.go`, `instruction.go`, `instructionconsume.go` (`communication_review`, `communication_instruction`) |
 | Withdrawal credentials | `internal/modules/consent/withdrawalcredential.go` (`withdrawal_credential`) |
 | Duties to tell | `internal/modules/consent/noticecase.go` (`privacy_notice_case`) |
+| A website lead's notice | `internal/modules/consent/leadnotice.go` (`lead_privacy_notice`), `internal/compose/siteleadnotice.go`, `internal/modules/privacy/erasure_untoldlead.go` |
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
 | The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
 | Cross-store agreement | `backend/gates/tableownership_test.go` |

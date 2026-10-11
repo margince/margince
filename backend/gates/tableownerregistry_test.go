@@ -253,6 +253,7 @@ var tableOwners = map[string]string{
 	// relies on them lives.
 	"contact_acquisition_evidence": "internal/modules/contacts",
 	"privacy_notice_case":          "internal/modules/consent",
+	"lead_privacy_notice":          "internal/modules/consent",
 	"consent_text_version":         "internal/modules/consent",
 	"communication_decision":       "internal/modules/consent",
 	"communication_basis":          "internal/modules/consent",

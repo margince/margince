@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -30,9 +31,21 @@ type commsBounceSink struct{ store *comms.Store }
 // edge is injected here like every other cross-module edge.
 type consentBounceObserver struct{ store *consent.Store }
 
+// A bounced website lead's notice deletes the lead instead of stopping the
+// address: the address is the lead's, and the lead is not kept untold. Staging
+// skips a website contact whose address is already on file.
 func (o consentBounceObserver) HardBounceTx(
 	ctx context.Context, tx pgx.Tx, fact comms.HardBounceFact,
 ) error {
+	notice, carried, err := consent.LeadNoticeBouncedTx(ctx, tx, fact.DeliveryID)
+	if err != nil {
+		return err
+	}
+	if carried {
+		return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{
+			LeadID: notice.LeadID, ApprovalID: notice.ApprovalID, DeliveryID: notice.DeliveryID,
+		})
+	}
 	return consent.RecordHardBounceTx(ctx, tx, consent.HardBounceFact{
 		Address:    fact.Address,
 		DeliveryID: fact.DeliveryID,

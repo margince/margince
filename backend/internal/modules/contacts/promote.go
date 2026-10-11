@@ -306,6 +306,9 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 	if lead.ArchivedAt != nil {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
+	if err := refuseWebsiteLeadNotYetTold(ctx, tx, id.UUID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	// Read through the same derivation the ladder matches on, not through a
 	// nil check: a full_name that is present and empty passes `!= nil` and
 	// names nobody, so such a lead promotes into a contact with no name at all.

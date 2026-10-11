@@ -84,6 +84,11 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		  -- always written against a contact or lead id, never a bare address.
 		  DELETE FROM communication_override
 		  WHERE lead_id IN (SELECT id FROM wiped)
+		), leadlinks AS (
+		  -- A website lead's privacy-notice link carries the address it was
+		  -- sent to, and an anonymize fires no cascade.
+		  DELETE FROM confirm_token
+		  WHERE lead_id IN (SELECT id FROM wiped)
 		), leadcredentials AS (
 		  DELETE FROM withdrawal_credential
 		  WHERE lead_id IN (SELECT id FROM wiped)

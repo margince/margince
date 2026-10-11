@@ -8,6 +8,45 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for InternalEventLeadPrivacyNoticeCreatedFailure.
+const (
+	LeadNoticeCollision InternalEventLeadPrivacyNoticeCreatedFailure = "collision"
+	LeadNoticeNoAddress InternalEventLeadPrivacyNoticeCreatedFailure = "no_address"
+	LeadNoticeRefused   InternalEventLeadPrivacyNoticeCreatedFailure = "refused"
+)
+
+// Valid indicates whether the value is a known member of the InternalEventLeadPrivacyNoticeCreatedFailure enum.
+func (e InternalEventLeadPrivacyNoticeCreatedFailure) Valid() bool {
+	switch e {
+	case LeadNoticeCollision:
+		return true
+	case LeadNoticeNoAddress:
+		return true
+	case LeadNoticeRefused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InternalEventLeadPrivacyNoticeCreatedState.
+const (
+	LeadNoticeFailed InternalEventLeadPrivacyNoticeCreatedState = "failed"
+	LeadNoticeQueued InternalEventLeadPrivacyNoticeCreatedState = "queued"
+)
+
+// Valid indicates whether the value is a known member of the InternalEventLeadPrivacyNoticeCreatedState enum.
+func (e InternalEventLeadPrivacyNoticeCreatedState) Valid() bool {
+	switch e {
+	case LeadNoticeFailed:
+		return true
+	case LeadNoticeQueued:
+		return true
+	default:
+		return false
+	}
+}
+
 // InternalEventAiBudgetUpdated The shared company allowance changed; workers reconsider deferred work.
 type InternalEventAiBudgetUpdated struct {
 	AfterRevision        string `json:"after_revision"`
@@ -107,6 +146,24 @@ type InternalEventDealSuggestionDismissed struct{}
 // InternalEventDealSuggestionSuperseded A suggestion stopped standing without anybody deciding it: its company gained an open deal or was archived, or a piece of its evidence was erased.
 type InternalEventDealSuggestionSuperseded struct{}
 
+// InternalEventLeadPrivacyNoticeCreated A website lead's Art. 14 notice was queued, or could not be given and nothing about the lead was kept. Entity-less and without the lead, which keeps it off the subscribable set: a named lead's unmet legal obligation is not a subscriber's to read. The proof row stays on the audit row the emit points at.
+type InternalEventLeadPrivacyNoticeCreated struct {
+	// Failure Why the notice could not be given, when it could not.
+	Failure *InternalEventLeadPrivacyNoticeCreatedFailure `json:"failure,omitempty"`
+
+	// State Whether the notice is on its way or could not be given.
+	State InternalEventLeadPrivacyNoticeCreatedState `json:"state"`
+}
+
+// InternalEventLeadPrivacyNoticeCreatedFailure Why the notice could not be given, when it could not.
+type InternalEventLeadPrivacyNoticeCreatedFailure string
+
+// InternalEventLeadPrivacyNoticeCreatedState Whether the notice is on its way or could not be given.
+type InternalEventLeadPrivacyNoticeCreatedState string
+
+// InternalEventLeadPrivacyNoticeFailed A website lead's queued notice bounced, so the lead is deleted in the same transaction. Entity-less for the reason the created event gives.
+type InternalEventLeadPrivacyNoticeFailed struct{}
+
 // InternalEventMeetingInvitationUpdated The durable calendar operation changed state; consumers reread permissioned details.
 type InternalEventMeetingInvitationUpdated struct {
 	Status  string `json:"status"`
@@ -170,6 +227,14 @@ func (InternalEventDealSuggestionDismissed) EntityType() string { return "" }
 func (InternalEventDealSuggestionSuperseded) EventType() string { return "deal_suggestion.superseded" }
 
 func (InternalEventDealSuggestionSuperseded) EntityType() string { return "" }
+
+func (InternalEventLeadPrivacyNoticeCreated) EventType() string { return "lead_privacy_notice.created" }
+
+func (InternalEventLeadPrivacyNoticeCreated) EntityType() string { return "" }
+
+func (InternalEventLeadPrivacyNoticeFailed) EventType() string { return "lead_privacy_notice.failed" }
+
+func (InternalEventLeadPrivacyNoticeFailed) EntityType() string { return "" }
 
 func (InternalEventMeetingInvitationUpdated) EventType() string { return "meeting_invitation.updated" }
 

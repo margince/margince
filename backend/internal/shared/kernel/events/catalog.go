@@ -333,6 +333,11 @@ var catalog = map[string]struct {
 	"tag_suggestion.accepted":   {contactStreamEntity, 1},
 	"tag_suggestion.dismissed":  {contactStreamEntity, 1},
 	"tag_suggestion.superseded": {contactStreamEntity, 1},
+
+	// A website lead's Art. 14 notice: queued, not given, or bounced. Internal
+	// only, and entity-less for the reason api/internal-events.yaml gives.
+	"lead_privacy_notice.created": {leadStreamEntity, 1},
+	"lead_privacy_notice.failed":  {leadStreamEntity, 1},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less
