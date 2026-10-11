@@ -107,8 +107,13 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	}
 	// The external identities this message answered to, through the helper the
 	// Art. 17 cascade also calls — see retireActivityIdentities for why they
-	// cannot be left behind.
-	if err := retireActivityIdentities(ctx, tx, []ids.UUID{id}); err != nil {
+	// cannot be left behind. The noise act keeps them as its tombstone and
+	// erases only the meeting proposals.
+	retire := retireActivityIdentities
+	if act.keepsMessageIdentity {
+		retire = eraseMeetingProposals
+	}
+	if err := retire(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
@@ -157,6 +162,10 @@ type erasureAct struct {
 	approvalWithdrawal string
 	collateralReason   string
 	cause              string
+	// keepsMessageIdentity keeps the Message-ID and reply links of the message.
+	// Only the noise act sets it: they are the tombstone that tells a later
+	// arrival of the same message it was already judged and destroyed.
+	keepsMessageIdentity bool
 }
 
 var (
@@ -179,8 +188,9 @@ var (
 	// aNoiseVerdictHid is the capture sweep destroying mail a noise verdict hid
 	// and nobody brought back within the undo window.
 	aNoiseVerdictHid = erasureAct{
-		approvalWithdrawal: NoiseSourceWithdrawal,
-		collateralReason:   "noise disposition: the content of the message was erased",
-		cause:              causeNoiseDisposition,
+		approvalWithdrawal:   NoiseSourceWithdrawal,
+		collateralReason:     "noise disposition: the content of the message was erased",
+		cause:                causeNoiseDisposition,
+		keepsMessageIdentity: true,
 	}
 )

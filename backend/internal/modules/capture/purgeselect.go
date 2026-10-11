@@ -140,7 +140,7 @@ func SelectPurgeSubjectTx(
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
 		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
-		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
+		       `+importersOfActivity+` AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
 		 WHERE `+match+`
