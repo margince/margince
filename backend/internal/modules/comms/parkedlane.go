@@ -30,13 +30,17 @@ import (
 // the lane is defined by the STAMP and not by this.
 const parkReasonColumn = "reason"
 
-// ParkedSend is one send of the caller's that was given up on: what it was
-// about, why it was abandoned in the dispatcher's own words, when that was
-// decided, and the contact the send's activity is filed under — zero when it is
-// filed under none, and the card then names the send by its subject line
-// alone.
+// ParkedSend is one send of the caller's that was given up on.
+//
+// It carries what the send was about, and why it was abandoned in the
+// dispatcher's own words. It also carries when that was decided, and the
+// contact its activity is filed under. That contact is zero when there is
+// none, and the card then carries no open verb.
 type ParkedSend struct {
-	ID        ids.UUID
+	ID ids.UUID
+	// Subject heads the card. It is the send's own subject line where there is
+	// one, and otherwise the channel and counterparty a message with no
+	// subject is known by. Never any of the message text.
 	Subject   string
 	Reason    string
 	ParkedAt  time.Time
@@ -54,14 +58,14 @@ type ParkedSend struct {
 var undeliveredLane = sendLane{
 	reasonColumn: parkReasonColumn,
 	atColumn:     "parked_at",
-	// MAIL only. This table also carries channel sends — Telegram and its
-	// kind — which have no subject line, so one on this lane would be a card
-	// with nothing on it but a reason. The bounce lane beside it is mail-only
-	// by accident of its own predicate (a channel send has no bounce report);
-	// here it has to be said. A channel send given up on still tells nobody,
-	// which is its own gap and needs a name for a message that has no subject
-	// — not a blank card here.
-	only: "o.channel_user_id IS NULL AND o.parked_at IS NOT NULL",
+	// Mail and channel sends both. A channel send has no subject line, so
+	// `laneSend.cardTitle` heads it by its channel and the counterparty. The
+	// record it was filed under is the card's own subject reference. No part
+	// of the message is shown, because the text is unsent.
+	//
+	// The bounce lane beside it stays mail-only, for its own reason. A channel
+	// send has no delivery report to come back hard.
+	only: "o.parked_at IS NOT NULL",
 }
 
 // ParkedSendsFor answers the calling contact's own abandoned sends since
@@ -74,7 +78,7 @@ func (s *Store) ParkedSendsFor(ctx context.Context, since time.Time, limit int) 
 	parked := make([]ParkedSend, 0, len(sends))
 	for _, send := range sends {
 		parked = append(parked, ParkedSend{
-			ID: send.ID, Subject: send.Subject, Reason: send.Reason,
+			ID: send.ID, Subject: send.cardTitle(), Reason: send.Reason,
 			ParkedAt: send.At, ContactID: send.ContactID,
 		})
 	}

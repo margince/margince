@@ -55940,6 +55940,14 @@ components:
             page where sending it again lives. A send filed under no contact still
             appears, named by its subject line, without the verb.
 
+            Channel sends appear too, and a channel message has no subject line. One
+            is titled by its channel and the counterparty that channel knows, for
+            example `Telegram to buyer`, and the record it was filed under is the
+            card's own `subject`. No part of the message text appears: it is unsent,
+            and this queue is read by colleagues. The counterparty is named as the
+            provider knows them rather than by the CRM record's own name, which a
+            reader of this lane may not be permitted to see.
+
             Withheld — named in `lanes_omitted` — for a caller with no human behind
             it. Absent — not empty — on an installation whose feed does not read
             delivery outcomes.
