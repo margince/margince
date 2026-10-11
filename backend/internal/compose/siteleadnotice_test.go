@@ -14,10 +14,9 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // noticeStep is the one name the accept path must call, directly. One exact
@@ -206,12 +205,19 @@ func TestEveryPathRefusesAnUnreviewedNotice(t *testing.T) {
 	}
 }
 
-// Consent sends the notice only to a lead under this source, privacy erases
-// only such a lead, and contacts holds only such a lead. A drift would leave one side refusing every lead.
-func TestTheWebsiteLeadSourceIsSpelledOnce(t *testing.T) {
-	if siteLeadSourceSystem != consent.WebsiteLeadSource || privacy.WebsiteLeadSource != consent.WebsiteLeadSource ||
-		contacts.WebsiteLeadSource != consent.WebsiteLeadSource {
-		t.Errorf("the website lead source is %q in compose, %q in consent, %q in privacy and %q in contacts",
-			siteLeadSourceSystem, consent.WebsiteLeadSource, privacy.WebsiteLeadSource, contacts.WebsiteLeadSource)
+// The website source decides which leads are told, held and deleted, so no
+// create wire may spell it, the declared importer's included.
+func TestNoRequestMaySpellTheWebsiteLeadSource(t *testing.T) {
+	source := provenance.WebsiteLeadSource
+	if siteLeadSourceSystem != source {
+		t.Fatalf("the accept captures under %q and the reserved name is %q", siteLeadSourceSystem, source)
+	}
+	for _, importer := range []bool{false, true} {
+		if err := provenance.RefuseWireAdmitting("manual", &source, importer); err == nil {
+			t.Errorf("a create wire (importer %v) may set source_system to the website source", importer)
+		}
+		if err := provenance.RefuseWireAdmitting(source, nil, importer); err == nil {
+			t.Errorf("a create wire (importer %v) may set source to the website source", importer)
+		}
 	}
 }

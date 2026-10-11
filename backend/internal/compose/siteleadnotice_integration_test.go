@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -29,7 +30,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // annasAddress is the address the team page published for Anna.
@@ -325,7 +328,7 @@ func TestTheNoticeHoldFailsClosed(t *testing.T) {
 	l := setupNoticeLane(t)
 	e := l.e
 	rep := e.As(e.Rep1, nil, integration.AdminPerms)
-	name, address, source, key := "Rowless", "rowless@acme.example", consent.WebsiteLeadSource, "rowless-key"
+	name, address, source, key := "Rowless", "rowless@acme.example", provenance.WebsiteLeadSource, "rowless-key"
 	rowless, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: &name, Email: &address, SourceSystem: &source, SourceID: &key, Source: source,
 	})
@@ -355,24 +358,46 @@ func TestTheNoticeHoldFailsClosed(t *testing.T) {
 	}
 }
 
-// The writers of the notice and of its erasure act on a website lead and its
-// site_lead proposal only.
+// The writers of the notice and of its erasure act on what the accept itself
+// recorded, never on a column a request can set.
 func TestTheNoticeWritersRefuseAnyOtherRecord(t *testing.T) {
 	l := setupNoticeLane(t)
 	e := l.e
 	other := l.otherLead(t)
-	teller, _ := l.notices.teller()
-	if _, err := teller.IssueLeadPrivacyNotice(l.ctx, consent.LeadNotice{LeadID: other}); err == nil {
-		t.Fatal("a lead another source captured was sent the website-lead notice")
-	}
-	err := databaseTx(t, e, func(ctx context.Context, tx pgx.Tx) error {
-		return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{LeadID: other})
+	// A lead under the website source that no accept captured: what a forged
+	// source_system would look like if a door ever let one through.
+	name, address, source, key := "Forged", "forged@acme.example", provenance.WebsiteLeadSource, "forged-key"
+	forged, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
+		FullName: &name, Email: &address, SourceSystem: &source, SourceID: &key, Source: source,
 	})
-	if err == nil {
-		t.Fatal("the untold-lead eraser deleted a lead another source captured")
+	if err != nil {
+		t.Fatalf("creating a lead under the website source by hand: %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1`, other); n != 1 {
-		t.Fatal("the lead another source captured is gone")
+	forgedID := ids.From[ids.LeadKind](ids.UUID(forged.Id))
+	// A site_lead proposal decided and redeemed by an effect that keeps nobody.
+	redeemed := l.stage(t, annaOnTheTeamPage)
+	redeemOnly := approvals.NewService(e.DB())
+	redeemOnly.WithEffect(siteLeadProposalKind, func(ctx context.Context, id ids.ApprovalID, _ json.RawMessage, hash string) error {
+		_, _, err := redeemOnly.Redeem(ctx, id, siteLeadProposalKind, hash)
+		return err
+	})
+	if _, err := redeemOnly.Decide(l.ctx, redeemed, true, nil); err != nil {
+		t.Fatalf("redeeming a site_lead proposal: %v", err)
+	}
+	teller, _ := l.notices.teller()
+	for what, lead := range map[string]ids.LeadID{"another source's lead": other, "a forged website lead": forgedID} {
+		if _, err := teller.IssueLeadPrivacyNotice(l.ctx, consent.LeadNotice{LeadID: lead, ApprovalID: redeemed}); err == nil {
+			t.Errorf("%s was sent the notice under a proposal that did not capture it", what)
+		}
+		err := databaseTx(t, e, func(ctx context.Context, tx pgx.Tx) error {
+			return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{LeadID: lead, ApprovalID: redeemed})
+		})
+		if err == nil {
+			t.Errorf("the untold-lead eraser accepted %s", what)
+		}
+		if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1`, lead); n != 1 {
+			t.Errorf("%s is gone", what)
+		}
 	}
 	pending := l.stage(t, annaOnTheTeamPage)
 	err = databaseTx(t, e, func(ctx context.Context, tx pgx.Tx) error {
@@ -380,6 +405,33 @@ func TestTheNoticeWritersRefuseAnyOtherRecord(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("a failure was recorded against a proposal nobody redeemed")
+	}
+}
+
+// A request cannot move a website lead out of the hold, and cannot create a
+// lead under the website source in the first place.
+func TestARequestCannotDodgeTheNoticeHold(t *testing.T) {
+	l := setupNoticeLane(t)
+	if err := l.accept(l.stage(t, annaOnTheTeamPage)); err != nil {
+		t.Fatalf("accepting the website lead: %v", err)
+	}
+	e := l.e
+	leadID := l.websiteLead(t)
+	admin := e.Admin()
+	relabel := "manual"
+	_, _ = e.Contacts.UpdateLead(admin, leadID, contacts.UpdateLeadInput{Source: &relabel})
+	if _, err := e.Contacts.ClaimRecord(e.As(e.Rep1, nil, integration.AdminPerms), "lead", leadID.UUID, nil); !errors.Is(err, contacts.ErrWebsiteLeadNotYetTold) {
+		t.Fatalf("claiming after relabelling the source = %v, want the pending refusal", err)
+	}
+	_, err := contacts.NewProvider(e.DB()).Create(admin, datasource.CreateInput{
+		EntityType: datasource.EntityLead, Source: "manual",
+		Fields: map[string]any{
+			"full_name": "From a request", "email": "request@acme.example",
+			"source_system": provenance.WebsiteLeadSource, "source_id": "from-a-request",
+		},
+	})
+	if err == nil {
+		t.Fatal("a request created a lead under the website source")
 	}
 }
 

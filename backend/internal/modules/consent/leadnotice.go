@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // Why a website lead's notice was not given. The table's CHECK holds the same
@@ -46,11 +47,8 @@ var ErrNoNoticeLane = fmt.Errorf("%w: this installation cannot send its own mail
 	"so a website lead cannot be told it is held; configure the relay, public URL and key vault",
 	apperrors.ErrConflict)
 
-// WebsiteLeadSource is the source a lead read off a company's website is
-// captured under. Only such a lead is sent this notice.
-const WebsiteLeadSource = "siteread"
-
-// errNotAWebsiteLead refuses a notice to a lead some other source captured.
+// errNotAWebsiteLead refuses a notice to any lead but the one the accepted
+// website-lead proposal captured.
 var errNotAWebsiteLead = fmt.Errorf("%w: only a lead read off a company's website is sent this notice",
 	apperrors.ErrConflict)
 
@@ -90,7 +88,7 @@ func (s *Store) IssueLeadPrivacyNotice(ctx context.Context, in LeadNotice) (bool
 	}
 	var told bool
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		address, already, err := leadNoticeAddressTx(ctx, tx, in.LeadID)
+		address, already, err := leadNoticeAddressTx(ctx, tx, in)
 		if err != nil || already {
 			return err
 		}
@@ -119,7 +117,11 @@ func (s *Store) IssueLeadPrivacyNotice(ctx context.Context, in LeadNotice) (bool
 
 // leadNoticeAddressTx locks the live lead the notice is for and reads the
 // address it goes to, and whether the lead was already sent one.
-func leadNoticeAddressTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (string, bool, error) {
+//
+// The lead must be the one this redeemed site_lead proposal captured: its
+// source key is the proposal's natural key. A request can write neither.
+func leadNoticeAddressTx(ctx context.Context, tx pgx.Tx, in LeadNotice) (string, bool, error) {
+	leadID := in.LeadID
 	if err := auth.Require(ctx, entityLead, principal.ActionRead); err != nil {
 		return "", false, err
 	}
@@ -133,8 +135,12 @@ func leadNoticeAddressTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (str
 	var already, fromAWebsite bool
 	if err := tx.QueryRow(ctx, `
 		SELECT l.email, EXISTS (SELECT 1 FROM lead_privacy_notice n WHERE n.lead_id = l.id),
-		       l.source_system IS NOT DISTINCT FROM $2
-		  FROM lead l WHERE l.id = $1`, leadID, WebsiteLeadSource).Scan(&address, &already, &fromAWebsite); err != nil {
+		       l.source_system IS NOT DISTINCT FROM $2 AND EXISTS (
+		           SELECT 1 FROM approval a
+		            WHERE a.id = $3 AND a.kind = 'site_lead' AND a.consumed_at IS NOT NULL
+		              AND a.proposed_change->>'natural_key' = l.source_id)
+		  FROM lead l WHERE l.id = $1`, leadID, provenance.WebsiteLeadSource, in.ApprovalID).
+		Scan(&address, &already, &fromAWebsite); err != nil {
 		return "", false, fmt.Errorf("consent: reading where the lead's notice goes: %w", err)
 	}
 	if !fromAWebsite {

@@ -433,6 +433,10 @@ language. Its link opens the same disclosure page.
 - **A lead waits for its notice.** It cannot be made a contact, claimed, given
   an owner, routed or merged until its notice has been sent for 72 hours without
   a bounce. A website lead with no notice record is held too.
+- **Only the accept can make a website lead.** The website source
+  (`provenance.WebsiteLeadSource`) is reserved: no create request or import may
+  set it, and nothing changes it later. The notice and the erasure check the
+  proposal and the proof row the accept wrote, not the lead's own columns.
 - **The proof row names nobody.** `lead_privacy_notice` records the wording
   version, the language, the delivery and the outcome. After a failure it is the
   only record left, apart from rows under a statutory hold.

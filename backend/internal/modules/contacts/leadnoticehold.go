@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // websiteLeadBounceWindow is how long after its notice was sent a website lead
@@ -48,6 +49,9 @@ func refuseWebsiteLeadNotYetTold(ctx context.Context, tx pgx.Tx, leadIDs ...ids.
 // websiteLeadNoticePending reports whether any of these leads is a website
 // lead not yet known to be told.
 //
+// A website lead is one the accept captured under the reserved website source,
+// or one a notice row names; no request can write either.
+//
 // It fails closed. A website lead counts as told only when its queued notice
 // was sent, carries no bounce, and has been out for the whole bounce window.
 // No row, a failed row, an unsent or a bounced mail all hold the lead.
@@ -59,22 +63,17 @@ func websiteLeadNoticePending(ctx context.Context, tx pgx.Tx, leadIDs ...ids.UUI
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		    SELECT 1 FROM lead l
-		     WHERE l.id = ANY($1) AND l.source_system = $3
+		     WHERE l.id = ANY($1)
+		       AND (l.source_system = $3
+		            OR EXISTS (SELECT 1 FROM lead_privacy_notice w WHERE w.lead_id = l.id))
 		       AND NOT EXISTS (
 		           SELECT 1 FROM lead_privacy_notice n
 		             JOIN comms_outbound o ON o.id = n.delivery_id
 		            WHERE n.lead_id = l.id AND n.state = 'queued'
 		              AND o.status = 'sent' AND o.bounced_at IS NULL
 		              AND o.sent_at <= now() - $2::interval))`,
-		leadIDs, websiteLeadBounceWindow, WebsiteLeadSource).Scan(&pending); err != nil {
+		leadIDs, websiteLeadBounceWindow, provenance.WebsiteLeadSource).Scan(&pending); err != nil {
 		return false, fmt.Errorf("contacts: reading whether the lead's privacy notice went out: %w", err)
 	}
 	return pending, nil
 }
-
-// WebsiteLeadSource mirrors consent.WebsiteLeadSource, which this module may
-// not import.
-//
-// Held by: TestTheWebsiteLeadSourceIsSpelledOnce
-// (backend/internal/compose/siteleadnotice_test.go)
-const WebsiteLeadSource = "siteread"
