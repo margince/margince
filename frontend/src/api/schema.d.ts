@@ -39061,6 +39061,8 @@ export interface components {
             /** @description The unit's own version, not a rule set's. */
             unit_version: string;
             description: string;
+            /** @description The commercial-correspondence floor selecting this pack puts in force. Absent when it declares none. */
+            correspondence_floor?: components["schemas"]["JurisdictionRetentionClass"];
         };
         JurisdictionRetentionClass: {
             /** @description The class, e.g. `commercial_correspondence`. */

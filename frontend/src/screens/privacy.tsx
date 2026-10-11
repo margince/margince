@@ -42,11 +42,18 @@ import {
 import { useLinkedCase } from "./privacy.caselink";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
+  type DeadlineDraft,
+  DsrDeadlineFields,
+  deadlineBody,
+  EMPTY_DEADLINE,
+  earlierDueTooLate,
+  useRequestDeadline,
+} from "./privacy.deadline";
+import {
   DSR_KIND_LABEL,
   DSR_STATUS_FACETS,
   DSR_STATUS_LABEL,
   type DsrStatusFacet,
-  endOfDayInZone,
   isIllegalTransition,
   isLegalHold,
 } from "./privacy.logic";
@@ -63,6 +70,7 @@ type CreateDataSubjectRequest =
 type UpdateDataSubjectRequest =
   components["schemas"]["UpdateDataSubjectRequest"];
 type DsrKind = CreateDataSubjectRequest["kind"];
+type RequestDeadline = components["schemas"]["RequestDeadline"];
 
 const DSR_KINDS: readonly DsrKind[] = ["access", "rectify", "erasure"];
 
@@ -86,14 +94,14 @@ type DsrDraft = Readonly<{
   kind: DsrKind;
   subjectRef: string;
   contact: RecordPickerCandidate | null;
-  dueAt: string;
+  deadline: DeadlineDraft;
 }>;
 
 const EMPTY_DSR: DsrDraft = {
   kind: "access",
   subjectRef: "",
   contact: null,
-  dueAt: "",
+  deadline: EMPTY_DEADLINE,
 };
 
 // Kind flips the subject field's shape: an erasure locks onto a picked contact,
@@ -107,12 +115,20 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   // `new Date(day)` reads the day as UTC midnight and rolls it back west of UTC.
   const tz = viewerZone();
 
+  const deadline = useRequestDeadline(draft.kind, draft.deadline, tz);
+
   const create = useMutation({
-    mutationFn: async (request: DsrDraft) => {
+    mutationFn: async ({
+      request,
+      computed,
+    }: {
+      request: DsrDraft;
+      computed: RequestDeadline;
+    }) => {
       const body: CreateDataSubjectRequest = {
         kind: request.kind,
         subject_ref: request.subjectRef.trim(),
-        due_at: endOfDayInZone(request.dueAt, tz),
+        ...deadlineBody(request.deadline, computed, tz),
       };
       return unwrap(
         await api.POST("/data-subject-requests", {
@@ -137,7 +153,11 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const dueRefused = problemFieldErrorsOf(create.error).some(
     (problem) => problem.field === "due_at",
   );
-  const ready = draft.subjectRef.trim() !== "" && draft.dueAt !== "";
+  const computed = deadline.data;
+  const ready =
+    draft.subjectRef.trim() !== "" &&
+    computed !== undefined &&
+    !earlierDueTooLate(draft.deadline, computed, tz);
   return (
     <>
       <form
@@ -145,7 +165,8 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (ready && !create.isPending) create.mutate(draft);
+          if (ready && !create.isPending)
+            create.mutate({ request: draft, computed });
         }}
       >
         <Field label={t("privacy.kind")}>
@@ -198,20 +219,15 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
           </Field>
         )}
 
-        <Field
-          label={t("privacy.dueAt")}
-          required
-          error={dueRefused ? t("privacy.dueRequired") : undefined}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              type="date"
-              value={draft.dueAt}
-              onChange={(event) => edit({ dueAt: event.target.value })}
-            />
-          )}
-        </Field>
+        <DsrDeadlineFields
+          draft={draft.deadline}
+          query={deadline}
+          refused={dueRefused}
+          zone={tz}
+          onChange={(next) =>
+            edit({ deadline: { ...draft.deadline, ...next } })
+          }
+        />
 
         {!dueRefused && <ErrorLine error={create.error} />}
       </form>

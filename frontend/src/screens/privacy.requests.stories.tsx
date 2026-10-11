@@ -30,6 +30,7 @@ const ASSIGNED: DataSubjectRequest = {
   status: "in_progress",
   assignee_id: "u-1",
   due_at: "2026-08-01T00:00:00Z",
+  due_overridden: false,
   created_at: "2026-07-01T00:00:00Z",
 };
 
@@ -41,6 +42,7 @@ const EXTERNAL: DataSubjectRequest = {
   subject_kind: null,
   status: "open",
   due_at: "2099-10-01T00:00:00Z",
+  due_overridden: false,
   created_at: "2026-08-01T00:00:00Z",
 };
 
@@ -53,6 +55,7 @@ const CLOSED: DataSubjectRequest = {
   status: "fulfilled",
   resolution: "Corrected the postal address on 12 August",
   due_at: "2026-08-20T00:00:00Z",
+  due_overridden: false,
   created_at: "2026-07-20T00:00:00Z",
 };
 

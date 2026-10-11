@@ -30,6 +30,7 @@ const NAMED: DataSubjectRequest = {
   subject_kind: "contact",
   status: "in_progress",
   due_at: "2026-08-01T00:00:00Z",
+  due_overridden: false,
   created_at: "2026-07-01T00:00:00Z",
 };
 
@@ -98,6 +99,9 @@ function stub(create?: () => Response, patched: Patched[] = []) {
             },
           }),
         );
+      }
+      if (url.pathname.endsWith("/data-subject-requests/deadline")) {
+        return json({ due_at: "2026-10-30T12:00:00Z", rule: "gdpr" });
       }
       if (url.pathname.endsWith("/data-subject-requests")) {
         if (method === "POST" && create) {
@@ -222,14 +226,17 @@ describe("the subject-request table", () => {
       within(dialog).getByLabelText(en["privacy.subjectRef"]),
       "anna@acme.test",
     );
-    await user.type(within(dialog).getByLabelText(/^Due/), "2026-09-30");
+    await within(dialog).findByText(en["jurisdiction.rule.gdpr"], {
+      exact: false,
+    });
+    const due = within(dialog).getByLabelText(en["privacy.earlierDue"]);
+    await user.type(due, "2026-09-30");
     await user.click(
       within(dialog).getByRole("button", { name: en["privacy.openRequest"] }),
     );
 
-    const due = within(dialog).getByLabelText(/^Due/);
     expect(
-      await within(dialog).findByText(en["privacy.dueRequired"]),
+      await within(dialog).findByText(/choose a date before/i),
     ).toBeInTheDocument();
     expect(due).toHaveAttribute("aria-invalid", "true");
   });

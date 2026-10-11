@@ -191,6 +191,12 @@ func floorFor(code jurisdiction.Code, ref time.Time) (jurisdiction.RetentionClas
 	return correspondenceClassOf(pack), nil
 }
 
+// CorrespondenceFloorOf is the floor selecting code would put in force, for a
+// screen that says what a change would do before it is made.
+func CorrespondenceFloorOf(code jurisdiction.Code) (jurisdiction.RetentionClass, error) {
+	return floorFor(code, time.Now())
+}
+
 // correspondenceClassOf is a pack's commercial-correspondence class, or the
 // zero class when it declares none.
 func correspondenceClassOf(pack jurisdiction.Pack) jurisdiction.RetentionClass {

@@ -158,6 +158,14 @@ func jurisdictionUnits() map[jurisdiction.Code]crmcontracts.JurisdictionUnit {
 			units[p.Code()] = unitContract(p.Code(), e)
 		}
 	}
+	for code, unit := range units {
+		if floor, err := privacy.CorrespondenceFloorOf(code); err == nil && floor.Name != "" {
+			unit.CorrespondenceFloor = &crmcontracts.JurisdictionRetentionClass{
+				Name: string(floor.Name), Keep: floor.Keep.String(), FromYearEnd: floor.Anchor == jurisdiction.AnchorCalendarYearEnd,
+			}
+			units[code] = unit
+		}
+	}
 	return units
 }
 

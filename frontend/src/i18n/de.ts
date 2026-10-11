@@ -6250,8 +6250,6 @@ export const de = {
   "privacy.kindAccess": "Auskunft",
   "privacy.kindRectify": "Berichtigung",
   "privacy.kindErasure": "Löschung",
-  "privacy.dueRequired":
-    "Eine Anfrage braucht ihr Fälligkeitsdatum. Lege eines fest, um sie anzulegen.",
   "privacy.purpose": "Zweck",
   "privacy.purposeDoiColumn": "Opt-in",
   "privacy.purposeDoiBadge": "Double-Opt-in",
@@ -8499,6 +8497,101 @@ export const de = {
   "settings.tab.notifications": "Meldungen",
   "settings.tab.connections": "Verbindungen",
   "settings.tab.extensions": "Erweiterungen",
+  "settings.tab.jurisdiction": "Rechtsraum",
+  "settings.page.jurisdiction.sub":
+    "Welches Landesrecht diese Installation befolgt, was das ändert und welche Dokumente dazugehören.",
+  "jurisdiction.card.title": "Rechtsraum",
+  "jurisdiction.selected.label": "Gewählter Rechtsraum",
+  "jurisdiction.selected.none": "Nicht festgelegt",
+  "jurisdiction.selected.noneDescription":
+    "Kein Rechtsraum festgelegt. Anfragen erhalten die DSGVO-Frist von einem Kalendermonat, und E-Mails behalten die längste Aufbewahrungsfrist der Pakete in diesem Build.",
+  "jurisdiction.unit.label": "Geliefert von",
+  "jurisdiction.unit.value": "{name}, Version {version}",
+  "jurisdiction.change.label": "Rechtsraum ändern",
+  "jurisdiction.change.description":
+    "Selten nötig. Die Änderung gilt sofort und steht danach im Audit-Log.",
+  "jurisdiction.change.placeholder": "Rechtsraum wählen",
+  "jurisdiction.option.none": "Kein Rechtsraum-Paket (DSGVO-Grundlage)",
+  "jurisdiction.change.action": "Ändern",
+  "jurisdiction.confirm.title": "Rechtsraum auf {name} ändern?",
+  "jurisdiction.confirm.confirm": "Rechtsraum ändern",
+  "jurisdiction.confirm.floor": "Aufbewahrungsfrist: Aus {from} wird {to}.",
+  "jurisdiction.confirm.floorCarried":
+    "E-Mails, die vor heute eingegangen sind, behalten {from}, weil die neue Frist kürzer ist.",
+  "jurisdiction.confirm.deadlines":
+    "Fristen für Anfragen folgen dem neuen Rechtsraum. Eine Anfrageart ohne eigene Frist behält den DSGVO-Monat.",
+  "jurisdiction.confirm.messaging":
+    "Ausgehende Nachrichten folgen den Nachrichtenregeln des neuen Rechtsraums.",
+  "jurisdiction.floor.none": "keine Frist",
+  "jurisdiction.floor.value": "{class}, {period}",
+  "jurisdiction.floor.fromYearEnd": "{period} ab Ende des Kalenderjahres",
+  "jurisdiction.effects.title": "Was das ändert",
+  "jurisdiction.effects.floor": "Aufbewahrungsfrist für Korrespondenz",
+  "jurisdiction.effects.floorStrictest":
+    "Die längste Frist der Pakete in diesem Build, bis ein Rechtsraum festgelegt ist.",
+  "jurisdiction.effects.floorPack": "Aus dem Paket für {name}.",
+  "jurisdiction.effects.floorNone.title": "Keine Aufbewahrungsfrist",
+  "jurisdiction.effects.floorNone.body":
+    "Das Paket für {name} legt keine Aufbewahrungsfrist fest. Erfasste E-Mails folgen nur deinen Aufbewahrungsregeln.",
+  "jurisdiction.effects.carried": "Übernommene Frist",
+  "jurisdiction.effects.carriedValue":
+    "{floor}, für E-Mails von vor dem {before}, bis {until}",
+  "jurisdiction.effects.deadline": "Frist: {kind}",
+  "jurisdiction.effects.messaging": "Nachrichtenregeln",
+  "jurisdiction.effects.messagingValue": "Regelwerk Version {version}",
+  "jurisdiction.effects.messagingNone":
+    "Keine. Jede Werbenachricht braucht eine Einwilligung.",
+  "jurisdiction.effects.class": "Aufbewahrungsklasse",
+  "jurisdiction.deadline.fromReceipt": "{period} ab Eingang",
+  "jurisdiction.rule.gdpr": "DSGVO, ein Kalendermonat",
+  "jurisdiction.rule.pack": "Regelwerk {rule}",
+  "jurisdiction.documents.title": "Dokumente",
+  "jurisdiction.documents.intro":
+    "Die Dokumente aus dem Paket dieses Rechtsraums, zum Lesen, Herunterladen und Prüfen.",
+  "jurisdiction.documents.empty":
+    "Das Paket dieses Rechtsraums enthält keine Dokumente.",
+  "jurisdiction.documents.emptyUnset":
+    "Kein Rechtsraum festgelegt, daher gibt es keine Dokumente.",
+  "jurisdiction.documents.read": "Lesen",
+  "jurisdiction.documents.close": "Schließen",
+  "jurisdiction.documents.readFailed":
+    "Das Dokument konnte nicht geladen werden.",
+  "jurisdiction.documents.note": "Für {audience} · {kind} · {language}",
+  "jurisdiction.audience.employer": "den Arbeitgeber",
+  "jurisdiction.audience.operator": "den Betreiber",
+  "jurisdiction.audience.employee": "Beschäftigte",
+  "jurisdiction.documentKind.template": "Vorlage",
+  "jurisdiction.documentKind.readingCopy": "Lesefassung",
+  "jurisdiction.documentKind.record": "Verzeichnis",
+  "jurisdiction.class.commercialCorrespondence": "Geschäftskorrespondenz",
+  "jurisdiction.class.accountingRecords": "Buchhaltungsunterlagen",
+  "jurisdiction.years_one": "{count} Jahr",
+  "jurisdiction.years_other": "{count} Jahre",
+  "jurisdiction.months_one": "{count} Monat",
+  "jurisdiction.months_other": "{count} Monate",
+  "jurisdiction.days_one": "{count} Tag",
+  "jurisdiction.days_other": "{count} Tage",
+  "jurisdiction.hours_one": "{count} Stunde",
+  "jurisdiction.hours_other": "{count} Stunden",
+  "setup.jurisdiction": "Rechtsraum",
+  "setup.jurisdictionHint":
+    "Legt Aufbewahrungsfrist, Nachrichtenregeln und Fristen für Anfragen fest. Du kannst ihn später in den Einstellungen ändern.",
+  "setup.jurisdictionPlaceholder": "Rechtsraum wählen",
+  "privacy.deadline.computed": "Frist",
+  "privacy.deadline.computedHint":
+    "Festgelegt durch {rule}, ab Eingang gerechnet.",
+  "privacy.deadline.loading": "Frist wird ermittelt",
+  "privacy.receivedAt": "Eingegangen am",
+  "privacy.receivedAtHint":
+    "Leer lassen für heute. Eine spät erfasste Anfrage behält die Frist ihres tatsächlichen Eingangs.",
+  "privacy.earlierDue": "Frühere Frist",
+  "privacy.earlierDueHint":
+    "Optional. Nur ein Datum vor der Frist oben wird angenommen.",
+  "privacy.earlierDueTooLate": "Wähle ein Datum vor dem {date}.",
+  "privacy.dueRule": "Fristregel",
+  "privacy.dueRuleUnknown":
+    "Von Hand eingetragen, bevor Fristen berechnet wurden",
+  "privacy.dueOverridden": "Früher gesetzt als die Regel vorgibt",
   "settings.tab.integrations": "Anbindungen",
   "settings.tab.capture": "Erfassungsregeln",
   "settings.tab.knowledge": "Wissen",

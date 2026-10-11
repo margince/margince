@@ -53067,6 +53067,9 @@ components:
         unit_name: { type: string, description: 'The extension unit that ships it.' }
         unit_version: { type: string, description: 'The unit''s own version, not a rule set''s.' }
         description: { type: string }
+        correspondence_floor:
+          description: 'The commercial-correspondence floor selecting this pack puts in force. Absent when it declares none.'
+          $ref: '#/components/schemas/JurisdictionRetentionClass'
 
     JurisdictionRetentionClass:
       type: object

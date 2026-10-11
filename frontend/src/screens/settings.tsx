@@ -78,6 +78,7 @@ import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
+import { JurisdictionCard } from "./settings.jurisdiction";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
@@ -312,21 +313,19 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     // ---- governance ----
     case "privacy":
       return <PrivacyLanes />;
+    case "jurisdiction":
+      return <JurisdictionCard />;
     case "audit":
-      // Split from the privacy page it used to end. The trail proves the
-      // surfaces there were honoured, but it answers to `audit_log` where they
-      // answer to the consent registry and the retention policy — so a reader
-      // could hold the audit grant and be refused the page carrying it.
+      // Its own page: it answers to `audit_log`, where the privacy page answers
+      // to consent and retention, and one reader can hold one without the other.
       return <AuditLogCard />;
     case "system-health":
       return <SystemHealthPage />;
     case "extensions":
       return <ExtensionAccessCard />;
     case "reset":
-      // Its own page, and the reason is the ordering the old Maintenance page
-      // could not express: a reindex, a queue reading and "empty the
-      // installation" were three verbs on one screen, ascending in consequence
-      // and separated by nothing.
+      // Its own page: a reindex, a queue reading and "empty the installation"
+      // were three verbs on one screen, separated by nothing.
       return <ResetDataCard />;
   }
 }

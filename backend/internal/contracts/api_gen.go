@@ -36894,8 +36894,9 @@ type JurisdictionRetentionClass struct {
 // JurisdictionUnit defines model for JurisdictionUnit.
 type JurisdictionUnit struct {
 	// Code The pack's ISO 3166-1 alpha-2 code.
-	Code        string `json:"code"`
-	Description string `json:"description"`
+	Code                string                      `json:"code"`
+	CorrespondenceFloor *JurisdictionRetentionClass `json:"correspondence_floor,omitempty"`
+	Description         string                      `json:"description"`
 
 	// UnitName The extension unit that ships it.
 	UnitName string `json:"unit_name"`

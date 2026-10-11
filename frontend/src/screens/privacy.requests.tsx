@@ -15,6 +15,7 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select, type SelectOption } from "../design-system/select";
 import { formatDate } from "../format/format";
+import { ruleText } from "../format/jurisdiction";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -357,6 +358,16 @@ function DsrFacts({
           )}
         </span>
       ),
+    },
+    {
+      key: "due-rule",
+      term: t("privacy.dueRule"),
+      // Null on a request filed before deadlines were computed, whose date an
+      // officer typed by hand.
+      value: dsr.due_rule
+        ? ruleText(dsr.due_rule, t)
+        : t("privacy.dueRuleUnknown"),
+      note: dsr.due_overridden ? t("privacy.dueOverridden") : undefined,
     },
   ];
   // The picker names the holder for a seat that may work the request.

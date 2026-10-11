@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { fetchSetupStatus, SetupClaimScreen } from "./setupclaim";
 
@@ -14,7 +15,10 @@ import { fetchSetupStatus, SetupClaimScreen } from "./setupclaim";
 function renderClaim(onClaimed = vi.fn()) {
   render(
     <LocaleProvider initial="en">
-      <SetupClaimScreen onClaimed={onClaimed} />
+      <SetupClaimScreen
+        onClaimed={onClaimed}
+        status={{ claimable: true, jurisdictions: ["de", "vn"] }}
+      />
     </LocaleProvider>,
   );
   return onClaimed;
@@ -26,6 +30,7 @@ async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/your name/i), "Ops");
   await user.type(screen.getByLabelText(/your email/i), "ops@acme.test");
   await user.type(screen.getByLabelText(/^Password/), "a bootstrap password!");
+  await pickOption(user, screen.getByLabelText(/jurisdiction/i), "Germany");
 }
 
 afterEach(() => {
@@ -80,6 +85,36 @@ describe("SetupClaimScreen", () => {
     // The field name the server reads. A camelCase key here would decode to an
     // empty password, which is the failure this whole path exists to prevent.
     expect(body.admin_password).toBe("a bootstrap password!");
+    expect(body.country).toBe("de");
+  });
+
+  // No silent default: the root of an installation is not created under a law
+  // nobody chose, and choosing no pack is sent as the empty code.
+  it("waits for a jurisdiction, and sends no pack as an empty code", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ workspace_id: "ws-1" }), { status: 201 }),
+    );
+    const onClaimed = renderClaim();
+    await user.type(screen.getByLabelText(/setup token/i), "a-token");
+    await user.type(screen.getByLabelText(/company name/i), "Acme");
+    await user.type(screen.getByLabelText(/your name/i), "Ops");
+    await user.type(screen.getByLabelText(/your email/i), "ops@acme.test");
+    await user.type(
+      screen.getByLabelText(/^Password/),
+      "a bootstrap password!",
+    );
+    const submit = screen.getByRole("button", { name: /create company/i });
+    expect(submit).toBeDisabled();
+    await pickOption(
+      user,
+      screen.getByLabelText(/jurisdiction/i),
+      "No jurisdiction pack (GDPR baseline)",
+    );
+    await user.click(submit);
+    await waitFor(() => expect(onClaimed).toHaveBeenCalledOnce());
+    const [, init] = vi.mocked(globalThis.fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body)).country).toBe("");
   });
 
   it("tells a wrong token apart from an installation someone else claimed", async () => {
@@ -141,7 +176,10 @@ describe("fetchSetupStatus", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ claimable: true }), { status: 200 }),
     );
-    await expect(fetchSetupStatus()).resolves.toEqual({ claimable: true });
+    await expect(fetchSetupStatus()).resolves.toEqual({
+      claimable: true,
+      jurisdictions: [],
+    });
   });
 
   it("answers not-claimable when the probe fails, rather than throwing", async () => {
@@ -149,18 +187,42 @@ describe("fetchSetupStatus", () => {
     // unavailable. A probe that cannot answer must leave the true message
     // standing, not replace it with a claim screen or an error page.
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
-    await expect(fetchSetupStatus()).resolves.toEqual({ claimable: false });
+    await expect(fetchSetupStatus()).resolves.toEqual({
+      claimable: false,
+      jurisdictions: [],
+    });
 
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("nope", { status: 500 }),
     );
-    await expect(fetchSetupStatus()).resolves.toEqual({ claimable: false });
+    await expect(fetchSetupStatus()).resolves.toEqual({
+      claimable: false,
+      jurisdictions: [],
+    });
   });
 
   it("treats a body that is not the expected shape as not claimable", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ claimable: "yes" }), { status: 200 }),
     );
-    await expect(fetchSetupStatus()).resolves.toEqual({ claimable: false });
+    await expect(fetchSetupStatus()).resolves.toEqual({
+      claimable: false,
+      jurisdictions: [],
+    });
+  });
+});
+
+describe("fetchSetupStatus jurisdictions", () => {
+  it("reads the packs a claimable installation offers, and drops anything that is not a code", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ claimable: true, jurisdictions: ["de", 7, "vn"] }),
+        { status: 200 },
+      ),
+    );
+    await expect(fetchSetupStatus()).resolves.toEqual({
+      claimable: true,
+      jurisdictions: ["de", "vn"],
+    });
   });
 });

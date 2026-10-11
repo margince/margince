@@ -96,6 +96,8 @@ function stubRoutes(
       // execution starts) so every PrivacyInboxCard test gets seed rows
       // without repeating the override.
       if (key === "GET /data-subject-requests") return jsonResponse(DSRS);
+      if (key === "GET /data-subject-requests/deadline")
+        return jsonResponse(COMPUTED_DEADLINE);
       if (key === "GET /users")
         return jsonResponse({
           data: [],
@@ -293,6 +295,7 @@ const DSRS = {
       subject_ref: "8f3a-contact-uuid",
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
+      due_overridden: false,
       created_at: "2026-07-01T00:00:00Z",
     },
     {
@@ -302,6 +305,7 @@ const DSRS = {
       status: "fulfilled",
       resolution: "sent by post",
       due_at: "2026-07-12T00:00:00Z",
+      due_overridden: false,
       created_at: "2026-06-01T00:00:00Z",
     },
   ],
@@ -774,6 +778,9 @@ describe("PrivacyInboxCard", () => {
   });
 });
 
+// What the server computes for a request filed now: the GDPR month.
+const COMPUTED_DEADLINE = { due_at: "2026-08-15T14:00:00Z", rule: "gdpr" };
+
 describe("opening a DSR (G-2)", () => {
   // An erasure fulfils by resolving subject_ref to a contact id. Free text
   // there means the server refuses (BE-2) — so the form must not offer it.
@@ -810,22 +817,6 @@ describe("opening a DSR (G-2)", () => {
     expect(screen.getByText(/fulfilled manually/i)).toBeInTheDocument();
   });
 
-  it("requires a due date — the statutory clock is not optional", async () => {
-    stubRoutes();
-    render(<PrivacyInboxCard />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /new request/i }),
-    );
-    await choose(screen.getByLabelText(/kind/i), "Access");
-    await userEvent.type(
-      screen.getByLabelText(/subject reference/i),
-      "anna@acme.test",
-    );
-    expect(
-      screen.getByRole("button", { name: /open request/i }),
-    ).toBeDisabled();
-  });
-
   // The load-bearing property (BE-2): the erasure fulfiller resolves
   // subject_ref to a contact id, so an erasure request must be incapable of
   // naming a subject the server cannot erase. The form only enforces this by
@@ -857,6 +848,7 @@ describe("opening a DSR (G-2)", () => {
             subject_ref: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
             status: "open",
             due_at: "2026-08-02T03:59:59.999Z",
+            due_overridden: false,
             created_at: "2026-07-15T00:00:00Z",
           },
           201,
@@ -869,11 +861,7 @@ describe("opening a DSR (G-2)", () => {
     await choose(screen.getByLabelText(/kind/i), "Erasure");
     await userEvent.type(screen.getByLabelText(/contact/i), "anna");
     await userEvent.click(await screen.findByText("Anna Weber"));
-    // type="date" only accepts a programmatic value change in jsdom (same
-    // limitation tasks.test.tsx works around for its own due-date field).
-    fireEvent.change(screen.getByLabelText(/due/i), {
-      target: { value: "2026-08-01" },
-    });
+    await screen.findByText(/GDPR, one calendar month/);
     await userEvent.click(
       screen.getByRole("button", { name: /open request/i }),
     );
@@ -884,14 +872,11 @@ describe("opening a DSR (G-2)", () => {
     );
     const posts = sent.filter((s) => s.key === "POST /data-subject-requests");
     // toEqual, not objectContaining: proves subject_ref is the picked uuid —
-    // never "Anna Weber" — and that no stray field (e.g. an assignee_id) rode
-    // along. due_at is 1 Aug 23:59:59.999 New York time, expressed as the UTC
-    // instant that actually is (2 Aug UTC) — never the UTC-midnight reading
-    // of the bare date, which would land on an entirely different day there.
+    // never "Anna Weber" — and that no due date rode along: the server
+    // computes it.
     expect(posts[0]?.body).toEqual({
       kind: "erasure",
       subject_ref: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      due_at: "2026-08-02T03:59:59.999Z",
     });
   });
 
@@ -911,6 +896,7 @@ describe("opening a DSR (G-2)", () => {
             subject_ref: "anna@acme.test",
             status: "open",
             due_at: "2026-08-02T03:59:59.999Z",
+            due_overridden: false,
             created_at: "2026-07-15T00:00:00Z",
           },
           201,
@@ -925,9 +911,7 @@ describe("opening a DSR (G-2)", () => {
       screen.getByLabelText(/subject reference/i),
       "anna@acme.test",
     );
-    fireEvent.change(screen.getByLabelText(/due/i), {
-      target: { value: "2026-08-01" },
-    });
+    await screen.findByText(/GDPR, one calendar month/);
     await userEvent.click(
       screen.getByRole("button", { name: /open request/i }),
     );
@@ -940,7 +924,6 @@ describe("opening a DSR (G-2)", () => {
     expect(posts[0]?.body).toEqual({
       kind: "access",
       subject_ref: "anna@acme.test",
-      due_at: "2026-08-02T03:59:59.999Z",
     });
   });
 
@@ -948,7 +931,7 @@ describe("opening a DSR (G-2)", () => {
   // UTC-midnight minting silently rolled the picked day back by one. Picking
   // 15 Jul mints the UTC instant for 23:59:59.999 New York time (16 Jul UTC);
   // the row must still read the date back as 15 Jul, not 14.
-  it("mints the due date at end-of-day in the viewer's zone, matching what the row later shows", async () => {
+  it("mints an earlier due date at end-of-day in the viewer's zone, matching what the row later shows", async () => {
     vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
       timeZone: "America/New_York",
     } as Intl.ResolvedDateTimeFormatOptions);
@@ -958,6 +941,7 @@ describe("opening a DSR (G-2)", () => {
       subject_ref: "anna@acme.test",
       status: "open",
       due_at: "2026-07-16T03:59:59.999Z",
+      due_overridden: false,
       created_at: "2026-07-15T00:00:00Z",
     };
     const sent = stubRoutes({
@@ -977,7 +961,10 @@ describe("opening a DSR (G-2)", () => {
       screen.getByLabelText(/subject reference/i),
       "anna@acme.test",
     );
-    fireEvent.change(screen.getByLabelText(/due/i), {
+    await screen.findByText(/GDPR, one calendar month/);
+    // type="date" only accepts a programmatic value change in jsdom (same
+    // limitation tasks.test.tsx works around for its own due-date field).
+    fireEvent.change(screen.getByLabelText(/earlier deadline/i), {
       target: { value: "2026-07-15" },
     });
     await userEvent.click(
