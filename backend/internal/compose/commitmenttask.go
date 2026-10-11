@@ -247,7 +247,7 @@ func commitmentTaskPrecheck(tasks *activities.Store) approvals.ReleasePrecheck {
 		if err := json.Unmarshal(staged, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
 		}
-		if err := tasks.ProbeLinkTargets(ctx, proposal.Links); err != nil {
+		if err := tasks.ProbeLinkWrites(ctx, proposal.Links); err != nil {
 			return err
 		}
 		return refuseCommitmentEdit(staged, edited)

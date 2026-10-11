@@ -114,7 +114,7 @@ func (o SendOrigin) resolve(ctx context.Context, s *Store) ([]ActivityLinkInput,
 		if len(o.links) == 0 {
 			return nil, &NoSendOriginError{}
 		}
-		if err := s.ProbeLinkTargets(ctx, o.links); err != nil {
+		if err := s.probeLinkTargets(ctx, o.links); err != nil {
 			return nil, err
 		}
 		return o.links, nil
@@ -132,13 +132,17 @@ func (o SendOrigin) resolve(ctx context.Context, s *Store) ([]ActivityLinkInput,
 	// cannot see and still reach a gate that answers about the RECIPIENTS, so
 	// the refusal they got back would disclose whether strangers had consented
 	// — and it would be a 409 where the row-scope answer is 404.
-	if err := s.ProbeLinkTargets(ctx, o.also); err != nil {
+	if err := s.probeLinkTargets(ctx, o.also); err != nil {
 		return nil, err
 	}
 	merged := mergedLinks(inherited, o.also)
-	// The bound applies to what will be WRITTEN. ProbeLinkTargets bounds the
-	// additions alone, so an anchor at the limit would fail later, inside the
-	// staging transaction. Checked here, the refusal reaches the sender at once.
+	// The bound applies to what will be WRITTEN, not to what the caller named.
+	// probeLinkTargets bounds the additions alone, and an anchor already at the
+	// limit plus one more passes that and then fails inside the staging
+	// transaction — after the consent gate has answered, after the message is
+	// prepared, and on a scheduled send days after the caller could have
+	// shortened anything. The write's own check stays; this one is what makes
+	// the refusal arrive while the sender is still at the keyboard.
 	if len(merged) > maxActivityLinks {
 		return nil, &TooManyLinksError{Count: len(merged)}
 	}
@@ -206,9 +210,9 @@ func (o SendOrigin) lockAnchorLive(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// ProbeLinkTargets refuses links the caller may not attach, before the write
-// that would insert them: an account-started send, or an accepted proposal.
-func (s *Store) ProbeLinkTargets(ctx context.Context, links []ActivityLinkInput) error {
+// probeLinkTargets refuses an account-started send whose named records the
+// caller cannot read, before any later guard can answer about anyone else.
+func (s *Store) probeLinkTargets(ctx context.Context, links []ActivityLinkInput) error {
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
 	}

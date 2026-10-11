@@ -103,7 +103,7 @@ func (s *Service) RedeemInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, 
 		// the caller is asserting authority, not browsing.
 		return 0, false, fmt.Errorf("no such approval: %w", apperrors.ErrApprovalTokenInvalid)
 	}
-	if err := validateRedemption(a, p, tool, diffHash, s.now()); err != nil {
+	if err := validateRedemption(a, redeemerFor(ctx, a, p), tool, diffHash, s.now()); err != nil {
 		return 0, false, err
 	}
 
