@@ -21,10 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// evidenceColumns is the SELECT list both evidence reads build from, so
-// scanEvidence's fixed Scan order stays correct for each: a column added here
-// without a matching dest fails to compile. The last column, source_missing,
-// is appended per caller by evidenceSelect.
+// evidenceColumns is the SELECT list both evidence reads build from, in
+// scanEvidence's Scan order. evidenceSelect appends source_missing last.
 const evidenceColumns = `id, deal_id, criterion_id, source_type, source_id,
 	source_lines, snippet, author_side, commitment, met, confidence,
 	observed_at, extracted_by, refuted_at, refuted_by, created_at, updated_at,
@@ -169,7 +167,7 @@ func evidenceIDFor(ctx context.Context, tx pgx.Tx, in EvidenceInput) (ids.UUID, 
 
 // evidenceSelect renders the evidence SELECT for this caller, filtered by
 // where, which names its one argument as $1.
-func (s *Store) evidenceSelect(ctx context.Context, where string, key any) (string, []any, error) {
+func (s *Store) evidenceSelect(ctx context.Context, where string, key ids.UUID) (string, []any, error) {
 	args := []any{key}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	missing, err := s.sourceMissingSQL(ctx, arg)
@@ -197,7 +195,7 @@ func (s *Store) readEvidence(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmco
 func (s *Store) readDealEvidence(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID,
 ) ([]crmcontracts.StageEvidence, error) {
-	query, args, err := s.evidenceSelect(ctx, "ev.deal_id = $1", dealID)
+	query, args, err := s.evidenceSelect(ctx, "ev.deal_id = $1", dealID.UUID)
 	if err != nil {
 		return nil, err
 	}

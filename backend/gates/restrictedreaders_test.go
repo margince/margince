@@ -41,8 +41,11 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -643,9 +646,9 @@ func packageBindingNames(files []*ast.File) map[string]map[string]bool {
 }
 
 // namesReaching widens a fragment's names to every package-level binding that
-// names one of them, at any depth. A function that runs the fragment through
-// another constant (`columns = "id, " + fragment`) assembles the same query as
-// one that names it, and without this it is no namer at all.
+// names one of them, at any depth. A function can run the fragment through
+// another constant (`columns = "id, " + fragment`). It assembles the same
+// query as one that names the fragment, so it is a namer too.
 func namesReaching(bindings map[string]map[string]bool, names []string) []string {
 	reached := map[string]bool{}
 	for _, name := range names {
@@ -862,5 +865,35 @@ func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
 				t.Errorf("readsAnActivitysAuditImage = %v, want %v for:\n%s", got, c.want, c.sql)
 			}
 		})
+	}
+}
+
+// A fragment that reaches its query through another constant is still judged
+// at the function that runs it. The planted package names the activity
+// fragment directly only in a guarded function, and runs it unguarded through
+// a second constant. Following direct names alone reads that as clean.
+func TestARestrictedReaderCensusFollowsAFragmentThroughAConstant(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	planted := filepath.Join(dir, "planted.go")
+	source := "package planted\n\n" +
+		"const sourceProbe = `EXISTS (SELECT 1 FROM activity a WHERE a.id = ev.source_id)`\n\n" +
+		"const columns = `id, ` + sourceProbe\n\n" +
+		"func guarded(q func(string)) { q(`SELECT ` + sourceProbe + ` AND a.restricted_at IS NULL`) }\n\n" +
+		"func unguarded(q func(string)) { q(`SELECT ` + columns + ` FROM deal_stage_evidence ev`) }\n"
+	if err := os.WriteFile(planted, []byte(source), 0o600); err != nil {
+		t.Fatalf("planting the package: %v", err)
+	}
+	file, err := gatekit.ParseFile(planted, 0)
+	if err != nil {
+		t.Fatalf("parsing the planted package: %v", err)
+	}
+	offenders := unguardedActivityReaders(packageCallGraph(t, dir),
+		packageBindingNames(parsePackageFiles(t, dir)), file, heldDimension)
+	if !slices.ContainsFunc(offenders, func(o string) bool { return strings.HasPrefix(o, "unguarded:") }) {
+		t.Fatalf("offenders = %v, want the function that runs the fragment through columns", offenders)
+	}
+	if slices.ContainsFunc(offenders, func(o string) bool { return strings.HasPrefix(o, "guarded:") }) {
+		t.Errorf("offenders = %v, the guarded namer is reported too", offenders)
 	}
 }

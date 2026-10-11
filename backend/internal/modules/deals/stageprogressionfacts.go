@@ -22,9 +22,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // StageProgressionFacts is the whole picture one decision rests on: what the
@@ -87,6 +89,9 @@ func (s *Store) ReadStageProgressionFacts(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID, autopilot AutopilotFacts, now time.Time,
 ) (StageProgressionFacts, error) {
 	var out StageProgressionFacts
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return out, err
+	}
 	out.DealID = dealID
 
 	where, err := readDealStanding(ctx, tx, dealID)

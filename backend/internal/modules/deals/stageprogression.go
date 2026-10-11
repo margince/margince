@@ -111,8 +111,8 @@ type ProposedCriterion struct {
 	// the claim rests on rather than taking the tick on trust.
 	EvidenceIDs []ids.UUID `json:"evidence_ids"`
 	// CitedSourceIDs are the records the card cites for it. They are hashed
-	// with the rest, so a source that stops opening changes the proposal and
-	// the next reading supersedes the card instead of joining it.
+	// with the rest. So when a source stops opening, the next reading
+	// supersedes the card instead of joining it.
 	CitedSourceIDs []ids.UUID `json:"cited_source_ids,omitempty"`
 }
 

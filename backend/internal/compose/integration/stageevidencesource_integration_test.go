@@ -7,7 +7,7 @@ package integration
 
 // Stage evidence says whether the reader can open its source, through the
 // real wiring: the activity and contract readers' own gates, not a copy.
-// A source the reader may not see reads exactly like a deleted one.
+// A source the reader may not see reads like a deleted one.
 
 import (
 	"testing"
@@ -44,8 +44,8 @@ type evidenceSources struct {
 }
 
 // seedEvidenceSources writes a deal Rep1 owns with three claims on one
-// criterion: a mail Rep1 limited to its participants, a contract on the deal,
-// and a contract on a second deal that was then archived.
+// criterion. One cites a mail Rep1 limited to its participants. One cites a
+// contract on the deal, and one a contract on a second, archived deal.
 func seedEvidenceSources(t *testing.T, e *Env) evidenceSources {
 	t.Helper()
 	admin := e.Admin()
