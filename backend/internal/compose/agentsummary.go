@@ -13,12 +13,12 @@ package compose
 // untyped map the surface hands back raw, so the decision a human was asked
 // to make was legible only to someone willing to read a JSON envelope.
 //
-// The summary is now built from the SAME bytes the diff_hash covers and the
-// redemption re-checks, so the text a human reads and the call that executes
-// cannot disagree. It stays structural rather than free prose: the operation
-// in plain words, then the body's own fields and values. The values are
-// agent-authored, so approvals.StageInTx sanitizes whatever lands here — this
-// file decides WHAT to say, that one decides what may be rendered.
+// The line is the resolver's, the one the tool door stages for the same
+// operation, so both doors read alike. Every body key the diff_hash binds that
+// the line does not show follows it as key=value. A field the command erased,
+// such as a bcc or a close reason, is never missing from the card. The values
+// are agent-authored, so approvals.StageInTx sanitizes whatever lands here.
+// This file decides what to say, and that one decides what may be rendered.
 //
 // The words around the values follow the installation's base language
 // (approvalsummarycopy.go); the field names and values are the call's own and
@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -47,14 +48,41 @@ const summaryFieldLimit = 8
 // cannot crowd out the fields after it.
 const summaryValueLimit = 48
 
-// stagedSentence is the line an approver reads. The resolver's line names the
-// records, so both doors show it. restSummary stands in where it says less: no
-// line, an id alone, or fields without the values a record write sets.
+// uuidText finds an id written into a sentence.
+var uuidText = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
+
+// stagedSentence is the line an approver reads: the resolver's, which names the
+// records, plus every body field it leaves out. A resolver with no line, or one
+// that names a record by an id the reader cannot open, gives way to restSummary.
 func stagedSentence(info agents.StageInfo, said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) string {
-	if info.ReadsPoorly() {
+	if info.Summary == "" || uuidText.MatchString(info.Summary) {
 		return restSummary(said, pol, r, body)
 	}
-	return info.Summary
+	unshown := summaryFieldsWhere(said, body, func(key string, raw json.RawMessage) bool {
+		return !sentenceShows(info.Summary, key, raw)
+	})
+	if len(unshown) == 0 {
+		return info.Summary
+	}
+	return info.Summary + ": " + strings.Join(unshown, ", ")
+}
+
+// sentenceShows reports whether the sentence already tells the approver this
+// field. A text value is shown when the sentence carries it, a list or object
+// when the sentence names the key. A number, a flag or a null never is, because
+// a cleared field is the change an approver most needs to see.
+func sentenceShows(sentence, key string, raw json.RawMessage) bool {
+	var text string
+	if strings.TrimSpace(string(raw)) != jsonNull && json.Unmarshal(raw, &text) == nil {
+		return text != "" && strings.Contains(sentence, text)
+	}
+	var list []json.RawMessage
+	var object map[string]json.RawMessage
+	if json.Unmarshal(raw, &list) == nil || json.Unmarshal(raw, &object) == nil {
+		word := regexp.MustCompile(`(^|[^A-Za-z0-9_])` + regexp.QuoteMeta(key) + `($|[^A-Za-z0-9_])`)
+		return word.MatchString(sentence)
+	}
+	return false
 }
 
 // restSummary describes the staged call: what it does to what, plus the
@@ -162,14 +190,9 @@ var opPhrases = map[string]string{
 	opRetireCustomField:        "Retire a custom field",
 	opUpdateCustomFieldOptions: "Change a custom field's options",
 	// "Merge tags" alone reads as reversible, which this is not, and the head is
-	// the half a triaging approver reads first. The routed tag — the word being
-	// RETIRED — appears nowhere in the body, so unlike the tool door's sentence
-	// this summary cannot name it: the head says what the act costs instead.
-	//
-	// It is not replaced by the resolver's prose, deliberately. This summary is
-	// built from the same bytes diff_hash covers and redemption re-checks, so
-	// the text a human reads and the call that runs cannot disagree; prose
-	// resolved from a separate read would break that.
+	// the half a triaging approver reads first. This head is the fallback line,
+	// used when the resolver has none. It cannot name the routed tag, the word
+	// being RETIRED, so it says what the act costs instead.
 	opMergeTags: "Fold one tag into another and release its name",
 }
 
@@ -221,13 +244,21 @@ func upperFirst(phrase string) string {
 // array is named and counted rather than expanded: the inbox is a summary,
 // and proposed_change carries the whole envelope for anyone who wants it.
 func summaryFields(said approvalSummaryCopy, body []byte) []string {
+	return summaryFieldsWhere(said, body, nil)
+}
+
+// summaryFieldsWhere is summaryFields for the entries `keep` accepts, or all of
+// them when it is nil. The limit counts the kept entries.
+func summaryFieldsWhere(said approvalSummaryCopy, body []byte, keep func(string, json.RawMessage) bool) []string {
 	var payload map[string]json.RawMessage
 	if len(strings.TrimSpace(string(body))) == 0 || json.Unmarshal(body, &payload) != nil {
 		return nil
 	}
 	keys := make([]string, 0, len(payload))
-	for key := range payload {
-		keys = append(keys, key)
+	for key, raw := range payload {
+		if keep == nil || keep(key, raw) {
+			keys = append(keys, key)
+		}
 	}
 	sort.Strings(keys)
 

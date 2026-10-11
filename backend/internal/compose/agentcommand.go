@@ -11,8 +11,8 @@ package compose
 // It is the same resolver the tool door reaches for the same operation. Where the
 // contract states a tier outright, the generated policy answers it. Where the
 // tier turns on the record's own state, the command answers that too
-// (agents.DynamicTierInput). The inbox line is the resolver's too. Only where
-// that says less does this door use its own (stagedSentence).
+// (agents.DynamicTierInput). The inbox line is the resolver's too, with the body
+// fields the command erased appended (stagedSentence).
 
 import (
 	"context"

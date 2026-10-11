@@ -135,10 +135,13 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 ### Fixed
 
 - **An approval reads the same on every door.** A write held for approval over
-  REST now shows the sentence the tool door shows, naming the records it
-  changes, such as the two tags a merge folds together. Only where that
-  sentence would point at a record by its id alone does the REST door keep its
-  own line.
+  REST now opens with the sentence the tool door shows, naming the records it
+  changes, such as the two tags a merge folds together. Each field of the
+  request that the sentence does not show follows it as `field=value`, so a
+  blind-copy recipient, an attachment or a close reason stays on the card. A
+  record create, update or logged activity follows its sentence with the values
+  it sets, because that sentence names only the fields. A call with no sentence,
+  or one that names a record by its id, keeps the REST line.
 - **A create must name its source.** A lead, a relationship, a note, a task, an offer,
   a product, a custom field and a signal are refused with a 422 naming `source` when
   it is absent or blank, as a contact, a company and a deal already were. So are a

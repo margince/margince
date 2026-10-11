@@ -30,7 +30,7 @@ describe("noticeHeadline", () => {
   });
 
   it("leaves a sentence, and any other kind, as sent", () => {
-    const sentence = "Fold one tag into another: into_tag_id=01a1";
+    const sentence = "Update a deal, setting amount_minor: amount_minor=100";
     expect(
       noticeHeadline({ kind: "approval_pending", subject: sentence }, t),
     ).toEqual({ headline: sentence });

@@ -286,11 +286,16 @@ func (d *twoDoors) stagedOn(t *testing.T, target string) []staged {
 
 // sameStaged fails unless each door staged one approval alike: kind, status,
 // the pin, the merge's second record, and the label and sentence a human reads.
-// The last two carry the target's name, which `names` gives per door. The
+// The last two carry the target's name, which `names` gives per door. The route
+// may follow the tool's sentence with body fields the command erased. The
 // replayed change is each door's own, so it need only be present.
 func (d *twoDoors) sameStaged(t *testing.T, what, viaREST, viaTool string, names ...string) staged {
 	t.Helper()
-	return d.stagedPair(t, what, viaREST, viaTool, true, names)
+	rest, tool := d.stagedRows(t, what, viaREST, viaTool, names)
+	if rest.Summary != tool.Summary && !strings.HasPrefix(rest.Summary, tool.Summary+": ") {
+		t.Errorf("%s: the route staged the sentence %q and the tool %q", what, rest.Summary, tool.Summary)
+	}
+	return differInNothingBut(t, what, rest, tool)
 }
 
 // sameStagedByID is sameStaged for an operation whose sentence names the record
@@ -298,16 +303,19 @@ func (d *twoDoors) sameStaged(t *testing.T, what, viaREST, viaTool string, names
 // its own. The two sentences need only be present.
 func (d *twoDoors) sameStagedByID(t *testing.T, what, viaREST, viaTool string, names ...string) staged {
 	t.Helper()
-	return d.stagedPair(t, what, viaREST, viaTool, false, names)
+	rest, tool := d.stagedRows(t, what, viaREST, viaTool, names)
+	return differInNothingBut(t, what, rest, tool)
 }
 
-func (d *twoDoors) stagedPair(t *testing.T, what, viaREST, viaTool string, sentence bool, names []string) staged {
+// stagedRows reads the one approval each door staged, with the target's name
+// masked, and fails when a sentence or a change is missing.
+func (d *twoDoors) stagedRows(t *testing.T, what, viaREST, viaTool string, names []string) (rest, tool staged) {
 	t.Helper()
 	onREST, onTool := d.stagedOn(t, viaREST), d.stagedOn(t, viaTool)
 	if len(onREST) != 1 || len(onTool) != 1 {
 		t.Fatalf("%s: the route staged %d approvals, the tool %d, want one each", what, len(onREST), len(onTool))
 	}
-	rest, tool := onREST[0], onTool[0]
+	rest, tool = onREST[0], onTool[0]
 	if len(names) == 2 {
 		rest.TargetLabel = strings.ReplaceAll(rest.TargetLabel, names[0], "<name>")
 		tool.TargetLabel = strings.ReplaceAll(tool.TargetLabel, names[1], "<name>")
@@ -317,10 +325,14 @@ func (d *twoDoors) stagedPair(t *testing.T, what, viaREST, viaTool string, sente
 	if rest.Summary == "" || tool.Summary == "" || rest.Change == "" || tool.Change == "" {
 		t.Errorf("%s: a staged approval lacks its sentence or its change: route %+v, tool %+v", what, rest, tool)
 	}
-	rest.Change, tool.Change = "", ""
-	if !sentence {
-		rest.Summary, tool.Summary = "", ""
-	}
+	return rest, tool
+}
+
+// differInNothingBut fails when two rows differ in a member other than the
+// sentence and the replayed change, which each door writes its own way.
+func differInNothingBut(t *testing.T, what string, rest, tool staged) staged {
+	t.Helper()
+	rest.Summary, rest.Change, tool.Summary, tool.Change = "", "", "", ""
 	if rest != tool {
 		t.Errorf("%s: the route staged\n%+v\nthe tool staged\n%+v", what, rest, tool)
 	}

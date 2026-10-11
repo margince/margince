@@ -710,8 +710,8 @@ func assertVerbResolvesItsTierPerCall(t *testing.T, served *agents.Registry, op,
 // is the only handle either door has on what the erased command carries, and the
 // enrich depth lives nowhere else. So the resolved StageInfo is held against the
 // tool door's staged row. What the REST gate stages is checked for every
-// operation too. It is the resolver's sentence, unless that tells the approver
-// less than this door's own.
+// operation too. It opens with the resolver's sentence, unless that has none or
+// names a record by id.
 func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 	t.Helper()
 	primary, secondary := ids.NewV7(), ids.NewV7()
@@ -752,11 +752,11 @@ func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 			"acts for one call", rest.Summary, subject.Summary)
 	}
 	staged := stagedSentence(rest, inEnglish, pol, req, body)
-	if rest.ReadsPoorly() {
+	if rest.Summary == "" || uuidText.MatchString(rest.Summary) {
 		if want := restSummary(inEnglish, pol, req, body); staged != want {
-			t.Errorf("%s: the resolver's sentence tells the approver less, so the gate stages %q, want its own %q", op, staged, want)
+			t.Errorf("%s: the resolver has no readable sentence, so the gate stages %q, want its own %q", op, staged, want)
 		}
-	} else if staged != subject.Summary {
+	} else if staged != subject.Summary && !strings.HasPrefix(staged, subject.Summary+": ") {
 		t.Errorf("%s: the gate stages %q and the tool %q, two sentences for one operation", op, staged, subject.Summary)
 	}
 	if (subject.TargetVersion == nil) != (rest.TargetVersion == nil) {

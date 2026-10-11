@@ -225,7 +225,7 @@ describe("NotificationBell", () => {
       "fetch",
       backendFor([
         notice("n1", fields, { kind: "approval_pending" }),
-        notice("n2", "Fold one tag into another: into_tag_id=01a1", {
+        notice("n2", "Update a deal, setting amount_minor: amount_minor=100", {
           kind: "approval_pending",
         }),
       ]).fetchMock,
@@ -240,7 +240,9 @@ describe("NotificationBell", () => {
     expect(within(bare).getByText(fields)).toBeTruthy();
     // A subject that is a sentence is still the headline, untouched.
     expect(
-      within(sentence).getByText("Fold one tag into another: into_tag_id=01a1"),
+      within(sentence).getByText(
+        "Update a deal, setting amount_minor: amount_minor=100",
+      ),
     ).toBeTruthy();
     expect(within(sentence).queryByText("Approvals waiting on you")).toBeNull();
   });

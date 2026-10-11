@@ -277,7 +277,6 @@ func (r createResolver) Subject(ctx context.Context, cmd CreateCommand) (StageIn
 	return StageInfo{
 		TargetType: cmd.RecordType,
 		Summary:    describeGenericWrite(said, fmt.Sprintf(said.createHead, said.noun(cmd.RecordType)), cmd.Fields),
-		FieldsOnly: true,
 	}, nil
 }
 
@@ -352,7 +351,6 @@ func (r patchResolver) Subject(ctx context.Context, cmd PatchCommand) (StageInfo
 		TargetType: cmd.RecordType,
 		TargetID:   cmd.ID,
 		Summary:    describeGenericWrite(said, fmt.Sprintf(said.updateHead, said.noun(cmd.RecordType)), cmd.Fields),
-		FieldsOnly: true,
 	}, nil
 }
 

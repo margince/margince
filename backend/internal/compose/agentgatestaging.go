@@ -238,9 +238,9 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 // about it.
 //
 // The line the human reads is the resolver's too (stagedSentence), so both
-// doors say the same thing about one operation. Where that line would tell the
-// approver less, this door keeps its own. It names the ACT and the body fields
-// with their values.
+// doors say the same thing about one operation. Body fields the command erased
+// follow it as key=value. A resolver with no usable line gives way to this
+// door's own.
 //
 // It writes the refusal itself and reports ok=false, so a caller that cannot
 // name a target stages nothing.
