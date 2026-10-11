@@ -12,11 +12,13 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -30,43 +32,84 @@ const restoredAddress = "geloescht@betroffene.example"
 // the entry. Only the journal in the object store still names the address.
 func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
 	e := integration.Setup(t)
-	journalDir := configureObjectStore(t)
-	vault := newTestVault(t, e)
+	eraser := journalledEraser(t, e)
+	eraseAndExport(t, e, eraser, seedContactWithAddress(t, e, restoredAddress))
 
-	// Before the backup: the contact was erased and the journal exported, both
-	// through the eraser the api uses.
-	journal, err := blobstore.NewFilesystem(journalDir)
-	if err != nil {
-		t.Fatalf("opening the journal store: %v", err)
-	}
-	eraser := compose.ComposedEraser(e.Pool, journal, nil)
-	erased := seedContactWithAddress(t, e, "Die Betroffene", restoredAddress)
-	if err := eraser.EraseContact(e.Admin(), erased, "Art. 17 request"); err != nil {
-		t.Fatalf("erasing the contact: %v", err)
-	}
-	if _, err := eraser.ExportSuppressions(e.Admin()); err != nil {
-		t.Fatalf("exporting the journal: %v", err)
-	}
+	rollBackSuppressionList(t)
+	restored := seedContactWithAddress(t, e, restoredAddress)
 
-	// The restore: the list rolled back and the contact's rows are back.
-	if _, err := integration.OwnerConn(t).Exec(context.Background(), `DELETE FROM erasure_suppression`); err != nil {
-		t.Fatalf("rolling the suppression list back: %v", err)
-	}
-	restored := seedContactWithAddress(t, e, "Die Betroffene", restoredAddress)
-
-	var out bytes.Buffer
-	handled, err := runDatabaseSubcommand(t.Context(), e.Pool, vault, []string{"replay-erasures"}, &out)
-	if !handled {
-		t.Fatal("the worker does not know the replay-erasures command")
-	}
+	out, err := replayErasures(t, e)
 	if err != nil {
 		t.Fatalf("replay-erasures: %v", err)
 	}
-	if !strings.Contains(out.String(), "Re-erased 1 contact(s)") {
-		t.Fatalf("the command reported %q, want the one restored contact", out.String())
+	if !strings.Contains(out, "Re-erased 1 contact(s)") {
+		t.Fatalf("the command reported %q, want the one restored contact", out)
 	}
-	if live := addressCount(t, e, restored); live != 0 {
+	if live := countRows(t, e, `SELECT count(*) FROM contact_email WHERE contact_id = $1`, restored); live != 0 {
 		t.Fatalf("the restored contact still holds %d address(es)", live)
+	}
+}
+
+// A contact known only by a chat account carries no address. The replay
+// matches the account itself, as the erasure hashed it.
+func TestReplayErasuresTakesAgainAContactKnownOnlyByAChatAccount(t *testing.T) {
+	e := integration.Setup(t)
+	eraser := journalledEraser(t, e)
+	eraseAndExport(t, e, eraser, seedContactWithChatAccount(t, e))
+
+	rollBackSuppressionList(t)
+	restored := seedContactWithChatAccount(t, e)
+
+	out, err := replayErasures(t, e)
+	if err != nil {
+		t.Fatalf("replay-erasures: %v", err)
+	}
+	if !strings.Contains(out, "Re-erased 1 contact(s)") {
+		t.Fatalf("the command reported %q, want the chat-only contact taken again", out)
+	}
+	if live := countRows(t, e, `SELECT count(*) FROM contact_channel_identity WHERE contact_id = $1`, restored); live != 0 {
+		t.Fatalf("the restored contact still holds %d chat account(s)", live)
+	}
+}
+
+// The journal ends at its last export. The command says when, so the operator
+// knows which erasures to take again by hand.
+func TestReplayErasuresSaysWhichErasuresItCannotCover(t *testing.T) {
+	e := integration.Setup(t)
+	eraser := journalledEraser(t, e)
+	eraseAndExport(t, e, eraser, seedContactWithAddress(t, e, restoredAddress))
+	manifest, err := eraser.ReadJournalManifest(e.Admin())
+	if err != nil {
+		t.Fatalf("reading the manifest: %v", err)
+	}
+
+	out, err := replayErasures(t, e)
+	if err != nil {
+		t.Fatalf("replay-erasures: %v", err)
+	}
+	if manifest.Entries != 1 || !strings.Contains(out, "holding 1 entries") {
+		t.Fatalf("the command reported %q from a manifest of %d entries, want the one", out, manifest.Entries)
+	}
+	if !strings.Contains(out, "Erasures completed after "+manifest.ExportedAt.Format(time.RFC3339)+" are NOT covered") {
+		t.Fatalf("the command reported %q, want the uncovered window named", out)
+	}
+}
+
+// An empty journal is most often a store pointed at the wrong place. The
+// operator has to say it is right before the replay reports a clean pass.
+func TestReplayErasuresRefusesAnEmptyJournalUnlessTold(t *testing.T) {
+	e := integration.Setup(t)
+	configureObjectStore(t)
+
+	if _, err := replayErasures(t, e); !errors.Is(err, compose.ErrReplayJournalEmpty) {
+		t.Fatalf("err = %v, want an empty journal refused", err)
+	}
+	out, err := replayErasures(t, e, "--empty-journal-ok")
+	if err != nil {
+		t.Fatalf("replay-erasures --empty-journal-ok: %v", err)
+	}
+	if !strings.Contains(out, "holds no entry") {
+		t.Fatalf("the command reported %q, want the empty journal named", out)
 	}
 }
 
@@ -77,14 +120,46 @@ func TestReplayErasuresRefusesToRunWithoutTheObjectStore(t *testing.T) {
 	t.Setenv(blobstore.EnvEndpoint, "")
 	t.Setenv(blobstore.EnvPath, "")
 
-	_, err := runDatabaseSubcommand(t.Context(), e.Pool, newTestVault(t, e), []string{"replay-erasures"}, &bytes.Buffer{})
-	if !errors.Is(err, compose.ErrReplayNeedsObjectStore) {
+	if _, err := replayErasures(t, e, "--empty-journal-ok"); !errors.Is(err, compose.ErrReplayNeedsObjectStore) {
 		t.Fatalf("err = %v, want the replay refused for want of the journal", err)
 	}
 }
 
-// configureObjectStore points the command at a filesystem object store, as an
-// installation's roles read it, and returns where the store keeps its objects.
+// replayErasures runs the command through the worker's own dispatch.
+func replayErasures(t *testing.T, e *integration.Env, flags ...string) (string, error) {
+	t.Helper()
+	vault := newTestVault(t, e)
+	var out bytes.Buffer
+	handled, err := runDatabaseSubcommand(t.Context(), e.Pool,
+		func() (keyvault.Vault, error) { return vault, nil },
+		append([]string{"replay-erasures"}, flags...), &out)
+	if !handled {
+		t.Fatal("the worker does not know the replay-erasures command")
+	}
+	return out.String(), err
+}
+
+// journalledEraser points the command at a filesystem object store and returns
+// the eraser the api would build over the same store.
+func journalledEraser(t *testing.T, e *integration.Env) *privacy.Eraser {
+	t.Helper()
+	store, err := blobstore.NewFilesystem(configureObjectStore(t))
+	if err != nil {
+		t.Fatalf("opening the object store: %v", err)
+	}
+	return compose.ComposedEraser(e.Pool, store, nil)
+}
+
+func eraseAndExport(t *testing.T, e *integration.Env, eraser *privacy.Eraser, contact ids.UUID) {
+	t.Helper()
+	if err := eraser.EraseContact(e.Admin(), contact, "Art. 17 request"); err != nil {
+		t.Fatalf("erasing the contact: %v", err)
+	}
+	if _, err := eraser.ExportSuppressions(e.Admin()); err != nil {
+		t.Fatalf("exporting the journal: %v", err)
+	}
+}
+
 func configureObjectStore(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -106,9 +181,18 @@ func newTestVault(t *testing.T, e *integration.Env) keyvault.Vault {
 	return vault
 }
 
-func seedContactWithAddress(t *testing.T, e *integration.Env, name, email string) ids.UUID {
+// rollBackSuppressionList stands in for the restore: the list goes back to a
+// point before the erasure.
+func rollBackSuppressionList(t *testing.T) {
 	t.Helper()
-	contact := e.SeedContact(t, name, nil)
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `DELETE FROM erasure_suppression`); err != nil {
+		t.Fatalf("rolling the suppression list back: %v", err)
+	}
+}
+
+func seedContactWithAddress(t *testing.T, e *integration.Env, email string) ids.UUID {
+	t.Helper()
+	contact := e.SeedContact(t, "Die Betroffene", nil)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
 		INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
 		VALUES ($1, $2, $3, 'work', true, 'manual', 'human:restore')`,
@@ -118,14 +202,23 @@ func seedContactWithAddress(t *testing.T, e *integration.Env, name, email string
 	return contact
 }
 
-func addressCount(t *testing.T, e *integration.Env, contact ids.UUID) int {
+func seedContactWithChatAccount(t *testing.T, e *integration.Env) ids.UUID {
+	t.Helper()
+	contact := e.SeedContact(t, "Nur im Chat", nil)
+	e.WsExec(t, `
+		INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
+		VALUES ($1, 'telegram', '4711', 'nurimchat', 'telegram', 'connector:telegram')`,
+		contact)
+	return contact
+}
+
+func countRows(t *testing.T, e *integration.Env, query string, contact ids.UUID) int {
 	t.Helper()
 	var n int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM contact_email WHERE contact_id = $1`, contact).Scan(&n)
+		return tx.QueryRow(context.Background(), query, contact).Scan(&n)
 	}); err != nil {
-		t.Fatalf("counting addresses: %v", err)
+		t.Fatalf("counting rows: %v", err)
 	}
 	return n
 }

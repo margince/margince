@@ -43,22 +43,51 @@ margince-migrate up --dsn "$SPARE_OWNER_DSN"
 ```
 
 A restore to a point before an erasure brings the erased contact's data back. The database's own suppression list
-rolls back with it. The worker job `suppression_journal_export` copies that list to the object store every hour, and the
-`replay-erasures` command of the worker program erases again every live contact the list or that copy names.
+rolls back with it. The worker job `suppression_journal_export` copies that list to the object store every hour. The
+`replay-erasures` command of the worker program erases again every live contact that the list or the copy names.
 
-Run it against the spare database, with the object store and key vault settings the worker has:
+The worker refuses a database whose recorded release differs from its own. Only the api records the release, when it
+starts. So if the backup was taken on an older release, record the current one first:
+
+1. Start one api of the running release against the spare database and object store.
+2. Send no user traffic to it, and stop it once it has started.
+
+If the backup was taken on the running release, skip these two steps.
+
+Then run the replay. Point every setting at the spare database and the spare object store, never at the live ones:
 
 ```sh
-export MARGINCE_DSN=postgres://...
+export MARGINCE_DSN="$SPARE_APP_DSN"
+export MARGINCE_BLOBSTORE_ENDPOINT="$SPARE_BLOBSTORE_ENDPOINT"
+export MARGINCE_BLOBSTORE_BUCKET="$SPARE_BLOBSTORE_BUCKET"
+export MARGINCE_BLOBSTORE_ACCESS_KEY="$SPARE_BLOBSTORE_ACCESS_KEY"
+export MARGINCE_BLOBSTORE_SECRET_KEY="$SPARE_BLOBSTORE_SECRET_KEY"
+export MARGINCE_KEYVAULT_ROOT_KEY="$MARGINCE_KEYVAULT_ROOT_KEY"
 worker replay-erasures
 ```
 
-The api does not need to be running. The command prints how many contacts it erased again. On a drill the answer is
-often zero, and zero is a valid result. A contact under legal hold is not erased; the command names it and exits with an
-error after it has erased the others. The command refuses to run without an object store, because the journal lives
-there.
+An installation that keeps its objects on local disk sets `MARGINCE_BLOBSTORE_PATH` to the spare folder instead of the
+`MARGINCE_BLOBSTORE_*` service settings. `MARGINCE_DSN` is the runtime app role, not the owner. The root key is the
+one the installation sealed its secrets with.
 
-For a real restore, do not let users back in until `replay-erasures` has run without an error.
+The command prints three things:
+
+- the time of the journal export it read, and how many entries that export held;
+- a warning that erasures completed after that time are not covered;
+- how many contacts it erased again.
+
+The journal ends at its last export. Take every erasure request completed after the printed time from your own record
+of the requests. Erase each of those contacts again by hand in the app.
+
+On a drill the count is often zero, and zero is a valid result. A contact under legal hold is not erased. The command
+names it and exits with an error after it has erased the others.
+
+The command refuses to run without an object store, because the journal lives there. It also refuses a journal with no
+entry, which most often means the settings point at the wrong store. Pass `--empty-journal-ok` only if the installation
+has never erased anyone.
+
+For a real restore, do not let users back in until `replay-erasures` has run without an error. The erasures after the
+printed time must be done by hand as well.
 
 ## 3. Check the restored copy
 
