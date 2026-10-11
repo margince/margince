@@ -70,6 +70,13 @@ func (s *Service) effectIsStillOwed(a row, approve bool, err error) bool {
 	if !errors.As(err, &decided) || !approve || decided.Status != approvalStatusApproved {
 		return false
 	}
+	return s.owesItsEffect(a)
+}
+
+// owesItsEffect is the row half of effectIsStillOwed: unredeemed, server
+// proposed, and of a kind with a registered effect. runPrecheck asks it too,
+// so its status guard lets this row, and no other, through to the re-drive.
+func (s *Service) owesItsEffect(a row) bool {
 	if a.ConsumedAt != nil || !serverProposed(a) {
 		return false
 	}

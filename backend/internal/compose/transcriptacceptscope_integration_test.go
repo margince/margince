@@ -93,6 +93,29 @@ func TestTheAcceptedWriteRefusesALinkTheDeciderCannotSee(t *testing.T) {
 	}
 }
 
+// A card whose write was refused stays owed its task. Once the decider can see
+// the contact, deciding again re-drives the write, past the precheck's guard.
+func TestARefusedWriteIsRedrivenOnceTheDeciderCanSeeTheLink(t *testing.T) {
+	s := stageMeetingPromise(t, func(e *transcriptEnv) ids.UUID { return e.Rep3 }, true)
+	writeOnly := approvals.NewService(s.DB())
+	writeOnly.WithEffect(CommitmentTaskKind, commitmentTaskEffect(writeOnly, s.Activities, s.Contacts))
+	if _, err := writeOnly.Decide(s.ctx, s.approval, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("writing with a link the decider cannot see: err = %v, want not found", err)
+	}
+	s.MakeCapturePrivate(t, "contact", s.private, s.Rep1)
+
+	if _, err := s.svc.Decide(s.ctx, s.approval, true, nil); err != nil {
+		t.Fatalf("deciding again once the contact is visible: %v", err)
+	}
+	if n := s.taskCount(t); n != 1 {
+		t.Errorf("the re-driven write left %d task(s), want one", n)
+	}
+	var decided *approvals.AlreadyDecidedError
+	if _, err := s.svc.Decide(s.ctx, s.approval, true, nil); !errors.As(err, &decided) {
+		t.Errorf("deciding a spent card again: err = %v, want already decided", err)
+	}
+}
+
 // The private contact is the decider's own, so they see every record the
 // meeting is filed under, and the task carries all of them.
 func TestAcceptingAMeetingPromiseTheDeciderCanSeeWholeCarriesItsLinks(t *testing.T) {

@@ -174,7 +174,12 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 	// The refusal inside the transaction is still the authority. This is the
 	// same question asked early, so the answer names the card's state rather
 	// than the estate's.
+	// An approved row still owed its effect passes on to the re-drive, whose
+	// effect asks every question of its write again (effectIsStillOwed).
 	if st := a.effectiveStatus(s.now()); st != "pending" {
+		if st == approvalStatusApproved && s.owesItsEffect(a) {
+			return nil
+		}
 		return &AlreadyDecidedError{Status: st}
 	}
 	check, ok := s.prechecks[a.Kind]
