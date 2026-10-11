@@ -313,9 +313,10 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 // answer for the same reason: a reader without the tier must be told they may
 // not ask, rather than handed an empty list they would read as a clear queue.
 //
-// An unknown rule reaches the module, which refuses it. Validating the word
-// here too would be a second list of the rules to keep in step with the one
-// that measures them.
+// An unknown rule reaches the module, which refuses it with the field named.
+//
+// Validating the word here too would be a second list of the rules to keep in
+// step with the one that measures them.
 func (s *Service) HiddenBacklogRows(
 	ctx context.Context, rule string,
 ) (crmcontracts.HiddenBacklogRows, error) {

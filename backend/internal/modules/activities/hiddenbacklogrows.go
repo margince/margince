@@ -74,6 +74,30 @@ func relaxationFor(rule HiddenRule, reader ids.UUID) (waitingRelaxation, bool) {
 // would let a typo read as a clean queue.
 var ErrUnknownHiddenRule = errors.New("activities: unknown hiding rule")
 
+// UnknownHiddenRuleError is that refusal with the field it is about, so the
+// transport answers 422 rather than a server fault.
+//
+// The endpoint's handler used to say the generated router validated the path
+// enum before the request arrived. It does not.
+//
+// So this refusal was the only thing between a mistyped rule and the store.
+// It reached the caller as `500 internal`, because a bare sentinel names no
+// field.
+//
+// It wraps the sentinel, so a caller testing errors.Is still sees it.
+type UnknownHiddenRuleError struct{ Rule string }
+
+func (e *UnknownHiddenRuleError) Error() string {
+	return "unknown hiding rule " + e.Rule
+}
+
+func (e *UnknownHiddenRuleError) Unwrap() error { return ErrUnknownHiddenRule }
+
+// FieldFault names the path parameter the caller can correct.
+func (e *UnknownHiddenRuleError) FieldFault() (field, code, message string) {
+	return "rule", "invalid_enum", e.Error()
+}
+
 // HiddenWaitingRows lists the threads one rule is holding back.
 //
 // The rows are the difference the figure reports: what the relaxed read finds
@@ -94,7 +118,7 @@ func (s *Store) HiddenWaitingRows(
 	reader := readerOrNobody(ctx)
 	relax, known := relaxationFor(rule, reader)
 	if !known {
-		return nil, fmt.Errorf("%w: %q", ErrUnknownHiddenRule, rule)
+		return nil, &UnknownHiddenRuleError{Rule: string(rule)}
 	}
 	var out []WaitingReply
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -115,7 +139,8 @@ func (s *Store) HiddenWaitingRows(
 			return err
 		}
 		strict, err := s.waitingStatement(
-			ctx, tx, asOf, waitingRelaxation{reader: reader}, measured, arg)
+			ctx, tx, asOf, waitingRelaxation{reader: reader}, measured, arg,
+		)
 		if err != nil {
 			return err
 		}
