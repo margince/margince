@@ -29,7 +29,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -79,11 +78,12 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	}
 	type entry struct{ kind, hash, when string }
 	var entries []entry
-	var exportedAt time.Time
+	var newest *time.Time
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The database clock at the read, so the manifest dates what the list
-		// held rather than when the last Put landed.
-		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&exportedAt); err != nil {
+		// The newest erasure the list knows, not the clock: a list read from a
+		// restored database is older than the moment it is exported.
+		if err := tx.QueryRow(ctx,
+			`SELECT max(created_at) FROM erasure_suppression`).Scan(&newest); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx,
@@ -111,65 +111,14 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 		}
 	}
 	// Written last, so a manifest names only an export whose every entry landed.
-	manifest := JournalManifest{ExportedAt: exportedAt.UTC(), Entries: len(entries)}
-	body := []byte(manifest.encode())
-	if err := e.blob.Put(ctx, suppressionJournalManifestKey,
-		bytes.NewReader(body), int64(len(body)), "text/plain"); err != nil {
-		return 0, fmt.Errorf("privacy: writing the suppression journal manifest: %w", err)
+	export := JournalManifest{Entries: len(entries)}
+	if newest != nil {
+		export.NewestErasure = newest.UTC()
+	}
+	if err := e.advanceJournalManifest(ctx, export); err != nil {
+		return 0, err
 	}
 	return len(entries), nil
-}
-
-// suppressionJournalManifestKey holds the last complete export's time and
-// size. No kind is named "manifest", so it shares no key with an entry.
-const suppressionJournalManifestKey = suppressionJournalPrefix + "manifest"
-
-// JournalManifest says what the last complete export held. An erasure after
-// ExportedAt is in no journal, so a replay cannot cover it.
-type JournalManifest struct {
-	ExportedAt time.Time
-	Entries    int
-}
-
-func (m JournalManifest) encode() string {
-	return fmt.Sprintf("exported_at %s\nentries %d\n", m.ExportedAt.Format(time.RFC3339), m.Entries)
-}
-
-// ErrNoJournalManifest reports a store that holds no complete export.
-var ErrNoJournalManifest = errors.New("privacy: the object store holds no complete suppression journal export")
-
-// ReadJournalManifest reports what the last complete export held, or
-// ErrNoJournalManifest when no export ever finished.
-func (e *Eraser) ReadJournalManifest(ctx context.Context) (JournalManifest, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
-		return JournalManifest{}, err
-	}
-	if e.blob == nil {
-		return JournalManifest{}, ErrNoJournalManifest
-	}
-	reader, _, err := e.blob.Get(ctx, suppressionJournalManifestKey)
-	if errors.Is(err, blobstore.ErrNotFound) {
-		return JournalManifest{}, ErrNoJournalManifest
-	}
-	if err != nil {
-		return JournalManifest{}, fmt.Errorf("privacy: reading the suppression journal manifest: %w", err)
-	}
-	body, readErr := io.ReadAll(io.LimitReader(reader, 1024))
-	if err := reader.Close(); err != nil && readErr == nil {
-		readErr = err
-	}
-	if readErr != nil {
-		return JournalManifest{}, fmt.Errorf("privacy: reading the suppression journal manifest: %w", readErr)
-	}
-	var stamp string
-	var manifest JournalManifest
-	if _, err := fmt.Sscanf(string(body), "exported_at %s\nentries %d\n", &stamp, &manifest.Entries); err != nil {
-		return JournalManifest{}, fmt.Errorf("privacy: the suppression journal manifest is malformed: %w", err)
-	}
-	if manifest.ExportedAt, err = time.Parse(time.RFC3339, stamp); err != nil {
-		return JournalManifest{}, fmt.Errorf("privacy: the suppression journal manifest is malformed: %w", err)
-	}
-	return manifest, nil
 }
 
 // journalSuppressed reports whether the exported list names this hash.

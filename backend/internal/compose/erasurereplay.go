@@ -43,8 +43,8 @@ var ErrReplayJournalEmpty = errors.New(
 // ErasureReplay is what one replay did and what it could rely on.
 type ErasureReplay struct {
 	Taken int
-	// Journal is the export the replay read. An erasure after
-	// Journal.ExportedAt is neither in it nor, after a restore, in the
+	// Journal is what the journal knows. An erasure after
+	// Journal.NewestErasure is neither in it nor, after a restore, in the
 	// database, so the replay cannot cover it.
 	Journal privacy.JournalManifest
 	// JournalEmpty is set when the operator let the replay run on a journal

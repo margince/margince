@@ -72,12 +72,15 @@ one the installation sealed its secrets with.
 
 The command prints three things:
 
-- the time of the journal export it read, and how many entries that export held;
-- a warning that erasures completed after that time are not covered;
+- the time of the newest erasure the journal knows, and how many entries it holds;
+- a warning that anything erased after that time is not covered;
 - how many contacts it erased again.
 
-The journal ends at its last export. Take every erasure request completed after the printed time from your own record
-of the requests. Erase each of those contacts again by hand in the app.
+The journal knows only the erasures that an hourly export carried. Take every erasure request completed after the
+printed time from your own record of the requests. Erase each of those contacts again by hand in the app.
+
+That time never moves back. A worker started against the restored database exports the older list, and the journal
+keeps the newer time it already held.
 
 On a drill the count is often zero, and zero is a valid result. A contact under legal hold is not erased. The command
 names it and exits with an error after it has erased the others.

@@ -69,10 +69,10 @@ func writeErasureReplayReport(stdout io.Writer, replay compose.ErasureReplay) {
 	if replay.JournalEmpty {
 		_, _ = fmt.Fprintln(stdout, "The erasure journal holds no entry; the replay read only the restored database's own list.")
 	} else {
-		exported := replay.Journal.ExportedAt.Format(time.RFC3339)
-		_, _ = fmt.Fprintf(stdout, "Read the erasure journal exported at %s, holding %d entries.\n", exported, replay.Journal.Entries)
-		_, _ = fmt.Fprintf(stdout, "Erasures completed after %s are NOT covered. "+
-			"Erase those contacts again by hand, from your record of the erasure requests.\n", exported)
+		newest := replay.Journal.NewestErasure.Format(time.RFC3339)
+		_, _ = fmt.Fprintf(stdout, "The erasure journal knows erasures up to %s, in %d entries.\n", newest, replay.Journal.Entries)
+		_, _ = fmt.Fprintf(stdout, "Anything erased after %s is NOT covered. "+
+			"Erase those contacts again by hand, from your record of the erasure requests.\n", newest)
 	}
 	_, _ = fmt.Fprintf(stdout, "Re-erased %d contact(s) that the suppression list or its journal names.\n", replay.Taken)
 }

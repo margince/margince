@@ -87,10 +87,10 @@ func TestReplayErasuresSaysWhichErasuresItCannotCover(t *testing.T) {
 	if err != nil {
 		t.Fatalf("replay-erasures: %v", err)
 	}
-	if manifest.Entries != 1 || !strings.Contains(out, "holding 1 entries") {
+	if manifest.Entries != 1 || !strings.Contains(out, "in 1 entries") {
 		t.Fatalf("the command reported %q from a manifest of %d entries, want the one", out, manifest.Entries)
 	}
-	if !strings.Contains(out, "Erasures completed after "+manifest.ExportedAt.Format(time.RFC3339)+" are NOT covered") {
+	if !strings.Contains(out, "Anything erased after "+manifest.NewestErasure.Format(time.RFC3339)+" is NOT covered") {
 		t.Fatalf("the command reported %q, want the uncovered window named", out)
 	}
 }
