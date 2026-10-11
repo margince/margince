@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -300,24 +301,85 @@ func TestAFailedRecordOfAnUntoldLeadIsRetriedByDecidingAgain(t *testing.T) {
 	}
 }
 
-func TestAWebsiteLeadIsNotPromotedOrClaimedWhileItsNoticeIsPending(t *testing.T) {
+func TestAWebsiteLeadIsNotHandedOnWhileItsNoticeIsPending(t *testing.T) {
 	l := setupNoticeLane(t)
 	if err := l.accept(l.stage(t, annaOnTheTeamPage)); err != nil {
 		t.Fatalf("accepting the website lead: %v", err)
 	}
 	e := l.e
-	leadID := ids.From[ids.LeadKind](ids.MustParse(
-		e.WsScalar(t, `SELECT id::text FROM lead WHERE source_system = 'siteread'`)))
-	rep := e.As(e.Rep1, nil, integration.AdminPerms)
-	_, _, err := e.Contacts.PromoteLead(rep, leadID, contacts.PromoteLeadInput{Trigger: "human_qualify"})
-	if !errors.Is(err, contacts.ErrWebsiteLeadNotYetTold) {
-		t.Fatalf("promoting a website lead whose notice is pending = %v, want the pending refusal", err)
-	}
-	if _, err := e.Contacts.ClaimRecord(rep, "lead", leadID.UUID, nil); !errors.Is(err, contacts.ErrWebsiteLeadNotYetTold) {
-		t.Fatalf("claiming a website lead whose notice is pending = %v, want the pending refusal", err)
-	}
+	leadID := l.websiteLead(t)
+	other := l.otherLead(t)
+	assertEveryHandoverRefused(t, l, leadID, other)
 	if n := e.WsCount(t, `SELECT count(*) FROM contact`); n != 0 {
 		t.Fatalf("%d contacts after the refused promotion, want 0", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id IS NULL AND merged_into_id IS NULL`, leadID); n != 1 {
+		t.Fatal("a refused handover still gave the website lead an owner or merged it")
+	}
+}
+
+// A website lead no notice row names, a notice that bounced softly, or one
+// still inside the bounce window: each holds the lead. Only a notice sent,
+// unbounced and out for the window lets it go.
+func TestTheNoticeHoldFailsClosed(t *testing.T) {
+	l := setupNoticeLane(t)
+	e := l.e
+	rep := e.As(e.Rep1, nil, integration.AdminPerms)
+	name, address, source, key := "Rowless", "rowless@acme.example", consent.WebsiteLeadSource, "rowless-key"
+	rowless, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
+		FullName: &name, Email: &address, SourceSystem: &source, SourceID: &key, Source: source,
+	})
+	if err != nil {
+		t.Fatalf("creating a website lead with no notice row: %v", err)
+	}
+	if _, err := e.Contacts.ClaimRecord(rep, "lead", ids.UUID(rowless.Id), nil); !errors.Is(err, contacts.ErrWebsiteLeadNotYetTold) {
+		t.Fatalf("claiming a website lead no notice row names = %v, want the pending refusal", err)
+	}
+	if err := l.accept(l.stage(t, annaOnTheTeamPage)); err != nil {
+		t.Fatalf("accepting the website lead: %v", err)
+	}
+	leadID := l.websiteLeadNamed(t, annasAddress)
+	e.WsExec(t, `UPDATE comms_outbound SET status = 'sent', sent_at = now() - interval '4 days',
+		bounced_at = now(), bounce_kind = 'soft' WHERE template_key = 'privacy_notice'`)
+	if _, err := e.Contacts.ClaimRecord(rep, "lead", leadID.UUID, nil); !errors.Is(err, contacts.ErrWebsiteLeadNotYetTold) {
+		t.Fatalf("claiming a website lead whose notice bounced = %v, want the pending refusal", err)
+	}
+	e.WsExec(t, `UPDATE comms_outbound SET bounced_at = NULL, bounce_kind = NULL,
+		sent_at = now() - interval '1 hour' WHERE template_key = 'privacy_notice'`)
+	if _, err := e.Contacts.ClaimRecord(rep, "lead", leadID.UUID, nil); !errors.Is(err, contacts.ErrWebsiteLeadNotYetTold) {
+		t.Fatalf("claiming inside the bounce window = %v, want the pending refusal", err)
+	}
+	e.WsExec(t, `UPDATE comms_outbound SET sent_at = now() - interval '4 days' WHERE template_key = 'privacy_notice'`)
+	if _, err := e.Contacts.ClaimRecord(rep, "lead", leadID.UUID, nil); err != nil {
+		t.Fatalf("claiming a website lead told four days ago without a bounce = %v, want it claimed", err)
+	}
+}
+
+// The writers of the notice and of its erasure act on a website lead and its
+// site_lead proposal only.
+func TestTheNoticeWritersRefuseAnyOtherRecord(t *testing.T) {
+	l := setupNoticeLane(t)
+	e := l.e
+	other := l.otherLead(t)
+	teller, _ := l.notices.teller()
+	if _, err := teller.IssueLeadPrivacyNotice(l.ctx, consent.LeadNotice{LeadID: other}); err == nil {
+		t.Fatal("a lead another source captured was sent the website-lead notice")
+	}
+	err := databaseTx(t, e, func(ctx context.Context, tx pgx.Tx) error {
+		return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{LeadID: other})
+	})
+	if err == nil {
+		t.Fatal("the untold-lead eraser deleted a lead another source captured")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1`, other); n != 1 {
+		t.Fatal("the lead another source captured is gone")
+	}
+	pending := l.stage(t, annaOnTheTeamPage)
+	err = databaseTx(t, e, func(ctx context.Context, tx pgx.Tx) error {
+		return consent.RecordLeadNoticeFailedTx(ctx, tx, pending, consent.LeadNoticeRefused)
+	})
+	if err == nil {
+		t.Fatal("a failure was recorded against a proposal nobody redeemed")
 	}
 }
 
@@ -368,4 +430,65 @@ func failLeadNoticeWrites(t *testing.T, owner *pgx.Conn) func() {
 	}
 	t.Cleanup(disarm)
 	return disarm
+}
+
+// websiteLead is the one website lead the accepted proposal kept.
+func (l *noticeLaneEnv) websiteLead(t *testing.T) ids.LeadID {
+	t.Helper()
+	return l.websiteLeadNamed(t, annasAddress)
+}
+
+// websiteLeadNamed is the website lead holding this address.
+func (l *noticeLaneEnv) websiteLeadNamed(t *testing.T, address string) ids.LeadID {
+	t.Helper()
+	return ids.From[ids.LeadKind](ids.MustParse(l.e.WsScalar(t,
+		`SELECT id::text FROM lead WHERE source_system = 'siteread' AND email = $1`, address)))
+}
+
+// otherLead is a lead a human created, which owes no website notice.
+func (l *noticeLaneEnv) otherLead(t *testing.T) ids.LeadID {
+	t.Helper()
+	name, address := "Bea Typed", "bea@elsewhere.example"
+	lead, _, err := l.e.Contacts.CreateLead(l.e.Admin(), contacts.CreateLeadInput{FullName: &name, Email: &address})
+	if err != nil {
+		t.Fatalf("creating a lead by hand: %v", err)
+	}
+	return ids.From[ids.LeadKind](ids.UUID(lead.Id))
+}
+
+// assertEveryHandoverRefused drives each path that passes a lead to
+// somebody, and expects the notice hold from each.
+func assertEveryHandoverRefused(t *testing.T, l *noticeLaneEnv, leadID, other ids.LeadID) {
+	t.Helper()
+	e := l.e
+	rep := e.As(e.Rep1, nil, integration.AdminPerms)
+	owner := ids.From[ids.UserKind](e.Rep1)
+	for path, err := range map[string]error{
+		"promote": func() error {
+			_, _, err := e.Contacts.PromoteLead(rep, leadID, contacts.PromoteLeadInput{Trigger: "human_qualify"})
+			return err
+		}(),
+		"claim": func() error { _, err := e.Contacts.ClaimRecord(rep, "lead", leadID.UUID, nil); return err }(),
+		"assign by update": func() error {
+			_, err := e.Contacts.UpdateLead(rep, leadID, contacts.UpdateLeadInput{OwnerID: &owner})
+			return err
+		}(),
+		"merge into another lead": func() error { _, err := e.Contacts.MergeLead(rep, leadID, other); return err }(),
+		"merge another lead in":   func() error { _, err := e.Contacts.MergeLead(rep, other, leadID); return err }(),
+	} {
+		if !errors.Is(err, contacts.ErrWebsiteLeadNotYetTold) {
+			t.Errorf("%s of a website lead whose notice is pending = %v, want the pending refusal", path, err)
+		}
+	}
+	decision, err := e.Contacts.RouteLead(rep, leadID, contacts.RoutingConfig{Owners: []ids.UserID{owner}})
+	if err != nil || decision.Assigned || decision.Reason != "notice_pending" {
+		t.Errorf("routing a website lead whose notice is pending = %+v, %v, want left unrouted", decision, err)
+	}
+}
+
+// databaseTx runs fn in one workspace transaction as the admin.
+func databaseTx(t *testing.T, e *integration.Env, fn func(context.Context, pgx.Tx) error) error {
+	t.Helper()
+	ctx := e.Admin()
+	return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) })
 }

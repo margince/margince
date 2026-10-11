@@ -195,6 +195,11 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 			decision = RoutingDecision{Reason: "already_owned"} // a human assignment outranks routing
 			return nil
 		}
+		// A website lead whose notice may still bounce is not handed to anybody.
+		if held, err := websiteLeadNoticePending(ctx, tx, leadID.UUID); err != nil || held {
+			decision = RoutingDecision{Reason: "notice_pending"}
+			return err
+		}
 		if !LeadStatus(status).Open() {
 			decision = RoutingDecision{Reason: "terminal_status"}
 			return nil

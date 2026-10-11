@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -142,5 +143,6 @@ func captureSiteLead(
 	return leadID, ours, err
 }
 
-// siteLeadSourceSystem is the source a website lead is captured under.
-const siteLeadSourceSystem = "siteread"
+// siteLeadSourceSystem is the source a website lead is captured under, which
+// consent asks before it sends the notice.
+const siteLeadSourceSystem = consent.WebsiteLeadSource

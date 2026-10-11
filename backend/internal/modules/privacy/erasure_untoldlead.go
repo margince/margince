@@ -11,6 +11,7 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -43,6 +44,9 @@ type UntoldLead struct {
 // on the caller's transaction, so the deletion commits with the failure that
 // caused it.
 func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
+	if err := refuseAnythingButAnUntoldLead(ctx, tx, in); err != nil {
+		return err
+	}
 	if !in.ApprovalID.IsZero() {
 		if err := dropFromSiteRead(ctx, tx, in.ApprovalID); err != nil {
 			return err
@@ -58,7 +62,7 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 	if in.LeadID.IsZero() {
 		return nil
 	}
-	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID)
+	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID, in.LeadID.UUID)
 	if err != nil {
 		return err
 	}
@@ -81,15 +85,19 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 // deleteNoticeActivities deletes the timeline row of the notice mail, which
 // takes the delivery and its decisions by cascade: the delivery holds the
 // recipient address. A row under a statutory hold stays where it is.
-func deleteNoticeActivities(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) ([]ids.UUID, error) {
+func deleteNoticeActivities(ctx context.Context, tx pgx.Tx, deliveryID, leadID ids.UUID) ([]ids.UUID, error) {
 	if deliveryID.IsZero() {
 		return nil, nil
 	}
+	// Only a delivery filed under this lead: a delivery id naming somebody
+	// else's mail deletes nothing.
 	rows, err := tx.Query(ctx, `
 		DELETE FROM activity
-		 WHERE id IN (SELECT activity_id FROM comms_outbound WHERE id = $1)
+		 WHERE id IN (SELECT o.activity_id FROM comms_outbound o
+		                JOIN activity_link al ON al.activity_id = o.activity_id AND al.lead_id = $2
+		               WHERE o.id = $1)
 		   AND restricted_at IS NULL
-		RETURNING id`, deliveryID)
+		RETURNING id`, deliveryID, leadID)
 	if err != nil {
 		return nil, fmt.Errorf("deleting the untold lead's notice mail: %w", err)
 	}
@@ -143,6 +151,35 @@ func dropFromSiteRead(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID)
 		 WHERE a.id = $1 AND a.kind = 'site_lead'
 		   AND sr.id::text = a.proposed_change->>'site_read_id'`, approvalID); err != nil {
 		return fmt.Errorf("removing the untold contact from the site read: %w", err)
+	}
+	return nil
+}
+
+// WebsiteLeadSource mirrors consent.WebsiteLeadSource, which this module may
+// not import.
+//
+// Held by: TestTheWebsiteLeadSourceIsSpelledOnce
+// (backend/internal/compose/siteleadnotice_test.go)
+const WebsiteLeadSource = "siteread"
+
+// errNotAnUntoldLead refuses an erasure pointed at anything but a website
+// lead and the site_lead proposal it came from.
+var errNotAnUntoldLead = errors.New("privacy: only a website lead and its site_lead proposal are erased for an untold notice")
+
+// refuseAnythingButAnUntoldLead checks, before anything is written, that the
+// lead is a website lead and the approval a site_lead proposal. Both ids come
+// from records, and a wrong one must delete nothing.
+func refuseAnythingButAnUntoldLead(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
+	var mismatched bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM lead
+		                WHERE id = $1 AND source_system IS DISTINCT FROM $3)
+		    OR EXISTS (SELECT 1 FROM approval WHERE id = $2 AND kind <> 'site_lead')`,
+		in.LeadID, in.ApprovalID, WebsiteLeadSource).Scan(&mismatched); err != nil {
+		return fmt.Errorf("checking what an untold-lead erasure names: %w", err)
+	}
+	if mismatched {
+		return errNotAnUntoldLead
 	}
 	return nil
 }

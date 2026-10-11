@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -201,5 +203,15 @@ func TestEveryPathRefusesAnUnreviewedNotice(t *testing.T) {
 	effect := siteLeadAcceptEffect(nil, nil, nil, stale)
 	if err := effect(context.Background(), ids.New[ids.ApprovalKind](), []byte(`{}`), "hash"); !errors.Is(err, errSiteLeadNoticeUnreviewed) {
 		t.Errorf("the accept step on a review of other wording = %v, want unreviewed before it redeems", err)
+	}
+}
+
+// Consent sends the notice only to a lead under this source, privacy erases
+// only such a lead, and contacts holds only such a lead. A drift would leave one side refusing every lead.
+func TestTheWebsiteLeadSourceIsSpelledOnce(t *testing.T) {
+	if siteLeadSourceSystem != consent.WebsiteLeadSource || privacy.WebsiteLeadSource != consent.WebsiteLeadSource ||
+		contacts.WebsiteLeadSource != consent.WebsiteLeadSource {
+		t.Errorf("the website lead source is %q in compose, %q in consent, %q in privacy and %q in contacts",
+			siteLeadSourceSystem, consent.WebsiteLeadSource, privacy.WebsiteLeadSource, contacts.WebsiteLeadSource)
 	}
 }

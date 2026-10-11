@@ -201,7 +201,6 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			now:    func() time.Time { return time.Now().UTC() },
 		},
 		consentHandlers:     newConsentHandlers(pool),
-		siteLeadNotices:     newSiteLeadNoticeLane(),
 		collectionsHandlers: newCollectionsHandlers(pool),
 		// The warm room ranks its contact edges by the §4 relationship
 		// strength owned by contacts; injected through the adapter below so
@@ -326,7 +325,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// the gate and the registry take: a step-up refused against one counter and
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
-	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.volumeMeter, log, srv.siteLeadNotices)
+	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
 	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//

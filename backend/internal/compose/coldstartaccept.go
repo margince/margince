@@ -42,11 +42,13 @@ import (
 // log is installed for the same reason and on the same service: a bundle member
 // whose effect fails AFTER its decision committed is reported to the client by
 // outcome alone, so this is the process that has to carry the cause.
-// notices is the lane a website lead is told through, installed here alone.
+// It also answers the lane a website lead is told through, installed here
+// alone, for rewireConfirmationLane to fill once the mail lane is wired.
 func approvalsHandlersWithEffects(
-	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger, notices *siteLeadNoticeLane,
-) approvals.Handlers {
-	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log))
+	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger,
+) (approvals.Handlers, *siteLeadNoticeLane) {
+	notices := newSiteLeadNoticeLane()
+	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
 }
 
 // approvalsServiceWithEffects is the registration list itself, split from the

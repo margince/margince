@@ -320,8 +320,9 @@ func TestApplySendPathRegistersTheHeldDraftRelease(t *testing.T) {
 	// The approvals surface built the way New builds it — before any send
 	// configuration exists — and then the send path applied over it. That
 	// ordering IS the thing under test.
+	approvalsHandlers, _ := approvalsHandlersWithEffects(e.Pool, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	srv := Server{
-		approvalsHandlers:  approvalsHandlersWithEffects(e.Pool, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), &siteLeadNoticeLane{}),
+		approvalsHandlers:  approvalsHandlers,
 		activitiesHandlers: newActivitiesHandlers(e.Pool),
 		send: SendPath{
 			Delivery:      NewDeliveryStager(e.Pool, inserter),

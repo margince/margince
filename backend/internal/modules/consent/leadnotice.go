@@ -46,6 +46,19 @@ var ErrNoNoticeLane = fmt.Errorf("%w: this installation cannot send its own mail
 	"so a website lead cannot be told it is held; configure the relay, public URL and key vault",
 	apperrors.ErrConflict)
 
+// WebsiteLeadSource is the source a lead read off a company's website is
+// captured under. Only such a lead is sent this notice.
+const WebsiteLeadSource = "siteread"
+
+// errNotAWebsiteLead refuses a notice to a lead some other source captured.
+var errNotAWebsiteLead = fmt.Errorf("%w: only a lead read off a company's website is sent this notice",
+	apperrors.ErrConflict)
+
+// errNotARedeemedSiteLead refuses a failure record for anything but an
+// accepted website-lead proposal redeemed in the caller's transaction.
+var errNotARedeemedSiteLead = fmt.Errorf("%w: a failed website-lead notice is recorded only "+
+	"against the accepted site_lead proposal it came from", apperrors.ErrConflict)
+
 // errLeadHasNoAddress refuses a notice to a lead with no address on the row.
 var errLeadHasNoAddress = fmt.Errorf("%w: the lead has no address to send the notice to",
 	apperrors.ErrConflict)
@@ -117,11 +130,15 @@ func leadNoticeAddressTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (str
 		return "", false, err
 	}
 	var address *string
-	var already bool
+	var already, fromAWebsite bool
 	if err := tx.QueryRow(ctx, `
-		SELECT l.email, EXISTS (SELECT 1 FROM lead_privacy_notice n WHERE n.lead_id = l.id)
-		  FROM lead l WHERE l.id = $1`, leadID).Scan(&address, &already); err != nil {
+		SELECT l.email, EXISTS (SELECT 1 FROM lead_privacy_notice n WHERE n.lead_id = l.id),
+		       l.source_system IS NOT DISTINCT FROM $2
+		  FROM lead l WHERE l.id = $1`, leadID, WebsiteLeadSource).Scan(&address, &already, &fromAWebsite); err != nil {
 		return "", false, fmt.Errorf("consent: reading where the lead's notice goes: %w", err)
+	}
+	if !fromAWebsite {
+		return "", false, errNotAWebsiteLead
 	}
 	if already {
 		return "", true, nil
@@ -215,6 +232,16 @@ func nullableApproval(id ids.ApprovalID) *ids.ApprovalID {
 func RecordLeadNoticeFailedTx(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, failure string) error {
 	if failure != LeadNoticeNoAddress && failure != LeadNoticeCollision && failure != LeadNoticeRefused {
 		return fmt.Errorf("consent: %q is not a reason a notice fails before the lead is kept", failure)
+	}
+	var redeemedSiteLead bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM approval
+		                WHERE id = $1 AND kind = 'site_lead' AND consumed_at IS NOT NULL)`,
+		approvalID).Scan(&redeemedSiteLead); err != nil {
+		return fmt.Errorf("consent: reading the proposal a failed notice came from: %w", err)
+	}
+	if !redeemedSiteLead {
+		return errNotARedeemedSiteLead
 	}
 	return writeLeadNoticeTx(ctx, tx, leadNoticeRow{approvalID: approvalID, state: "failed", failure: failure})
 }

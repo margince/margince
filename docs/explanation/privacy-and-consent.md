@@ -430,8 +430,9 @@ language. Its link opens the same disclosure page.
   deletes the lead, its notice mail and its captured original. The contact's entry
   in the site read is removed, and the accepted proposal is emptied
   (`privacy.EraseUntoldLeadTx`).
-- **A lead waits for its notice.** It cannot be made a contact or claimed until
-  its notice has been sent for 72 hours without a bounce.
+- **A lead waits for its notice.** It cannot be made a contact, claimed, given
+  an owner, routed or merged until its notice has been sent for 72 hours without
+  a bounce. A website lead with no notice record is held too.
 - **The proof row names nobody.** `lead_privacy_notice` records the wording
   version, the language, the delivery and the outcome. After a failure it is the
   only record left, apart from rows under a statutory hold.
