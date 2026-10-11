@@ -337,8 +337,15 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 // own (D5). Left to the erasure, the project's name would freeze at erasure
 // time instead of at qualification.
 func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.ActivityID, stamp StampProject) error {
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM contact c JOIN activity_link l ON l.contact_id = c.id
-		 WHERE l.activity_id = $1 ORDER BY c.id FOR SHARE OF c`, echoID); err != nil {
+	// The copy takes only contacts this lock confirmed live. A link added to the
+	// echo after it stays behind, as does a contact anonymised while it waited.
+	rows, err := tx.Query(ctx, `SELECT c.id FROM contact c JOIN activity_link l ON l.contact_id = c.id
+		 WHERE l.activity_id = $1 AND c.archived_at IS NULL ORDER BY c.id FOR SHARE OF c`, echoID)
+	if err != nil {
+		return fmt.Errorf("activities: holding the contacts the absorbed echo is filed under: %w", err)
+	}
+	held, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
 		return fmt.Errorf("activities: holding the contacts the absorbed echo is filed under: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
@@ -355,13 +362,11 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 		          AND held.entity_type = echo_link.entity_type
 		          AND coalesce(held.contact_id, held.company_id, held.deal_id, held.lead_id, held.project_id)
 		            = coalesce(echo_link.contact_id, echo_link.company_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
-		   AND NOT EXISTS (
-		       SELECT 1 FROM contact gone
-		        WHERE gone.id = echo_link.contact_id AND gone.archived_at IS NOT NULL)
+		   AND (echo_link.contact_id IS NULL OR echo_link.contact_id = ANY($3))
 		   AND NOT (echo_link.entity_type = 'project' AND EXISTS (
 		       SELECT 1 FROM activity_link held
 		        WHERE held.activity_id = $1 AND held.entity_type = 'project'))`,
-		survivorID, echoID); err != nil {
+		survivorID, echoID, held); err != nil {
 		return fmt.Errorf("activities: giving the send the absorbed echo's timeline links: %w", err)
 	}
 	// Read the survivor's project link back rather than counting on the insert
@@ -371,7 +376,7 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 	// the link arrived here or was already there. At most one row can come
 	// back: uq_activity_link_project admits one project link per activity.
 	var project ids.UUID
-	err := tx.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`SELECT project_id FROM activity_link WHERE activity_id = $1 AND entity_type = 'project'`,
 		survivorID).Scan(&project)
 	if errors.Is(err, pgx.ErrNoRows) {
