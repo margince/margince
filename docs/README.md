@@ -42,9 +42,8 @@ An installation needs these documents before it may read the mail of its own tea
 customer signs them, and Margince does not check them.
 [handbook/compliance.md](handbook/compliance.md) says why.
 
-- [compliance/en/README.md](compliance/en/README.md): the list, in English, with each German document
-  next to its English copy. Sign the German ones in [compliance/de/](compliance/de/), because only
-  the German text is the legal one.
+- [compliance/README.md](compliance/README.md): the list, with each German document next to its
+  English copy. `extensions/de` ships them, and only the German text is the legal one.
 
 ### Attacks: what we must do as the maker
 

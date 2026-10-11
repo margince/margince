@@ -258,7 +258,7 @@ var retired = gatekit.Waive(map[string]string{
 	// Waived rather than renamed because the rename was tried: it produced
 	// "die beschäftigte Contact" and "Eine Einwilligung je Contact", which are
 	// not German, in four documents that get printed and signed.
-	"docs/compliance/de": "German legal prose about the employees whose mail is captured — " +
+	"extensions/de/documents/de": "German legal prose about the employees whose mail is captured — " +
 		"die beschäftigte Person is a human being, and these documents never name this record",
 
 	"scripts/handbook-ask/questions.txt": "questions in the words users type — \"add a new " +

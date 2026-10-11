@@ -4,10 +4,12 @@
 // Package de is the German jurisdiction pack (ADR-0042) as a stable-tier
 // extension — the ADR-0120 migration pilot: the first first-party unit
 // shipping enabled-by-default in the vanilla tree (its directory under
-// extensions/ IS the enablement). V1 ships the GoBD statutory retention
-// classes; further obligations (the XRechnung/ZUGFeRD fiscal formats,
-// the CRA conformity regime) return to the seam when their work packages
-// land. Core code never contains a jurisdiction string — this unit is
+// extensions/ IS the enablement). It ships the GoBD statutory retention
+// classes, the outbound-messaging rules, the request deadline and the
+// compliance documents an employer signs. The XRechnung/ZUGFeRD fiscal
+// formats return to the seam when their work package lands; the CRA
+// documents are the maker's duty and live in docs/compliance/cra.
+// Core code never contains a jurisdiction string — this unit is
 // where Germany lives. The product ships no scraping-based enrichment; the
 // legal position behind that is a whitepaper kept with the company's business
 // material, not in this tree.
@@ -19,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // New returns the unit's declaration (the ADR-0120 §4 constructor
@@ -30,6 +33,23 @@ func New() extension.Extension {
 		Description:   "German jurisdiction pack: the statutory retention floors (§147 AO) and the outbound-messaging rules (UWG §7, Art. 13) the core engines apply. Registers no records, routes or jobs.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
 		Messaging:     []messaging.Rules{messagingRules()},
+		SubjectRights: []subjectrights.Rules{subjectRights()},
+		Documents:     documents(),
+	}
+}
+
+// subjectRights states the GDPR month for every request kind. German law adds
+// no shorter deadline, so a German installation gets what the core's fallback
+// would give, under the citation that binds it here.
+func subjectRights() subjectrights.Rules {
+	month := subjectrights.Deadline{Period: jurisdiction.Period{Months: 1}}
+	return subjectrights.Rules{
+		Jurisdiction: "de",
+		Version:      1,
+		Instruments:  []messaging.Instrument{{Name: "Regulation (EU) 2016/679, Art. 12(3)", EffectiveFrom: time.Date(2018, time.May, 25, 0, 0, 0, 0, time.UTC)}},
+		Deadlines: map[subjectrights.RequestKind]subjectrights.Deadline{
+			subjectrights.Access: month, subjectrights.Rectify: month, subjectrights.Erasure: month,
+		},
 	}
 }
 

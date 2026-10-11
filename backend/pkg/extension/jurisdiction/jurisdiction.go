@@ -107,10 +107,10 @@ func (p Period) Validate() error {
 	return nil
 }
 
-// Pack is one jurisdiction's compiled-in behavior set. Retention is the
-// only obligation packs carry today; the further ADR-0042 contributions
-// (FiscalFormatter, ConformityRegime, …) return when a work package pays
-// for them.
+// Pack is one jurisdiction's compiled-in behavior set. It carries the
+// retention floors; the messaging rules, request deadlines and documents of
+// the same jurisdiction are their own Extension fields. The fiscal formats
+// (ADR-0042 FiscalFormatter) return when a work package pays for them.
 type Pack interface {
 	// Code is the pack's jurisdiction, lower-case ISO 3166-1 alpha-2.
 	Code() Code

@@ -4,7 +4,8 @@
 What German law requires of this product, stated as data that the core engines apply. The pack
 decides nothing: it declares, and the engine reads.
 
-Two obligations are here.
+Four things are here: the retention floors, the outbound-message rules, the request deadline, and
+the documents an employer signs before mail is read.
 
 ## Retention floors (GoBD, §147 AO)
 
@@ -71,6 +72,17 @@ no acknowledgement owed for an opt-out.
 
 The zero values are intended, so a reader who compares packs can tell a chosen absence from a
 missing field. `TestGermanyImposesNoPrefixNoCapAndNoAcknowledgement` holds them.
+
+## Request deadlines (GDPR Art. 12(3))
+
+Every kind of GDPR request is due one calendar month after it arrives. German
+law sets no shorter deadline, and the pack states the month with its citation.
+
+## Documents
+
+`documents/de/` holds the five originals to sign; `documents/en/` holds the English copies, for
+reading only. The list is in [docs/compliance/README.md](../../docs/compliance/README.md). The
+Jurisdiction settings page lists and serves them when the installation is set to Germany.
 
 ## Changing any of this
 

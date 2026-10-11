@@ -354,7 +354,6 @@ disqualify
 do
 doctor
 document
-documentation
 dollars
 domain
 done

@@ -18,7 +18,7 @@ package gates
 // may read employee mail. Nothing was broken; it was simply unfindable.
 //
 // The walk is transitive on purpose, so a subtree may keep its own hub page —
-// docs/handbook/README.md and docs/compliance/en/README.md both index their own
+// docs/handbook/README.md and docs/compliance/README.md both index their own
 // trees, and a flat "is this basename mentioned in the index" check would either
 // force every page into the root index or accept a filename that appears in some
 // unrelated sentence. Reachability is the property that actually matters to a

@@ -1,7 +1,7 @@
 # Reporting an actively exploited vulnerability (CRA Article 14)
 
 This runbook covers Gradion's duty as manufacturer under CRA Article 14. The
-customer-side documents in [`../en/`](../en/README.md) are what an installation
+customer-side documents in [`../README.md`](../README.md) are what an installation
 signs before it reads employee mail. This directory is what we do when a
 weakness in Margince is being exploited in the wild.
 

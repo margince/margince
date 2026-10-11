@@ -17,7 +17,7 @@ To get Margince ready for mail capture within the law, do four things before any
 2. Settle private use of work mail: consent per colleague, or a written ban (Einwilligung, §26(2) BDSG).
 3. Agree it with the works council (Betriebsvereinbarung, §87(1) Nr. 6 BetrVG).
 4. Record it for the regulator (Verarbeitungsverzeichnis und DSFA, Art. 30 and Art. 35).
-Templates ship with the Margince documentation.
+With Germany chosen as the law, **Settings → Governance → Jurisdiction** lists the templates.
 Also called: DSGVO, data protection, works council, Betriebsrat, DPIA.
 
 ### Does Margince check that we signed a works agreement?
@@ -52,9 +52,9 @@ Also called: compliance check, legal sign-off, is Margince compliant.
 4. **Write it down for the regulator**: the *Verarbeitungsverzeichnis und DSFA*
    (Art. 30, Art. 35). One entry per processing operation.
 
-The templates live in the compliance section of the Margince documentation. The
-English set is for reading and for passing around inside the company; the German
-versions are the ones to sign.
+With Germany chosen as the law, the templates are on **Settings → Governance →
+Jurisdiction**, to read and download. The English set is for reading and for
+passing around inside the company; the German versions are the ones to sign.
 
 ## What Margince gives you to point at
 
