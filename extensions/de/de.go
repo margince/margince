@@ -29,7 +29,7 @@ func New() extension.Extension {
 	return extension.Extension{
 		Name:          "de",
 		Version:       "1.0.0",
-		Description:   "German jurisdiction pack: the statutory retention floors (§147 AO) and the outbound-messaging rules (UWG §7, Art. 13) the core engines apply. Registers no records, routes or jobs.",
+		Description:   "German jurisdiction pack: the retention floors (§147 AO), the messaging rules (UWG §7, Art. 13), the request deadline and the staff documents. Registers no records, routes or jobs.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
 		Messaging:     []messaging.Rules{messagingRules()},
 		SubjectRights: []subjectrights.Rules{subjectRights()},
