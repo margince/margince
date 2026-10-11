@@ -327,15 +327,45 @@ an installation sets. `backend/gates/aicallsubject_test.go` is the census that k
 complete. Every model call in the tree either names its subject, says why it is about no single
 record, or is listed as owing one.
 
-## Jurisdiction retention floors
+## The installation's jurisdiction
 
-A retention action that destroys data must not break a legal floor. Packs for each jurisdiction are extensions
-(`extensions/de`), built in through the `ports/jurisdiction` seam; see
-[extensibility.md](extensibility.md). Core code never names a jurisdiction. The **`de`** (German) pack
+An installation runs under one jurisdiction, stored as `installation.country`. It comes from
+`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/de`, `extensions/vn`), built in through the
+`ports/jurisdiction` seam; see [extensibility.md](extensibility.md). Core code never names a
+jurisdiction.
+
+The selected pack decides three things: the retention floor, the messaging rules and the request
+deadlines. A pack compiled in but not selected applies nothing.
+
+- With no jurisdiction set, requests get one calendar month (GDPR Art. 12(3)). Messaging takes the
+  strict rules every jurisdiction shares. Retention keeps the longest floor of every compiled-in pack,
+  so a new release exposes no mail that was kept safe the day before.
+- A change to a weaker floor carries the old one. The change writes `privacy.retention_floor_carry`
+  in the same transaction. Mail sent or received before the change keeps the old floor until its window
+  closes. The carry is never lowered.
+- An owner's delete of captured mail, and a retention erase, check the floor in force again inside the
+  transaction that destroys. So a change between choosing and destroying cannot destroy mail the floor keeps.
+- Boot refuses a stored code with no compiled-in pack, in the api and in the worker.
+
+`privacy.ResolveFloorPolicy` resolves the floor once per decision. Every path that destroys data passes
+it down.
+
+### Request deadlines
+
+A pack may declare a deadline per request kind (`SubjectRights`), in calendar units or in hours. A kind
+it leaves out gets the GDPR month. The confirm link and a request filed by hand share one resolver.
+Each request stores the rule as `due_rule`, such as `gdpr` or `vn v1`.
+
+A request filed by hand may carry an earlier date, stored with `due_overridden`. A later date gets
+`422`. A row filed before this has a NULL `due_rule`.
+
+### Retention floors
+
+A retention action that destroys data must not break a legal floor. The **`de`** (German) pack
 declares GoBD retention classes.
 
-The retention check takes the longest built-in floor for business
-correspondence. It keeps outside business correspondence (a *Handelsbrief*) from being destroyed
+The retention check takes the selected pack's floor for business correspondence, or the longest
+built-in floor when no jurisdiction is set. It keeps outside business correspondence (a *Handelsbrief*) from being destroyed
 before that floor. An internal note or task is not correspondence and carries no floor. A fitness test
 pins that line (a 400-day email lives on; a note as old as that is erased).
 

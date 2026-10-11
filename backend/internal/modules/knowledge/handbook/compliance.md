@@ -69,3 +69,15 @@ versions are the ones to sign.
 Margince cannot tell you whether your own way of working is within the law: the
 templates have blanks to fill in. For erasure, access requests, retention and consent inside Margince, see
 [What is kept, what is destroyed](retention-exports-and-deletion.md).
+
+## Which law applies
+
+Margince follows one law for the whole installation. An admin chooses it at first setup, or later on **Settings → Governance → Jurisdiction**. The page shows what the choice changes:
+
+- how long business mail is kept before anyone may delete it;
+- the due date of a privacy request;
+- the rules for sales mail.
+
+With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
+
+A change to a law that keeps mail for a shorter time does not cut that time for mail you already hold. That mail keeps the old time, and the page says until when.

@@ -45,7 +45,12 @@ token instead. The user who claims the installation enters the company and the f
 the `seeds.*` values still apply.
 
 After that, editing `workspace` or `bootstrap_admin` changes
-nothing. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
+nothing, with one exception.
+
+`workspace.country` names the jurisdiction pack the installation runs under, as a two-letter ISO 3166-1
+code in small letters. It is also seeded into an existing installation that has no stored country.
+Boot refuses a code with no compiled-in pack, in the api and in the worker. After the first seed, the
+Jurisdiction settings page changes it. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
 `seeds.*` again from the current file. Every other section of the file is read at each boot.
 
 **Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
