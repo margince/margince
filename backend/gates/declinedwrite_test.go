@@ -85,11 +85,7 @@ var declinedWriteIsSilent = gatekit.Waive(map[string]string{
 // review: growing an error where a caller expects nil changes what a worker
 // does next.
 var declinedWriteOwesACheck = gatekit.Waive(map[string]string{
-	"backend/internal/modules/ai/voice_build_run.go:SetBuildStage":               "a stage advances only while the build is running, so a worker whose build was cancelled keeps spending model calls on stages nothing records (#7210)",
-	"backend/internal/modules/capture/pending.go:Retire":                         "a verdict reached by a paid model call is written only while this worker still holds the claim, and a stolen claim discards the verdict with the caller told nothing (#7210)",
-	"backend/internal/modules/capture/pendingreview.go:LinkProposal":             "the proposal row is created first and attached second, so a row resolved in between leaves a proposal nothing points at (#7210)",
-	"backend/internal/modules/capture/pendingreview.go:ResolveReviewedAs":        "a human reviewer's disposition lands only while the row is still unsure, so a decision made twice silently drops one of them and the screen reports both as saved (#7210)",
-	"backend/internal/modules/contacts/domaintriageresolve.go:bindTriageDossier": "the dossier binds only while company_id IS NULL, so a concurrent bind to a DIFFERENT company leaves the caller believing it owns a dossier that names somebody else (#7210)",
+	"backend/internal/modules/ai/voice_build_run.go:SetBuildStage": "a stage advances only while the build is running, so a worker whose build was cancelled keeps spending model calls on stages nothing records (#7210)",
 })
 
 // countingHelpers names every function in one package whose body reads a
@@ -281,7 +277,7 @@ func TestAConditionalByIDWriteReportsThatItDeclined(t *testing.T) {
 	// Pinning it keeps the gate green while holding the debt where it is. A
 	// sixth write owing a check fails here, and each one #7210 fixes lowers
 	// this number.
-	const writesOwingACheck = 5
+	const writesOwingACheck = 1
 	if got := len(declinedWriteOwesACheck.Subjects()); got != writesOwingACheck {
 		t.Errorf("%d writes owe an outcome check, pinned at %d: a new one is debt this gate refuses, "+
 			"and one fixed lowers the pin", got, writesOwingACheck)

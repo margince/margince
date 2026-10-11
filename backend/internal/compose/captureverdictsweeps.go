@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -85,7 +86,14 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 			if proposalID.IsZero() {
 				continue
 			}
-			if err := e.pending.LinkProposal(wsCtx, row.ID, proposalID); err != nil {
+			// A row a human decided while this sweep staged its offer is
+			// nothing to link, not a reason to abandon the other rows.
+			//
+			// The offer describes a question that is already answered.
+			switch err := e.pending.LinkProposal(wsCtx, row.ID, proposalID); {
+			case errors.Is(err, apperrors.ErrConflict), errors.Is(err, apperrors.ErrNotFound):
+				continue
+			case err != nil:
 				return err
 			}
 		}
