@@ -390,6 +390,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |
 | `rbacgate_test.go` | H2 | Every exported method on a module's \*Store or \*Service (the seam both the HTTP handlers and the MCP tool surface call through) references the platform auth gate (object RBAC and/or the row-scope spellings), directly or through a same-package helper. |
+| `relayhandler_test.go` | H2 | Every method wearing the event-relay handler shape is wired to the bus. |
 | `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
 | `replayscope_test.go` | H2 | A replay is a read, so every operation the idempotency middleware can replay must either re-probe the row scope of the record its recorded body carries, or say in writing that the body carries no such record. |
 | `resetflushscope_test.go` | H2 | The reset's cache flush has two entry points by design, and the split is a security boundary rather than a style choice. |

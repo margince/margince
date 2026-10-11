@@ -5,13 +5,16 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // pricedRisk is one overdue deal carrying an amount, as the at-risk lane
@@ -47,7 +50,7 @@ func TestTheRecordedVerdictIsTheMaterialBarInBaseMoney(t *testing.T) {
 	small, yen, mid, big := pricedRisk(eur(100)), pricedRisk(smallInYen), pricedRisk(eur(200)), pricedRisk(eur(50_000))
 	svc := judgedService([]RiskyDeal{small, yen, mid, big})
 
-	got, err := svc.MaterialAtRisk(context.Background())
+	got, err := svc.MaterialAtRisk(asTheSweep())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +68,7 @@ func TestTheRecordAgreesWithTheQueuesMaterialReason(t *testing.T) {
 	risky := []RiskyDeal{pricedRisk(eur(100)), pricedRisk(smallInYen), pricedRisk(eur(200)), pricedRisk(eur(50_000))}
 	svc := judgedService(risky)
 
-	recorded, err := svc.MaterialAtRisk(context.Background())
+	recorded, err := svc.MaterialAtRisk(asTheSweep())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +100,7 @@ func TestAnUnpricedPipelineRecordsNoVerdict(t *testing.T) {
 	t.Parallel()
 	svc := judgedService([]RiskyDeal{{DealID: ids.NewV7(), Name: "Unpriced", CloseOverdue: true}})
 
-	got, err := svc.MaterialAtRisk(context.Background())
+	got, err := svc.MaterialAtRisk(asTheSweep())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,5 +155,29 @@ func TestTheFigureCountsTheWholeDaysTheWindowHolds(t *testing.T) {
 					c.first.Format(time.DateOnly), c.end.Format(time.DateOnly))
 			}
 		})
+	}
+}
+
+// asTheSweep is the context the risk-verdict sweep hands this service: the
+// system principal, bound by the caller rather than by the method.
+func asTheSweep() context.Context {
+	return principal.SystemActing(context.Background(), "system:risk-verdict-test")
+}
+
+// A human caller is refused, so the recorded verdict cannot be one reader's
+// view of the pipeline.
+//
+// The bar is a median over the amounts the caller can read. A rep whose field
+// masks hide some amounts would rank against a different median. The row this
+// writes is the workspace's answer rather than theirs.
+func TestOnlyTheSystemMayJudgeTheAtRiskPipeline(t *testing.T) {
+	t.Parallel()
+	svc := judgedService([]RiskyDeal{pricedRisk(eur(100)), pricedRisk(eur(200))})
+
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:rep",
+	})
+	if _, err := svc.MaterialAtRisk(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a human judging the pipeline → %v, want ErrPermissionDenied", err)
 	}
 }

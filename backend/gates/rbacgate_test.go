@@ -472,7 +472,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 // gate collects, so writing the store that way would have left the write path
 // invisible here while this comment claimed otherwise.
 var storeEntryPointScope = gatekit.Scope{
-	Roots:   []string{modulesDir, settingsStoreDir},
+	Roots:   []string{modulesDir, settingsStoreDir, composeTierDir},
 	Subject: declaresStoreEntryPoint,
 	Exempt:  entryPointsOutsideModules,
 }
@@ -483,56 +483,23 @@ var storeEntryPointScope = gatekit.Scope{
 // it in would mean waiving files this gate has not judged.
 const settingsStoreDir = "internal/platform/settings"
 
+const composeTierDir = "internal/compose"
+
 // entryPointsOutsideModules ratifies the files that hold this entry-point shape
-// outside internal/modules. Each says what the methods are; none says they are
-// correctly gated, because this gate has not judged them — bringing a tier under
-// it is its own decision, taken with its own evidence, and ratifying the sweep is
-// not that decision. The entries are the ratchet: a file that stops holding the
-// shape is reported stale here, so the question cannot be forgotten.
+// outside the roots. Each says what the methods are; none says they are
+// correctly gated, because this gate has not judged them. Bringing a tier under
+// it is its own decision, taken with its own evidence.
+//
+// What remains is the blobstore drivers, which own no domain rows and answer to
+// an interface rather than a caller. The compose tier is a root, so this gate
+// judges it.
+//
+// The entries are the ratchet: a file that stops holding the shape is reported
+// stale here, so the question cannot be forgotten.
 var entryPointsOutsideModules = gatekit.Waive(map[string]string{
-	"internal/compose/attention/waitinglane.go":      "attention.Service.HiddenBacklog — the guardrail over the queue's own hiding rules, and a projection with no read of its own: every figure comes from activities.Store.HiddenWaiting across the Waiting seam, and THAT method is inside this gate's roots and opens with auth.Require on activity plus the same ActivityContentClause the waiting lane composes, so the row scope is applied where the SQL is. This file reads no table and writes nothing. Ratified here only as a subject the roots do not cover",
-	"internal/compose/company360/assemble.go":        "company360.Service.Assemble — a compose read service assembling the record-360 view across domain tables; this package does reference the platform auth gate (auth.Require, EnsureVisible, the scope clauses), but whether the gate's transitive resolution proves that for each entry point is a judgement this change has not made",
-	"internal/compose/company360/graph.go":           "company360.Service.Graph — the same read service's relationship graph, in a package that reaches auth through its section helpers; enrolling compose in this gate is a separate decision from proving where the entry points are",
-	"internal/compose/company360/coverage.go":        "company360.Service.Coverage — the account's coverage reading, ratified on the same terms as its siblings: it opens with the contacts store's own GetCompanyTx (auth.Require + EnsureVisible), the roster it folds carries the contact row scope as a predicate, and the deals it lists go through scopeClause; enrolling compose in this gate is the separate decision the other company360 entry points are ratified under",
-	"internal/compose/company360/contactlist.go":     "company360.Service.ContactPage — the account's contact list, the paging surface behind the 360's contacts section; it opens with the same contacts-store GetCompanyTx (auth.Require + EnsureVisible) that Graph and Assemble open with, and the roster read it pages carries the contact row scope as a predicate, but enrolling compose in this gate is the same separate decision its siblings are ratified under",
-	"internal/compose/company360/introdraft.go":      "company360.Service.IntroRequestDraft — the ask a rep sends a colleague. It opens with auth.RequireHuman, then the contacts store's own GetCompanyTx (auth.Require + EnsureVisible) refuses an account this caller cannot open; the contact is read through contactIdentity under the contact row scope, and the route through mayReadRoutes + contactRoutes, so a caller without activity:read learns nothing about who can reach whom. It WRITES nothing at all — no draft row, no activity, no audit entry beyond the model call's own — which is why there is no mutation for this gate to be the last line in front of. Ratified here only as a subject the roots do not cover",
-	"internal/compose/company360/roleproposals.go":   "company360.Service.ProposeRoles — the buying-role reading, and the one WRITE in this package's ratified set. It opens with auth.RequireHuman, then asks relationship.create and deal.update as OBJECT grants, then auth.EnsureWritableLive on the deal itself — that last one matters because the seats are written under a substituted system principal, which is unbounded, so the caller's row-level write authority has to be established while they are still the actor. Every read that feeds the prompt is the coverage card's own (contacts.StrengthForCompanyContacts, contactIdentity, deals.Stakeholders) and the message bodies carry auth.ActivityContentClause. The seats themselves go through contacts.Store.CreateRelationshipTx, which this gate DOES judge directly; enrolling compose in this gate is the separate decision its siblings are ratified under",
-	"internal/compose/company360/dismissal.go":       "company360.Service.DismissSuggestion — the suggestion-dismissal write; it opens with auth.RequireHuman and auth.Require, so it is not a suspected gap, but this gate has not been the thing that checked it",
-	"internal/compose/company360/viewbaseline.go":    "company360.Service.Acknowledge — the record-view acknowledgement write, likewise opening with auth.RequireHuman and auth.Require; ratified here only as a subject the roots do not cover",
-	"internal/compose/project360/assemble.go":        "project360.Service.Assemble — the project record-360 read, the company and contact views' sibling and ratified on the same terms as contact360/assemble.go: its mandatory anchor read opens with the deals store's own auth.Require + EnsureVisible (GetProjectTx) and every section is a module store's gated transaction-taking read, but whether this gate's transitive resolution proves that per entry point is the judgement enrolling compose would have to make",
-	"internal/compose/contact360/assemble.go":        "contact360.Service.Assemble — the contact record-360 read, the company view's sibling and ratified on the same terms as company360/assemble.go: its mandatory root read opens with the contacts store's own auth.Require + EnsureVisible and every section carries its object grant, but whether this gate's transitive resolution proves that per entry point is the judgement enrolling compose would have to make",
-	"internal/compose/contact360/handlers.go":        "contact360.Handlers.AcknowledgeContactView — the contact view's visit acknowledgement, the twin of company360/viewbaseline.go and likewise opening with auth.RequireHuman; ratified here only as a subject the roots do not cover",
-	"internal/compose/contact360/momentdismissal.go": "contact360.Service.DismissMoment — the contact page's moment dismissal, the twin of company360/dismissal.go: it opens with auth.RequireHuman, auth.Require and auth.EnsureVisibleLive, so it is not a suspected gap, but this gate has not been the thing that checked it",
-	"internal/compose/dealstatus/service.go":         "dealstatus.Service.Get — the deal page's status card. It gathers its facts through gated reads and nothing else: deals.Store.GetDeal and DealHealth (deal.read plus the deal row scope), activities.Store.ListActivities and ListOpenTasks (activity.read plus the link-walk scope, narrowed to the deal), dealrooms.Store.ListRooms and ListThreads (deal_room.read plus the deal scope; a caller without the grant reads no room and the card says nothing about one). The writing over them is a pure function of what those reads returned. The one row it writes is its own cache entry in deal_status_card, keyed by the reading user so no card crosses readers, and derived content carries no audit or outbox row",
-	"internal/compose/dealstatus/moves.go":           "dealstatus.Service.CachedMoves — the same card's move, read for a page of deals at once so the worklist can name a step it does not decide. It READS ONLY THE CACHE and assembles nothing, so it makes no record read this gate could be the last line in front of; what it returns was written by Service.Get above, under that caller's own gated reads. The admission is the cache key itself: the WHERE names user_id, and the workspace binding is WithWorkspaceTx's, so a reader reaches only cards written from records they were already admitted to. A deal they have no card for is simply absent from the answer, which is the same shape a refused read would take. It writes nothing at all",
-	"internal/compose/magic/linerecords.go":          "magic.Service.LineRecords — opening one done line. It reads and writes nothing, and it is gated the same way as Read in service.go: it regroups the window through doneSince, whose arms ask auth.Require for each object grant and render auth.ScopeClauseFor (activities: auth.ActivityContentClause), so a record the reader may not see is never a member. Field values are filtered by the reader's role masks (fieldmask.go). Held by TestAnOpenedLineHoldsOnlyRecordsTheReaderMaySee and TestAnOpenedLineWithholdsWhatTheReadersRoleMasks",
-	"internal/compose/magic/service.go":              "magic.Service.Read — the machinery's receipt. It reads and writes nothing, and it is NOT ungated: every audit row it serves is placed by joining the table its entity_type names, under that table's own gate, because audit_log carries no workspace_id (migration 1787320004 dropped the tenant column from the append-only ledgers) and so cannot be scoped by itself. done.go asks auth.Require for the entity's object grant AND renders auth.ScopeClauseFor's row predicate for the five owner-scoped records; activities go through auth.Require plus auth.ActivityContentClause, whose audience arm a row-scope clause would miss. Both halves are needed and neither implies the other: auth.UnboundedFor answers true for a rep on `deal`, so the clause renders EMPTY and a read leaning on it alone would serve every row to a seat holding no grant — the trap of taking a scope clause for a gate, held by TestASeatThatCannotReadDealsSeesNoMachineActionOnOne. An entity type this build cannot place is counted in not_shown rather than served, because a row it cannot scope is a row it cannot prove the reader may see",
-	"internal/compose/dealstatus/cards.go":           "dealstatus.Service.CachedCards — the same card's VERDICT, read for a page of deals at once so the worklist can carry a standing it does not decide. It stands where CachedMoves beside it stands: it READS ONLY THE CACHE and assembles nothing, so it makes no record read this gate could be the last line in front of, and what it returns was written by Service.Get under that caller's own gated reads. The admission is the cache key itself — the WHERE names user_id, and the workspace binding is WithWorkspaceTx's — so a reader reaches only cards written from records they were already admitted to. It is NOT ungated beyond that: the verdict sentence is model-written FROM the timeline and grounding.go requires it to cite the records it rests on, so its text restates their content, and content derived from an activity carries the audience predicate wherever it is served. So the activities the sentence cites are re-asked on every read through the same readableActivities CachedMoves uses (auth.Require plus auth.ActivityContentClause), and a standing whose cited message this reader may no longer read is dropped whole rather than served. It writes nothing at all",
-	"internal/compose/worklistsnap/store.go":         "worklistsnap.Service.Freeze and Resume — one reader's position in one walk through their own worklist. It reads and writes NO tenant record: the row holds a list of (source, row_id) identities, the four frozen bucket counts, a fingerprint and two timestamps, and deliberately no title, subject, name or evidence — every page re-reads the live rows through the assembler's own gated lanes and renders only what that caller may see at that moment. So there is no record this gate could be the last line in front of. The admission is the key itself: both statements name reader_id from the authenticated principal, readerOf refuses anything but a human seat, and the workspace binding is WithWorkspaceTx's — a colleague's walk simply does not match, which TestAColleaguesWalkIsNotResumable holds against the real table. Per-reader derived state, so no audit and no outbox row, ratified in moduleaudits alongside company_brief and deal_status_card",
-	"internal/compose/attention/teamexceptions.go":   "attention.Service.TeamExceptions — the lead's read of what is going wrong on their team. It opens no transaction and reads no table: every row comes from Service.Assemble, which is already ratified above as a projection over the owning modules' own gated reads, and this file only decides which of those rows is a condition a lead can act on. So there is no record it could be the last line in front of. The admission is requireLeadTier plus the caller's own visibility, exactly as TeamBoard and HiddenBacklog take it — a rep is refused before any row is judged, and the rows themselves were already narrowed by the lanes that produced them. Ratified here only as a subject the roots do not cover",
-	"internal/compose/attention/handled.go":          "attention.Service.HandledForYou — the reader's own receipt of what was done for them. It opens no transaction and reads no table: every row comes from the Receipts seam, whose implementation is the approvals module's own gated read, and this file only bounds and shapes what that returned. So there is no record it could be the last line in front of. The admission is auth.RequireHuman plus that seam's own scope — a receipt is the acting reader's, and a principal with no human behind it has nobody the acts were taken for. Ratified here only as a subject the roots do not cover", "internal/compose/meetingbrief/service.go": "meetingbrief.Service.Get — the pre-meeting brief read. UNLIKE its contactbrief sibling it carries no auth.RequireHuman: agents read it through prep_for_meeting, so that one tool and the contact page cannot answer the same question differently. What admits the read instead is auth.Require on activity and contact, then auth.EnsureActivityContentVisibleLive on the meeting itself, and every record it is written from arrives through the caller's own gated 360 and the contacts store's own claim read, so the row-scope gates run in those reads rather than here. An agent is capped the same way a contact is: a passport's authority is re-derived from the granting human's live seat on every call, never read off the principal. It also writes nothing — there is no cache — so there is no mutation for this gate to be the last line in front of",
-	"internal/compose/companydossier/cachedread.go":       "companydossier.Service.CachedSections — the cache-READ half of the company dossier, for a drafter that must never trigger an assembly. It opens with auth.RequireHuman and resolves the acting user, and the cache it reads is keyed per reader, so a row assembled for somebody else is not reachable through it; the dossier itself was assembled through the caller's own gated reads. Ratified here only as a subject the roots do not cover",
-	"internal/compose/contactbrief/service.go":            "contactbrief.Service.Get — the relationship brief read, ratified on the same terms as its companybrief sibling: it opens with auth.RequireHuman and every record it is written from arrives through the caller's own gated 360, so the row-scope gates run in that read rather than here",
-	"internal/compose/contactresearch/service.go":         "contactresearch.Service.Run and .Save — the deep-research surface. Run opens with auth.RequireHuman and reads only through the caller's own gated contact360, so it can research nobody they cannot open; Save carries its write into contacts.Store.SaveResearchClaims, which this gate DOES judge directly. Ratified here only as a subject the roots do not cover",
-	"internal/compose/companydossier/service.go":          "companydossier.Service.Get — the company dossier read, opening with auth.RequireHuman and assembling only from reads the caller makes themselves, so the row-scope gates run in the contacts store this calls rather than here",
-	"internal/compose/companydossier/growthfitservice.go": "companydossier.GrowthFitService.Get — the growth-fit read, ratified on the same terms as its dossier sibling: it opens with auth.RequireHuman and every record it counts arrives through a read the caller makes themselves, so the row-scope gates run in the contacts store rather than here",
-	"internal/compose/companybrief/service.go":            "companybrief.Service.Get and .Ask — the company brief read and its question surface, both opening with auth.RequireHuman; whether RequireHuman alone is the right admission for them is a question for the tier's own review, not for this sweep",
-	"internal/compose/companyscan/service.go":             "companyscan.Service.Get and .Ensure — the account scan, ratified on companybrief's terms: both open with auth.RequireHuman and resolve the acting user, the row they read is keyed per reader behind auth.EnsureVisible on the account, and everything the scan is written from arrives through the caller's own gated 360 and the content-gated words read, so the row-scope gates run in those reads rather than here. Run is the worker's entry and binds the reader's own principal before any read",
-	"internal/compose/company360/advice.go":               "company360.Service.UndismissedAdvice and .KeepUndismissed — the advice seam the account scan merges with. Both resolve the acting user, both run behind auth.EnsureVisible on the account, and the rules they run are the same grant-gated reads the composite's own suggestions section runs, so the object and row gates are those reads' rather than a second spelling here",
-	"internal/compose/contactdraft/service.go":            "contactdraft.Service.Draft — the contact-side email draft, ratified on the same terms as its accountdraft mirror: it opens with auth.RequireHuman and every record it grounds in arrives through the caller's own gated contact 360, so the row-scope gates run in that read rather than here. It also writes nothing, so there is no mutation for this gate to be the last line in front of",
-	"internal/compose/leaddraft/service.go":               "leaddraft.Service.Draft — the lead-side email draft, ratified on the same terms as its contactdraft mirror: it opens with auth.RequireHuman, the lead arrives through the contacts store's own gated GetLead and the correspondence through the activities store's own list, so the row-scope gates run in those reads rather than here. It also writes nothing, so there is no mutation for this gate to be the last line in front of",
-	"internal/compose/accountdraft/service.go":            "accountdraft.Service.Draft — the account-started email draft, ratified on the same terms as its companybrief sibling: it opens with auth.RequireHuman and every record it grounds in arrives through the caller's own gated 360, so the row-scope gates run in that read rather than here. It also writes nothing, so there is no mutation for this gate to be the last line in front of",
-	"internal/compose/analyticssharestore.go":             "AnalyticsShareStore.Issue, .ListIssued, .Resolve and .Revoke — the share link's writer and readers. Issue, ListIssued and Revoke DO open with auth.Require on forecast create, the verb the issuing seat holds, so none is a suspected gap; ListIssued and Revoke are further row-scoped to created_by, the authenticated issuer, and another seat's share is ErrNotFound to Revoke. Resolve deliberately opens with NO gate on the caller, because its caller is a recipient holding a token and not a seat, and what admits it is the token digest plus identity.IssuerStillHolds re-evaluating the forecast:read of the issuer as it stands today. The reading a resolved share then serves runs through the forecast engine under the principal of the RECIPIENT, so the row scope and the field masks are applied there. Ratified here only as a subject the roots do not cover",
-	"internal/compose/attention/assemble.go":              "attention.Service.Assemble — the day's read, matched because its dependency interfaces carry List/Count methods. It holds no store and opens no transaction: every lane is a read through the owning module's own gated entry point (approvals.Service.ListWire, contacts.Store.ListDedupeCandidates and CountOpenDedupeCandidates, activities.Store.ListActivities), and a lane whose read is refused is omitted and named rather than returned empty. Ratified here only as a subject the roots do not cover",
-	"internal/compose/attention/worklist.go":              "attention.Service.Worklist — the same day's read, ranked. Matched for the reason feed.go is: its dependency interfaces carry List/Count methods. It holds no store and opens no transaction of its own, and it reads NOTHING the lane feed did not already read — it calls Assemble and re-projects the result, so every gate that admitted a lane there is the gate that admitted it here, and a lane refused there arrives refused. Ratified here only as a subject the roots do not cover",
-	"internal/compose/attention/materialrecord.go":        "attention.Service.MaterialAtRisk — the queue's material verdict, asked by the hourly pass that records it. It holds no store and opens no transaction of its own: the deals come from the at-risk lane, which is deals.Store.ListDeals behind auth.Require on deal plus the list scope clause, and the prices from the base-money seam. It writes nothing; the verdict rows are written by deals.Store.RecordRiskDay, which this gate DOES judge and which refuses every principal but the system. Ratified here only as a subject the roots do not cover",
-	"internal/compose/attention/namedteam.go":             "Named-team composition reader: requireLeadTier gates the request, MembersOfTeam enforces live-team authority and row scope, and boardForRoster delegates to the existing gated attention sources. No table access or mutation lives here.",
-	"internal/compose/attention/teamboard.go":             "attention.Service.TeamBoard — the manager's counts over the same work, matched for the reason its two siblings are. It holds no store and opens no transaction. It admits the read on the reader's own ROW SCOPE first, before touching a source: a tier below team is ErrPermissionDenied, and an unbound membership reader is refused rather than answered as an empty team. Every count then comes from a read the caller makes themselves — identity.Service.LiveTeammatesOfCaller (auth.RequireHuman, and the roster it walks is the caller's own teams), activities.Store.WaitingReplies and OverdueLoadByAssignee (auth.Require plus the activity scope clauses), the at-risk lane's own gated list — so what it reports is bounded by what this reader may already open, and a source that refuses fails the board rather than drawing a column of zeros. It writes nothing. Ratified here only as a subject the roots do not cover",
-	"internal/compose/runnerservice.go":                   "RunnerService.TickWorkspace — the agent runner's worker-loop seam, which carries no human principal at all; that posture is what the module-side waivers spell out for their sweep entry points, and applying the same reasoning to compose needs the tier brought under the gate first",
-	"internal/compose/runnerresume.go":                    "RunnerService.HandleEvent — the same posture on the event-bus seam: a decision arrives on the bus under no human principal, and the authority it resumes under is re-derived from the parked run's own passport",
-	"internal/platform/blobstore/memory.go":               "memoryStore's Put/Get/Delete/Health — a blobstore.Store driver, matched only because the receiver type name ends in \"Store\". It moves opaque bytes under a caller-supplied key and holds no record and no workspace column, so there is no RBAC object for this gate's rule to name",
-	"internal/platform/blobstore/s3.go":                   "s3Store's Put/Get/Delete/Health — the same driver interface over S3, matched by the same receiver-name suffix; the admission that matters for a blob is taken by the module surface that mints its key, not by an object-storage client",
-	"internal/platform/blobstore/fs.go":                   "fsStore's Put/Get/Delete/DeletePrefix/Health — the same driver interface over a local directory, matched by the same receiver-name suffix, and ratified on the same terms as its two siblings: the admission that matters for a blob is taken by the module surface that mints its key. What is different here is worth naming rather than hiding behind the sameness — a key becomes a PATH, so fsStore.path refuses an absolute or traversing key outright (ErrInvalidKey). That is not this gate's object rule; it is the key prefix that carries tenant isolation, and a traversal would walk through it and serve a different object than the row named",
+	"internal/platform/blobstore/memory.go": "memoryStore's Put/Get/Delete/Health — a blobstore.Store driver, matched only because the receiver type name ends in \"Store\". It moves opaque bytes under a caller-supplied key and holds no record and no workspace column, so there is no RBAC object for this gate's rule to name",
+	"internal/platform/blobstore/s3.go":     "s3Store's Put/Get/Delete/Health — the same driver interface over S3, matched by the same receiver-name suffix; the admission that matters for a blob is taken by the module surface that mints its key, not by an object-storage client",
+	"internal/platform/blobstore/fs.go":     "fsStore's Put/Get/Delete/DeletePrefix/Health — the same driver interface over a local directory, matched by the same receiver-name suffix, and ratified on the same terms as its two siblings: the admission that matters for a blob is taken by the module surface that mints its key. What is different here is worth naming rather than hiding behind the sameness — a key becomes a PATH, so fsStore.path refuses an absolute or traversing key outright (ErrInvalidKey). That is not this gate's object rule; it is the key prefix that carries tenant isolation, and a traversal would walk through it and serve a different object than the row named",
 })
 
 // declaresStoreEntryPoint reports whether the file holds an entry point of the
@@ -553,8 +520,12 @@ func declaresStoreEntryPoint(path string, file *ast.File) bool {
 
 // isStoreEntryPoint is the three-part shape: exported, a pointer receiver on a
 // *Store or *Service type, and a context.Context parameter.
+//
+// An events.Handler is entered by the bus rather than by a caller, whatever its
+// receiver is called. isRelayHandler says what that costs, and what holds the
+// handlers instead.
 func isStoreEntryPoint(fn *ast.FuncDecl) bool {
-	if fn.Recv == nil || len(fn.Recv.List) == 0 || !fn.Name.IsExported() {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 || !fn.Name.IsExported() || isRelayHandler(fn) {
 		return false
 	}
 	star, ok := fn.Recv.List[0].Type.(*ast.StarExpr)
@@ -694,7 +665,7 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 				}
 				ast.Inspect(fn.Body, func(n ast.Node) bool {
 					if sel, ok := n.(*ast.SelectorExpr); ok {
-						if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "auth" && isAuthDecision(sel.Sel.Name) {
+						if pkg, ok := sel.X.(*ast.Ident); ok && isAdmissionCall(pkg.Name, sel.Sel.Name) {
 							info.auth = true
 						}
 						info.calls[sel.Sel.Name] = true
@@ -714,6 +685,37 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 	return pkgs
 }
 
+// isAdmissionCall says whether this package-qualified call refuses a caller.
+//
+// Nearly every one is a refusal in the auth package. The exception is a door
+// opened by a bearer token, where there is no caller seat to ask about.
+//
+// The share link resolver asks whether the issuing seat still holds the object
+// and action. A revoked seat's links die with it.
+//
+// Ratified one name at a time, because adding a name here can only make this
+// gate more permissive. Leaving one out makes it stricter, and that failure is
+// loud: the entry point reports ungated.
+func isAdmissionCall(pkg, name string) bool {
+	if pkg == "auth" {
+		return isAuthDecision(name)
+	}
+	return delegatedAdmissions[pkg+"."+name] != ""
+}
+
+// gatekit:fixture the admissions asked outside the auth package, each with the
+// authority it actually checks.
+//
+// delegatedAdmissions are calls that ask the object and action question about
+// somebody other than the caller. Each entry names whose authority stands in,
+// because a gate that admits on a third party's grant is the thing a reader
+// gets wrong.
+var delegatedAdmissions = map[string]string{
+	"identity.IssuerStillHolds": "asks whether the seat that ISSUED a share link still holds the object and " +
+		"action it covers, read now rather than when the link was made. The caller is an anonymous " +
+		"bearer, so the issuer's standing is the only authority there is to check",
+}
+
 // isAuthDecision says whether this name in the auth package REFUSES a caller.
 //
 // The gate used to count any selector on the package, which meant auth.Actor —
@@ -723,10 +725,14 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 // whether the caller may be there at all is exactly the shape this test claims
 // to catch. Two such reads were found the day this changed.
 //
-// The set is DERIVED from the verb the function's name starts with, not typed
-// out: Require, Ensure, Admit, Hold and Lock are the package's refusal verbs,
-// and a new one inherits the rule by being named like its neighbours. The
-// census below proves the convention still describes the package.
+// The set is derived from the verb the function's name starts with. Require,
+// Ensure, Admit and Hold are the package's refusal verbs, and a new one
+// inherits the rule by being named like its neighbours.
+//
+// The census below proves the convention still describes the package.
+//
+// Lock is not among them. LockSubjectLive reads as a refusal and is classified
+// below as not one, so counting the verb would contradict that entry.
 func isAuthDecision(name string) bool {
 	for _, verb := range authDecisionVerbs {
 		if strings.HasPrefix(name, verb) {
