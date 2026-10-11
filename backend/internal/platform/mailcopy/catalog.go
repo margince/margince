@@ -40,6 +40,7 @@ func buildCatalog() map[Language]Copy {
 	notificationLines(line)
 	digestLines(line)
 	confirmLines(line)
+	noticeLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
 }

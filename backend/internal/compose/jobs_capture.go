@@ -177,7 +177,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// The stall notice, which is the only thing that tells a seat their
 		// backlog stopped moving: an outage refunds the attempt rather than
 		// spending it, so nothing retires and nothing else surfaces it.
-		backlogNotice: NewBacklogStallNotifier(notices.NewStore(InstallationDB(pool)), time.Now),
+		backlogNotice: NewBacklogStallNotifier(notices.NewStore(InstallationDB(pool)), pool, time.Now),
 		log:           log,
 	})
 	// The confidentiality verdict, registered unconditionally for a related but
