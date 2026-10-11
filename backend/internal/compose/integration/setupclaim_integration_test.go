@@ -74,7 +74,7 @@ func claimStatus(t *testing.T, srv *httptest.Server, body string) int {
 // and the server refuses a claim that leaves either out.
 func claimBody(token string) string {
 	return `{"setup_token":"` + token + `","company_name":"Claimed Co","timezone":"Europe/Berlin",` +
-		`"base_currency":"EUR","base_language":"en",` +
+		`"base_currency":"EUR","base_language":"en","country":"",` +
 		`"admin_email":"ops@claimed.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 }
 
@@ -186,12 +186,12 @@ func TestAClaimWithoutABasisIsRefused(t *testing.T) {
 	// now asked on the form, so a claim that omits either is a client that
 	// stopped asking — and defaulting it would put this installation
 	// permanently on a currency nobody chose.
-	noLanguage := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin",` +
+	noLanguage := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin","country":"",` +
 		`"base_currency":"EUR","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, noLanguage); got != http.StatusUnprocessableEntity {
 		t.Errorf("a claim naming no base language answered %d, want 422", got)
 	}
-	noCurrency := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin",` +
+	noCurrency := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin","country":"",` +
 		`"base_language":"en","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, noCurrency); got != http.StatusUnprocessableEntity {
 		t.Errorf("a claim naming no base currency answered %d, want 422", got)

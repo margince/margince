@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // Config is the root of margince.yaml. Every section beyond `version` is
@@ -105,6 +106,11 @@ type Workspace struct {
 	BaseCurrency string `yaml:"base_currency"`
 	BaseLanguage string `yaml:"base_language"`
 	Timezone     string `yaml:"timezone"`
+	// Country is the jurisdiction the installation runs under, as a lower-case
+	// ISO 3166-1 alpha-2 code naming a compiled-in pack. Empty leaves it unset.
+	// Seeded once, also into an existing installation that has none stored;
+	// after that Settings → Jurisdiction changes it, never this file.
+	Country string `yaml:"country"`
 }
 
 // BootstrapAdmin identifies the first administrator. The password is a
@@ -338,6 +344,11 @@ func (c Config) validate() error {
 	}
 	if cur := c.Workspace.BaseCurrency; cur != "" && !values.ValidCurrency(cur) {
 		return fmt.Errorf("deployconfig: workspace.base_currency %q is not a 3-letter ISO 4217 code", cur)
+	}
+	if code := c.Workspace.Country; code != "" {
+		if err := jurisdiction.Code(code).Validate(); err != nil {
+			return fmt.Errorf("deployconfig: workspace.country: %w", err)
+		}
 	}
 	if lang := c.Workspace.BaseLanguage; lang != "" && !textlang.Known(lang) {
 		return fmt.Errorf("deployconfig: workspace.base_language %q is not a language this build speaks (en, de, vi)", lang)

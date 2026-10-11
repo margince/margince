@@ -172,7 +172,16 @@ var Country = settings.Define[string](
 		if v == "" {
 			return nil
 		}
-		return jurisdiction.Code(v).Validate()
+		code := jurisdiction.Code(v)
+		if err := code.Validate(); err != nil {
+			return err
+		}
+		// A code no compiled-in pack answers would select a jurisdiction that
+		// applies nothing, while the screen says it applies.
+		if _, ok := jurisdiction.For(code); !ok {
+			return fmt.Errorf("no jurisdiction pack for %q is compiled into this build", v)
+		}
+		return nil
 	},
 	// MachineryApplied because the outbound authorization engine reads it while
 	// applying the posture to its OWN write — the case that declaration exists

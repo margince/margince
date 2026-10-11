@@ -25,6 +25,10 @@
         },
         "timezone": {
           "type": "string"
+        },
+        "country": {
+          "description": "Country is the jurisdiction the installation runs under, as a lower-case ISO 3166-1 alpha-2 code naming a compiled-in pack. Empty leaves it unset. Seeded once, also into an existing installation that has none stored; after that Settings → Jurisdiction changes it, never this file.",
+          "type": "string"
         }
       }
     },
