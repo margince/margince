@@ -134,6 +134,11 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Fixed
 
+- **An approval reads the same on every door.** A write held for approval over
+  REST now shows the sentence the tool door shows, naming the records it
+  changes, such as the two tags a merge folds together. Only where that
+  sentence would point at a record by its id alone does the REST door keep its
+  own line.
 - **A create must name its source.** A lead, a relationship, a note, a task, an offer,
   a product, a custom field and a signal are refused with a 422 naming `source` when
   it is absent or blank, as a contact, a company and a deal already were. So are a

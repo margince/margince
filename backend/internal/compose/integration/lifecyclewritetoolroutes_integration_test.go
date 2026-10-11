@@ -169,7 +169,7 @@ func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 			t.Errorf("activity %s is linked to %v after a staged batch, want it left on %s", id, got, from)
 		}
 	}
-	d.sameStaged(t, "relink batch", toRest, toTool, "Batch To Rest", "Batch To Tool")
+	d.sameStagedByID(t, "relink batch", toRest, toTool, "Batch To Rest", "Batch To Tool")
 
 	// Once a human approves, the retry carrying the approval moves the activity,
 	// and the two doors leave the same rows.

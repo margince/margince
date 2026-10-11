@@ -47,6 +47,16 @@ const summaryFieldLimit = 8
 // cannot crowd out the fields after it.
 const summaryValueLimit = 48
 
+// stagedSentence is the line an approver reads. The resolver's line names the
+// records, so both doors show it. restSummary stands in where it says less: no
+// line, an id alone, or fields without the values a record write sets.
+func stagedSentence(info agents.StageInfo, said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) string {
+	if info.ReadsPoorly() {
+		return restSummary(said, pol, r, body)
+	}
+	return info.Summary
+}
+
 // restSummary describes the staged call: what it does to what, plus the
 // request body's own top-level fields. A body-less action route (send this
 // offer, archive this record) names the act alone — which is the whole change,

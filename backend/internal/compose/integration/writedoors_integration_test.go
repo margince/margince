@@ -284,13 +284,24 @@ func (d *twoDoors) stagedOn(t *testing.T, target string) []staged {
 	return out
 }
 
-// sameStaged fails unless each door staged one approval alike. It compares the
-// kind, the status, the record and version the decision is pinned to, and the
-// second record a merge names. It also compares the label a human reads. A label
-// carries the target's name. So `names` gives the route's and the tool's, which
-// differ by how the scenario seeded them. The sentence and the replayed change
-// are written by each door's own staging path, so both need only be present.
+// sameStaged fails unless each door staged one approval alike: kind, status,
+// the pin, the merge's second record, and the label and sentence a human reads.
+// The last two carry the target's name, which `names` gives per door. The
+// replayed change is each door's own, so it need only be present.
 func (d *twoDoors) sameStaged(t *testing.T, what, viaREST, viaTool string, names ...string) staged {
+	t.Helper()
+	return d.stagedPair(t, what, viaREST, viaTool, true, names)
+}
+
+// sameStagedByID is sameStaged for an operation whose sentence names the record
+// by its id. The resolver's line has nothing to read there, so the route stages
+// its own. The two sentences need only be present.
+func (d *twoDoors) sameStagedByID(t *testing.T, what, viaREST, viaTool string, names ...string) staged {
+	t.Helper()
+	return d.stagedPair(t, what, viaREST, viaTool, false, names)
+}
+
+func (d *twoDoors) stagedPair(t *testing.T, what, viaREST, viaTool string, sentence bool, names []string) staged {
 	t.Helper()
 	onREST, onTool := d.stagedOn(t, viaREST), d.stagedOn(t, viaTool)
 	if len(onREST) != 1 || len(onTool) != 1 {
@@ -300,11 +311,16 @@ func (d *twoDoors) sameStaged(t *testing.T, what, viaREST, viaTool string, names
 	if len(names) == 2 {
 		rest.TargetLabel = strings.ReplaceAll(rest.TargetLabel, names[0], "<name>")
 		tool.TargetLabel = strings.ReplaceAll(tool.TargetLabel, names[1], "<name>")
+		rest.Summary = strings.ReplaceAll(rest.Summary, names[0], "<name>")
+		tool.Summary = strings.ReplaceAll(tool.Summary, names[1], "<name>")
 	}
 	if rest.Summary == "" || tool.Summary == "" || rest.Change == "" || tool.Change == "" {
 		t.Errorf("%s: a staged approval lacks its sentence or its change: route %+v, tool %+v", what, rest, tool)
 	}
-	rest.Summary, rest.Change, tool.Summary, tool.Change = "", "", "", ""
+	rest.Change, tool.Change = "", ""
+	if !sentence {
+		rest.Summary, tool.Summary = "", ""
+	}
 	if rest != tool {
 		t.Errorf("%s: the route staged\n%+v\nthe tool staged\n%+v", what, rest, tool)
 	}

@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -98,6 +99,25 @@ type StageInfo struct {
 	CoTargetType string
 	CoTargetID   ids.UUID
 	Summary      string
+	// FieldsOnly marks a sentence that names the fields a record write sets and
+	// leaves their values to the replayed change.
+	FieldsOnly bool
+}
+
+// ReadsPoorly reports whether the sentence tells an approver less than a door's
+// own line could. It is empty, or it names a record by an id the reader cannot
+// open, or it names fields without their values. Such a call keeps the staging
+// door's own sentence.
+func (i StageInfo) ReadsPoorly() bool {
+	if i.Summary == "" || i.FieldsOnly {
+		return true
+	}
+	for _, id := range []ids.UUID{i.TargetID, i.CoTargetID} {
+		if !id.IsZero() && strings.Contains(i.Summary, id.String()) {
+			return true
+		}
+	}
+	return false
 }
 
 // stageableTool is implemented by tools whose refused 🟡 calls should

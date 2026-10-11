@@ -253,6 +253,7 @@ func (r createOfferResolver) Subject(ctx context.Context, cmd CreateOfferCommand
 	return StageInfo{
 		TargetType: offerRecordType,
 		Summary:    fmt.Sprintf(said.onDeal, write, cmd.DealID),
+		FieldsOnly: true,
 	}, nil
 }
 

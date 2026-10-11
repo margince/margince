@@ -65,6 +65,7 @@ func (r logActivityResolver) Subject(ctx context.Context, cmd LogActivityCommand
 	return StageInfo{
 		TargetType: string(datasource.EntityActivity),
 		Summary:    describeGenericWrite(said, fmt.Sprintf(said.logHead, said.noun(string(datasource.EntityActivity))), cmd.Fields),
+		FieldsOnly: true,
 	}, nil
 }
 

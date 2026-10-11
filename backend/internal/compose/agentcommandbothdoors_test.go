@@ -706,12 +706,12 @@ func assertVerbResolvesItsTierPerCall(t *testing.T, served *agents.Registry, op,
 // compareDoors resolves one operation through each door and holds the two
 // answers to being the same one.
 //
-// The REST side is compared at the COMMAND, not at the staged row: this door
-// writes its own inbox line (restSummary names the concrete method and path a
-// REST diff hash binds), so the resolver's sentence never reaches the approval
-// it stages. The sentence is still the only handle either door has on what the
-// erased command carries — the enrich depth lives nowhere else — so it is the
-// resolved StageInfo that is held against the tool door's staged row.
+// The REST side is compared at the COMMAND, not at the staged row. The sentence
+// is the only handle either door has on what the erased command carries, and the
+// enrich depth lives nowhere else. So the resolved StageInfo is held against the
+// tool door's staged row. What the REST gate stages is checked for every
+// operation too. It is the resolver's sentence, unless that tells the approver
+// less than this door's own.
 func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 	t.Helper()
 	primary, secondary := ids.NewV7(), ids.NewV7()
@@ -750,6 +750,14 @@ func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 		t.Errorf("the doors resolve one operation to two commands:\n  REST: %q\n  tool: %q\nThe sentence is "+
 			"the only place an erased command's own arguments show, so the two doors would perform different "+
 			"acts for one call", rest.Summary, subject.Summary)
+	}
+	staged := stagedSentence(rest, inEnglish, pol, req, body)
+	if rest.ReadsPoorly() {
+		if want := restSummary(inEnglish, pol, req, body); staged != want {
+			t.Errorf("%s: the resolver's sentence tells the approver less, so the gate stages %q, want its own %q", op, staged, want)
+		}
+	} else if staged != subject.Summary {
+		t.Errorf("%s: the gate stages %q and the tool %q, two sentences for one operation", op, staged, subject.Summary)
 	}
 	if (subject.TargetVersion == nil) != (rest.TargetVersion == nil) {
 		t.Errorf("one door pins a version the other does not (REST %v, tool %v) — the same call would be held "+

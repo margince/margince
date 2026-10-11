@@ -208,7 +208,7 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 		TargetID:       target.TargetID,
 		CoTargetType:   target.CoTargetType,
 		CoTargetID:     target.CoTargetID,
-		Summary:        restSummary(commands.summaryCopy(ctx), pol, r, body),
+		Summary:        stagedSentence(target, commands.summaryCopy(ctx), pol, r, body),
 	})
 	if sErr != nil {
 		httperr.Write(w, r, sErr)
@@ -237,14 +237,10 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 // run here too, refusing a target the caller cannot see before a human is asked
 // about it.
 //
-// Only the target is taken from the resolver. The line the human reads stays
-// this door's own (restSummary), which now names the ACT — the contract's tool
-// verb and record type — plus the body fields this door's diff_hash binds. The
-// method and path it used to print are gone: a uuid names a record the reader
-// cannot open from it, and an operationId is the contract's word rather than
-// theirs. Adopting the resolver's line here instead is still blocked on the six
-// types the record seam does not serve: it labels those by id alone, which is
-// the same defect one layer over.
+// The line the human reads is the resolver's too (stagedSentence), so both
+// doors say the same thing about one operation. Where that line would tell the
+// approver less, this door keeps its own. It names the ACT and the body fields
+// with their values.
 //
 // It writes the refusal itself and reports ok=false, so a caller that cannot
 // name a target stages nothing.

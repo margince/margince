@@ -7,12 +7,12 @@ package compose
 // what turns an HTTP request into the operation's typed command.
 //
 // The door decodes; it does not interpret. What the approval binds to, and what
-// would be refused anyway, come back from the resolver the command is bound to
-// — the same resolver the tool door reaches for the same operation. Where the
-// contract states a tier outright, the generated policy answers it; where the
+// would be refused anyway, come back from the resolver the command is bound to.
+// It is the same resolver the tool door reaches for the same operation. Where the
+// contract states a tier outright, the generated policy answers it. Where the
 // tier turns on the record's own state, the command answers that too
-// (agents.DynamicTierInput). Only the inbox line is still this door's own
-// (restSummary), and stagedTarget says why.
+// (agents.DynamicTierInput). The inbox line is the resolver's too. Only where
+// that says less does this door use its own (stagedSentence).
 
 import (
 	"context"
