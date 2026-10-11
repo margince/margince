@@ -581,7 +581,7 @@ The 18 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## data_subject_request
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -590,6 +590,8 @@ The 18 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `channel` | `text` |  | One of `confirm_link`, `email`, `phone`, `letter`, `in_person`, `operator_ui`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `due_at` | `timestamp with time zone` | yes | Statutory deadline (e.g. 30 days). |
+| `due_overridden` | `boolean`, default `false` | yes | True when the officer chose an earlier deadline than `due_rule` gives. |
+| `due_rule` | `text` |  | The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or `<jurisdiction> v<version>` for a pack's own deadline. |
 | `kind` | `text` | yes | One of `access`, `rectify`, `erasure`. |
 | `receipt_reference` | `text` |  |  |
 | `received_at` | `timestamp with time zone` |  |  |

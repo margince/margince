@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 297 |
-| Columns | 3543 |
+| Columns | 3545 |
 | Foreign keys | 494 |
 | Owning areas | 36 |
 
@@ -245,7 +245,7 @@ erDiagram
 | [`conversation_claim`](contacts.md#conversation_claim) | contacts | 19 | 0 |
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
 | [`custom_field`](customfields.md#custom_field) | customfields | 14 | 0 |
-| [`data_subject_request`](consent.md#data_subject_request) | consent | 14 | 0 |
+| [`data_subject_request`](consent.md#data_subject_request) | consent | 16 | 0 |
 | [`deal`](deals.md#deal) | deals | 43 | 24 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 9 | 1 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
