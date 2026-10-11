@@ -103,3 +103,38 @@ func captureGuessedDisplayNamesTx(
 	}
 	return found, nil
 }
+
+// splitNameIsCapturesGuessTx reports whether a contact's split name columns are
+// still only ever what a machine guessed.
+//
+// A display-name split is a guess. "Greven Ebusiness" parses to first `Greven`
+// and last `Ebusiness`, and every greeting then uses it. What the conversation
+// shows may replace that. What a colleague typed may not be replaced by either.
+//
+// Who wrote the column is the question, and the audit trail answers it. Any
+// audit row naming first_name or last_name, written by somebody other than
+// capture's own writers, protects the pair. Which actors count as capture's own
+// comes from captureWriterSQL, which the display-name test above renders too.
+//
+// The enrich writer is admitted beside them, and that is this statement's own
+// addition rather than captureWriterSQL's. A name the pass landed from one
+// signature is still a machine's reading, so a later signature that disagrees
+// is a better one. Were it left out, the first enrich write would protect the
+// name against every later one.
+func splitNameIsCapturesGuessTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (bool, error) {
+	var guessed bool
+	err := tx.QueryRow(ctx, `
+		SELECT NOT EXISTS (
+		       SELECT 1 FROM audit_log a
+		        WHERE a.entity_type = 'contact' AND a.entity_id = $1
+		          AND a.action <> 'create'
+		          AND (a.after ?| $5::text[] OR a.before ?| $5::text[])
+		          AND NOT (`+captureWriterSQL("a.actor_id", "$2", "$3", "$4")+`
+		                   OR a.actor_id = $6))`,
+		contactID, CaptureVerdictActor, CaptureAcceptActor, DisplayNameRepairActor,
+		[]string{columnFirstName, columnLastName}, enrichCapturedBy).Scan(&guessed)
+	if err != nil {
+		return false, fmt.Errorf("contacts: reading whose name contact %s carries: %w", contactID, err)
+	}
+	return guessed, nil
+}

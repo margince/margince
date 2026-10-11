@@ -29,6 +29,15 @@ const (
 	columnLastName  = "last_name"
 )
 
+// FieldFirstName and FieldLastName are those same columns as the signature pass
+// names them. They are exported so the pass's vocabulary and this module's
+// writer spell them once. A field the model may state, beside a column nothing
+// here mirrors, would be a silent no-op.
+const (
+	FieldFirstName = columnFirstName
+	FieldLastName  = columnLastName
+)
+
 // fillMissingContactName completes a contact the ladder landed on by exact
 // address, and completes ONLY what is missing.
 //
