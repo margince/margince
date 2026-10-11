@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -44,6 +45,7 @@ import (
 // such "there is nothing to do" case and are always wired.
 func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Logger) *privacy.RetentionService {
 	return privacy.NewRetentionService(db, blob, log, RawCapturePurgerFor(db)).
+		WithCountry(identity.CountryOf).
 		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 		})
@@ -79,7 +81,7 @@ func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
 // deployment that configured neither.
 func ComposedEraser(pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault) *privacy.Eraser {
 	db := InstallationDB(pool)
-	return privacy.NewEraser(db).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
+	return privacy.NewEraser(db).WithCountry(identity.CountryOf).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
 		WithPayloadVault(privacyPayloads(vault))
 }
 

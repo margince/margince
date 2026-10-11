@@ -16434,6 +16434,44 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /installation/jurisdiction:
+    get:
+      tags: [Identity]
+      operationId: getInstallationJurisdiction
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: The installation's jurisdiction and what it puts in force.
+      description: |
+        Which jurisdiction pack applies, what it changes (retention floor, messaging rules,
+        request deadlines) and the documents it ships. Changed through
+        `PATCH /installation/settings` with `country`. Gated on `installation_settings` read.
+      responses:
+        '200':
+          description: The jurisdiction and its effects.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstallationJurisdiction' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /installation/jurisdiction/documents/{documentId}:
+    parameters:
+      - { name: documentId, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Identity]
+      operationId: downloadJurisdictionDocument
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Download one of the selected jurisdiction's documents.
+      description: 'The document''s bytes. Only the selected jurisdiction''s documents are served; any other id is 404.'
+      responses:
+        '200':
+          description: The file bytes; Content-Disposition names the file.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /installation/license:
     get:
       tags: [Identity]
@@ -18333,6 +18371,12 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention/erasure (B-EP07.13/.16).
+      description: |
+        The server computes the deadline from `received_at` under the installation's
+        jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
+
+        BEHAVIOUR CHANGE: a `due_at` later than the computed deadline is refused with 422. It
+        used to be stored as sent. An earlier `due_at` is stored and marked `due_overridden`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -18346,6 +18390,27 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /data-subject-requests/deadline:
+    get:
+      tags: [Compliance]
+      operationId: getDataSubjectRequestDeadline
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: The deadline a request would get, and the rule that sets it.
+      description: |
+        What the request form shows before filing: the same resolver `POST /data-subject-requests`
+        applies. Gated like the queue, on `privacy_request` read.
+      parameters:
+        - { name: kind, in: query, required: true, schema: { type: string, enum: [access, rectify, erasure] } }
+        - { name: received_at, in: query, required: false, schema: { type: string, format: date-time }, description: 'When the request arrived. Absent means now.' }
+      responses:
+        '200':
+          description: The computed deadline.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequestDeadline' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /privacy/controller-particulars:
     get:
@@ -29152,6 +29217,14 @@ components:
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
         name: { type: string, maxLength: 200, description: Rename the company. }
+        country:
+          type: string
+          description: |
+            The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
+            compiled into this build, or the empty string for no pack. A code with no
+            compiled-in pack is refused with 422. When the change weakens the correspondence
+            retention floor, the old floor keeps binding mail that occurred before the change
+            (`GET /installation/jurisdiction` reports it as `floor.carried`).
         timezone: { type: string, description: The IANA reporting zone. }
         base_currency:
           type: string
@@ -52719,7 +52792,7 @@ components:
     DataSubjectRequest:
       type: object
       description: A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
-      required: [id, kind, subject_ref, status, due_at, created_at]
+      required: [id, kind, subject_ref, status, due_at, due_overridden, created_at]
       properties:
         id: { type: string, format: uuid }
         kind: { type: string, enum: [access, rectify, erasure] }
@@ -52738,6 +52811,15 @@ components:
             external identifier, an erased subject, or one the caller may not read.
         status: { type: string, enum: [open, in_progress, fulfilled, rejected] }
         due_at: { type: string, format: date-time, description: 'Statutory deadline (e.g. 30 days).' }
+        due_rule:
+          type: [string, 'null']
+          description: |
+            The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or
+            `<jurisdiction> v<version>` for a pack's own deadline. Null on a request filed before
+            deadlines were computed, whose date was typed by hand.
+        due_overridden:
+          type: boolean
+          description: 'True when the officer chose an earlier deadline than `due_rule` gives.'
         assignee_id: { type: [string, 'null'], format: uuid }
         resolution: { type: [string, 'null'] }
         created_at: { type: string, format: date-time }
@@ -52915,15 +52997,147 @@ components:
 
     CreateDataSubjectRequest:
       type: object
-      required: [kind, subject_ref, due_at]
+      required: [kind, subject_ref]
       properties:
         kind: { type: string, enum: [access, rectify, erasure] }
         subject_ref: { type: string }
+        received_at:
+          type: string
+          format: date-time
+          description: 'When the request arrived. Absent means now. A time in the future is refused with 422 naming `received_at`.'
         due_at:
           type: string
           format: date-time
-          description: 'The statutory deadline the caller computed. A request without one is refused with 422 naming `due_at`.'
+          description: |
+            An earlier deadline than the one the server computes from `received_at`. Absent takes
+            the computed deadline. A date LATER than the computed deadline is refused with 422
+            naming `due_at`; an earlier one is stored with `due_overridden: true`.
         assignee_id: { type: [string, 'null'], format: uuid }
+
+    RequestDeadline:
+      type: object
+      description: The deadline a request of one kind received at one instant gets, and the rule that set it.
+      required: [due_at, rule]
+      properties:
+        due_at: { type: string, format: date-time }
+        rule:
+          type: string
+          description: '`gdpr`, or `<jurisdiction> v<version>` for a pack''s own deadline.'
+
+    InstallationJurisdiction:
+      type: object
+      description: |
+        Which jurisdiction this installation runs under and what that selection puts in force.
+        Each section names its own source: the unit that ships the pack, the pack's retention
+        classes, the messaging rule set with its own version, and the request deadlines.
+      required: [selected, available, floor, deadlines, documents]
+      properties:
+        selected:
+          type: [string, 'null']
+          description: 'The selected pack code, or null when no jurisdiction is set.'
+        available:
+          type: array
+          description: 'Every jurisdiction pack compiled into this build.'
+          items: { $ref: '#/components/schemas/JurisdictionUnit' }
+        unit:
+          description: 'The extension unit that ships the selected pack. Absent when nothing is selected.'
+          $ref: '#/components/schemas/JurisdictionUnit'
+        retention_classes:
+          type: array
+          description: 'Every retention class the selected pack declares. Empty when nothing is selected or the pack declares none.'
+          items: { $ref: '#/components/schemas/JurisdictionRetentionClass' }
+        floor: { $ref: '#/components/schemas/RetentionFloorPolicy' }
+        messaging:
+          description: 'The selected pack''s messaging rule set. Absent when it declares none.'
+          $ref: '#/components/schemas/JurisdictionMessagingRules'
+        deadlines:
+          type: array
+          description: 'The request deadline per kind, each with the rule that sets it.'
+          items: { $ref: '#/components/schemas/JurisdictionDeadline' }
+        documents:
+          type: array
+          description: 'The documents the selected pack ships.'
+          items: { $ref: '#/components/schemas/JurisdictionDocument' }
+
+    JurisdictionUnit:
+      type: object
+      required: [code, unit_name, unit_version, description]
+      properties:
+        code: { type: string, description: 'The pack''s ISO 3166-1 alpha-2 code.' }
+        unit_name: { type: string, description: 'The extension unit that ships it.' }
+        unit_version: { type: string, description: 'The unit''s own version, not a rule set''s.' }
+        description: { type: string }
+
+    JurisdictionRetentionClass:
+      type: object
+      required: [name, keep, from_year_end]
+      properties:
+        name: { type: string, description: 'The class, e.g. `commercial_correspondence`.' }
+        keep: { type: string, description: 'The ISO 8601 period the class keeps, e.g. `P6Y`.' }
+        from_year_end: { type: boolean, description: 'The period counts from the end of the calendar year.' }
+
+    RetentionFloorPolicy:
+      type: object
+      description: |
+        The correspondence floor in force. With no jurisdiction selected it is the strictest floor
+        of every compiled-in pack. `known` false means no floor binds new mail.
+      required: [known, from_year_end, packs]
+      properties:
+        known: { type: boolean }
+        class: { type: string }
+        keep: { type: string, description: 'ISO 8601 period. Absent when `known` is false.' }
+        from_year_end: { type: boolean }
+        packs: { type: array, items: { type: string }, description: 'Every compiled-in pack code.' }
+        carried:
+          description: 'A floor an earlier, stricter jurisdiction left on mail that occurred before the change.'
+          $ref: '#/components/schemas/CarriedRetentionFloor'
+
+    CarriedRetentionFloor:
+      type: object
+      required: [class, keep, from_year_end, before, binds_until]
+      properties:
+        class: { type: string }
+        keep: { type: string, description: 'ISO 8601 period.' }
+        from_year_end: { type: boolean }
+        before: { type: string, format: date-time, description: 'Mail that occurred before this instant stays bound.' }
+        binds_until: { type: string, format: date-time, description: 'When the youngest bound message leaves the window.' }
+
+    JurisdictionMessagingRules:
+      type: object
+      required: [version, instruments]
+      properties:
+        version: { type: integer, description: 'The rule set''s own version, which decisions record.' }
+        instruments:
+          type: array
+          items: { $ref: '#/components/schemas/JurisdictionInstrument' }
+
+    JurisdictionInstrument:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, description: 'The law or decree, as a regulator cites it.' }
+        effective_from: { type: string, format: date }
+
+    JurisdictionDeadline:
+      type: object
+      required: [kind, rule]
+      properties:
+        kind: { type: string, enum: [access, rectify, erasure] }
+        rule: { type: string, description: '`gdpr`, or `<jurisdiction> v<version>`.' }
+        period: { type: string, description: 'ISO 8601 calendar period, when the deadline counts in calendar units.' }
+        hours: { type: integer, description: 'Hours, when the deadline counts in hours.' }
+
+    JurisdictionDocument:
+      type: object
+      required: [id, title, language, audience, kind, media_type, size_bytes]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        language: { type: string }
+        audience: { type: string, enum: [employer, operator, employee] }
+        kind: { type: string, enum: [template, reading_copy, record] }
+        media_type: { type: string }
+        size_bytes: { type: integer }
 
     UpdateDataSubjectRequest:
       type: object

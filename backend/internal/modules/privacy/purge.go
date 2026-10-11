@@ -21,6 +21,7 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -114,23 +115,31 @@ func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, 
 	}
 	destroyed := 0
 	for _, id := range ids {
-		if err := s.purgeOneActivity(ctx, id, reason); err != nil {
+		kept, err := s.purgeOneActivity(ctx, id, reason)
+		if err != nil {
 			return destroyed, fmt.Errorf("privacy: purging a captured message: %w", err)
 		}
-		destroyed++
+		if !kept {
+			destroyed++
+		}
 	}
 	return destroyed, nil
 }
 
 // purgeOneActivity runs the retention module's own activity/erase executor and
-// audits it as an owner's act.
-func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, reason PurgeReason) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+// audits it as an owner's act. kept reports a message the floor now in force
+// shields, which is left as it is.
+func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, reason PurgeReason) (kept bool, err error) {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The SAME executor retention runs. It nulls the text, then calls
 		// purgeContentDerivedFrom for the provider original, the vectors, the
 		// attachments, the delivery copies and the field provenance — the list
 		// that used to exist twice and was missing two entries in one copy.
 		if err := s.eraseActivityContent(ctx, tx, id); err != nil {
+			if errors.Is(err, errKeptByFloor) {
+				kept = true
+				return nil
+			}
 			return err
 		}
 		// Audited under `erase`, the same closed verb retention uses, so the
@@ -151,6 +160,7 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id,
 			retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))
 	})
+	return kept, err
 }
 
 // AnonymiseContacts strips the identifying columns from the named contacts, on an
@@ -245,16 +255,8 @@ func (s *RetentionService) anonymiseOneContact(
 // The returned fragment is the POSITIVE form: it is TRUE for an activity
 // aliased `a` that the law still requires this installation to keep. A caller
 // deciding what it may destroy negates it; a caller deciding what to withhold
-// uses it as it stands. It expects the interval and the year-end anchor as the
-// next two positional arguments, in that order; StatutoryFloorArgs supplies
-// them.
-func StatutoryFloorShield(intervalArg, anchorArg int) string {
-	return handelsbriefShielded(intervalArg, anchorArg)
-}
-
-// StatutoryFloorArgs are the two values StatutoryFloorShield's placeholders
-// take, read from the installation's configured retention period: the interval
-// itself, and whether the window is anchored to the end of the calendar year.
-func StatutoryFloorArgs() (interval string, yearEndAnchor bool) {
-	return statutoryFloorArgs()
+// uses it as it stands. It expects the floor policy as the next two positional
+// arguments, in that order; FloorPolicy.ShieldArgs supplies them.
+func StatutoryFloorShield(currentArg, carriedArg int) string {
+	return handelsbriefShielded(currentArg, carriedArg)
 }

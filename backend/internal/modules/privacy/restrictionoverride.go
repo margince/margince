@@ -130,12 +130,18 @@ func releaseFoundNothing(ctx context.Context, tx pgx.Tx, activityID ids.UUID) er
 // the evidence row and the audit tombstone, where an accountability question
 // is actually answered.
 func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason StatedReason) error {
-	interval, anchor := statutoryFloorArgs()
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
 		decision, err := admitRestrictionDecision(ctx, tx, reason)
 		if err != nil {
 			return err
 		}
+		// The stricter of the current and the carried floor, so a jurisdiction
+		// change never pins an old record to a window that already closed.
+		floor, err := ResolveFloorPolicy(ctx, tx, e.country)
+		if err != nil {
+			return err
+		}
+		floorCurrent, floorCarried := floor.sqlArgs()
 		if err := auth.EnsureActivityVisible(ctx, tx, activityID); err != nil {
 			// A held record reads as gone to every reader (A165 §2), so a
 			// not-found here is ambiguous on its own. pinRefusalFor says which
@@ -159,7 +165,7 @@ func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason Sta
 			         WHERE c IS NOT NULL),
 			       archived_at = coalesce(a.archived_at, now())
 			 WHERE a.id = $1 AND a.restricted_at IS NULL
-			 RETURNING a.restricted_until`, activityID, retentionClassCorrespondence, interval, anchor).Scan(&until)
+			 RETURNING a.restricted_until`, activityID, retentionClassCorrespondence, floorCurrent, floorCarried).Scan(&until)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("the record is already under a retention obligation: %w", apperrors.ErrConflict)
 		}

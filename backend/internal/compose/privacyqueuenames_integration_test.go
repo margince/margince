@@ -172,7 +172,7 @@ func TestTheSubjectQueueNamesOnlyRecordsItsReaderMayOpen(t *testing.T) {
 	store := consent.NewStore(e.DB())
 	for ref := range refs {
 		if _, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
-			Kind: "access", SubjectRef: ref, DueAt: time.Now().Add(30 * 24 * time.Hour),
+			Kind: "access", SubjectRef: ref, DueAt: new(time.Now().Add(7 * 24 * time.Hour)),
 		}); err != nil {
 			t.Fatalf("filing a request about %s: %v", ref, err)
 		}

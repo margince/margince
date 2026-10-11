@@ -1471,6 +1471,10 @@ func (stubs) CreateDataSubjectRequest(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "CreateDataSubjectRequest")
 }
 
+func (stubs) GetDataSubjectRequestDeadline(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetDataSubjectRequestDeadlineParams) {
+	httperr.NotImplemented(w, r, "GetDataSubjectRequestDeadline")
+}
+
 func (stubs) UpdateDataSubjectRequest(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "UpdateDataSubjectRequest")
 }
@@ -1865,6 +1869,14 @@ func (stubs) UndoImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id open
 
 func (stubs) GetAuthenticationPolicy(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
+}
+
+func (stubs) GetInstallationJurisdiction(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetInstallationJurisdiction")
+}
+
+func (stubs) DownloadJurisdictionDocument(w nethttp.ResponseWriter, r *nethttp.Request, documentId string) {
+	httperr.NotImplemented(w, r, "DownloadJurisdictionDocument")
 }
 
 func (stubs) GetLicenseEntitlement(w nethttp.ResponseWriter, r *nethttp.Request) {

@@ -109,13 +109,18 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		return PurgeOutcome{}, err
 	}
 	var subject capture.PurgeSubject
+	var policy privacy.FloorPolicy
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		var err error
-		if workspaceScoped {
-			subject, err = capture.SelectWorkspacePurgeSubjectTx(ctx, tx, rule.Kind, rule.Value, statutoryFloor())
+		floor, resolved, err := purgeFloorTx(ctx, tx)
+		if err != nil {
 			return err
 		}
-		subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, statutoryFloor())
+		policy = resolved
+		if workspaceScoped {
+			subject, err = capture.SelectWorkspacePurgeSubjectTx(ctx, tx, rule.Kind, rule.Value, floor)
+			return err
+		}
+		subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, floor)
 		return err
 	}); err != nil {
 		return PurgeOutcome{}, err
@@ -136,7 +141,7 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		Skipped:    len(subject.Restricted),
 		Anonymised: len(minted),
 		Preview:    preview,
-		Kept:       keptBreakdown(subject),
+		Kept:       keptBreakdown(subject, policy),
 	}
 	// After the selection, because the contact grant depends on whether it found
 	// contacts to anonymise.
@@ -185,7 +190,11 @@ func (p *CapturePurger) purgeableContacts(ctx context.Context, seat ids.UUID, ru
 }
 
 func purgeableContactsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, rule capture.Exclusion) ([]ids.UUID, error) {
-	mailboxOnly, err := capture.SelectPurgeableContactsTx(ctx, tx, seat, rule.Kind, rule.Value, statutoryFloor())
+	floor, _, err := purgeFloorTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	mailboxOnly, err := capture.SelectPurgeableContactsTx(ctx, tx, seat, rule.Kind, rule.Value, floor)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +205,11 @@ func purgeableContactsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, rule cap
 // transaction that anonymises it; only that contact pays the capture-origin check.
 func (p *CapturePurger) stillPurgeable(seat ids.UUID, rule capture.Exclusion) privacy.ContactStillPurgeable {
 	return func(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
-		mailboxOnly, err := capture.SelectPurgeableContactsTx(ctx, tx, seat, rule.Kind, rule.Value, statutoryFloor())
+		floor, _, err := purgeFloorTx(ctx, tx)
+		if err != nil {
+			return false, err
+		}
+		mailboxOnly, err := capture.SelectPurgeableContactsTx(ctx, tx, seat, rule.Kind, rule.Value, floor)
 		if err != nil || !slices.Contains(mailboxOnly, id) {
 			return false, err
 		}
@@ -332,8 +345,11 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 	for _, seat := range seats {
 		var subject capture.PurgeSubject
 		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-			var err error
-			subject, err = capture.SelectPersonalPurgeTx(ctx, tx, seat, windows, statutoryFloor(), personalSweepBatch)
+			floor, _, err := purgeFloorTx(ctx, tx)
+			if err != nil {
+				return err
+			}
+			subject, err = capture.SelectPersonalPurgeTx(ctx, tx, seat, windows, floor, personalSweepBatch)
 			return err
 		}); err != nil {
 			return destroyed, fmt.Errorf("verdict: selecting personal mail for one seat: %w", err)
@@ -350,27 +366,6 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 		destroyed += len(subject.SoleImports)
 	}
 	return destroyed, nil
-}
-
-// statutoryFloor hands capture the shield privacy spells once.
-//
-// Commercial correspondence inside its legal retention window is not the
-// owner's to destroy: the nightly evaluator refuses to touch it for six years,
-// and a purge that ignored the floor would be the one destructive path in the
-// tree that bypasses it. Capture cannot import privacy, so the predicate
-// travels rather than being written a second time — and a second copy is
-// exactly how one path stops shielding what the others do.
-func statutoryFloor() capture.StatutoryFloor {
-	interval, anchor := privacy.StatutoryFloorArgs()
-	return capture.StatutoryFloor{
-		// The predicate privacy hands out is the NEGATED form — it filters a
-		// destructive statement down to rows the law permits destroying. The
-		// purge needs the positive question ("must this be kept?"), so it is
-		// negated back here, where both halves are visible in one place.
-		Clause:   func(intervalArg, anchorArg int) string { return privacy.StatutoryFloorShield(intervalArg, anchorArg) },
-		Interval: interval,
-		Anchor:   anchor,
-	}
 }
 
 // purgeableRule reads the rule this caller may act on, and reports whether it is
@@ -470,8 +465,11 @@ func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger
 func (p *CapturePurger) PurgeRemoved(ctx context.Context, seat ids.UUID, sourceSystem, sourceID string) error {
 	var subject capture.PurgeSubject
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		var err error
-		subject, err = capture.SelectRemovedPurgeTx(ctx, tx, seat, sourceSystem, sourceID, statutoryFloor())
+		floor, _, err := purgeFloorTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		subject, err = capture.SelectRemovedPurgeTx(ctx, tx, seat, sourceSystem, sourceID, floor)
 		return err
 	}); err != nil {
 		return fmt.Errorf("capture: selecting what a mailbox-side deletion destroys: %w", err)

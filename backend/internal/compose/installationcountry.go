@@ -12,11 +12,15 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
@@ -76,4 +80,17 @@ func compiledInCodes() []string {
 	}
 	slices.Sort(codes)
 	return codes
+}
+
+// NewInstallationSettingsFor is the installation-settings store with the
+// jurisdiction change wired to the floor carry, the one way the surface and its
+// tests build it.
+func NewInstallationSettingsFor(pool *pgxpool.Pool) *identity.InstallationSettingsStore {
+	return identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool)).WithCountryChange(carryFloorOnCountryChange)
+}
+
+// carryFloorOnCountryChange is the hook a jurisdiction change runs: privacy
+// keeps the floor the change would weaken on the mail already held.
+func carryFloorOnCountryChange(ctx context.Context, tx pgx.Tx, store *settings.Store, from, to jurisdiction.Code) error {
+	return privacy.CarryOnChangeTx(ctx, tx, store, from, to, time.Now())
 }

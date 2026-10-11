@@ -10949,6 +10949,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation/jurisdiction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The installation's jurisdiction and what it puts in force.
+         * @description Which jurisdiction pack applies, what it changes (retention floor, messaging rules,
+         *     request deadlines) and the documents it ships. Changed through
+         *     `PATCH /installation/settings` with `country`. Gated on `installation_settings` read.
+         */
+        get: operations["getInstallationJurisdiction"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/jurisdiction/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download one of the selected jurisdiction's documents.
+         * @description The document's bytes. Only the selected jurisdiction's documents are served; any other id is 404.
+         */
+        get: operations["downloadJurisdictionDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/license": {
         parameters: {
             query?: never;
@@ -12471,8 +12515,36 @@ export interface paths {
         /** List GDPR data-subject requests (B-E11.30). */
         get: operations["listDataSubjectRequests"];
         put?: never;
-        /** Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention/erasure (B-EP07.13/.16). */
+        /**
+         * Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention/erasure (B-EP07.13/.16).
+         * @description The server computes the deadline from `received_at` under the installation's
+         *     jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
+         *
+         *     BEHAVIOUR CHANGE: a `due_at` later than the computed deadline is refused with 422. It
+         *     used to be stored as sent. An earlier `due_at` is stored and marked `due_overridden`.
+         */
         post: operations["createDataSubjectRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-subject-requests/deadline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The deadline a request would get, and the rule that sets it.
+         * @description What the request form shows before filing: the same resolver `POST /data-subject-requests`
+         *     applies. Gated like the queue, on `privacy_request` read.
+         */
+        get: operations["getDataSubjectRequestDeadline"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -19807,6 +19879,14 @@ export interface components {
         UpdateInstallationSettingsRequest: {
             /** @description Rename the company. */
             name?: string;
+            /**
+             * @description The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
+             *     compiled into this build, or the empty string for no pack. A code with no
+             *     compiled-in pack is refused with 422. When the change weakens the correspondence
+             *     retention floor, the old floor keeps binding mail that occurred before the change
+             *     (`GET /installation/jurisdiction` reports it as `floor.carried`).
+             */
+            country?: string;
             /** @description The IANA reporting zone. */
             timezone?: string;
             /**
@@ -38757,6 +38837,14 @@ export interface components {
              * @description Statutory deadline (e.g. 30 days).
              */
             due_at: string;
+            /**
+             * @description The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or
+             *     `<jurisdiction> v<version>` for a pack's own deadline. Null on a request filed before
+             *     deadlines were computed, whose date was typed by hand.
+             */
+            due_rule?: string | null;
+            /** @description True when the officer chose an earlier deadline than `due_rule` gives. */
+            due_overridden: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
             resolution?: string | null;
@@ -38923,11 +39011,127 @@ export interface components {
             subject_ref: string;
             /**
              * Format: date-time
-             * @description The statutory deadline the caller computed. A request without one is refused with 422 naming `due_at`.
+             * @description When the request arrived. Absent means now. A time in the future is refused with 422 naming `received_at`.
              */
-            due_at: string;
+            received_at?: string;
+            /**
+             * Format: date-time
+             * @description An earlier deadline than the one the server computes from `received_at`. Absent takes
+             *     the computed deadline. A date LATER than the computed deadline is refused with 422
+             *     naming `due_at`; an earlier one is stored with `due_overridden: true`.
+             */
+            due_at?: string;
             /** Format: uuid */
             assignee_id?: string | null;
+        };
+        /** @description The deadline a request of one kind received at one instant gets, and the rule that set it. */
+        RequestDeadline: {
+            /** Format: date-time */
+            due_at: string;
+            /** @description `gdpr`, or `<jurisdiction> v<version>` for a pack's own deadline. */
+            rule: string;
+        };
+        /**
+         * @description Which jurisdiction this installation runs under and what that selection puts in force.
+         *     Each section names its own source: the unit that ships the pack, the pack's retention
+         *     classes, the messaging rule set with its own version, and the request deadlines.
+         */
+        InstallationJurisdiction: {
+            /** @description The selected pack code, or null when no jurisdiction is set. */
+            selected: string | null;
+            /** @description Every jurisdiction pack compiled into this build. */
+            available: components["schemas"]["JurisdictionUnit"][];
+            /** @description The extension unit that ships the selected pack. Absent when nothing is selected. */
+            unit?: components["schemas"]["JurisdictionUnit"];
+            /** @description Every retention class the selected pack declares. Empty when nothing is selected or the pack declares none. */
+            retention_classes?: components["schemas"]["JurisdictionRetentionClass"][];
+            floor: components["schemas"]["RetentionFloorPolicy"];
+            /** @description The selected pack's messaging rule set. Absent when it declares none. */
+            messaging?: components["schemas"]["JurisdictionMessagingRules"];
+            /** @description The request deadline per kind, each with the rule that sets it. */
+            deadlines: components["schemas"]["JurisdictionDeadline"][];
+            /** @description The documents the selected pack ships. */
+            documents: components["schemas"]["JurisdictionDocument"][];
+        };
+        JurisdictionUnit: {
+            /** @description The pack's ISO 3166-1 alpha-2 code. */
+            code: string;
+            /** @description The extension unit that ships it. */
+            unit_name: string;
+            /** @description The unit's own version, not a rule set's. */
+            unit_version: string;
+            description: string;
+        };
+        JurisdictionRetentionClass: {
+            /** @description The class, e.g. `commercial_correspondence`. */
+            name: string;
+            /** @description The ISO 8601 period the class keeps, e.g. `P6Y`. */
+            keep: string;
+            /** @description The period counts from the end of the calendar year. */
+            from_year_end: boolean;
+        };
+        /**
+         * @description The correspondence floor in force. With no jurisdiction selected it is the strictest floor
+         *     of every compiled-in pack. `known` false means no floor binds new mail.
+         */
+        RetentionFloorPolicy: {
+            known: boolean;
+            class?: string;
+            /** @description ISO 8601 period. Absent when `known` is false. */
+            keep?: string;
+            from_year_end: boolean;
+            /** @description Every compiled-in pack code. */
+            packs: string[];
+            /** @description A floor an earlier, stricter jurisdiction left on mail that occurred before the change. */
+            carried?: components["schemas"]["CarriedRetentionFloor"];
+        };
+        CarriedRetentionFloor: {
+            class: string;
+            /** @description ISO 8601 period. */
+            keep: string;
+            from_year_end: boolean;
+            /**
+             * Format: date-time
+             * @description Mail that occurred before this instant stays bound.
+             */
+            before: string;
+            /**
+             * Format: date-time
+             * @description When the youngest bound message leaves the window.
+             */
+            binds_until: string;
+        };
+        JurisdictionMessagingRules: {
+            /** @description The rule set's own version, which decisions record. */
+            version: number;
+            instruments: components["schemas"]["JurisdictionInstrument"][];
+        };
+        JurisdictionInstrument: {
+            /** @description The law or decree, as a regulator cites it. */
+            name: string;
+            /** Format: date */
+            effective_from?: string;
+        };
+        JurisdictionDeadline: {
+            /** @enum {string} */
+            kind: "access" | "rectify" | "erasure";
+            /** @description `gdpr`, or `<jurisdiction> v<version>`. */
+            rule: string;
+            /** @description ISO 8601 calendar period, when the deadline counts in calendar units. */
+            period?: string;
+            /** @description Hours, when the deadline counts in hours. */
+            hours?: number;
+        };
+        JurisdictionDocument: {
+            id: string;
+            title: string;
+            language: string;
+            /** @enum {string} */
+            audience: "employer" | "operator" | "employee";
+            /** @enum {string} */
+            kind: "template" | "reading_copy" | "record";
+            media_type: string;
+            size_bytes: number;
         };
         /** @description A sparse patch: an absent field is left as it is, and an explicit null clears a nullable one. */
         UpdateDataSubjectRequest: {
@@ -61925,6 +62129,53 @@ export interface operations {
             };
         };
     };
+    getInstallationJurisdiction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The jurisdiction and its effects. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationJurisdiction"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    downloadJurisdictionDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file bytes; Content-Disposition names the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getLicenseEntitlement: {
         parameters: {
             query?: never;
@@ -63654,6 +63905,32 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDataSubjectRequestDeadline: {
+        parameters: {
+            query: {
+                kind: "access" | "rectify" | "erasure";
+                /** @description When the request arrived. Absent means now. */
+                received_at?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The computed deadline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestDeadline"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

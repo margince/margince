@@ -127,7 +127,7 @@ func setupDSR(t *testing.T) *dsrEnv {
 func (e *dsrEnv) mustCreate(t *testing.T, kind, subjectRef string) dsrRow {
 	t.Helper()
 	row, err := e.store.CreateDSR(e.ctx, CreateDSRInput{
-		Kind: kind, SubjectRef: subjectRef, DueAt: time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC),
+		Kind: kind, SubjectRef: subjectRef, DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("creating %s DSR: %v", kind, err)

@@ -277,7 +277,8 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// name, reporting zone, base currency — the last of which locks once a
 	// deal has converted against it (ADR-0085 §7).
 	s.installationSettingsHandlers = installationSettingsHandlers{
-		store:          identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool)),
+		store:          NewInstallationSettingsFor(pool),
+		pool:           pool,
 		maxUploadBytes: s.uploadLimits.Attachment,
 	}
 	// The workspace's own consumer-mail list (CAP-PARAM-5): the surviving
@@ -454,7 +455,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// here is answered there rather than sitting in a second queue nobody
 		// reads.
 		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)}).
-		WithEraser(privacy.NewEraser(InstallationDB(pool))).
+		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryOf)).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)

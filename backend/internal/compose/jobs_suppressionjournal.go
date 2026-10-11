@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -87,7 +88,7 @@ func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspac
 	// The system principal, bound here rather than inherited: a queue carries
 	// no actor, and ExportSuppressions is gated on the contact delete grant.
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), suppressionJournalActor)
-	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithBlobstore(w.blob)
+	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithCountry(identity.CountryOf).WithBlobstore(w.blob)
 	written, err := eraser.ExportSuppressions(ctx)
 	if err != nil {
 		return err

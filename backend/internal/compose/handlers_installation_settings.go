@@ -11,7 +11,9 @@ package compose
 import (
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -19,6 +21,9 @@ import (
 
 type installationSettingsHandlers struct {
 	store *identity.InstallationSettingsStore
+	// pool reads the jurisdiction page in one transaction
+	// (handlers_installation_jurisdiction.go).
+	pool *pgxpool.Pool
 	// configuredProviders carries the external sign-in providers this DEPLOYMENT
 	// mounted, injected by the option that wires them. Empty is the honest
 	// answer for a deployment that composed none, and the screen then offers
@@ -109,6 +114,9 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		Name:         req.Name,
 		Timezone:     req.Timezone,
 		BaseCurrency: req.BaseCurrency,
+		// The entry refuses a code no compiled-in pack answers; the store runs
+		// the floor carry in the same transaction.
+		Country: req.Country,
 	}
 	if req.DateFormat != nil {
 		value := string(*req.DateFormat)

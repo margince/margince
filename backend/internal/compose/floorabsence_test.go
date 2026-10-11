@@ -3,74 +3,71 @@
 
 package compose
 
-// What the installation says at boot about the law it is applying.
+// What the installation says at boot about the floor it applies.
 
 import (
 	"bytes"
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
-// The absence is stated, not left to be discovered. Which branch this build
-// takes depends on its compiled-in packs, so the assertion follows the posture
-// rather than asserting one — what it holds is that EVERY posture says
-// something, and that a build with no floor says so at WARN.
-func TestTheInstallationSaysWhetherItKnowsItsStatutoryFloor(t *testing.T) {
+func announced(posture privacy.FloorPosture) string {
 	var out bytes.Buffer
-	announceStatutoryFloor(slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	announceStatutoryFloor(slog.New(slog.NewTextHandler(&out, &slog.HandlerOptions{Level: slog.LevelDebug})), posture)
+	return out.String()
+}
 
-	line := out.String()
-	if line == "" {
-		t.Fatal("the installation said nothing about its statutory floor")
-	}
-	posture := privacy.StatutoryFloorPosture()
-	if posture.Known {
-		if !strings.Contains(line, "in force") || !strings.Contains(line, posture.Class) {
-			t.Fatalf("a known floor is not named in %q", line)
-		}
-		return
-	}
-	// Not a configuration preference: mail is kept that nothing requires
-	// keeping, and the reason given for keeping it names a law nobody
-	// established.
-	if !strings.Contains(line, "level=WARN") {
-		t.Fatalf("an absent floor was not reported as a warning: %q", line)
-	}
-	if !strings.Contains(line, "no statutory retention floor") {
-		t.Fatalf("the absence is not stated in %q", line)
+// The four cases an operator must tell apart each say which they are.
+func TestTheBootLineTellsTheFourFloorCasesApart(t *testing.T) {
+	sixYears := jurisdiction.RetentionClass{Name: jurisdiction.CommercialCorrespondence, Keep: jurisdiction.Period{Years: 6}}
+	for _, c := range []struct {
+		name    string
+		posture privacy.FloorPosture
+		want    []string
+	}{
+		{"not set", privacy.FloorPosture{Known: true, Class: "commercial_correspondence", Keep: sixYears.Keep, Packs: []string{"de", "vn"}},
+			[]string{"level=INFO", "no jurisdiction selected", "strictest compiled-in"}},
+		{"set, no floor", privacy.FloorPosture{Selected: "vn", Packs: []string{"de", "vn"}},
+			[]string{"level=WARN", "selected jurisdiction's pack declares none", "jurisdiction=vn"}},
+		{"set, with floor", privacy.FloorPosture{Selected: "de", Known: true, Class: "commercial_correspondence", Keep: sixYears.Keep},
+			[]string{"level=INFO", "in force", "jurisdiction=de"}},
+		{"carried", privacy.StatutoryFloorPosture(privacy.FloorPolicy{Selected: "vn", Carried: &privacy.CarriedFloor{Class: sixYears, Before: time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)}}),
+			[]string{"carried retention floor", "binds_until=2032-03-01"}},
+		{"nothing compiled in", privacy.FloorPosture{},
+			[]string{"level=WARN", "no jurisdiction packs compiled in"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			line := announced(c.posture)
+			for _, want := range c.want {
+				if !strings.Contains(line, want) {
+					t.Errorf("boot line %q does not contain %q", line, want)
+				}
+			}
+		})
 	}
 }
 
-// A build with no observability is a unit-test wiring, and several route-level
-// tests construct one. It must not panic on the reporting path — a wiring gap
-// should be learned about where the wiring is, not through a nil dereference
-// inside a log line.
-//
-// The recover is the assertion: without it this test could only fail by
-// crashing the run, which reports the wrong thing about the wrong test.
+// A unit-test wiring has no logger and no pool. The reporting path must not
+// panic there.
 func TestAnnouncingTheFloorWithNoLoggerIsSilentRatherThanFatal(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("announcing the floor with no logger panicked: %v", r)
 		}
 	}()
-	announceStatutoryFloor(nil)
+	announceStatutoryFloor(nil, privacy.FloorPosture{})
+	announceStatutoryFloorFrom(nil, nil)
 }
 
-// The posture never shows a period beside a false Known: a reader handed
-// "6 years" under "no floor known" would reasonably believe the first.
-func TestAnUnknownFloorCarriesNoPeriod(t *testing.T) {
-	posture := privacy.StatutoryFloorPosture()
-	if posture.Known {
-		if posture.Class == "" {
-			t.Fatal("a known floor names no class")
-		}
-		return
-	}
-	if posture.Class != "" || posture.Keep.String() != "P0D" {
-		t.Fatalf("an unknown floor carries %q / %s, want neither", posture.Class, posture.Keep)
+// The posture never shows a period beside a false Known.
+func TestAPolicyWithNoFloorCarriesNoPeriod(t *testing.T) {
+	posture := privacy.StatutoryFloorPosture(privacy.FloorPolicy{Selected: "vn"})
+	if posture.Known || posture.Class != "" || posture.Keep.String() != "P0D" {
+		t.Fatalf("a policy with no floor reports %+v, want no class and no period", posture)
 	}
 }

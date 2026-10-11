@@ -39,6 +39,7 @@ const (
 	fieldSubjectRef = "subject_ref"
 	fieldResolution = "resolution"
 	fieldDueAt      = "due_at"
+	fieldReceivedAt = "received_at"
 	fieldAssigneeID = "assignee_id"
 
 	// The request kinds the handlers branch on. Constants for the same reason
@@ -59,7 +60,7 @@ func illegalTransition(from, to string) *ValidationError {
 	}
 }
 
-const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id`
+const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id, due_rule, due_overridden`
 
 // dsrSelectByID is the single-row fetch GetDSR and lockDSR share, so their
 // projected columns cannot drift.
@@ -90,12 +91,17 @@ type dsrRow struct {
 	// link carries. NIL on one an officer opened by hand, which is why
 	// resolveDSRSubject reads the reference as well.
 	ContactID *ids.UUID
+	// DueRule names the rule set the deadline came from; nil on a request
+	// filed before deadlines were computed.
+	DueRule *string
+	// DueOverridden marks a deadline the officer set earlier than the rule's.
+	DueOverridden bool
 }
 
 func scanDSR(r pgx.Row) (dsrRow, error) {
 	var d dsrRow
 	err := r.Scan(&d.ID, &d.Kind, &d.Status, &d.SubjectRef, &d.AssigneeID, &d.DueAt, &d.Resolution,
-		&d.CreatedAt, &d.ContactID)
+		&d.CreatedAt, &d.ContactID, &d.DueRule, &d.DueOverridden)
 	return d, err
 }
 
@@ -210,7 +216,11 @@ type CreateDSRInput struct {
 	Kind       string
 	SubjectRef string
 	AssigneeID *ids.UserID
-	DueAt      time.Time
+	// ReceivedAt is when the request arrived; nil is now.
+	ReceivedAt *time.Time
+	// DueAt is an earlier deadline than the computed one; nil takes the
+	// computed one.
+	DueAt *time.Time
 }
 
 // CreateDSR files a request into the queue, behind the queue's own gate.
@@ -232,24 +242,31 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 	if strings.TrimSpace(in.SubjectRef) == "" {
 		return dsrRow{}, &ValidationError{Field: fieldSubjectRef, Reason: "required"}
 	}
-	// An absent or null due_at decodes to the zero time, which the queue would
-	// sort as overdue since the year 1.
-	if in.DueAt.IsZero() {
-		return dsrRow{}, &ValidationError{Field: fieldDueAt, Reason: "required"}
+	received, err := receivedAtFor(in.ReceivedAt, time.Now())
+	if err != nil {
+		return dsrRow{}, err
 	}
 	var out dsrRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		computed, rule, err := s.requestDeadlineTx(ctx, tx, in.Kind, received)
+		if err != nil {
+			return err
+		}
+		due, overridden, err := dueAtFor(in.DueAt, computed, rule)
+		if err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, `
-			INSERT INTO data_subject_request (kind, subject_ref, assignee_id, due_at)
-			VALUES ($1, $2, $3, $4)
+			INSERT INTO data_subject_request (kind, subject_ref, assignee_id, received_at, due_at, due_rule, due_overridden)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING `+dsrColumns,
-			in.Kind, strings.TrimSpace(in.SubjectRef), in.AssigneeID, in.DueAt)
-		var err error
+			in.Kind, strings.TrimSpace(in.SubjectRef), in.AssigneeID, received, due, rule, overridden)
 		if out, err = scanDSR(row); err != nil {
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "data_subject_request", out.ID, nil, map[string]any{
-			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, fieldDueAt: in.DueAt,
+			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, fieldReceivedAt: received, fieldDueAt: due,
+			"due_rule": rule, "due_overridden": overridden,
 		})
 		return err
 	})
@@ -389,6 +406,10 @@ func wireDSR(d dsrRow, subjects map[ids.UUID]dsrSubject) crmcontracts.DataSubjec
 		DueAt:      d.DueAt,
 		Resolution: d.Resolution,
 		CreatedAt:  d.CreatedAt,
+		// Null on a request filed before deadlines were computed, which the
+		// screen reads as "set by hand, rule unknown".
+		DueRule:       d.DueRule,
+		DueOverridden: d.DueOverridden,
 	}
 	if d.AssigneeID != nil {
 		assignee := openapi_types.UUID(d.AssigneeID.UUID)

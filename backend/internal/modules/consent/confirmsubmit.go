@@ -133,7 +133,7 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		// erasure made one request, and three deadlines a few microseconds
 		// apart would be three answers to give rather than one.
 		receivedAt := time.Now()
-		staged, err := stageProposals(ctx, tx, ref, in, receivedAt)
+		staged, err := stageProposals(ctx, tx, ref, in, receivedAt, s.requestDeadlineTx)
 		if err != nil {
 			return err
 		}
@@ -357,11 +357,11 @@ func refuseWiderThanTheMail(kind string, in ConfirmSubmission) error {
 // one records what was asked for. Keeping them together put both decisions in
 // one body dense enough that the complexity gate refused it.
 func stageProposals(ctx context.Context, tx pgx.Tx, ref ConfirmRef,
-	in ConfirmSubmission, receivedAt time.Time,
+	in ConfirmSubmission, receivedAt time.Time, deadlines requestDeadlineFunc,
 ) ([]RightsCaseReceipt, error) {
 	var receipts []RightsCaseReceipt
 	for field, value := range in.Corrections {
-		receipt, err := stageOneProposal(ctx, tx, ref, submissionCorrection, &field, &value, receivedAt)
+		receipt, err := stageOneProposal(ctx, tx, ref, submissionCorrection, &field, &value, receivedAt, deadlines)
 		if err != nil {
 			return nil, err
 		}
@@ -369,7 +369,7 @@ func stageProposals(ctx context.Context, tx pgx.Tx, ref ConfirmRef,
 		receipts = append(receipts, receipt)
 	}
 	if in.RequestErasure {
-		receipt, err := stageOneProposal(ctx, tx, ref, submissionErasure, nil, nil, receivedAt)
+		receipt, err := stageOneProposal(ctx, tx, ref, submissionErasure, nil, nil, receivedAt, deadlines)
 		if err != nil {
 			return nil, err
 		}
@@ -384,13 +384,13 @@ func stageProposals(ctx context.Context, tx pgx.Tx, ref ConfirmRef,
 //
 // Held by: TestOneWriterFilesAConfirmSubmission (backend/gates/rightscasewriters_test.go)
 func stageOneProposal(ctx context.Context, tx pgx.Tx, ref ConfirmRef, kind string,
-	field, value *string, receivedAt time.Time,
+	field, value *string, receivedAt time.Time, deadlines requestDeadlineFunc,
 ) (RightsCaseReceipt, error) {
 	submissionID, err := stageSubmission(ctx, tx, ref, kind, field, value)
 	if err != nil {
 		return RightsCaseReceipt{}, err
 	}
-	reference, err := openRightsCaseTx(ctx, tx, ref.ContactID, submissionID, kind, receivedAt)
+	reference, err := openRightsCaseTx(ctx, tx, ref.ContactID, submissionID, kind, receivedAt, deadlines)
 	if err != nil {
 		return RightsCaseReceipt{}, err
 	}

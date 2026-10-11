@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -345,12 +346,16 @@ func TestAPurgeAsksTheStatutoryFloorBeforeDestroying(t *testing.T) {
 // from an assumption about which jurisdiction packs this binary carries.
 func statutoryWindowIsOpen(t *testing.T, e *integration.Env, activityID ids.UUID) bool {
 	t.Helper()
-	interval, anchor := privacy.StatutoryFloorArgs()
 	var open bool
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		policy, err := privacy.ResolveFloorPolicy(context.Background(), tx, identity.CountryOf)
+		if err != nil {
+			return err
+		}
+		current, carried := policy.ShieldArgs()
 		return tx.QueryRow(context.Background(),
 			`SELECT (`+privacy.StatutoryFloorShield(2, 3)+`) FROM activity a WHERE a.id = $1`,
-			activityID, interval, anchor).Scan(&open)
+			activityID, current, carried).Scan(&open)
 	}); err != nil {
 		t.Fatalf("asking whether the statutory window is open: %v", err)
 	}

@@ -230,8 +230,11 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 	if maxRows <= 0 {
 		maxRows = noiseSweepBatch
 	}
-	floor := statutoryFloor()
 	return e.inWorkspace(ctx, func(wsCtx context.Context, ws ids.UUID) error {
+		floor, err := purgeFloor(wsCtx, e.pool)
+		if err != nil {
+			return err
+		}
 		redacted, failed := 0, 0
 		var after *capture.NoiseMessage
 		// Pages walk past a message that keeps failing. A pass that only ever
@@ -244,7 +247,7 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 				return err
 			}
 			for _, message := range page {
-				done, err := e.redactOneNoiseMessage(wsCtx, message.ID, window, floor)
+				done, err := e.redactOneNoiseMessage(wsCtx, message.ID, window)
 				switch {
 				case err != nil:
 					failed++
@@ -274,11 +277,15 @@ func (e *CounterpartyVerdictEngine) RedactNoiseWorkspace(ctx context.Context, wi
 // It reports false when the message no longer qualifies once locked. A human
 // may have un-archived it. A hold, a request or a colleague's import may have
 // arrived after the backlog was read.
-func (e *CounterpartyVerdictEngine) redactOneNoiseMessage(
-	ctx context.Context, id ids.UUID, window time.Duration, floor capture.StatutoryFloor,
-) (bool, error) {
+func (e *CounterpartyVerdictEngine) redactOneNoiseMessage(ctx context.Context, id ids.UUID, window time.Duration) (bool, error) {
 	destroyed := false
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		// The floor in force now, not the one the page was selected under: a
+		// jurisdiction change between the two must not destroy what it shields.
+		floor, _, err := purgeFloorTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		claimed, err := e.pending.ClaimNoiseMailForRedactionTx(ctx, tx, id, window, floor)
 		if err != nil || !claimed {
 			return err

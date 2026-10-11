@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"sync"
 
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -67,4 +68,32 @@ func clone(r Rules) Rules {
 	out.Instruments = slices.Clone(r.Instruments)
 	out.Deadlines = maps.Clone(r.Deadlines)
 	return out
+}
+
+// GDPRRule names the fallback deadline: one calendar month from receipt, GDPR
+// Art. 12(3).
+const GDPRRule = "gdpr"
+
+// GDPR is that fallback deadline. A month, not thirty days, and clamped to the
+// month's last day: one month after 31 January is 28 February (Deadline.Due).
+// Held by TestOneCalendarMonthFollowsTheShortMonths.
+var GDPR = Deadline{Period: jurisdiction.Period{Months: 1}}
+
+// Resolve is the one lookup every request writer and the admin page make:
+// the deadline a jurisdiction gives one kind, and the rule that names it. A
+// jurisdiction that declares no deadline for the kind, and an empty code, get
+// the GDPR month.
+func Resolve(code jurisdiction.Code, kind RequestKind) (Deadline, string) {
+	if code == "" {
+		return GDPR, GDPRRule
+	}
+	rules, ok := For(code)
+	if !ok {
+		return GDPR, GDPRRule
+	}
+	deadline, ok := rules.Deadlines[kind]
+	if !ok {
+		return GDPR, GDPRRule
+	}
+	return deadline, string(code) + " v" + strconv.Itoa(rules.Version)
 }

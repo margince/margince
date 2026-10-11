@@ -81,14 +81,19 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		return err
 	}
 	subject := ids.From[ids.ContactKind](contactID)
-	// The statutory correspondence floor the retention engine applies to its
-	// activity selectors applies here too: erasing the contact a Handelsbrief
-	// hangs off must not destroy the correspondence itself below its floor.
-	floorInterval, floorAnchor := statutoryFloorArgs()
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := requireErasableContact(ctx, tx, subject); err != nil {
 			return err
 		}
+		// The statutory correspondence floor the retention engine applies to
+		// its activity selectors applies here too: erasing the contact a
+		// Handelsbrief hangs off must not destroy the correspondence itself
+		// below its floor.
+		floor, err := ResolveFloorPolicy(ctx, tx, e.country)
+		if err != nil {
+			return err
+		}
+		floorCurrent, floorCarried := floor.sqlArgs()
 		keys, err := subjectIdentifiers(ctx, tx, subject)
 		emails, identities := keys.emails, keys.identities
 		if err != nil {
@@ -128,14 +133,14 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := lockSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities)); err != nil {
 			return err
 		}
-		activitiesRedacted, err := redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor)
+		activitiesRedacted, err := redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor)
 		if err != nil {
 			return err
 		}
 		// What the floor shielded from the statement above is held instead
 		// (erasure_restrict.go): the same three id sets, selected BY the
 		// floor rather than against it, so every row is one of the two.
-		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor, e.payloads)
+		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, e.payloads)
 		if err != nil {
 			return err
 		}
@@ -177,7 +182,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		// transaction (objects first). A failure here — including a
 		// misconfigured store — rolls the whole erasure back, so it stays
 		// retryable and never commits a half-erasure.
-		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
+		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorCurrent, floorCarried); err != nil {
 			return err
 		}
 		// The activities this erasure just destroyed travel with the subject:

@@ -3236,6 +3236,8 @@ public.data_subject_request.data_subject_request_status_check CHECK ((status = A
 public.data_subject_request.dsr_assignee_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.data_subject_request.dsr_resolution_shape CHECK (((status <> ALL (ARRAY['fulfilled'::text, 'rejected'::text])) OR (resolution IS NOT NULL)))
 public.data_subject_request.due_at timestamp with time zone NOT NULL gen=- def=-
+public.data_subject_request.due_overridden boolean NOT NULL gen=- def=false
+public.data_subject_request.due_rule text gen=- def=-
 public.data_subject_request.id uuid NOT NULL gen=- def=uuidv7()
 public.data_subject_request.kind text NOT NULL gen=- def=-
 public.data_subject_request.receipt_reference text gen=- def=-

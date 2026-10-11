@@ -100,6 +100,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/data-subject-requests": {
 		{Name: "status", Values: []string{"open", "in_progress", "fulfilled", "rejected"}, Array: false, Explode: true},
 	},
+	"GET /v1/data-subject-requests/deadline": {
+		{Name: "kind", Values: []string{"access", "rectify", "erasure"}, Array: false, Explode: true},
+	},
 	"GET /v1/deal-rooms": {
 		{Name: "state", Values: []string{"draft", "building", "ready", "publishing", "live", "paused", "closed", "expired", "archived"}, Array: false, Explode: true},
 	},

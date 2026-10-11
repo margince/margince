@@ -3,15 +3,12 @@
 
 package privacy
 
-// Whether this installation knows what the law requires it to keep.
+// What this installation can say about the floor it applies.
 //
-// The floor fails OPEN, which is the right way round and the reason the
-// absence has to be said out loud. A purge handed no clause shields every row
-// (StatutoryFloor.column), so an installation with no applicable pack does not
-// destroy correspondence it should have kept — it keeps everything and reports
-// the reason as the statute. Both halves of that are wrong to leave silent:
-// mail is held that nothing requires holding, and an owner asking why is told
-// a law applied when none was established.
+// Four cases, and an operator needs to tell them apart: no jurisdiction is
+// selected (the strictest compiled-in floor holds); one is selected and its
+// pack declares no floor; one is selected with a floor; and, beside any of
+// these, a carried floor from an earlier jurisdiction still binding older mail.
 
 import (
 	"time"
@@ -19,46 +16,66 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
-// FloorPosture is what this installation can say about its statutory floor.
+// FloorPosture is the evaluated floor, in the terms a screen or a log states.
 type FloorPosture struct {
-	// Known reports that some compiled-in pack declares a commercial
-	// correspondence floor. False means no pack does, which is a fact about
-	// the BUILD rather than about the law: the periods exist, this binary
-	// simply carries none of them.
+	// Selected is the installation's jurisdiction, empty when none is set.
+	Selected string
+	// Known reports that a correspondence floor binds new mail. With nothing
+	// selected that is the strictest compiled-in pack's; with a selection it is
+	// that pack's own.
 	Known bool
-	// Class and Keep describe the strictest floor when one is known, and are
-	// empty otherwise. A reader is never shown a period beside a false Known.
+	// Class and Keep describe that floor, and are empty when Known is false. A
+	// reader is never shown a period beside a false Known.
 	Class string
 	Keep  jurisdiction.Period
 	// FromYearEnd says the period counts from the end of the calendar year.
 	FromYearEnd bool
-	// Packs names every compiled-in jurisdiction, floor or no floor. An
-	// installation with packs that all decline to declare a floor is a
-	// different situation from one with no packs at all — the first has been
-	// answered, the second has not been asked.
+	// Packs names every compiled-in jurisdiction, floor or no floor.
 	Packs []string
+	// Carried is the floor an earlier jurisdiction left on older mail, or nil.
+	Carried *CarriedPosture
 }
 
-// StatutoryFloorPosture reports what this installation knows about the floor,
-// so an operator is TOLD rather than left to find out.
-//
-// The distinction the surface turns on is "asked and answered" versus "never
-// asked". A pack that declares no correspondence class has made a statement —
-// extensions/vn does exactly that, with its reasoning written out — and an
-// installation carrying it is in a different position from one built with no
-// packs at all, even though both have no floor to apply.
-func StatutoryFloorPosture() FloorPosture {
-	posture := FloorPosture{}
+// CarriedPosture describes a carried floor and how long it keeps binding.
+type CarriedPosture struct {
+	Class       string
+	Keep        jurisdiction.Period
+	FromYearEnd bool
+	// Before is the change time: mail that occurred earlier is bound.
+	Before time.Time
+	// BindsUntil is when the youngest bound message leaves the carried window,
+	// after which the carried floor binds nothing.
+	BindsUntil time.Time
+}
+
+// StatutoryFloorPosture reports the floor a resolved policy applies.
+func StatutoryFloorPosture(p FloorPolicy) FloorPosture {
+	posture := FloorPosture{Selected: string(p.Selected)}
 	for _, pack := range jurisdiction.Applicable() {
 		posture.Packs = append(posture.Packs, string(pack.Code()))
 	}
-	floor := statutoryCorrespondenceFloor(time.Now())
-	if floor.Name == "" {
-		return posture
+	if p.Current.Name != "" {
+		posture.Known = true
+		posture.Class = string(p.Current.Name)
+		posture.Keep = p.Current.Keep
+		posture.FromYearEnd = p.Current.Anchor == jurisdiction.AnchorCalendarYearEnd
 	}
-	posture.Known = true
-	posture.Class = string(floor.Name)
-	posture.Keep = floor.Keep
-	posture.FromYearEnd = floor.Anchor == jurisdiction.AnchorCalendarYearEnd
+	if c := p.Carried; c != nil {
+		posture.Carried = &CarriedPosture{
+			Class: string(c.Class.Name), Keep: c.Class.Keep,
+			FromYearEnd: c.Class.Anchor == jurisdiction.AnchorCalendarYearEnd,
+			Before:      c.Before, BindsUntil: windowEndAt(c.Class, c.Before),
+		}
+	}
 	return posture
+}
+
+// windowEndAt is when the window over a message that occurred at occurred
+// closes, the same instant floorWindowEnd computes in SQL.
+func windowEndAt(class jurisdiction.RetentionClass, occurred time.Time) time.Time {
+	start := occurred
+	if class.Anchor == jurisdiction.AnchorCalendarYearEnd {
+		start = time.Date(occurred.Year()+1, time.January, 1, 0, 0, 0, 0, occurred.Location())
+	}
+	return start.AddDate(class.Keep.Years, class.Keep.Months, class.Keep.Days)
 }

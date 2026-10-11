@@ -50,7 +50,9 @@ import (
 // this predicate shields today is exactly what the restriction holds until.
 // A zero floor stringifies to a zero interval, so the ELSE branch reduces to
 // `occurred_at > now()` — nothing is shielded, exactly as before.
-func correspondenceFloorPredicate(intervalArg, anchorArg int) string {
+//
+// currentArg and carriedArg hold the FloorPolicy as JSON (FloorPolicy.sqlArgs).
+func correspondenceFloorPredicate(currentArg, carriedArg int) string {
 	// An already-restricted row is out of every destructive path's reach,
 	// unconditionally and before the floor is even considered. The data-layer
 	// guard refuses a write to one, and a refusal inside the nightly pass
@@ -60,7 +62,7 @@ func correspondenceFloorPredicate(intervalArg, anchorArg int) string {
 	// (A167/ADR-0116). The expiry sweep reaches these rows by its own
 	// selector, which is the only path that may.
 	return `AND a.restricted_at IS NULL
-		  AND NOT (` + handelsbriefShielded(intervalArg, anchorArg) + `)`
+		  AND NOT (` + handelsbriefShielded(currentArg, carriedArg) + `)`
 }
 
 // handelsbriefShielded is the floor's positive form: the activity aliased `a`
@@ -70,10 +72,10 @@ func correspondenceFloorPredicate(intervalArg, anchorArg int) string {
 // rather than destroy. One spelling, so what one path shields is what the
 // other restricts — a row that fell between the two would be neither erased
 // nor held.
-func handelsbriefShielded(intervalArg, anchorArg int) string {
+func handelsbriefShielded(currentArg, carriedArg int) string {
 	return `a.kind NOT IN ('task','note')
 		  AND (` + handelsbriefArm + `)
-		  AND ` + floorWindowEnd(intervalArg, anchorArg) + ` > now()`
+		  AND ` + floorWindowEnd(currentArg, carriedArg) + ` > now()`
 }
 
 // floorWindowEnd is the instant the statutory window over the activity
@@ -86,9 +88,21 @@ func handelsbriefShielded(intervalArg, anchorArg int) string {
 // reads, so a row can never sit shielded from destruction yet outside the
 // window the restriction would pin — that gap would be a record neither
 // erased nor held.
-func floorWindowEnd(intervalArg, anchorArg int) string {
-	return fmt.Sprintf(`CASE WHEN $%[2]d THEN date_trunc('year', a.occurred_at) + interval '1 year' + $%[1]d::interval
-		           ELSE a.occurred_at + $%[1]d::interval END`, intervalArg, anchorArg)
+//
+// A row that occurred before the carried floor's change time is held to the
+// later of the two window ends. With no carried floor the second arm is NULL,
+// which GREATEST ignores.
+func floorWindowEnd(currentArg, carriedArg int) string {
+	return fmt.Sprintf(`GREATEST(%s,
+		           CASE WHEN a.occurred_at < ($%d::jsonb->>'before')::timestamptz THEN %s END)`,
+		windowEndUnder(currentArg), carriedArg, windowEndUnder(carriedArg))
+}
+
+// windowEndUnder is one floor's window end over the activity aliased `a`.
+func windowEndUnder(arg int) string {
+	return fmt.Sprintf(`CASE WHEN ($%[1]d::jsonb->>'year_end')::boolean
+		                THEN date_trunc('year', a.occurred_at) + interval '1 year' + ($%[1]d::jsonb->>'keep')::interval
+		                ELSE a.occurred_at + ($%[1]d::jsonb->>'keep')::interval END`, arg)
 }
 
 // handelsbriefArm answers whether an activity is a Handelsbrief — correspondence
@@ -134,55 +148,34 @@ var handelsbriefArm = `a.retention_class IS NOT NULL
 		          WHERE pl.activity_id = a.id AND pl.entity_type = 'project'))`
 
 // statutoryCorrespondenceFloor is the strictest compiled-in pack's
-// commercial-correspondence class — the boundary below which a
-// destructive retention action must not touch an email activity. The
-// floors are calendar periods with a declared ANCHOR, never day counts:
-// a Years*365 conversion would shorten a statutory floor across leap
-// years, and ignoring a calendar-year-end anchor (§147(4) AO) would
-// erase a January document almost a year early. Strictness is compared
-// as ProtectedSince at ref (the pass's evaluation time): mixed-unit
-// periods and mixed anchors only order against an instant. The zero
-// class means no pack declares one.
+// commercial-correspondence class — the floor an installation with no selected
+// jurisdiction applies (floorFor). The floors are calendar periods with a
+// declared ANCHOR, never day counts: a Years*365 conversion would shorten a
+// statutory floor across leap years, and ignoring a calendar-year-end anchor
+// (§147(4) AO) would erase a January document almost a year early. Strictness
+// is compared as ProtectedSince at ref: mixed-unit periods and mixed anchors
+// only order against an instant. The zero class means no pack declares one.
 func statutoryCorrespondenceFloor(ref time.Time) jurisdiction.RetentionClass {
 	floor := jurisdiction.RetentionClass{}
 	for _, pack := range jurisdiction.Applicable() {
-		retention := pack.Retention()
-		if retention == nil {
-			continue
-		}
-		for _, class := range retention.Classes() {
-			if class.Name == jurisdiction.CommercialCorrespondence && class.ProtectedSince(ref).Before(floor.ProtectedSince(ref)) {
-				floor = class
-			}
+		class := correspondenceClassOf(pack)
+		if class.Name != "" && class.ProtectedSince(ref).Before(floor.ProtectedSince(ref)) {
+			floor = class
 		}
 	}
 	return floor
 }
 
-// statutoryFloorArgs resolves the strictest compiled-in correspondence floor
-// into the two positional args correspondenceFloorPredicate reads — the ISO
-// 8601 interval and the calendar-year-end anchor flag. The contact-erase
-// cascade (erasure.go) passes these so it shields EXACTLY what the retention
-// activity selectors do, keeping erasure.go free of the jurisdiction seam.
-func statutoryFloorArgs() (interval string, yearEndAnchor bool) {
-	floor := statutoryCorrespondenceFloor(time.Now())
-	return floor.Keep.String(), floor.Anchor == jurisdiction.AnchorCalendarYearEnd
-}
-
-// StatutoryFloorClass names what the correspondence floor keeps and for how
-// long, so a purge can tell the owner WHICH rule kept their mail rather than
-// only that something did.
+// StrictestClass names what kept a shielded message: the stricter of the
+// current and the carried floor, so a purge can tell the owner WHICH rule kept
+// their mail rather than only that something did.
 //
 // The class name and the period, and no citation: the packs carry neither a
-// section number nor a statute name, and inventing one here would put a legal
-// reference in front of a colleague that nothing in the product can hold to.
-// The handbook is where the citation belongs, and it carries it.
-//
-// An installation with no applicable pack has a zero class, which reads as an
-// empty name and a zero period — and that is the honest answer, because a
-// purge that cannot ask what the law requires shields everything rather than
-// guessing (StatutoryFloor.column).
-func StatutoryFloorClass() (name string, keep jurisdiction.Period, yearEndAnchor bool) {
-	floor := statutoryCorrespondenceFloor(time.Now())
-	return string(floor.Name), floor.Keep, floor.Anchor == jurisdiction.AnchorCalendarYearEnd
+// section number nor a statute name. The handbook is where the citation
+// belongs, and it carries it.
+func (p FloorPolicy) StrictestClass(ref time.Time) jurisdiction.RetentionClass {
+	if p.Carried != nil && p.Carried.Class.ProtectedSince(ref).Before(p.Current.ProtectedSince(ref)) {
+		return p.Carried.Class
+	}
+	return p.Current
 }

@@ -261,6 +261,9 @@ var retentionSweepFiles = []string{
 	// list is what would otherwise have reported the sweep as having stopped
 	// deleting them.
 	"internal/modules/privacy/retentionconsent.go",
+	// The activity/erase executor, which left retentionactions.go when it
+	// crossed the length cap.
+	"internal/modules/privacy/activityerase.go",
 }
 
 // sqlStatements splits one Go string literal into the statements it holds. A

@@ -10750,6 +10750,69 @@ func (e JobFailureState) Valid() bool {
 	}
 }
 
+// Defines values for JurisdictionDeadlineKind.
+const (
+	JurisdictionDeadlineKindAccess  JurisdictionDeadlineKind = "access"
+	JurisdictionDeadlineKindErasure JurisdictionDeadlineKind = "erasure"
+	JurisdictionDeadlineKindRectify JurisdictionDeadlineKind = "rectify"
+)
+
+// Valid indicates whether the value is a known member of the JurisdictionDeadlineKind enum.
+func (e JurisdictionDeadlineKind) Valid() bool {
+	switch e {
+	case JurisdictionDeadlineKindAccess:
+		return true
+	case JurisdictionDeadlineKindErasure:
+		return true
+	case JurisdictionDeadlineKindRectify:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JurisdictionDocumentAudience.
+const (
+	JurisdictionDocumentAudienceEmployee JurisdictionDocumentAudience = "employee"
+	JurisdictionDocumentAudienceEmployer JurisdictionDocumentAudience = "employer"
+	JurisdictionDocumentAudienceOperator JurisdictionDocumentAudience = "operator"
+)
+
+// Valid indicates whether the value is a known member of the JurisdictionDocumentAudience enum.
+func (e JurisdictionDocumentAudience) Valid() bool {
+	switch e {
+	case JurisdictionDocumentAudienceEmployee:
+		return true
+	case JurisdictionDocumentAudienceEmployer:
+		return true
+	case JurisdictionDocumentAudienceOperator:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JurisdictionDocumentKind.
+const (
+	JurisdictionDocumentKindReadingCopy JurisdictionDocumentKind = "reading_copy"
+	JurisdictionDocumentKindRecord      JurisdictionDocumentKind = "record"
+	JurisdictionDocumentKindTemplate    JurisdictionDocumentKind = "template"
+)
+
+// Valid indicates whether the value is a known member of the JurisdictionDocumentKind enum.
+func (e JurisdictionDocumentKind) Valid() bool {
+	switch e {
+	case JurisdictionDocumentKindReadingCopy:
+		return true
+	case JurisdictionDocumentKindRecord:
+		return true
+	case JurisdictionDocumentKindTemplate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for KindAutonomyMode.
 const (
 	KindAutonomyModeAuto   KindAutonomyMode = "auto"
@@ -20434,6 +20497,27 @@ func (e ListDataSubjectRequestsParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for GetDataSubjectRequestDeadlineParamsKind.
+const (
+	GetDataSubjectRequestDeadlineParamsKindAccess  GetDataSubjectRequestDeadlineParamsKind = "access"
+	GetDataSubjectRequestDeadlineParamsKindErasure GetDataSubjectRequestDeadlineParamsKind = "erasure"
+	GetDataSubjectRequestDeadlineParamsKindRectify GetDataSubjectRequestDeadlineParamsKind = "rectify"
+)
+
+// Valid indicates whether the value is a known member of the GetDataSubjectRequestDeadlineParamsKind enum.
+func (e GetDataSubjectRequestDeadlineParamsKind) Valid() bool {
+	switch e {
+	case GetDataSubjectRequestDeadlineParamsKindAccess:
+		return true
+	case GetDataSubjectRequestDeadlineParamsKindErasure:
+		return true
+	case GetDataSubjectRequestDeadlineParamsKindRectify:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListDealsParamsStatus.
 const (
 	ListDealsParamsStatusLost ListDealsParamsStatus = "lost"
@@ -27163,6 +27247,20 @@ type CaptureVerdictClock struct {
 	Running bool `json:"running"`
 }
 
+// CarriedRetentionFloor defines model for CarriedRetentionFloor.
+type CarriedRetentionFloor struct {
+	// Before Mail that occurred before this instant stays bound.
+	Before time.Time `json:"before"`
+
+	// BindsUntil When the youngest bound message leaves the window.
+	BindsUntil  time.Time `json:"binds_until"`
+	Class       string    `json:"class"`
+	FromYearEnd bool      `json:"from_year_end"`
+
+	// Keep ISO 8601 period.
+	Keep string `json:"keep"`
+}
+
 // ChangeContractStatusRequest defines model for ChangeContractStatusRequest.
 type ChangeContractStatusRequest struct {
 	// Status The asserted new status. `superseded` is set by renewContract, not here.
@@ -32154,10 +32252,15 @@ type CreateCustomFieldRequestType string
 type CreateDataSubjectRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
-	// DueAt The statutory deadline the caller computed. A request without one is refused with 422 naming `due_at`.
-	DueAt      time.Time                    `json:"due_at"`
-	Kind       CreateDataSubjectRequestKind `json:"kind"`
-	SubjectRef string                       `json:"subject_ref"`
+	// DueAt An earlier deadline than the one the server computes from `received_at`. Absent takes
+	// the computed deadline. A date LATER than the computed deadline is refused with 422
+	// naming `due_at`; an earlier one is stored with `due_overridden: true`.
+	DueAt *time.Time                   `json:"due_at,omitempty"`
+	Kind  CreateDataSubjectRequestKind `json:"kind"`
+
+	// ReceivedAt When the request arrived. Absent means now. A time in the future is refused with 422 naming `received_at`.
+	ReceivedAt *time.Time `json:"received_at,omitempty"`
+	SubjectRef string     `json:"subject_ref"`
 }
 
 // CreateDataSubjectRequestKind defines model for CreateDataSubjectRequest.Kind.
@@ -32932,7 +33035,15 @@ type DataSubjectRequest struct {
 	CreatedAt  time.Time           `json:"created_at"`
 
 	// DueAt Statutory deadline (e.g. 30 days).
-	DueAt      time.Time                `json:"due_at"`
+	DueAt time.Time `json:"due_at"`
+
+	// DueOverridden True when the officer chose an earlier deadline than `due_rule` gives.
+	DueOverridden bool `json:"due_overridden"`
+
+	// DueRule The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or
+	// `<jurisdiction> v<version>` for a pack's own deadline. Null on a request filed before
+	// deadlines were computed, whose date was typed by hand.
+	DueRule    *string                  `json:"due_rule,omitempty"`
 	Id         openapi_types.UUID       `json:"id"`
 	Kind       DataSubjectRequestKind   `json:"kind"`
 	Resolution *string                  `json:"resolution,omitempty"`
@@ -36173,6 +36284,32 @@ type InstallationBrand struct {
 	LogoUrl *string `json:"logo_url,omitempty"`
 }
 
+// InstallationJurisdiction Which jurisdiction this installation runs under and what that selection puts in force.
+// Each section names its own source: the unit that ships the pack, the pack's retention
+// classes, the messaging rule set with its own version, and the request deadlines.
+type InstallationJurisdiction struct {
+	// Available Every jurisdiction pack compiled into this build.
+	Available []JurisdictionUnit `json:"available"`
+
+	// Deadlines The request deadline per kind, each with the rule that sets it.
+	Deadlines []JurisdictionDeadline `json:"deadlines"`
+
+	// Documents The documents the selected pack ships.
+	Documents []JurisdictionDocument `json:"documents"`
+
+	// Floor The correspondence floor in force. With no jurisdiction selected it is the strictest floor
+	// of every compiled-in pack. `known` false means no floor binds new mail.
+	Floor     RetentionFloorPolicy        `json:"floor"`
+	Messaging *JurisdictionMessagingRules `json:"messaging,omitempty"`
+
+	// RetentionClasses Every retention class the selected pack declares. Empty when nothing is selected or the pack declares none.
+	RetentionClasses *[]JurisdictionRetentionClass `json:"retention_classes,omitempty"`
+
+	// Selected The selected pack code, or null when no jurisdiction is set.
+	Selected *string           `json:"selected"`
+	Unit     *JurisdictionUnit `json:"unit,omitempty"`
+}
+
 // InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
@@ -36691,6 +36828,80 @@ type JobKindHealth struct {
 
 	// Waiting Available, scheduled or pending: queued and not yet started.
 	Waiting int `json:"waiting"`
+}
+
+// JurisdictionDeadline defines model for JurisdictionDeadline.
+type JurisdictionDeadline struct {
+	// Hours Hours, when the deadline counts in hours.
+	Hours *int                     `json:"hours,omitempty"`
+	Kind  JurisdictionDeadlineKind `json:"kind"`
+
+	// Period ISO 8601 calendar period, when the deadline counts in calendar units.
+	Period *string `json:"period,omitempty"`
+
+	// Rule `gdpr`, or `<jurisdiction> v<version>`.
+	Rule string `json:"rule"`
+}
+
+// JurisdictionDeadlineKind defines model for JurisdictionDeadline.Kind.
+type JurisdictionDeadlineKind string
+
+// JurisdictionDocument defines model for JurisdictionDocument.
+type JurisdictionDocument struct {
+	Audience  JurisdictionDocumentAudience `json:"audience"`
+	Id        string                       `json:"id"`
+	Kind      JurisdictionDocumentKind     `json:"kind"`
+	Language  string                       `json:"language"`
+	MediaType string                       `json:"media_type"`
+	SizeBytes int                          `json:"size_bytes"`
+	Title     string                       `json:"title"`
+}
+
+// JurisdictionDocumentAudience defines model for JurisdictionDocument.Audience.
+type JurisdictionDocumentAudience string
+
+// JurisdictionDocumentKind defines model for JurisdictionDocument.Kind.
+type JurisdictionDocumentKind string
+
+// JurisdictionInstrument defines model for JurisdictionInstrument.
+type JurisdictionInstrument struct {
+	EffectiveFrom *openapi_types.Date `json:"effective_from,omitempty"`
+
+	// Name The law or decree, as a regulator cites it.
+	Name string `json:"name"`
+}
+
+// JurisdictionMessagingRules defines model for JurisdictionMessagingRules.
+type JurisdictionMessagingRules struct {
+	Instruments []JurisdictionInstrument `json:"instruments"`
+
+	// Version The rule set's own version, which decisions record.
+	Version int `json:"version"`
+}
+
+// JurisdictionRetentionClass defines model for JurisdictionRetentionClass.
+type JurisdictionRetentionClass struct {
+	// FromYearEnd The period counts from the end of the calendar year.
+	FromYearEnd bool `json:"from_year_end"`
+
+	// Keep The ISO 8601 period the class keeps, e.g. `P6Y`.
+	Keep string `json:"keep"`
+
+	// Name The class, e.g. `commercial_correspondence`.
+	Name string `json:"name"`
+}
+
+// JurisdictionUnit defines model for JurisdictionUnit.
+type JurisdictionUnit struct {
+	// Code The pack's ISO 3166-1 alpha-2 code.
+	Code        string `json:"code"`
+	Description string `json:"description"`
+
+	// UnitName The extension unit that ships it.
+	UnitName string `json:"unit_name"`
+
+	// UnitVersion The unit's own version, not a rule set's.
+	UnitVersion string `json:"unit_version"`
 }
 
 // KindAutonomy One kind's standing with the reader — how it will be handled next time, and the
@@ -42617,6 +42828,14 @@ type RequestCommunicationDecisionRequest struct {
 	Note *string `json:"note,omitempty"`
 }
 
+// RequestDeadline The deadline a request of one kind received at one instant gets, and the rule that set it.
+type RequestDeadline struct {
+	DueAt time.Time `json:"due_at"`
+
+	// Rule `gdpr`, or `<jurisdiction> v<version>` for a pack's own deadline.
+	Rule string `json:"rule"`
+}
+
 // RescheduleSendRequest A new moment for a message already scheduled. TIME ONLY — the content is what the
 // approval bound to, so changing it is cancel-and-recompose (ADR-0104 §5).
 type RescheduleSendRequest struct {
@@ -42809,6 +43028,21 @@ type RestrictedRecord struct {
 // rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
 // `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
 type RetentionAction string
+
+// RetentionFloorPolicy The correspondence floor in force. With no jurisdiction selected it is the strictest floor
+// of every compiled-in pack. `known` false means no floor binds new mail.
+type RetentionFloorPolicy struct {
+	Carried     *CarriedRetentionFloor `json:"carried,omitempty"`
+	Class       *string                `json:"class,omitempty"`
+	FromYearEnd bool                   `json:"from_year_end"`
+
+	// Keep ISO 8601 period. Absent when `known` is false.
+	Keep  *string `json:"keep,omitempty"`
+	Known bool    `json:"known"`
+
+	// Packs Every compiled-in pack code.
+	Packs []string `json:"packs"`
+}
 
 // RetentionOverrideRequest defines model for RetentionOverrideRequest.
 type RetentionOverrideRequest struct {
@@ -45908,6 +46142,13 @@ type UpdateInstallationSettingsRequest struct {
 
 	// CloseDateSweepIntervalSeconds Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.
 	CloseDateSweepIntervalSeconds *int `json:"close_date_sweep_interval_seconds,omitempty"`
+
+	// Country The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
+	// compiled into this build, or the empty string for no pack. A code with no
+	// compiled-in pack is refused with 422. When the change weakens the correspondence
+	// retention floor, the old floor keeps binding mail that occurred before the change
+	// (`GET /installation/jurisdiction` reports it as `floor.carried`).
+	Country *string `json:"country,omitempty"`
 
 	// DateFormat Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
 	DateFormat *UpdateInstallationSettingsRequestDateFormat `json:"date_format,omitempty"`
@@ -51796,6 +52037,17 @@ type CreateDataSubjectRequestParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// GetDataSubjectRequestDeadlineParams defines parameters for GetDataSubjectRequestDeadline.
+type GetDataSubjectRequestDeadlineParams struct {
+	Kind GetDataSubjectRequestDeadlineParamsKind `form:"kind" json:"kind"`
+
+	// ReceivedAt When the request arrived. Absent means now.
+	ReceivedAt *time.Time `form:"received_at,omitempty" json:"received_at,omitempty"`
+}
+
+// GetDataSubjectRequestDeadlineParamsKind defines parameters for GetDataSubjectRequestDeadline.
+type GetDataSubjectRequestDeadlineParamsKind string
 
 // ListDealRoomsParams defines parameters for ListDealRooms.
 type ListDealRoomsParams struct {
@@ -67898,6 +68150,9 @@ type ServerInterface interface {
 	// Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention/erasure (B-EP07.13/.16).
 	// (POST /data-subject-requests)
 	CreateDataSubjectRequest(w http.ResponseWriter, r *http.Request, params CreateDataSubjectRequestParams)
+	// The deadline a request would get, and the rule that sets it.
+	// (GET /data-subject-requests/deadline)
+	GetDataSubjectRequestDeadline(w http.ResponseWriter, r *http.Request, params GetDataSubjectRequestDeadlineParams)
 	// Update a data-subject request's status / assignee / resolution.
 	// (PATCH /data-subject-requests/{id})
 	UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -68195,6 +68450,12 @@ type ServerInterface interface {
 	// Which sign-in methods this installation offers.
 	// (GET /installation/authentication-policy)
 	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
+	// The installation's jurisdiction and what it puts in force.
+	// (GET /installation/jurisdiction)
+	GetInstallationJurisdiction(w http.ResponseWriter, r *http.Request)
+	// Download one of the selected jurisdiction's documents.
+	// (GET /installation/jurisdiction/documents/{documentId})
+	DownloadJurisdictionDocument(w http.ResponseWriter, r *http.Request, documentId string)
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
@@ -71435,6 +71696,12 @@ func (_ Unimplemented) CreateDataSubjectRequest(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The deadline a request would get, and the rule that sets it.
+// (GET /data-subject-requests/deadline)
+func (_ Unimplemented) GetDataSubjectRequestDeadline(w http.ResponseWriter, r *http.Request, params GetDataSubjectRequestDeadlineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Update a data-subject request's status / assignee / resolution.
 // (PATCH /data-subject-requests/{id})
 func (_ Unimplemented) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -72026,6 +72293,18 @@ func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id 
 // Which sign-in methods this installation offers.
 // (GET /installation/authentication-policy)
 func (_ Unimplemented) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The installation's jurisdiction and what it puts in force.
+// (GET /installation/jurisdiction)
+func (_ Unimplemented) GetInstallationJurisdiction(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download one of the selected jurisdiction's documents.
+// (GET /installation/jurisdiction/documents/{documentId})
+func (_ Unimplemented) DownloadJurisdictionDocument(w http.ResponseWriter, r *http.Request, documentId string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89507,6 +89786,58 @@ func (siw *ServerInterfaceWrapper) CreateDataSubjectRequest(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// GetDataSubjectRequestDeadline operation middleware
+func (siw *ServerInterfaceWrapper) GetDataSubjectRequestDeadline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetDataSubjectRequestDeadlineParams
+
+	// ------------- Required query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "received_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "received_at", r.URL.Query(), &params.ReceivedAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "received_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "received_at", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDataSubjectRequestDeadline(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateDataSubjectRequest operation middleware
 func (siw *ServerInterfaceWrapper) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request) {
 
@@ -93931,6 +94262,58 @@ func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAuthenticationPolicy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetInstallationJurisdiction operation middleware
+func (siw *ServerInterfaceWrapper) GetInstallationJurisdiction(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInstallationJurisdiction(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadJurisdictionDocument operation middleware
+func (siw *ServerInterfaceWrapper) DownloadJurisdictionDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "documentId" -------------
+	var documentId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "documentId", chi.URLParam(r, "documentId"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "documentId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadJurisdictionDocument(w, r, documentId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -110175,6 +110558,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/data-subject-requests", wrapper.CreateDataSubjectRequest)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/data-subject-requests/deadline", wrapper.GetDataSubjectRequestDeadline)
+	})
+	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/data-subject-requests/{id}", wrapper.UpdateDataSubjectRequest)
 	})
 	r.Group(func(r chi.Router) {
@@ -110470,6 +110856,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/jurisdiction", wrapper.GetInstallationJurisdiction)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/jurisdiction/documents/{documentId}", wrapper.DownloadJurisdictionDocument)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)

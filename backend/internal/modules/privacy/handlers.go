@@ -79,6 +79,13 @@ func (h Handlers) WithRawCapturePurger(purge RawCapturePurger) Handlers {
 	return h
 }
 
+// WithCountry gives the controller's pin the selected jurisdiction, so it pins
+// to the floor that jurisdiction puts in force.
+func (h Handlers) WithCountry(country CountryReader) Handlers {
+	h.eraser = h.eraser.WithCountry(country)
+	return h
+}
+
 // ListAuditLog implements (GET /audit-log).
 func (h Handlers) ListAuditLog(w http.ResponseWriter, r *http.Request, params crmcontracts.ListAuditLogParams) {
 	f := AuditFilter{

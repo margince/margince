@@ -19,6 +19,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -410,4 +411,32 @@ func loggedAttr(t *testing.T, records, key string) string {
 		}
 	}
 	return ""
+}
+
+// The claim's jurisdiction is stored, and status offers the compiled-in packs
+// while the installation is claimable.
+func TestAClaimStoresTheChosenJurisdiction(t *testing.T) {
+	srv, token, owner := unprovisionedServerWithOwner(t)
+	status, err := srv.Client().Get(srv.URL + "/setup/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { apptest.CloseBody(t, status) })
+	var offered struct {
+		Jurisdictions []string `json:"jurisdictions"`
+	}
+	if err := json.NewDecoder(status.Body).Decode(&offered); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(offered.Jurisdictions, "zq") {
+		t.Fatalf("status offers %v, want the compiled-in zq pack", offered.Jurisdictions)
+	}
+	body := strings.Replace(claimBody(token), `"country":""`, `"country":"zq"`, 1)
+	if got := claimStatus(t, srv, body); got != http.StatusCreated {
+		t.Fatalf("claim with country zq → %d, want 201", got)
+	}
+	var stored string
+	if err := owner.QueryRow(context.Background(), `SELECT value #>> '{}' FROM setting WHERE key = 'installation.country'`).Scan(&stored); err != nil || stored != "zq" {
+		t.Fatalf("stored country = %q (%v), want zq", stored, err)
+	}
 }

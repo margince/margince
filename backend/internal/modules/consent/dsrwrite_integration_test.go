@@ -51,32 +51,12 @@ func (e *dsrEnv) assigned(t *testing.T) dsrRow {
 	officer := ids.From[ids.UserKind](e.user)
 	row, err := e.store.CreateDSR(e.ctx, CreateDSRInput{
 		Kind: dsrKindAccess, SubjectRef: "assigned@dsr.test", AssigneeID: &officer,
-		DueAt: time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC),
+		DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("opening an assigned request: %v", err)
 	}
 	return row
-}
-
-func TestARequestWithoutADueDateIsRefused(t *testing.T) {
-	e := setupDSR(t)
-	for _, body := range []string{
-		`{"kind":"access","subject_ref":"x@dsr.test"}`,
-		`{"kind":"access","subject_ref":"x@dsr.test","due_at":null}`,
-	} {
-		w := e.sendDSR(http.MethodPost, body, func(w http.ResponseWriter, r *http.Request) {
-			e.handlers().CreateDataSubjectRequest(w, r, crmcontracts.CreateDataSubjectRequestParams{})
-		})
-		if w.Code != http.StatusUnprocessableEntity || validationField(t, w.Body.Bytes()) != fieldDueAt {
-			t.Fatalf("%s answered %d %s, want 422 naming due_at: a request stored without one "+
-				"sorts as overdue since the year 1", body, w.Code, w.Body)
-		}
-	}
-	rows, _, err := e.store.ListDSRs(e.ctx, nil, "", "")
-	if err != nil || len(rows) != 0 {
-		t.Fatalf("a refused request was stored anyway: %d rows, %v", len(rows), err)
-	}
 }
 
 func TestANullAssigneeHandsTheRequestBack(t *testing.T) {
