@@ -87,9 +87,9 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
-	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc,
-		activities.NewStore(InstallationDB(pool)), contacts.NewStore(InstallationDB(pool))))
-	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck())
+	commitmentTasks := activities.NewStore(InstallationDB(pool))
+	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, contacts.NewStore(InstallationDB(pool))))
+	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(commitmentTasks))
 	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
 		deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())

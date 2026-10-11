@@ -405,9 +405,9 @@ func TestASendFiledUnderMoreRecordsThanTheBoundIsRefusedBeforeItProbesAnything(t
 	}
 }
 
-// The bound is applied at the WRITE, not only on the send path's probe, so a
-// booking — which reaches the timeline through the same insert and never passes
-// probeLinkTargets — meets it too.
+// The bound is applied at the write as well as on the send path's probe. A
+// booking reaches the timeline through the same insert and never passes
+// ProbeLinkTargets, so it meets the bound there.
 func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
 	e := setupSend(t)
 	company := e.seedCompany(t)
@@ -526,10 +526,8 @@ func TestAReplyNamingALinkItsAnchorAlreadyCarriesFilesItOnce(t *testing.T) {
 // TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound holds the bound
 // against what will be WRITTEN rather than against what the caller named.
 //
-// probeLinkTargets bounds the additions alone, so an anchor already at the
-// limit plus one more passed it and failed inside the staging transaction —
-// after the consent gate had answered, after the message was prepared, and on a
-// scheduled send days after the caller could have shortened anything.
+// ProbeLinkTargets bounds the additions alone. An anchor already at the limit
+// plus one more would pass it and fail later, inside the staging transaction.
 func TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")

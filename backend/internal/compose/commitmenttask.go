@@ -74,7 +74,12 @@ type commitmentTask struct {
 func writeCommitmentTask(
 	ctx context.Context, tx pgx.Tx, tasks *activities.Store, claims *contacts.Store, t commitmentTask,
 ) (ids.UUID, error) {
-	execCtx := extractorContext(onBehalfOf(ctx, t.Assignee), t.Extractor)
+	// The reader's own pass files for the assignee; a human accepting a
+	// proposal writes as themselves, so the audit row names nobody else.
+	execCtx := extractorContext(ctx, t.Extractor)
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalSystem {
+		execCtx = onBehalfOf(execCtx, t.Assignee)
+	}
 	sourceSystem, sourceID := activities.CommitmentTaskSource, t.Locator
 	assignee := ids.From[ids.UserKind](t.Assignee)
 	sourceActivity := t.SourceActivityID
@@ -171,14 +176,9 @@ func commitmentTaskEffect(
 			return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
 				apperrors.ErrPermissionDenied)
 		}
-		// The human decided; the write is the reader's, done for them, and the
-		// decider is on the approval's own audit row. The decision grants of
-		// this kind (activity:create, contact:update) are what admitted the
-		// human, and RedeemAndApply spends the approval in the same
-		// transaction, so this principal exists only inside that act.
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type: principal.PrincipalSystem, ID: commitmentAcceptActor,
-		})
+		// The write runs as the deciding human, so each staged link meets the
+		// visibility check a link they typed would. One they cannot see refuses
+		// the whole acceptance, and the approval stays unspent.
 		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
 			privateTo, err := sourcePrivateToNow(ctx, tx, proposal.SourceActivityID, proposal.PrivateTo)
 			if err != nil {
@@ -188,8 +188,8 @@ func commitmentTaskEffect(
 				return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
 					apperrors.ErrPermissionDenied)
 			}
-			_, err = writeCommitmentTask(execCtx, tx, tasks, claims, commitmentTask{
-				Extractor: commitmentAcceptActor, Locator: proposal.Locator,
+			_, err = writeCommitmentTask(ctx, tx, tasks, claims, commitmentTask{
+				Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
 				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID,
@@ -238,46 +238,55 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	return &owner, nil
 }
 
-// commitmentTaskPrecheck refuses an edit that reaches past the promise's
-// wording and its day. Everything else is what the reviewer agreed to: the
-// locator in particular is the key that remembers the promise, and an edited
-// one would let an accepted task escape that memory or block another.
-func commitmentTaskPrecheck() approvals.ReleasePrecheck {
-	return func(_ context.Context, staged, edited json.RawMessage) error {
-		if len(edited) == 0 {
-			return nil
-		}
-		var before, after CommitmentTaskProposal
-		if err := json.Unmarshal(staged, &before); err != nil {
+// commitmentTaskPrecheck refuses a proposal filed under a record the decider
+// cannot see. It runs before the decision, so the card stays pending. The
+// effect asks again as it writes.
+func commitmentTaskPrecheck(tasks *activities.Store) approvals.ReleasePrecheck {
+	return func(ctx context.Context, staged, edited json.RawMessage) error {
+		var proposal CommitmentTaskProposal
+		if err := json.Unmarshal(staged, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
 		}
-		if err := json.Unmarshal(edited, &after); err != nil {
-			return &approvals.InvalidEditError{Cause: err}
+		if err := tasks.ProbeLinkTargets(ctx, proposal.Links); err != nil {
+			return err
 		}
-		if strings.TrimSpace(after.Summary) == "" {
-			return &approvals.InvalidEditError{Cause: errors.New("a task needs a summary — say what was committed to")}
-		}
-		if _, err := time.Parse(time.DateOnly, after.DueDate); after.DueDate != "" && err != nil {
-			return &approvals.InvalidEditError{Cause: fmt.Errorf(
-				"the due date %q is not a date — write it as YYYY-MM-DD", after.DueDate)}
-		}
-		after.Summary, after.DueDate = before.Summary, before.DueDate
-		pinned, err := json.Marshal(after)
-		if err != nil {
-			return fmt.Errorf("compose: marshal edited commitment proposal: %w", err)
-		}
-		original, err := json.Marshal(before)
-		if err != nil {
-			return fmt.Errorf("compose: marshal staged commitment proposal: %w", err)
-		}
-		if string(pinned) != string(original) {
-			return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording and its due date may be edited")}
-		}
-		return nil
+		return refuseCommitmentEdit(staged, edited)
 	}
 }
 
-// commitmentAcceptActor captures a task a human accepted from a proposal. The
-// promise is still the reader's suggestion; the human is on the decision's
-// audit row, which is where "who approved this" belongs.
-const commitmentAcceptActor = "agent:commitment-reader"
+// refuseCommitmentEdit refuses an edit that reaches past the promise's
+// wording and its day. Everything else is what the reviewer agreed to. The
+// locator is the key that remembers the promise: edited, it would let a task
+// escape that memory or block another.
+func refuseCommitmentEdit(staged, edited json.RawMessage) error {
+	if len(edited) == 0 {
+		return nil
+	}
+	var before, after CommitmentTaskProposal
+	if err := json.Unmarshal(staged, &before); err != nil {
+		return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
+	}
+	if err := json.Unmarshal(edited, &after); err != nil {
+		return &approvals.InvalidEditError{Cause: err}
+	}
+	if strings.TrimSpace(after.Summary) == "" {
+		return &approvals.InvalidEditError{Cause: errors.New("a task needs a summary — say what was committed to")}
+	}
+	if _, err := time.Parse(time.DateOnly, after.DueDate); after.DueDate != "" && err != nil {
+		return &approvals.InvalidEditError{Cause: fmt.Errorf(
+			"the due date %q is not a date — write it as YYYY-MM-DD", after.DueDate)}
+	}
+	after.Summary, after.DueDate = before.Summary, before.DueDate
+	pinned, err := json.Marshal(after)
+	if err != nil {
+		return fmt.Errorf("compose: marshal edited commitment proposal: %w", err)
+	}
+	original, err := json.Marshal(before)
+	if err != nil {
+		return fmt.Errorf("compose: marshal staged commitment proposal: %w", err)
+	}
+	if string(pinned) != string(original) {
+		return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording and its due date may be edited")}
+	}
+	return nil
+}
