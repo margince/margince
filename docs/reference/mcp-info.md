@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 84 |
+| Tools | 81 |
 | Resources | 9 |
-| Tool catalog | 258.0 KB |
+| Tool catalog | 250.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66945 |
+| Approx. wire tokens | 65046 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 112.4 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 67.1 KB | 26% | Yes, every step |
-| Input schemas | 58.3 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
-| **Description + input schema** | **125.4 KB** | **48%** | **the recurring cost** |
+| Output schemas | 108.4 KB | 43% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 65.5 KB | 26% | Yes, every step |
+| Input schemas | 57.1 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 19.6 KB | 7% | Partly |
+| **Description + input schema** | **122.6 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -52,7 +52,7 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (84)
+### Tools (81)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -66,6 +66,7 @@ descriptions and input schemas are what each step pays for.
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
+| [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 2.1 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.2 KB |
@@ -78,13 +79,11 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 3.0 KB |
 | [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
-| [`demote_lead`](#demote_lead) | Reverse a lead promotion |  |  | 2.4 KB |
 | [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes |  | 2.2 KB |
 | [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
 | [`describe_record_fields`](#describe_record_fields) | Describe the record write vocabulary | yes |  | 2.4 KB |
 | [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.5 KB |
-| [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.7 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
@@ -110,8 +109,6 @@ descriptions and input schemas are what each step pays for.
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes |  | 3.9 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 4.4 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.5 KB |
-| [`promote_lead`](#promote_lead) | Promote a lead to a contact |  |  | 2.6 KB |
-| [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.2 KB |
@@ -1009,11 +1006,11 @@ Retire a record that should no longer be worked — a duplicate, a dead company,
 ended. Archiving hides the record from day-to-day work; it does not delete it and does not move
 anything attached to it, so an archived duplicate still holds the activities and deals that were
 logged against it. Use merge_records when a duplicate's history should end up on the record that
-survives, and disqualify_lead when a lead is going nowhere — a lead's own transition records the
-reason where archiving would not. By default the record is archived when this call answers; where an
-installation has raised this verb to confirm first, the answer is a staged approval and you must not
-report the record as archived until the retry that carries their approval has answered. (Governance:
-runs immediately; requires passport scope "write".)
+survives, and change_lead_state to disqualify a lead going nowhere — a lead's own transition
+records the reason where archiving would not. By default the record is archived when this call
+answers; where an installation has raised this verb to confirm first, the answer is a staged
+approval and you must not report the record as archived until the retry that carries their approval
+has answered. (Governance: runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2441,6 +2438,85 @@ happened, in UTC — prefer it over a date the prose recalls, and convert before
     "trace_id",
     "trust",
     "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### change_lead_state
+
+**Change a lead's state**
+
+```text
+Move a lead through its lifecycle. qualify fills what the lead's own data already implies — today
+the company name, from its email domain — and names the qualification fields still empty. promote
+turns a lead who has genuinely engaged into a contact, carrying their history across. disqualify
+closes out a lead that is going nowhere. demote reverses a promotion that should not have happened.
+qualify fills only empty fields and never overwrites or invents a value. promote needs a trigger
+naming the engagement — a reply, a booked or held meeting, or a human's decision; cold outreach
+nobody answered never promotes. disqualify keeps the record and its history. demote needs a reason
+and is refused once the promoted contact owns a deal. Use enrich to learn about a company from its
+website, and update_record to edit a lead's fields. The gaps qualify reports are what a human still
+has to supply. A promotion answers with the new contact's id. Where an installation has raised an
+action to confirm first, the answer is a staged approval: keep its id and do not report the change
+until the retry carrying it has answered. (Governance: runs immediately; requires passport scope
+"write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "action": {
+      "enum": [
+        "demote",
+        "disqualify",
+        "promote",
+        "qualify"
+      ],
+      "type": "string"
+    },
+    "approval_id": {
+      "description": "Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "evidence_note": {
+      "description": "promote only",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "lead_id": {
+      "description": "The lead",
+      "format": "uuid",
+      "type": "string"
+    },
+    "reason": {
+      "description": "demote only, required: why the promotion is reversed",
+      "minLength": 1,
+      "type": "string"
+    },
+    "trigger": {
+      "description": "promote only, required: the genuine engagement justifying it",
+      "enum": [
+        "inbound_reply",
+        "meeting_booked",
+        "meeting_held",
+        "human_qualify"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "action",
+    "lead_id"
   ],
   "type": "object"
 }
@@ -4963,161 +5039,6 @@ immediately; requires passport scope "write".)
 
 </details>
 
-### demote_lead
-
-**Reverse a lead promotion**
-
-```text
-Reverse a promotion that should not have happened, putting the lead back on the open ladder. It
-blocks rather than orphans: a promotion whose contact now owns a deal is refused, and activities
-captured since the promotion stay on the contact's timeline — they are real history. A promotion
-that merged into an existing contact leaves that contact untouched and only clears the lineage. Use
-disqualify_lead when the lead is real but going nowhere; demotion says the promotion itself was
-wrong. The lead is demoted when this call answers. Where an installation has raised this verb to
-confirm first, the answer is a staged approval instead — keep its id, and do not report the
-demotion until the retry carrying it has answered. (Governance: runs immediately; requires passport
-scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "approval_id": {
-      "description": "Set on approved retry",
-      "format": "uuid",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "lead_id": {
-      "description": "The lead whose promotion is being reversed",
-      "format": "uuid",
-      "type": "string"
-    },
-    "reason": {
-      "description": "Why the promotion is being reversed; recorded in the audit trail, because an undo nobody explained is indistinguishable later from a mistake",
-      "minLength": 1,
-      "type": "string"
-    }
-  },
-  "required": [
-    "lead_id",
-    "reason"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "lead": {
-          "type": "object"
-        },
-        "unwind": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "lead",
-        "unwind"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### describe_analytics_vocabulary
 
 **Describe the analytics vocabulary**
@@ -5765,149 +5686,6 @@ goes there and not in a slot of its own. (Governance: runs immediately; requires
 
 </details>
 
-### disqualify_lead
-
-**Disqualify a lead**
-
-```text
-Close out a lead that is not going anywhere, so it stops appearing as live work. It is the lead's
-own terminal state and keeps the record and its history; it is not a deletion and not an archive.
-Use promote_lead when engagement says the opposite, and qualify_lead when the lead is only missing
-information. By default the lead is disqualified when this call answers; where an installation has
-raised this verb to confirm first, do not report the lead as disqualified until the retry carrying
-their approval has answered. (Governance: runs immediately; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "approval_id": {
-      "description": "Set on approved retry",
-      "format": "uuid",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "lead_id": {
-      "description": "The lead to disqualify",
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "required": [
-    "lead_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### draft_email
 
 **Draft an email**
@@ -6325,11 +6103,11 @@ accept onto the record. It reaches OUTSIDE the workspace, and what it returns is
 nothing lands on the record until someone accepts it, which is the review that guards this, not an
 approval on the call. Reading one page answers immediately; reading a whole site is queued and
 answers with a read id rather than the content. What it finds is captured text from a third party,
-not a fact this workspace has verified. Use qualify_lead when the missing values are already
-derivable from the record itself, which costs no external read and needs no approval. Keep the
-company_id you enriched, and the read id when a whole-site read was queued — the result is
-collected against it later. (Governance: a human approves every call before it runs; requires
-passport scope "enrich".)
+not a fact this workspace has verified. Use change_lead_state to qualify a lead when the missing
+values are already derivable from the record itself, which costs no external read and needs no
+approval. Keep the company_id you enriched, and the read id when a whole-site read was queued —
+the result is collected against it later. (Governance: a human approves every call before it runs;
+requires passport scope "enrich".)
 ```
 
 <details><summary>Input schema</summary>
@@ -11457,371 +11235,6 @@ and others a human approves first, decided per call from its arguments; requires
       },
       "required": [
         "deal"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### promote_lead
-
-**Promote a lead to a contact**
-
-```text
-Turn a lead who has genuinely engaged into a contact record, carrying their history across. It
-requires a trigger naming the engagement that justifies it — a reply, a booked or held meeting, or
-a human's decision. Cold outreach that nobody answered is not a promotion, and there is no trigger
-for it. Use qualify_lead when the lead is merely incomplete rather than ready, and disqualify_lead
-when the engagement says the opposite. By default the lead is promoted when this call answers and
-the promoted contact's id comes back with it. Where an installation has raised this verb to confirm
-first, the answer is a staged approval instead and the id arrives only from the retry that carries
-it. (Governance: runs immediately; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "approval_id": {
-      "description": "Set on approved retry",
-      "format": "uuid",
-      "type": "string"
-    },
-    "evidence_note": {
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "lead_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "trigger": {
-      "description": "The genuine engagement justifying promotion; cold outreach with no reply never promotes",
-      "enum": [
-        "inbound_reply",
-        "meeting_booked",
-        "meeting_held",
-        "human_qualify"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "lead_id",
-    "trigger"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "contact": {
-          "properties": {
-            "fields": {
-              "type": "object"
-            },
-            "id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "record_type": {
-              "type": "string"
-            },
-            "trust_tier": {
-              "type": "string"
-            },
-            "version": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "fields",
-            "id",
-            "record_type"
-          ],
-          "type": "object"
-        },
-        "merged": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "contact",
-        "merged"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### qualify_lead
-
-**Qualify a lead**
-
-```text
-Fill in what a lead's own data already implies — today the company name, from the domain of its
-email address — and report which qualification fields are still empty. It fills only a field that
-is currently EMPTY and derivable from the lead itself. It never overwrites a value, never invents
-one, and reaches nothing outside the record, so a lead with nothing to derive from comes back
-unchanged with its gaps named. Use enrich to learn about a company from its website, and
-promote_lead once a real engagement means the lead should become a contact. The gaps in the result
-are what a human still has to supply; they are the honest answer to "is this lead ready", not a
-failure of the call. (Governance: runs immediately; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "lead_id": {
-      "description": "The lead to qualify",
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "required": [
-    "lead_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "filled": {
-          "additionalProperties": {
-            "properties": {
-              "evidence": {
-                "items": {
-                  "properties": {
-                    "snippet": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "snippet",
-                    "source"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "value": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "evidence",
-              "value"
-            ],
-            "type": "object"
-          },
-          "type": "object"
-        },
-        "gaps": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "record_id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "filled",
-        "gaps",
-        "record_id"
       ],
       "type": "object"
     },

@@ -87,6 +87,7 @@ ways.
 | `bulk_update_records` | 🟢 | `write` | no |
 | `invite_meeting` | 🟡 | `send` | yes |
 | `catch_me_up_on` | 🟢 | `read` | no |
+| `change_lead_state` | 🟢 | `write` | no |
 | `change_lists` | 🟢 | `write` | no |
 | `check_availability` | 🟢 | `read` | no |
 | `commit_import` | 🟢 | `write` | no |

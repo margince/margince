@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 84,
+    "tools": 85,
     "system_frame_tokens": 586,
-    "tokens": 29825,
-    "median_tool_tokens": 292,
-    "mean_tool_tokens": 354
+    "tokens": 30301,
+    "median_tool_tokens": 293,
+    "mean_tool_tokens": 356
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 84,
+      "of_served_tools": 85,
       "tokens": 3810,
       "listing_tokens": 1913,
       "step_schema_tokens": 1311,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 84,
+      "of_served_tools": 85,
       "tokens": 5292,
       "listing_tokens": 2818,
       "step_schema_tokens": 1888,
@@ -163,6 +163,10 @@
       "tokens": 493
     },
     {
+      "name": "change_lead_state",
+      "tokens": 467
+    },
+    {
       "name": "search_records",
       "tokens": 456
     },
@@ -191,12 +195,12 @@
       "tokens": 397
     },
     {
-      "name": "prep_for_meeting",
-      "tokens": 394
+      "name": "enrich",
+      "tokens": 396
     },
     {
-      "name": "enrich",
-      "tokens": 390
+      "name": "prep_for_meeting",
+      "tokens": 394
     },
     {
       "name": "draft_email",
@@ -260,7 +264,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 289
+      "tokens": 291
     },
     {
       "name": "describe_analytics_vocabulary",

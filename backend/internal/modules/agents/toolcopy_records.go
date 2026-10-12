@@ -167,7 +167,7 @@ var archiveRecordCopy = toolCopy{
 		"move anything attached to it, so an archived duplicate still holds the activities and " +
 		"deals that were logged against it.",
 	Instead: "Use merge_records when a duplicate's history should end up on the record that " +
-		"survives, and disqualify_lead when a lead is going nowhere — a lead's own transition " +
+		"survives, and change_lead_state to disqualify a lead going nowhere — a lead's own transition " +
 		"records the reason where archiving would not.",
 	Retain: "By default the record is archived when this call answers; where an installation " +
 		"has raised this verb to confirm first, the answer is a staged approval and you must not " +

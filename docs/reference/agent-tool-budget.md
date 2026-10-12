@@ -55,9 +55,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 84 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29825 |  |  | 91% |  |  |  |
+| `morning_brief` | 5 | 5 of 85 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 85 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 85 |  | 30301 |  |  | 92% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 292 tokens, mean 354, across 84 served tools.
+Median 293 tokens, mean 356, across 85 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -173,6 +173,7 @@ listing once. Read a row as what that tool costs a menu.
 | `run_analytics_query` | 506 |  |
 | `progress_deal` | 505 |  |
 | `resolve_entities` | 493 |  |
+| `change_lead_state` | 467 |  |
 | `search_records` | 456 |  |
 | `advance_deal` | 446 |  |
 | `forecast_movement` | 443 |  |
@@ -180,8 +181,8 @@ listing once. Read a row as what that tool costs a menu.
 | `advance_project_phase` | 416 |  |
 | `review_commitments` | 401 |  |
 | `attach_document` | 397 |  |
+| `enrich` | 396 |  |
 | `prep_for_meeting` | 394 |  |
-| `enrich` | 390 |  |
 | `draft_email` | 385 |  |
 | `describe_report_vocabulary` | 349 |  |
 | `catch_me_up_on` | 348 | 2 scenarios |
@@ -197,7 +198,7 @@ listing once. Read a row as what that tool costs a menu.
 | `relink_activity` | 303 |  |
 | `merge_records` | 293 |  |
 | `read_record` | 292 | 2 scenarios |
-| `archive_record` | 289 |  |
+| `archive_record` | 291 |  |
 | `describe_analytics_vocabulary` | 286 |  |
 | `draft_follow_ups_for` | 279 |  |
 | `whats_slipping_this_week` | 269 |  |

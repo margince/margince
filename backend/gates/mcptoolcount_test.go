@@ -30,11 +30,11 @@ package gates
 // independently. Reading one as the other is the mistake this paragraph exists
 // to prevent.
 //
-// WHY THIS GATE CANNOT LOWER THE NUMBER. Merging or renaming verbs runs
-// through x-mcp-tool and the generated policy against a vocabulary ratified
-// outside this tree, so a local rename is a contract break. That reconciliation
-// is the second half of #940 and is where the count actually comes down. A
-// count gate touches none of it, which is why it did not have to wait.
+// HOW THE NUMBER COMES DOWN. A router (modules/agents/router.go) is one listed
+// tool that runs as one of several unlisted ones, chosen by an argument. The
+// unlisted tools keep their names, because a name is an approval kind, a tier
+// floor key and a contract verb, so x-mcp-tool and the generated policy do not
+// change.
 
 import (
 	"encoding/json"
@@ -87,7 +87,11 @@ const clientToolCeiling = 100
 // attach_document and list_documents raise it to 84. Without them an agent
 // handed a file can only save its text as a note; the user gives up two more
 // slots and keeps 16 of the client's 100 for other servers.
-const publishedToolCeiling = 84
+//
+// change_lead_state fronts qualify, promote, disqualify and demote, and lowers
+// it to 81. From here the ceiling only comes down; raising it needs an explicit
+// maintainer decision on #940.
+const publishedToolCeiling = 81
 
 type mcpInfoFile struct {
 	Totals struct {
