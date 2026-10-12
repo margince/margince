@@ -122,7 +122,7 @@ func parseRobots(body string) robotsPolicy {
 	var current *robotsGroup
 	inAgentRun := false
 
-	for _, raw := range strings.Split(body, "\n") {
+	for raw := range strings.SplitSeq(body, "\n") {
 		line := strings.TrimSpace(raw)
 		if i := strings.IndexByte(line, '#'); i >= 0 {
 			line = strings.TrimSpace(line[:i])

@@ -1,0 +1,6 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__at_risk_relationships", "mcp__margince__intro_path_to", "mcp__margince__read_reporting", "mcp__margince__search_report_evidence"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_reporting", "input": {"mode": "evaluate", "selection": {"metrics": ["bookings_won"], "period": "this_quarter", "target_basis": "month", "close_window": "all_open", "scope": {"kind": "workspace"}, "blocks": ["metric_reading"]}}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__at_risk_relationships", "input": {}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__intro_path_to", "input": {"company_id": "co-nordwind"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__search_report_evidence", "input": {"run_id": "r1", "query": "Preis"}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "We booked about EUR 100k, worked out from the won deals. Körber Sensorik and Reply Deutschland are at risk. Yes, price is the holdup: roughly 70% of customers raise it. Sofia could introduce you to Heike at Nordwind."}

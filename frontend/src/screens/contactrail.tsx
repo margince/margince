@@ -176,6 +176,7 @@ export function ContactTagsSection({ view }: Readonly<{ view: Contact360 }>) {
       entityType="contact"
       entityID={contact.id}
       canEdit={canUpdate && !readOnlyReason}
+      employer={contact.employer}
     />
   );
 }

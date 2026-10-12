@@ -93,11 +93,10 @@ func workspaceSweepOpts(childKind string) *river.InsertOpts {
 	if spec.OptsOwner != jobs.OptsFanOut {
 		panic("compose: " + childKind + " declares an opts_owner other than fan_out, so its queue and attempt cap are not this helper's to set")
 	}
-	return markedAsFleetPass(&river.InsertOpts{
-		Queue:       spec.Queue,
+	return markedAsFleetPass(jobs.QueuedAsKind(childKind, &river.InsertOpts{
 		MaxAttempts: spec.MaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	})
+	}))
 }
 
 // oneOffChildOpts is workspaceSweepOpts' counterpart for the same child kind
@@ -126,7 +125,7 @@ func oneOffChildOpts(childKind string) *river.InsertOpts {
 	if spec.OptsOwner != jobs.OptsFanOut {
 		panic("compose: " + childKind + " declares an opts_owner other than fan_out, so its queue and attempt cap are not this helper's to set")
 	}
-	return &river.InsertOpts{Queue: spec.Queue, MaxAttempts: spec.MaxAttempts}
+	return jobs.QueuedAsKind(childKind, &river.InsertOpts{MaxAttempts: spec.MaxAttempts})
 }
 
 // oneOffPassOpts is oneOffChildOpts for a COLLAPSED pass: a scheduled kind that
@@ -158,7 +157,7 @@ func oneOffPassOpts(kind string) *river.InsertOpts {
 	if spec.OptsOwner != jobs.OptsCaller {
 		panic("compose: " + kind + " declares an opts_owner other than caller, so its queue is not this helper's to set")
 	}
-	return &river.InsertOpts{Queue: spec.Queue, MaxAttempts: periodicPassMaxAttempts}
+	return jobs.QueuedAsKind(kind, &river.InsertOpts{MaxAttempts: periodicPassMaxAttempts})
 }
 
 // fanOutChildren is every kind some dispatcher DECLARES it fans out to —

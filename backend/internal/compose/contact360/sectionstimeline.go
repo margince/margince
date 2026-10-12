@@ -187,7 +187,8 @@ const (
 // second copy the helper exists to prevent.
 var byUrgencyHumanFirst = sectionOrder(
 	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
-		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
+		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC",
+)
 
 // sectionPage is the section's edge in the activities list's own cursor
 // vocabulary, so the record page continues from this page's last row rather
@@ -413,17 +414,32 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 	if !ok || p.UserID == (ids.UUID{}) {
 		return ids.UserID{}, fmt.Errorf(
 			"the visit baseline is per-user and this call carries no user: %w",
-			apperrors.ErrPermissionDenied)
+			apperrors.ErrPermissionDenied,
+		)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
 }
 
 // baselineFor reads the caller's own mark. The user_id predicate is the
 // whole scope and has to be written out: without it one rep would read
-// another rep's reading history. It is also sufficient — core 0225
+// another rep's reading history. It is also sufficient, because core 0225
 // collapsed user_record_view's unique key to (user_id, entity_type,
 // entity_id).
+//
+// An agent has no mark of its own and does not borrow its granting human's. A
+// passport carries that human's UserID, so the predicate alone answers with
+// their reading history.
+//
+// The response would then carry the instant that human last looked at this
+// contact. An agent reads the timeline whole instead, which is what a reader
+// who has never visited sees.
 func (s *Service) baselineFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (at time.Time, visited bool, err error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return time.Time{}, false, nil
+		}
+		return time.Time{}, false, err
+	}
 	userID, err := actingUser(ctx)
 	if err != nil {
 		return time.Time{}, false, err
@@ -440,5 +456,3 @@ func (s *Service) baselineFor(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 	}
 	return at, true, nil
 }
-
-func ptr[T any](v T) *T { return &v }

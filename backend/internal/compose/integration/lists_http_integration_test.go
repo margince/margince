@@ -5,8 +5,8 @@
 
 package integration
 
-// Lists over the wire: absent while an installation has not switched them on,
-// and, once on, the same answer to a user and to the agent acting for them.
+// Lists over the wire: absent when an operator has switched them off, and,
+// when on, the same answer to a user and to the agent acting for them.
 
 import (
 	"encoding/json"
@@ -16,7 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func listsApp(t *testing.T, on bool) (*apptest.AppEnv, *apptest.MCPClient) {
@@ -30,7 +32,7 @@ func listsApp(t *testing.T, on bool) (*apptest.AppEnv, *apptest.MCPClient) {
 	return e, apptest.NewMCPClient(e, apptest.MCPBearerToken(t, e, "list agent", "read", "write"))
 }
 
-func TestListsAreAbsentWhileTheInstallationHasThemSwitchedOff(t *testing.T) {
+func TestListsAreAbsentWhenAnOperatorSwitchesThemOff(t *testing.T) {
 	e, agent := listsApp(t, false)
 	someList := ids.NewV7().String()
 	for _, call := range []struct{ method, path string }{
@@ -43,9 +45,12 @@ func TestListsAreAbsentWhileTheInstallationHasThemSwitchedOff(t *testing.T) {
 		{"GET", "/v1/lists/" + someList + "/members"},
 		{"POST", "/v1/lists/" + someList + "/members"},
 		{"POST", "/v1/lists/" + someList + "/members/remove"},
+		{"POST", "/v1/lists/" + someList + "/members/restore"},
 		{"GET", "/v1/lists/" + someList + "/members/" + someList + "/why"},
 		{"GET", "/v1/lists/" + someList + "/history"},
 		{"GET", "/v1/contacts?list_id=" + someList},
+		{"GET", "/v1/companies?list_id=" + someList},
+		{"GET", "/v1/leads?list_id=" + someList},
 		{"GET", "/v1/deals?list_id=" + someList},
 	} {
 		if status := e.Call(t, call.method, call.path, AnyMap{"name": "x", "entity_type": "contact"}, nil, nil); status != http.StatusNotFound {
@@ -66,6 +71,30 @@ func TestListsAreAbsentWhileTheInstallationHasThemSwitchedOff(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/exports", AnyMap{"list_id": someList, "format": "json"}, nil, nil); status != http.StatusNotFound {
 		t.Errorf("an export of a list = %d, want 404 while lists are off", status)
 	}
+	assertNoListReachesARecord(t, e, agent)
+}
+
+// assertNoListReachesARecord holds the surfaces that start from a record: the
+// bulk list verbs through both doors, and the company page's Shortlists.
+func assertNoListReachesARecord(t *testing.T, e *apptest.AppEnv, agent *apptest.MCPClient) {
+	t.Helper()
+	shortlist := seedShortlistBehindTheSwitch(t, e)
+	contacts := seedBulkContacts(t, e, 1)
+	for _, verb := range []string{"add_to_list", "remove_from_list"} {
+		change := AnyMap{"record_type": "contact", "verb": verb, "list_id": shortlist, "items": contacts}
+		if status := e.Call(t, "POST", "/v1/bulk/preview", change, nil, nil); status != http.StatusNotFound {
+			t.Errorf("bulk %s = %d, want 404 while lists are off", verb, status)
+		}
+		change["mode"] = "preview"
+		agent.CallRefused(t, "bulk_update_records", change)
+	}
+	var company AnyMap
+	mustCall(t, e, "POST", "/v1/companies", AnyMap{"display_name": "Unlisted Account", "source": "manual"}, http.StatusCreated, &company)
+	var view map[string]json.RawMessage
+	mustCall(t, e, "GET", "/v1/companies/"+company["id"].(string)+"/360", nil, http.StatusOK, &view)
+	if memberships, named := view["list_memberships"]; named && string(memberships) != "null" {
+		t.Errorf("the company page names Shortlists %s while lists are off", memberships)
+	}
 }
 
 type listDTO struct {
@@ -85,8 +114,8 @@ func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
 		t.Fatalf("create list → %d", status)
 	}
 	var member, other AnyMap
-	e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Quoted Customer"}, nil, &member)
-	e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Not Quoted"}, nil, &other)
+	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Quoted Customer"}, nil, &member)
+	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Not Quoted"}, nil, &other)
 	// The member is added through the agent's door, the read through both.
 	added := agent.CallOK(t, "change_lists", map[string]any{
 		"mode": "add_member", "list_id": list.ID, "entity_type": "contact",
@@ -123,7 +152,7 @@ func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
 
 func TestAnAgentPreviewOfAListDefinitionIsLoggedAsARead(t *testing.T) {
 	e, agent := listsApp(t, true)
-	e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Previewed Contact"}, nil, nil)
+	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Previewed Contact"}, nil, nil)
 	before := countPreviews(t, e)
 	agent.CallOK(t, "read_lists", map[string]any{
 		"mode": "preview", "entity_type": "contact",
@@ -154,4 +183,19 @@ func assertAnswersItsSchema(t *testing.T, e *apptest.AppEnv, tool string, got ap
 	if defect := agents.ResultDefect(spec.OutputSchema, json.RawMessage(got.Text)); defect != "" {
 		t.Fatalf("%s answered outside its advertised schema: %s", tool, defect)
 	}
+}
+
+// seedShortlistBehindTheSwitch writes a workspace-wide Shortlist through the
+// collections store, which the switch does not gate, so a refusal proves the
+// switch rather than an unknown list id.
+func seedShortlistBehindTheSwitch(t *testing.T, e *apptest.AppEnv) string {
+	t.Helper()
+	ctx := principal.SystemActing(principal.WithWorkspaceID(t.Context(), apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool)), "system:lists-off-test")
+	list, err := compose.NewCollectionsStore(e.Pool).CreateList(ctx, collections.CreateListInput{
+		Name: "Hidden picks", EntityType: "contact", Sharing: "workspace",
+	})
+	if err != nil {
+		t.Fatalf("seeding a Shortlist: %v", err)
+	}
+	return list.ID.String()
 }

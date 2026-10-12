@@ -45,6 +45,11 @@ name: scheduled
 #                        bench-perf-check), and an alarm that cannot finish files
 #                        a breach it never measured.
 #
+#   slop trend         — the slop scores and the comment numbers, once a week,
+#                        beside last week's. Not a verdict: the comment checks
+#                        judge only added lines, and this is what shows whether
+#                        the rest of the tree gets better.
+#
 # One more job earns its place here for the same reason rather than the same
 # question. reap-caches is maintenance, not a verdict on main — but the state it
 # maintains only ever drifts BETWEEN merges, and its failure mode is silence:
@@ -73,6 +78,10 @@ on:
         default: false
       llm:
         description: "Also run the six use cases against a real model (COSTS TOKENS; needs CLAUDE_CODE_OAUTH_TOKEN)"
+        type: boolean
+        default: false
+      trend:
+        description: "Also record the slop trend (craft slop and craft stats against last week's run)"
         type: boolean
         default: false
 
@@ -481,6 +490,16 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MARGINCE_E2E_LLM: "1"
           E2E_LLM_SLUG: ci
+          # The subscription token above is the only credential this job holds,
+          # and only the claude CLI can spend it.
+          E2E_LLM_CANDIDATE: claude
+          E2E_LLM_VIA: cli
+          # No embedding key reaches this runner, so search_context ranks by
+          # word overlap; the verdicts it would write say `search: lexical`.
+          E2E_LLM_ALLOW_LEXICAL: "1"
+          # Verdicts go to a directory this run alone writes, so the upload
+          # below can never carry the committed ones in its place.
+          E2E_LLM_VERDICTS: ${{ runner.temp }}/e2e-llm-verdicts
         run: |
           set -o pipefail
           if make e2e-llm 2>&1 | tee llm.log; then
@@ -500,7 +519,7 @@ jobs:
       # the week it appeared.
       - name: Keep the run transcripts
         if: always() && steps.funded.outputs.configured == 'yes'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: ./.github/actions/upload-artifact-retried
         with:
           name: e2e-llm-transcripts
           path: e2e/llm/records/
@@ -510,6 +529,16 @@ jobs:
           # nothing — a green step on top of a job that had already failed 30
           # seconds in. The absence of transcripts is itself the finding.
           if-no-files-found: error
+      # The verdicts each say how they were measured (route, search mode), which
+      # the transcripts do not; a lane that stopped first leaves none, so warn.
+      - name: Keep the run verdicts
+        if: always() && steps.funded.outputs.configured == 'yes'
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: e2e-llm-verdicts
+          path: ${{ runner.temp }}/e2e-llm-verdicts/
+          retention-days: 30
+          if-no-files-found: warn
 
   # PERF-1's PERCEIVED budget (MOBILE-AC-2), the browser half of what
   # perf-budgets measures over HTTP.
@@ -569,12 +598,10 @@ jobs:
       # The browser only. `make bench-mobile-check` runs the install and the
       # build itself, so doing them here as well would install twice and leave
       # two spellings of the lane's setup to drift apart.
-      # Bounded because `--with-deps` shells out to apt inside the runner, and
-      # an unresponsive mirror hangs with no output.
+      # Retried and split in the action, because `--with-deps` shells out to
+      # apt inside the runner and an unresponsive mirror hangs with no output.
       - name: Install the Playwright Chromium browser
-        working-directory: frontend
-        timeout-minutes: 6
-        run: pnpm exec playwright install --with-deps chromium
+        uses: ./.github/actions/install-playwright-chromium
       # The step separates "the budget breached" from "the lane could not run",
       # exactly as perf-budgets does and for the same reason: a failed install,
       # a build error or a preview server that never came up all reach the
@@ -610,6 +637,62 @@ jobs:
   # gate is a second RUN rather than a pattern: shift the clock, require the same
   # verdict. A test that pins its own clock is unaffected, which is correct — it
   # is already immune to what this lane looks for.
+  # The weekly trend of the slop scores and the comment numbers. No gate reads
+  # them: the paper behind the scores found they do not predict a failing test,
+  # so the job writes this week beside last week in the run summary and keeps
+  # the JSON for next week. It fails only when it cannot measure.
+  slop-trend:
+    name: slop trend (weekly)
+    if: github.event.schedule == '0 2 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.trend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # Reads the previous run's artifact, the only history the trend has.
+      actions: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # craft scores TypeScript with the frontend's own compiler.
+      - name: Install the frontend packages
+        run: cd frontend && pnpm install --frozen-lockfile
+      - name: Fetch last week's numbers
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          prev="$RUNNER_TEMP/slop-trend-prev"
+          mkdir -p "$prev"
+          # The newest live artifact from a run on main. A manual run on another
+          # branch must not become the week the next run is compared with.
+          url="$(gh api "repos/$REPO/actions/artifacts?name=slop-trend&per_page=50" \
+            --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main")][0].archive_download_url // empty')"
+          if [[ -z "$url" ]]; then
+            echo "No earlier slop-trend artifact from main: this run records the first one."
+            exit 0
+          fi
+          gh api "$url" > "$RUNNER_TEMP/slop-trend-prev.zip"
+          unzip -o -q "$RUNNER_TEMP/slop-trend-prev.zip" -d "$prev"
+      # runner.temp is not available in a job's env, so the paths are set here.
+      - name: Record the trend
+        run: SLOP_TREND_DIR="$RUNNER_TEMP/slop-trend" make slop-trend PREV="$RUNNER_TEMP/slop-trend-prev"
+      - uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: slop-trend
+          path: ${{ runner.temp }}/slop-trend/*.json
+          retention-days: 90
+
   fe-clock-drift:
     name: fe clock drift (main, +200 days)
     runs-on: ubuntu-latest
@@ -678,7 +761,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -729,4 +812,5 @@ jobs:
           LLM_RESULT: ${{ needs['llm-use-cases'].result }}
           LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
+          TREND_RESULT: ${{ needs['slop-trend'].result }}
         run: ./scripts/scheduled-report.sh

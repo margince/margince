@@ -1,5 +1,11 @@
 import type { components } from "../api/schema";
-import { formatMoney, formatNumber } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatDateTime,
+  formatMoney,
+  formatMoneyCompact,
+  formatNumber,
+} from "../format/format";
 import type { Locale, Translator } from "../i18n";
 
 export type ReportingSelection = components["schemas"]["ReportingSelection"];
@@ -51,4 +57,67 @@ export function blockLabel(block: ReportingBlockKind, t: Translator): string {
 
 export function reportingMoneyUnit(unit: string, currency: string): boolean {
   return unit === "money" || (/^[A-Z]{3}$/.test(unit) && unit === currency);
+}
+
+export function editionLabel(
+  edition: ReportingEdition,
+  locale: Locale,
+): string {
+  const context = edition.evaluation.context;
+  return `${reportingPeriodLabel(context.interval, context.timezone, locale)} · ${formatDateTime(edition.captured_at, locale, context.timezone)}`;
+}
+
+export function executionLabel(
+  status: string | undefined,
+  t: Translator,
+): string {
+  switch (status) {
+    case "pending":
+    case "running":
+    case "succeeded":
+    case "partial":
+    case "failed":
+    case "suspended":
+    case "skipped":
+      return t(`reporting.execution.${status}`);
+    default:
+      return "";
+  }
+}
+
+export function reportingCompactAmount(
+  value: number | null | undefined,
+  unit: string,
+  currency: string,
+  locale: Locale,
+): string {
+  return value != null && reportingMoneyUnit(unit, currency)
+    ? currency
+      ? formatMoneyCompact(value, currency, locale)
+      : "—"
+    : reportingAmount(value, unit, currency, locale);
+}
+
+export function reportingPeriodLabel(
+  interval: { start_at: string; end_at: string },
+  zone: string,
+  locale: Locale,
+): string {
+  return `${formatDateAbbrev(interval.start_at, locale, zone)} – ${formatDateAbbrev(new Date(Date.parse(interval.end_at) - 1).toISOString(), locale, zone)}`;
+}
+
+export type ReportAction = {
+  kind: "duplicate" | "archive" | "freeze";
+  report: ReportingReport;
+  key: string;
+  name?: string;
+};
+export function editionStatus(
+  edition: ReportingEdition,
+  t: Translator,
+): string {
+  if (edition.expired) return t("reporting.expired");
+  if (edition.redacted) return t("reporting.redacted");
+  if (edition.withheld) return t("reporting.withheld");
+  return edition.name;
 }

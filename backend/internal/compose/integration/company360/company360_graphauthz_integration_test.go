@@ -16,7 +16,7 @@ package company360
 //     the record;
 //   - an edge needs BOTH its ends visible — a stakeholder seat is withheld
 //     when either the deal or the contact is;
-//   - the intro path names the contact the warm room names, and stays quiet
+//   - the signal route names the contact the warm room names, and stays quiet
 //     rather than naming a different one.
 
 import (
@@ -108,7 +108,7 @@ func TestCompanyGraphOmitsAGroupTheCallerMayNotRead(t *testing.T) {
 	}
 
 	// Without the contact grant: no contacts, no stakeholder edges, and both
-	// contacts and the intro path named as withheld.
+	// contacts and the signal route named as withheld.
 	noContacts := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
@@ -129,7 +129,7 @@ func TestCompanyGraphOmitsAGroupTheCallerMayNotRead(t *testing.T) {
 	if edges := graphEdgeKinds(graph); edges[crmcontracts.CompanyGraphEdgeKindDealStakeholder] != 0 {
 		t.Error("a stakeholder edge was drawn without the contact grant — an edge names two records")
 	}
-	for _, want := range []crmcontracts.CompanyGraphGroupsOmitted{"contacts", "intro_path"} {
+	for _, want := range []crmcontracts.CompanyGraphGroupsOmitted{"contacts", "signal_route"} {
 		if !slices.Contains(graph.GroupsOmitted, want) {
 			t.Errorf("groups_omitted = %v, want it to name %q", graph.GroupsOmitted, want)
 		}
@@ -250,10 +250,10 @@ func TestCompanyGraphHidesACapturePrivateAccount(t *testing.T) {
 	}
 }
 
-// TestCompanyGraphIntroPathNamesTheWarmRoomsContact is the no-drift
+// TestCompanyGraphSignalRouteNamesTheWarmRoomsContact is the no-drift
 // claim, taken against real rows: the card marks the same contact
 // GET /signals/{id}/intro-path would route through, and cites the signal.
-func TestCompanyGraphIntroPathNamesTheWarmRoomsContact(t *testing.T) {
+func TestCompanyGraphSignalRouteNamesTheWarmRoomsContact(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -276,18 +276,18 @@ func TestCompanyGraphIntroPathNamesTheWarmRoomsContact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("graph: %v", err)
 	}
-	if graph.IntroPath == nil {
-		t.Fatal("no intro path for an open resolved signal with a measured contact")
+	if graph.SignalRoute == nil {
+		t.Fatal("no signal route for an open resolved signal with a measured contact")
 	}
-	if ids.UUID(graph.IntroPath.ContactId) != warm {
-		t.Errorf("intro path routes through %v, want the strongest contact %v", graph.IntroPath.ContactId, warm)
+	if ids.UUID(graph.SignalRoute.ContactId) != warm {
+		t.Errorf("signal route routes through %v, want the strongest contact %v", graph.SignalRoute.ContactId, warm)
 	}
-	if ids.UUID(graph.IntroPath.SignalId) != signal {
-		t.Errorf("intro path cites signal %v, want %v", graph.IntroPath.SignalId, signal)
+	if ids.UUID(graph.SignalRoute.SignalId) != signal {
+		t.Errorf("signal route cites signal %v, want %v", graph.SignalRoute.SignalId, signal)
 	}
 	marked := 0
 	for _, node := range graph.Nodes {
-		if node.IntroPath != nil && *node.IntroPath {
+		if node.OnSignalRoute != nil && *node.OnSignalRoute {
 			marked++
 			if ids.UUID(node.Id) != warm {
 				t.Errorf("marked node %v as the route in, want %v", node.Id, warm)
@@ -295,7 +295,7 @@ func TestCompanyGraphIntroPathNamesTheWarmRoomsContact(t *testing.T) {
 		}
 	}
 	if marked != 1 {
-		t.Errorf("%d nodes carry intro_path, want exactly 1", marked)
+		t.Errorf("%d nodes carry signal_route, want exactly 1", marked)
 	}
 
 	// A caller without the signal grant gets the same contacts and no path,
@@ -305,11 +305,11 @@ func TestCompanyGraphIntroPathNamesTheWarmRoomsContact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("graph without the signal grant: %v", err)
 	}
-	if graph.IntroPath != nil {
-		t.Errorf("intro path %+v served without the signal grant", *graph.IntroPath)
+	if graph.SignalRoute != nil {
+		t.Errorf("signal route %+v served without the signal grant", *graph.SignalRoute)
 	}
-	if !slices.Contains(graph.GroupsOmitted, "intro_path") {
-		t.Errorf("groups_omitted = %v, want it to name intro_path", graph.GroupsOmitted)
+	if !slices.Contains(graph.GroupsOmitted, "signal_route") {
+		t.Errorf("groups_omitted = %v, want it to name signal_route", graph.GroupsOmitted)
 	}
 	if !graphHasNode(graph, warm) {
 		t.Error("the contact is missing for a caller who holds the contact grant")
@@ -340,19 +340,19 @@ func TestCompanyGraphCitesACompanySubjectSignal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("graph: %v", err)
 	}
-	if graph.IntroPath == nil {
-		t.Fatal("no intro path for a signal created about the account itself")
+	if graph.SignalRoute == nil {
+		t.Fatal("no signal route for a signal created about the account itself")
 	}
-	if ids.UUID(graph.IntroPath.SignalId) != signal {
-		t.Errorf("intro path cites signal %v, want the company-subject signal %v",
-			graph.IntroPath.SignalId, signal)
+	if ids.UUID(graph.SignalRoute.SignalId) != signal {
+		t.Errorf("signal route cites signal %v, want the company-subject signal %v",
+			graph.SignalRoute.SignalId, signal)
 	}
 }
 
-// TestCompanyGraphReportsNoIntroPathWithoutAnOpenSignal: the ranking is
+// TestCompanyGraphReportsNoSignalRouteWithoutAnOpenSignal: the ranking is
 // available whenever the account has contacts, so the absence has to come from
 // the signal, not from the contacts.
-func TestCompanyGraphReportsNoIntroPathWithoutAnOpenSignal(t *testing.T) {
+func TestCompanyGraphReportsNoSignalRouteWithoutAnOpenSignal(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -368,11 +368,11 @@ func TestCompanyGraphReportsNoIntroPathWithoutAnOpenSignal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("graph: %v", err)
 	}
-	if graph.IntroPath != nil {
-		t.Errorf("intro path %+v reported for an account with no open signal", *graph.IntroPath)
+	if graph.SignalRoute != nil {
+		t.Errorf("signal route %+v reported for an account with no open signal", *graph.SignalRoute)
 	}
-	if slices.Contains(graph.GroupsOmitted, "intro_path") {
-		t.Error("groups_omitted names intro_path for a caller who HAS the signal grant — nothing was withheld")
+	if slices.Contains(graph.GroupsOmitted, "signal_route") {
+		t.Error("groups_omitted names signal_route for a caller who HAS the signal grant — nothing was withheld")
 	}
 	if !graphHasNode(graph, contact) {
 		t.Error("the contact is missing")

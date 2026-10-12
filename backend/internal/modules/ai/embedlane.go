@@ -30,7 +30,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	// with another binding's width or provider label.
 	b := r.binding()
 	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return model.Embeddings{}, fmt.Errorf("ai: embeddings outside workspace context")
+		return model.Embeddings{}, errors.New("ai: embeddings outside workspace context")
 	}
 	stripped := make([]string, len(req.Inputs))
 	for i, input := range req.Inputs {
@@ -63,6 +63,11 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 
 	start := r.now()
 	res, err := b.embedder.Embed(embedCtx, req)
+	if refusedUncalled(err) {
+		// No call was made to a provider already known to be down, so there is
+		// nothing to trace, and a caller tells a deferral from a failed lane.
+		return model.Embeddings{}, err
+	}
 	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, CacheOff: r.cacheOff, LatencyMS: r.now().Sub(start).Milliseconds()}
 	if err == nil {
 		// Stamp the SAME token estimate the meter records below onto the

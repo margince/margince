@@ -32,6 +32,10 @@ func Deals() deals.Installation {
 		IssuerLegalName: contacts.ConfirmedIssuerLegalName,
 		BaseCurrency:    identity.BaseCurrencyOf,
 		Timezone:        identity.TimezoneOf,
+		// The Value sort reads both ungated: a seat that may read deals may
+		// order them, whatever its installation_settings grant.
+		BaseCurrencyApplied: identity.BaseCurrencyAppliedTx,
+		TimezoneApplied:     identity.TimezoneAppliedTx,
 		// activities owns `activity`, so the stamp's write lives there and the
 		// edge is injected here (ADR-0054).
 		StampCorrespondence: activities.StampCorrespondenceForDeal,
@@ -49,5 +53,8 @@ func Deals() deals.Installation {
 		// approvals owns the pending proposals that follow a deal to its new
 		// owner, so the hand-over lives there and the edge is injected here.
 		FollowOwner: approvals.FollowDealOwnerInTx,
+		// contracts owns the contract row rule, which stage evidence asks
+		// before it calls a cited contract openable.
+		ContractVisible: contracts.VisibleClause,
 	}
 }

@@ -81,8 +81,8 @@ func embedReindexRouter(t *testing.T, modelName string) *ai.Router {
 	t.Helper()
 	cfg := ai.FakeRoutingConfig()
 	cfg.Embeddings = ai.EmbeddingsConfig{
-		ProviderConfig: ai.ProviderConfig{Provider: ai.ProviderFake, Model: modelName},
-		Dimensions:     fakeEmbedDims,
+		Provider: ai.ProviderFake, Model: modelName,
+		Dimensions: fakeEmbedDims,
 	}
 	modelPath, err := compose.NewLocalModelPath(cfg, ai.WithoutResultCache())
 	if err != nil {
@@ -170,10 +170,7 @@ func newEmbedReindexRunner(t *testing.T, e *apptest.AppEnv, embedder search.Embe
 	ApplyRiverSchema(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	runner, err := compose.NewJobRunner(e.Pool, quiet, compose.JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		Embedder:          embedder,
+		Embedder: embedder,
 	})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)

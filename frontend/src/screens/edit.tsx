@@ -1,25 +1,20 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { Route } from "../app/router";
-import { Button, Modal } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
+import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { derivedRecordKeys } from "./activitykeys";
-import {
-  isVersionSkew,
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-} from "./common";
+import { ProblemError, problemExistingId, problemMessageOf } from "./common";
 import {
   type CreateField,
   type FormRows,
   RecordFormBody,
   usePublishedValues,
 } from "./create";
+import { catalogOfRecord, useSettledOpen } from "./create.dialog";
 import {
   prefillFromRecord,
   prefillRowsFromRecord,
@@ -167,7 +162,6 @@ export function EditRecordModal({
   // function of the values. See usePublishedValues (create.tsx).
   onValuesChange?: (values: Record<string, string>) => void;
 }>) {
-  const headingId = useId();
   const [values, setValues] = useState<Record<string, string>>({});
   usePublishedValues(values, onValuesChange);
   // Repeatable-row fields prefill from the record's current rows (e.g. a
@@ -237,27 +231,23 @@ export function EditRecordModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {title}
-      </Heading>
-      <RecordFormBody
-        fields={fields}
-        values={values}
-        setValues={setValues}
-        rows={rows}
-        setRows={setRows}
-        pending={pending}
-        error={error}
-        existing={existing}
-        resolveExisting={resolveExisting}
-        onSubmit={(submitted, submittedRows) =>
-          onSubmit(submitted, submittedRows, opened)
-        }
-        onClose={onClose}
-        intent="save"
-      />
-    </Modal>
+    <RecordFormBody
+      dialog={{ open, title }}
+      fields={fields}
+      values={values}
+      setValues={setValues}
+      rows={rows}
+      setRows={setRows}
+      pending={pending}
+      error={error}
+      existing={existing}
+      resolveExisting={resolveExisting}
+      onSubmit={(submitted, submittedRows) =>
+        onSubmit(submitted, submittedRows, opened)
+      }
+      onClose={onClose}
+      intent="save"
+    />
   );
 }
 
@@ -321,6 +311,7 @@ export function EditAction<Updated extends { id: string }>({
 }>) {
   const t = useT();
   const [editing, setEditing] = useState(false);
+  const shown = useSettledOpen(editing, catalogOfRecord(recordKey));
   const mutation = useUpdateRecord<Updated>({
     update: (values, rows, opened) => update(values, rows, opened),
     invalidate,
@@ -333,9 +324,6 @@ export function EditAction<Updated extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
-  const skew =
-    mutation.error instanceof ProblemError &&
-    isVersionSkew(mutation.error.problem);
   return (
     <>
       {/* Square in a header. A pencil is the one glyph every reader in this
@@ -351,6 +339,7 @@ export function EditAction<Updated extends { id: string }>({
         <Button
           reasonId={disabledReasonId}
           onClick={() => setEditing(true)}
+          pending={editing && !shown}
           data-testid="edit-record"
         >
           {label}
@@ -361,23 +350,18 @@ export function EditAction<Updated extends { id: string }>({
           icon={<PenLine aria-hidden="true" />}
           reasonId={disabledReasonId}
           onClick={() => setEditing(true)}
+          pending={editing && !shown}
           testId="edit-record"
         />
       )}
       <EditRecordModal
-        open={editing}
+        open={shown}
         onClose={() => setEditing(false)}
         title={label}
         fields={fields}
         record={record}
         pending={mutation.isPending}
-        error={
-          mutation.isError
-            ? skew
-              ? t("edit.versionSkew")
-              : problemMessageOf(mutation.error, t)
-            : null
-        }
+        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
         existing={existing}
         resolveExisting={resolveExisting}
         onValuesChange={onValuesChange}

@@ -1,31 +1,30 @@
+<!-- prose:plain -->
 # The contact record page
 
-The overview prioritizes recorded context and real work. A new contact must not look like an established relationship that has gone cold.
+The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
 
 ## Reading order
 
-An actionable moment, an open task or an outstanding commitment leads. Otherwise the relationship brief leads, falling back to a neutral summary of recorded identity when no brief exists. Source and creation date sit beside the owner in the header. A failed brief has its own retry; failure does not become an empty profile.
+A moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. A failed brief has its own retry; a failure does not turn into an empty profile.
 
-The `thin_relationship` rule requires an available, empty activity timeline and no recorded colleague connections. Its label is “No interactions recorded.” It supplies no synthetic relationship-change evidence. The quiet and thin results render as compact coverage statements rather than suggested actions. Coverage concerns records visible to the reader, not everything anyone knows about the contact.
+The `thin_relationship` rule needs an activity timeline that loaded and is empty, and no recorded colleague connections. Its label is `No interactions recorded`. It supplies no made-up evidence that the relationship changed. The `thin_relationship` result shows as a short line that states what the record covers, not as a next step. They cover the records the reader can see, not everything anyone knows about the contact.
 
-Empty reading cards, commitments and conversation previews do not occupy the overview. Real tasks still appear when a recommendation is dismissed, and open the shared task detail modal. The full work-queue link names its broader destination. Available conversation memory appears once; the History tab holds the full chronology. The sidebar does not duplicate recent activity.
+An empty block, whether for reading, for promises or for a conversation, does not show on the Overview tab. Real tasks still show when a moment is dismissed, and they open the shared task window. The link to the full work queue says that it opens the whole queue. What the system knows about past conversations shows once; the History tab holds the full story in time order. The sidebar does not show the newest activity a second time.
 
-Relationship direction distinguishes inbound only, outbound only and two-way exchanges. A successful empty pulse, colleague list or signal list is omitted; role restrictions remain explicit. An absence of timestamps does not establish a one-sided relationship.
+A relationship is marked inbound only, outbound only, or both ways. A pulse, colleague list or signal list that loaded but is empty does not show; a limit set by role is still stated. Missing times do not prove that a relationship runs only one way.
 
-## Communication permissions
+Editing identity, choosing the default address and resolving where the contact works stay with the parts that already do them.
 
-The sidebar answers permission by purpose and reachability by channel, using the existing consent guard. Loading, failed and successful unknown answers are distinct. Each message still passes its authoritative send check.
+## Permission to write
 
-“Manage consent & proof history” opens the existing consent ledger. Recorded grants and send permission remain different concepts: other recorded grounds can affect the guard. Recording or withdrawing consent refreshes the ledger, guard, contact read and communication review. Subject-only confirmation stays subject-only.
+The sidebar answers permission per purpose and reach per channel, through the existing consent guard. A reader who decides whether to write needs both answers, and they come from different records. An answer that is still loading, one that failed, and one that loaded but is unknown each look different. Each message still passes its own send check, which decides.
 
-“Ask them to confirm their details” lives in that sidebar panel. It uses the existing endpoint and recorded recipient; it is absent for a contact the caller cannot write and unavailable without an email. A queued request is not delivery or a grant. Existing error, unavailable-mail and expiry states remain visible.
+`Manage consent & proof history` opens the existing consent ledger. A recorded grant and send permission are different things: other recorded legal reasons can change what the guard says. Recording or taking back consent loads the ledger, the guard, the contact read and the message review again. When only the subject confirmed, it stays recorded as subject-only.
 
-On narrow viewports, “Details & permissions” opens the same sidebar content in a drawer. Desktop uses the standard remembered details pane. Visibility, correspondence privacy and communication permission remain separate controls.
+`Ask them to confirm their details` lives in that sidebar panel. It uses the existing endpoint and the recorded recipient. It does not show for a contact the caller cannot write, and it is off when there is no email address. A request in the queue is neither a delivery nor a grant. The existing states for an error, for no mail and for a request past its time limit stay visible.
+
+On a small screen, `Details & permissions` opens the same sidebar content over the page. On desktop it is the normal sidebar panel, which keeps whether it was open. Who can see the record, the privacy of mail, and permission to send stay separate controls.
 
 ## Focus and the work queue
 
-Focus uses ordinary eligibility and ranking, without pin controls or saved pin overrides. The separate full work queue keeps its existing pin behavior. The backend selects Focus before applying personal pins to the queue, so old saved pins cannot pull informational notices into Focus or change its order.
-
-## Verification
-
-Behavior tests cover zero-interaction coverage, factual fallback, failed reads and retries, lazy consent history, guard refresh after recording consent, read-only/no-address confirmation, directionality, direct task opening, and separation of Focus ranking from work-queue pins. Storybook includes fresh, profile-only, failed, active-task, phone and dark states. Identity editing, primary-address selection and employment resolution remain owned by their existing components.
+Focus chooses and orders entries the normal way, with no pin controls and no stored pins that change it. The separate full work queue keeps its pins as they work today. The backend chooses Focus before it applies personal pins to the queue. So old stored pins cannot pull a note that asks for no action into Focus, or change its order.

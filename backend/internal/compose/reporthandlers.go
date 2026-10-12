@@ -40,19 +40,23 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 	// Every aggregate row carries its own "Explain This Number" handle
 	// (AC-R6): the plan's filters plus the row's group-key values. The
 	// result-level handle explains the whole filtered set.
-	rows := make([]map[string]interface{}, len(outcome.Rows))
+	rows := make([]map[string]any, len(outcome.Rows))
 	copy(rows, outcome.Rows)
 	for _, row := range rows {
 		// The handle carries the instant this answer converted at, so opening it
 		// tomorrow still reconciles to the figure printed today.
 		row[reservedDerivationColumn] = scopedDerivationURL(
-			outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row, outcome.GeneratedAt, outcome.Scope)
+			outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, row, outcome.GeneratedAt, outcome.Scope,
+		)
 	}
 	// The whole-result handle pins the same instant its rows do: it explains the
 	// same answer, over every row rather than one group's.
 	resultURL := scopedDerivationURL(
-		outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, nil, outcome.GeneratedAt, outcome.Scope)
-	totalRows := len(rows)
+		outcome.Report, outcome.Filters, outcome.GroupBy, outcome.Aggregates, nil, outcome.GeneratedAt, outcome.Scope,
+	)
+	// The groups that matched, not the page: a full page is the top of a longer
+	// answer and says so, the way the drill-through beside it already does.
+	totalRows := outcome.TotalRows
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportResult{
 		Report:               outcome.Report,
 		Plan:                 outcome.Plan,
@@ -87,7 +91,7 @@ func (h reportHandlers) ExplainReport(w http.ResponseWriter, r *http.Request, re
 		httperr.Write(w, r, err)
 		return
 	}
-	rows := make([]map[string]interface{}, len(outcome.Rows))
+	rows := make([]map[string]any, len(outcome.Rows))
 	copy(rows, outcome.Rows)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportDerivation{
 		Report:               outcome.Report,

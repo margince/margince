@@ -90,7 +90,17 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 	if len(found) > exceptionsBound {
 		out.Exceptions = found[:exceptionsBound]
 	}
+	nameExceptionOwners(out.Exceptions, rosterNames(roster))
 	return out, nil
+}
+
+// nameExceptionOwners names each row's owner from the roster this page already
+// read, as the queue names its own. Unnamed, a client draws a real colleague as
+// "Hidden", which is the word it keeps for an owner this reader may not resolve.
+func nameExceptionOwners(found []crmcontracts.TeamException, names map[ids.UUID]string) {
+	for i := range found {
+		nameAnOwner(&found[i].Owner, names)
+	}
 }
 
 // exceptionsIn reads the conditions out of an assembled day.
@@ -100,10 +110,6 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 // sees exceptions over work they may already see and the two surfaces answer
 // one question rather than two. A parallel read would be a second answer, and
 // the two would drift the first time either changed.
-//
-// Held by: TestABreachedReplyIsJudgedByThePolicysOwnState
-// (teamexceptions_test.go), which fails if this page decides a breach from
-// anything but the lead lane's own verdict.
 func exceptionsIn(rows []ranked, asOf time.Time) []crmcontracts.TeamException {
 	out := []crmcontracts.TeamException{}
 	for _, row := range rows {
@@ -176,11 +182,6 @@ func exceptionOf(row ranked, asOf time.Time) (crmcontracts.TeamException, bool) 
 	}
 	owner := ownerOnTheWire(row, ids.UUID{})
 	switch {
-	// A first reply the policy says is already late. The THRESHOLD is that
-	// policy's own state, so the manager and the rep read one rule.
-	case row.item.Source == sourceLeadResponse && breachedReply(row):
-		return exception(row, owner, crmcontracts.TeamExceptionKindTeamExceptionResponseBreached,
-			string(crmcontracts.LeadSlaStateLeadSlaStateBreached), asOf), true
 	// Revenue the day already judged material — the pipeline's own median,
 	// which is what makes "material" track the business rather than a number
 	// somebody typed once.
@@ -246,18 +247,4 @@ func exceptionSince(row ranked, asOf time.Time) time.Time {
 		return row.occurredAt
 	}
 	return asOf
-}
-
-// breachedReply reads the lead lane's own verdict off the row.
-//
-// The reason the classifier already wrote, not a second reading of the clock:
-// leadStanding decides breach from the policy state, and re-deciding it here
-// from the deadline would be a second rule that agrees today.
-func breachedReply(row ranked) bool {
-	for _, because := range row.item.Because {
-		if because.Kind == "response_overdue" {
-			return true
-		}
-	}
-	return false
 }

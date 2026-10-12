@@ -122,6 +122,15 @@ func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 	}
 }
 
+// The per-company shape is the bound walk with the enclosing company's column
+// where the bind was: every arm, compared against the row the outer query is on.
+func TestThePerCompanyWalkIsTheBoundWalkCorrelated(t *testing.T) {
+	bound := strings.ReplaceAll(CompanyLinkedActivityExists(1), "$1", OuterCompanyAlias+".id")
+	if got := CompanyLinkedActivityExistsPerCompany(); got != bound {
+		t.Errorf("the per-company walk drifted from the bound one:\n got %s\nwant %s", got, bound)
+	}
+}
+
 func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 	for entityType, column := range map[string]string{
 		"contact": "al.contact_id",
@@ -367,7 +376,7 @@ func TestOnlyTheObligationAdmitsThreadlessMail(t *testing.T) {
 	}
 	// Every reader of the waiting query asks the same obligation, because the
 	// query carries it rather than taking it from its caller.
-	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[12]s", "%[18]s")) {
+	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[11]s", "%[17]s")) {
 		t.Fatal("the waiting query no longer carries owedSQL, so the lane and the badge can disagree")
 	}
 }
@@ -393,11 +402,11 @@ func TestAThreadlessMessageIsNotDroppedBeforeItIsJudged(t *testing.T) {
 // database on every call — reported to the reader as "this source could not be
 // read", which is indistinguishable from a permissions problem.
 func TestTheWaitingQuerySelectsWhatItScans(t *testing.T) {
-	from := strings.Index(waitingRepliesSQL, "FROM activity a")
-	if from < 0 {
+	before, _, ok := strings.Cut(waitingRepliesSQL, "FROM activity a")
+	if !ok {
 		t.Fatal("the waiting query no longer selects from activity")
 	}
-	head := waitingRepliesSQL[:from]
+	head := before
 	subject := strings.Index(head, "a.subject")
 	sender := strings.Index(head, "sender.address")
 	occurred := strings.Index(head, "a.occurred_at")

@@ -9,6 +9,13 @@ import { DECIDE_RUNG } from "./ai-decision-labels";
 
 type Health = components["schemas"]["AiHealth"];
 
+/** The rung a task starts on: the decision model's, or its leading tier's. */
+export function laneRung(health: Health, tier: string, decisionFirst: boolean) {
+  return health.rungs.find(
+    (r) => r.tier === (decisionFirst ? DECIDE_RUNG : tier),
+  );
+}
+
 /**
  * How the lane a task starts on is answering, as the pill the providers list
  * uses for its own state. A decision-first task starts on the decision model,
@@ -29,9 +36,7 @@ export function TaskState({
   const t = useT();
   const { locale } = useLocale();
   if (!health) return null;
-  const rung = health.rungs.find(
-    (r) => r.tier === (decisionFirst ? DECIDE_RUNG : tier),
-  );
+  const rung = laneRung(health, tier, decisionFirst);
   if (!rung) {
     return (
       <Badge>

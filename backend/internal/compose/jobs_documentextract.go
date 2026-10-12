@@ -47,8 +47,7 @@ func (DocumentExtractArgs) Kind() string { return "document_extract" }
 // workspace and work in another.
 func (a DocumentExtractArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// documentExtractInsertOpts routes the job to the readings' own queue and
-// deduplicates by args: the reading id is unique per reading, so a re-submitted
+// documentExtractInsertOpts deduplicates the job by args: the reading id is unique per reading, so a re-submitted
 // enqueue of the SAME reading collapses while a fresh reading always queues.
 //
 // ByState is the load-bearing half, and its absence is a trap. River's default
@@ -65,14 +64,13 @@ func (a DocumentExtractArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // a reading in flight still dedupes, a finished one no longer blocks its own
 // replacement.
 func documentExtractInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue: transcriptReadQueue,
+	return jobs.QueuedAs[DocumentExtractArgs](&river.InsertOpts{
 		// One-off: a rep asked for this document to be read and nothing
 		// re-asks, so the ladder carries the blob-store blip and the malformed
 		// attachment alone — the reading vcardIngestMaxAttempts is sized for.
 		MaxAttempts: oneOffJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-	}
+	})
 }
 
 // withDocumentReader stamps the principal every write of this reading is

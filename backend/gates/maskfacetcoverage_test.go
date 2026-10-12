@@ -5,7 +5,7 @@
 
 package gates
 
-// Every object the maskable-field catalog offers is one some record's HISTORY
+// Every object the maskable-field catalog offers is one some record's history
 // withholds too.
 //
 // A mask is configured on an OBJECT and an audit row is filed under an ENTITY

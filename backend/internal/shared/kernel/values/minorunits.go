@@ -20,6 +20,7 @@ package values
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 )
@@ -58,9 +59,7 @@ var currencyMinorDigits = map[string]int{
 // change what every money figure in the product scales by, from anywhere.
 func MinorUnitExceptions() map[string]int {
 	out := make(map[string]int, len(currencyMinorDigits))
-	for code, digits := range currencyMinorDigits {
-		out[code] = digits
-	}
+	maps.Copy(out, currencyMinorDigits)
 	return out
 }
 

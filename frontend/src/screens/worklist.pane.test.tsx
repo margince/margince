@@ -58,15 +58,15 @@ describe("what the selected row is about", () => {
     //
     // The pane names the record and answers the question the row cannot: how
     // long the silence has run, in both directions.
-    await screen.findByText("Last inbound");
-    expect(screen.getByText("Last outbound")).toBeTruthy();
+    await screen.findByText("Last from this contact");
+    expect(screen.getByText("Last to this contact")).toBeTruthy();
 
     // And it is still a control: pressing the rank puts the row down.
     await userEvent.click(
       screen.getByRole("button", { name: /^Show details for/ }),
     );
     await waitFor(() => {
-      expect(screen.queryByText("Last inbound")).toBeNull();
+      expect(screen.queryByText("Last from this contact")).toBeNull();
     });
 
     // And picks it up again, so the press is a toggle rather than a one-way
@@ -74,7 +74,7 @@ describe("what the selected row is about", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /^Show details for/ }),
     );
-    await screen.findByText("Last inbound");
+    await screen.findByText("Last from this contact");
   });
 
   // A rank that opens nothing is not a control.
@@ -189,7 +189,7 @@ describe("what the selected row is about", () => {
     renderWorklist();
 
     // In hand on arrival, so there is nothing to press to open it.
-    await screen.findByText("Last inbound");
+    await screen.findByText("Last from this contact");
 
     current = day({
       queue: [],
@@ -199,7 +199,7 @@ describe("what the selected row is about", () => {
     // pane goes with it rather than outliving the row it describes.
     await userEvent.click(screen.getByRole("button", { name: /Approvals/ }));
     await waitFor(() => {
-      expect(screen.queryByText("Last inbound")).toBeNull();
+      expect(screen.queryByText("Last from this contact")).toBeNull();
     });
   });
   it("draws no aside landmark for a row that has no pane", async () => {

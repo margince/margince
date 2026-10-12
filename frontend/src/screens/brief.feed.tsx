@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
@@ -88,18 +87,6 @@ export function BriefFeed({
                     count: formatNumber(changed.count, locale),
                   })}
                 </Badge>
-              </a>
-            )}
-            {/* The way into the whole queue, on the panel's own head: it is
-                the panel's one destination, and at the foot of a list of
-                verbs it read as a caption. */}
-            {day && (
-              <a
-                className="btn brief-focus-open"
-                href={worklistLaneHref("all", day.scope)}
-              >
-                {t("brief.feed.fullWorklist")}
-                <ArrowRight aria-hidden="true" />
               </a>
             )}
           </span>

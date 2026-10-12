@@ -174,6 +174,9 @@ func (s *Store) ReverseEdge(ctx context.Context, in ReverseEdgeInput) error {
 // "leave it". The audited pair is already narrowed to what MOVED, so an image
 // missing a key is an assertion that this entry did not change it.
 func relationshipPatchFromImage(image map[string]any) (UpdateRelationshipInput, error) {
+	if held := EdgeFieldsNoPatchRestores(image); len(held) > 0 {
+		return UpdateRelationshipInput{}, fmt.Errorf("contacts: no patch restores the edge's %v", held)
+	}
 	var out UpdateRelationshipInput
 	var err error
 	if out.Role, err = imageString(image, relationshipRoleField); err != nil {
@@ -189,6 +192,16 @@ func relationshipPatchFromImage(image map[string]any) (UpdateRelationshipInput, 
 		return UpdateRelationshipInput{}, err
 	}
 	return out, nil
+}
+
+// EdgeFieldsNoPatchRestores names the fields of an edge image that only capture
+// or a merge writes. No relationship patch sets them, so an entry that moved
+// one cannot be put back, and saying it was would be false.
+func EdgeFieldsNoPatchRestores(image map[string]any) []string {
+	if _, held := image[fieldFirstObservedAt]; held {
+		return []string{fieldFirstObservedAt}
+	}
+	return nil
 }
 
 // The three decodes an edge image needs. An image arrives as jsonb, so a date is

@@ -404,3 +404,69 @@ func TestACandidateNamesTheCorrespondentItWasWith(t *testing.T) {
 			candidate.CounterpartyEmail, requestCounterparty)
 	}
 }
+
+// A bounded pass judges the current request before an old one: the old one
+// ages out of daily work whether or not it is judged, the current one is what
+// a rep is looking at.
+func TestASettlementPassJudgesTheNewestRequestFirst(t *testing.T) {
+	e := setupLoad(t)
+	old := seedEmailRequest(t, e, "Old ask from the import", "commitment", OwedVerdictAsksUs)
+	e.exec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, old, requestInstant.AddDate(0, 0, -120))
+	replyTo(t, e, old, "Done, see attached.", requestInstant.AddDate(0, 0, -119))
+	current := seedEmailRequest(t, e, "Current ask", "commitment", OwedVerdictAsksUs)
+	replyTo(t, e, current, "Sent you the slots.", requestInstant.Add(time.Hour))
+
+	if before := settledBefore(t, e, current, old); !before {
+		t.Fatalf("the pass would judge %v after %v", current, old)
+	}
+}
+
+// A fresh reply to an old request is judged before an older reply to a newer
+// one: the order follows the answer, so a request a human still holds is not
+// starved behind newer asks.
+func TestAFreshReplyToAnOldRequestIsJudgedFirst(t *testing.T) {
+	e := setupLoad(t)
+	old := seedEmailRequest(t, e, "Old ask a rep still holds", "commitment", OwedVerdictAsksUs)
+	e.exec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, old, requestInstant.AddDate(0, 0, -120))
+	current := seedEmailRequest(t, e, "Current ask", "commitment", OwedVerdictAsksUs)
+	replyTo(t, e, current, "Sent you the slots.", requestInstant.Add(time.Hour))
+	replyTo(t, e, old, "Finally, here it is.", requestInstant.Add(2*time.Hour))
+
+	if before := settledBefore(t, e, old, current); !before {
+		t.Fatalf("the pass would judge %v after %v", old, current)
+	}
+}
+
+// Two replies sent in the same instant are ordered by which was written last,
+// not by which request is newer.
+func TestRepliesSentTogetherAreJudgedLatestReplyFirst(t *testing.T) {
+	e := setupLoad(t)
+	earlierAsk := seedEmailRequest(t, e, "Earlier ask", "commitment", OwedVerdictAsksUs)
+	laterAsk := seedEmailRequest(t, e, "Later ask", "commitment", OwedVerdictAsksUs)
+	sent := requestInstant.Add(time.Hour)
+	replyTo(t, e, laterAsk, "Here are the slots.", sent)
+	replyTo(t, e, earlierAsk, "And here is the quote.", sent)
+
+	if before := settledBefore(t, e, earlierAsk, laterAsk); !before {
+		t.Fatalf("the pass would judge %v, whose reply was written last, after %v", earlierAsk, laterAsk)
+	}
+}
+
+// settledBefore reports whether the pass reads first before second. Positions
+// within one read rather than a budget of one: the package's tests share a
+// template, so another test's requests are in the read too.
+func settledBefore(t *testing.T, e *loadEnv, first, second ids.UUID) bool {
+	t.Helper()
+	rows, err := storeKnowing(e).RepliedRequests(asClassifier(e), requestInstant.Add(48*time.Hour), 500)
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := map[ids.UUID]int{}
+	for i, row := range rows {
+		at[row.RequestID] = i + 1
+	}
+	if at[first] == 0 || at[second] == 0 {
+		t.Fatalf("the read did not offer both requests (positions %d, %d)", at[first], at[second])
+	}
+	return at[first] < at[second]
+}

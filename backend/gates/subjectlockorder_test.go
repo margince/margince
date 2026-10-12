@@ -5,7 +5,7 @@
 
 package gates
 
-// The subject lock is the FIRST row a transaction takes.
+// The subject lock is the first row a transaction takes.
 //
 // Art. 17 erasure is subject-first and always has been: anonymizeSubjectRows
 // runs `UPDATE contact … archived_at` and then, in the same transaction, deletes

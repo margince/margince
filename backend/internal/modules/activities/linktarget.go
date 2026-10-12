@@ -104,6 +104,18 @@ func linkNameCoalesce(alias string) string {
 	return "coalesce(" + strings.Join(arms, ", ") + ")"
 }
 
+// linkTargetLive is true when the record a link row points at is not archived:
+// exactly one arm is set, so coalesce reads that arm's answer.
+//
+// alias names the activity_link table in the caller's query.
+func linkTargetLive(alias string) string {
+	arms := make([]string, 0, len(linkTargets))
+	for _, t := range linkTargets {
+		arms = append(arms, sprintf("(SELECT t.archived_at IS NULL FROM %s t WHERE t.id = %s.%s)", t.kind, alias, t.column))
+	}
+	return "coalesce(" + strings.Join(arms, ", ") + ", false)"
+}
+
 // linkVocabulary renders the accepted types for an error a human has to act
 // on, so the message names the current set instead of a stale hand-written one.
 func linkVocabulary() string {

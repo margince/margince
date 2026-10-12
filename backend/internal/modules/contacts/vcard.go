@@ -21,10 +21,13 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // VCardEntry is one card, reduced to what a contact record holds. Every field is
@@ -124,7 +127,7 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 			// up. It is the same malformation the end-of-file case refuses, and
 			// it refuses the same way.
 			if current != nil {
-				return nil, fmt.Errorf("contacts: a vCard begins before the one before it ended")
+				return nil, errors.New("contacts: a vCard begins before the one before it ended")
 			}
 			current = &VCardEntry{}
 		case "END":
@@ -135,7 +138,7 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 			// structure this parser cannot account for as one it can, which is
 			// the same silence one line along.
 			if current == nil {
-				return nil, fmt.Errorf("contacts: a vCard ends without having begun")
+				return nil, errors.New("contacts: a vCard ends without having begun")
 			}
 			out = append(out, *current)
 			current = nil
@@ -146,10 +149,10 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 		}
 	}
 	if current != nil {
-		return nil, fmt.Errorf("contacts: the vCard file ends inside a card")
+		return nil, errors.New("contacts: the vCard file ends inside a card")
 	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("contacts: the file holds no vCard")
+		return nil, errors.New("contacts: the file holds no vCard")
 	}
 	return out, nil
 }
@@ -283,7 +286,8 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 }
 
 // parseVCardRevision reads REV, the card's own statement of when it was last
-// revised, and nil when it states none or states one this reader cannot parse.
+// revised. It is nil when the card states none, or one this reader cannot
+// parse or store.
 //
 // It matters because a card carries no other date, and the import needs one:
 // dating a card from the moment the request ran makes a re-upload of the same
@@ -309,7 +313,7 @@ func parseVCardRevision(value string) *time.Time {
 		time.RFC3339, "2006-01-02T15:04:05Z07", "2006-01-02T15:04:05Z0700",
 	} {
 		if at, err := time.Parse(layout, v); err == nil {
-			return &at
+			return storableRevision(at)
 		}
 	}
 	// Zoneless forms are read as UTC, which is a GUESS — the card states a wall
@@ -322,10 +326,17 @@ func parseVCardRevision(value string) *time.Time {
 		"20060102T150405", "2006-01-02T15:04:05", "20060102", "2006-01-02",
 	} {
 		if at, err := time.Parse(layout, v); err == nil {
-			return &at
+			return storableRevision(at)
 		}
 	}
 	return nil
+}
+
+func storableRevision(at time.Time) *time.Time {
+	if !datasource.InstantInRange(at) {
+		return nil
+	}
+	return &at
 }
 
 // decodeVCardValue undoes the two encodings a real-world card carries: the

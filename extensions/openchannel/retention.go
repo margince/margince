@@ -40,6 +40,19 @@ import (
 // document indefinitely.
 const retainDecidedDays = 30
 
+// How long a marker waits for the landing it was written for.
+//
+// NOT a retention policy. A marker is one activity id and a timestamp, with no
+// subject data to age out; the window exists for the landing that never came —
+// an archive this unit recorded because it could not tell the id apart from one
+// it was about to claim, where the drain then failed, parked, or the id was
+// never this unit's at all. The last of those is the common case.
+//
+// An hour against a race measured in milliseconds: long enough that a drain
+// retrying a landing still finds its marker, short enough that the table holds
+// roughly one workspace-hour of archives rather than a history of them.
+const expireUnclaimedArchiveHours = 1
+
 // sweepDecided removes what is past the retention window, in the drain's own
 // tick.
 //
@@ -73,10 +86,18 @@ func sweepDecided(ctx context.Context, rt extension.Runtime) error {
 		// The same window on the outbound ledger, because it answers the mirror
 		// question and a member comparing the two screens should not find one of
 		// them remembering a month further back than the other.
-		_, err := tx.Exec(ctx,
+		if _, err := tx.Exec(ctx,
 			`DELETE FROM `+outboundTable+`
 			  WHERE created_at < now() - make_interval(days => $1::int)`,
-			retainDecidedDays)
+			retainDecidedDays); err != nil {
+			return err
+		}
+		// And the markers whose landing never came, on their own much shorter
+		// window: they are not evidence and nobody reads them.
+		_, err := tx.Exec(ctx,
+			`DELETE FROM `+archivedFirstTable+`
+			  WHERE noticed_at < now() - make_interval(hours => $1::int)`,
+			expireUnclaimedArchiveHours)
 		return err
 	})
 	if err != nil {

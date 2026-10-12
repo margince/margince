@@ -4,29 +4,36 @@
 import { useState } from "react";
 
 import { useCan, useCanWrite } from "../app/capability";
-import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Modal,
+  OverflowMenu,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { Select, type SelectOption } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { isTagTone, TAG_TONES, TagPill } from "../design-system/tagpill";
+import { Select } from "../design-system/select";
+import { TagPill } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryGate } from "./common";
-import { nearMatches } from "./tagadmin.logic";
-import type { Tag, TagColor } from "./tagadmin.queries";
+import { useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf, QueryStates } from "./common";
+import type { Tag } from "./tagadmin.queries";
 import {
   useArchiveTag,
-  useCreateTag,
+  useCountedTagCatalog,
   useMergeTags,
   useRestoreTag,
-  useTagCatalog,
-  useTagDetail,
-  useUpdateTag,
 } from "./tagadmin.queries";
+import { TagDialog } from "./tagdialog";
+import { useUndoableRemoval } from "./undoableremoval";
 import "./tagadmin.css";
+
+type TagVerbs = Readonly<{ canEdit: boolean; canArchive: boolean }>;
 
 /**
  * Settings › Data model: the workspace's tag vocabulary.
@@ -47,19 +54,15 @@ export function TagVocabularyCard() {
   // rather than vanishing, which is the rail's own rule.
   const canRead = useCan("tag", "read");
   const canCreate = useCanWrite("tag", "create");
-  const canEdit = useCanWrite("tag", "update");
-  const canArchive = useCanWrite("tag", "delete");
-  const catalog = useTagCatalog(canRead);
+  const verbs: TagVerbs = {
+    canEdit: useCanWrite("tag", "update"),
+    canArchive: useCanWrite("tag", "delete"),
+  };
+  const catalog = useCountedTagCatalog(canRead);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Tag | null>(null);
   const [merging, setMerging] = useState<Tag | null>(null);
-  const archive = useArchiveTag();
-  const restore = useRestoreTag();
-  // Archive and restore have nowhere else to speak: they are one press with no
-  // dialog of their own. Create, edit and merge each carry their refusal in
-  // the dialog that asked for it, and a sentence in both places reads as two
-  // separate failures.
-  const failure = [archive, restore].find((m) => m.isError);
+  const words = catalog.data?.data ?? [];
 
   return (
     <Panel
@@ -73,86 +76,48 @@ export function TagVocabularyCard() {
       <PanelBody>
         <PanelIntro>{t("tagAdmin.sub")}</PanelIntro>
         {!canRead && <p className="tagadmin-note">{t("tagAdmin.withheld")}</p>}
-        {failure?.error != null && (
+        {/* The catalog is capped and carries no cursor. An admin shown a cut
+            list would coin a duplicate of a word past the cap, and merge could
+            not name it as a target. */}
+        {canRead && catalog.data?.page.has_more && (
           <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("tagAdmin.changeFailed")}
+            tone="warning"
+            kind="standing"
+            title={t("tagAdmin.truncatedTitle")}
           >
-            {problemMessageOf(failure.error, t)}
+            {t("tagAdmin.truncated")}
           </Callout>
         )}
-        {canRead && (
-          <SettingList>
-            <SettingRow
-              label={t("tagAdmin.listLabel")}
-              layout="stack"
-              control={
-                <QueryGate query={catalog} pendingLabel={t("tagAdmin.title")}>
-                  {(answer) => {
-                    const words = answer.data ?? [];
-                    if (words.length === 0) {
-                      return (
-                        <p className="tagadmin-note">{t("tagAdmin.empty")}</p>
-                      );
-                    }
-                    return (
-                      <>
-                        {/* The catalog is capped and carries no cursor. An admin
-                          shown a cut list would coin a duplicate of a word past
-                          the cap, and merge could not name it as a target. */}
-                        {answer.page.has_more && (
-                          <Callout
-                            tone="warning"
-                            kind="standing"
-                            title={t("tagAdmin.truncatedTitle")}
-                          >
-                            {t("tagAdmin.truncated")}
-                          </Callout>
-                        )}
-                        <ul
-                          className="tagadmin-list"
-                          data-testid="tag-vocabulary"
-                        >
-                          {words.map((tag) => (
-                            <TagVocabularyRow
-                              key={tag.id}
-                              tag={tag}
-                              canEdit={canEdit}
-                              canArchive={canArchive}
-                              onEdit={() => setEditing(tag)}
-                              onMerge={() => setMerging(tag)}
-                              onArchive={() => archive.mutate(tag.id)}
-                              onRestore={() => restore.mutate(tag.id)}
-                            />
-                          ))}
-                        </ul>
-                      </>
-                    );
-                  }}
-                </QueryGate>
-              }
-            />
-          </SettingList>
-        )}
       </PanelBody>
+      {canRead &&
+        (catalog.isSuccess && words.length > 0 ? (
+          <TagTable
+            words={words}
+            verbs={verbs}
+            onEdit={setEditing}
+            onMerge={setMerging}
+          />
+        ) : (
+          <PanelBody>
+            <QueryStates query={catalog} pendingLabel={t("tagAdmin.title")}>
+              <EmptyState>{t("tagAdmin.empty")}</EmptyState>
+            </QueryStates>
+          </PanelBody>
+        ))}
       {adding && (
-        <TagDialog
-          vocabulary={catalog.data?.data ?? []}
-          onClose={() => setAdding(false)}
-        />
+        <TagDialog vocabulary={words} onClose={() => setAdding(false)} />
       )}
       {editing && (
         <TagDialog
           existing={editing}
-          vocabulary={catalog.data?.data ?? []}
+          vocabulary={words}
           onClose={() => setEditing(null)}
         />
       )}
       {merging && (
         <MergeDialog
           source={merging}
-          vocabulary={catalog.data?.data ?? []}
+          vocabulary={words}
           onClose={() => setMerging(null)}
         />
       )}
@@ -160,244 +125,146 @@ export function TagVocabularyCard() {
   );
 }
 
-/**
- * One word, with how much of the workspace carries it and the verbs it takes.
- *
- * The usage count is what makes archiving and merging decisions rather than
- * guesses: retiring a word twelve hundred records carry is a different act
- * from retiring one nobody used.
- */
-function TagVocabularyRow({
-  tag,
-  canEdit,
-  canArchive,
+function TagTable({
+  words,
+  verbs,
   onEdit,
   onMerge,
-  onArchive,
-  onRestore,
 }: Readonly<{
-  tag: Tag;
-  canEdit: boolean;
-  canArchive: boolean;
-  onEdit: () => void;
-  onMerge: () => void;
-  onArchive: () => void;
-  onRestore: () => void;
+  words: readonly Tag[];
+  verbs: TagVerbs;
+  onEdit: (tag: Tag) => void;
+  onMerge: (tag: Tag) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
-  // Asked for one word at a time, when a reader asks. The count is three
-  // row-scoped queries per tag on the server — the visibility rule is per
-  // table, so it cannot be one grouped pass — and drawing it for every row
-  // would spend six hundred queries opening a card in a workspace with two
-  // hundred words, to answer a question about the one word being retired.
-  const [wanted, setWanted] = useState(false);
-  const detail = useTagDetail(wanted ? tag.id : undefined);
-  const usage = detail.data?.usage;
-  const carried =
-    usage === undefined
-      ? undefined
-      : usage.contacts + usage.companies + usage.deals;
-  const archived = Boolean(tag.archived_at);
-
+  const columns: DataTableColumn<Tag>[] = [
+    {
+      key: "tag",
+      header: t("tagAdmin.colTag"),
+      fold: "title",
+      render: (tag) => <TagName tag={tag} />,
+    },
+    {
+      // Retiring or merging a word many records carry is a different act
+      // from retiring one nobody used, so the count sits beside the verbs.
+      key: "usage",
+      header: t("tagAdmin.colUsage"),
+      align: "end",
+      render: (tag) =>
+        tag.carried_by === undefined
+          ? "—"
+          : plural("tagAdmin.usedBy", tag.carried_by, {
+              count: formatNumber(tag.carried_by, locale),
+            }),
+    },
+  ];
+  if (verbs.canEdit || verbs.canArchive) {
+    columns.push({
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      align: "end",
+      fold: "end",
+      render: (tag) => (
+        <TagMenu
+          tag={tag}
+          verbs={verbs}
+          onEdit={() => onEdit(tag)}
+          onMerge={() => onMerge(tag)}
+        />
+      ),
+    });
+  }
   return (
-    <li className="tagadmin-row">
-      <TagPill name={tag.name} tone={tag.color} archived={archived} />
-      <span className="tagadmin-usage t-caption">
-        {carried !== undefined ? (
-          t("tagAdmin.usage", { count: formatNumber(carried, locale) })
-        ) : detail.isError ? (
-          // A count that failed says so. Left as "Counting…" it waits forever,
-          // and a reader deciding whether to retire a word is told nothing
-          // while appearing to be told something.
-          t("tagAdmin.usageFailed")
-        ) : wanted ? (
-          // Not "0" while it is in flight: a zero drawn before the answer is a
-          // claim about the vocabulary nobody made.
-          t("tagAdmin.usagePending")
-        ) : (
-          <Button variant="ghost" onClick={() => setWanted(true)}>
-            {t("tagAdmin.countUsage")}
-          </Button>
-        )}
-      </span>
-      <span className="tagadmin-verbs">
-        {canEdit && !archived && (
-          <Button variant="ghost" onClick={onEdit}>
+    <DataTable
+      bleed
+      fold
+      label={t("tagAdmin.listLabel")}
+      columns={columns}
+      rows={[...words]}
+      rowKey={(tag) => tag.id}
+      rowTestId={(tag) => `tag-${tag.id}`}
+    />
+  );
+}
+
+// A retired word keeps its place so it can be restored, and drops its colour
+// because it is no longer offered.
+function TagName({ tag }: Readonly<{ tag: Tag }>) {
+  const t = useT();
+  const archived = Boolean(tag.archived_at);
+  return (
+    <span className="tagadmin-name">
+      <TagPill name={tag.name} tone={archived ? null : tag.color} />
+      {archived && <Badge>{t("tagAdmin.retired")}</Badge>}
+    </span>
+  );
+}
+
+function TagMenu({
+  tag,
+  verbs,
+  onEdit,
+  onMerge,
+}: Readonly<{
+  tag: Tag;
+  verbs: TagVerbs;
+  onEdit: () => void;
+  onMerge: () => void;
+}>) {
+  const t = useT();
+  const { archive, restore } = useTagLifecycle(tag.name);
+  const archived = Boolean(tag.archived_at);
+  const edits = verbs.canEdit && !archived;
+  if (!edits && !verbs.canArchive) {
+    return null;
+  }
+  return (
+    <span className="cell-actions">
+      <OverflowMenu label={t("table.rowActions", { name: tag.name })}>
+        {edits && (
+          <Button aria-haspopup="dialog" onClick={onEdit}>
             {t("tagAdmin.edit")}
           </Button>
         )}
-        {canEdit && !archived && (
-          <Button variant="ghost" onClick={onMerge}>
+        {edits && (
+          <Button aria-haspopup="dialog" onClick={onMerge}>
             {t("tagAdmin.merge")}
           </Button>
         )}
-        {canArchive &&
+        {verbs.canArchive &&
           (archived ? (
-            <Button variant="ghost" onClick={onRestore}>
+            <Button
+              disabled={restore.isPending}
+              onClick={() => restore.mutate(tag.id)}
+            >
               {t("tagAdmin.restore")}
             </Button>
           ) : (
-            <Button variant="ghost" onClick={onArchive}>
+            <Button
+              disabled={archive.isPending}
+              onClick={() => archive.mutate(tag.id)}
+            >
               {t("tagAdmin.archive")}
             </Button>
           ))}
-      </span>
-    </li>
+      </OverflowMenu>
+    </span>
   );
 }
 
-/** How many close words a warning names before it stops listing them. */
-const NEAR_MATCHES_NAMED = 5;
-
-/**
- * A Select's answer as a colour, or none.
- *
- * The control hands back a string. Asserting it would let a value the palette
- * does not hold reach the API, where the server refuses it — a refusal the
- * reader cannot act on, for a choice they did not make.
- */
-function asTagColor(value: string): TagColor | "" {
-  return isTagTone(value) ? value : "";
-}
-
-/**
- * The colour options, each carrying the same dot the tag itself will draw.
- *
- * The swatch is what an admin actually picks by — the tone NAMES mean nothing
- * to them, and a list of words was the whole complaint. It is decorative, so
- * the label still names the colour for a reader who cannot see it.
- */
-function colorOptions(t: ReturnType<typeof useT>): readonly SelectOption[] {
-  return [
-    { value: "", label: t("tagAdmin.colorNone") },
-    ...TAG_TONES.map((tone) => ({
-      value: tone,
-      label: t(`tagAdmin.color.${tone}`),
-      adornment: (
-        <span className={`tagpill-dot tagpill-dot-${tone}`} aria-hidden />
-      ),
-    })),
-  ];
-}
-
-/**
- * Coining a word, or correcting one.
- *
- * The near-match warning is a warning and not a refusal: an admin coining "EV"
- * beside "EV programme" may mean exactly that, and a rule that stopped them
- * would be this tier deciding what the vocabulary may contain. What it prevents
- * is the accident — the admin who looked for a word, did not see it, and is one
- * press away from a second spelling of one that already exists.
- */
-function TagDialog({
-  existing,
-  vocabulary,
-  onClose,
-}: Readonly<{
-  existing?: Tag;
-  vocabulary: readonly Tag[];
-  onClose: () => void;
-}>) {
+// Retiring runs at once and offers Undo, because restoring is the exact inverse.
+function useTagLifecycle(name: string) {
   const t = useT();
-  const [name, setName] = useState(existing?.name ?? "");
-  // Narrowed, not asserted: the Select hands back a string, and a value that is
-  // not one of the four would reach the API as a colour the server refuses.
-  const [color, setColor] = useState<TagColor | "">(existing?.color ?? "");
-  const create = useCreateTag();
-  const update = useUpdateTag();
-  const pending = create.isPending || update.isPending;
-  const failure = create.error ?? update.error;
-  // A row that came back with no version cannot be written at all, and this
-  // tier knows why. Without its own sentence the refusal reaches the reader as
-  // "the request failed, no cause reported" — true, and useless: there is
-  // nothing they can retype to fix it, and reopening the page is what does.
-  const unversioned = existing !== undefined && existing.version === undefined;
-  // Never the word being edited: a rename that keeps most of its own spelling
-  // would otherwise warn that it collides with itself.
-  const others = vocabulary.filter((tag) => tag.id !== existing?.id);
-  const near = nearMatches(name, others);
-
-  const submit = () => {
-    const trimmed = name.trim();
-    if (trimmed === "") {
-      return;
-    }
-    if (existing) {
-      update.mutate(
-        {
-          id: existing.id,
-          version: existing.version,
-          name: trimmed,
-          // "none" clears, because an absent field and a null field decode to
-          // the same thing in the request type.
-          color: color === "" ? "none" : color,
-        },
-        { onSuccess: onClose },
-      );
-      return;
-    }
-    create.mutate(
-      { name: trimmed, color: color === "" ? undefined : color },
-      { onSuccess: onClose },
-    );
-  };
-
-  return (
-    <ConfirmModal
-      open
-      onClose={onClose}
-      title={existing ? t("tagAdmin.editTitle") : t("tagAdmin.addTitle")}
-      confirmLabel={existing ? t("tagAdmin.save") : t("tagAdmin.create")}
-      confirmDisabled={name.trim() === "" || unversioned}
-      pending={pending}
-      error={
-        unversioned
-          ? t("tagAdmin.noVersion")
-          : failure != null
-            ? problemMessageOf(failure, t)
-            : undefined
-      }
-      onConfirm={submit}
-    >
-      <Field label={t("tagAdmin.nameLabel")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={name}
-            maxLength={64}
-            onChange={(event) => setName(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("tagAdmin.colorLabel")}>
-        {(control) => (
-          <Select
-            {...control}
-            value={color}
-            onChange={(next) => setColor(asTagColor(next))}
-            options={colorOptions(t)}
-          />
-        )}
-      </Field>
-      {near.length > 0 && (
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={t("tagAdmin.nearMatchTitle")}
-        >
-          {t("tagAdmin.nearMatch", {
-            // Capped: a warning naming forty words is one an admin scrolls
-            // past, which costs the near-duplicate it exists to catch.
-            names: near
-              .slice(0, NEAR_MATCHES_NAMED)
-              .map((tag) => tag.name)
-              .join(", "),
-          })}
-        </Callout>
-      )}
-    </ConfirmModal>
-  );
+  const toasts = useUndoableRemoval<string>({
+    removed: t("tagAdmin.retiredToast", { name }),
+    restored: t("tagAdmin.restoredToast", { name }),
+  });
+  const restore = useRestoreTag(toasts.restored);
+  const archive = useArchiveTag(toasts.removed((id) => restore.mutate(id)));
+  return { archive, restore };
 }
 
 /**
@@ -431,21 +298,26 @@ function MergeDialog({
 
   if (result) {
     return (
-      <Modal open onClose={onClose} labelledBy="tagadmin-merged">
-        <div className="tagadmin-merged">
-          <Heading size="large" id="tagadmin-merged">
-            {t("tagAdmin.mergedTitle")}
-          </Heading>
-          {/* Moved and collapsed are counted apart because they are different
-              facts: a record that carried only the source now carries the
-              target, while a record that carried both simply loses a duplicate
-              — and adding them would report records the target did not gain. */}
-          <p>
-            {t("tagAdmin.mergedBody", {
-              moved: formatNumber(result.moved, locale),
-              collapsed: formatNumber(result.collapsed, locale),
-            })}
-          </p>
+      <Modal
+        open
+        onClose={onClose}
+        labelledBy="tagadmin-merged"
+        intent="confirm"
+      >
+        <Heading size="large" id="tagadmin-merged" className="t-h2 modal-title">
+          {t("tagAdmin.mergedTitle")}
+        </Heading>
+        {/* Moved and collapsed are counted apart because they are different
+            facts: a record that carried only the source now carries the
+            target, while a record that carried both simply loses a duplicate
+            — and adding them would report records the target did not gain. */}
+        <p>
+          {t("tagAdmin.mergedBody", {
+            moved: formatNumber(result.moved, locale),
+            collapsed: formatNumber(result.collapsed, locale),
+          })}
+        </p>
+        <div className="actions">
           <Button onClick={onClose}>{t("tagAdmin.done")}</Button>
         </div>
       </Modal>

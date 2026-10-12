@@ -38,8 +38,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // moneyPair is read as ONE field for supersession. amount_minor is a count of
@@ -114,13 +117,106 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 	if len(asked) == 0 {
 		return nil, nil
 	}
+	moved, err := columnsThatMoved(ctx, tx, entityType, id, asked)
+	if err != nil {
+		return nil, err
+	}
+	childMoved, err := childFieldsThatMoved(ctx, tx, row, asked)
+	if err != nil {
+		return nil, err
+	}
+	moved = append(moved, childMoved...)
+	half, err := moneyMovedUnderIt(ctx, tx, row)
+	if err != nil {
+		return nil, err
+	}
+	if half != "" {
+		moved = append(moved, half)
+	}
+	return reportedAs(moved, imageKeys(after)), nil
+}
+
+// columnsThatMoved names the image keys that are columns of the record and
+// hold something other than the image's value now. A timestamp column is the
+// same value in any zone, and the audit image is spelled in the writer's zone where
+// the row is read in the session's, so those two compare as instants.
+func columnsThatMoved(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, asked []byte) ([]string, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT k.key
+		SELECT k.key, to_jsonb(r) -> k.key, k.value,
+		       EXISTS (SELECT 1 FROM pg_attribute a
+		               WHERE a.attrelid = $3::regclass AND a.attname = k.key AND a.atttypid = 'timestamptz'::regtype)
 		FROM jsonb_each($2::jsonb) AS k(key, value)
 		JOIN `+pgx.Identifier{entityType}.Sanitize()+` r ON r.id = $1
 		WHERE to_jsonb(r) ? k.key
 		  AND to_jsonb(r) -> k.key IS DISTINCT FROM k.value
-		ORDER BY 1`, id, asked)
+		ORDER BY 1`, id, asked, pgx.Identifier{entityType}.Sanitize())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var moved []string
+	for rows.Next() {
+		var key string
+		var timestamp bool
+		var live, stated json.RawMessage
+		if err := rows.Scan(&key, &live, &stated, &timestamp); err != nil {
+			return nil, err
+		}
+		if !timestamp || !sameInstant(live, stated) {
+			moved = append(moved, key)
+		}
+	}
+	return moved, rows.Err()
+}
+
+// sameInstant reports whether two jsonb strings are one point in time.
+func sameInstant(a, b json.RawMessage) bool {
+	var x, y string
+	if json.Unmarshal(a, &x) != nil || json.Unmarshal(b, &y) != nil {
+		return false
+	}
+	left, err := time.Parse(time.RFC3339Nano, x)
+	if err != nil {
+		return false
+	}
+	right, err := time.Parse(time.RFC3339Nano, y)
+	return err == nil && left.Equal(right)
+}
+
+// asSet spells a jsonb expression with an array's elements in a canonical
+// order: a child table is read back in no promised order, so two spellings of
+// one set of rows differ only by position.
+func asSet(expr string) string {
+	return `(CASE WHEN jsonb_typeof(` + expr + `) = 'array' THEN (SELECT COALESCE(jsonb_agg(e ORDER BY e::text), '[]'::jsonb)
+		FROM jsonb_array_elements(` + expr + `) e) ELSE ` + expr + ` END)`
+}
+
+// childFieldsThatMoved names the image keys the record holds in tables of
+// their own (a contact's social profiles, emails and phones; a company's
+// domains and relationship types), which are not in the row's jsonb. Their
+// current value is the one the latest later entry that wrote the key left, so
+// a colleague's edit refuses the restore, and a walk back through the history
+// still works because each reversal writes the value it restores. A write that
+// reaches those tables without auditing the key is not seen.
+func childFieldsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []byte) ([]string, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT k.key
+		FROM (
+			SELECT i.key, i.value
+			FROM jsonb_each($2::jsonb) AS i(key, value)
+			JOIN `+pgx.Identifier{row.EntityType}.Sanitize()+` r ON r.id = $1
+			WHERE NOT to_jsonb(r) ? i.key
+		) AS k
+		CROSS JOIN LATERAL (
+			SELECT later.after -> k.key AS value
+			FROM audit_log later
+			WHERE later.entity_type = $3 AND later.entity_id = $1 AND later.after ? k.key
+			  AND (later.occurred_at, later.id) >
+			      (SELECT this.occurred_at, this.id FROM audit_log this WHERE this.id = $4)
+			ORDER BY later.occurred_at DESC, later.id DESC
+			LIMIT 1) latest
+		WHERE `+asSet("latest.value")+` IS DISTINCT FROM `+asSet("k.value")+`
+		ORDER BY 1`, row.EntityID, asked, row.EntityType, row.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,17 +229,7 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 		}
 		moved = append(moved, key)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	half, err := moneyMovedUnderIt(ctx, tx, row)
-	if err != nil {
-		return nil, err
-	}
-	if half != "" {
-		moved = append(moved, half)
-	}
-	return reportedAs(moved, imageKeys(after)), nil
+	return moved, rows.Err()
 }
 
 // moneyMovedUnderIt names the money half this entry states ALONE when the other
@@ -154,9 +240,10 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 //
 // The trail is what answers it, not the image: an update records only the
 // fields the request set, so an entry that changed the amount alone carries no
-// currency to compare the record against. Asking whether a LATER row wrote the
-// sibling is the difference between refusing this restore and refusing every
-// amount change ever made.
+// currency to compare the record against. The first later row to write the
+// sibling holds, in its before-image, what the sibling was at this entry; the
+// sibling has moved only when the record no longer holds that. A later change
+// that was itself put back therefore does not refuse.
 func moneyMovedUnderIt(ctx context.Context, tx pgx.Tx, row AuditRow) (string, error) {
 	var image map[string]json.RawMessage
 	if err := json.Unmarshal(row.After, &image); err != nil {
@@ -178,12 +265,19 @@ func moneyMovedUnderIt(ctx context.Context, tx pgx.Tx, row AuditRow) (string, er
 	}
 	var moved bool
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM audit_log later
+		WITH first_later AS (
+		  SELECT later.before -> $4 AS held
+		  FROM audit_log later
 		  WHERE later.entity_type = $1 AND later.entity_id = $2
 		    AND later.after ? $4
 		    AND (later.occurred_at, later.id) >
-		        (SELECT this.occurred_at, this.id FROM audit_log this WHERE this.id = $3))`,
+		        (SELECT this.occurred_at, this.id FROM audit_log this WHERE this.id = $3)
+		  ORDER BY later.occurred_at, later.id
+		  LIMIT 1)
+		SELECT EXISTS (
+		  SELECT 1 FROM first_later
+		  WHERE held IS DISTINCT FROM
+		        (SELECT to_jsonb(r) -> $4 FROM `+pgx.Identifier{row.EntityType}.Sanitize()+` r WHERE r.id = $2))`,
 		row.EntityType, row.EntityID, row.ID, sibling).Scan(&moved); err != nil {
 		return "", fmt.Errorf("compose: reading whether %s moved since: %w", sibling, err)
 	}
@@ -193,20 +287,15 @@ func moneyMovedUnderIt(ctx context.Context, tx pgx.Tx, row AuditRow) (string, er
 	return stated, nil
 }
 
-// Only keys the record holds as COLUMNS are compared, and the row itself says
-// which those are — `to_jsonb(r) ? key`. A field kept in its own table
-// (a contact's social profiles, a company's domains or relationship types) is
-// absent from the row's jsonb, so comparing it would read every one of them as
-// moved and refuse every restore that touched one.
+// Keys the record holds as COLUMNS are compared against the row, and the row
+// itself says which those are — `to_jsonb(r) ? key`. A field kept in its own
+// table is judged by childFieldsThatMoved instead, against the trail, because
+// the row's jsonb does not carry it and comparing it there would read every one
+// as moved.
 //
 // Derived rather than listed. A hand-kept set of "fields that are not columns"
 // is a second copy of the schema, and it fails the same way each time somebody
 // adds one: silently, by refusing a restore that should have worked.
-//
-// The gap this leaves is stated: supersession does not judge those fields, so
-// two contacts editing a company's domains in turn will not block each other the
-// way two editing its name do. Judging them means reading each relation, which
-// earns its own engine when it is worth building.
 
 // coupledImage is the after-image narrowed to the keys worth comparing: the
 // derived columns are dropped, because a row that changed carries a new

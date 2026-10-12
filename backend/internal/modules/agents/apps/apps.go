@@ -12,11 +12,13 @@
 // `go:embed` directive binds to a directory layout.
 //
 // WHAT A VIEW IS, in this tree's terms: a second RENDERER for an answer a tool
-// already gives in text. It owns no data path, holds no credential, and calls
-// nothing. Every fact it displays arrived in the tool result the host pushed
-// into it, which is why this package has no dependency on a store, a seam, or a
-// principal — it composes documents, and the documents are the same for every
-// caller.
+// already gives in text, and for a choice card the place its answer is clicked.
+// It owns no data path and holds no credential. Every fact it displays arrived in
+// the tool result the host pushed into it, and a click asks the HOST to run one
+// of the tools the view declares in actions.json, under the connected
+// assistant's own passport. That is why this package has no dependency on a
+// store, a seam, or a principal: it composes documents, and the documents are the
+// same for every caller.
 //
 // WHY THE DOCUMENTS ARE SELF-CONTAINED. Each is built with its stylesheet and
 // its scripts INLINE, and declares an empty origin allowlist. A host builds its
@@ -39,29 +41,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// The URIs the tools name. They are exported because a tool's declaration and
-// the document that answers it are two halves of one promise, and the only way
-// they cannot drift is for both to read the same constant — the composed-surface
-// sweep proves every named URI is published, but a shared constant means there
-// is nothing for it to catch.
-const (
-	// CompanyBriefURI renders read_brief's queue.
-	CompanyBriefURI = "ui://margince/company-brief.html"
-	// RelationshipMapURI renders who_knows's colleagues.
-	RelationshipMapURI = "ui://margince/relationship-map.html"
-	// CommitmentsURI renders review_commitments's open promises.
-	CommitmentsURI = "ui://margince/commitments.html"
-	// HandoffURI renders prepare_handoff's briefing and its gaps.
-	HandoffURI = "ui://margince/handoff.html"
-	// PipelineReviewURI renders whats_slipping_this_week's ranked deals.
-	//
-	// It registers NO tool of its own. A `render_*` name on this surface is a
-	// document hung off a tool that already answers, not a second verb — the
-	// two that shipped before it are the same, and a tool here would cost a
-	// listing slot and an admission surface to display an answer the caller
-	// already has.
-	PipelineReviewURI = "ui://margince/pipeline-review.html"
-)
+// CreateFollowupsURI is the card create_record offers after a create: the pair it
+// filed for review, and a tag word it was asked to offer. It is exported so the tool's declaration and the document that
+// answers it read the same constant; the composed-surface sweep proves every URI
+// a tool names is published.
+const CreateFollowupsURI = "ui://margince/create-followups.html"
+
+// ApprovalURI is the card read_approval offers: one proposal a human has to
+// release, with Approve and Reject beside it.
+const ApprovalURI = "ui://margince/approval.html"
+
+// FieldConflictURI is the card update_record offers when part of a patch was
+// held because those fields were last edited by hand.
+const FieldConflictURI = "ui://margince/field-conflict.html"
 
 // view is one published document's identity. The document itself is not here:
 // it is fetched, admitted and held at run time, so this is the half that is a
@@ -78,36 +70,22 @@ type view struct {
 // is derived from the URI rather than listed beside it.
 var catalog = []view{
 	{
-		uri:  CompanyBriefURI,
-		name: "company_brief_view",
-		// A title a human reads in a host's own UI chrome, so it says what the
-		// panel shows rather than naming the tool behind it.
-		title:       "Morning brief",
-		description: "The ranked brief queue, with the factor decomposition each item ranked on.",
+		uri:         CreateFollowupsURI,
+		name:        "create_followups_view",
+		title:       "Next steps for this record",
+		description: "What a new record leaves to decide: a possible duplicate with the choice to merge it or keep it apart, and a tag word offered for it.",
 	},
 	{
-		uri:         RelationshipMapURI,
-		name:        "relationship_map_view",
-		title:       "Who knows this contact",
-		description: "The colleagues who know a contact, warmest first, with the interactions behind each warmth band.",
+		uri:         ApprovalURI,
+		name:        "approval_view",
+		title:       "Waiting for a decision",
+		description: "A change an assistant proposed, what it would do, and the choice to approve or reject it.",
 	},
 	{
-		uri:         CommitmentsURI,
-		name:        "commitments_view",
-		title:       "Open commitments",
-		description: "The promises still outstanding, oldest first, with who owes each one and how far past due it is.",
-	},
-	{
-		uri:         HandoffURI,
-		name:        "handoff_view",
-		title:       "Delivery handoff",
-		description: "What the delivery side is being given for one project, with each gap beside the fact it is about.",
-	},
-	{
-		uri:         PipelineReviewURI,
-		name:        "pipeline_review_view",
-		title:       "Pipeline review",
-		description: "The deals at risk this week, worst first, with the evidence each risk claim rests on.",
+		uri:         FieldConflictURI,
+		name:        "field_conflict_view",
+		title:       "Edited by hand",
+		description: "Fields last edited by hand that an update would overwrite, with the value on the record beside the one proposed and the choice to keep or replace it.",
 	},
 }
 

@@ -5,8 +5,8 @@
 
 package gates
 
-// The idle base — a record's newest activity when one is recorded, else the
-// instant it was created — is spelled once, in shared/kernel/idlebase.
+// The idle base (a record's newest activity when one is recorded, else the
+// instant it was created) is spelled once, in shared/kernel/idlebase.
 //
 // It was spelled five times, across the stalled-deal rule, an account's
 // pipeline read, a coverage read, the what's-slipping ranker and the

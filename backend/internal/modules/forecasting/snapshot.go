@@ -38,7 +38,7 @@ const (
 // movement with its own bucket: a number that moved because the rules changed
 // must not be reported as the business moving. Bump it when a reading's
 // membership or arithmetic changes.
-const DefinitionVersion = "forecast_v1"
+const DefinitionVersion = "forecast_v2"
 
 // Column and payload keys shared by the insert and the audit payload. Named
 // rather than repeated, because a key written in two places can come to be
@@ -158,7 +158,7 @@ func (s *Store) writeContributions(
 			"snapshot_id", "deal_id", "owner_id", colAmountMinor, colCurrency,
 			"base_minor", "fx_rate", "fx_date", "effective_close_date",
 			"close_provisional", "category", "stage_probability", "stage_id", "weighted_minor",
-			"in_won", "in_evidence", "in_best_case", "in_open", "exclusion_reason",
+			"in_won", "in_evidence", "in_best_case", "in_open", "in_lost", "exclusion_reason",
 			"audit_id", "approval_id", "captured_by",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
@@ -192,7 +192,7 @@ func (s *Store) writeContributions(
 				currency, row.BaseMinor, nil, nil,
 				row.EffectiveClose, row.CloseProvisional, nullIfEmpty(row.Category),
 				nullableInt(row.StageProbability), nullableID(row.StageID), weighted,
-				row.InWon, row.InEvidence, row.InBestCase, row.InOpen,
+				row.InWon, row.InEvidence, row.InBestCase, row.InOpen, row.InLost,
 				nullIfEmpty(row.ExclusionReason),
 				row.AuditID, row.ApprovalID, capturedBy,
 			}, nil
@@ -257,16 +257,23 @@ func nullableInt(v int) *int {
 
 // SnapshotSide loads one snapshot's definition version and its per-deal rows.
 //
-// Gated on read: a snapshot is a record of what the workspace expected, and
-// reading one is reading the forecast.
+// Gated on read, then passed through the store's lens: a snapshot freezes the
+// workspace's figures, and its per-deal rows must not reach a caller who could
+// not have read those deals or that population live.
 func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snapshotSide, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
 		return snapshotSide{}, err
 	}
+	if s.lens == nil {
+		return snapshotSide{}, errors.New("forecasting: no snapshot lens is bound, so a snapshot's rows cannot be narrowed")
+	}
 	var out snapshotSide
+	var scope Scope
 	err := tx.QueryRow(ctx,
-		`SELECT definition_version, period_start, period_end FROM forecast_snapshot WHERE id = $1`, id).
-		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd)
+		`SELECT definition_version, period_start, period_end, scope_kind, scope_id, pipeline_id, base_currency
+		 FROM forecast_snapshot WHERE id = $1`, id).
+		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd, &scope.Kind, &scope.ID,
+			&out.PipelineID, &out.BaseCurrency)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return snapshotSide{}, apperrors.ErrNotFound
 	}
@@ -277,7 +284,7 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	rows, err := tx.Query(ctx, `
 		SELECT deal_id, owner_id, amount_minor, currency, base_minor,
 		       effective_close_date, close_provisional, category, stage_probability,
-		       weighted_minor, in_won, in_evidence, in_best_case, in_open,
+		       weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
 		       exclusion_reason, audit_id, approval_id
 		FROM forecast_contribution
 		WHERE snapshot_id = $1
@@ -296,7 +303,7 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		var weighted *int64
 		err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
 			&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
-			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen,
+			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
 			&exclusion, &c.AuditID, &c.ApprovalID)
 		c.DealID = dealID.String()
 		if owner != nil {
@@ -322,6 +329,13 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	if err != nil {
 		return snapshotSide{}, fmt.Errorf("forecasting: collecting the snapshot's contributions: %w", err)
 	}
+	out.Scope = scope
+	frozen := len(out.Contributions)
+	out.Contributions, err = s.lens(ctx, tx, scope, out.PipelineID, out.Contributions)
+	if err != nil {
+		return snapshotSide{}, err
+	}
+	out.Withheld = len(out.Contributions) < frozen
 	return out, nil
 }
 
@@ -372,5 +386,25 @@ func (s *Store) MovementTx(
 			Message: "a movement compares two readings of the same period",
 		}
 	}
+	if opening.Scope.Kind != closing.Scope.Kind || !sameID(opening.Scope.ID, closing.Scope.ID) ||
+		!sameID(opening.PipelineID, closing.PipelineID) {
+		return Movement{}, &values.ParseError{
+			Field: "from", Code: "populations_differ",
+			Message: "a movement compares two readings of the same scope and pipeline",
+		}
+	}
+	if opening.BaseCurrency != closing.BaseCurrency {
+		return Movement{}, &values.ParseError{
+			Field: "from", Code: "currencies_differ",
+			Message: "a movement compares two readings in the same base currency",
+		}
+	}
 	return Classify(reading, opening, closing), nil
+}
+
+func sameID(a, b *ids.UUID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }

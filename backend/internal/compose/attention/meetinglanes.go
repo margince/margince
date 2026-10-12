@@ -34,9 +34,9 @@ type MeetingsAwaitingOutcome interface {
 }
 
 // MeetingAwaitingOutcome is one appointment that happened and owes an answer. It
-// carries less than Meeting because a meeting still ahead offers preparation,
-// which needs a contact's page; this one offers recording what happened, which
-// needs the activity and nothing else.
+// carries less than Meeting because a meeting still ahead offers preparation;
+// this one offers recording what happened, which needs the activity and who it
+// was with.
 type MeetingAwaitingOutcome struct {
 	ID      ids.UUID
 	Subject string
@@ -54,6 +54,10 @@ type MeetingAwaitingOutcome struct {
 	// when no calendar claims it, and the row then names nobody rather than
 	// guessing.
 	HostUserID ids.UUID
+
+	// Who the meeting was with: the same counterparty Meeting.ContactID names.
+	// Zero for an internal meeting, or one whose outside attendees are withheld.
+	ContactID ids.UUID
 }
 
 // Meeting is one appointment still ahead of the reader.
@@ -62,11 +66,11 @@ type Meeting struct {
 	Subject  string
 	StartsAt time.Time
 
-	// Whose page the brief is read on. The brief opens as `?prep=<activity>` on
-	// a CONTACT's record, so the activity id names the meeting and says nothing
-	// about where to read it. Zero for an internal meeting, or one whose only
-	// attendees are withheld: the row then offers no verb rather than a link to
-	// a page picked at random.
+	// Who the meeting is with, and so whose page the brief is read on. The
+	// brief opens as `?prep=<activity>` on a CONTACT's record, so the activity
+	// id names the meeting and says nothing about where to read it. Zero for an
+	// internal meeting, or one whose outside attendees are withheld: the row
+	// then offers no verb rather than a link to a page picked at random.
 	ContactID ids.UUID
 
 	// True when nothing has been written down for a meeting about to happen.

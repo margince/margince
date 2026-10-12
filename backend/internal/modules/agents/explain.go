@@ -16,6 +16,7 @@ package agents
 
 import (
 	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -44,6 +45,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		steppedUp   *StepUpStagedError
 		overQuota   *auth.VolumeExceededError
 		staged      *workflow.StagedApprovalError
+		skew        *apperrors.VersionSkewError
 	)
 	switch {
 	case errors.As(err, &steppedUp):
@@ -79,9 +81,10 @@ func (s *Dispatcher) explain(tool string, err error) string {
 			overQuota.Error() + ")"
 	case errors.As(err, &staged):
 		// A 🟡 call that reached the inbox, and the branch that says WHAT is
-		// waiting there. It is not this credential's to release — the one that
-		// proposed an action does not answer it — so the caller's job is to
-		// relay, and it can only relay a description it was given: an agent sent
+		// waiting there. The contact answers it — in the CRM, or through this
+		// credential when the change can be undone and the call is attended
+		// (stagedReleasePath) — so the caller's job is to relay, and it can only
+		// relay a description it was given: an agent sent
 		// to read_approval for the sentence tells the user a change is pending
 		// and cannot say which.
 		//
@@ -93,6 +96,13 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// Quoting the error whole would have carried the unescaped original
 		// beside the escaped copy.
 		return stagedExplanation(staged)
+	case errors.Is(err, ErrFileCannotWait):
+		return "This call needs a contact's approval, and a file cannot wait for an approval: the approval would " +
+			"keep the file. Nothing was changed. Do not retry; tell the user to attach the file in the Margince app."
+	case errors.Is(err, errFileKindRefused):
+		return "Margince does not accept this kind of file, so nothing was attached. (" + fileKindDetail(err) +
+			") Do not retry: do not rename it, convert it, pack it into a zip or other archive, or save its " +
+			"contents as a note. Tell the user it was not attached and which kinds are accepted."
 	case errors.Is(err, apperrors.ErrRequiresApproval):
 		// An approval is required and nothing was staged to carry it — a surface
 		// with no inbox, or a tool that cannot describe its own staging target.
@@ -112,6 +122,9 @@ func (s *Dispatcher) explain(tool string, err error) string {
 			"more of it than they lent this credential. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrNotFound):
 		return "No such record in this workspace (or it is outside the acting user's row scope). (" + err.Error() + ")"
+	case errors.As(err, &skew):
+		// Its words name the remedy, a re-stage or a reload, which the generic retry below contradicts.
+		return echoSafe(skew.Message, MaxFaultDetail)
 	case errors.Is(err, apperrors.ErrVersionSkew):
 		return "The record changed since it was read; re-read it and retry with the new version. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrApprovalTokenInvalid):
@@ -197,6 +210,11 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 	}
 
 	explained := faultExplanation(fault)
+	if fault.Status == http.StatusNotImplemented {
+		// A 501 is the installation, not the call: no argument or retry reaches it.
+		return "This installation does not offer what this call needs, so nothing was changed and no argument " +
+			"would change that. (" + explained + ") Do not retry; tell the user it is not available here."
+	}
 	if fault.Transient() {
 		return "This tool is temporarily unavailable — nothing was changed. (" + explained + ") " +
 			"The same call can succeed later; wait before retrying, and tell the user if they are waiting on it."
@@ -204,6 +222,15 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 	return "This call was refused as issued and nothing was changed; repeating it unchanged will be refused the same way. (" +
 		explained + ") Correct the arguments and call again — or, if this is a governed refusal " +
 		"rather than a mistake, do not retry: tell the user what is blocking it."
+}
+
+// fileKindDetail is the store's refusal as the classified path renders it, so
+// the agent keeps the field code and the list of accepted kinds.
+func fileKindDetail(err error) string {
+	if fault, ok := httperr.Classify(err); ok {
+		return faultExplanation(fault)
+	}
+	return echoSafe(err.Error(), MaxFaultDetail)
 }
 
 // faultExplanation renders what the agent is told inside the parentheses: the
@@ -356,14 +383,25 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 			" Do not stage another: repeat this call with \"approval_id\": \"" +
 			staged.ApprovalID.String() + "\"."
 	}
-	return "Confirm-first (🟡): a contact answers this before it runs, and it is not yours to answer. " +
+	return "Confirm-first (🟡): a contact answers this before it runs. " +
 		what +
-		" Put what it would do in front of them and wait for their word. They can release it in the " +
-		"CRM, or you can relay the answer they give you with decide_approval — list_approvals is the " +
-		"same queue either way. Once released, this exact call repeats with \"approval_id\": \"" +
+		" Put what it would do in front of them and wait for their word. " +
+		stagedReleasePath(staged) +
+		" Once released, this exact call repeats with \"approval_id\": \"" +
 		staged.ApprovalID.String() + "\". " +
 		"Blocks THIS call only — do the rest of what you were asked that does not depend on it, " +
 		"and report what you DID alongside what is waiting."
+}
+
+// stagedReleasePath says who answers a staged call, and offers decide_approval
+// only to a credential that can use it: a relay offered where the engine would
+// refuse is a dead end the caller finds out about one call later.
+func stagedReleasePath(staged *workflow.StagedApprovalError) string {
+	if staged.ReleasableByCaller {
+		return "This change can be undone, so once the user says yes you can release it yourself with " +
+			"decide_approval (list_approvals is the same queue), or they can release it in the CRM."
+	}
+	return "It is not yours to answer: the contact releases it in the CRM (list_approvals shows the same queue)."
 }
 
 // faultReferenceSuffix names what a refusal left behind, in the one place an

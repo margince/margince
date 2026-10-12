@@ -18,7 +18,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // maxUsageWindowDays bounds one report request: the aggregation is
@@ -93,6 +95,9 @@ type aiUsageTask = struct {
 	Task            string  `json:"task"`
 	TaskDisplayName *string `json:"task_display_name,omitempty"`
 
+	// TaskSummary What the task does, in plain words, for a reader deciding what it costs.
+	TaskSummary *string `json:"task_summary,omitempty"`
+
 	// Tier local_small, cheap_cloud, premium, frontier, local_large.
 	Tier          string `json:"tier"`
 	TokensIn      int    `json:"tokens_in"`
@@ -113,13 +118,14 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 		}
 		for _, task := range day.Tasks {
 			cached := task.CachedHits
-			name := DisplayName(Task(task.Task))
+			name, summary := taskLabel(Task(task.Task))
 			if name == "" {
 				name = task.Task
 			}
 			wireTask := aiUsageTask{
 				Task:            task.Task,
 				TaskDisplayName: &name,
+				TaskSummary:     optionalSummary(summary),
 				Tier:            task.Tier,
 				Calls:           task.Calls,
 				CachedHits:      &cached,
@@ -165,7 +171,11 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 // model lanes — what they cost, and whether they are answering — and both are
 // admitted through the same automation-config grant.
 func (h Handlers) GetAiHealth(w http.ResponseWriter, r *http.Request) {
-	rungs, err := h.meter.RungHealthReport(r.Context())
+	var bound map[Tier]ModelRef
+	if h.boundModels != nil {
+		bound = h.boundModels()
+	}
+	rungs, err := h.meter.RungHealthReport(r.Context(), bound)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -176,6 +186,41 @@ func (h Handlers) GetAiHealth(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, rung := range rungs {
 		out.Rungs = append(out.Rungs, toContractRungHealth(rung))
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// WithBoundModels counts each lane's health against the model bound reads
+// it serves now.
+func (h Handlers) WithBoundModels(bound func() map[Tier]ModelRef) Handlers {
+	h.boundModels = bound
+	return h
+}
+
+// GetAiProviderHealth implements (GET /ai/provider-health).
+//
+// Admitted by the same grant as GetAiHealth. It reads the in-process book
+// merged with the status other processes shared, not ai_call, so it needs no
+// database and still answers for this process alone when the shared store is
+// unreachable.
+func (h Handlers) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
+	if err := auth.Require(r.Context(), "ai_diagnostics", principal.ActionRead); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	entries := h.providers.report(r.Context())
+	out := crmcontracts.AiProviderHealth{Providers: make([]crmcontracts.AiProviderHealthEntry, 0, len(entries))}
+	for _, e := range entries {
+		wire := crmcontracts.AiProviderHealthEntry{
+			Provider: e.Provider,
+			Health:   crmcontracts.AiProviderHealthEntryHealth(e.Status.Health),
+			Since:    e.Status.Since,
+		}
+		if !e.Status.RetryAfter.IsZero() {
+			retry := e.Status.RetryAfter
+			wire.RetryAfter = &retry
+		}
+		out.Providers = append(out.Providers, wire)
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
@@ -197,4 +242,13 @@ func toContractRungHealth(r RungHealth) crmcontracts.AiRungHealth {
 	}
 	out.LastCallAt = r.LastCallAt
 	return out
+}
+
+// optionalSummary leaves the field off for a task with nothing to say rather
+// than sending an empty sentence.
+func optionalSummary(summary string) *string {
+	if summary == "" {
+		return nil
+	}
+	return &summary
 }

@@ -133,7 +133,8 @@ func TestTokenPathsReachTheTokenRowBeforeTheMemberRow(t *testing.T) {
 				"%s:%s locks the member row before it reaches auth_token — redemption takes "+
 					"the token row FIRST, so this inverts the order and a redeem racing this can "+
 					"deadlock. Hold no app_user row lock and serialize with "+
-					"lockMemberForTokenIssue instead.", fn.file, fn.name)
+					"lockMemberForTokenIssue instead.", fn.file, fn.name,
+			)
 		}
 	}
 	if checked == 0 {
@@ -151,6 +152,7 @@ func reachableBody(fn identityFunc, byName map[string]identityFunc, seen map[str
 	}
 	seen[fn.name] = true
 	text := fn.body
+	var textSb155 strings.Builder
 	for name, callee := range byName {
 		// Word-bounded: a plain substring makes canIssuePasswordLink look like
 		// a caller of IssuePasswordLink, dragging unrelated bodies in and
@@ -160,9 +162,10 @@ func reachableBody(fn identityFunc, byName map[string]identityFunc, seen map[str
 		}
 		callsCallee := regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\(`)
 		if callsCallee.MatchString(fn.body) {
-			text += reachableBody(callee, byName, seen)
+			textSb155.WriteString(reachableBody(callee, byName, seen))
 		}
 	}
+	text += textSb155.String()
 	return text
 }
 
@@ -193,7 +196,8 @@ func TestTokenSupersedersSerializeOnTheMember(t *testing.T) {
 				"%s:%s supersedes and re-mints a member's token without "+
 					"lockMemberForTokenIssue — two issuers racing would both leave a live "+
 					"token, so the one-outstanding-token rule would hold only when nobody "+
-					"raced.", fn.file, fn.name)
+					"raced.", fn.file, fn.name,
+			)
 		}
 	}
 	if checked == 0 {

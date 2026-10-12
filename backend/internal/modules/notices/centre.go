@@ -115,7 +115,8 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, read_at
+			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, read_at,
+			       coalesce(dedupe_key, '')
 			  FROM notice
 			 WHERE recipient_user_id = $1 AND `+notTheReadersOwnStageMove+keyset+`
 			 ORDER BY created_at DESC, id DESC
@@ -245,12 +246,18 @@ func scanCentreItems(rows pgx.Rows) ([]CentreItem, error) {
 		// arriving alone is a row the constraint should have refused.
 		var targetType *string
 		var targetID *ids.UUID
+		var dedupeKey string
 		if err := rows.Scan(&item.ID, &item.Kind, &item.Subject, &item.Body,
-			&targetType, &targetID, &item.CreatedAt, &item.Origin, &item.ReadAt); err != nil {
+			&targetType, &targetID, &item.CreatedAt, &item.Origin, &item.ReadAt, &dedupeKey); err != nil {
 			return nil, err
 		}
 		if targetType != nil && targetID != nil {
 			item.Target = Target{Type: *targetType, ID: *targetID}
+		}
+		// A notice asking for a decision opens the decision, not the record it
+		// is about: the record answers nothing, and the decision names it.
+		if approval, ok := approvalOfNoticeKey(item.Kind, dedupeKey); ok {
+			item.Target = Target{Type: TargetApproval, ID: approval}
 		}
 		items = append(items, item)
 	}

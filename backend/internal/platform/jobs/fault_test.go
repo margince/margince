@@ -68,8 +68,7 @@ func TestFaultPassesAWrappedControlReturnThrough(t *testing.T) {
 	// The helper that produced the snooze may itself be wrapped by its
 	// caller before the worker returns it.
 	wrapped := fmt.Errorf("telegram_poll: %w", river.JobSnooze(time.Minute))
-	var snooze *river.JobSnoozeError
-	if !errors.As(Fault(wrapped), &snooze) {
+	if _, ok := errors.AsType[*river.JobSnoozeError](Fault(wrapped)); !ok {
 		t.Fatal("Fault must leave a wrapped snooze detectable by River's errors.As check, or the job fails instead of rescheduling")
 	}
 }
@@ -78,8 +77,7 @@ func TestFaultPassesAWrappedControlReturnThrough(t *testing.T) {
 // control return wins, because rescheduling is not failing.
 func TestFaultPrefersTheControlReturnOverASentinelUnderneath(t *testing.T) {
 	wrapped := fmt.Errorf("%w", river.JobCancel(apperrors.ErrConsentNotGranted))
-	var cancel *river.JobCancelError
-	if !errors.As(Fault(wrapped), &cancel) {
+	if _, ok := errors.AsType[*river.JobCancelError](Fault(wrapped)); !ok {
 		t.Fatal("a cancel carrying a known sentinel must stay a cancel — River stops the job rather than spending a rung on it")
 	}
 }

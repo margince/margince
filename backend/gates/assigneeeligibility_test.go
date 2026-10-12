@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// A seat's fitness to receive work has ONE spelling, wherever it is asked.
+// A seat's fitness to receive work has one spelling, wherever it is asked.
 //
 // eligibilityColumns are the user columns that decide it. A second reader of
 // this SET is a second answer to "may this contact receive a record", and the
@@ -77,9 +77,10 @@ func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 			return nil
 		}
 		rel := "internal/" + strings.TrimPrefix(filepath.ToSlash(strings.TrimPrefix(path, root)), "/")
-		// All of them, in one file, plus the active-status clause: that
-		// conjunction is the question, and any subset is a different one.
-		if !strings.Contains(text, "status = 'active'") {
+		// All of them, in one file, plus the active-status clause, spelled out
+		// or called through the shared live-member helper. That conjunction is
+		// the question, and any subset is a different one.
+		if !strings.Contains(text, "status = 'active'") && !strings.Contains(text, "workforce.LiveMemberSQL(") {
 			return nil
 		}
 		hits := []string{}
@@ -156,7 +157,7 @@ func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 		t.Fatal("AssigneeEligibleSQL is gone from assignscope.go: the rule it holds has moved and this gate has not")
 	}
 	for _, half := range []string{
-		"status = 'active'", "archived_at IS NULL", "NOT %[1]s.is_agent",
+		"workforce.LiveMemberSQL(alias)", "NOT %[2]s.is_agent",
 		"seat_type <> 'read'", "ownerPredicate",
 	} {
 		if !strings.Contains(body, half) {

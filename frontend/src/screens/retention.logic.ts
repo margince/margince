@@ -79,7 +79,7 @@ export function actionLabelKey(action: RetentionAction): MessageKey {
 }
 
 /**
- * What a stored policy is actually doing tonight.
+ * What a stored policy does on the next retention pass.
  *
  * Three states, because "enabled" alone does not answer the question the
  * screen exists to answer: the retain-only posture overrides a destructive
@@ -98,21 +98,28 @@ export function policyEffect(
   return policy.suppressed_by_posture ? "suppressed" : "acting";
 }
 
-const EFFECT_LABEL_KEYS: Record<PolicyEffect, MessageKey> = {
-  acting: "retention.effectActing",
-  suppressed: "retention.effectSuppressed",
-  disabled: "retention.effectDisabled",
+// An acting policy carries no status: the intro says every enabled policy acts
+// on the retention schedule, so a row speaks only when it differs.
+const EFFECT_BADGES: Record<
+  PolicyEffect,
+  Readonly<{ key: MessageKey; tone?: "warning" }> | null
+> = {
+  acting: null,
+  suppressed: { key: "retention.effectSuppressed", tone: "warning" },
+  disabled: { key: "retention.effectDisabled" },
 };
 
-export function effectLabelKey(effect: PolicyEffect): MessageKey {
-  return EFFECT_LABEL_KEYS[effect];
+export function effectBadge(
+  effect: PolicyEffect,
+): Readonly<{ key: MessageKey; tone?: "warning" }> | null {
+  return EFFECT_BADGES[effect];
 }
 
-// The sentence under a row that is not acting. An acting row needs none — it
-// does what it says.
+// A suppressed row needs no sentence of its own: the posture row above it says
+// what retain-only mode holds back.
 const EFFECT_REASON_KEYS: Record<PolicyEffect, MessageKey | null> = {
   acting: null,
-  suppressed: "retention.suppressedWhy",
+  suppressed: null,
   disabled: "retention.disabledWhy",
 };
 
@@ -120,16 +127,30 @@ export function effectReasonKey(effect: PolicyEffect): MessageKey | null {
   return EFFECT_REASON_KEYS[effect];
 }
 
-const EFFECT_TONES: Record<PolicyEffect, "success" | "warning" | undefined> = {
-  acting: "success",
-  suppressed: "warning",
-  disabled: undefined,
-};
+// The tone grows with what the action takes away: archive keeps the record.
+const ACTION_TONES: Record<RetentionAction, "warning" | "danger" | undefined> =
+  {
+    archive: undefined,
+    anonymize: "warning",
+    erase: "danger",
+  };
 
-export function effectTone(
-  effect: PolicyEffect,
-): "success" | "warning" | undefined {
-  return EFFECT_TONES[effect];
+export function actionTone(
+  action: RetentionAction,
+): "warning" | "danger" | undefined {
+  return ACTION_TONES[action];
+}
+
+const DAYS_PER_YEAR = 365;
+
+/** A window as the reader counts it: whole years when it is one, else days. */
+export function keepFor(days: number): Readonly<{
+  unit: "retention.keepYears" | "retention.keepDays";
+  count: number;
+}> {
+  return days % DAYS_PER_YEAR === 0
+    ? { unit: "retention.keepYears", count: days / DAYS_PER_YEAR }
+    : { unit: "retention.keepDays", count: days };
 }
 
 /**

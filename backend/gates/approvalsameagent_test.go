@@ -7,7 +7,7 @@
 
 package gates
 
-// "Is this the agent that staged the proposal" has ONE spelling, and it is not
+// "Is this the agent that staged the proposal" has one spelling, and it is not
 // passport equality.
 //
 // A connected agent's passport id does not survive its own token refresh: the

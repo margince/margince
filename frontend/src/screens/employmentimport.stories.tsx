@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { ImportedEmploymentHistory } from "./employmentimport";
 import {
@@ -80,3 +81,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Unresolved: Story = {};
 export const ReadOnly: Story = { args: { canEdit: false } };
+export const MatchingACompany: Story = {
+  play: async () => {
+    const [match] = await screen.findAllByRole("button", {
+      name: "Match company",
+    });
+    await userEvent.click(match);
+    await screen.findByRole("dialog", { name: "Match company" });
+  },
+};

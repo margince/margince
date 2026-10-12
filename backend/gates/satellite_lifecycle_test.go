@@ -5,14 +5,15 @@
 
 package gates
 
-// Contact-satellite lifecycle reach as a fitness function. piicoverage_test.go
-// proves Art. 17 erasure and Art. 15 SAR reach every table its registry
-// declares PII-bearing; it says nothing about the three OTHER lifecycle paths a
-// contact's child rows ride — the retention anonymizer, the merge relink, and the
-// archive cascade. Those are where a new satellite rots invisibly: a satellite
-// nobody archived stays live under an archived Contact, and one nobody relinked
-// is orphaned on the merged-away half. Neither errors, and neither is visible
-// until someone reads the row that should be gone.
+// Every table with a contact_id column is reached by the retention anonymizer,
+// the merge relink and the archive cascade, or says why not.
+// piicoverage_test.go proves Art. 17 erasure and Art. 15 SAR reach every table
+// its registry declares PII-bearing; it says nothing about the three OTHER
+// lifecycle paths a contact's child rows ride — the retention anonymizer, the
+// merge relink, and the archive cascade. Those are where a new satellite rots
+// invisibly: a satellite nobody archived stays live under an archived Contact,
+// and one nobody relinked is orphaned on the merged-away half. Neither errors,
+// and neither is visible until someone reads the row that should be gone.
 //
 // The obligations are DERIVED, never listed:
 //
@@ -63,6 +64,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -132,6 +134,7 @@ var satelliteLifecyclePaths = []satellitePath{
 // asks about is reported as unmatched, so a ratification cannot outlive the
 // reason for it.
 var carriedElsewhere = gatekit.Waive(map[string]string{
+	"tag_suggestion":         "a tag suggestion is the tag scout's reading of ONE record's evidence. The merge archives the merged-away contact, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion. Moving the row could collide with the survivor's own open suggestion of the same tag",
 	"graph_interaction_edge": "search owns it and REBUILDS it rather than moving it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's, which is the right shape for a table derived entirely from activities the merge has already relinked. Moving the rows instead would carry a fold computed against the pre-merge graph",
 })
 
@@ -158,6 +161,7 @@ const (
 // merge's own transaction.
 var carriedThroughAPort = map[string]portCarry{
 	"communication_suppression": {consentPkg, "Store.CarryStopsTx", "holdsALiveStop"},
+	"communication_override":    {consentPkg, "Store.CarryOverridesTx", "holdsALiveOverride"},
 	"withdrawal_credential":     {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"preference_token":          {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"confirm_token":             {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
@@ -214,7 +218,7 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 			t.Fatal(err)
 		}
 		current := ""
-		for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
+		for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
 			if m := createTableLine.FindStringSubmatch(line); m != nil {
 				current = m[1]
 				columns[current] = map[string]bool{}
@@ -396,10 +400,5 @@ func TestEveryPortCarriesTheTablesItsRegisterEntryClaims(t *testing.T) {
 // readsTable reports whether any statement names table as a FROM target.
 func readsTable(statements []string, table string) bool {
 	from := regexp.MustCompile(`(?i)\bFROM\s+` + regexp.QuoteMeta(table) + `\b`)
-	for _, statement := range statements {
-		if from.MatchString(statement) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(statements, from.MatchString)
 }

@@ -34,6 +34,8 @@ export type ComboBoxProps = Readonly<{
   suggestions: readonly ComboBoxSuggestion[];
   placeholder?: string;
   disabled?: boolean;
+  /** An address box keeps the browser's own email check. */
+  type?: "text" | "email";
   /** The four a `Field` hands its control, spread at every call site. */
   id?: string;
   required?: boolean;
@@ -74,7 +76,7 @@ export function ComboBox(props: ComboBoxProps) {
           ref={inputRef}
           id={props.id}
           className="input combobox-input"
-          type="text"
+          type={props.type ?? "text"}
           autoComplete="off"
           {...list.fieldAria}
           aria-label={props["aria-label"]}

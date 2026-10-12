@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -41,6 +42,13 @@ func breachedLeadEvent(t *testing.T, e *integration.Env, owner *pgx.Conn) (ids.U
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
 		 VALUES ($1, 'Overdue Lead', 'new', 'inbound', 'human:x', $2)`, lead, e.Rep1); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := activities.NewStore(e.DB()).LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: new("Incoming enquiry"), Direction: new("inbound"),
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Date(2026, 8, 18, 9, 0, 0, 0, time.UTC)
@@ -126,6 +134,17 @@ func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
 	}
 	if assignee == nil || *assignee != e.Rep1 {
 		t.Errorf("task assignee = %v, want the escalation target %s", assignee, e.Rep1)
+	}
+	// System work about the lead, not a touch of it: a human origin would
+	// make the breach the lead's latest activity.
+	var origin string
+	if err := owner.QueryRow(context.Background(), `
+		SELECT a.origin FROM activity a JOIN activity_link l ON l.activity_id = a.id
+		WHERE l.lead_id = $1 AND a.kind = 'task'`, lead).Scan(&origin); err != nil {
+		t.Fatal(err)
+	}
+	if origin != activities.OriginSystemRemediation {
+		t.Errorf("escalation task origin = %q, want %q", origin, activities.OriginSystemRemediation)
 	}
 
 	// The notify half, which nothing here asked about until it panicked. A
@@ -256,4 +275,51 @@ func TestLeadSLAEscalationWritesBothHalvesOrNeither(t *testing.T) {
 	if recipients := leadSLANoticeRecipients(t, owner); len(recipients) != 0 {
 		t.Errorf("notices = %d after a refused notice write, want 0", len(recipients))
 	}
+}
+
+// The escalation's notice and task speak the installation's language.
+//
+// Both are stored, and the digest mail quotes the notice subject. A rep
+// reading their worklist in German must not find an English line in it.
+func TestTheSLAEscalationIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+
+	integration.SetBaseLanguage(e.Admin(), t, e.Pool, "de")
+	if subject := escalateAndReadNoticeSubject(t, e, owner); !strings.Contains(subject, "SLA-Verstoß") {
+		t.Errorf("the installation is set to German and the notice reads %q", subject)
+	}
+
+	// The other direction catches copy that happens to be one language: a test
+	// asserting only German passes against code that always writes German.
+	integration.SetBaseLanguage(e.Admin(), t, e.Pool, "en")
+	if subject := escalateAndReadNoticeSubject(t, e, owner); !strings.Contains(subject, "SLA breach") {
+		t.Errorf("the installation was changed to English and the notice reads %q", subject)
+	}
+}
+
+// escalateAndReadNoticeSubject runs one breach through the real handler and
+// answers the subject it stored.
+//
+// A fresh lead each call, because both halves carry the breach's natural key.
+// A second escalation of one breach is the no-op the dedupe exists for.
+func escalateAndReadNoticeSubject(t *testing.T, e *integration.Env, owner *pgx.Conn) string {
+	t.Helper()
+	_, ev, deadline, ctx := breachedLeadEvent(t, e, owner)
+	h := newLeadSLAEscalation(e.DB(), func() time.Time { return deadline.Add(time.Hour) })
+	eff, err := h.Plan(ctx, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Apply(ctx, ev, eff, nil); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	var subject string
+	if err := owner.QueryRow(context.Background(), `
+		SELECT subject FROM notice
+		 WHERE kind = $1 ORDER BY created_at DESC, id DESC LIMIT 1`,
+		noticeKindLeadSLA).Scan(&subject); err != nil {
+		t.Fatalf("reading the stored notice: %v", err)
+	}
+	return subject
 }

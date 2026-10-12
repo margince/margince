@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states a chaser was drafted for Reply Deutschland Verlängerung and does not mention drafting one for Körber Sensorik Rollout or any other deal.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer says a follow-up was drafted for Reply Deutschland Verlängerung, the one deal that has gone quiet, and does not say a chaser was drafted for Körber Sensorik Rollout or for any other deal. Answer no if it names no drafted follow-up, or names a deal other than Reply Deutschland as one it drafted for.",
+  "answer": "Done. I drafted the chaser for Reply Deutschland Verlängerung, sent the follow-up to Jonas Reinhard, sent Greta Lindqvist her first email, and answered Lena Bauer on Telegram that the Ventile price list goes out tomorrow."
+}

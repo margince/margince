@@ -54,8 +54,8 @@ func TestCreatingACorpusStampsTheDefaultFloor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if got.MinSimilarity != knowledge.DefaultMinSimilarity {
-		t.Fatalf("floor = %v, want the default %v", got.MinSimilarity, knowledge.DefaultMinSimilarity)
+	if got.MinSimilarityOverridden == nil || *got.MinSimilarityOverridden {
+		t.Fatalf("overridden = %v, want false: the corpus takes its binding's measured floor", got.MinSimilarityOverridden)
 	}
 	// A corpus is born empty, and says so: the screen reads these three before
 	// any document exists, and a nil coverage would render as a blank rather
@@ -79,7 +79,7 @@ func TestAnExplicitFloorSurvivesTheCreate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if got.MinSimilarity != floor {
+	if got.MinSimilarityOverridden == nil || !*got.MinSimilarityOverridden || got.MinSimilarity != floor {
 		t.Fatalf("floor = %v, want the caller's %v", got.MinSimilarity, floor)
 	}
 }
@@ -318,4 +318,26 @@ func corpusAuditRows(t *testing.T, e *Env, corpusID ids.UUID) int {
 	t.Helper()
 	return e.WsCount(t,
 		`SELECT count(*) FROM audit_log WHERE entity_type = 'knowledge_corpus' AND entity_id = $1`, corpusID)
+}
+
+// A corpus with no override reports the floor measured for the binding in
+// force, and an override reports itself.
+func TestACorpusReportsTheFloorOfTheBindingThatReadsIt(t *testing.T) {
+	e := newIngestEnv(t)
+	store := e.store.WithEmbedIdentity(func() string { return "gemini/gemini-embedding-001@1536" })
+	got, err := store.ReadCorpus(e.ctx, e.corpus)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if got.MinSimilarity != 0.65 || got.MinSimilarityOverridden == nil || *got.MinSimilarityOverridden {
+		t.Fatalf("floor = %v overridden = %v, want gemini's 0.65, not overridden", got.MinSimilarity, got.MinSimilarityOverridden)
+	}
+	floor := 0.4
+	got, err = store.EditCorpus(e.ctx, e.corpus, knowledge.UpdateCorpus{MinSimilarity: &floor})
+	if err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+	if got.MinSimilarity != 0.4 || !*got.MinSimilarityOverridden {
+		t.Fatalf("floor = %v overridden = %v, want the override", got.MinSimilarity, *got.MinSimilarityOverridden)
+	}
 }

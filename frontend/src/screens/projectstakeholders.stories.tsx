@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
   AddProjectStakeholder,
   RemoveProjectStakeholder,
@@ -39,6 +40,18 @@ export const Add: Story = {
         <AddProjectStakeholder projectId="pr-1" />
       </StoryProviders>
     );
+  },
+};
+
+export const Adding: Story = {
+  render: Add.render,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Add stakeholder",
+      }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("dialog");
   },
 };
 

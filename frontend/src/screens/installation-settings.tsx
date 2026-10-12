@@ -21,6 +21,11 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -33,7 +38,7 @@ import {
   problemFieldErrorsOf,
   problemMessageOf,
   QueryGate,
-  throwProblem,
+  unwrap,
 } from "./common";
 import {
   RegionalSettingsFields,
@@ -78,19 +83,14 @@ export function useUpdateInstallationSettings(onSaved: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (patch: Patch) => {
-      const { data, error } = await api.PATCH("/installation/settings", {
-        body: patch,
-      });
-      if (error) {
-        // `throwProblem`, not `new Error(problemMessage(...))`. The wrapped form
-        // flattened the server's answer to one sentence, which discarded
-        // `details.errors[]` — so the per-field assertions the API already sends
-        // on a 422 were unreachable, and every refusal on this three-field form
-        // arrived as one paragraph at the bottom that named no field. It also
-        // stopped being a ProblemError, which is what the global failure sink
-        // uses to tell a server refusal from a bug worth logging.
-        throwProblem(error, t);
-      }
+      // Thrown as a ProblemError, so a 422's `details.errors[]` lands on the field
+      // it names and the failure sink does not log a refusal as a bug.
+      const data = unwrap(
+        await api.PATCH("/installation/settings", {
+          body: patch,
+        }),
+        t,
+      );
       return data;
     },
     onSuccess: (data) => {
@@ -332,93 +332,90 @@ function InstallationSettingsForm({
         {!canManage && (
           <p id={denialId}>{t("installationSettings.readOnly")}</p>
         )}
-        <SettingList>
-          <SettingRow
-            label={t("installationSettings.name")}
-            description={t("installationSettings.nameHint")}
-            value={settings.name}
-            control={editVerb("name", t("installationSettings.name"))}
-          />
-          <SettingRow
-            label={t("installationSettings.timezone")}
-            description={t("installationSettings.timezoneHint")}
-            value={settings.timezone}
-            control={editVerb("timezone", t("installationSettings.timezone"))}
-          />
-          <SettingRow
-            label={t("installationSettings.baseCurrency")}
-            description={currencyNote(settings, t)}
-            value={settings.base_currency}
-            control={editVerb(
-              "base_currency",
-              t("installationSettings.baseCurrency"),
-            )}
-          />
-          <RegionalSettingsRows settings={settings} editVerb={editVerb} />
-          <SettingRow
-            label={t("installationSettings.baseLanguage")}
-            description={t("installationSettings.baseLanguageHint")}
-            // The language's own name, not its code: "Deutsch" is what an
-            // operator recognises, and `en` is what the wire carries.
-            value={languageName(settings.base_language, t)}
-            control={editVerb(
-              "base_language",
-              t("installationSettings.baseLanguage"),
-            )}
-          />
-          <SettingRow
-            label={t("installationSettings.fiscalYearStart")}
-            description={t("installationSettings.fiscalYearStartHint")}
-            // The month's name and the span it produces, because the number
-            // alone answers the wrong question: an admin is deciding what a
-            // report will SAY, and "April — FY2026/27" shows that where "4"
-            // makes them work it out.
-            value={fiscalYearStartSummary(
-              settings.fiscal_year_start_month,
-              locale,
-              new Date().getFullYear(),
-            )}
-            control={editVerb(
-              "fiscal_year_start_month",
-              t("installationSettings.fiscalYearStart"),
-            )}
-          />
-          <SettingRow
-            label={t("installationSettings.forwardMeasure")}
-            description={t("installationSettings.forwardMeasureHint")}
-            // The measure's own sentence rather than the stored word: an admin
-            // is deciding what a projection MEANS, and "manager_call" does not
-            // say that the call replaces the projection instead of adding to it.
-            value={t(
-              `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
-            )}
-            control={editVerb(
-              "forecast_forward_measure",
-              t("installationSettings.forwardMeasure"),
-            )}
-          />
-        </SettingList>
-        {editing !== null && (
-          <InstallationProfileDialog
-            settings={settings}
-            draft={draft}
-            focus={editing}
-            canManage={canManage}
-            dirty={dirty}
-            pending={update.isPending}
-            refused={refused}
-            blanketError={
-              update.isError && refused.size === 0
-                ? problemMessageOf(update.error, t)
-                : null
-            }
-            describe={describe}
-            onChange={setDraft}
-            onClose={() => setEditing(null)}
-            onSubmit={submit}
-          />
-        )}
       </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("installationSettings.name")}
+          description={t("installationSettings.nameHint")}
+          value={settings.name}
+          control={editVerb("name", t("installationSettings.name"))}
+        />
+        <SettingRow
+          label={t("installationSettings.timezone")}
+          description={t("installationSettings.timezoneHint")}
+          value={settings.timezone}
+          control={editVerb("timezone", t("installationSettings.timezone"))}
+        />
+        <SettingRow
+          label={t("installationSettings.baseCurrency")}
+          description={currencyNote(settings, t)}
+          value={settings.base_currency}
+          control={editVerb(
+            "base_currency",
+            t("installationSettings.baseCurrency"),
+          )}
+        />
+        <RegionalSettingsRows settings={settings} editVerb={editVerb} />
+        <SettingRow
+          label={t("installationSettings.baseLanguage")}
+          description={t("installationSettings.baseLanguageHint")}
+          // The language's own name, not its code: "Deutsch" is what an
+          // operator recognises, and `en` is what the wire carries.
+          value={languageName(settings.base_language, t)}
+          control={editVerb(
+            "base_language",
+            t("installationSettings.baseLanguage"),
+          )}
+        />
+        <SettingRow
+          label={t("installationSettings.fiscalYearStart")}
+          description={t("installationSettings.fiscalYearStartHint")}
+          // The month and the fiscal year it starts; a bare "4" leaves the
+          // admin to work out what a report will say.
+          value={fiscalYearStartSummary(
+            settings.fiscal_year_start_month,
+            locale,
+            new Date().getFullYear(),
+          )}
+          control={editVerb(
+            "fiscal_year_start_month",
+            t("installationSettings.fiscalYearStart"),
+          )}
+        />
+        <SettingRow
+          label={t("installationSettings.forwardMeasure")}
+          description={t("installationSettings.forwardMeasureHint")}
+          // The measure's own sentence rather than the stored word: an admin
+          // is deciding what a projection means.
+          value={t(
+            `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
+          )}
+          control={editVerb(
+            "forecast_forward_measure",
+            t("installationSettings.forwardMeasure"),
+          )}
+        />
+      </SettingList>
+      {editing !== null && (
+        <InstallationProfileDialog
+          settings={settings}
+          draft={draft}
+          focus={editing}
+          canManage={canManage}
+          dirty={dirty}
+          pending={update.isPending}
+          refused={refused}
+          blanketError={
+            update.isError && refused.size === 0
+              ? problemMessageOf(update.error, t)
+              : null
+          }
+          describe={describe}
+          onChange={setDraft}
+          onClose={() => setEditing(null)}
+          onSubmit={submit}
+        />
+      )}
     </Panel>
   );
 }
@@ -459,25 +456,12 @@ function InstallationProfileDialog({
   const refusalTitle = t("installationSettings.saveFailed");
   const { locale } = useLocale();
   const titleId = useId();
-  // Focus lands on the field whose Edit was pressed — programmatic rather than
-  // the `autoFocus` attribute, the same way the sign-in page does it, so the
-  // a11y lint's blanket rule against autofocus stays intact.
+  const formId = useId();
+  // Focus lands on the field whose Edit was pressed. Not `autoFocus`: the a11y
+  // lint refuses it.
   const asked = useRef<HTMLInputElement>(null);
-  // Two of the fields are a `Select` — a button and a portalled listbox, not an
-  // input — so neither takes the ref the text fields share. Their triggers are
-  // found through the form, which keeps the same promise the text fields keep:
-  // the verb beside a fact leads to the fact.
-  //
-  // Found by the fact each one EDITS, not by `[role="combobox"]`. There are two
-  // comboboxes here now, and a query for the role returns whichever the form
-  // renders first — so pressing Edit beside the fiscal year focused the
-  // language instead, and a third Select would have moved that again silently.
-  //
-  // `Field` generates its control id with `useId`, which is a React handle
-  // (`:r3:`) and carries no fact name, so the marker is written at the call
-  // site instead. Explicit rather than inferred: a selector guessing at a
-  // generated id would break the day React changes the format, and nothing
-  // would fail except the focus nobody tests by hand.
+  // A `Select` takes no ref, so its trigger is found by the `data-fact` it
+  // edits: a query for the role alone returns whichever combobox renders first.
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     const picker = form.current?.querySelector<HTMLElement>(
@@ -490,217 +474,225 @@ function InstallationProfileDialog({
     asked.current?.focus();
   }, [focus]);
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {t("installationSettings.companyTitle")}
-      </Heading>
-      <form
-        ref={form}
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        <Field
-          label={t("installationSettings.name")}
-          hint={t("installationSettings.nameHint")}
-          error={refused.get("name")}
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2">
+          {t("installationSettings.companyTitle")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        <form
+          id={formId}
+          ref={form}
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
         >
-          {(control) => (
-            <TextInput
-              {...control}
-              aria-describedby={describe(control)}
-              ref={focus === "name" ? asked : undefined}
-              value={draft.name}
-              disabled={!canManage}
-              onChange={(event) =>
-                onChange({ ...draft, name: event.target.value })
-              }
-            />
-          )}
-        </Field>
-        <Field
-          label={t("installationSettings.timezone")}
-          hint={t("installationSettings.timezoneHint")}
-          error={refused.get("timezone")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              aria-describedby={describe(control)}
-              ref={focus === "timezone" ? asked : undefined}
-              value={draft.timezone}
-              disabled={!canManage}
-              onChange={(event) =>
-                onChange({ ...draft, timezone: event.target.value })
-              }
-            />
-          )}
-        </Field>
-
-        {/* A section INSIDE the dialog's own heading: the currency rule needs
-            the room to be explained, and level 3 is what keeps that from
-            minting a second heading at the dialog's own rank. */}
-        <SectionHeader
-          level={3}
-          title={t("installationSettings.currencyTitle")}
-        />
-        <Field
-          label={t("installationSettings.baseCurrency")}
-          hint={currencyNote(settings, t)}
-          error={refused.get("base_currency")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              aria-describedby={describe(control)}
-              ref={focus === "base_currency" ? asked : undefined}
-              value={draft.base_currency}
-              disabled={!canManage || settings.base_currency_locked}
-              onChange={(event) =>
-                onChange({ ...draft, base_currency: event.target.value })
-              }
-            />
-          )}
-        </Field>
-
-        <RegionalSettingsFields
-          draft={draft}
-          canManage={canManage}
-          refused={refused}
-          onChange={onChange}
-        />
-        <div data-fact="base_language">
           <Field
-            label={t("installationSettings.baseLanguage")}
-            hint={t("installationSettings.baseLanguageHint")}
-            error={refused.get("base_language")}
+            label={t("installationSettings.name")}
+            hint={t("installationSettings.nameHint")}
+            error={refused.get("name")}
           >
             {(control) => (
-              <Select
+              <TextInput
                 {...control}
-                // `control.id` is spread through UNCHANGED: `Field` renders its
-                // label with `htmlFor` pointing at it, so replacing it would
-                // leave the combobox with no accessible name. The focus effect
-                // reads that same id back out of the DOM.
                 aria-describedby={describe(control)}
-                value={draft.base_language}
+                ref={focus === "name" ? asked : undefined}
+                value={draft.name}
                 disabled={!canManage}
-                // Language names are proper nouns and deliberately untranslated,
-                // so every option is in a different language from the page around
-                // it — `lang` is WCAG 2.2 AA 3.1.2, and our locale codes are the
-                // BCP 47 subtags it wants.
-                options={LOCALES.map((locale) => ({
-                  value: locale,
-                  label: t(localeNameKey(locale)),
-                  lang: locale,
-                }))}
-                // `Select` reports a string; narrowing it back through LOCALES is
-                // what makes it a locale without an assertion, and drops an
-                // answer the control was never offering.
-                onChange={(next) => {
-                  const picked = LOCALES.find((locale) => locale === next);
-                  if (picked) {
-                    onChange({ ...draft, base_language: picked });
-                  }
-                }}
+                onChange={(event) =>
+                  onChange({ ...draft, name: event.target.value })
+                }
               />
             )}
           </Field>
-        </div>
-
-        <div data-fact="fiscal_year_start_month">
           <Field
-            label={t("installationSettings.fiscalYearStart")}
-            hint={t("installationSettings.fiscalYearStartHint")}
-            error={refused.get("fiscal_year_start_month")}
+            label={t("installationSettings.timezone")}
+            hint={t("installationSettings.timezoneHint")}
+            error={refused.get("timezone")}
           >
             {(control) => (
-              <Select
+              <TextInput
                 {...control}
                 aria-describedby={describe(control)}
-                value={identifierNumber(draft.fiscal_year_start_month)}
+                ref={focus === "timezone" ? asked : undefined}
+                value={draft.timezone}
                 disabled={!canManage}
-                // Twelve months, each labelled with what a report would then be
-                // called — "April — FY2026/27". A bare number would make the
-                // admin work out the consequence of every option; this states it.
-                options={MONTHS.map((month) => ({
-                  value: identifierNumber(month),
-                  label: fiscalYearStartSummary(
-                    month,
-                    locale,
-                    new Date().getFullYear(),
-                  ),
-                }))}
-                // `Select` reports a string. Narrowed back through MONTHS rather
-                // than parsed, so an answer the control never offered cannot
-                // reach the draft.
-                onChange={(next) => {
-                  const picked = MONTHS.find((month) => String(month) === next);
-                  if (picked) {
-                    onChange({ ...draft, fiscal_year_start_month: picked });
-                  }
-                }}
+                onChange={(event) =>
+                  onChange({ ...draft, timezone: event.target.value })
+                }
               />
             )}
           </Field>
-        </div>
 
-        <div data-fact="forecast_forward_measure">
+          {/* A section INSIDE the dialog's own heading: the currency rule needs
+              the room to be explained, and level 3 is what keeps that from
+              minting a second heading at the dialog's own rank. */}
+          <SectionHeader
+            level={3}
+            title={t("installationSettings.currencyTitle")}
+          />
           <Field
-            label={t("installationSettings.forwardMeasure")}
-            hint={t("installationSettings.forwardMeasureHint")}
-            error={refused.get("forecast_forward_measure")}
+            label={t("installationSettings.baseCurrency")}
+            hint={currencyNote(settings, t)}
+            error={refused.get("base_currency")}
           >
             {(control) => (
-              <Select
+              <TextInput
                 {...control}
                 aria-describedby={describe(control)}
-                value={draft.forecast_forward_measure}
-                disabled={!canManage}
-                options={FORWARD_MEASURES.map((measure) => ({
-                  value: measure,
-                  label: t(`installationSettings.forwardMeasure.${measure}`),
-                }))}
-                // Narrowed back through the offered set rather than cast, so a
-                // value this build does not know cannot reach the draft and be
-                // saved as a measure the server would then refuse on every read.
-                onChange={(next) => {
-                  const picked = FORWARD_MEASURES.find(
-                    (measure) => measure === next,
-                  );
-                  if (picked) {
-                    onChange({ ...draft, forecast_forward_measure: picked });
-                  }
-                }}
+                ref={focus === "base_currency" ? asked : undefined}
+                value={draft.base_currency}
+                disabled={!canManage || settings.base_currency_locked}
+                onChange={(event) =>
+                  onChange({ ...draft, base_currency: event.target.value })
+                }
               />
             )}
           </Field>
-        </div>
 
-        {/* Only what no field claimed: a refusal on the input AND again below
-            states one problem twice, and the second is what nobody reads. */}
-        {blanketError !== null ? (
-          <Callout tone="danger" kind="outcome" title={refusalTitle}>
-            {blanketError}
-          </Callout>
-        ) : null}
-        <div className="form-actions">
-          <Button variant="ghost" type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!pending && (!canManage || !dirty)}
-            pending={pending}
-            busyLabel={t("common.saving")}
-          >
-            {t("installationSettings.save")}
-          </Button>
-        </div>
-      </form>
+          <RegionalSettingsFields
+            draft={draft}
+            canManage={canManage}
+            refused={refused}
+            onChange={onChange}
+          />
+          <div data-fact="base_language">
+            <Field
+              label={t("installationSettings.baseLanguage")}
+              hint={t("installationSettings.baseLanguageHint")}
+              error={refused.get("base_language")}
+            >
+              {(control) => (
+                <Select
+                  {...control}
+                  // `control.id` is spread through UNCHANGED: `Field` renders its
+                  // label with `htmlFor` pointing at it, so replacing it would
+                  // leave the combobox with no accessible name. The focus effect
+                  // reads that same id back out of the DOM.
+                  aria-describedby={describe(control)}
+                  value={draft.base_language}
+                  disabled={!canManage}
+                  // Language names are proper nouns and deliberately untranslated,
+                  // so every option is in a different language from the page around
+                  // it — `lang` is WCAG 2.2 AA 3.1.2, and our locale codes are the
+                  // BCP 47 subtags it wants.
+                  options={LOCALES.map((locale) => ({
+                    value: locale,
+                    label: t(localeNameKey(locale)),
+                    lang: locale,
+                  }))}
+                  // `Select` reports a string; narrowing it back through LOCALES is
+                  // what makes it a locale without an assertion, and drops an
+                  // answer the control was never offering.
+                  onChange={(next) => {
+                    const picked = LOCALES.find((locale) => locale === next);
+                    if (picked) {
+                      onChange({ ...draft, base_language: picked });
+                    }
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+
+          <div data-fact="fiscal_year_start_month">
+            <Field
+              label={t("installationSettings.fiscalYearStart")}
+              hint={t("installationSettings.fiscalYearStartHint")}
+              error={refused.get("fiscal_year_start_month")}
+            >
+              {(control) => (
+                <Select
+                  {...control}
+                  aria-describedby={describe(control)}
+                  value={identifierNumber(draft.fiscal_year_start_month)}
+                  disabled={!canManage}
+                  // Twelve months, each labelled with what a report would then be
+                  // called — "April — FY2026/27". A bare number would make the
+                  // admin work out the consequence of every option; this states it.
+                  options={MONTHS.map((month) => ({
+                    value: identifierNumber(month),
+                    label: fiscalYearStartSummary(
+                      month,
+                      locale,
+                      new Date().getFullYear(),
+                    ),
+                  }))}
+                  // `Select` reports a string. Narrowed back through MONTHS rather
+                  // than parsed, so an answer the control never offered cannot
+                  // reach the draft.
+                  onChange={(next) => {
+                    const picked = MONTHS.find(
+                      (month) => String(month) === next,
+                    );
+                    if (picked) {
+                      onChange({ ...draft, fiscal_year_start_month: picked });
+                    }
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+
+          <div data-fact="forecast_forward_measure">
+            <Field
+              label={t("installationSettings.forwardMeasure")}
+              hint={t("installationSettings.forwardMeasureHint")}
+              error={refused.get("forecast_forward_measure")}
+            >
+              {(control) => (
+                <Select
+                  {...control}
+                  aria-describedby={describe(control)}
+                  value={draft.forecast_forward_measure}
+                  disabled={!canManage}
+                  options={FORWARD_MEASURES.map((measure) => ({
+                    value: measure,
+                    label: t(`installationSettings.forwardMeasure.${measure}`),
+                  }))}
+                  // Narrowed back through the offered set rather than cast, so a
+                  // value this build does not know cannot reach the draft and be
+                  // saved as a measure the server would then refuse on every read.
+                  onChange={(next) => {
+                    const picked = FORWARD_MEASURES.find(
+                      (measure) => measure === next,
+                    );
+                    if (picked) {
+                      onChange({ ...draft, forecast_forward_measure: picked });
+                    }
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+
+          {/* Only what no field claimed: a refusal on the input AND again below
+              states one problem twice, and the second is what nobody reads. */}
+          {blanketError !== null ? (
+            <Callout tone="danger" kind="outcome" title={refusalTitle}>
+              {blanketError}
+            </Callout>
+          ) : null}
+        </form>
+      </DrawerBody>
+      <DrawerFoot className="actions">
+        <Button variant="ghost" type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={!pending && (!canManage || !dirty)}
+          pending={pending}
+          busyLabel={t("common.saving")}
+        >
+          {t("installationSettings.save")}
+        </Button>
+      </DrawerFoot>
     </Modal>
   );
 }

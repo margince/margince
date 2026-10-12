@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -201,6 +202,10 @@ func (t readApprovalTool) Spec() mcp.ToolSpec {
 			"staged_action_id":{"type":"string","format":"uuid","description":"From list_approvals."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[StagedApproval](),
+		// The card is the second renderer of a queue answer the text already
+		// gives; model-only, because the tools it acts through are named in
+		// apps/actions.json and reading the queue is not one of them.
+		UI: &mcp.ToolUI{ResourceURI: apps.ApprovalURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 

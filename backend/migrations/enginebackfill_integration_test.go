@@ -17,6 +17,7 @@ package migrations_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -73,8 +74,8 @@ func replayAsShipped(t *testing.T, conn *pgx.Conn) {
 		}
 	}
 	applyMigrationFile(t, conn, engineBackfillMigration)
-	for i := len(asShipped) - 1; i >= 0; i-- {
-		if _, err := conn.Exec(ctx, asShipped[i].then); err != nil {
+	for _, a := range slices.Backward(asShipped) {
+		if _, err := conn.Exec(ctx, a.then); err != nil {
 			t.Fatalf("naming the schema back: %v", err)
 		}
 	}

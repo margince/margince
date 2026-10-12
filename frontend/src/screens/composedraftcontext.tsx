@@ -1,12 +1,11 @@
 import { Sparkles } from "lucide-react";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { useCompany360 } from "./company360";
-import type { DraftUnavailable } from "./compose";
+import type { DraftUnavailable } from "./composedraftcall";
 import { Citations } from "./record360";
 
 // The account-started draft: choosing what a message is about before a model
@@ -99,18 +98,6 @@ export function AccountDraftContext({
       )}
     </>
   );
-}
-
-// A reason's chip opens the record it names. Only the two kinds that HAVE a
-// screen are routed: a fact or a profile field has a receipt rather than a
-// page, and this dialog is the wrong place to open one over.
-export function openCited(entityType: string, entityId: string) {
-  if (entityType === "deal") {
-    navigate({ screen: "deals", id: entityId });
-  }
-  if (entityType === "contact") {
-    navigate({ screen: "contacts", id: entityId });
-  }
 }
 
 // What the draft was written from, in the two shapes State D draws: a "Based

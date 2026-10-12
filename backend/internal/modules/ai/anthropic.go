@@ -6,8 +6,10 @@ package ai
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,6 +24,7 @@ import (
 // customer's). stdlib HTTP only: the vendor wire format is small enough
 // that an SDK would cost more in dependency surface than it saves.
 type anthropicClient struct {
+	model.NoHealth
 	http         *http.Client
 	baseURL      string
 	apiKey       string
@@ -242,7 +245,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 	if err := scanner.Err(); err != nil {
 		return model.Response{}, fmt.Errorf("ai: anthropic: stream: %w", err)
 	}
-	return model.Response{}, fmt.Errorf("ai: anthropic: stream ended without message_stop")
+	return model.Response{}, errors.New("ai: anthropic: stream ended without message_stop")
 }
 
 func (c *anthropicClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
@@ -309,7 +312,9 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 	if wire.MaxTokens <= 0 {
 		wire.MaxTokens = unsetMaxOutputTokens
 	}
-	wire.Thinking = anthropicThinkingFor(wire.Model, req.ThinkingFloor, wire.MaxTokens, len(req.Tools))
+	// An admin's exact level outranks the floor; this wire has no default
+	// thinking to keep, so both map to the same budget table.
+	wire.Thinking = anthropicThinkingFor(wire.Model, cmp.Or(req.ThinkingLevel, req.ThinkingFloor), wire.MaxTokens, len(req.Tools))
 	for _, tool := range req.Tools {
 		wire.Tools = append(wire.Tools, anthropicToolWire{
 			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,

@@ -11,6 +11,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
@@ -154,8 +155,7 @@ func TestATerminalCaseSaysWhenItBecameOne(t *testing.T) {
 			DueAt: time.Now(), State: NoticeCompleted,
 		})
 	})
-	var invalid *ValidationError
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("a completed case with no timestamp returned %v, want a validation error", err)
 	}
 }
@@ -165,9 +165,7 @@ func TestATerminalCaseSaysWhenItBecameOne(t *testing.T) {
 func privacyOperator(e *channelConsentEnv) context.Context {
 	actor, _ := principal.Actor(e.ctx)
 	objects := map[string]principal.ObjectGrant{}
-	for k, v := range actor.Permissions.Objects {
-		objects[k] = v
-	}
+	maps.Copy(objects, actor.Permissions.Objects)
 	objects["privacy_request"] = principal.ObjectGrant{Read: true, Update: true}
 	actor.Permissions.Objects = objects
 	return principal.WithActor(e.ctx, actor)

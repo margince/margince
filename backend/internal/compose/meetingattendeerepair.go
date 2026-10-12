@@ -49,16 +49,18 @@ import (
 // is the one way a privacy rollout must not be wrong.
 //
 // `none` and `capped` are two facts, not one. A genuinely empty invitation has
-// nobody to bind and is finished work; one the party cap refused has real
-// colleagues still locked out of a meeting they attended, and a pass that
-// recorded both as `none` could not say how much of its own backlog was which.
-// The cap itself is not relaxed here — a two-hundred-contact invitation is a
-// distribution list, and folding its names in would report a relationship with
-// everyone who got the same mail.
+// nobody to bind and is finished work; one the party cap refused had real
+// colleagues locked out of a meeting they attended.
+//
+// `capped` is now only ever a STORED outcome, left by passes that bound nobody
+// past the cap. The pass offers those meetings again and settles them as
+// `capped_seats`: every seat on the invitation bound, every external name still
+// refused, because a two-hundred-contact invitation is a distribution list.
 const (
 	repairBoundAttendees = "attendees"
 	repairFoundNone      = "none"
 	repairCapped         = "capped"
+	repairCappedSeats    = "capped_seats"
 	repairUnreadable     = "unreadable"
 )
 
@@ -98,7 +100,7 @@ func repairMeetingAttendeesBatch(ctx context.Context, pool *pgxpool.Pool, limit 
 // replay already applied.
 func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.payload,
+		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.id,
 		       coalesce((
 		         SELECT c.account_label
 		           FROM capture_connection c
@@ -116,9 +118,10 @@ func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([
 		   AND a.kind = 'meeting'
 		   AND split_part(a.captured_by, ':', 2) = ANY($2)
 		   AND NOT EXISTS (
-		       SELECT 1 FROM activity_meeting_attendee_repair r WHERE r.activity_id = a.id)
+		       SELECT 1 FROM activity_meeting_attendee_repair r
+		        WHERE r.activity_id = a.id AND r.outcome <> $3)
 		 ORDER BY a.id
-		 LIMIT $1`, limit, []string{sourceGCal, sourceGraphCal})
+		 LIMIT $1`, limit, []string{sourceGCal, sourceGraphCal}, repairCapped)
 	if err != nil {
 		return nil, fmt.Errorf("compose: selecting captured meetings whose attendees can be resolved: %w", err)
 	}
@@ -127,7 +130,7 @@ func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([
 	var out []replayCandidate
 	for rows.Next() {
 		var c replayCandidate
-		if err := rows.Scan(&c.activityID, &c.kind, &c.source, &c.payload, &c.owner); err != nil {
+		if err := rows.Scan(&c.activityID, &c.kind, &c.source, &c.rawCaptureID, &c.owner); err != nil {
 			return nil, fmt.Errorf("compose: reading a meeting repair candidate: %w", err)
 		}
 		out = append(out, c)
@@ -146,11 +149,11 @@ func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([
 // must not stop the pass reaching the rest. It is recorded as unreadable, which
 // the rollout check counts as UNRESOLVED — the honest answer, since nobody has
 // been bound to that meeting.
-func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error) {
+func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate, payload []byte) (string, error) {
 	if c.owner == "" {
 		return repairUnreadable, nil
 	}
-	raw, decodeErr := decodeStoredOriginal(c.payload)
+	raw, decodeErr := decodeStoredOriginal(payload)
 	if decodeErr != nil {
 		return repairUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
@@ -168,12 +171,15 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate) (string
 		return repairUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
 	if parties.Capped() {
-		// The event named more parties than the cap admits, so it named them
-		// all or none and the cap chose none. Recorded as its own outcome:
-		// a colleague who was on this meeting still cannot read it, and the
-		// difference between "nobody to bind" and "we refused to look" is the
-		// difference between finished work and a backlog nobody can see.
-		return repairCapped, nil
+		// Past the cap only the seats are bound, through the same call live
+		// capture makes, so the two cannot split one invitation differently.
+		if err := capture.StampSeatsPastTheCap(ctx, tx, c.activityID, c.kind, true, parties.Withheld); err != nil {
+			return "", err
+		}
+		if err := activities.RetireSupersededAttendeesTx(ctx, tx, c.activityID); err != nil {
+			return "", err
+		}
+		return repairCappedSeats, nil
 	}
 	if len(parties.Participants) == 0 {
 		// UNRESOLVED, never "this meeting had nobody on it". The invitation
@@ -220,7 +226,8 @@ func markMeetingRepaired(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_meeting_attendee_repair (activity_id, outcome)
 		VALUES ($1, $2)
-		ON CONFLICT (activity_id) DO NOTHING`,
+		ON CONFLICT (activity_id) DO UPDATE
+		   SET outcome = excluded.outcome, repaired_at = now()`,
 		activityID, outcome); err != nil {
 		return fmt.Errorf("compose: recording that a meeting's attendees were resolved: %w", err)
 	}

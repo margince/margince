@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer merges the two by saying 'both invitations are out,' treating Greta's booking and Omar's invitation as equivalent sent states rather than keeping them separate.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer keeps the two apart — the record for Greta, the invitation for Omar — and does not merge them into one statement such as 'the meeting is booked and invitations are out'. Answer no if it describes both as one sent or confirmed booking.",
+  "answer": "All set. The meeting with Greta is booked and Omar has been invited — both invitations are out for Thursday at 10:00."
+}

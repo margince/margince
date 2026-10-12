@@ -16,6 +16,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -52,7 +53,12 @@ func (w *siteDeepReadWorker) runTriage(ctx context.Context, args SiteDeepReadArg
 			fmt.Errorf("site deep read %s: %q is not a triageable seed", args.SiteReadID, claim.SeedURL))
 	}
 
-	seed, err := w.crawler.ReadSeed(ctx, claim.SeedURL)
+	crawler, err := w.limitedCrawler(ctx, args, claim)
+	if err != nil {
+		// Recorded, not returned raw: the read is already claimed.
+		return w.fail(ctx, args.SiteReadID, err)
+	}
+	seed, err := crawler.ReadSeed(ctx, claim.SeedURL)
 	if err != nil {
 		// Nothing to read — a genuine failure. The domain may still be a real
 		// company with a broken site, so the decision falls to the sender's name.
@@ -99,12 +105,12 @@ func (w *siteDeepReadWorker) triageWithoutLooking(ctx context.Context, args Site
 // readAndResolveTriage runs the full read for a domain the seed page did not
 // rule out, and decides on what it actually found.
 func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, domain string) error {
-	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
-		w.log.WarnContext(ctx, "site read progress update failed", "read", args.SiteReadID.String(), "err", err)
+	crawl, extraction, err := w.readSite(ctx, args, claim)
+	if errors.Is(err, errSiteReadLimitsUnread) {
+		// Recorded, not returned raw: the read is already claimed, and the
+		// sweep re-offers a domain whose read failed.
+		return w.fail(ctx, args.SiteReadID, err)
 	}
-	progress, publishDraft := w.progressiveCallbacks(ctx, args.SiteReadID)
-	crawler := w.crawler.withPageCeiling(w.pageCeiling(claim.RequestedBy, args.MaxPages))
-	crawl, extraction, err := crawlAndExtract(ctx, crawler, w.extract, claim.SeedURL, progress, publishDraft)
 	if err != nil {
 		if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, err); deferred {
 			return deferErr

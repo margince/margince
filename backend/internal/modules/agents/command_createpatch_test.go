@@ -60,10 +60,19 @@ func TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite(t *testing.T) {
 	tool := createRecord{}
 
 	_, err := tool.StageInfo(context.Background(), json.RawMessage(`{"record_type":"custom_field","fields":{}}`))
-	var badArgs *BadArgsError
-	if !errors.As(err, &badArgs) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("staging a create_record call naming a type this verb cannot create answered %v, want a "+
 			"BadArgsError — an approval for it could never be carried out", err)
+	}
+}
+
+// offer_tag is an argument of the tool, so the staging door takes it too: a
+// create that routes through an approval is not refused for the offer it carries.
+func TestCreateRecordStageInfoAcceptsAnOfferedTag(t *testing.T) {
+	_, err := createRecord{}.StageInfo(context.Background(),
+		json.RawMessage(`{"record_type":"contact","offer_tag":"K5 Conference 2026","fields":{"full_name":"Ada"}}`))
+	if err != nil {
+		t.Fatalf("staging a create that carries offer_tag answered %v, want the same arguments Handle accepts", err)
 	}
 }
 
@@ -73,8 +82,7 @@ func TestCreateGuardsRefuseAnUnknownField(t *testing.T) {
 	call := NewCreateCall(nil, CreateCommand{RecordType: "contact", Fields: json.RawMessage(`{"nickname":"Bob"}`)})
 
 	err := call.Guards(context.Background())
-	var badArgs *BadArgsError
-	if !errors.As(err, &badArgs) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("guarding an unknown field answered %v, want a BadArgsError naming it", err)
 	}
 	if !strings.Contains(err.Error(), "nickname") {
@@ -111,8 +119,7 @@ func TestPatchGuardsRefuseAnUnknownField(t *testing.T) {
 	})
 
 	err := call.Guards(context.Background())
-	var badArgs *BadArgsError
-	if !errors.As(err, &badArgs) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("guarding an unknown field answered %v, want a BadArgsError naming it", err)
 	}
 	if !strings.Contains(err.Error(), "nickname") {

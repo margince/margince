@@ -110,6 +110,22 @@ export const LongLabel: Story = {
   ),
 };
 
+export const Wrapping: Story = {
+  parameters: badgeDocs(
+    "`wrap`: every word is read, so a long label takes a second line.",
+  ),
+  render: () => (
+    <div style={{ ...stack, alignItems: "flex-start", inlineSize: 200 }}>
+      <Badge tone="accent" wrap>
+        Stored in the vault · Google Gemini
+      </Badge>
+      <Badge tone="accent" wrap>
+        Stored
+      </Badge>
+    </div>
+  ),
+};
+
 export const InsideUppercaseParent: Story = {
   parameters: badgeDocs("A parent's case, tracking and face stop at its edge."),
   render: () => (

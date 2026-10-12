@@ -328,6 +328,23 @@ const SixPrioritiesDay = readingsDay({}, [
 export const SixPriorities: Story = {
   render: brief({ approvals: [], day: SixPrioritiesDay }),
 };
+// A row that is not an activity opens its details in the drawer beside the
+// queue; its close is the way back to Focus.
+export const RowDetailsOpen: Story = {
+  render: brief({ approvals: [], day: SixPrioritiesDay }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      (
+        await within(canvasElement).findAllByRole("button", {
+          name: en["brief.focus.context"],
+        })
+      )[0],
+    );
+    await within(document.body).findByRole("dialog", {
+      name: en["brief.focus.context"],
+    });
+  },
+};
 // The same morning read by a seat whose row scope REACHES A TEAM. The
 // Mine/Team dial is drawn from the worklist's own `scope_options`, so a seat
 // that reaches nobody else never sees it — which is why the frame above cannot

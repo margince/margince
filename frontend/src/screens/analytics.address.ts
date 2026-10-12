@@ -10,6 +10,7 @@
 // report card and its queries into the morning's bundle.
 
 import { navigate } from "../app/router";
+import { currentParams } from "../app/urlstate";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
@@ -60,7 +61,7 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
 
 export function sectionFromAddress(
   segment: string | undefined,
-  fallback: Section = "forecast",
+  fallback: Section = "performance",
 ): Section {
   if (isSection(segment)) {
     return segment;
@@ -81,7 +82,7 @@ export function sectionFromAddress(
  * holding the rows their figure was read from.
  */
 export function openAnalyticsSection(section: Section): void {
-  navigate({ screen: "analytics", id: section });
+  navigate({ screen: "analytics", id: section }, currentParams());
 }
 
 /**

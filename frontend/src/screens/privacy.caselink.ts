@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { routeHash } from "../app/router";
-import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
+import {
+  currentParams,
+  replaceDial,
+  type UrlParams,
+  useUrlParams,
+} from "../app/urlstate";
 import { settingsHref } from "./settingsrouting";
 
 /**
@@ -75,7 +80,7 @@ export function useLinkedCase(
   readonly linked: LinkedCase;
   readonly toggle: (id: string) => void;
 } {
-  const [params, setParams] = useUrlParams();
+  const [params] = useUrlParams();
   // THE ADDRESS IS THE STATE, and there is deliberately no second copy of it
   // beside this. An open row mirrored into `useState` is a value that can
   // disagree with the URL bar — the reader closes a row and the link they copy
@@ -122,22 +127,15 @@ export function useLinkedCase(
     loadMore();
   });
 
-  const toggle = useCallback(
-    (id: string) => {
-      // Read outside the render rather than from the snapshot above: two
-      // toggles in one handler would both build on a stale copy and the second
-      // would discard the first, which is what app/urlstate.ts says about
-      // every other dial.
-      const next = new Map(currentParams());
-      if (caseInParams(next) === id) {
-        next.delete(CASE_PARAM);
-      } else {
-        next.set(CASE_PARAM, id);
-      }
-      setParams(next);
-    },
-    [setParams],
-  );
+  // Read outside the render rather than from the snapshot above: two toggles
+  // in one handler would both build on a stale copy and the second would
+  // discard the first, which is what app/urlstate.ts says about every dial.
+  const toggle = useCallback((id: string) => {
+    replaceDial(
+      CASE_PARAM,
+      caseInParams(currentParams()) === id ? undefined : id,
+    );
+  }, []);
 
   return { expandedId, linked, toggle };
 }

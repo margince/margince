@@ -209,7 +209,7 @@ func TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot(t *testing.
 		records: versionedDeal{stageID: stage, version: 3},
 	}
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil, nil)
 	// Nil dependencies are enough: resolving a tier reads the arguments and
 	// invokes no handler.
 	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil, nil)
@@ -272,7 +272,7 @@ func TestEveryDynamicTierRouteHasACommandThatAnswersItsTier(t *testing.T) {
 		records: versionedDeal{stageID: stage, version: 3},
 	}
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil, nil)
 	// relink_activity is a lifecycle tool, and it is dynamic — the walk below
 	// derives the routes to check from the policy table, so a registry missing
 	// this set would report the route as unresolvable rather than skip it.
@@ -281,7 +281,9 @@ func TestEveryDynamicTierRouteHasACommandThatAnswersItsTier(t *testing.T) {
 
 	checked := 0
 	for route, pol := range agentPolicies {
-		if pol.Access != accessTool || pol.Tier != tierDynamic {
+		// A registry-served route never reaches tierInput: Invoke asks the
+		// tool's own ResolverInput, as on the MCP door.
+		if pol.Access != accessTool || pol.Tier != tierDynamic || pol.ServedBy == servedByRegistry {
 			continue
 		}
 		checked++

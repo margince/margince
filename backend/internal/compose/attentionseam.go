@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -248,6 +249,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		deals: deals.NewStore(db, DealsInstallation()),
 		now:   now,
 	}).
+		// The mirror: the reader's own sends nobody has answered, once the
+		// workspace's follow-up window has passed.
+		WithAwaiting(attentionAwaiting{
+			store: activities.NewStore(db).WithOwnDomains(
+				ownDomainReader{store: capture.NewOwnDomainStore(db)}),
+		}).
 		// The reader's own override. The ranking has carried a pin level since
 		// it was written and nothing could set it, so the one control that says
 		// "I know, and I want this first anyway" did not exist.
@@ -274,6 +281,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress).
+		WithMeetingHorizon(attentionMeetingHorizon{
+			registry: captureHealthRegistry(db), store: activities.NewStore(db),
+		}).
 		// The reader's OWN undecided domains. Bound to the contacts store the
 		// rest of this seam already reads: the question is opened by capture and
 		// answered against the same disposition ledger the admin list shows, so
@@ -281,6 +291,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// still open".
 		WithDomainQuestions(attentionDomainQuestions{store: contacts.NewStore(db)}).
 		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
+		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
@@ -288,6 +299,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// When the contact a row names last wrote to us and when we last wrote
 		// to them, from the same reader the contact's own page uses.
 		WithContactTouch(attentionContactTouch{pool: pool}).
+		// And the same pair for a row about an account, from the company page's reader.
+		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
+		// Which account a meeting row's contact works for, from the employer
+		// read every contact page carries.
+		WithContactEmployers(contacts.NewStore(db)).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page
@@ -311,13 +327,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// dropped this would present as a Team Lead unable to open their own
 		// rep's day rather than as one able to open a stranger's.
 		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).
-		// The inbound leads still owed a first reply. The store answers the
-		// ordering and the state; this lane only ranks them against the rest of
-		// the day.
-		WithLeadResponses(attentionLeadResponses{
-			store:     contacts.NewStore(db),
-			teammates: newTeammatesSeam(pool),
-		}).
 		// How many promises each teammate has already missed, for the team
 		// board. Counted rather than listed, because the task lane above stops
 		// at a dozen and a board built from it would call every loaded rep
@@ -419,6 +428,12 @@ type attentionSnapshots struct{ pool *pgxpool.Pool }
 
 func (a attentionSnapshots) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
 	return database.WithWorkspaceSnapshot(ctx, a.pool, fn)
+}
+
+func (a attentionSnapshots) Degradable(
+	ctx context.Context, budget time.Duration, fn func(context.Context) error,
+) error {
+	return database.WithDegradableRead(ctx, budget, fn)
 }
 
 func (a attentionSnapshots) Detached(ctx context.Context) context.Context {

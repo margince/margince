@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -155,7 +156,8 @@ func deleteSubjectLinkedInGhosts(
 		               AND r.archived_at IS NULL
 		               AND (r.company_id = g.matched_company_id
 		                    OR lower(f_unaccent(o.display_name)) = g.normalized_company
-		                    OR lower(f_unaccent(o.display_name)) LIKE g.normalized_company || ' %')))`,
+		                    OR lower(f_unaccent(o.display_name)) LIKE `+
+		storekit.EscapeLikeSQL("g.normalized_company")+` || ' %')))`,
 		contactID, emails, subjectName, linkedInHandles)
 	return err
 }
@@ -170,14 +172,18 @@ func deleteSubjectLinkedInGhosts(
 // for a `contact.erased` event this path has never emitted, so the edges
 // outlived every erasure.
 func deleteSubjectInteractionEdges(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM graph_interaction_edge WHERE contact_id = $1`, contactID); err != nil {
-		return err
-	}
+	// Contact projection first: every writer of the two edge tables takes them
+	// in that order (search.edgeTargets), and a delete in the opposite order
+	// deadlocks with a refold that touches the same contact.
+	//
 	// The contact↔contact projection names the subject on EITHER end, so both
 	// endpoint columns are matched — a contact_a-only delete leaves the subject
 	// standing on the far side of everyone else's edges.
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM graph_contact_edge WHERE contact_a = $1 OR contact_b = $1`, contactID); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx,
-		`DELETE FROM graph_contact_edge WHERE contact_a = $1 OR contact_b = $1`, contactID)
+		`DELETE FROM graph_interaction_edge WHERE contact_id = $1`, contactID)
 	return err
 }

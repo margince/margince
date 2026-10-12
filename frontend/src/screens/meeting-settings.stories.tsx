@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { bookingFrame } from "./book.storykit";
-import { bookingConnection, bookingProfile } from "./book.testkit";
+import {
+  bookingConnection,
+  bookingHours,
+  bookingProfile,
+} from "./book.testkit";
 import { MeetingSettings } from "./meeting-settings";
 import { jsonResponse, meRoute } from "./story-utils";
 
@@ -55,5 +59,45 @@ export const NoCalendar: Story = {
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, provider: "", enabled: false }),
     "GET /connectors": () => jsonResponse({ data: [] }),
+  }),
+};
+
+// An Outlook calendar names Microsoft Teams for the default video link, and a
+// host who switched it off sees the location field carry the meeting instead.
+export const OutlookVideoOff: Story = {
+  render: bookingFrame(() => <MeetingSettings />, {
+    ...identity,
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [
+          {
+            ...bookingConnection,
+            provider: "graphcal",
+            scopes: ["Calendars.ReadWrite"],
+          },
+        ],
+      }),
+    "GET /scheduling/profile": () =>
+      jsonResponse({
+        ...bookingProfile,
+        provider: "graphcal",
+        video_call: false,
+      }),
+  }),
+};
+export const OutlookVideoOffDark: Story = {
+  ...OutlookVideoOff,
+  globals: { theme: "dark" },
+};
+export const SetupNotFinished: Story = {
+  render: bookingFrame(() => <MeetingSettings />, {
+    ...identity,
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, enabled: false }),
+    "GET /me/working-hours": () =>
+      jsonResponse({
+        chosen: false,
+        working_hours: bookingHours.working_hours,
+      }),
   }),
 };

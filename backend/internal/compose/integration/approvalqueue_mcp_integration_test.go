@@ -94,7 +94,7 @@ func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args s
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	_, err := invoke("enrich", `{"company_id":"`+company.ID+`"}`)
@@ -132,8 +132,9 @@ func answered[T any](t *testing.T, out string) T {
 
 // The whole round trip, on the credentials it really takes: the one that
 // proposed the action sees it and reads it, a SECOND one answers it, and the
-// first redeems what was released. The split is the rule, not the harness — a
-// credential does not confirm its own proposal.
+// first redeems what was released. The split is the rule, not the harness — an
+// enrich fetches a page the model named, which cannot be unfetched, so its
+// proposer does not release it.
 func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.T) {
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "proposing agent", "read", "write", "enrich"))
@@ -193,8 +194,8 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 		t.Error("read_approval answered without the change it proposes — there is nothing to decide from")
 	}
 
-	// THE PROPOSER DOES NOT ANSWER IT. Approving the row it staged would be the
-	// confirm-first act performed on itself.
+	// THE PROPOSER DOES NOT ANSWER IT: what the release does leaves the
+	// workspace, and nobody could take it back after seeing it.
 	answer := `{"staged_action_id":"` + approvalID.String() + `","decision":"approve"}`
 	if _, err = invoke("decide_approval", answer); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("the proposer approving its own proposal → %v, want ErrPermissionDenied", err)
@@ -283,20 +284,20 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Relink Account"}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Relink Account"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	var project struct {
 		ID string `json:"id"`
 	}
 	if status := q.Call(t, "POST", "/v1/projects", AnyMap{
-		"name": "Relink Engagement", "company_id": company.ID,
+		"name": "Relink Engagement", "company_id": company.ID, "source": "manual",
 	}, nil, &project); status != http.StatusCreated {
 		t.Fatalf("create project → %d", status)
 	}
@@ -331,8 +332,7 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 		t.Run("a "+destination.entityType+" is relinked with no approval", func(t *testing.T) {
 			if _, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
 				`","entity_type":"`+destination.entityType+`","entity_id":"`+destination.entityID+`"}`); err != nil {
-				var staged *workflow.StagedApprovalError
-				if errors.As(err, &staged) {
+				if staged, ok := errors.AsType[*workflow.StagedApprovalError](err); ok {
 					t.Fatalf("relinking to a %s staged approval %s; a member does this in the app unasked",
 						destination.entityType, staged.ApprovalID)
 				}
@@ -344,8 +344,7 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 	t.Run("a project still stages", func(t *testing.T) {
 		_, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
 			`","entity_type":"project","entity_id":"`+project.ID+`"}`)
-		var staged *workflow.StagedApprovalError
-		if !errors.As(err, &staged) {
+		if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
 			t.Fatalf("relinking to a project → %v, want a staged approval — filing under a project is write-once", err)
 		}
 	})

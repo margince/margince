@@ -45,6 +45,8 @@ func (stubApprovals) StageVolumeRelease(_ context.Context, _ agents.VolumeReleas
 	return ids.ApprovalID{}, false, nil
 }
 
+func (stubApprovals) ReleasableByCaller(context.Context, agents.StageRequest) bool { return false }
+
 func (stubApprovals) StageCall(_ context.Context, _ agents.StageRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }
@@ -71,8 +73,8 @@ func (stubComms) DraftEmail(context.Context, ids.UUID, string) (string, string, 
 	return "", "", nil
 }
 
-func (stubComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
-	return "", "", nil
+func (stubComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (agents.FirstDraft, error) {
+	return agents.FirstDraft{}, nil
 }
 
 func (stubComms) SendEmail(context.Context, ids.UUID, agents.SendEmailArgs) (agents.SendEmailResult, error) {
@@ -109,7 +111,7 @@ type stubSoR struct {
 
 func TestEveryConfirmationRequiredToolHasADecisionGrantMapping(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
-	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil, nil)
 	// A nil brief reader is a legal wiring: this walk reads Specs() only, and
 	// the tool answers the assembled picture when no brief seam is bound.
 	agents.RegisterIntentTools(registry, stubRetriever{}, nil, nil)

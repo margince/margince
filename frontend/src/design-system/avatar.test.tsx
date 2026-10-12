@@ -62,6 +62,10 @@ describe("Avatar", () => {
       ["Ana-Sofía Ruiz", "AS"],
       ["Müller", "M"],
       ["李", "李"],
+      // A plus-addressed inbox splits at the plus, not at the domain.
+      ["jane+doe@example.com", "JD"],
+      // "ß" uppercases to "SS"; a chip is still one letter per part.
+      ["ßeta Smith", "SS"],
     ])("reads %s as %s", (name, expected) => {
       const { container } = render(<Avatar name={name} identity={ID} />);
       expect(container.textContent).toBe(expected);

@@ -20,12 +20,13 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useCanWrite } from "../../app/capability";
 import { navigate } from "../../app/router";
-import { Button, Modal, OverflowMenu } from "../../design-system/atoms";
+import { Button, OverflowMenu } from "../../design-system/atoms";
+import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { dealRecordKeys } from "../activitykeys";
 import { ArchiveAction } from "../archive";
-import { throwProblem, useMe } from "../common";
+import { unwrap, useMe } from "../common";
 import { LogActivityAction } from "../logactivity";
 import { RecordEmailVerb } from "../recordemail";
 import { ShareAction } from "../share";
@@ -96,17 +97,16 @@ function ReopenAction({
       toStageId: string;
       version: number | undefined;
     }) => {
-      const { data, error } = await api.POST("/deals/{id}/advance", {
-        params: {
-          path: { id: dealId },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: { to_stage_id: input.toStageId, status: "open" },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deals/{id}/advance", {
+          params: {
+            path: { id: dealId },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: { to_stage_id: input.toStageId, status: "open" },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       setOpen(false);
@@ -125,14 +125,19 @@ function ReopenAction({
       >
         {t("deal.reopen")}
       </Button>
-      <Modal
+      <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
-        labelledBy="reopen-title"
+        title={t("deal.reopenPick")}
+        confirmLabel={t("deal.reopenConfirm")}
+        confirmDisabled={!stageId}
+        pending={reopen.isPending}
+        onConfirm={() => {
+          if (stageId) {
+            reopen.mutate({ toStageId: stageId, version: dealVersion });
+          }
+        }}
       >
-        <p className="t-sub" id="reopen-title">
-          {t("deal.reopenPick")}
-        </p>
         <div className="d360-reopen-stages">
           {openStages.map((s) => (
             <Button
@@ -146,27 +151,7 @@ function ReopenAction({
           ))}
         </div>
         <ErrorLine error={reopen.error} />
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>{t("deals.cancel")}</Button>
-          <Button
-            variant="primary"
-            data-testid="reopen-confirm"
-            // A write in flight is `pending`, never `disabled`: the two mean
-            // different things and Button keeps the focused control reachable
-            // for the first. Spelled as disabled, the browser drops focus from
-            // the button the reader just pressed.
-            disabled={!stageId}
-            pending={reopen.isPending}
-            onClick={() => {
-              if (stageId) {
-                reopen.mutate({ toStageId: stageId, version: dealVersion });
-              }
-            }}
-          >
-            {t("deal.reopenConfirm")}
-          </Button>
-        </div>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }
@@ -273,16 +258,14 @@ export function DealActions({
           confirmText={t("deal.archiveConfirm")}
           archivedMessage={t("record.archiveDone", { name: deal.name })}
           archive={async () => {
-            const { data, error } = await api.DELETE("/deals/{id}", {
-              params: {
-                path: { id: deal.id },
-                ...ifMatch(requireVersion(deal.version)),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return unwrap(
+              await api.DELETE("/deals/{id}", {
+                params: {
+                  path: { id: deal.id },
+                  ...ifMatch(requireVersion(deal.version)),
+                },
+              }),
+            );
           }}
           invalidate="deals"
           recordKey="deal"

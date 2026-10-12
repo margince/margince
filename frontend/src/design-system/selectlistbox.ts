@@ -35,11 +35,18 @@ export type ListboxOption = Readonly<{ label: string; disabled?: boolean }>;
 // when the control unmounts mid-word, and nothing to fake in a test.
 const TYPEAHEAD_RESET_MS = 500;
 
+/** Any row a keyboard walks; the index signature lets a row that never
+ *  disables (a suggestion) be walked without claiming the field. */
+export type Walkable = Readonly<{
+  disabled?: boolean;
+  [field: string]: unknown;
+}>;
+
 // The next option at or after `from` that a keyboard may land on, walking in
 // `step`'s direction. Deliberately does not wrap: a list that jumps from its
 // last entry back to its first hides from the reader that they reached the end.
-function stepEnabled<T extends ListboxOption>(
-  options: readonly T[],
+export function stepEnabled(
+  options: readonly Walkable[],
   from: number,
   step: 1 | -1,
 ): number {

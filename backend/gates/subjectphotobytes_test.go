@@ -5,7 +5,7 @@
 
 package gates
 
-// A subject's photo may not be STORED until erasure can destroy the bytes.
+// A subject's photo may not be stored until erasure can destroy the bytes.
 //
 // `contact.photo_object_key` names an object in the blob store. The Art. 17
 // cascade clears the column, because a pointer to a subject's photograph is a

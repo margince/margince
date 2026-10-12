@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -54,7 +55,7 @@ func (p versionedDeal) Read(context.Context, datasource.EntityRef) (datasource.R
 func advanceSpec(t *testing.T, deps restCommandDeps) (*agents.Registry, mcp.ToolSpec) {
 	t.Helper()
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil, nil)
 	spec, _, ok := operationSpec(agentPolicies["POST /v1/deals/{id}/advance"], reg)
 	if !ok {
 		t.Fatal("the registry serves no advance_deal spec for the REST twin to admit against")
@@ -63,12 +64,12 @@ func advanceSpec(t *testing.T, deps restCommandDeps) (*agents.Registry, mcp.Tool
 }
 
 // admitOpenMove runs an open→open deal move through the real gate and answers
-// the If-Match the downstream contract handler would read, plus the status the
-// door answered. These are the two lines agentGate runs between resolving the
+// the If-Match the downstream contract handler would read, plus the door's own
+// answer. These are the two lines agentGate runs between resolving the
 // tier input and dispatching.
 //
 // seen is empty when the door refused, because then no handler ran.
-func admitOpenMove(t *testing.T, callerIfMatch string) (seen string, status int) {
+func admitOpenMove(t *testing.T, callerIfMatch string) (seen string, answered *httptest.ResponseRecorder) {
 	t.Helper()
 	deal, stage := ids.NewV7(), ids.NewV7()
 	deps := restCommandDeps{
@@ -93,9 +94,9 @@ func admitOpenMove(t *testing.T, callerIfMatch string) (seen string, status int)
 	next := http.HandlerFunc(func(_ http.ResponseWriter, got *http.Request) {
 		seen = got.Header.Get("If-Match")
 	})
-	recorder := httptest.NewRecorder()
-	admitAgentCall(recorder, r, next, admissionOutcome{pol: pol, spec: spec, registry: reg})
-	return seen, recorder.Code
+	answered = httptest.NewRecorder()
+	admitAgentCall(answered, r, next, admissionOutcome{pol: pol, spec: spec, registry: reg})
+	return seen, answered
 }
 
 // agentRequestCtx is the passport principal the gate governs: a full seat with
@@ -118,8 +119,8 @@ func TestAnAdmittedAgentWriteCarriesThePinItsTierWasResolvedFrom(t *testing.T) {
 // The caller may pin its own write, and does — as long as it names the record
 // the gate judged.
 func TestACallerIfMatchThatNamesTheGatesVersionIsForwardedUnchanged(t *testing.T) {
-	if got, status := admitOpenMove(t, "12"); got != "12" || status != http.StatusOK {
-		t.Errorf("the handler saw If-Match %q at status %d, want 12 and 200", got, status)
+	if got, answered := admitOpenMove(t, "12"); got != "12" || answered.Code != http.StatusOK {
+		t.Errorf("the handler saw If-Match %q at status %d, want 12 and 200", got, answered.Code)
 	}
 }
 
@@ -133,10 +134,13 @@ func TestACallerIfMatchTheGateDidNotReadIsRefused(t *testing.T) {
 		"a version the caller still holds":     "4",
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, status := admitOpenMove(t, caller)
-			if status != http.StatusConflict {
+			got, answered := admitOpenMove(t, caller)
+			if answered.Code != http.StatusConflict {
 				t.Errorf("status = %d, want 409 — a pin the gate never proved anything about must "+
-					"not condition the write it admitted", status)
+					"not condition the write it admitted", answered.Code)
+			}
+			if want := "at version 12, not version " + caller + ","; !strings.Contains(answered.Body.String(), want) {
+				t.Errorf("the refusal reads %s, want it to say %q", answered.Body.String(), want)
 			}
 			if got != "" {
 				t.Errorf("the handler ran with If-Match %q despite the refusal", got)
@@ -160,7 +164,7 @@ func TestAWriteWithNoAdmittedPinIsForwardedUnconditioned(t *testing.T) {
 		records: versionedDeal{stageID: stage, version: 12},
 	}
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil, nil)
 	// A create names no record and reads none, so its tool twin is static-tier:
 	// there is nothing for the gate to have proved anything about.
 	pol := agentPolicies["POST /v1/contacts"]

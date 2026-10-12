@@ -95,6 +95,7 @@ export function CompanyRecentList({
   activities,
   nameOf,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   activities: readonly Activity[];
   // Resolves a linked record's id to its display name, off the reading the
@@ -104,6 +105,7 @@ export function CompanyRecentList({
   // carries (a closed deal, a capped list).
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -120,6 +122,7 @@ export function CompanyRecentList({
             duration={durationLabel(activity, t, locale)}
             nameOf={nameOf}
             onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
           />
         ))}
       </ul>
@@ -152,6 +155,7 @@ function RecentRow({
   duration,
   nameOf,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   activity: Activity;
   when: string;
@@ -159,6 +163,7 @@ function RecentRow({
   duration?: string;
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const kind = t(KIND_LABELS[activity.kind]);
@@ -185,13 +190,8 @@ function RecentRow({
           <EmailEntry
             summary={email}
             timestamp={when}
-            onOpen={
-              onOpenRecord
-                ? () => onOpenRecord("activity", activity.id)
-                : undefined
-            }
-            // Absent only for a host that mounts no drawer. Every account
-            // surface that draws this list routes `activity` to the reader.
+            onOpen={onOpenEmail ? () => onOpenEmail(activity.id) : undefined}
+            // Absent only for a host that mounts no email drawer.
             whyNotOpenable="noReader"
           />
         ) : (

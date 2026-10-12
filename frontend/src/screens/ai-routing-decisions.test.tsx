@@ -59,18 +59,17 @@ describe("the decision model lane", () => {
       within(lane).getByRole("combobox", { name: "Model" }),
       "jev-classify",
     );
-    // Any server on the Jev wire, so the endpoint is the binding: the full
-    // URL, sent as typed.
-    await user.type(
-      within(lane).getByLabelText("Host"),
-      "http://127.0.0.1:8767/v1/systemone",
-    );
+    // Any server on the Jev wire: its endpoint is the provider's, set on the
+    // provider's sheet, so the lane names none and says where to set it.
+    expect(within(lane).queryByLabelText("Host")).toBeNull();
+    expect(
+      within(lane).getByText(/jev_compatible has no host yet/),
+    ).toBeInTheDocument();
 
     const sent = await saveEditor(user, backend);
     expect(sent?.decisions).toEqual({
       provider: "jev_compatible",
       model: "jev-classify",
-      base_url: "http://127.0.0.1:8767/v1/systemone",
     });
     // The lanes it sits beside are sent untouched.
     expect(sent?.embeddings.model).toBe("gemini-embedding-001");
@@ -83,12 +82,23 @@ describe("the decision model lane", () => {
     const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR, BOUND, {
       providerKeys: [
-        { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-        { provider: "jev", configured: false, env_var: "TYPESAFE_API_KEY" },
+        {
+          provider: "gemini",
+          configured: true,
+          env_var: "GEMINI_API_KEY",
+          usable: true,
+        },
+        {
+          provider: "jev",
+          configured: false,
+          env_var: "TYPESAFE_API_KEY",
+          usable: false,
+        },
         {
           provider: "jev_compatible",
           configured: false,
           env_var: "JEV_COMPATIBLE_API_KEY",
+          usable: true,
           optional: true,
         },
       ],
@@ -109,7 +119,8 @@ describe("the decision model lane", () => {
 
   // OpenRouter's endpoint is a URL nobody remembers, so jev_compatible offers
   // it in one press — the endpoint and the model certified there — and names
-  // the key it needs, which the preset cannot fill.
+  // the key it needs, which the preset cannot fill. With no endpoint on the
+  // provider yet, the endpoint travels on the lane and the server lifts it.
   it("fills OpenRouter's endpoint and model from the preset and saves them", async () => {
     const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR, {
@@ -126,9 +137,6 @@ describe("the decision model lane", () => {
     ).toBeInTheDocument();
     await user.click(
       within(lane).getByRole("button", { name: "Preset: OpenRouter" }),
-    );
-    expect(within(lane).getByLabelText("Host")).toHaveValue(
-      OPENROUTER_DECISION_PRESET.base_url,
     );
     expect(within(lane).getByRole("combobox", { name: "Model" })).toHaveValue(
       OPENROUTER_DECISION_PRESET.model,
@@ -149,6 +157,27 @@ describe("the decision model lane", () => {
     const backend = backendFor(ROUTING_EDITOR, {
       ...BOUND,
       decisions: { provider: "jev", model: "jev-1.13.0" },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    await screen.findByTestId("ai-routing-decisions");
+    const lane = await openEditor(user, "ai-routing-decisions");
+    expect(
+      within(lane).queryByRole("button", { name: "Preset: OpenRouter" }),
+    ).toBeNull();
+  });
+
+  // A provider already pointed at another decision server keeps it, so a
+  // preset that would set OpenRouter's model there is not offered.
+  it("offers no OpenRouter preset when the provider is pointed elsewhere", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      decisions: { provider: "jev_compatible", model: "jev-classify" },
+      providers: {
+        jev_compatible: { base_url: "http://127.0.0.1:8767/v1/systemone" },
+      },
     });
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);

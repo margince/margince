@@ -288,84 +288,89 @@ export function AcceptSuggestionDialog({
       },
     );
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("dealSuggestion.acceptTitle", { company: suggestion.company_name })}
       </Heading>
-      <Field label={t("dealSuggestion.field.name")} required>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={draft.name}
-            onChange={(event) => set({ name: event.target.value })}
-            data-testid="deal-suggestion-name"
-          />
-        )}
-      </Field>
-      <div className="dealsuggestion-money">
-        <Field label={t("dealSuggestion.field.amount")}>
+      <div className="form-stack">
+        <Field label={t("dealSuggestion.field.name")} required>
           {(control) => (
-            <MoneyInput
+            <TextInput
               {...control}
-              valueMinor={draft.amountMinor}
-              currency={draft.currency}
-              blankWhenZero
-              onChangeMinor={(amountMinor) => set({ amountMinor })}
-              data-testid="deal-suggestion-amount"
+              value={draft.name}
+              onChange={(event) => set({ name: event.target.value })}
+              data-testid="deal-suggestion-name"
             />
           )}
         </Field>
-        <Field label={t("dealSuggestion.field.currency")}>
+        <div className="form-row dealsuggestion-money">
+          <Field label={t("dealSuggestion.field.amount")}>
+            {(control) => (
+              <MoneyInput
+                {...control}
+                valueMinor={draft.amountMinor}
+                currency={draft.currency}
+                blankWhenZero
+                onChangeMinor={(amountMinor) => set({ amountMinor })}
+                data-testid="deal-suggestion-amount"
+              />
+            )}
+          </Field>
+          <Field label={t("dealSuggestion.field.currency")}>
+            {(control) => (
+              <Select
+                {...control}
+                options={currencies.map((code) => ({
+                  value: code,
+                  label: code,
+                }))}
+                value={draft.currency}
+                onChange={(currency) => set({ currency })}
+              />
+            )}
+          </Field>
+        </div>
+        <Field label={t("dealSuggestion.field.stage")}>
           {(control) => (
             <Select
               {...control}
-              options={currencies.map((code) => ({ value: code, label: code }))}
-              value={draft.currency}
-              onChange={(currency) => set({ currency })}
+              options={stages.map((stage) => ({
+                value: stage.id,
+                label: stage.name,
+              }))}
+              value={draft.stageId}
+              onChange={(stageId) => set({ stageId })}
             />
           )}
         </Field>
+        <Field label={t("dealSuggestion.field.owner")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={[
+                { value: "", label: t("dealSuggestion.ownerMe") },
+                ...owners,
+              ]}
+              value={draft.ownerId}
+              onChange={(ownerId) => set({ ownerId })}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("dealSuggestion.field.closeDate")}
+          hint={t("dealSuggestion.closeDateHint")}
+        >
+          {(control) => (
+            <DateInput
+              {...control}
+              value={isISODate(draft.closeDate) ? draft.closeDate : ""}
+              onChange={(event) => set({ closeDate: event.target.value })}
+              data-testid="deal-suggestion-close"
+            />
+          )}
+        </Field>
+        <ErrorLine error={accept.error} />
       </div>
-      <Field label={t("dealSuggestion.field.stage")}>
-        {(control) => (
-          <Select
-            {...control}
-            options={stages.map((stage) => ({
-              value: stage.id,
-              label: stage.name,
-            }))}
-            value={draft.stageId}
-            onChange={(stageId) => set({ stageId })}
-          />
-        )}
-      </Field>
-      <Field label={t("dealSuggestion.field.owner")}>
-        {(control) => (
-          <Select
-            {...control}
-            options={[
-              { value: "", label: t("dealSuggestion.ownerMe") },
-              ...owners,
-            ]}
-            value={draft.ownerId}
-            onChange={(ownerId) => set({ ownerId })}
-          />
-        )}
-      </Field>
-      <Field
-        label={t("dealSuggestion.field.closeDate")}
-        hint={t("dealSuggestion.closeDateHint")}
-      >
-        {(control) => (
-          <DateInput
-            {...control}
-            value={isISODate(draft.closeDate) ? draft.closeDate : ""}
-            onChange={(event) => set({ closeDate: event.target.value })}
-            data-testid="deal-suggestion-close"
-          />
-        )}
-      </Field>
-      <ErrorLine error={accept.error} />
       <div className="actions">
         <Button onClick={onClose} disabled={accept.isPending}>
           {t("create.cancel")}

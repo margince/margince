@@ -294,11 +294,12 @@ describe("the keys themselves", () => {
     }
   });
 
-  it("carries the list, the detail page and the history on every write", () => {
+  it("carries the list, the detail page, the history and its lists on every write", () => {
     expect(leadWriteKeys("l-1")).toEqual([
       ["leads"],
       ["lead", "l-1"],
       ["record-history", "lead", "l-1"],
+      ["lists", "record", "lead", "l-1"],
     ]);
   });
 

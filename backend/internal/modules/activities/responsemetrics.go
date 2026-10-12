@@ -75,8 +75,15 @@ var firstResponseSQL = `
 	  -- The FIRST answer after it, not the newest: what a customer waited is the
 	  -- time to the answer they actually got. Unbounded above, because an answer
 	  -- that came after the window closed still ends a wait the window opened.
+	  --
+	  -- OFFSET 0 keeps the lateral a subquery the planner evaluates ONCE per
+	  -- inbound row. Flattened, its one output column was inlined at both of its
+	  -- uses — the IS NOT NULL below and the percentile's ORDER BY — and every
+	  -- answer arm ran twice per message: half of a thirty-second production
+	  -- plan was the second copy.
 	  CROSS JOIN LATERAL (
 	         SELECT ` + firstAnswerAtSQL("inbound", "'infinity'::timestamptz") + ` AS occurred_at
+	         OFFSET 0
 	       ) reply
 	 WHERE inbound.kind IN ('email', 'message')
 	   AND inbound.direction = 'inbound'

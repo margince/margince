@@ -1,0 +1,26 @@
+{
+  "scenario": "case49_who_can_introduce_us",
+  "criteria": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 36,
+    "output_tokens": 8868,
+    "cache_creation_input_tokens": 131043,
+    "cache_read_input_tokens": 1373986,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.8877
+  }
+}

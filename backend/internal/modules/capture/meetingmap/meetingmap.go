@@ -29,9 +29,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -238,6 +238,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		// the natural key alone exactly as it did before.
 		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay},
 		Participants:      m.participants.Participants,
+		WithheldParties:   m.participants.Withheld,
 		Addresses:         m.addresses,
 	}.WithProviderAttestedParticipants(true)
 }
@@ -283,7 +284,7 @@ func buildBody(ev Event, attendeeEmails []string) string {
 	if desc := strings.TrimSpace(ev.Description); desc != "" {
 		body = header + "\n\n" + desc
 	}
-	return truncate(body, MaxBodyLen)
+	return textcut.BytesMarked(body, MaxBodyLen, "…")
 }
 
 // AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC.
@@ -317,19 +318,6 @@ func orDash(s string) string {
 		return "-"
 	}
 	return s
-}
-
-func truncate(s string, limit int) string {
-	if len(s) <= limit {
-		return s
-	}
-	// Back off to a rune boundary so the stored excerpt is never a broken UTF-8
-	// sequence.
-	cut := limit
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
 }
 
 // eventAddresses returns every address the event names — organizer, attendees
@@ -494,5 +482,5 @@ func eventDuration(event Event) *int {
 		return nil
 	}
 	seconds := int(event.EndsAt.Sub(event.StartsAt) / time.Second)
-	return &seconds
+	return capture.StorableDuration(&seconds)
 }

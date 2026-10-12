@@ -5,7 +5,7 @@
 
 package gates
 
-// A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one
+// A currency's minor-unit scale (100 for EUR, 1000 for KWD, 1 for VND) is one
 // fact, and the table that holds it lives in shared/kernel/values. The table
 // was already shared. The ARITHMETIC that turns it into a multiplier was not:
 // four functions each wrote their own `for i := 0; i < digits; i++ { s *= 10 }`
@@ -217,8 +217,8 @@ func importAlias(file *ast.File, path string) string {
 			}
 			return spec.Name.Name
 		}
-		if i := strings.LastIndex(path, "/"); i >= 0 {
-			return path[i+1:]
+		if _, after, ok := strings.CutLast(path, "/"); ok {
+			return after
 		}
 		return path
 	}

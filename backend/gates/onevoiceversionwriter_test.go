@@ -5,7 +5,7 @@
 
 package gates
 
-// voice_profile_version and voice_profile_delta each have ONE writer.
+// voice_profile_version and voice_profile_delta each have one writer.
 //
 // They had three apiece — a build, a rollback, and the manual activation of a
 // derived artifact — hand-copying a twenty-column INSERT between them. Nothing

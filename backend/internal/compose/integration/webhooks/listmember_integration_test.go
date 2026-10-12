@@ -46,7 +46,7 @@ func TestAShortlistMembershipDeliveryNamesNoList(t *testing.T) {
 	}, nil, &list); status != http.StatusCreated {
 		t.Fatalf("create list → %d", status)
 	}
-	e.Call(t, "POST", "/v1/contacts", integration.AnyMap{"full_name": "Picked Contact"}, nil, &contact)
+	e.Call(t, "POST", "/v1/contacts", integration.AnyMap{"source": "manual", "full_name": "Picked Contact"}, nil, &contact)
 	if status := e.Call(t, "POST", "/v1/lists/"+list["id"].(string)+"/members", integration.AnyMap{
 		"entity_type": "contact", "entity_id": contact["id"],
 	}, nil, nil); status != http.StatusCreated {

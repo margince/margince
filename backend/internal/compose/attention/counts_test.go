@@ -36,7 +36,7 @@ func countFor(t *testing.T, out crmcontracts.Worklist, category string) crmcontr
 // showing. Without this the reader cannot tell a finished queue from a cut one.
 func TestThePageCountsEachKindOfWork(t *testing.T) {
 	tasks := []crmcontracts.AttentionItem{}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		tasks = append(tasks, item("t"+string(rune('a'+i)), "task", withDue(rankInstant)))
 	}
 	day := crmcontracts.Attention{
@@ -45,7 +45,7 @@ func TestThePageCountsEachKindOfWork(t *testing.T) {
 		AtRisk:  lane(item("deal", "deal_at_risk", withDeal(50_000_00))),
 	}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 
 	if count := countFor(t, got, "tasks"); count.Considered != 4 || count.Shown != 4 {
 		t.Fatalf("tasks: considered %d shown %d, wanted four of each", count.Considered, count.Shown)
@@ -60,12 +60,12 @@ func TestThePageCountsEachKindOfWork(t *testing.T) {
 // would call a backlog empty.
 func TestWorkBelowTheCutIsStillCounted(t *testing.T) {
 	tasks := []crmcontracts.AttentionItem{}
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		tasks = append(tasks, item("t"+string(rune('a'+i)), "task", withDue(rankInstant)))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 3, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 3, waitingRead{}, worklistCursor{}, nil)
 
 	count := countFor(t, got, "tasks")
 	if count.Shown != 3 {
@@ -87,7 +87,7 @@ func TestANarrowedPageStillCountsTheKindsItIsNotDrawing(t *testing.T) {
 		AtRisk:  lane(item("deal", "deal_at_risk", withDeal(50_000_00))),
 	}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "deals_at_risk", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "deals_at_risk", 25, waitingRead{}, worklistCursor{}, nil)
 
 	tasks := countFor(t, got, "tasks")
 	if tasks.Considered != 1 {
@@ -104,7 +104,7 @@ func TestANarrowedPageStillCountsTheKindsItIsNotDrawing(t *testing.T) {
 // the page where it is the dominant thing.
 func TestAFoldedGroupCountsTheItemsItStandsFor(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		row := item("f"+string(rune('a'+i)), "automation_run")
 		cause := "automation_run:one-rule"
 		row.CauseRef = &cause
@@ -112,7 +112,7 @@ func TestAFoldedGroupCountsTheItemsItStandsFor(t *testing.T) {
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AutomationHealth: &failures}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	count := countFor(t, got, "system")
 	if count.Shown != 6 {
@@ -124,12 +124,12 @@ func TestAFoldedGroupCountsTheItemsItStandsFor(t *testing.T) {
 // the read never finished counting is the failure the flag exists to prevent.
 func TestACategoryWhoseSourceHitItsBoundSaysThereMayBeMore(t *testing.T) {
 	decisions := []crmcontracts.AttentionItem{}
-	for i := 0; i < batchScanDepth; i++ {
+	for i := range batchScanDepth {
 		decisions = append(decisions, item("d"+string(rune(i)), "approval", withKind("send_email")))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: decisions}
 
-	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 
 	if count := countFor(t, got, "decisions"); !count.MoreAvailable {
 		t.Fatal("a category read to its bound reported a flat count, so a client would draw it as a total")
@@ -153,7 +153,7 @@ func TestTheDuplicateLaneSaysThereIsMoreWhenItsOwnCountSaysSo(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: shown}
 	day.Counts.DuplicatesOpen = &open
 
-	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	if count := countFor(t, got, "decisions"); !count.MoreAvailable {
 		t.Fatalf("the lane showed %d of %d open pairs and called the day complete", len(shown), open)
@@ -169,7 +169,7 @@ func TestTheDuplicateLaneIsSilentWhenItShowedEveryOpenPair(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: shown}
 	day.Counts.DuplicatesOpen = &open
 
-	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	if count := countFor(t, got, "decisions"); count.MoreAvailable {
 		t.Fatal("the lane showed its one open pair and still told the reader to look for more")
@@ -186,8 +186,8 @@ func TestCountsAreOrderedTheSameWayTwice(t *testing.T) {
 		NeedsYou: []crmcontracts.AttentionItem{item("decision", "approval", withKind("send_email"))},
 	}
 
-	first := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
-	second := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	first := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
+	second := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 
 	if len(first.Counts) != len(second.Counts) {
 		t.Fatalf("two reads counted %d and %d categories", len(first.Counts), len(second.Counts))
@@ -423,7 +423,7 @@ func TestTheSourceMapAgreesForAWaitingCustomer(t *testing.T) {
 // accounting itself.
 func TestABoundedSourceFilteredToNothingStillSaysThereMayBeMore(t *testing.T) {
 	deals := []crmcontracts.AttentionItem{}
-	for i := 0; i < quietDealBound; i++ {
+	for i := range quietDealBound {
 		row := item("d"+string(rune('a'+i%26)), "deal_at_risk", withDeal(1000))
 		row.Deal.OwnerId = uuidPtr(ids.MustParse("01a05500-0000-7000-8000-0000000000ee"))
 		deals = append(deals, row)
@@ -432,7 +432,7 @@ func TestABoundedSourceFilteredToNothingStillSaysThereMayBeMore(t *testing.T) {
 
 	// Unassigned drops every row that has an owner, so the lane read fifty and
 	// kept none.
-	out := (&Service{}).worklistFrom(t.Context(), day, scopeUnassigned, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(t.Context(), day, scopeUnassigned, "", 25, waitingRead{}, worklistCursor{}, nil)
 
 	count := countFor(t, out, "deals_at_risk")
 	if count.Considered != 0 {

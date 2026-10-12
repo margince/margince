@@ -152,6 +152,7 @@ export function HiddenFigures({
           label={t("worklist.hidden.pastHorizon")}
           detail={t("worklist.hidden.pastHorizon.detail")}
           locale={locale}
+          measured={!backlog.truncated}
           t={t}
         />
         <Reading
@@ -161,6 +162,7 @@ export function HiddenFigures({
           label={t("worklist.hidden.unlinked")}
           detail={t("worklist.hidden.unlinked.detail")}
           locale={locale}
+          measured={!backlog.truncated}
           t={t}
         />
         <Reading
@@ -170,6 +172,7 @@ export function HiddenFigures({
           label={t("worklist.hidden.colleagues")}
           detail={t("worklist.hidden.colleagues.detail")}
           locale={locale}
+          measured={!backlog.truncated}
           t={t}
         />
         {/* A model's judgement sits between the two: nobody chose it, and
@@ -181,6 +184,7 @@ export function HiddenFigures({
           label={t("worklist.hidden.informsUs")}
           detail={t("worklist.hidden.informsUs.detail")}
           locale={locale}
+          measured={!backlog.truncated}
           t={t}
         />
         <Reading
@@ -190,6 +194,7 @@ export function HiddenFigures({
           label={t("worklist.hidden.notSales")}
           detail={t("worklist.hidden.notSales.detail")}
           locale={locale}
+          measured={!backlog.truncated}
           t={t}
         />
         <Reading
@@ -199,6 +204,7 @@ export function HiddenFigures({
           label={t("worklist.hidden.setAside")}
           detail={t("worklist.hidden.setAside.detail")}
           locale={locale}
+          measured={!backlog.truncated}
           t={t}
         />
       </ul>
@@ -217,6 +223,7 @@ function Reading({
   label,
   detail,
   locale,
+  measured,
   onOpenEmail,
   t,
 }: Readonly<{
@@ -225,11 +232,14 @@ function Reading({
   label: string;
   detail: string;
   locale: Locale;
+  // False when the read hit its limit: every figure is then a difference of
+  // two capped reads, so a zero means "not counted" rather than "none".
+  measured: boolean;
   onOpenEmail: (activityId: string) => void;
   t: Translator;
 }>) {
   const [open, setOpen] = useState(false);
-  if (count === 0) {
+  if (count === 0 && measured) {
     return null;
   }
   return (
@@ -240,16 +250,23 @@ function Reading({
         summary={
           <span className="worklist-hidden-row">
             <span className="worklist-hidden-count">
-              {t("worklist.hidden.count", {
-                count: formatNumber(count, locale),
-              })}
+              {count === 0
+                ? t("worklist.hidden.notCounted")
+                : t("worklist.hidden.count", {
+                    count: formatNumber(count, locale),
+                  })}
             </span>
             <span>{label}</span>
             <span className="t-caption worklist-hidden-detail">{detail}</span>
           </span>
         }
       >
-        <HiddenRows rule={rule} open={open} onOpenEmail={onOpenEmail} />
+        <HiddenRows
+          rule={rule}
+          open={open}
+          measured={measured}
+          onOpenEmail={onOpenEmail}
+        />
       </Disclosure>
     </li>
   );
@@ -261,10 +278,12 @@ function Reading({
 function HiddenRows({
   rule,
   open,
+  measured,
   onOpenEmail,
 }: Readonly<{
   rule: HiddenRule;
   open: boolean;
+  measured: boolean;
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
@@ -281,7 +300,13 @@ function HiddenRows({
     <SurfaceState
       state={state}
       loadingLabel={t("worklist.hidden.rows.loading")}
-      emptyLabel={t("worklist.hidden.rows.empty")}
+      // At the reading limit an empty page is not "nothing held back": the
+      // rows are read under the same limit, so it may only be out of reach.
+      emptyLabel={t(
+        measured
+          ? "worklist.hidden.rows.empty"
+          : "worklist.hidden.rows.outOfReach",
+      )}
     >
       <ul className="worklist-hidden-rows">
         {rows.data?.rows.map((row) => (

@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
 
 func main() {
@@ -31,6 +32,8 @@ func main() {
 		"directory of certification records (relative to backend/, matching `make e2e-ai-report`'s cwd)")
 	corpusDir := flag.String("corpus", "internal/compose/aicert/corpus",
 		"directory of certification scenarios, read to tell a current record from a stale one")
+	presetDir := flag.String("presets", "../config/presets",
+		"directory of deploy presets, read to report each task's first rung and fallback per preset")
 	flag.Parse()
 
 	// The census is what says which sites SHOULD have a record: an absent
@@ -69,4 +72,28 @@ func main() {
 
 	fmt.Print(renderReadiness(aicert.Census{Sites: census.All(), Scopes: census.Scopes()}, stamps, perScenario, records)) //nolint:forbidigo // this IS the report — reportcmd's whole job is printing it to stdout, not application logging
 	fmt.Print(renderDecisions(decisionRows))                                                                              //nolint:forbidigo // the report's second table, printed for the same reason
+
+	reports, err := presetReports(context.Background(), *presetDir, corpus, census, records)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Print(renderPresets(reports)) //nolint:forbidigo // the report's third table, printed for the same reason
+}
+
+// presetReports reads the rung states of the presets under dir over the committed records.
+func presetReports(ctx context.Context, dir string, corpus []aicert.Scenario, census *aitasks.Registry, records []aicert.Record) ([]presetReport, error) {
+	presets, err := loadPresets(dir)
+	if err != nil {
+		return nil, err
+	}
+	var reports []presetReport
+	for file, routing := range presets {
+		rungs, err := aicert.PresetRungs(ctx, routing, corpus, census, records)
+		if err != nil {
+			return nil, fmt.Errorf("preset %s: %w", file, err)
+		}
+		reports = append(reports, presetReport{File: file, Rungs: rungs})
+	}
+	return reports, nil
 }

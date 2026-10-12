@@ -88,7 +88,8 @@ func lockSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	return err
 }
 
-func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool) ([]ids.UUID, error) {
+func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floor FloorPolicy) ([]ids.UUID, error) {
+	floorCurrent, floorCarried := floor.sqlArgs()
 	// Redact the subject's own timeline rows, the unlinked mail about them — in
 	// both directions, captured and sent (unlinkedSubjectMail) — and the
 	// unlinked CHANNEL messages from them (unlinkedSubjectChannel), but shield
@@ -136,7 +137,7 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 		    OR a.id IN (`+unlinkedSubjectMail+`)
 		    OR a.id IN (`+unlinkedSubjectChannel+`))
 		  `+correspondenceFloorPredicate(3, 4)+`
-		RETURNING a.id`, contactID, emails, floorInterval, floorAnchor, erasedName, channelKeys)
+		RETURNING a.id`, contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +152,7 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM field_provenance
 		WHERE object_type = 'activity' AND object_id IN (`+subjectOnlyDestroyable+`)`,
-		contactID, floorInterval, floorAnchor); err != nil {
+		contactID, floorCurrent, floorCarried); err != nil {
 		return nil, err
 	}
 	// And how the reply verdict came to be what it was. DELETED rather than
@@ -187,10 +188,11 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	return redacted, nil
 }
 
-// deleteSubjectListMemberships takes the subject off every Shortlist, as the
-// contact and as each lead the same act anonymized, and deletes the history of
-// those memberships. Each row says somebody chose the subject for a purpose,
-// and its note says why in a colleague's words. The act anonymizes in place, so
+// deleteSubjectListMemberships takes the subject off every Shortlist and out
+// of every Live List's last check, as the contact and as each lead the same act
+// anonymized, and deletes the history of those memberships. Each row says
+// somebody chose the subject for a purpose, or that a filter picked them out,
+// and a note says why in a colleague's words. The act anonymizes in place, so
 // no archive runs and nothing else removes them.
 //
 // The leads are the ones the caller's own anonymize answered (anonymizeLeadTwins
@@ -208,6 +210,9 @@ func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Conte
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM list_member WHERE `+subject, args); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list memberships: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM list_live_member WHERE `+subject, args); err != nil {
+		return fmt.Errorf("privacy: clearing the subject from the Live Lists' last checks: %w", err)
 	}
 	return nil
 }

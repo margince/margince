@@ -42,6 +42,9 @@ import (
 // DuplicateCandidate is one open review-queue pair naming a record this call
 // just created, in the terms a caller acts on.
 type DuplicateCandidate struct {
+	// CandidateID names the review-queue pair, which is what dismissing or
+	// re-opening it takes.
+	CandidateID string `json:"candidate_id"`
 	// OtherRecordID is the record already in the workspace — never the one that
 	// was just created. A caller offering a merge needs to know which is which,
 	// and working it out from a left/right pair is a step it should not have to
@@ -64,9 +67,12 @@ type DuplicateCandidate struct {
 type DuplicateEvidence struct {
 	// Field is the axis — "phone", "full_name", "email".
 	Field string `json:"field"`
-	// Left and Right are the two values compared, in their stored form. Either
-	// may be empty: a one-sided signal is a fact one record carries and the
-	// other does not, which is itself evidence.
+	// Left is the value on the record this call created and Right the one
+	// already here, in their stored form: detection writes the evidence from
+	// the created record's side, whichever order the pair's ids sort in.
+	//
+	// Either may be empty: a one-sided signal is a fact one record carries and
+	// the other does not, which is itself evidence.
 	Left  string `json:"left_value,omitempty"`
 	Right string `json:"right_value,omitempty"`
 	// Signal is how they met: "collide" for two values that are the same or
@@ -108,7 +114,9 @@ func duplicateWarning(n int) Warning {
 		Code: CodeDuplicateFiled,
 		Message: subject + ", so the pair was filed for a human to review. " +
 			"The record was still created and nothing was merged — " +
-			"read the candidate's evidence before offering to merge them.",
+			"read the candidate's evidence before offering to merge them. " +
+			"Tell the user the pair is waiting for that review; whether the two are one " +
+			"is the reviewer's call, not yours.",
 	}
 }
 
@@ -127,6 +135,9 @@ type createdRecord struct {
 	// which is the common case. Present and non-empty means a human has been
 	// asked about this record — see the warning that travels with it.
 	DuplicateCandidates []DuplicateCandidate `json:"duplicate_candidates,omitempty"`
+	// TagOffer is present only when the caller proposed a word with offer_tag
+	// and it can be offered. It records an offer; nothing was applied.
+	TagOffer *TagOffer `json:"tag_offer,omitempty"`
 }
 
 // reportDuplicates tells the caller what this create filed for review.

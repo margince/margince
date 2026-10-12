@@ -41,6 +41,9 @@ func testWeeklyReportingPrivacy(t *testing.T, anonymize bool) {
 	if _, err := dealsStore.UpdateDeal(writer, ids.From[ids.DealKind](ids.UUID(closed.Id)), deals.UpdateDealInput{OwnerID: &transferred}); err != nil {
 		t.Fatal(err)
 	}
+	actor, _ := principal.Actor(human)
+	actor.UserID, actor.ID = e.Rep3, "human:"+e.Rep3.String()
+	human = principal.WithActor(human, actor)
 	contact := ids.NewV7()
 	var b reportingBindings
 	if _, err := e.owner.Exec(human, "INSERT INTO contact(id,first_name,last_name,full_name,source,captured_by) VALUES("+b.add(contact)+","+b.add("Jamie")+","+b.add("Buyer")+","+b.add("Jamie Buyer")+","+b.add("manual")+","+b.add("human:"+e.Rep1.String())+")", b.values...); err != nil {
@@ -65,6 +68,10 @@ func testWeeklyReportingPrivacy(t *testing.T, anonymize bool) {
 	}
 	at := time.Date(2026, 9, 28, 9, 0, 0, 0, time.UTC)
 	engine := weekly.NewEngine(e.Pool, newTeammatesSeam(e.Pool)).WithNumeric(weeklyNumericEvaluator{})
+	former, _, err := engine.AssembleFor(reportingActor(e), at)
+	if err != nil || former.Counts.DealsWon != 0 {
+		t.Fatalf("former owner's Weekly retained the win: %+v %v", former, err)
+	}
 	review, created, err := engine.AssembleFor(human, at)
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +80,7 @@ func testWeeklyReportingPrivacy(t *testing.T, anonymize bool) {
 		t.Fatalf("shared Weekly counts: %+v", review)
 	}
 	service := newReportingService(e.Pool, func() time.Time { return at })
-	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}, Period: "last_week", TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"metric_reading"}}
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep3)}, Period: "last_week", TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"metric_reading"}}
 	evaluation, err := service.Evaluate(human, selection)
 	if err != nil {
 		t.Fatal(err)
@@ -106,6 +113,7 @@ func testWeeklyReportingPrivacy(t *testing.T, anonymize bool) {
 		t.Fatalf("frozen Weekly changed: %+v", frozen)
 	}
 	reportingWorkerIdentity(t, e)
+	human = reportingActor(e)
 	report, err := service.CreateReport(human, crmcontracts.ReportingReportInput{Name: "Confirmed customer outcomes", Audience: "private", Selection: selection})
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +122,7 @@ func testWeeklyReportingPrivacy(t *testing.T, anonymize bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	worker := &reportScheduleSweepWorker{enabled: true, pool: e.Pool, now: func() time.Time { return at }}
+	worker := &reportScheduleSweepWorker{pool: e.Pool, now: func() time.Time { return at }}
 	if err := worker.Work(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}

@@ -28,6 +28,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -139,5 +140,26 @@ func TestAFaultLineNamesTheWorkspaceButLeavesTheCorrelationIDToTheHandler(t *tes
 	}
 	if got := record["kind"]; got != unitKind {
 		t.Fatalf("kind = %v, want %q — a line nobody can tie to a job row is a line nobody can use", got, unitKind)
+	}
+}
+
+// A failure classified by a core sentinel stores a fixed sentence, which names
+// neither the read nor the record nor the step. The cause therefore has to reach
+// the process log like every other classified failure, or the diagnosis is kept
+// nowhere at all.
+func TestASentinelClassifiedFaultLogsItsCause(t *testing.T) {
+	cause := fmt.Errorf("signal scan: read the account %s: %w", "acct-7", apperrors.ErrNotFound)
+
+	record := faultRecord(context.Background(), t, "signal_scan", cause)
+
+	if record["msg"] != "jobs: a worker failed" {
+		t.Errorf("logged %q, want the line every classified failure shares", record["msg"])
+	}
+	if record["kind"] != "signal_scan" {
+		t.Errorf("the line does not name the kind: %v", record)
+	}
+	logged := group(t, record, "error")
+	if !strings.Contains(fmt.Sprint(logged["message"]), "read the account acct-7") {
+		t.Errorf("the logged cause lost the read it names: %v", logged)
 	}
 }

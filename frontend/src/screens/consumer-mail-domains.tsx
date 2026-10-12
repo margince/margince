@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import { useCanUpsert, useCanWrite } from "../app/capability";
 import { isOption } from "../app/options";
@@ -13,16 +13,23 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { useSettledValue } from "../design-system/debouncedsearch";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { IconAction } from "../design-system/iconaction";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { SEARCH_DEBOUNCE_MS } from "./listquery";
+import { captureValueMessage } from "./capturevalue";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import "./consumer-mail-domains.css";
 
 // This installation's own consumer-mail list (CAP-PARAM-5). Mail from a consumer
@@ -84,13 +91,11 @@ function useAddConsumerMailDomain() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (entry: { domain: string; kind: Kind }) => {
-      const { data, error } = await api.POST("/capture/consumer-mail-domains", {
-        body: entry,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/capture/consumer-mail-domains", {
+          body: entry,
+        }),
+      );
     },
     onSuccess: (_written, added) => {
       void queryClient.invalidateQueries({
@@ -107,13 +112,11 @@ function useRemoveConsumerMailDomain() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE(
-        "/capture/consumer-mail-domains/{id}",
-        { params: { path: { id } } },
+      unwrap(
+        await api.DELETE("/capture/consumer-mail-domains/{id}", {
+          params: { path: { id } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
@@ -124,16 +127,6 @@ function useRemoveConsumerMailDomain() {
       toast.show(t("settings.removed"));
     },
   });
-}
-
-/** A typed value held back until the typing stops, so it can be a query key. */
-function useSettledSearch(typed: string): string {
-  const [settled, setSettled] = useState(typed);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(typed), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
-  return settled;
 }
 
 // The shipped baseline, searchable in place: an operator deciding whether a
@@ -151,7 +144,7 @@ function BaselineRow() {
   // a list of 8 700 domains — and the answers could land out of order, leaving
   // the results of a prefix under the word the reader had finished typing. The
   // shared list surface settles on the same constant.
-  const needle = useSettledSearch(q.trim());
+  const needle = useSettledValue(q.trim());
   const query = useConsumerMailBaseline(needle);
   const result = query.data;
   return (
@@ -252,83 +245,68 @@ export function ConsumerMailDomainsCard() {
         </Button>
       }
     >
-      {/* `form-stack` stays: the denial sentence and the failure Callout under
-          the rows are non-row children, and the list owns only the intervals
-          BETWEEN its rows. */}
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("consumerMail.sub")}</PanelIntro>
-        <SettingList>
-          {/* The entries are the subject of this card rather than an answer to
-              a question beside them, so they take the row's full width. */}
-          <SettingRow
-            label={t("consumerMail.addedTitle")}
-            layout="stack"
-            control={
-              <QueryGate query={query} pendingLabel={t("consumerMail.title")}>
-                {(entries) =>
-                  entries.length === 0 ? (
-                    // `empty`, and only `empty`: nothing has been added, so the
-                    // shipped list decides every domain. The row caps and
-                    // left-aligns it already (settingrow.css).
-                    <EmptyState>{t("consumerMail.none")}</EmptyState>
-                  ) : (
-                    // One entry per row, in the row language the rest of this
-                    // tab speaks: the domain names itself on the left, what it
-                    // IS stands as the row's answer, and the verb that takes it
-                    // back sits at one x down the list. It was a hand-rolled
-                    // `<ul>` of four-item flex rows — and the mail glyph on
-                    // every one of them distinguished nothing, since every row
-                    // on this card is a mail domain.
-                    <SettingList testId="consumer-mail-domain-list">
-                      {entries.map((entry) => (
-                        <SettingRow
-                          key={entry.id}
-                          label={entry.domain}
-                          value={t(kindLabel[entry.kind])}
-                          control={
-                            <Button
-                              variant="ghost"
-                              aria-label={t("consumerMail.remove")}
-                              disabled={remove.isPending}
-                              reasonId={canManage ? undefined : denialId}
-                              onClick={() => remove.mutate(entry.id)}
-                            >
-                              <Trash2 aria-hidden />
-                            </Button>
-                          }
-                        />
-                      ))}
-                    </SettingList>
-                  )
-                }
-              </QueryGate>
-            }
-          />
-          {/* The shipped list is the SECOND question this card answers — what
-              the baseline already says, against what this installation adds to
-              it — and a reader consults it while deciding, not on every visit.
-              A disclosure, so it costs one line until it is asked for. */}
-          <Disclosure summary={t("consumerMail.baselineTitle")}>
-            <BaselineRow />
-          </Disclosure>
-        </SettingList>
-        {denial && <p id={denialId}>{denial}</p>}
-        {remove.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("consumerMail.removeFailed")}
-          >
-            {problemMessageOf(remove.error, t)}
-          </Callout>
-        )}
-        {adding && (
-          <AddConsumerMailDialog
-            canManage={canManage}
-            onClose={() => setAdding(false)}
-          />
-        )}
       </PanelBody>
+      <PanelGroupHead title={t("consumerMail.addedTitle")} level="h3" />
+      <QueryGate query={query} pendingLabel={t("consumerMail.title")}>
+        {(entries) =>
+          entries.length === 0 ? (
+            // `empty`, and only `empty`: nothing has been added, so the
+            // shipped list decides every domain.
+            <EmptyState>{t("consumerMail.none")}</EmptyState>
+          ) : (
+            <SettingList bleed="records" testId="consumer-mail-domain-list">
+              {entries.map((entry) => (
+                <SettingRow
+                  key={entry.id}
+                  label={entry.domain}
+                  value={t(kindLabel[entry.kind])}
+                  control={
+                    <IconAction
+                      variant="ghost"
+                      label={t("consumerMail.remove", {
+                        domain: entry.domain,
+                      })}
+                      icon={<Trash2 aria-hidden />}
+                      disabled={remove.isPending}
+                      reasonId={canManage ? undefined : denialId}
+                      onClick={() => remove.mutate(entry.id)}
+                    />
+                  }
+                />
+              ))}
+            </SettingList>
+          )
+        }
+      </QueryGate>
+      {/* The shipped list is consulted while deciding, not on every visit, so
+          it costs one line until it is asked for. */}
+      <Disclosure summary={t("consumerMail.baselineTitle")}>
+        <PanelBody>
+          <BaselineRow />
+        </PanelBody>
+      </Disclosure>
+      {(denial || remove.isError) && (
+        <PanelBody className="form-stack">
+          {denial && <p id={denialId}>{denial}</p>}
+          {remove.isError && (
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("consumerMail.removeFailed")}
+            >
+              {problemMessageOf(remove.error, t)}
+            </Callout>
+          )}
+        </PanelBody>
+      )}
+      {adding && (
+        <AddConsumerMailDialog
+          canManage={canManage}
+          onClose={() => setAdding(false)}
+        />
+      )}
     </Panel>
   );
 }
@@ -348,15 +326,17 @@ function AddConsumerMailDialog({
   // here with the control it refuses — a reason outside the dialog is a reason
   // a reader inside it never gets.
   const carveOutDenialId = useId();
+  const formId = useId();
   const [domain, setDomain] = useState("");
   const [kind, setKind] = useState<Kind>("extra");
   const typed = domain.trim();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("consumerMail.addTitle")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(e) => {
           e.preventDefault();
@@ -403,22 +383,23 @@ function AddConsumerMailDialog({
             kind="outcome"
             title={t("consumerMail.addFailed")}
           >
-            {problemMessageOf(add.error, t)}
+            {captureValueMessage(add.error, "domain", t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={add.isPending || typed === ""}
-          >
-            {t("consumerMail.add")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={add.isPending || typed === ""}
+        >
+          {t("consumerMail.add")}
+        </Button>
+      </div>
     </Modal>
   );
 }

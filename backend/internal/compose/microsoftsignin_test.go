@@ -175,18 +175,22 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 
 	tok := rig.mint(t, testKID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-1", "email": "carol@example.com",
+		"given_name": "Carol",
 	})
-	email, sub, verified, groups, err := adapter.Verify(context.Background(), tok)
+	claims, err := adapter.Verify(context.Background(), tok)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if email != "carol@example.com" || sub != "sub-1" || !verified {
-		t.Fatalf("email=%q sub=%q verified=%v", email, sub, verified)
+	if claims.Email != "carol@example.com" || claims.Subject != "sub-1" || !claims.EmailVerified {
+		t.Fatalf("email=%q sub=%q verified=%v", claims.Email, claims.Subject, claims.EmailVerified)
+	}
+	if claims.GivenName != "Carol" {
+		t.Fatalf("given name = %q, want the token's given_name claim", claims.GivenName)
 	}
 	// No groups claim surfaces as none — a groupless token grants nothing and
 	// is never an error.
-	if len(groups) != 0 {
-		t.Fatalf("groups = %v for a token carrying no groups claim, want none", groups)
+	if len(claims.Groups) != 0 {
+		t.Fatalf("groups = %v for a token carrying no groups claim, want none", claims.Groups)
 	}
 
 	// A directory that stamps the standard groups claim gets it passed through
@@ -195,11 +199,11 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-1", "email": "carol@example.com",
 		"groups": []string{"11111111-aaaa-bbbb-cccc-222222222222"},
 	})
-	_, _, _, groups, err = adapter.Verify(context.Background(), grouped)
+	claims, err = adapter.Verify(context.Background(), grouped)
 	if err != nil {
 		t.Fatalf("Verify(grouped): %v", err)
 	}
-	if len(groups) != 1 || groups[0] != "11111111-aaaa-bbbb-cccc-222222222222" {
+	if groups := claims.Groups; len(groups) != 1 || groups[0] != "11111111-aaaa-bbbb-cccc-222222222222" {
 		t.Fatalf("groups = %v, want the token's groups claim passed through", groups)
 	}
 
@@ -209,12 +213,12 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-2",
 		"email": "", "preferred_username": "dan@example.com",
 	})
-	email, _, verified, _, err = adapter.Verify(context.Background(), upnOnly)
+	claims, err = adapter.Verify(context.Background(), upnOnly)
 	if err != nil {
 		t.Fatalf("Verify(upn only): %v", err)
 	}
-	if email != "dan@example.com" || !verified {
-		t.Fatalf("email=%q verified=%v, want the UPN read as the address", email, verified)
+	if claims.Email != "dan@example.com" || !claims.EmailVerified {
+		t.Fatalf("email=%q verified=%v, want the UPN read as the address", claims.Email, claims.EmailVerified)
 	}
 
 	// A token naming no address at all resolves to nobody rather than to the
@@ -222,8 +226,8 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 	nameless := rig.mint(t, testKID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-3", "email": "",
 	})
-	if _, _, verified, _, err := adapter.Verify(context.Background(), nameless); err != nil || verified {
-		t.Fatalf("a token naming no address: verified=%v err=%v, want unverified and no error", verified, err)
+	if claims, err := adapter.Verify(context.Background(), nameless); err != nil || claims.EmailVerified {
+		t.Fatalf("a token naming no address: verified=%v err=%v, want unverified and no error", claims.EmailVerified, err)
 	}
 }
 
@@ -342,13 +346,13 @@ func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
 		// none.
 		"email": "", "preferred_username": "admin@margince.test",
 	})
-	email, _, verified, _, err := adapter.Verify(context.Background(), tok)
+	claims, err := adapter.Verify(context.Background(), tok)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if email != "" || verified {
+	if claims.Email != "" || claims.EmailVerified {
 		t.Errorf("a personal account's preferred_username %q was taken as a verified address — "+
-			"a handle its holder picks would be a way into whichever member already has it", email)
+			"a handle its holder picks would be a way into whichever member already has it", claims.Email)
 	}
 
 	// The claim Microsoft DID make them prove is still taken.
@@ -356,12 +360,12 @@ func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
 		"iss": consumerIss, "tid": microsoftConsumerTenant, "sub": "sub-msa",
 		"email": "someone@gmail.test", "preferred_username": "admin@margince.test",
 	})
-	email, _, verified, _, err = adapter.Verify(context.Background(), proven)
+	claims, err = adapter.Verify(context.Background(), proven)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if email != "someone@gmail.test" || !verified {
-		t.Errorf("a personal account's proven address = %q (verified %v), want it taken", email, verified)
+	if claims.Email != "someone@gmail.test" || !claims.EmailVerified {
+		t.Errorf("a personal account's proven address = %q (verified %v), want it taken", claims.Email, claims.EmailVerified)
 	}
 
 	// And a WORK account keeps the fallback, or a directory that publishes no
@@ -370,12 +374,12 @@ func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-work",
 		"email": "", "preferred_username": "dana@corp.test",
 	})
-	email, _, verified, _, err = adapter.Verify(context.Background(), work)
+	claims, err = adapter.Verify(context.Background(), work)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if email != "dana@corp.test" || !verified {
-		t.Errorf("a work account's UPN = %q (verified %v), want it taken", email, verified)
+	if claims.Email != "dana@corp.test" || !claims.EmailVerified {
+		t.Errorf("a work account's UPN = %q (verified %v), want it taken", claims.Email, claims.EmailVerified)
 	}
 }
 

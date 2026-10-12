@@ -5,8 +5,7 @@ package contacts
 
 // The company list read: the shared listPage runner bound to the
 // company table — DM-VOCAB-2 sort vocabulary, the shared filter
-// chain plus the classification filter, and the company row scan +
-// domain attachment.
+// chain, and the company row scan + domain attachment.
 
 import (
 	"context"
@@ -51,7 +50,7 @@ type ListCompaniesInput struct {
 	OwnerID       *ids.UserID
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
-	// listFilters.ownershipClause, which also refuses two of them at once.
+	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
 	// Two questions, asked separately because one value could not answer both:
@@ -90,7 +89,7 @@ var companyListFields = map[string]storekit.SortField{
 	createdAtColumn:    storekit.Column(storekit.KindTimestamp),
 	updatedAtColumn:    storekit.Column(storekit.KindTimestamp),
 	companyNameColumn:  storekit.Column(fieldcatalog.TypeText),
-	ownerIDColumn:      storekit.Column(storekit.KindUUID),
+	ownerIDColumn:      storekit.OwnerNameSort(companyEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	columnDescription:  storekit.Column(fieldcatalog.TypeText),
 	// classification is retired and the column the list draws is lifecycle, so
@@ -155,7 +154,7 @@ func foldDomainQuery(raw string) string {
 }
 
 // ListCompanies is the row-scoped company list read:
-// quick-find, owner, domain, classification and custom-field filters,
+// quick-find, owner, domain and custom-field filters,
 // keyset pagination under the validated sort.
 // companyCommonFilters is the shared filter set for an account list: every dial
 // the contact and lead lists also carry, plus the domain an account is found by.

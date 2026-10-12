@@ -205,11 +205,11 @@ func TestTheValidatorRefusesOutputThatIsNotTheRequiredShape(t *testing.T) {
 }
 
 func TestATaskBodySaysWhoPromisedItAndWhereToCheck(t *testing.T) {
-	one := transcriptTaskBody(TranscriptStepProposal{Owner: "Priya", SourceLines: []int{3}})
+	one := transcriptCommitmentBody("Priya", []int{3})
 	if !strings.Contains(one, "Priya") || !strings.Contains(one, "line 3") {
 		t.Errorf("a single-line citation reads as %q; want the owner and 'line 3'", one)
 	}
-	many := transcriptTaskBody(TranscriptStepProposal{Owner: "Dana", SourceLines: []int{3, 4}})
+	many := transcriptCommitmentBody("Dana", []int{3, 4})
 	if !strings.Contains(many, "lines 3, 4") {
 		t.Errorf("a multi-line citation must pluralize and list them, got %q", many)
 	}

@@ -68,6 +68,9 @@ export type Leaf = Readonly<{
   field: string;
   op: FilterOp;
   value: LeafValue;
+  // A model proposed this clause and the reader has not changed it. Editor-only,
+  // like `id`: encode copies field, op and value by name, so it never leaves.
+  proposed?: true;
 }>;
 
 export type Group = Readonly<{
@@ -144,6 +147,14 @@ export function replaceNode(
     }
   }
   return { ...tree, children };
+}
+
+/**
+ * The tree with a group at its root. `decode` answers a bare leaf for a stored
+ * single clause, and every edit here needs a group to add to.
+ */
+export function rootGroup(node: Node): Group {
+  return isGroup(node) ? node : newGroup("and", [node]);
 }
 
 /** Append a node to the group with this id. */

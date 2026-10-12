@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // sqlUnbounded is what an unnarrowed reader's scope renders to.
@@ -28,6 +29,14 @@ import (
 // are one idea — this caller may read every row — and spelling it repeatedly
 // invites one that says something subtly different.
 const sqlUnbounded = "true"
+
+// orUnbounded renders an empty scope clause as the unnarrowed predicate.
+func orUnbounded(clause string) string {
+	if clause == "" {
+		return sqlUnbounded
+	}
+	return clause
+}
 
 // countWeek tallies the week. One statement, because ten round trips for ten
 // integers is ten chances for the numbers to describe different moments.
@@ -45,9 +54,7 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	if err != nil {
 		return Counts{}, err
 	}
-	if dealScope == "" {
-		dealScope = sqlUnbounded
-	}
+	dealScope = orUnbounded(dealScope)
 
 	verbsPos := arg(privacy.ScrubVerbs())
 	completion := taskCompletionAtSQL("a", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))
@@ -109,8 +116,9 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 // Both the weekly counts and the funnel scorecard use the arrival cohort and
 // the same closing instant. A missing breach stamp does not prove an SLA target.
 const (
-	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d`
-	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d`
+	nonImportedLeadSQL        = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
+	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d AND ` + nonImportedLeadSQL
+	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d AND ` + nonImportedLeadSQL
 )
 
 // countWeekLeads counts how the week's inbound leads were answered.
@@ -137,12 +145,10 @@ func countWeekLeads(
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	if scope == "" {
-		scope = sqlUnbounded
-	}
+	scope = orUnbounded(scope)
 	// One window expression, three counts over it.
 	const arrived = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d`
+		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d AND ` + nonImportedLeadSQL
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT count(*) FROM lead l
@@ -192,19 +198,25 @@ func countWeekLeads(
 // meetingIsTheirsSQL is the one spelling of "this meeting is that rep's":
 // hosted by them, or — where no host was recorded — filed by them.
 //
-// TWO readers ask it, the headline count here and the funnel in
-// weeklyscorecard.go, and they must not disagree: a meeting credited to
-// different contacts by the two panels is one page contradicting itself about the
-// same week. The caller supplies its own placeholders because the two queries
-// number their arguments differently.
+// THREE readers ask it, the headline count here, the funnel in
+// weeklyscorecard.go and the coverage in weeklycoverage.go, and they must not
+// disagree: a meeting credited to different contacts by two panels is one page
+// contradicting itself about the same week. The caller supplies its own
+// placeholders because the queries number their arguments differently.
 //
 // The fallback is bounded to rows with NO host on purpose. A meeting naming one
 // is that contact's, and letting its recorder also claim it would count one
 // meeting twice across two reps.
 //
+// A row that names a source author is excluded from the fallback: an import
+// writes another system's history, and its recorder is whoever ran the import.
+// Such a row with no host names an author with no seat here, so nobody here
+// held it (activities.meetingHost).
+//
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
 func meetingIsTheirsSQL(hostPos, capturedPos string) string {
-	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s))",
+	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s"+
+		" AND m.source_author_id IS NULL AND m.source_author_name IS NULL))",
 		hostPos, capturedPos)
 }
 
@@ -268,9 +280,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 	if err != nil {
 		return nil, err
 	}
-	if dealScope == "" {
-		dealScope = sqlUnbounded
-	}
+	dealScope = orUnbounded(dealScope)
 
 	// The week's closed list prints each deal's figure beside its name, so the
 	// mask reaches it here as it does the deal list. The `moved` leg below

@@ -4,9 +4,15 @@ import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { useLocale, useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountMenu } from "./account";
-import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
-import { entryLabel, NAV, type NavSection } from "./nav";
+import { useFiltersCrumbs } from "./filterstrail";
+import {
+  entryLabel,
+  NAV,
+  type NavSection,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import { NotificationBell } from "./notificationbell";
 import {
   OFF_RAIL_TITLE_KEYS,
@@ -43,8 +49,8 @@ function collapseHotkeyLabel(platform: string): string {
  * A hook rather than a function because the last segment of a record's trail is
  * the record's NAME, which is a read — and a trail that printed a uuid until the
  * read landed would be a different sentence on every page open. `useEntityName`
- * is called on every route so the hook order never depends on which page is on
- * screen; it makes no request without an id to resolve.
+ * and `useFiltersCrumbs` are called on every route so the hook order never
+ * depends on which page is on screen; neither asks for a name nobody needs.
  */
 function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const t = useT();
@@ -53,13 +59,14 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   // A record kind, and only then: an id segment that names no record is a
   // screen's own state — the settings tab, for one — and the page is still the
   // screen.
-  const recordKind = route.id ? SCREEN_ENTITY[route.screen] : undefined;
+  const recordKind = recordKindOf(route);
   const subject = useRouteSubject(route);
   const inSection = sectionHead(section, route);
   const unit =
     route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
+  const filtersCrumbs = useFiltersCrumbs(route);
 
-  if (recordKind && route.id) {
+  if ((recordKind && route.id) || reservedPageTitle(route)) {
     // A record's trail leads back to the list it was opened from, which is the
     // one place the reader can go that is not "somewhere else entirely".
     return [
@@ -92,6 +99,9 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
       },
       { label: entryLabel(inSection.entry, locale, t) },
     ];
+  }
+  if (filtersCrumbs) {
+    return filtersCrumbs;
   }
   return [{ label: resolveTitle(route.screen, navItem?.labelKey, t) }];
 }

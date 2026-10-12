@@ -216,7 +216,7 @@ func TestAnInboundMessageConcurrentWithAMergeLinksTheSurvivor(t *testing.T) {
 		if err := e.store.resolveChannelContact(ctx, tx, in, &res); err != nil {
 			return err
 		}
-		if _, err := e.store.MergeContact(e.as(), res.ContactID, survivor); err != nil {
+		if _, err := e.store.MergeContact(e.as(), res.ContactID, survivor, nil); err != nil {
 			return err
 		}
 		return e.store.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID)

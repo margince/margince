@@ -15,6 +15,9 @@ import { ProviderMark } from "../../design-system/provider-mark";
 // the ASK — what is about to be read, in plain words, before the reader
 // leaves for the provider's own consent screen (or, for IMAP, before they
 // hand over a credential at all).
+//
+// The content is the dialog's own children, a `.form-stack` then an `.actions`
+// row, so the ask scrolls under a pinned title and its buttons stay in reach.
 
 export function ConnectDialog({
   open,
@@ -39,7 +42,7 @@ export function ConnectDialog({
 }>) {
   const headingId = useId();
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <div className="ob-connect-dialog-mark" aria-hidden="true">
         <ProviderMark providerKey={providerMarkKey} />
       </div>
@@ -47,7 +50,7 @@ export function ConnectDialog({
         {headline}
       </Heading>
       {intro && <p className="ob-connect-dialog-intro">{intro}</p>}
-      <div className="ob-connect-dialog-body">{children}</div>
+      {children}
     </Modal>
   );
 }

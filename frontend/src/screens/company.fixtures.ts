@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type Mock, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 
@@ -10,21 +9,21 @@ type Company360 = components["schemas"]["Company360"];
 
 // What the server answers a company record with, in ONE place.
 //
-// Mounting `CompanyScreen` fires the same five reads on every render — the
-// composite 360, the hierarchy roll-up, the deterministic brief, the
-// relationship strength, the assistant's context — before a suite can assert
-// anything about the one card or tab it is actually about. A suite that carries
-// its own copy of those answers is making a second claim about the same wire,
-// free to drift from this one, and the next read the screen grows reaches only
-// the copy whose file the author happened to have open.
+// Mounting `CompanyScreen` fires the same reads on every render — the ones
+// `backstopAnswer` below answers — before a suite can assert anything about the
+// one card or tab it is actually about. A suite that carries its own copy of
+// those answers is making a second claim about the same wire, free to drift
+// from this one, and the next read the screen grows reaches only the copy whose
+// file the author happened to have open.
 //
 // This module answers the WIRE and nothing else: response bodies for real
-// endpoints, and the stub that routes a request to one. It never stands in for
+// endpoints, and which one a request is answered with. It never stands in for
 // what the screen does with them — a fixture that reimplemented the page's own
 // logic would prove the fixture right rather than the page. Mounting is the
 // suite's own business, and keeping it out is what lets this file stay JSX-free:
 // `scripts/fe-uat.mjs` reads every `.tsx` under `src/` as a component and asks
 // for a story that renders it, which a set of response bodies cannot have.
+// It imports no test runner, because stories load it.
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -73,7 +72,7 @@ export const company: Company = {
  */
 export const company360: Company360 = {
   as_of: "2026-06-01T09:00:00Z",
-  company: company,
+  company,
   sections_omitted: [],
   contacts: emptySection,
   deals: {
@@ -119,18 +118,6 @@ export const emptyBrief = {
 };
 
 /**
- * The dormant/no-interactions strength response. The Company Overview fires
- * this GET unconditionally, so it is the default for every suite that is not
- * itself about the strength card.
- */
-export const dormantStrength = {
-  score: 0,
-  bucket: "none",
-  factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
-  last_interaction: null,
-};
-
-/**
  * Answers the record read the page shell needs and an empty page for everything
  * else, so a suite exercising one card does not have to plumb every other
  * request the screen fires.
@@ -148,17 +135,6 @@ function rollupResponse(rollup: unknown): Response {
   return jsonResponse(rollup ?? emptyRollup);
 }
 
-/**
- * A URL-capturing fetch stub for the company surfaces: every request is
- * recorded so a test can assert the params it carried, and a caller-supplied
- * responder decides what comes back.
- *
- * The reads the page shell fires on every render are answered up front from
- * their quiet defaults, so a suite that does not care about relationship
- * strength or the roll-up never plumbs a branch for them. A suite that IS about
- * one of them passes its own body through `options` — or, for the roll-up, a
- * whole `Response` when what it asserts is a refusal.
- */
 // A reader who has never asked for this account's scan: the state the page
 // meets on a first open, before its own ensure answers. The server merges
 // the rules' live advice into every scan it wires, a never-read one included,
@@ -199,8 +175,7 @@ function neverScannedEchoing(view: unknown): typeof neverScanned {
 // answered from the fixtures unless a suite hands in its own. Named routes
 // rather than a chain in the mock, so a suite reads what the backstop
 // answers as a table.
-type BackstopOptions = Readonly<{
-  strength?: unknown;
+export type BackstopOptions = Readonly<{
   company360?: unknown;
   scan?: unknown;
   rollup?: unknown;
@@ -211,13 +186,10 @@ type BackstopOptions = Readonly<{
   connectors?: unknown;
 }>;
 
-function backstopAnswer(
+export function backstopAnswer(
   pathname: string,
   options?: BackstopOptions,
 ): Response | undefined {
-  if (pathname.endsWith("/strength")) {
-    return jsonResponse(options?.strength ?? dormantStrength);
-  }
   if (pathname.endsWith("/context")) {
     return jsonResponse({
       anchor: { type: "company", id: "o-1" },
@@ -246,37 +218,13 @@ function backstopAnswer(
   return undefined;
 }
 
-export function stubFetch(
-  responder: (
-    url: string,
-    method: string,
-    request: Request,
-  ) => Promise<Response>,
-  options?: BackstopOptions,
-): {
-  fetchMock: Mock<(request: Request) => Promise<Response>>;
-  urls: string[];
-} {
-  const urls: string[] = [];
-  const fetchMock = vi.fn(async (request: Request) => {
-    urls.push(request.url);
-    const pathname = new URL(request.url).pathname;
-    const answer =
-      backstopAnswer(pathname, options) ??
-      (await responder(request.url, request.method, request));
-    return pathname.endsWith("/me") ? withSession(answer) : answer;
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return { fetchMock, urls };
-}
-
 // The session a responder that never named one gets: a full seat holding
 // the grants a rep working their own accounts holds. Every write control on
 // the page asks the grant before it draws, so a responder that answered /me
 // with the COMPANY body (the catch-all most specs end in) would otherwise
 // describe a reader every verb is withheld from. A spec about a refusal
 // answers /me itself, with a `user`, and is passed through untouched.
-async function withSession(answer: Response): Promise<Response> {
+export async function withSession(answer: Response): Promise<Response> {
   // A refusal is a session too — the 401 the boundary tells apart from an
   // unavailable server — and stays exactly as the responder answered it.
   if (!answer.ok) {

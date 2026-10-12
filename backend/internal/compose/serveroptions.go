@@ -90,19 +90,6 @@ func WithMCPResource(resource string) Option {
 	}
 }
 
-// WithOAuthAccessTokenTTL shortens the passport the OAuth handshake mints —
-// the code exchange and every rotation alike. Without it a connector's access
-// token keeps the passport default (30 days), which is the posture every
-// deployment ran before this knob existed; with it an operator can take that to
-// connector norms (minutes plus refresh) without a code change, and the refresh
-// machinery is what makes that cheap. cmd passes it from
-// --oauth-access-token-ttl / MARGINCE_OAUTH_ACCESS_TOKEN_TTL.
-func WithOAuthAccessTokenTTL(ttl time.Duration) Option {
-	return func(s *Server, _ *pgxpool.Pool) {
-		s.authHandlers = s.WithOAuthAccessTokenTTL(ttl)
-	}
-}
-
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,
 // the OAuth authorization server and both discovery documents are mounted
 // together. Without it none of those routes exists — an installation that
@@ -162,7 +149,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
 		// Erasure must reach the attachment bytes, not only the rows, so the
 		// DSR erase path gets a blob-aware eraser (Art. 17).
-		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithBlobstore(store))
+		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithBlobstore(store))
 		// The controller's release on the retention surface is an erasure too,
 		// and reaches the same bytes.
 		s.privacyHandlers = s.privacyHandlers.WithBlobstore(store)
@@ -232,6 +219,11 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// the panic that says so at boot rather than at the read.
 		if s.aiRoutingHandlers.store != nil {
 			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithVault(vault)
+		}
+		// The sync lists each vendor's models with the key sealed here; guarded
+		// like the store above, for a role that composed no AI surface.
+		if s.priceCatalogues.broker != nil {
+			s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, vault, config.FromOS, s.log, s.priceCatalogues))
 		}
 		// The connector OAuth apps ride the same reasoning: each client SECRET is
 		// sealed, so the surface exists only where there is somewhere to seal it.
@@ -395,6 +387,13 @@ func WithPublicBaseURL(base string) Option {
 	}
 }
 
+// WithAPIBaseURL sets the API's own external base, for a deployment that
+// serves the API on a different origin than the SPA. Where a passport calls
+// the API is read from it first (agentAPIOrigin).
+func WithAPIBaseURL(base string) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.apiBaseURL = base }
+}
+
 // WithDelivery wires the machinery an accepted send is staged for
 // transmission with, onto BOTH send transports this role serves: the HTTP
 // handler and the MCP send_email tool. Without it a send refuses rather than
@@ -419,5 +418,13 @@ func WithSendAuthority(authority activities.SendAuthority) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.send.SendAuthority = authority
 		s.rebuildToolRegistry(pool)
+	}
+}
+
+// WithFilterProposals binds the lane that reads a list described in plain
+// words into filter clauses. Unbound, the endpoint answers 409 ai_not_configured.
+func WithFilterProposals(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.filterProposalHandlers = s.withFilterProposalLane(brain)
 	}
 }

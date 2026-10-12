@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import { Button, Field, Modal } from "../design-system/atoms";
+import { Button, Field, Textarea } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
-import { throwProblem } from "./common";
-import "./companyreject.css";
+import { unwrap } from "./common";
 import "./common.css";
 
 type Company = components["schemas"]["Company"];
@@ -38,7 +37,6 @@ export function CompanyRejectAction({
   disabledReasonId?: string;
 }>) {
   const t = useT();
-  const headingId = useId();
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
   // ONE key per confirmation, held across retries. Without it a response lost
@@ -75,20 +73,20 @@ export function CompanyRejectAction({
     // the latest render sends the previous text — refusing a filled form, or
     // recording a reason the reader had already replaced.
     archive: async ({ reason: typed }) => {
-      const { data, error } = await api.POST("/companies/{id}/reject", {
-        params: {
-          path: { id: company.id },
-          // Through ifMatch's own second argument: it owns the header map, and
-          // a sibling `header` beside it is silently overwritten.
-          ...ifMatch(requireVersion(company.version), {
-            "Idempotency-Key": idempotencyKey,
-          }),
-        },
-        body: { reason: typed.trim() },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      const data = unwrap(
+        await api.POST("/companies/{id}/reject", {
+          params: {
+            path: { id: company.id },
+            // Through ifMatch's own second argument: it owns the header map, and
+            // a sibling `header` beside it is silently overwritten.
+            ...ifMatch(requireVersion(company.version), {
+              "Idempotency-Key": idempotencyKey,
+            }),
+          },
+          body: { reason: typed.trim() },
+        }),
+        t,
+      );
       return { id: data.company.id, domain: data.domain.domain };
     },
     invalidate: "companies",
@@ -125,15 +123,19 @@ export function CompanyRejectAction({
       >
         {t("company.reject")}
       </Button>
-      <Modal
+      <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
-        labelledBy={headingId}
+        title={t("company.reject")}
+        confirmLabel={t("company.reject")}
+        confirmVariant="danger"
+        // The reason is REQUIRED by the contract, so the control that sends it
+        // says so before the server has to.
+        confirmDisabled={!ready}
+        onConfirm={() => mutation.mutate({ reason })}
+        pending={mutation.isPending}
       >
-        <Heading size="large" id={headingId} className="t-h2 modal-title">
-          {t("company.reject")}
-        </Heading>
-        <p className="companyreject-confirm">
+        <p>
           {t("company.rejectConfirm", {
             name: company.display_name,
             domain: primary.domain,
@@ -145,7 +147,7 @@ export function CompanyRejectAction({
           required
         >
           {(control) => (
-            <textarea
+            <Textarea
               {...control}
               rows={3}
               value={reason}
@@ -154,27 +156,7 @@ export function CompanyRejectAction({
           )}
         </Field>
         <ErrorLine error={mutation.error} />
-        <div className="actions">
-          <Button
-            onClick={() => setConfirming(false)}
-            disabled={mutation.isPending}
-          >
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="danger"
-            // The reason is REQUIRED by the contract, so the control that
-            // sends it says so before the server has to: a refusal for an
-            // empty field the reader can see is a round trip that teaches
-            // them nothing.
-            disabled={!ready || mutation.isPending}
-            onClick={() => mutation.mutate({ reason })}
-            data-testid="reject-company-confirm"
-          >
-            {t("company.reject")}
-          </Button>
-        </div>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }

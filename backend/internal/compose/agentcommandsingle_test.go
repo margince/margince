@@ -62,12 +62,13 @@ var singlePurposeTools = []string{
 //
 // gatekit:fixture the request body crm.yaml declares for each route — expected input the walk decodes, not a waived cost
 var contractBodies = map[string]string{
-	"sendEmail":        `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales"}`,
-	"sendMessage":      `{"body":"hi","consent_purpose":"support"}`,
-	"sendCompanyEmail": `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
-	"bookMeeting":      `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","links":[{"entity_type":"deal","entity_id":"019ff000-0000-7000-8000-000000000002"}]}`,
-	"promoteLead":      `{"trigger":"inbound_reply"}`,
-	"undoBulkChange":   `{}`,
+	"sendEmail":              `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales"}`,
+	"sendMessage":            `{"body":"hi","consent_purpose":"support"}`,
+	"sendCompanyEmail":       `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
+	"bookMeeting":            `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","links":[{"entity_type":"deal","entity_id":"019ff000-0000-7000-8000-000000000002"}]}`,
+	"promoteLead":            `{"trigger":"inbound_reply"}`,
+	"undoBulkChange":         `{}`,
+	"disposeDedupeCandidate": `{"disposition":"not_a_duplicate"}`,
 	// Optional on the wire so a governed agent disqualify works bare; the
 	// decode is proven against the body the UI really sends.
 	"disqualifyLead":      `{"reason_id":"019ff000-0000-7000-8000-000000000007","note":"went with a competitor"}`,
@@ -256,12 +257,9 @@ func TestAMergeStagesTheSurvivorTheBodyNamesRatherThanTheRoutedRecord(t *testing
 // where that shows: a site crawl a resolver describes as a page read is an
 // approval given for something else entirely.
 //
-// The SUMMARY rather than the inbox line, and the difference is worth stating.
-// stagedTarget (agentgatestaging.go) takes only the TARGET from the resolver
-// and writes restSummary as the line an approver reads on this door — that line
-// names the concrete path, so a human here does see which read they are
-// releasing. What the summary proves is that the erased command underneath
-// carries the right depth at all, which is the only handle this door has on it.
+// The resolver's SUMMARY is what stagedSentence puts in front of the approver,
+// so a human here reads which read they are releasing. What the summary proves
+// is that the erased command underneath carries the right depth at all.
 func TestTheTwoEnrichRoutesStageTheDepthTheirOwnRouteMeans(t *testing.T) {
 	staged := map[string]string{}
 	for _, c := range []struct{ op, path string }{

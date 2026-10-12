@@ -143,6 +143,7 @@ type capturedFile struct {
 	partID       *string
 	sourceID     *string
 	company      *string
+	withheld     bool
 }
 
 func withFiles(rec connector.NormalizedRecord, parts ...connector.Part) connector.NormalizedRecord {
@@ -179,7 +180,7 @@ func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourc
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT filename, content_type, declared_type, category, storage_key,
-			       byte_size, external_part_id, external_source_id, company_id::text
+			       byte_size, external_part_id, external_source_id, company_id::text, bytes_withheld
 			  FROM attachment
 			 WHERE external_source_id = $1
 			 ORDER BY external_part_id`, system+":"+sourceID)
@@ -190,7 +191,7 @@ func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourc
 		for rows.Next() {
 			var f capturedFile
 			if err := rows.Scan(&f.filename, &f.contentType, &f.declaredType, &f.category,
-				&f.storageKey, &f.byteSize, &f.partID, &f.sourceID, &f.company); err != nil {
+				&f.storageKey, &f.byteSize, &f.partID, &f.sourceID, &f.company, &f.withheld); err != nil {
 				return err
 			}
 			out = append(out, f)
@@ -544,12 +545,11 @@ func TestTheAuditImageOfACapturedFileNamesTheCategoryTheRowHolds(t *testing.T) {
 	}
 }
 
-// A thread the classifier has already judged private stores no files at all.
-//
-// The read boundary kept a colleague out of them; it did not keep them from
-// being written. A payslip forwarded from a private address is the case, and
-// not storing it is strictly better than storing it and being able to delete
-// it later.
+// A thread the classifier has already judged private keeps none of its files'
+// bytes. Each file is still named, on a row with no stored object, so its
+// owner sees what arrived — a payslip forwarded from a private address is the
+// case, and not storing it is strictly better than storing it and deleting it
+// later.
 func TestAPrivateThreadsFilesAreNeverStored(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
@@ -564,9 +564,7 @@ func TestAPrivateThreadsFilesAreNeverStored(t *testing.T) {
 		t.Fatalf("capture: %v", err)
 	}
 
-	if files := filesFor(ctx, t, db, "msg-private-"+tag); len(files) != 0 {
-		t.Fatalf("a private thread stored %d file(s)", len(files))
-	}
+	requireNamedWithoutBytes(t, filesFor(ctx, t, db, "msg-private-"+tag))
 	// And the message itself is kept. Refusing the correspondence would lose a
 	// real exchange over a file nobody wanted stored.
 	if !activityExists(ctx, t, db, "msg-private-"+tag) {
@@ -634,9 +632,7 @@ func TestAThreadHeldByItsOwnerWithholdsItsFilesToo(t *testing.T) {
 		t.Fatalf("capture: %v", err)
 	}
 
-	if files := filesFor(ctx, t, db, "msg-owner-held-"+tag); len(files) != 0 {
-		t.Fatalf("an owner-held thread stored %d file(s)", len(files))
-	}
+	requireNamedWithoutBytes(t, filesFor(ctx, t, db, "msg-owner-held-"+tag))
 	if verdict := withheldVerdict(ctx, t, db, "msg-owner-held-"+tag); verdict != "held_by_owner" {
 		t.Fatalf("the trail records %q, want the seat's own hand rather than the classifier", verdict)
 	}

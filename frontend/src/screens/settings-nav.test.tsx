@@ -281,6 +281,8 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "usage",
   "automations",
   "privacy",
+  // The installation_settings update ops holds, which also opens Company.
+  "jurisdiction",
   "system-health",
 );
 

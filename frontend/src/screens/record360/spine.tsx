@@ -15,7 +15,7 @@
 // reason this is a spine rather than a fourth card: the rule below draws the
 // waiting itself, at a size that reads before the words around it.
 
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 
 import { useRecordZone } from "../../app/recordzone";
 import { EmailReference } from "../../design-system/emailreference";
@@ -26,6 +26,7 @@ import {
   namesOf,
   withWhom,
 } from "../../design-system/participants";
+import { useScrollRegion } from "../../design-system/scrollregion";
 import {
   calendarDaysBetween,
   formatDateAbbrev,
@@ -34,6 +35,12 @@ import {
 } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  CALLED_OFF_MEETING,
+  EXCHANGE_KINDS,
+  type ExchangeKind,
+  isExchange,
+} from "./exchangekinds";
 import "./spine.css";
 
 /**
@@ -98,6 +105,8 @@ export type SpineSource = {
       // that names OUR side of an exchange — a mail carries the contact it was
       // with and nothing about the mailbox behind it.
       host_user_id?: string | null;
+      // Meeting only: whether it was held, booked or called off.
+      meeting_status?: string | null;
     }[];
     // Whether the read sent a cut page. A thread that drew three of four
     // conversations can count the rest; one drawn from a cut page cannot, and
@@ -165,6 +174,8 @@ export function RecordSpine({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
+  const axis = useRef<HTMLDivElement>(null);
+  const axisRegion = useScrollRegion(axis, t("record.timeline"));
   if (!source) {
     return null;
   }
@@ -184,13 +195,7 @@ export function RecordSpine({
   // the one stop with no record behind it, and on a horizontal axis the WIDTH
   // is the waiting — a silence drawn the same width as the meeting before it
   // says the two took the same amount of time.
-  const columns = stops
-    .map((stop) =>
-      // The marker is a line rather than a stop, so it takes only the width
-      // of the word on it.
-      todayColumn(stop),
-    )
-    .join(" ");
+  const columns = stops.map(todayColumn).join(" ");
   return (
     <PanelBody className="co-spine">
       {/* The axis runs ACROSS, not down: a reader takes the account's shape —
@@ -199,7 +204,7 @@ export function RecordSpine({
           give. It scrolls rather than wraps, because a time axis that wrapped
           onto a second line would put a later stop to the left of an earlier
           one. */}
-      <div className="co-spine-scroll">
+      <div ref={axis} className="co-spine-scroll" {...axisRegion}>
         <ol className="co-spine-track" style={{ gridTemplateColumns: columns }}>
           {stops.map((stop) => (
             <li
@@ -432,28 +437,6 @@ function on(at: string, ctx: Ctx): string {
   return formatDateAbbrev(at, ctx.locale, ctx.zone);
 }
 
-// The kinds that are an EXCHANGE with the record, each with what a single one
-// of it is called. The timeline section is unfiltered — it carries tasks from
-// the same table — and a task is something we wrote to ourselves rather than
-// something that was said.
-//
-// A map rather than a set plus a template-literal key: `t` takes a declared
-// MessageKey, so writing the key from the kind would put the catalog beyond
-// what the compiler can check and let a new kind ship printing its own id.
-const EXCHANGE_KINDS = {
-  email: "co.spine.kind.email",
-  call: "co.spine.kind.call",
-  meeting: "co.spine.kind.meeting",
-  note: "co.spine.kind.note",
-  message: "co.spine.kind.message",
-} as const satisfies Record<string, MessageKey>;
-
-type ExchangeKind = keyof typeof EXCHANGE_KINDS;
-
-function isExchange(kind: string): kind is ExchangeKind {
-  return kind in EXCHANGE_KINDS;
-}
-
 // How many conversations the thread draws before the silence.
 //
 // Three is what fits above the fold beside the gap and what is left ahead. A
@@ -665,6 +648,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
     const at = Date.parse(entry.occurred_at ?? "");
     if (
       !isExchange(entry.kind) ||
+      CALLED_OFF_MEETING.has(entry.meeting_status ?? "") ||
       !subject ||
       // Already happened, as of the read the rest of the card describes: an
       // `occurred_at DESC` list sorts a meeting booked for next week to the

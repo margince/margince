@@ -1,7 +1,8 @@
 import { useQueries } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { stable } from "../format/collate";
+import { unwrap } from "./common";
 
 // The companies a deals board names, resolved to the names and marks its
 // cards draw.
@@ -75,7 +76,7 @@ export function useCompanyMarks(
               : [],
           ),
         ),
-      ].sort()
+      ].sort(stable)
     : [];
   const batches: string[][] = [];
   for (let at = 0; at < unnamed.length; at += COMPANY_MARK_BATCH) {
@@ -85,25 +86,22 @@ export function useCompanyMarks(
     queries: batches.map((batch) => ({
       queryKey: ["companies", "marks", batch],
       queryFn: async (): Promise<Map<string, CompanyMark>> => {
-        const { data, error } = await api.GET("/companies", {
-          params: {
-            // Archived as well: archiving a company leaves its deals naming
-            // it, and the single-record read these replaced answered those.
-            query: {
-              id: batch,
-              include_anchor: true,
-              include_archived: true,
-              limit: batch.length,
+        // A refused read is held as an error, as screens/entityref.tsx does. Each
+        // card it covers then says its company did not load, not drawing none.
+        const data = unwrap(
+          await api.GET("/companies", {
+            params: {
+              // Archived as well: archiving a company leaves its deals naming
+              // it, and the single-record read these replaced answered those.
+              query: {
+                id: batch,
+                include_anchor: true,
+                include_archived: true,
+                limit: batch.length,
+              },
             },
-          },
-        });
-        if (error) {
-          // A refused read is not an absence: it is held as an error, so each
-          // card it covers says its company did not load rather than drawing
-          // none. The same rule the shared reference resolver states
-          // (screens/entityref.tsx).
-          throwProblem(error);
-        }
+          }),
+        );
         // An id missing from the answer is archived, or row scope hides it
         // from this reader, and no retry turns that into a name: the card has
         // no company to draw.

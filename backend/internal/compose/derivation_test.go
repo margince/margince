@@ -81,8 +81,7 @@ func TestRenderDefinitionTellsUnsetApartFromEmptyText(t *testing.T) {
 func TestRenderDefinitionRejectsUnknownAggregate(t *testing.T) {
 	_, err := renderDefinition(prebuiltReports["forecast"], nil, nil,
 		[]reportAggregate{{Fn: "p90", Field: "amount_minor"}})
-	var notAllowed *FieldNotAllowedError
-	if !errors.As(err, &notAllowed) {
+	if _, ok := errors.AsType[*FieldNotAllowedError](err); !ok {
 		t.Fatalf("unknown fn → %v, want FieldNotAllowedError", err)
 	}
 }
@@ -143,8 +142,7 @@ func TestParseDerivationQueryRejectsMalformedHandles(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err = parseDerivationQuery(values)
-		var notAllowed *FieldNotAllowedError
-		if !errors.As(err, &notAllowed) {
+		if _, ok := errors.AsType[*FieldNotAllowedError](err); !ok {
 			t.Errorf("%s → %v, want FieldNotAllowedError", name, err)
 		}
 	}

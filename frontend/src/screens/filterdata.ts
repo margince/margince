@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { historyFieldLabelKey } from "./historyfieldlabels";
 import {
   type EncodedPredicate,
@@ -37,7 +37,7 @@ export type FilterResource = FilterVocabulary["resource"];
  * is established here (`max_messages` on the connector body generates the same
  * way), so this follows the house rather than reshaping the contract to dodge it.
  */
-const PREVIEW_PAGE = 25;
+export const PREVIEW_PAGE = 25;
 
 export function vocabularyQueryKey(resource: FilterResource) {
   return ["filter-vocabulary", resource] as const;
@@ -51,18 +51,20 @@ export function vocabularyQueryKey(resource: FilterResource) {
  * clause, so one fetch serves a whole editing session. That is also why the
  * field picker reads THIS rather than a list of its own — the server owns which
  * fields exist, and a second copy would offer one the engine refuses.
+ *
+ * `enabled` lets a surface that needs it only sometimes call the hook
+ * unconditionally and still ask nothing when it does not.
  */
-export function useFilterVocabulary(resource: FilterResource) {
+export function useFilterVocabulary(resource: FilterResource, enabled = true) {
   return useQuery<FilterVocabulary>({
     queryKey: vocabularyQueryKey(resource),
+    enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/filters/vocabulary", {
-        params: { query: { resource } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/filters/vocabulary", {
+          params: { query: { resource } },
+        }),
+      );
     },
   });
 }
@@ -99,13 +101,11 @@ export function useFilterPreview(
     // in flight, and the caller shows staleness rather than absence.
     placeholderData: (previous) => previous,
     queryFn: async () => {
-      const { data, error } = await api.POST("/filters/preview", {
-        body: { resource, filter, limit },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/filters/preview", {
+          body: { resource, filter, limit },
+        }),
+      );
     },
   });
 }
@@ -180,8 +180,14 @@ export function fieldLabel(
   if (key) {
     return t(key);
   }
-  const bare = field.custom ? field.name.replace(/^cf_/, "") : field.name;
-  return bare.replaceAll("_", " ");
+  return field.custom
+    ? customColumnLabel(field.name)
+    : field.name.replaceAll("_", " ");
+}
+
+/** A custom column's `cf_` name read as words, as `fieldLabel` reads it. */
+export function customColumnLabel(column: string): string {
+  return column.replace(/^cf_/, "").replaceAll("_", " ");
 }
 
 /** The wire shape a caller hands the preview, for tests that assert the body. */

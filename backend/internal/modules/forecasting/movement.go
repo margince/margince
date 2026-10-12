@@ -107,6 +107,15 @@ type snapshotSide struct {
 	// every line of the waterfall would be a number nobody can act on.
 	PeriodStart time.Time
 	PeriodEnd   time.Time
+	// Population is what the snapshot was frozen over. A movement between two
+	// different populations reports the population change as deals that moved.
+	Scope        Scope
+	PipelineID   *ids.UUID
+	BaseCurrency string
+	// Withheld says the lens dropped rows: deals this caller cannot read, or that
+	// no longer exist. A consumer that draws a complete-looking chart from the
+	// remainder must say the rest is withheld.
+	Withheld bool
 }
 
 // Reading names which of the four money answers a movement explains. A
@@ -183,7 +192,7 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 		add(BucketArchived, delta)
 		out.Deals = append(out.Deals, DealDelta{
 			DealID: dealID, Bucket: BucketArchived, AmountMinor: delta,
-			FromMinor: ptr(contributionOf(reading, was)), ToMinor: ptr(int64(0)),
+			FromMinor: new(contributionOf(reading, was)), ToMinor: new(int64(0)),
 		})
 	}
 
@@ -218,6 +227,8 @@ func classifyOutcome(reading Reading, was Contribution, existed bool, now Contri
 		return BucketWon
 	case !existed:
 		return BucketNew
+	case now.InLost && !was.InLost && inReading(reading, was):
+		return BucketLost
 	case now.ExclusionReason == "" && was.ExclusionReason != "":
 		// It became countable again: a price arrived, or a rate did.
 		return BucketAmount
@@ -334,14 +345,12 @@ func dealDelta(
 ) DealDelta {
 	out := DealDelta{
 		DealID: dealID, Bucket: bucket, AmountMinor: delta,
-		ToMinor:    ptr(contributionOf(reading, now)),
+		ToMinor:    new(contributionOf(reading, now)),
 		AuditID:    now.AuditID,
 		ApprovalID: now.ApprovalID,
 	}
 	if existed {
-		out.FromMinor = ptr(contributionOf(reading, was))
+		out.FromMinor = new(contributionOf(reading, was))
 	}
 	return out
 }
-
-func ptr[T any](v T) *T { return &v }

@@ -257,6 +257,7 @@ const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "POST /coldstart/preview": "always",
   "POST /company/site-reads/{readId}/messages": "always",
   "POST /deals/{id}/role-proposals": "always",
+  "POST /filters/propose": "always",
   "POST /knowledge/corpora/{id}/ask": "always",
   "POST /leads/{id}/draft-email": "always",
   "POST /offers/{id}/regenerate": "always",

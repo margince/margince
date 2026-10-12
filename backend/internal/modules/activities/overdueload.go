@@ -41,6 +41,9 @@ type OverdueLoad struct {
 // DISCOVER-gated, matching the list this counts. The board publishes a number
 // and no content, and a task's existence under a record the reader may open is
 // what discover already admits.
+//
+// A task aged out of the Worklist is not counted unless its assignee pinned it,
+// so the figure a lead reads is the one the rep's own day shows.
 const overdueLoadSQL = `
 	SELECT COALESCE(a.assignee_id, '00000000-0000-0000-0000-000000000000'::uuid), count(*)
 	  FROM activity a
@@ -48,6 +51,7 @@ const overdueLoadSQL = `
 	   AND a.archived_at IS NULL
 	   AND a.due_at IS NOT NULL AND a.due_at < $%[1]d
 	   AND %[2]s
+	   AND %[3]s
 	 GROUP BY 1`
 
 // OverdueLoadByAssignee counts each contact's open tasks already past due.
@@ -67,7 +71,8 @@ func (s *Store) OverdueLoadByAssignee(ctx context.Context, asOf time.Time) ([]Ov
 		if scope == "" {
 			scope = scopeUnbounded
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(overdueLoadSQL, instant, scope), args...)
+		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", arg)
+		rows, err := tx.Query(ctx, fmt.Sprintf(overdueLoadSQL, instant, scope, agedOut), args...)
 		if err != nil {
 			return err
 		}

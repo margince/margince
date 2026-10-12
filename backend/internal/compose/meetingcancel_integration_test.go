@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	calendarSystem = "gcal"
+	calendarSystem = integration.CalendarSystem
 	calendarEvent  = "evt-consulting-monthly"
 )
 
@@ -51,11 +51,7 @@ var meetingStart = time.Date(2026, 3, 4, 9, 0, 0, 0, time.UTC)
 
 // calendarSink is the Sink as compose builds it for a calendar connector: the
 // cancel seam wired to the module that owns the activity table.
-func calendarSink(e *integration.Env) *capture.Sink {
-	return capture.NewSink(e.DB()).WithMeetingCloser(
-		activities.CancelCapturedMeetingFor(capture.SeatHoldsActivityTx),
-		activities.CancelMeetingByIDTx)
-}
+func calendarSink(e *integration.Env) *capture.Sink { return e.CalendarSink() }
 
 // captureMeeting lands one meeting activity through the real Sink, exactly as a
 // live calendar pull would, and answers its id.
@@ -92,20 +88,7 @@ func calendarOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
 // fixture for the other calendar provider needs its own actor rather than a
 // second spelling of this one.
 func connectorOwnerCtx(e *integration.Env, owner ids.UUID, connectorName string) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalConnector, ID: "connector:" + connectorName,
-		UserID: owner, OnBehalfOf: owner,
-		Permissions: principal.Permissions{
-			Objects: map[string]principal.ObjectGrant{
-				"activity": {Create: true, Read: true, Update: true},
-				"contact":  {Create: true, Read: true, Update: true},
-				"company":  {Create: true, Read: true, Update: true},
-			},
-			RowScope: principal.RowScopeAll,
-		},
-	})
+	return e.ConnectorOwnerCtx(owner, connectorName)
 }
 
 // meetingKey is the natural key the capture landed under — what a later pull

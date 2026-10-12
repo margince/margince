@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../margince.schema.json
+# config/presets/gemini_vertex_eu.yaml — every lane on Gemini served by Vertex AI
+# at an EU location, under eu_hosted.
+#
+# What it guarantees: Google processes every prompt, and every text embedded,
+# in EU member states. The chat tiers use the `eu` multi-region; the embeddings
+# lane uses europe-west4, because `eu` serves no embedding model. eu_hosted
+# refuses London (europe-west2), Zürich (europe-west6), `global` and `us` at save.
+# It covers AI inference only — docs/how-to/connect-a-cloud-model-provider.md §5.
+#
+# Needs one service-account JSON key, from GEMINI_VERTEX_SA_JSON or Settings →
+# Provider keys, on an account holding roles/aiplatform.user in a project with the
+# Vertex AI API enabled. Not loaded automatically — see README.md.
+version: 1
+
+seeds:
+  ai_routing:
+    profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+    # Where Google processes every chat tier's call, written once.
+    providers:
+      gemini_vertex:
+        location: eu
+    # gemini_cloud.yaml's Flash and Flash-Lite at its thinking levels, so its
+    # certification records grade these rungs (aicert.MeasuredAs). Vertex serves
+    # no Pro model in the EU, so frontier takes premium's Flash.
+    tiers:
+      local_small: { provider: gemini_vertex, model: gemini-3.1-flash-lite }
+      cheap_cloud: { provider: gemini_vertex, model: gemini-3.1-flash-lite }
+      premium:     { provider: gemini_vertex, model: gemini-3.5-flash, thinking_level: low }
+      frontier:    { provider: gemini_vertex, model: gemini-3.5-flash, thinking_level: low }
+    # The width is asked of the model as outputDimensionality, as on gemini.
+    # The embedder keeps a location of its own, which overrides the provider's
+    # for this lane alone.
+    embeddings:
+      provider: gemini_vertex
+      location: europe-west4
+      model: gemini-embedding-001
+      dimensions: 1536

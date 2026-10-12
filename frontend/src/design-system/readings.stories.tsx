@@ -66,7 +66,7 @@ export const Meters: Story = {
 // dense against default, one under the other, because the size is only legible
 // as a comparison: the default bar stands alone in a column and pays for its own
 // interval above and below, while a dense one is the label's own bar in a row
-// that owns its spacing. Read it in both themes — the track is `--bgCard` and a
+// that owns its spacing. Read it in both themes: the track is `--bgInset` and a
 // 6px band of it sits differently against the panel in dark.
 export const DenseMeters: Story = {
   render: () => (
@@ -292,5 +292,27 @@ export const SegmentBars: Story = {
         }}
       />
     </>
+  ),
+};
+
+export const LongStageNames: Story = {
+  render: () => (
+    <BarList
+      label="Open pipeline by stage"
+      rows={[
+        {
+          key: "legal",
+          label: "Procurement, legal and security approval",
+          value: 25000000,
+          amount: "€250k",
+        },
+        {
+          key: "pilot",
+          label: "Technical pilot and stakeholder alignment",
+          value: 17000000,
+          amount: "€170k",
+        },
+      ]}
+    />
   ),
 };

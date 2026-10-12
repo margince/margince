@@ -7,7 +7,7 @@ import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
-import { navigate, useRoute } from "../app/router";
+import { navigate } from "../app/router";
 import {
   Avatar,
   Badge,
@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
@@ -39,7 +40,6 @@ import {
   formatMoney,
   formatNumber,
 } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
@@ -51,6 +51,7 @@ import {
   problemMessageOf,
   QueryGate,
   throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import { ThreadFold } from "./company/glance";
@@ -66,11 +67,6 @@ import {
 } from "./company360";
 import { NewDealAction } from "./companyactions";
 import { CompanyApprovalsPanel } from "./companyapprovals";
-import {
-  citationHasReceipt,
-  citationOpensRecord,
-  openCitation,
-} from "./companycitations";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyContactsList } from "./companycontacts/contacts";
 import { CoverageBand } from "./companycontacts/summary";
@@ -95,7 +91,8 @@ import {
   type ActivityDrawer,
   CompanyHeaderActions,
 } from "./companyheaderactions";
-import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
+import { CompanyIdentityFacts } from "./companyheaderfacts";
+import { CompanyNameLine } from "./companylifecycle";
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
@@ -107,12 +104,7 @@ import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { wholeCount } from "./companyrailshared";
-import {
-  COMPANY_TABS,
-  type CompanyTab,
-  companyTabRoute,
-  isCompanyTab,
-} from "./companytab";
+import { COMPANY_TABS, type CompanyTab } from "./companytab";
 import { TechnicalProfilePanel } from "./companytechnical";
 import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
 import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
@@ -128,13 +120,18 @@ import {
   ListTable,
   listFetchLimit,
   useListQuery,
-  useOwnerChips,
   useTagChips,
 } from "./listquery";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
+import { useOwnerChips } from "./ownerdials";
 import { PartnerTab } from "./partners";
-import { RecordSpine, WrittenBy } from "./record360";
+import {
+  type OpenReceipt,
+  openCitation,
+  RecordSpine,
+  WrittenBy,
+} from "./record360";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -166,7 +163,9 @@ import { groupChronology } from "./timelinegroups";
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 import { useAccountScan } from "./accountscan";
+import { useAddressedTab } from "./recordtab";
 import { invalidateRecord } from "./recordwritekeys";
+import { WorklistReturnLink } from "./worklist.return";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
 // evidence-or-omit: a field with no stored value is absent, never guessed.
@@ -193,21 +192,20 @@ async function fetchCompaniesPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Company>> {
-  const { data, error } = await api.GET("/companies", {
-    params: {
-      query: {
-        q: query.q || undefined,
-        sort: query.sort || undefined,
-        include_archived: query.includeArchived || undefined,
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        ...listQueryParams(query.filters),
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: {
+        query: {
+          q: query.q || undefined,
+          sort: query.sort || undefined,
+          include_archived: query.includeArchived || undefined,
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          ...listQueryParams(query.filters),
+        },
       },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {
@@ -278,8 +276,8 @@ export function CompaniesScreen() {
               label={t("create.company")}
               invalidate="companies"
               screen="companies"
-              create={(values, rows) =>
-                createCompany(values, rows, cf.toBody(values), t)
+              create={(values, rows, key) =>
+                createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
               fields={[...companyCreateFields, ...cf.formFields]}
@@ -663,38 +661,8 @@ function companyTabsFor(
     : COMPANY_TABS.filter((id) => !drop.has(id));
 }
 
-// useCompanyTab is scoped to the ACCOUNT being read, the same reason the
-// chronology filter is (useChronologyFilter): the route swaps one company
-// for another without ever unmounting this component, so a reader who opened
-// Partner on one account met it again on the next — and companyTabsFor's own
-// carveout (a reader mid-way through setting up a programme keeps the tab
-// while `tab === "partner"`) has no way to tell "still this account" from
-// "a different one" unless something resets it at the boundary.
-function useCompanyTab(
-  recordId: string,
-): [CompanyTab, (next: CompanyTab) => void] {
-  const route = useRoute();
-  // Read off the ADDRESS rather than held beside it, so the tab a reader is on
-  // is the tab the URL names — and the per-record reset this used to do by
-  // hand is gone with it: a tab belongs to the account it is addressed with,
-  // so swapping accounts cannot carry one along.
-  const addressed =
-    route.screen === "companies" && route.id === recordId
-      ? route.id2
-      : undefined;
-  return [
-    isCompanyTab(addressed) ? addressed : "overview",
-    // A PUSH, so Back steps between the tabs a reader opened rather than
-    // leaving the account altogether — the same thing the contact page's strip
-    // does. The per-record reset this used to hold is now the address's: a tab
-    // belongs to the account it names, so moving to another account cannot
-    // carry one along.
-    (next: CompanyTab) => navigate(companyTabRoute(recordId, next)),
-  ];
-}
-
 // openTaskId is scoped to the ACCOUNT being read, the same reason
-// useCompanyTab is: the route swaps one company for another without ever
+// the tab is: the route swaps one company for another without ever
 // unmounting this component, so a task detail modal opened on one account
 // would keep rendering over the next one.
 //
@@ -741,7 +709,14 @@ function useOpenTaskId(
 // roster behind the owner picker, and the record slice they prefill.
 export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const [tab, setTab] = useCompanyTab(id);
+  // The tab is scoped to the ACCOUNT being read, the same reason the
+  // chronology filter is (useChronologyFilter): the route swaps one company
+  // for another without ever unmounting this component, so a reader who opened
+  // Partner on one account met it again on the next — and companyTabsFor's own
+  // carveout (a reader mid-way through setting up a programme keeps the tab
+  // while `tab === "partner"`) has no way to tell "still this account" from
+  // "a different one" unless something resets it at the boundary.
+  const [tab, setTab] = useAddressedTab("companies", id, COMPANY_TABS);
   const view = useCompany360(id);
   // Only an assembled 360 counts as a visit: a page that never rendered the
   // account is not one the reader saw.
@@ -751,13 +726,11 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   const companyQuery = useQuery({
     queryKey: ["company", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 
@@ -914,9 +887,9 @@ function useChronologySlots({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The workspace roster, for the ids a change row stores. Read here rather
-  // than inside the adapter: the roster is a workspace query and the adapter
-  // is a pure mapping, which is what lets it be tested without one.
+  // The workspace roster, for the ids a change row stores. Still walks rather
+  // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
+  // `values.nameOf`, called per row as it renders, so the ids are unknown here.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
@@ -950,9 +923,6 @@ function useChronologySlots({
     kind: "company",
     recordId: company.id,
     filter,
-    // A narrowed read is a question about what was said, so the record's own
-    // edits stand down: they are not meetings, and not what the reader asked.
-    narrowed: hasTimelineFilters(filters),
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -1010,29 +980,26 @@ function useChronologySlots({
         </>
       ),
       timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
-      // Every cut renders through the ONE chronicle: Changes draws the same
-      // change rows the All view interleaves and Conversations the same
-      // thread rows, so no cut is a second rendering of rows another cut
-      // already shows. The By-field reading and the put-back control live in
-      // the record's Full history (the header's overflow menu), the one
-      // surface that carries the restore write.
+      // Every cut renders through the one chronicle, so no cut is a second
+      // rendering of rows another cut shows. The By-field reading and the
+      // put-back control live in the record's Full history (the header's
+      // overflow menu), the one surface that carries the restore write.
       timelineNotice:
         chronologyNotice(
           filter === "conversations"
             ? "chronology.conversationsEmpty"
             : "co.timeline.empty",
+          filter,
+          history,
           {
-            // The two feeds are read together rather than per filter.
-            loading: loading || history.loading || timeline.isPending,
-            failed: failed || history.failed || timeline.isError,
+            loading: loading || timeline.isPending,
+            failed: failed || timeline.isError,
             // A narrowed read is the list's own and is assembled once it
             // answers; the unfiltered one is the 360's section.
             assembled: hasTimelineFilters(filters)
               ? timeline.isSuccess
               : Boolean(view?.activities),
-            filter,
           },
-          history.entries.length,
           t,
         ) ??
         // The Conversations cut narrows the chronicle to the exchanges
@@ -1062,28 +1029,17 @@ function useChronologySlots({
 // The ORDER belongs to the card that offered the chip, not to the drawer. A
 // reader who clicked the third citation in a sentence expects "next" to mean
 // the fourth citation in THAT sentence — a drawer that built its own order
-// would step somewhere they cannot predict. A card with no ordering to give
-// passes none, and the drawer draws no arrows rather than guessing one.
+// would step somewhere they cannot predict. A sentence with one receipt has
+// nowhere to step, and the drawer draws no arrows rather than guessing one.
 function useCitedReceipt() {
   const [cited, setCited] = useState<CitedRecord | null>(null);
   const [list, setList] = useState<readonly CitedRecord[]>([]);
-  // The message a citation opened, held HERE beside the receipt it opens for
-  // the other kinds: both answer "what did this chip open", and splitting them
-  // would leave a caller wiring two states for one question.
+  // Beside the receipt, because both answer "what did this chip open" and a
+  // caller should not wire two states for one question.
   const [email, setEmail] = useState<string | null>(null);
-  const open = (
-    entityType: string,
-    entityId: string,
-    siblings?: readonly CitedRecord[],
-  ) => {
-    if (citationOpensRecord(entityType)) {
-      openCitation(entityType, entityId);
-      return;
-    }
-    if (citationHasReceipt(entityType)) {
-      setCited({ entityType, entityId });
-      setList(siblings ?? []);
-    }
+  const open: OpenReceipt = (receipt, siblings) => {
+    setCited(receipt);
+    setList(siblings);
   };
   // Wrapping at each end: a reader walking a sentence's citations should not
   // hit a dead stop and have to close the drawer to reach the first one again.
@@ -1105,10 +1061,6 @@ function useCitedReceipt() {
     cited,
     email,
     open,
-    // The message door, on its own. `open` routes a citation by its KIND, and a
-    // message is not a kind the citation renderer hands back — it decides per
-    // row whether a summary is openable and calls this directly, so the host
-    // passes it as `onOpenEmail` beside `onOpenRecord`.
     openEmail: setEmail,
     close: () => setCited(null),
     closeEmail: () => setEmail(null),
@@ -1277,6 +1229,7 @@ function CompanyPage({
   return (
     <div className="record-sheet">
       <RecordView
+        back={<WorklistReturnLink />}
         name={company.display_name}
         identity={company.id}
         avatarSrc={company.logo_url}
@@ -1284,10 +1237,10 @@ function CompanyPage({
         // on the page, but beside a work column that opens on the reader's ask
         // it no longer needs to be the size of a masthead.
         scale="compact"
-        // What the account is, and the one way in every reader already knows,
-        // on the name's own line, the contact record's own shape.
-        nameBadge={<CompanySubtitle company={company} />}
-        // The account's standing, as the pills row under the name.
+        // Where the account stands, the one control on the name's own line.
+        nameBadge={<CompanyNameLine company={company} />}
+        // What the account is, the way in, what it is to us and who may read
+        // it, as the row under the name.
         pulse={<CompanyMarks company={company} />}
         zone={recordZone}
         // The way in, who holds the account and when its own row was written,
@@ -1418,29 +1371,28 @@ function CompanyPage({
           open={auditOpen}
           onClose={() => setAuditOpen(false)}
           labelledBy="co-audit-title"
-          size="wide"
+          intent="drawer-reading"
         >
-          <Heading
-            size="large"
-            id="co-audit-title"
-            className="t-h2 modal-title"
-          >
-            {t("record.fullHistory")}
-          </Heading>
-          {/* Mounted only while open: the two history reads behind it are the
-            page's most expensive, and nobody who never opens the panel should
-            pay for them. */}
-          {auditOpen && (
-            <RecordHistoryTab
-              kind="company"
-              id={company.id}
-              restore={{
-                version: company.version,
-                onRestored: () =>
-                  invalidateRecord(queryClient, "company", company.id),
-              }}
-            />
-          )}
+          <DrawerHead>
+            <Heading size="large" id="co-audit-title" className="t-h2">
+              {t("record.fullHistory")}
+            </Heading>
+          </DrawerHead>
+          <DrawerBody>
+            {/* Mounted only while open: the two history reads behind it are
+              the page's most expensive, and only a reader who opens it pays. */}
+            {auditOpen && (
+              <RecordHistoryTab
+                kind="company"
+                id={company.id}
+                restore={{
+                  version: company.version,
+                  onRestored: () =>
+                    invalidateRecord(queryClient, "company", company.id),
+                }}
+              />
+            )}
+          </DrawerBody>
         </Modal>
       </RecordView>
     </div>
@@ -1514,6 +1466,7 @@ function CompanyRecordBody({
   // moment of closing would empty it in front of the reader. Null only before
   // the first composer is ever opened, so nothing is mounted until then.
   const shownAnchor = useRef<ComposeAnchor | null>(null);
+  const recordZone = useRecordZone();
   if (composing !== null) {
     shownAnchor.current = composing;
   }
@@ -1553,7 +1506,8 @@ function CompanyRecordBody({
             failed={failed}
             onOpenHistory={onOpenHistory}
             onOpenTab={onTab}
-            onOpenRecord={receipt.open}
+            onOpenRecord={openCitation}
+            onOpenReceipt={receipt.open}
             onOpenEmail={receipt.openEmail}
             offerResearch={offerResearch}
             onOpenTasks={() => onTab("tasks")}
@@ -1584,7 +1538,8 @@ function CompanyRecordBody({
         readOnly={readOnly}
         openTaskId={openTaskId}
         onOpenTask={onOpenTask}
-        onOpenRecord={receipt.open}
+        onOpenRecord={openCitation}
+        onOpenReceipt={receipt.open}
         taskUpdate={taskUpdate}
       />
       {/* The composer, anchored on the message a draft_reply suggestion named.
@@ -1690,7 +1645,7 @@ function CompanyRecordBody({
           the same reason: both are what a chip on this page opens into. */}
       <OpenEmailDrawer
         activityId={receipt.email}
-        zone={viewerZone()}
+        zone={recordZone}
         onClose={receipt.closeEmail}
       />
       <CompanyProfileTab
@@ -1700,7 +1655,8 @@ function CompanyRecordBody({
         onOpenHistory={onOpenHistory}
         refusedReasonId={refusedReasonId}
         nameOf={dossierNames}
-        onOpenRecord={receipt.open}
+        onOpenRecord={openCitation}
+        onOpenReceipt={receipt.open}
         onOpenEmail={receipt.openEmail}
       />
     </>
@@ -1771,6 +1727,7 @@ function CompanyOverviewStack({
   failed,
   onOpenHistory,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
   onOpenTasks,
   onOpenTask,
@@ -1792,13 +1749,10 @@ function CompanyOverviewStack({
   loading: boolean;
   failed: boolean;
   onOpenHistory: () => void;
-  // Where a cited chip leads. Owned by the page, because the profile tab cites
-  // the same records and two owners would mean two receipts open over each
-  // other.
   onOpenRecord: (entityType: string, entityId: string) => void;
-  // Where a cited MESSAGE leads: the page's own email drawer. Beside
-  // onOpenRecord and owned by the same page, for the same reason — two drawers
-  // over one page would open over each other.
+  // The page's own drawers: the profile tab cites the same records, and two
+  // owners would open two drawers over each other.
+  onOpenReceipt: OpenReceipt;
   onOpenEmail: (activityId: string) => void;
   onOpenTasks: () => void;
   // The leading card's own fallback verbs, threaded to `useTodayReading`: a
@@ -1814,10 +1768,10 @@ function CompanyOverviewStack({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The names the reading resolves ids against: the account's own records, and
-  // the workspace roster for the colleague who held a meeting. Read here rather
-  // than inside the thread, because the roster is a workspace read and the
-  // thread is a presentational component that holds none of its own.
+  // The names the reading resolves ids against: the account's own records, and the
+  // workspace roster for the colleague who held a meeting. Still walks rather than
+  // reading useMemberNames by id, for the same reason useChronologySlots above does:
+  // `nameOf` is handed down and called per value as the reading's own rows render.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
@@ -1843,6 +1797,7 @@ function CompanyOverviewStack({
     onPrepareMeeting,
     onDraftTo,
     onOpenRecord,
+    onOpenReceipt,
     onOpenEmail,
     onPerform,
     onOpenTask,
@@ -1916,11 +1871,7 @@ function CompanyOverviewStack({
           // is one of ours, and the account's own contacts are the other side
           // of it.
           nameOf={nameOf}
-          // The page's own router, which already sends an `activity` to the
-          // email drawer for every cited chip on this account
-          // (citationOpensEmail). The thread takes that same door rather
-          // than a second opener somebody would have to keep in step.
-          onOpenEmail={(activityId) => onOpenRecord("activity", activityId)}
+          onOpenEmail={onOpenEmail}
         />
         {/* Keyed on the account, so its fold is the account's own. The page
               stays mounted while the route swaps companies, and without
@@ -1933,6 +1884,7 @@ function CompanyOverviewStack({
           loading={loading}
           onOpenHistory={onOpenHistory}
           onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
         />
       </Company360Call>
       {/* One column under the 360, full width at every measure: content-driven
@@ -1951,6 +1903,7 @@ function CompanyOverviewStack({
         companyId={company.id}
         nameOf={records}
         onOpenRecord={onOpenRecord}
+        onOpenReceipt={onOpenReceipt}
         onOpenEmail={onOpenEmail}
       />
       {/* The prepared questions are the ones the 360 answers in prose, and
@@ -1962,6 +1915,7 @@ function CompanyOverviewStack({
         <AssistantPanel
           companyId={company.id}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           onOpenEmail={onOpenEmail}
           projects={view?.projects}
         />
@@ -1974,6 +1928,7 @@ function CompanyOverviewStack({
         <GrowthFitPanel
           companyId={company.id}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           onOpenEmail={onOpenEmail}
         />
       )}
@@ -2003,6 +1958,7 @@ function CompanyDealsAndTasksTabs({
   openTaskId,
   onOpenTask,
   onOpenRecord,
+  onOpenReceipt,
   taskUpdate,
 }: Readonly<{
   tab: CompanyTab;
@@ -2015,10 +1971,10 @@ function CompanyDealsAndTasksTabs({
   readOnly: boolean;
   openTaskId: string | null;
   onOpenTask: (activityId: string | null) => void;
-  // Where a recommended step's cited records lead. The page's own receipt, so
-  // a chip opened from the Tasks tab lands where the same chip on the overview
-  // does.
+  // Where a recommended step's citations lead: the page's own, so a chip
+  // opened from the Tasks tab lands where the same chip on the overview does.
   onOpenRecord: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -2076,6 +2032,7 @@ function CompanyDealsAndTasksTabs({
           readOnly={readOnly}
           onOpenTask={onOpenTask}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           update={taskUpdate}
         />
       )}
@@ -2153,6 +2110,7 @@ function CompanyTasksTab({
   readOnly,
   onOpenTask,
   onOpenRecord,
+  onOpenReceipt,
   update,
 }: Readonly<{
   companyId: string;
@@ -2163,6 +2121,7 @@ function CompanyTasksTab({
   readOnly: boolean;
   onOpenTask: (activityId: string) => void;
   onOpenRecord: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
@@ -2205,6 +2164,7 @@ function CompanyTasksTab({
             companyId={companyId}
             view={view}
             onOpenRecord={onOpenRecord}
+            onOpenReceipt={onOpenReceipt}
           />
         )
       }
@@ -2250,6 +2210,7 @@ function CompanyProfileTab({
   refusedReasonId,
   nameOf,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   active: boolean;
@@ -2262,6 +2223,7 @@ function CompanyProfileTab({
   // read the same names and open through the same receipt.
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
 }>) {
   if (!active) {
@@ -2275,6 +2237,7 @@ function CompanyProfileTab({
       refusedReasonId={refusedReasonId}
       nameOf={nameOf}
       onOpenRecord={onOpenRecord}
+      onOpenReceipt={onOpenReceipt}
       onOpenEmail={onOpenEmail}
     />
   );
@@ -2287,6 +2250,7 @@ function ReferenceDisclosures({
   refusedReasonId,
   nameOf,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   company: Company;
@@ -2297,6 +2261,7 @@ function ReferenceDisclosures({
   refusedReasonId?: string;
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
 }>): ReactNode {
   return (
@@ -2305,6 +2270,7 @@ function ReferenceDisclosures({
       onOpenHistory={onOpenHistory}
       nameOf={nameOf}
       onOpenRecord={onOpenRecord}
+      onOpenReceipt={onOpenReceipt}
       onOpenEmail={onOpenEmail}
       tools={
         <>

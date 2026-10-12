@@ -26,6 +26,7 @@ package costestimate
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -321,10 +322,8 @@ func observedUnitsDenom(task ai.Task, slices []ai.ServedTaskTotal, labeledCount 
 func effectiveModel(ladder LadderResolver, task ai.Task, s ai.ServedTaskTotal) (ai.ModelRef, bool) {
 	bound := ladder.BoundLadder(task)
 	served := ai.ModelRef{Provider: s.Provider, Model: s.ModelID}
-	for _, b := range bound {
-		if b == served {
-			return served, true // still runs → its own current rate
-		}
+	if slices.Contains(bound, served) {
+		return served, true // still runs → its own current rate
 	}
 	if m, ok := ladder.CurrentModelForTier(s.Tier); ok {
 		return m, true // departed → repriced at the CURRENT binding of its OWN tier

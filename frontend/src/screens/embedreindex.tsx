@@ -16,7 +16,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDuration, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { bandTone } from "./aiusage";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
 import "./embedreindex.css";
 import { available } from "./settingscapability";
 import { holds } from "./settingscatalog";
@@ -63,9 +63,6 @@ function impactLabel(
   return t("embedreindex.impact.normal");
 }
 
-// dialogTitle/dialogConfirmLabel factor the mode-dependent copy out of the
-// render body below — the ONLY difference between the reindex and rebuild
-// flows is which strings the shared ConfirmModal shows.
 function dialogTitle(
   mode: "reindex" | "rebuild",
   t: ReturnType<typeof useT>,
@@ -243,10 +240,7 @@ export function EmbedReindexCard() {
     queryKey: embedReindexStatusQueryKey,
     enabled: canRead && bound,
     queryFn: async (): Promise<ReindexStatus> => {
-      const { data, error } = await api.GET("/embeddings/reindex/status");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/embeddings/reindex/status"));
       if (!data) {
         throw new Error("malformed reindex status response");
       }
@@ -261,10 +255,7 @@ export function EmbedReindexCard() {
     queryKey: embedReindexPreviewQueryKey,
     enabled: mode !== null,
     queryFn: async (): Promise<ReindexPreview> => {
-      const { data, error } = await api.GET("/embeddings/reindex/preview");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/embeddings/reindex/preview"));
       if (!data) {
         throw new Error("malformed reindex preview response");
       }
@@ -274,19 +265,17 @@ export function EmbedReindexCard() {
 
   const confirm = useMutation({
     mutationFn: async (force: boolean): Promise<ReindexStatus> => {
-      const { data, error } = await api.POST("/embeddings/reindex", {
-        body: {
-          // The identity this SPA previewed against, snapshotted at dialog
-          // open — the server 409s (reindex_identity_drift) if the embed
-          // binding changed since, so this must be the on-screen value, not a
-          // possibly-refetched live one.
-          previewed_identity: previewedIdentity ?? undefined,
-          force,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.POST("/embeddings/reindex", {
+          body: {
+            // The identity this SPA previewed against, snapshotted at dialog open. The
+            // server 409s (reindex_identity_drift) if the embed binding changed since,
+            // so this must be the on-screen value, not a refetched live one.
+            previewed_identity: previewedIdentity ?? undefined,
+            force,
+          },
+        }),
+      );
       if (!data) {
         throw new Error("malformed reindex confirm response");
       }
@@ -353,7 +342,7 @@ export function EmbedReindexCard() {
           const isRunning = data.status === "reembedding";
           return (
             <>
-              <SettingList>
+              <SettingList bleed="settings">
                 <SettingRow
                   label={t("embedreindex.statusLabel")}
                   control={
@@ -421,6 +410,8 @@ export function EmbedReindexCard() {
                   onClose={closeDialog}
                   title={dialogTitle(mode ?? "reindex", t)}
                   confirmLabel={dialogConfirmLabel(mode ?? "reindex", t)}
+                  // A rebuild re-embeds every record and cannot be undone.
+                  confirmVariant={mode === "rebuild" ? "danger" : "primary"}
                   // Gate on a fully-loaded, non-errored, non-refetching
                   // estimate — a cached preview that is refetching
                   // (isFetching) or has errored must not leave Confirm live
@@ -481,13 +472,17 @@ export function EmbedReindexCard() {
     );
   }
 
+  // The status rows stand straight in the panel; a withheld or unbound notice
+  // is a sentence under the intro.
+  const listsStatus = canRead && bound;
   // No bottom margin of its own: `.settings-stack` owns the gap between cards.
   return (
     <Panel title={t("embedreindex.title")}>
       <PanelBody>
         <PanelIntro>{t("embedreindex.sub")}</PanelIntro>
-        <CardBoundary>{body}</CardBoundary>
+        {!listsStatus && <CardBoundary>{body}</CardBoundary>}
       </PanelBody>
+      {listsStatus && <CardBoundary>{body}</CardBoundary>}
     </Panel>
   );
 }

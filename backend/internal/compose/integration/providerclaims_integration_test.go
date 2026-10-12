@@ -315,7 +315,7 @@ func TestMergeKeepsBothSidesPurchasedClaims(t *testing.T) {
 
 	store := contacts.NewStore(e.DB())
 	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source),
-		ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -347,7 +347,7 @@ func TestMergeKeepsBothLiveRunsWhenEitherMayHaveBeenPaid(t *testing.T) {
 
 	store := contacts.NewStore(e.DB())
 	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source),
-		ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -388,7 +388,7 @@ func TestMergeCancelsTheMergedAwayRecordsUnspentRun(t *testing.T) {
 
 	store := contacts.NewStore(e.DB())
 	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source),
-		ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatal(err)
 	}
 

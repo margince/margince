@@ -5,6 +5,7 @@
 // import from here; see README.md for what belongs in it.
 
 export { BriefTitle } from "./brieftitle";
+export { citationOpensRecord, openCitation } from "./citationroute";
 export {
   type BriefSentence,
   type CitationChip,
@@ -13,6 +14,7 @@ export {
   type CitedKind,
   type CitedSibling,
   citationChips,
+  type OpenReceipt,
   SentenceList,
   WrittenBy,
   type WrittenByWriter,

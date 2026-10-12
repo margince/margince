@@ -1,7 +1,12 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -36,6 +41,7 @@ function render(ui: ReactNode) {
 
 describe("ArchiveAction", () => {
   it("announces a refused archive with the server's own reason", async () => {
+    const user = userEvent.setup();
     render(
       <ArchiveAction
         label="Archive contact"
@@ -51,8 +57,12 @@ describe("ArchiveAction", () => {
         }}
       />,
     );
-    await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(screen.getByTestId("archive-confirm"));
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
 
     const announced = await screen.findByRole("alert");
     expect(announced.textContent).toBe("the record is under retention");
@@ -66,6 +76,7 @@ describe("ArchiveAction", () => {
   });
 
   it("says what went, once it has gone", async () => {
+    const user = userEvent.setup();
     // An archive is destructive and the contract has no restore endpoint, so
     // the closing dialog was the whole of what a reader got — and a dialog
     // closing is dismissal, not confirmation. It names the record because
@@ -81,8 +92,12 @@ describe("ArchiveAction", () => {
         onArchived={() => {}}
       />,
     );
-    await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(screen.getByTestId("archive-confirm"));
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "“Jana Brandt” archived",

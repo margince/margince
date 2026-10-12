@@ -1,7 +1,8 @@
-# custom/ — the fork-owned migration namespace (ADR-0017)
+<!-- prose:plain -->
+# custom/: the folder for a fork's own migrations
 
-Upstream ships this directory empty. A fork's agent-authored migrations
-land here as `<YYYYMMDDHHMMSS>_<name>.up.sql` / `.down.sql` pairs, tracked
-in `schema_migrations_custom`, applied after every `core/` migration.
-Custom columns carry the `x_` prefix so they can never collide with an
-upstream column on upgrade.
+Margince ships this folder empty. The migrations a fork's agents write go here, as an
+`<YYYYMMDDHHMMSS>_<name>.up.sql` file and a `.down.sql` file for each one. The table
+`schema_migrations_custom` tracks them, and they run after every `core/` migration.
+A custom column's name starts with `x_`, so it can never have the same name as a column
+that a new Margince version adds.

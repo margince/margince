@@ -85,11 +85,11 @@ func recordFieldsUnkeyed() map[string]string {
 // and is described separately, since its accepted keys are per-workspace.
 func contractFieldNames(t reflect.Type) []string {
 	names := make([]string, 0, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		tag := t.Field(i).Tag.Get("json")
+	for field := range t.Fields() {
+		tag := field.Tag.Get("json")
 		name := tag
-		if comma := strings.IndexByte(tag, ','); comma >= 0 {
-			name = tag[:comma]
+		if before, _, ok := strings.Cut(tag, ","); ok {
+			name = before
 		}
 		if name == "" || name == "-" {
 			continue

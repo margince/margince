@@ -5,8 +5,8 @@
 
 package gates
 
-// The dev seeder and the boot proof ask "is this contact currently employed?" the
-// way the PRODUCT asks it, and they ask it in the same words.
+// The dev seeder and the boot proof ask "is this contact currently employed?"
+// the way the product asks it, and they ask it in the same words.
 //
 // Neither is a Go client, so neither can call employment.CurrentPrimarySQL:
 // both are shell over the public API, and both therefore hand-spell the rule as

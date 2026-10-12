@@ -59,6 +59,11 @@ it.each(["public", "reschedule"])(
       await screen.findByText(de["scheduling.windowHorizon"]),
     ).toBeTruthy();
     expect(screen.queryByText("English server explanation")).toBeNull();
-    expect(screen.getByLabelText(de["scheduling.date"])).toBeTruthy();
+    // The way to another date stays on screen beside the explanation.
+    if (surface === "public")
+      expect(
+        screen.getByRole("button", { name: de["calendar.previousMonth"] }),
+      ).toBeTruthy();
+    else expect(screen.getByLabelText(de["scheduling.date"])).toBeTruthy();
   },
 );

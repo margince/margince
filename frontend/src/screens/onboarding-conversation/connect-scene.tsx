@@ -731,31 +731,26 @@ function LinkedinPanel({
   const trimmed = profile.trim();
 
   return (
-    <div className="ob-connect-linkedin-panel">
-      <Field label={t("ob.conv.linkedin.profileLabel")}>
-        {(control) => (
-          <input
-            {...control}
-            type="url"
-            inputMode="url"
-            placeholder={t("ob.conv.linkedin.profilePlaceholder")}
-            value={profile}
-            onChange={(event) => setProfile(event.target.value)}
-          />
-        )}
-      </Field>
-      <p className="t-sub">{t("ob.conv.linkedin.profileWhy")}</p>
-      <div className="ob-connect-dialog-actions">
+    <>
+      <div className="form-stack ob-connect-linkedin-panel">
+        <Field label={t("ob.conv.linkedin.profileLabel")}>
+          {(control) => (
+            <input
+              {...control}
+              type="url"
+              inputMode="url"
+              placeholder={t("ob.conv.linkedin.profilePlaceholder")}
+              value={profile}
+              onChange={(event) => setProfile(event.target.value)}
+            />
+          )}
+        </Field>
+        <p className="t-sub">{t("ob.conv.linkedin.profileWhy")}</p>
+        {error !== null && <ErrorLine>{error}</ErrorLine>}
+        <p className="t-sub">{t("ob.conv.linkedin.importLater")}</p>
+      </div>
+      <div className="actions">
         <Button
-          variant="primary"
-          disabled={trimmed === "" || pending}
-          onClick={() => onSave(trimmed)}
-        >
-          {t("ob.conv.linkedin.save")}
-        </Button>
-        <button
-          type="button"
-          className="ob-connect-dialog-notnow"
           // Skipping and saving are the two answers to the same question, so
           // they cannot both be in flight at once: a skip that lands while
           // the save PUT is still pending would leave the account skipped
@@ -765,10 +760,15 @@ function LinkedinPanel({
           onClick={onSkip}
         >
           {t("ob.conv.linkedin.skip")}
-        </button>
+        </Button>
+        <Button
+          variant="primary"
+          disabled={trimmed === "" || pending}
+          onClick={() => onSave(trimmed)}
+        >
+          {t("ob.conv.linkedin.save")}
+        </Button>
       </div>
-      {error !== null && <ErrorLine>{error}</ErrorLine>}
-      <p className="t-sub">{t("ob.conv.linkedin.importLater")}</p>
-    </div>
+    </>
   );
 }

@@ -16,10 +16,11 @@ var (
 	pinnedTriggers = []TriggerKind{
 		"record_created_updated", "field_reaches_value", "deal_enters_leaves_stage",
 		"no_activity_for_n_days", "date_field_approaching", "inbound_reply", "task_overdue",
+		"list_membership_changed",
 	}
 	pinnedActions = []ActionType{
 		"create_task", "notify", "assign_owner",
-		"set_field", "draft_email", "request_approval",
+		"set_field", "draft_email", "request_approval", "add_to_shortlist",
 	}
 )
 

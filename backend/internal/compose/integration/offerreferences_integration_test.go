@@ -17,12 +17,21 @@ package integration
 // offer read disclosed strictly more than the id the deal read withholds.
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/installseam"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -63,6 +72,19 @@ var offerDeskWideNoCompanyPerms = principal.Permissions{
 	},
 }
 
+// offerDeskWideCompanyPerms is that desk with the company grant back: it edits
+// every deal, and opens every company capture privacy does not hold back from it.
+var offerDeskWideCompanyPerms = principal.Permissions{
+	RoleKeys: []string{"deal_desk"},
+	RowScope: principal.RowScopeAll,
+	Objects: map[string]principal.ObjectGrant{
+		"deal":                  {Create: true, Read: true, Update: true},
+		"offer":                 {Create: true, Read: true, Update: true},
+		"company":               {Read: true},
+		"installation_settings": {Read: true},
+	},
+}
+
 // seedOfferOnAPrivateCompany is one sent offer whose buyer is capture-private to a
 // colleague, created and sent by an admin who can see it.
 //
@@ -70,34 +92,11 @@ var offerDeskWideNoCompanyPerms = principal.Permissions{
 // that carries the name.
 func seedOfferOnAPrivateCompany(t *testing.T, e *Env) (ids.OfferID, ids.DealID, ids.UUID) {
 	t.Helper()
-	pipeline, open, _ := DealFixture(t, e)
-	admin := e.Admin()
-
-	// Workspace-visible while the admin links it, so the write passes its own
-	// EnsureLinkTarget gate; capture privacy lands afterwards, which is the
-	// order a connector-captured company reaches this state in anyway.
-	privateCompany := e.SeedCompany(t, "Meridian Labs", &e.Rep3)
-	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Meridian renewal", pipeline, open, &e.Rep3))
-	companyID := companyIDOf(privateCompany)
-	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{CompanyID: &companyID}); err != nil {
-		t.Fatalf("linking the deal to its company: %v", err)
-	}
-
 	// Created and sent by the colleague the company belongs to, before it
 	// becomes private: that is the order this state actually arises in, and it
 	// leaves a real snapshot for the refusals below to be about.
+	offer, deal, privateCompany := draftOfferOnAColleaguesCompany(t, e)
 	desk := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
-	description, price := "Retainer", int64(10000)
-	created, err := e.Deals.CreateOffer(desk, deal, deals.CreateOfferInput{
-		Currency: "EUR", Source: "manual",
-		LineItems: []deals.OfferLineInputRow{{
-			Description: &description, Quantity: "1", UnitPriceMinor: &price,
-		}},
-	})
-	if err != nil {
-		t.Fatalf("create offer: %v", err)
-	}
-	offer := ids.From[ids.OfferKind](ids.UUID(created.Id))
 	sent, err := e.Deals.SendOffer(desk, offer, nil)
 	if err != nil {
 		t.Fatalf("send offer: %v", err)
@@ -110,6 +109,37 @@ func seedOfferOnAPrivateCompany(t *testing.T, e *Env) (ids.OfferID, ids.DealID, 
 	}
 	e.MakeCapturePrivate(t, "company", privateCompany, e.Rep3)
 	return offer, deal, privateCompany
+}
+
+// draftOfferOnAColleaguesCompany is a draft offer on Rep3's deal for Meridian
+// Labs, written by Rep3 while the company is still workspace-visible.
+func draftOfferOnAColleaguesCompany(t *testing.T, e *Env) (ids.OfferID, ids.DealID, ids.UUID) {
+	t.Helper()
+	pipeline, open, _ := DealFixture(t, e)
+	admin := e.Admin()
+
+	// Workspace-visible while the admin links it, so the write passes its own
+	// EnsureLinkTarget gate; capture privacy lands afterwards, which is the
+	// order a connector-captured company reaches this state in anyway.
+	company := e.SeedCompany(t, "Meridian Labs", &e.Rep3)
+	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Meridian renewal", pipeline, open, &e.Rep3))
+	companyID := companyIDOf(company)
+	if _, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{CompanyID: &companyID}); err != nil {
+		t.Fatalf("linking the deal to its company: %v", err)
+	}
+
+	desk := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
+	description, price := "Retainer", int64(10000)
+	created, err := e.Deals.CreateOffer(desk, deal, deals.CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []deals.OfferLineInputRow{{
+			Description: &description, Quantity: "1", UnitPriceMinor: &price,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("create offer: %v", err)
+	}
+	return ids.From[ids.OfferKind](ids.UUID(created.Id)), deal, company
 }
 
 // A reader who cannot open the company gets the offer without it.
@@ -307,5 +337,165 @@ func TestARenderKeepsTheBuyerBlockForASeatThatCanOpenIt(t *testing.T) {
 	}
 	if ingredients.BuyerBlock["display_name"] == nil {
 		t.Errorf("the buyer block names no company: %v", ingredients.BuyerBlock)
+	}
+}
+
+// The DOWNLOAD says no more than the read does either.
+//
+// A render withholds the buyer from the seat rendering it, then stores the
+// document for every reader of the offer. Printed by a colleague who could open
+// the company, it names a buyer this reader's own read withholds — so the read
+// drops the reference with the buyer, and the download answers the 404 an offer
+// never rendered gets.
+func TestADownloadSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
+	e := Setup(t)
+	offer, deal, _ := seedOfferOnAPrivateCompany(t, e)
+	owner := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
+	h := deals.NewHandlers(e.DB(), installseam.Deals()).WithBlobstore(blobstore.NewMemory())
+	renderOfferAs(owner, t, h, offer)
+
+	got, err := e.Deals.GetOffer(rep, offer, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the offer: %v", err)
+	}
+	if got.PdfAssetRef != nil {
+		t.Errorf("the offer names its rendering %q to a seat that cannot open the buyer the document prints", *got.PdfAssetRef)
+	}
+	page, _, err := e.Deals.ListDealOffers(rep, deal, deals.ListDealOffersInput{})
+	if err != nil || len(page) != 1 {
+		t.Fatalf("listing the deal's offers = %d offer(s), %v; want the one offer", len(page), err)
+	}
+	if page[0].PdfAssetRef != nil {
+		t.Errorf("the listed offer names its rendering %q", *page[0].PdfAssetRef)
+	}
+
+	requireNoRendering(t, downloadOfferPdfAs(rep, h, offer), "downloading as a seat that cannot open the buyer")
+
+	// The control: the document refused above really does name the company, and
+	// the seat that can open it still downloads it.
+	served := downloadOfferPdfAs(owner, h, offer)
+	if served.Code != http.StatusOK {
+		t.Fatalf("downloading as the colleague who can open the buyer = %d %s, want 200", served.Code, served.Body.String())
+	}
+	if !bytes.Contains(served.Body.Bytes(), []byte("Meridian Labs")) {
+		t.Error("the stored document does not print the buyer, so the refusal above withheld nothing")
+	}
+}
+
+// A draft's buyer can change after it is rendered, and the stored document goes
+// on printing the old one. So the change retires the rendering: kept, it would be
+// judged by the NEW buyer's visibility and handed to a seat the old buyer is
+// hidden from.
+func TestANewBuyerRetiresTheRenderingThatPrintsTheOldOne(t *testing.T) {
+	e := Setup(t)
+	offer, _, privateCompany := draftOfferOnAColleaguesCompany(t, e)
+	e.MakeCapturePrivate(t, "company", privateCompany, e.Rep3)
+	owner := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
+	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskWideCompanyPerms)
+	blob := blobstore.NewMemory()
+	h := deals.NewHandlers(e.DB(), installseam.Deals()).WithBlobstore(blob)
+	stored := renderOfferAs(owner, t, h, offer)
+	requireNoRendering(t, downloadOfferPdfAs(desk, h, offer), "downloading as a desk that cannot open the buyer")
+
+	ashgrove := companyIDOf(e.SeedCompany(t, "Ashgrove Holdings", &e.Rep1))
+	changed := changeBuyerAs(desk, t, h, offer, ashgrove)
+	if changed.PdfAssetRef != nil {
+		t.Errorf("the offer still names the rendering %q, which prints the buyer it no longer has", *changed.PdfAssetRef)
+	}
+	if _, _, err := blob.Get(context.Background(), stored); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Errorf("the retired rendering is still in the store (err=%v) — nothing names it, and it prints the old buyer", err)
+	}
+	requireNoRendering(t, downloadOfferPdfAs(desk, h, offer), "downloading after the buyer changed")
+
+	// The control: the change retired the old document, not the feature. A render
+	// after it prints the new buyer, and the desk downloads that one.
+	renderOfferAs(desk, t, h, offer)
+	served := downloadOfferPdfAs(desk, h, offer)
+	if served.Code != http.StatusOK || !bytes.Contains(served.Body.Bytes(), []byte("Ashgrove Holdings")) {
+		t.Fatalf("downloading the rendering made after the change = %d, want 200 printing the new buyer", served.Code)
+	}
+}
+
+// failingDeleteStore refuses every delete: an object store that is down after the
+// edit has already committed.
+type failingDeleteStore struct{ blobstore.Store }
+
+func (failingDeleteStore) Delete(context.Context, string) error {
+	return errors.New("object store unavailable")
+}
+
+// Reclaiming the retired PDF is housekeeping after the edit commits, so a store
+// that refuses the delete leaves an orphan and the edit still stands.
+func TestABuyerChangeStandsWhenTheRetiredPdfCannotBeDeleted(t *testing.T) {
+	e := Setup(t)
+	offer, _, _ := draftOfferOnAColleaguesCompany(t, e)
+	owner := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
+	h := deals.NewHandlers(e.DB(), installseam.Deals()).WithBlobstore(failingDeleteStore{Store: blobstore.NewMemory()})
+	renderOfferAs(owner, t, h, offer)
+
+	ashgrove := companyIDOf(e.SeedCompany(t, "Ashgrove Holdings", &e.Rep3))
+	if changed := changeBuyerAs(owner, t, h, offer, ashgrove); changed.PdfAssetRef != nil {
+		t.Errorf("the edit answered the rendering %q it retired", *changed.PdfAssetRef)
+	}
+	got, err := e.Deals.GetOffer(owner, offer, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the offer back: %v", err)
+	}
+	if got.BuyerCompanyId == nil || ids.UUID(*got.BuyerCompanyId) != ashgrove.UUID || got.PdfAssetRef != nil {
+		t.Errorf("the committed edit did not stand: buyer=%v ref=%v", got.BuyerCompanyId, got.PdfAssetRef)
+	}
+}
+
+// changeBuyerAs sends the buyer change through the real handler and answers the
+// offer it returned.
+func changeBuyerAs(ctx context.Context, t *testing.T, h deals.Handlers, offer ids.OfferID, buyer ids.CompanyID) crmcontracts.Offer {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	h.UpdateOffer(rec, httptest.NewRequest(http.MethodPatch, "/v1/offers/"+offer.String(),
+		strings.NewReader(`{"buyer_company_id":"`+buyer.String()+`"}`)).WithContext(ctx),
+		crmcontracts.Id(offer.UUID), crmcontracts.UpdateOfferParams{})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("changing the draft's buyer = %d %s, want 200", rec.Code, rec.Body.String())
+	}
+	var changed crmcontracts.Offer
+	if err := json.Unmarshal(rec.Body.Bytes(), &changed); err != nil {
+		t.Fatalf("decoding the changed offer: %v", err)
+	}
+	return changed
+}
+
+// renderOfferAs renders through the real handler and answers the ref it stored.
+func renderOfferAs(ctx context.Context, t *testing.T, h deals.Handlers, offer ids.OfferID) string {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	h.RenderOffer(rec, httptest.NewRequest(http.MethodPost, "/v1/offers/"+offer.String()+"/render", nil).WithContext(ctx),
+		crmcontracts.Id(offer.UUID), crmcontracts.RenderOfferParams{})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("rendering the offer = %d %s, want 200", rec.Code, rec.Body.String())
+	}
+	var rendered crmcontracts.Offer
+	if err := json.Unmarshal(rec.Body.Bytes(), &rendered); err != nil || rendered.PdfAssetRef == nil {
+		t.Fatalf("the render named no ref it stored (err=%v): %s", err, rec.Body.String())
+	}
+	return *rendered.PdfAssetRef
+}
+
+func downloadOfferPdfAs(ctx context.Context, h deals.Handlers, offer ids.OfferID) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	h.DownloadOfferPdf(rec, httptest.NewRequest(http.MethodGet, "/v1/offers/"+offer.String()+"/pdf", nil).WithContext(ctx),
+		crmcontracts.Id(offer.UUID))
+	return rec
+}
+
+// requireNoRendering holds a download to the answer an offer never rendered gets.
+func requireNoRendering(t *testing.T, rec *httptest.ResponseRecorder, what string) {
+	t.Helper()
+	var problem AnyMap
+	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
+		t.Fatalf("%s = %d, not a problem document: %v", what, rec.Code, err)
+	}
+	if rec.Code != http.StatusNotFound || problem["code"] != "not_found" {
+		t.Fatalf("%s = %d %v, want 404 not_found", what, rec.Code, problem["code"])
 	}
 }

@@ -5,8 +5,8 @@
 
 package gates
 
-// `x-agent-access: human-only` is enforced by ONE line, and this is what holds
-// it there.
+// `x-agent-access: human-only` is enforced by one line, and this holds it
+// there.
 //
 // The annotation is a declaration; what refuses an agent is agentGate, an
 // operation middleware wrapped around every route the contract router serves.

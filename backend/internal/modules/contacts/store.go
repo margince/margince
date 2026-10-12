@@ -76,6 +76,9 @@ type Store struct {
 	// strand one — see satellitecarry.go.
 	consentCarrier ConsentSatelliteCarrier
 	introCarrier   IntroCarrier
+	// grantCarrier moves the shares on a retiring record; nil refuses a merge
+	// that would strand one (grantcarry.go).
+	grantCarrier GrantCarrier
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a
@@ -159,6 +162,12 @@ func (s *Store) WithVatCheckEnqueue(enqueue VatCheckEnqueue) *Store {
 
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
+}
+
+// txRetryingLockCycles is tx for a write that files under shared records and
+// has no effect outside its transaction, so a deadlock victim is run again.
+func (s *Store) txRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) error {
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) })
 }
 
 // txSnapshot is tx for a read whose answer is COMPOSED from more than one

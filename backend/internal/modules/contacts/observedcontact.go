@@ -33,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -142,15 +143,37 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		// weighs these rows and decides that separately.
 		return observedApplied, nil
 	}
+	if observedNameFields[f.Field] {
+		guessed, err := splitNameIsCapturesGuessTx(ctx, tx, contactID)
+		if err != nil {
+			return observedSkipped, err
+		}
+		// The sidecar row above still stands, because the statement is
+		// evidence. A reader comparing it against the name on the page can see
+		// that a colleague's answer was kept. Only the column is left alone.
+		if !guessed {
+			return observedApplied, nil
+		}
+	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE contact SET `+column+` = $2 WHERE id = $1 AND archived_at IS NULL`, contactID, f.Value)
+		UPDATE contact SET `+column+` = $2
+		 WHERE id = $1 AND archived_at IS NULL AND `+column+` IS DISTINCT FROM $2`, contactID, f.Value)
 	if err != nil {
 		return observedSkipped, fmt.Errorf("contacts: observed %s fill: %w", f.Field, err)
 	}
 	if tag.RowsAffected() == 0 {
-		// The subject went between the two statements: the evidence row must
-		// not claim a value the record does not carry.
-		return observedSkipped, revokeSignatureEvidence(ctx, tx, contactID, f.Field)
+		// Either the record already showed this value, so the statement
+		// confirmed it rather than filling it and undoing it must not clear
+		// it; or the subject went between the two statements, and the
+		// evidence row must not claim a value the record does not carry.
+		_, err := storekit.LockRow(ctx, tx, entityContact, contactID.UUID, storekit.LiveOnly)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return observedSkipped, revokeSignatureEvidence(ctx, tx, contactID, f.Field)
+		}
+		if err != nil {
+			return observedSkipped, err
+		}
+		return observedConfirmed, nil
 	}
 	return observedApplied, nil
 }
@@ -164,11 +187,20 @@ func applyObservedField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 // guess which column the line belongs in, and would write a street into a
 // country as readily as not.
 func observedFieldColumn(field string) (string, bool) {
-	if field == fieldTitle {
-		return fieldTitle, true
+	switch field {
+	case fieldTitle, columnFirstName, columnLastName:
+		return field, true
 	}
 	return "", false
 }
+
+// observedNameFields are the columns a split guess may have written, and the
+// only ones whose mirror asks whose name the record already carries.
+//
+// Every other observed field follows the pass's recency rule, where a later
+// statement replaces an earlier value. A name does not. A colleague who typed
+// one has said who this is, and no reading of a signature outranks that.
+var observedNameFields = map[string]bool{columnFirstName: true, columnLastName: true}
 
 // seedFromColumn reads the value a mirror COLUMN holds when the sidecar does not
 // already account for it, so a value somebody typed survives into the undo

@@ -41,7 +41,7 @@ func RegisterLifecycleTools(
 	advancer ProjectPhaseAdvancer,
 ) {
 	r.Register(relinkActivity{relinker: relinker, p: p, language: r.language})
-	r.Register(relinkThread{relinker: relinker, p: p, language: r.language})
+	r.Register(relinkThread{relinker: relinker})
 	r.Register(relinkActivities{relinker: relinker, p: p, language: r.language})
 	r.Register(disqualifyLead{p: p, disqualifier: disqualifier, language: r.language})
 	r.Register(demoteLead{p: p, demoter: demoter, language: r.language})
@@ -127,8 +127,8 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		Description: relinkActivityCopy.render(),
 		Instead:     relinkActivityCopy.Instead,
 		// Dynamic because filing under a PROJECT classifies the activity as
-		// commercial correspondence — write-once and monotonic — while every
-		// other destination is an association a member can undo. See
+		// commercial correspondence, which a contact confirms first; every
+		// other destination is an association that runs at once. See
 		// relinkActivityTier.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
 		TierResolver: relinkActivityTier,

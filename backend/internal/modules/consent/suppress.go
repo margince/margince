@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -90,6 +91,13 @@ const auditFieldKind = "kind"
 // bare key on two writers would mislabel whichever ships second.
 const auditFieldSuppressionKind = "suppression_kind"
 
+// auditFieldDecidedByLevel is the audit payload key every writer of this
+// package's authority-carrying tables uses for the level a row was recorded
+// at — a stop, a bounce and an override alike. One spelling shared across
+// them rather than each writer retyping the string literal, so a rename
+// changes one constant instead of three call sites silently drifting apart.
+const auditFieldDecidedByLevel = "decided_by_level"
+
 // Suppress records that a subject asked not to be written to.
 //
 // The verb is deliberately narrow: it writes one row, at the caller's own
@@ -98,6 +106,8 @@ const auditFieldSuppressionKind = "suppression_kind"
 // other "stop writing to me" — and collapsing them would make a re-grant
 // silently undo a stop the subject never lifted.
 func (s *Store) Suppress(ctx context.Context, in SuppressInput) error {
+	// A reason of only spaces says nothing, so it records nothing.
+	in.Reason = strings.TrimSpace(in.Reason)
 	sub, level, err := admitSuppress(ctx, in)
 	if err != nil {
 		return err
@@ -304,7 +314,7 @@ func (s *Store) suppressAdmittedTx(
 	// held something before, and Audit refuses an update with no before-image
 	// rather than let one record a change it cannot describe.
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
-		map[string]any{auditFieldSuppressionKind: in.Kind, "decided_by_level": string(level)})
+		map[string]any{auditFieldSuppressionKind: in.Kind, auditFieldDecidedByLevel: string(level)})
 	if err != nil {
 		return err
 	}

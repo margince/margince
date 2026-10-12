@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -81,7 +82,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 			  FROM activity a
 			  JOIN (`+activities.CompanyReachSet()+`) ro ON ro.activity_id = a.id
 			 WHERE a.archived_at IS NULL
-			   AND a.kind IN `+relstrength.InteractionKindSQLGroup()+`
+			   AND `+relstrength.InteractionCountsSQL("a")+`
 			   -- An interaction with no recorded direction cannot say who spoke
 			   -- last, so it is skipped rather than guessed at — the same rule
 			   -- PO-F-4 applies to the engagement state.
@@ -158,7 +159,7 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 	if err != nil {
 		return GhostedPass{}, err
 	}
-	said := signalSummaryCopyFor(baseLanguageForSummary(ctx, tx))
+	said := signalSummaryCopyFor(identity.BaseLanguageForRecord(ctx, tx))
 	pass := GhostedPass{Considered: len(candidates)}
 	for _, found := range candidates {
 		days := int(now.Sub(found.At).Hours() / 24)

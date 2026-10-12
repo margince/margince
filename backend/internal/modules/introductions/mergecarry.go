@@ -191,7 +191,7 @@ func auditMergeClosedAsk(ctx context.Context, tx pgx.Tx, id, about ids.UUID, bef
 // from the census rather than spelled again.
 func openStatuses() []string {
 	var open []string
-	for _, status := range everyStatus() {
+	for _, status := range EveryStatus() {
 		if Open(status) {
 			open = append(open, string(status))
 		}

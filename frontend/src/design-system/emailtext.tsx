@@ -9,7 +9,7 @@ export function EmailText({ body }: Readonly<{ body: string }>) {
   // identify a quoted envelope header, which is not part of the message text.
   const parts = splitEmailBody(body);
   return (
-    <>
+    <div className="emailtext">
       <p className="emailtext__main">{parts.main}</p>
       {parts.tail === "signature" && (
         <p className="emailtext__signoff">{parts.trimmed}</p>
@@ -20,6 +20,6 @@ export function EmailText({ body }: Readonly<{ body: string }>) {
           <p>{parts.trimmed}</p>
         </details>
       )}
-    </>
+    </div>
   );
 }

@@ -134,7 +134,7 @@ func TestTheDailyPassFreezesTheWorkspacesForecast(t *testing.T) {
 	// columns: what matters is that the frozen state is one this product can
 	// actually difference, and the contributions are what make a headline
 	// answerable at all.
-	store := forecasting.NewStore(InstallationDB(e.Pool))
+	store := newForecastStoreFor(e.Pool)
 	var side struct {
 		contributions int
 	}

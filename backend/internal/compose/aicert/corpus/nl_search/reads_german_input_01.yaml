@@ -1,0 +1,37 @@
+name: nl_search_reads_german_input
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: company
+  text: Unternehmen in Deutschland, die in den letzten 30 Tagen angelegt wurden
+  today: '2026-09-30'
+  lang: de
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: country, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: city, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: industry, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: last_activity_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      and:
+      - field: country
+        op: eq
+        value: DE
+      - field: created_at
+        op: gte
+        value:
+          days_ago: 30
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: 'The passing filter is country DE and created_at on or after 30 days ago, as a relative date (days_ago
+    30), never a fixed calendar date. A German sentence selects the same list its English twin does: Deutschland is
+    the ISO code DE, and "in den letzten 30 Tagen" is a window that starts 30 days back.'

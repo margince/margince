@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer leaves Körber Sensorik Rollout out entirely, naming only Reply Deutschland Verlängerung as a quiet deal.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer names Körber Sensorik Rollout among the deals that have gone quiet for three weeks or more. Saying it is still under the product's usual sixty-day line is true and fine. Answer no if the answer leaves Körber Sensorik Rollout out, says it has been quiet for sixty days or more, or calls it slipping past, over or beyond a sixty-day or two-month line.",
+  "answer": "Only one deal has gone quiet: Reply Deutschland Verlängerung, with nothing since a mail 75 days ago. Everything else is moving."
+}

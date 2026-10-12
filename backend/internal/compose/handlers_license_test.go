@@ -35,21 +35,21 @@ func TestToContractLicenseEntitlement(t *testing.T) {
 			posture:     granted(10),
 			used:        9,
 			wantState:   "valid",
-			wantGranted: ptr(10),
+			wantGranted: new(10),
 		},
 		{
 			name:        "exactly at the grant is not over it",
 			posture:     granted(10),
 			used:        10,
 			wantState:   "valid",
-			wantGranted: ptr(10),
+			wantGranted: new(10),
 		},
 		{
 			name:        "one past the grant",
 			posture:     granted(10),
 			used:        11,
 			wantState:   "valid",
-			wantGranted: ptr(10),
+			wantGranted: new(10),
 			wantOver:    true,
 		},
 		{
@@ -74,7 +74,7 @@ func TestToContractLicenseEntitlement(t *testing.T) {
 			wantState: "valid",
 			// Distinct from the absent case above: this license really does permit
 			// nobody, and the meter has to be able to say so.
-			wantGranted: ptr(0),
+			wantGranted: new(0),
 			wantOver:    true,
 		},
 	} {
@@ -104,8 +104,6 @@ func TestToContractLicenseEntitlement(t *testing.T) {
 		})
 	}
 }
-
-func ptr(n int) *int { return &n }
 
 // The refusal reason never reaches the wire. It is the module's account of the
 // installation's own configuration, and the module quotes token content it has
@@ -171,8 +169,9 @@ func TestWithLicensePostureKeepsTheSeatCountItWasGiven(t *testing.T) {
 	// Stand in for the assembly, which is what puts the store here. A real one
 	// needs a pool; what this asserts is only that the option does not discard
 	// whatever it found, so a non-nil marker is the whole fixture.
-	srv := Server{}
-	srv.licenseHandlers = licenseHandlers{seats: &identity.SeatUsageStore{}}
+	srv := Server{
+		seats: &identity.SeatUsageStore{},
+	}
 
 	WithLicensePosture(func() licensecheck.Posture {
 		return licensecheck.Posture{State: licensecheck.StateAbsent, CheckedAt: resolvedAt}

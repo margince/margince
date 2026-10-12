@@ -285,7 +285,7 @@ func (e *reconcileEnv) readTranscriptFor(
 	var id ids.ApprovalID
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT id FROM approval WHERE kind = $1 AND target_entity_id = $2 AND status = 'pending'`,
-		TranscriptProposalKind, activity.UUID).Scan(&id); err != nil {
+		CommitmentTaskKind, activity.UUID).Scan(&id); err != nil {
 		t.Fatalf("no transcript card staged on the meeting: %v", err)
 	}
 	return id
@@ -354,9 +354,9 @@ func TestATranscriptReadWhileTheDealChangesHandsIsFiledForTheNewOwner(t *testing
 	deal := e.SeedDeal(t, "Handed over mid-reading", e.pipeline, e.open, &e.Rep1)
 	meeting := e.logTranscript(t, "Rollout call", deal)
 	brain := oneShotBrain{
-		cannedBrain: cannedBrain{reply: groundedReply(t, 3, 0.95)},
-		once:        &sync.Once{},
-		during:      func() { e.reassign(t, deal, e.Rep2) },
+		reply:  groundedReply(t, 3, 0.95),
+		once:   &sync.Once{},
+		during: func() { e.reassign(t, deal, e.Rep2) },
 	}
 
 	card := e.readTranscriptFor(t, e.Rep1, meeting, brain)

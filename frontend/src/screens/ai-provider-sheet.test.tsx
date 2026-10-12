@@ -10,6 +10,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AiProviderKeysCard } from "./ai-provider-keys";
+import { providerState } from "./ai-provider-sheet";
 
 afterEach(() => {
   cleanup();
@@ -29,24 +30,28 @@ const KEYS = {
       provider: "gemini",
       configured: true,
       env_var: "GEMINI_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "anthropic",
       configured: true,
       env_var: "ANTHROPIC_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai",
       configured: false,
       env_var: "OPENAI_API_KEY",
+      usable: false,
       optional: false,
     },
     {
       provider: "jev",
       configured: false,
       env_var: "TYPESAFE_API_KEY",
+      usable: false,
       optional: false,
     },
   ],
@@ -104,18 +109,27 @@ function backend(
         models: [{ id: "gemini-4-pro" }],
       });
     }
-    if (path.endsWith("/ai-model-rates/refresh")) {
+    if (path.endsWith("/ai/price-sync")) {
       return jsonResponse({
-        providers: [
-          {
-            provider: "gemini",
-            outcome: "not_available",
-            updated: 0,
-            unchanged: 0,
-            models: [],
-            unlisted: [],
+        auto_sync: true,
+        last_run: {
+          ran_at: "2026-10-02T10:00:00Z",
+          trigger: "scheduled",
+          report: {
+            providers: [
+              {
+                provider: "gemini",
+                outcome: "unchanged",
+                updated: 0,
+                unchanged: 0,
+                added: 0,
+                kept: 1,
+                models: [],
+                unlisted: [],
+              },
+            ],
           },
-        ],
+        },
       });
     }
     if (path.endsWith("/ai-model-rates") && req.method === "POST") {
@@ -169,24 +183,58 @@ async function open(
   provider: string,
 ) {
   await user.click(
-    await screen.findByRole("button", { name: `Manage ${provider}` }),
+    within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
+      "button",
+      { name: /^(Edit|Open) / },
+    ),
   );
-  return screen.findByRole("dialog", { name: provider });
+  return screen.findByRole("dialog");
 }
 
 describe("the Providers list", () => {
-  it("reads each vendor as active, ready, needing a key or not active", async () => {
+  it("names what each vendor serves, and badges only a state other than in use", async () => {
     mount();
-    const state = async (provider: string) =>
-      (await screen.findByTestId(`ai-provider-row-${provider}`)).textContent;
-    await vi.waitFor(async () =>
-      expect(await state("gemini")).toContain("cheap_cloud, embeddings"),
-    );
-    expect(await state("gemini")).toContain("Active");
-    expect(await state("anthropic")).toContain("Ready");
-    expect(await state("anthropic")).toContain("Not used");
-    expect(await state("jev")).toContain("Needs key");
-    expect(await state("openai")).toContain("Not active");
+    const row = (provider: string) =>
+      screen.findByTestId(`ai-provider-row-${provider}`);
+    const gemini = await row("gemini");
+    await within(gemini).findByText("Everyday cloud");
+    expect(within(gemini).getByText("Embedding model")).toBeTruthy();
+    expect(within(gemini).getByText("gemini")).toBeTruthy();
+    expect(within(gemini).queryByText("Active")).toBeNull();
+    expect((await row("anthropic")).textContent).toContain("Ready");
+    expect((await row("anthropic")).textContent).not.toContain("Not used");
+    expect((await row("jev")).textContent).toContain("Needs key");
+    expect((await row("openai")).textContent).toContain("Not active");
+  });
+
+  it("puts the vendor that needs a hand first, then the ones in use", async () => {
+    mount();
+    await within(
+      await screen.findByTestId("ai-provider-row-gemini"),
+    ).findByText("Everyday cloud");
+    const order = screen
+      .getAllByTestId(/^ai-provider-row-/)
+      .map((row) => row.dataset.testid?.replace("ai-provider-row-", ""));
+    expect(order.slice(0, 2)).toEqual(["jev", "gemini"]);
+  });
+
+  it("opens a vendor's sheet from anywhere on its row", async () => {
+    const user = userEvent.setup();
+    mount();
+    const gemini = await screen.findByTestId("ai-provider-row-gemini");
+    await user.click(await within(gemini).findByText("Everyday cloud"));
+    expect(
+      await screen.findByRole("dialog", { name: "Google Gemini" }),
+    ).toBeTruthy();
+  });
+
+  it("offers Open, not Edit, to a seat that may not change providers", async () => {
+    mount({ ai_routing: ["read"], ai_model_rate: ["read"] });
+    const gemini = await screen.findByTestId("ai-provider-row-gemini");
+    expect(
+      await within(gemini).findByRole("button", { name: "Open Google Gemini" }),
+    ).toBeTruthy();
+    expect(within(gemini).queryByRole("button", { name: /^Edit/ })).toBeNull();
   });
 });
 
@@ -387,14 +435,13 @@ describe("a provider's sheet", () => {
     ).toBeTruthy();
   });
 
-  it("says a refresh left this vendor to be priced by hand", async () => {
+  it("says what the last price sync did for this vendor", async () => {
     const user = userEvent.setup();
     mount();
-    await user.click(
-      await screen.findByRole("button", { name: "Refresh model prices" }),
-    );
     const sheet = await open(user, "gemini");
-    expect(await within(sheet).findByText("Set by hand")).toBeTruthy();
+    expect(
+      await within(sheet).findByText("1 hand-set price kept"),
+    ).toBeTruthy();
   });
 
   it("offers a reader who may not write the sheet no verb at all", async () => {
@@ -410,17 +457,6 @@ describe("a provider's sheet", () => {
     ).toBeNull();
   });
 
-  // The refresh reads the sheet before writing it, so a write grant without
-  // the read would press the button into a refusal.
-  it("offers no refresh to a writer who may not read the sheet", async () => {
-    const user = userEvent.setup();
-    mount({ ai_routing: ["read"], ai_model_rate: ["create", "update"] });
-    await open(user, "gemini");
-    expect(
-      screen.queryByRole("button", { name: "Refresh model prices" }),
-    ).toBeNull();
-  });
-
   // A denial already known is not asked of the server: the 403 would only
   // spend a request on the empty answer the hook stands in for.
   it("asks for no prices on behalf of a reader who may not see them", async () => {
@@ -431,5 +467,22 @@ describe("a provider's sheet", () => {
     expect(within(sheet).queryByText("Prices")).toBeNull();
     expect(asked).not.toContain("GET /v1/ai-model-rates");
     expect(asked).toContain("GET /v1/ai/provider-keys");
+  });
+});
+
+describe("providerState", () => {
+  it("reads the server's usable answer rather than re-deriving it", () => {
+    const status = {
+      provider: "openai",
+      configured: false,
+      optional: false,
+      env_var: "OPENAI_API_KEY",
+      credential_kind: "api_key" as const,
+      usable: true,
+    };
+    expect(providerState(status, undefined)).toBe("ready");
+    expect(providerState({ ...status, usable: false }, undefined)).toBe(
+      "inactive",
+    );
   });
 });

@@ -16,7 +16,7 @@ GO ?= go
 # consumer — see the comment on check-backend for why they are not that
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
-  test-dev-cleanup \
+  test-dev-cleanup test-disk-headroom \
   test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict \
   test-review-coverage \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
@@ -66,7 +66,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length comment-budget test-comment-budget comment-density rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -291,7 +291,7 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
+build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
 	$(MAKE) -C backend $@
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
@@ -765,6 +765,24 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## seeds and tears down its own DEV_SLUG stack.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
 ##
+## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|mistral, each pinned
+## to the model its consumer app defaults to (e2e/llm/candidates.json), and
+## E2E_LLM_VIA=api|openrouter|cli. api and openrouter run e2e/llm/drive.py, the
+## neutral bridge that offers every vendor the same tools under the server's own
+## instructions — the comparable route. cli runs `claude -p` or `codex exec`,
+## each with its own system prompt, filed apart under <model>@<cli>. The judge
+## is reached by E2E_LLM_JUDGE_VIA=cli|api|openrouter. Codex reports no list of
+## the tools it offered, so its run is held against the lane's own tools/list;
+## a codex release that renames a switched-off feature key fails every run with
+## exit 2, a harness stop, until e2e/llm/drive.py's list follows it.
+## Before the world is snapshotted, search_context must rank by meaning
+## (e2e/llm/stackready.py), or the lane stops: every candidate would be measured
+## on a degraded tool. E2E_LLM_STACK_PRESET=config/presets/<name>.yaml binds the
+## stack to a committed preset first (its key in .env.local);
+## E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files the verdict as lexical.
+## E2E_LLM_VERDICTS=<dir> writes the verdicts there instead of the committed
+## records tree, so the run publishes nothing.
+##
 ## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
 ## does the answer carry this name, this date, this count; its `judge:` criteria
 ## are sentences a human can read, decided per run by a pinned model, because
@@ -878,26 +896,22 @@ fe-edge-padding:
 		pnpm exec playwright install chromium >/dev/null 2>&1 && \
 		node scripts/check-edge-padding.mjs $(ARGS)
 
-## craft-static — the deterministic code-craftsmanship gate (ADR-0045) over
-## every hand-written Go tree, strict: BLOCKER and MAJOR findings both fail it.
-## The pre-push hook (.githooks/pre-push) runs the same bar diff-scoped; this
-## target is the full manual sweep, and it is green — the backlog was cleared
-## to arm it. extensions/ and fixtures/ are their own Go modules, so `./...`
-## never reaches them and the bar has to name them: a first-party unit ships
-## the same product, and the fixture is the worked example a unit author copies.
+## craft-static — the deterministic code-craftsmanship gate (ADR-0045), strict:
+## BLOCKER and MAJOR findings both fail it. The code checks judge every
+## hand-written Go file, and they are green because the backlog was cleared to
+## arm them. The comment checks read Go and TypeScript and judge only the lines
+## added since origin/main, so old comments improve as files are touched; with
+## no origin/main the gate fails instead of judging nothing. The pre-push hook
+## runs the same bar over the files a push changes.
 ##
-## The gate is a pinned binary (scripts/craft-pin.sh), not source in this tree.
-## Roots are written from the REPOSITORY ROOT, which is where the binary runs —
-## they used to lead with ../../ because the gate was built and run from its own
-## directory, which changed the working directory first. A leftover ../../
-## resolves outside the repository and reports a clean sweep of nothing, which
-## reads exactly like a pass.
+## extensions/ and fixtures/ are their own Go modules, so `./...` never reaches
+## them and the bar has to name them: a first-party unit ships the same product,
+## and the fixture is the worked example a unit author copies. The gate is a
+## pinned binary (scripts/craft-pin.sh), and the paths are written from the
+## repository root, where it runs.
 craft-static: test-craft-pin
-	@bin="$$(./scripts/craft-pin.sh)" && \
-		"$$bin" static --strict --root backend && \
-		"$$bin" static --strict --root extensions && \
-		"$$bin" static --strict --root fixtures && \
-		"$$bin" static --strict --root desktop
+	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base origin/main \
+		backend extensions fixtures desktop frontend tools
 
 ## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
 ## this branch's diff to an external model API and get a reading of what a
@@ -1049,6 +1063,13 @@ test-lane-timeout-report:
 ## consumer group, each acking events the other never saw.
 test-dev-isolation:
 	@./scripts/test-dev-isolation.sh
+
+## test-disk-headroom — prove the disk check refuses below its floor, warns
+## above it and exempts CI. The lane and `make dev` both call it before doing
+## any work, so a check that quietly stopped recognising a full disk would put
+## the failure back where it was: hours later, as Postgres being unreachable.
+test-disk-headroom:
+	@bash scripts/lib-diskspace.test.sh
 
 ## test-dev-cleanup — prove a failed `make dev` leaves nothing running: the EXIT
 ## trap is armed for every `up` rather than only for a stack that claims a port,
@@ -1252,6 +1273,30 @@ comment-budget:
 comment-density:
 	@./scripts/check-comment-density.sh
 
+## comment-stats — the shape of the tree's comments may get better and never
+## worse: words per sentence, long sentences, lines in long blocks, tone words
+## and comment-heavy Go functions, pinned in scripts/comment-stats-baseline.json.
+## The comment checks judge only added lines, so this is what shows the old
+## comments improving. A run that measures under 10,000 files fails, because a
+## wrong path would otherwise report a pass. Re-pin with `make comment-stats-pin`
+## in the change that lowers a number.
+COMMENT_STATS_PATHS := backend extensions fixtures desktop frontend tools
+comment-stats: test-craft-pin
+	@"$$(./scripts/craft-pin.sh)" stats --min-files 10000 \
+		--baseline scripts/comment-stats-baseline.json $(COMMENT_STATS_PATHS)
+## comment-stats-pin — write the current comment numbers to the baseline.
+comment-stats-pin: test-craft-pin
+	@"$$(./scripts/craft-pin.sh)" stats --min-files 10000 --write-baseline \
+		--baseline scripts/comment-stats-baseline.json $(COMMENT_STATS_PATHS)
+
+## slop-trend — record the tree's slop scores (`craft slop`) and comment
+## numbers (`craft stats`) in .tmp/slop-trend, as JSON and as a Markdown table.
+## With PREV=<dir> holding an earlier run's JSON, the table shows the change. A
+## report for trends: it fails only when it cannot measure. Needs the frontend
+## packages, because TypeScript is scored with the frontend's compiler.
+slop-trend: test-craft-pin
+	@./scripts/slop-trend.sh $(PREV)
+
 ## test-comment-budget — prove the budget gate fails an over-budget change.
 ## A budget nothing can trip reads exactly like a change within budget.
 test-comment-budget:
@@ -1269,7 +1314,7 @@ rls-store-path:
 ## from a run that never reached the model: a refused credential is named as
 ## one, and a genuinely bad answer is still a finding. It also holds the judged
 ## half offline, against verdicts a real judge gave the committed fixtures: a
-## judge that agreed with everything fails 22 of these cases, and a judge that
+## judge that agreed with everything fails every defect fixture, and a judge that
 ## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-check.sh
@@ -1665,7 +1710,9 @@ sbom-validate:
 	    || { echo "FAIL: could not install the pinned SPDX validator"; exit 1; }; \
 	  if ! pyspdxtools -i $(SBOM_DIR)/margince.spdx221.json; then echo "FAIL: $(SBOM_DIR)/margince.spdx221.json is not a valid SPDX 2.2.1 document"; exit 1; fi'
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"
-	@$(JSONSCHEMA) validate $(SBOM_SCHEMA_DIR)/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
+	@# --fast: exhaustive mode keeps an evaluation trace per node and exhausts the runner's memory on a
+	@# document that digests every committed file; fast mode still fails an invalid document (exit 2).
+	@$(JSONSCHEMA) validate --fast $(SBOM_SCHEMA_DIR)/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
 	@echo "OK: three SBOMs valid against their formats"
 
 ## sbom-sign — keyless-sign each generated SBOM with cosign (writes *.cosign.bundle; needs an OIDC token).

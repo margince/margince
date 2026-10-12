@@ -3,13 +3,12 @@
 
 package automation
 
-// TriggerKind is the closed, user-facing trigger vocabulary (RC-11,
-// features/10 §1): the seven ways a catalog or agent-authored automation
-// may fire. A new member is a code-and-test change, never data — the same
+// TriggerKind is the closed, user-facing trigger vocabulary (RC-11): the
+// eight ways a catalog or agent-authored automation may fire. A new member is a code-and-test change, never data — the same
 // anti-builder guard the action side carries.
 type TriggerKind string
 
-// The seven closed trigger kinds (RC-11), in declaration order.
+// The eight closed trigger kinds (RC-11), in declaration order.
 const (
 	TriggerRecordCreatedUpdated  TriggerKind = "record_created_updated"
 	TriggerFieldReachesValue     TriggerKind = "field_reaches_value"
@@ -18,6 +17,7 @@ const (
 	TriggerDateFieldApproaching  TriggerKind = "date_field_approaching"
 	TriggerInboundReply          TriggerKind = "inbound_reply"
 	TriggerTaskOverdue           TriggerKind = "task_overdue"
+	TriggerListMembershipChanged TriggerKind = "list_membership_changed"
 )
 
 // Trigger entry points (see TriggerDef.Entry): an event trigger reaches the
@@ -36,6 +36,8 @@ const (
 	eventEngagementReply  = "engagement.reply"
 	eventActivityCaptured = "activity.captured"
 	eventLeadCreated      = "lead.created"
+	eventListEvaluated    = "list.evaluated"
+	eventListArchived     = "list.archived"
 )
 
 // TriggerDef declares how one trigger reaches the engine. Entry is "event"
@@ -70,6 +72,9 @@ var triggerDefs = map[TriggerKind]TriggerDef{
 	// must not re-fire the same automation instance twice.
 	TriggerInboundReply: {Kind: TriggerInboundReply, Entry: entryEvent, EventType: eventEngagementReply},
 	TriggerTaskOverdue:  {Kind: TriggerTaskOverdue, Entry: entryClock},
+	// One check of the watched Live List stands for every record it saw join
+	// or leave; the engine fans it out per record (listrulefire.go).
+	TriggerListMembershipChanged: {Kind: TriggerListMembershipChanged, Entry: entryEvent, EventType: eventListEvaluated},
 }
 
 // AllTriggerKinds is the closed set, in declaration order. The closure
@@ -79,6 +84,7 @@ func AllTriggerKinds() []TriggerKind {
 	return []TriggerKind{
 		TriggerRecordCreatedUpdated, TriggerFieldReachesValue, TriggerDealEntersLeavesStage,
 		TriggerNoActivityForNDays, TriggerDateFieldApproaching, TriggerInboundReply, TriggerTaskOverdue,
+		TriggerListMembershipChanged,
 	}
 }
 

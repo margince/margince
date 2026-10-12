@@ -10,8 +10,9 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
+import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
-import { SCREEN_ENTITY } from "./entity";
+import { type EntityKind, SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN } from "./extensions";
 import type { Route, Screen } from "./router";
 import {
@@ -31,6 +32,7 @@ export type {
   NavTrailLevel,
 } from "./subnav";
 export {
+  currentClaim,
   entryLabel,
   navEntryHref,
   navEntryRoute,
@@ -43,7 +45,7 @@ export {
 // structure and collapse to hairline rules at 56px, so the collapsed rail is the
 // flat list WDS-NAV-1 describes.
 //
-// It carries ten rows. Filters & views and Projects are destinations here and
+// Filters & views and Projects are destinations here and
 // Automations is not: Automations is set-and-forget configuration and lives
 // inside Settings → AI, where the product already offered a second door to it,
 // while the filter builder is a full authoring surface, and a screen this list
@@ -169,7 +171,7 @@ export const NAV: readonly NavItem[] = NAV_GROUPS.flatMap(
 export const BADGE_SCREENS: ReadonlySet<Screen> = new Set();
 
 // At phone width the sidebar becomes a bottom bar, which fits five thumb-sized
-// cells — ten destinations would need horizontal scrolling, and a nav you have
+// cells — every destination would need horizontal scrolling, and a nav you have
 // to scroll is a nav you cannot see. The CENTRE cell is not a destination: it is
 // the agent, which is app-level chrome and reports rather than navigates, so
 // three destinations ride the bar and More carries the rest.
@@ -213,21 +215,38 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
   "projects",
 ]);
 
-// The one id segment that is not a record id: `#/deals/new` is the deals LIST
-// with its create form open (App.tsx, DealsRoute), so it is scanned across like
-// every other list and must not take the record column.
+// Id segments that name a page rather than a record, each on its own screen
+// only: `#/leads/new` is the lead whose id is "new".
 export const CREATE_ID = "new";
+export const IMPORT_ID = "import";
 
-// The screen that segment belongs to, spelled once. Deals is the only route
-// that reads `new` as a create form, so anywhere else the word is an ordinary
-// id: `#/leads/new` is the lead whose id happens to be "new" and is as much a
-// record as any other.
-const CREATE_SCREEN: Screen = "deals";
+// A `titleKey` marks a page of its own below the list; without one the segment
+// is a state of the list itself (`#/deals/new` is the list with its form open).
+const RESERVED_SEGMENTS: Readonly<
+  Partial<Record<Screen, { id: string; titleKey?: MessageKey }>>
+> = {
+  deals: { id: CREATE_ID },
+  contacts: { id: IMPORT_ID, titleKey: "vcardImport.title" },
+};
 
-// Whether the route's id is that create segment rather than a record id — the
-// question the shell's column policy asks before it calls a page a record.
-export function opensCreateForm(route: Route): boolean {
-  return route.screen === CREATE_SCREEN && route.id === CREATE_ID;
+export function opensReservedPage(route: Route): boolean {
+  return (
+    route.id !== undefined && RESERVED_SEGMENTS[route.screen]?.id === route.id
+  );
+}
+
+// The trail, the agent's subject and the rail read a reserved page's name here.
+export function reservedPageTitle(route: Route): MessageKey | undefined {
+  return opensReservedPage(route)
+    ? RESERVED_SEGMENTS[route.screen]?.titleKey
+    : undefined;
+}
+
+// The trail, the page heading, the agent's subject and the rail all ask this.
+export function recordKindOf(route: Route): EntityKind | undefined {
+  return route.id === undefined || opensReservedPage(route)
+    ? undefined
+    : SCREEN_ENTITY[route.screen];
 }
 
 // Screens that keep the same reading column on every address they answer,
@@ -314,7 +333,7 @@ const CUSTOM_NAV_GROUPS: Partial<
 // keeps its key as its `id` so `activeId` matching needs nothing new.
 //
 // Upstream's registry is empty, so in vanilla every one of these is a no-op and
-// the rail is the same ten rows rail.test.tsx pins.
+// the rail is the same rows rail.test.tsx pins.
 function forkItems(
   headingKey: MessageKey | undefined,
 ): readonly NavLevelEntry[] {
@@ -343,7 +362,7 @@ function primaryLevel(route: Route): NavTrailLevel {
         ...forkItems(group.headingKey),
       ],
     })),
-    ancestor: opensARecord(route),
+    ancestor: opensAPageBelow(route),
     path: [],
     badgeIds: BADGE_SCREENS,
     barIds: MOBILE_PRIMARY,
@@ -351,17 +370,18 @@ function primaryLevel(route: Route): NavTrailLevel {
 }
 
 // Whether the active row is only the SECTION the page sits in rather than the
-// page itself — which is true exactly when the route opens a RECORD, because a
-// record is the one thing a segment under a screen reaches that is a page of its
-// own. The test is the top bar's own: `SCREEN_ENTITY` is what decides whether
-// the trail up there ends in a record and claims to be the page, so deriving the
-// row's answer from the same map is what keeps exactly one element claiming
-// `aria-current="page"`. Asking `route.id !== undefined` instead read every
-// segment as a page: `#/filters/companies` picks the object tab OF the filters
-// page, and the row that leads there was demoted to an ancestor of a page that
-// does not exist.
-function opensARecord(route: Route): boolean {
-  return route.id !== undefined && SCREEN_ENTITY[route.screen] !== undefined;
+// page itself: true exactly where the top bar's trail ends in a page of its own
+// below the screen. That is a record, a reserved segment that names its own page
+// (`#/contacts/import`), or a page below the Filters and views library. The trail
+// asks the same three predicates, which keeps exactly one element claiming
+// `aria-current="page"`; `route.id !== undefined` would demote the row on a
+// segment that opens no page, such as `#/filters/views`, the library itself.
+function opensAPageBelow(route: Route): boolean {
+  return (
+    recordKindOf(route) !== undefined ||
+    reservedPageTitle(route) !== undefined ||
+    opensAFocusedFiltersPage(route)
+  );
 }
 
 // Which primary row a route makes current. It is the route's screen for every
@@ -385,6 +405,10 @@ function activeRowFor(route: Route): string {
   // no screen and marks no row, which is the honest answer for one.
   if (route.screen === CUSTOM_SCREEN) {
     return route.id ?? route.screen;
+  }
+  // One list is a page of the library that lists it, and has no row of its own.
+  if (route.screen === "lists") {
+    return "filters";
   }
   return route.screen;
 }

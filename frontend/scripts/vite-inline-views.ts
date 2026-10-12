@@ -38,6 +38,12 @@ const VOCABULARY: Record<string, string[]> = JSON.parse(
   readFileSync(resolve(HERE, "../src/mcp-apps/forbidden.json"), "utf8"),
 );
 
+/** What each view may ask its host to run, by view directory. A class in the
+ *  vocabulary named `...Undeclared` is waived for a view with an entry here. */
+const ACTIONS: Record<string, string[]> = JSON.parse(
+  readFileSync(resolve(HERE, "../src/mcp-apps/actions.json"), "utf8"),
+);
+
 /** Element names a self-contained document has no business carrying. */
 const FORBIDDEN_TAGS = [
   "link",
@@ -72,10 +78,14 @@ const URL_ATTRIBUTES = [
  * that the api runs before it will serve a document — see the file header for
  * why that identity is the point rather than a coincidence.
  */
-export function validateDocument(html: string): string[] {
+export function validateDocument(
+  html: string,
+  actions: readonly string[] = [],
+): string[] {
   const found: string[] = [];
   const lowered = html.toLowerCase();
-  for (const tokens of Object.values(VOCABULARY)) {
+  for (const [name, tokens] of Object.entries(VOCABULARY)) {
+    if (name.endsWith("Undeclared") && actions.length > 0) continue;
     for (const token of tokens) {
       if (matches(html, lowered, token)) found.push(token);
     }
@@ -345,8 +355,13 @@ function refuseSelfClosingText(text: string, tag: string): void {
 }
 
 export function inlineViews(): Plugin {
+  let view = "";
   return {
     name: "mcp-apps:inline-views",
+    // The build is one view per run, selected by --mode.
+    configResolved(config) {
+      view = config.mode;
+    },
     // After vite's own HTML plugin has injected the tags this folds in.
     enforce: "post",
     generateBundle(_options, bundle) {
@@ -396,7 +411,7 @@ export function inlineViews(): Plugin {
       // what keeps them off the disk, where build-mcp-apps.mjs counts again.
       delete bundle[js];
       delete bundle[css];
-      refuse(inlined);
+      refuse(view, inlined);
     },
   };
 }
@@ -490,8 +505,11 @@ async function buildOneView(name: string): Promise<string> {
 
 /** refuse throws unless the document is admissible, naming every reason. A view
  *  that would be refused in production must not reach production. */
-function refuse(html: string): void {
-  const findings = [...validateDocument(html), ...inspectDocument(html)];
+function refuse(view: string, html: string): void {
+  const findings = [
+    ...validateDocument(html, ACTIONS[view] ?? []),
+    ...inspectDocument(html),
+  ];
   if (findings.length > 0) {
     throw new Error(
       `mcp-apps: the built document reaches off-origin — ${findings.join(", ")}. ` +

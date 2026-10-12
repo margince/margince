@@ -40,6 +40,8 @@ export const feature: components["schemas"]["AiFeatureRoute"] = {
   impact: "unchanged",
   budget_exempt: false,
   decision_first: false,
+  decides: false,
+  defaults: { decision_timeout_ms: 15000, attempt_timeout_ms: 300000 },
 };
 export const status: components["schemas"]["AiStatus"] = {
   budget: allowance,
@@ -48,7 +50,13 @@ export const status: components["schemas"]["AiStatus"] = {
   task_contract_hash: "fixture",
   features: [feature],
   deferred_work: [
-    { carrier: "site_read", unit: "reads", available: true, count: 3 },
+    {
+      carrier: "site_read",
+      unit: "reads",
+      available: true,
+      count: 3,
+      waiting_on_provider: 2,
+    },
     { carrier: "company_scan", unit: "scans", available: false },
     { carrier: "voice_build", unit: "builds", available: true, count: 0 },
   ],

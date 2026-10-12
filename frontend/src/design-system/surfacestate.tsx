@@ -221,11 +221,14 @@ function Nothing({
   label,
   detail,
 }: Readonly<{ label: string; detail?: string }>) {
+  const line = <p className="surfacestate-empty">{label}</p>;
+  if (!detail) return line;
+  // One box for the pair, so a stack it lands in spaces it as one row.
   return (
-    <>
-      <p className="surfacestate-empty">{label}</p>
-      {detail && <p className="surfacestate-empty-detail">{detail}</p>}
-    </>
+    <div className="surfacestate-nothing">
+      {line}
+      <p className="surfacestate-empty-detail">{detail}</p>
+    </div>
   );
 }
 
@@ -291,17 +294,17 @@ export function SurfaceState({
           )}
         </div>
       )}
-      {/* The value first, then when it was last true. Reversing them buries
-          the caveat under the figure a reader has already taken as current. */}
+      {/* The caveat above the value, in one box: below it, the caveat arrives
+          late; apart from it, a host stack's gap falls between the two. */}
       {state === "stale" && (
-        <>
+        <div className="surfacestate-stale-frame">
           <p className="surfacestate-stale">
             {detail?.staleAsOf
               ? t("state.staleAsOf", { when: detail.staleAsOf })
               : t("state.stale")}
           </p>
           {children}
-        </>
+        </div>
       )}
       {state === "partial" && (
         <>

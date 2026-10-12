@@ -27,8 +27,10 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // readSiteTechnology matches every crawled page against the fingerprint
@@ -46,7 +48,10 @@ func (w *siteDeepReadWorker) readSiteTechnology(ctx context.Context, claim conta
 		return
 	}
 	companyID := ids.From[ids.CompanyKind](*claim.CompanyID)
-	found, err := technologiesAcross(crawl.Pages)
+	// Resolved once per read: these labels are stored, so they answer to the
+	// installation's language rather than to whoever triggered the crawl.
+	lang := textlang.Lang(identity.BaseLanguageForPrompt(ctx, w.pool))
+	found, err := technologiesAcross(crawl.Pages, lang)
 	if err != nil {
 		w.log.WarnContext(ctx, "site technology read failed",
 			"company", companyID.String(), "err", err)
@@ -75,7 +80,14 @@ func (w *siteDeepReadWorker) readSiteTechnology(ctx context.Context, claim conta
 // "how do you know they run Shopware?" gets /shop, not whichever page sorted
 // last. The crawl's own order is seed-first, so a marker on the homepage still
 // cites the homepage.
-func technologiesAcross(pages []crawlPage) ([]contacts.TechnicalObservation, error) {
+// lang names any enumerated signal. A fingerprint names a vendor, and no
+// language renames Shopify.
+//
+// It is threaded anyway, so a field that joins this path later is named like
+// every other rather than left untranslated.
+func technologiesAcross(
+	pages []crawlPage, lang textlang.Lang,
+) ([]contacts.TechnicalObservation, error) {
 	seen := map[string]bool{}
 	observations := make([]contacts.TechnicalObservation, 0, len(pages))
 	for _, page := range pages {
@@ -101,7 +113,7 @@ func technologiesAcross(pages []crawlPage) ([]contacts.TechnicalObservation, err
 				continue
 			}
 			seen[signal.Key] = true
-			observations = append(observations, observationOf(signal, fingerprint.URL))
+			observations = append(observations, observationOf(signal, fingerprint.URL, lang))
 		}
 	}
 	return observations, nil

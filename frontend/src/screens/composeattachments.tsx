@@ -35,10 +35,14 @@ import {
   useLocale,
   useT,
 } from "../i18n";
-import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
+import {
+  ACCEPTED_ATTACHMENT_ATTR,
+  type AttachmentParent,
+  uploadAttachment,
+} from "./attachmentupload";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import { useProviderCarriage } from "./channelproviders";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import type { RelinkKind } from "./compose";
 import "./composeattachments.css";
 
@@ -78,19 +82,17 @@ export function useRecordFiles(
   return useQuery({
     queryKey: ["attachments", entityType, entityId, "compose"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/attachments", {
-        params: {
-          query: {
-            entity_type: entityType,
-            entity_id: entityId,
-            limit: OFFERED,
+      return unwrap(
+        await api.GET("/attachments", {
+          params: {
+            query: {
+              entity_type: entityType,
+              entity_id: entityId,
+              limit: OFFERED,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     enabled,
   });
@@ -322,6 +324,7 @@ function AttachPicker({
         hint={t("compose.fileUploadHint")}
         emptyLabel={t("compose.fileUploadEmpty")}
         onPick={(picked) => upload.mutate(picked)}
+        accept={ACCEPTED_ATTACHMENT_ATTR}
       />
       {upload.isPending && (
         <p aria-live="polite">{t("compose.fileUploading")}</p>

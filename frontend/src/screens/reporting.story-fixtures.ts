@@ -36,6 +36,11 @@ export function reportingStoryRoutes(
       },
       { seat: readOnly ? "read" : "full" },
     ),
+    "GET /installation/settings": () =>
+      jsonResponse({
+        fiscal_year_start_month: 1,
+        timezone: REPORTING_FIXTURE_ZONE,
+      }),
     "GET /analytics/context": () =>
       jsonResponse({
         default_scope: reportingStoryScope,
@@ -45,7 +50,8 @@ export function reportingStoryRoutes(
         as_of: interval.end_at,
         capabilities: {},
       }),
-    "GET /analytics/metrics": () => jsonResponse(reportingStoryCatalog),
+    "GET /analytics/metrics": () =>
+      jsonResponse({ ...reportingStoryCatalog, schedule_ready: true }),
     "GET /analytics/framework": () => jsonResponse(reportingStoryFramework),
     "GET /pipelines": () =>
       jsonResponse({
@@ -77,6 +83,8 @@ export function reportingStoryRoutes(
         rows: [
           {
             key: "deal",
+            source_type: "deal",
+            source_id: "00000000-0000-4000-8000-000000000012",
             label: "Northstar rollout",
             value: 6400000,
             occurred_at: "2026-09-08T10:00:00Z",

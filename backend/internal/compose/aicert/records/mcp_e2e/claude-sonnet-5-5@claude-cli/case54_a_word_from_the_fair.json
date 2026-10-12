@@ -1,0 +1,23 @@
+{
+  "scenario": "case54_a_word_from_the_fair",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 32,
+    "output_tokens": 4083,
+    "cache_creation_input_tokens": 89189,
+    "cache_read_input_tokens": 944453,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.5865
+  }
+}

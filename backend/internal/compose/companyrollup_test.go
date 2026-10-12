@@ -5,6 +5,7 @@ package compose
 
 import (
 	"math"
+	"slices"
 	"testing"
 	"time"
 
@@ -238,8 +239,6 @@ func indexOf(haystack, needle string) int {
 	return -1
 }
 
-func uuidPtr(id ids.UUID) *ids.UUID { return &id }
-
 func TestPruneUnreadable(t *testing.T) {
 	root := ids.NewV7()
 	childA := ids.NewV7()
@@ -249,10 +248,10 @@ func TestPruneUnreadable(t *testing.T) {
 
 	tree := []companyTreeNode{
 		{id: root, parentID: nil, displayName: "Root Co"},
-		{id: childA, parentID: uuidPtr(root), displayName: "Child A"},
-		{id: childB, parentID: uuidPtr(root), displayName: "Child B"},
-		{id: grandchildA1, parentID: uuidPtr(childA), displayName: "Grandchild A1"},
-		{id: grandchildB1, parentID: uuidPtr(childB), displayName: "Grandchild B1"},
+		{id: childA, parentID: new(root), displayName: "Child A"},
+		{id: childB, parentID: new(root), displayName: "Child B"},
+		{id: grandchildA1, parentID: new(childA), displayName: "Grandchild A1"},
+		{id: grandchildB1, parentID: new(childB), displayName: "Grandchild B1"},
 	}
 
 	t.Run("all readable includes the whole tree, root-first", func(t *testing.T) {
@@ -367,13 +366,7 @@ func TestPruneUnreadable(t *testing.T) {
 			t.Fatalf("included = %v, want all 5 nodes back in", included)
 		}
 		for id := range wantIncluded {
-			found := false
-			for _, gotID := range included {
-				if gotID == id {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(included, id)
 			if !found {
 				t.Errorf("included is missing restored node %v", id)
 			}

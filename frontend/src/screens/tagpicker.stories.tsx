@@ -3,16 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { screen, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "./story-utils";
-import { AddTagDialog } from "./tagpicker";
+import { AddTagPicker } from "./tagpicker";
 
-// Pick a word the workspace already has. The dialog cannot coin one, so what
+// Pick a word the workspace already has. The picker cannot coin one, so what
 // is worth a picture is the pair that stops a reader coining a near-duplicate
 // anyway: the whole catalog, and a catalog that was CUT and says so. The
 // no-match plate is reached by typing and belongs to the unit test beside this.
@@ -24,25 +24,22 @@ const VOCABULARY = [
   { id: "t-2", workspace_id: "w", name: "Renewal", color: "lime" },
 ];
 
-// This surface is a Modal, portalled to document.body, so `#storybook-root`
-// holds the preview decorator and nothing else however well the dialog renders
-// — and `layout: "fullscreen"` removes even that, which leaves the render gate
-// watching an empty root and reporting a dialog that mounted perfectly as one
-// that never rendered.
-//
-// The root filling is then only evidence that the DECORATOR ran, so the frames
-// here drive a play that names what they expect. A rejecting play IS a failure
-// the gate reports, which is what makes their green worth something.
-const meta: Meta<typeof AddTagDialog> = {
+// The panel is portalled to document.body, so the play finds it there, after
+// pressing the trigger the story renders.
+const meta: Meta<typeof AddTagPicker> = {
   title: "Patterns/Add tag",
-  component: AddTagDialog,
-  play: async () => {
+  component: AddTagPicker,
+  parameters: { layout: "padded" },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Add tag" }),
+    );
     const dialog = within(await screen.findByRole("dialog"));
     await dialog.findByText("Key Account");
   },
 };
 export default meta;
-type Story = StoryObj<typeof AddTagDialog>;
+type Story = StoryObj<typeof AddTagPicker>;
 
 function Served({
   truncated,
@@ -59,16 +56,11 @@ function Served({
   return <StoryProviders>{children}</StoryProviders>;
 }
 
-/** The whole vocabulary fits, so the dialog says nothing about its own length. */
+/** The whole vocabulary fits, so the list says nothing about its own length. */
 export const WholeCatalog: Story = {
   render: () => (
     <Served truncated={false}>
-      <AddTagDialog
-        entityType="company"
-        entityID={COMPANY}
-        current={[]}
-        onClose={() => undefined}
-      />
+      <AddTagPicker entityType="company" entityID={COMPANY} current={[]} />
     </Served>
   ),
 };
@@ -80,12 +72,18 @@ export const WholeCatalog: Story = {
 export const CatalogCut: Story = {
   render: () => (
     <Served truncated>
-      <AddTagDialog
-        entityType="company"
-        entityID={COMPANY}
-        current={[]}
-        onClose={() => undefined}
-      />
+      <AddTagPicker entityType="company" entityID={COMPANY} current={[]} />
+    </Served>
+  ),
+};
+
+/** On a phone the same search and list fill a sheet. */
+export const PhoneSheet: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <Served truncated={false}>
+      <AddTagPicker entityType="company" entityID={COMPANY} current={[]} />
     </Served>
   ),
 };

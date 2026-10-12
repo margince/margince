@@ -335,6 +335,28 @@ describe("the header states the split", () => {
     expect(screen.queryByText(/\d total/)).toBeNull();
   });
 
+  // Under a filter the pills carry the filtered counts. The sentence keeps
+  // the whole day's, and says so, rather than reading as the filtered count.
+  it("says the figures are the whole day's under a filter", async () => {
+    globalThis.location.hash = "#/worklist?filter=customer_waiting";
+    stub(
+      day({
+        queue: [row({ id: "pair-1", destination: "review" })],
+        summary: {
+          urgent: 0,
+          due: 0,
+          lower_priority: 5,
+          total: 5,
+          buckets: { urgent: 0, due_today: 0, planned: 0, review: 5 },
+        },
+      }),
+    );
+    renderWorklist();
+
+    await screen.findByText("Whole day: 0 today · 5 to review");
+    globalThis.location.hash = "";
+  });
+
   it("keeps the five-figure sentence for a server without the partition", async () => {
     stub(
       day({

@@ -29,6 +29,7 @@ import (
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -235,17 +236,26 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 // and a chip is a label rather than a message: it has no greeting, wants no
 // paragraph break, and a finding telling the model to add one would spend the
 // single correction retry on feedback about the wrong thing entirely.
-func Formatting(body string) []Finding {
-	if !unbrokenBlock(body) {
-		return nil
+func Formatting(body string, on Grounds) []Finding {
+	var findings []Finding
+	if missingGreeting(body, on.FirstName, on.LastName) {
+		findings = append(findings, Finding{
+			Rule:   RuleMissingGreeting,
+			Phrase: "a first line that greets nobody",
+			Why: "every draft opens with a greeting line — greet the recipient on the " +
+				"first line, then a blank line, then the message",
+		})
 	}
-	return []Finding{{
-		Rule:   RuleUnbrokenBlock,
-		Phrase: "the whole message on one line",
-		Why: "the greeting and the message run together as a single block, which " +
-			"reads as a wall of text in every mail client — put the greeting on its " +
-			"own line and separate the paragraphs with a blank line",
-	}}
+	if unbrokenBlock(body) {
+		findings = append(findings, Finding{
+			Rule:   RuleUnbrokenBlock,
+			Phrase: "the whole message on one line",
+			Why: "the greeting and the message run together as a single block, which " +
+				"reads as a wall of text in every mail client — put the greeting on its " +
+				"own line and separate the paragraphs with a blank line",
+		})
+	}
+	return findings
 }
 
 // unbrokenBlock reports a body written as one run of text.
@@ -329,11 +339,7 @@ const openingRunes = 240
 
 // opening is the first part of the body, cut on a rune boundary.
 func opening(body string) string {
-	runes := []rune(body)
-	if len(runes) <= openingRunes {
-		return body
-	}
-	return string(runes[:openingRunes])
+	return textcut.Runes(body, openingRunes)
 }
 
 // contains reports whether text holds phrase as whole words.

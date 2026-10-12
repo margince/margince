@@ -73,12 +73,6 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
-	// A project with no requested owner belongs to its creator, the same
-	// default contact/company/deal births apply. Ownerless matters
-	// more here than elsewhere: write authority reads an unowned row as
-	// nobody's to change, so an ownerless project can never be attached to a
-	// deal by the rep who just created it (projects.EnsureAttachable).
-	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
 	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Project{}, err
@@ -99,6 +93,17 @@ func createProjectTx(
 	ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string,
 	active []fieldcatalog.Column, attachCompany AttachCompany, companies ProjectCompanies,
 ) (crmcontracts.Project, error) {
+	// A project with no requested owner belongs to its creator, the same
+	// default contact/company/deal births apply. Ownerless matters
+	// more here than elsewhere: write authority reads an unowned row as
+	// nobody's to change, so an ownerless project can never be attached to a
+	// deal by the rep who just created it (projects.EnsureAttachable).
+	owner, err := storekit.NewRecordOwner(ctx, tx, in.OwnerID)
+	if err != nil {
+		return crmcontracts.Project{}, err
+	}
+	in.OwnerID = owner
+
 	// The anchor company is a client-supplied reference to a row-scoped
 	// record, so naming it is a read of it: the caller must be able to see
 	// the company before a project can be hung off it. The composite FK

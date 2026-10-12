@@ -56,7 +56,7 @@ async function show(fit: GrowthFit) {
       }
     >
       <LocaleProvider initial="en">
-        <GrowthFitPanel companyId="o-1" />
+        <GrowthFitPanel companyId="o-1" onOpenReceipt={() => {}} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -87,7 +87,7 @@ describe("the wait before the first assessment", () => {
         }
       >
         <LocaleProvider initial="en">
-          <GrowthFitPanel companyId="o-1" />
+          <GrowthFitPanel companyId="o-1" onOpenReceipt={() => {}} />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -200,7 +200,7 @@ describe("how well this company fits what we sell", () => {
         }
       >
         <LocaleProvider initial="en">
-          <GrowthFitPanel companyId="o-1" />
+          <GrowthFitPanel companyId="o-1" onOpenReceipt={() => {}} />
         </LocaleProvider>
       </QueryClientProvider>,
     );

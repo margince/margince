@@ -79,8 +79,7 @@ func (s *Store) recoverProposalInvitation(ctx context.Context, proposal proposal
 	if !ok || len(token) != 43 {
 		return crmcontracts.MeetingInvitation{}, apperrors.ErrNotFound
 	}
-	out := invitationView(row)
-	out.CalendarUrl = nil
+	out := guestInvitationView(invitationView(row))
 	out.ManagementToken = &token
 	return out, nil
 }

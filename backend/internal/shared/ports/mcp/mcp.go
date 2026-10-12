@@ -104,8 +104,10 @@ type ToolSpec struct {
 	// into strict typed structs and enforce their own invariants.
 	InputSchema  json.RawMessage
 	OutputSchema json.RawMessage
-	OpenAPIOp    string // the crm.yaml operationId (or logical op family) this maps to
-	Egress       bool   // true if the tool reaches outside the workspace (send_email, webhooks)
+	// OpenAPIOp names the crm.yaml operations this tool runs as, operationIds
+	// joined by "/"; each declares this tool as its x-mcp-tool verb.
+	OpenAPIOp string
+	Egress    bool // true if the tool reaches outside the workspace (send_email, webhooks)
 	// HumanOnly marks a tool that exists in the registry so REST can dispatch
 	// it by name, but that no Agent or Buyer principal may ever invoke or be
 	// shown — the wire twin of a contract's x-agent-access: human-only. The
@@ -136,6 +138,9 @@ type ToolSpec struct {
 	// keys. Held to InputSchema in both directions, and to the agent catalog, by
 	// TestEveryServedToolNamesTheKeysOfItsObjects.
 	UnkeyedArguments map[string]string
+	// MaxArgsBytes bounds this tool's encoded arguments; zero is the 1 MiB every
+	// JSON body takes, so a transport ceiling raised for one tool widens no other.
+	MaxArgsBytes int64
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's
@@ -215,7 +220,10 @@ const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with oth
 const ConflictingSourcesRule = "When two sources disagree, say that they disagree and name both; " +
 	"never invent an event that would reconcile them. Where a structured field on a record " +
 	"(a date, an amount, a status) disagrees with prose someone wrote, the field wins: " +
-	"say which one you relied on and why."
+	"say which one you relied on and why. When you repeat what the prose claims, attribute " +
+	"it in that same sentence (\"the note dates it to March\"), including in a translation, and " +
+	"never restate it as something that happened. Leaving the prose's claim out does not " +
+	"settle the disagreement: still say that the two disagree."
 
 // RiskTier is the autonomy class (A34/ADR-0026). AutoExecute and ConfirmationRequired are
 // static — the declared value is the tool's whole tier. Dynamic means the

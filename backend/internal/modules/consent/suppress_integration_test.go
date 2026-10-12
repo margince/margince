@@ -437,8 +437,7 @@ func TestNoSeatLiftsAnObjectionItRecorded(t *testing.T) {
 	}
 	// And refused for the RIGHT reason: a validation error here would mean the
 	// request was malformed, not that the authority held.
-	var invalid *ValidationError
-	if errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*ValidationError](err); ok {
 		t.Fatalf("the lift was refused as malformed (%v), so this says nothing about authority", err)
 	}
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -524,5 +523,20 @@ func TestAStopEverythingStillConfirmsItself(t *testing.T) {
 		if got := suppressionBinds(commsauthz.ReasonSubjectRequest, c.category, nil, nil); got != c.stopped {
 			t.Errorf("a subject request against %s: binds = %v, want %v", c.category, got, c.stopped)
 		}
+	}
+}
+
+// A reason of only spaces says nothing, and the stop's recorded explanation
+// must not read as if somebody had written one.
+func TestASuppressionReasonOfOnlySpacesRecordsNoReason(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: suppressibleKind, Reason: "   \t ",
+	}); err != nil {
+		t.Fatalf("recording a stop: %v", err)
+	}
+	if _, _, source := liveSuppressionRow(t, e, e.contact); source != "recorded by a contact" {
+		t.Errorf("source = %q, want the door alone: the reason was only spaces", source)
 	}
 }

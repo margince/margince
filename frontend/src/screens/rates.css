@@ -19,7 +19,7 @@
   gap: var(--space-2);
 }
 
-/* The price form's verbs stay put while the dialog or sheet body scrolls on a
+/* The price form's verbs stay put while the provider sheet's body scrolls on a
  * short screen. */
 .rates-manual-actions {
   position: sticky;

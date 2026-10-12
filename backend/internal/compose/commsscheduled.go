@@ -112,7 +112,7 @@ type scheduledSendWorker struct {
 // immediate one is: the signature, the sender name, the unsubscribe linker and
 // the draft-outcome recorder all present, all identical. A hand-built store
 // here would be a second send path wearing the first one's name.
-func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob blobstore.Store, pacing SendPacing, origin SendOrigin) *scheduledSendWorker {
+func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob blobstore.Store, origin SendOrigin) *scheduledSendWorker {
 	return &scheduledSendWorker{
 		pool: pool,
 		// The ORIGIN travels, because a fired message builds its unsubscribe
@@ -127,7 +127,7 @@ func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob
 		// than built here: firing enqueues a delivery job, and a second
 		// construction site would be a second way for the two to disagree.
 		delivery: delivery,
-		grace:    pacing.withDefaults().ScheduleGrace,
+		grace:    defaultScheduleGrace,
 		now:      time.Now,
 	}
 }

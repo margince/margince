@@ -13,7 +13,6 @@ package compose
 
 import (
 	"slices"
-	"time"
 
 	"github.com/riverqueue/river"
 
@@ -35,19 +34,36 @@ func periodicFor[A declaredJobArgs](cfg JobRunnerConfig, args A) []*river.Period
 	if !declared {
 		panic("compose: scheduling " + args.Kind() + ", which api/jobs.yaml does not declare")
 	}
-	if !registers(cfg, spec.Registration) {
-		return nil
-	}
-	interval, scheduled := scheduleInterval(cfg, spec)
-	if !scheduled {
+	if !registers(cfg, spec.Registration) || spec.Cadence.OnDemand {
 		return nil
 	}
 	opts := periodicInsertOpts(args)
+	if spec.Cadence.Setting != "" {
+		// Built even when its setting holds zero, so the book can add it the
+		// moment an admin switches it back on.
+		job, runs := schedulesOf(cfg).schedule(spec, args, opts)
+		if !runs {
+			return nil
+		}
+		return []*river.PeriodicJob{job}
+	}
+	if spec.Cadence.Fixed <= 0 {
+		panic("compose: " + spec.Kind + " declares no cadence, so it has no schedule to place — only a dispatcher is scheduled here")
+	}
 	return []*river.PeriodicJob{river.NewPeriodicJob(
-		river.PeriodicInterval(interval),
+		river.PeriodicInterval(spec.Cadence.Fixed),
 		func() (river.JobArgs, *river.InsertOpts) { return args, opts },
 		&river.PeriodicJobOpts{RunOnStart: true},
 	)}
+}
+
+// schedulesOf is the book this wiring schedules from: the one the worker read
+// at boot, or the defaults for a wiring built without a database.
+func schedulesOf(cfg JobRunnerConfig) *ScheduleBook {
+	if cfg.Schedules == nil {
+		return DefaultSchedules()
+	}
+	return cfg.Schedules
 }
 
 // periodicInsertOpts is sweepInsertOpts plus an attempt cap for the passes
@@ -107,49 +123,6 @@ func registers(cfg JobRunnerConfig, r jobs.Registration) bool {
 	return true
 }
 
-// scheduleInterval resolves a declared cadence to the interval River schedules
-// on, and reports whether there is a schedule at all. Three forms, and the
-// difference between them is the whole content of the field:
-//
-//   - on demand — a human's confirm enqueues this dispatcher and no clock ever
-//     does, so there is no entry to place. Declared rather than inferred,
-//     because a schedule someone forgot looks otherwise identical.
-//   - schedule when positive — the kind stays wired and only the tick goes
-//     away. River offers no cadence for a non-positive duration and refuses
-//     none either: PeriodicInterval(0) yields Next(t) == t, so the enqueuer
-//     re-derives a run time that never advances and dispatches as fast as
-//     Postgres accepts an insert. Only the kinds that DECLARE this read a
-//     non-positive dial that way; it is a posture, not a rule over every dial.
-//   - otherwise — the declared literal, or the operator dial it names.
-func scheduleInterval(cfg JobRunnerConfig, spec jobs.Spec) (time.Duration, bool) {
-	cadence := spec.Cadence
-	if cadence.OnDemand {
-		return 0, false
-	}
-	if cadence.ScheduleWhenPositive != "" && operatorInterval(cfg, spec.Kind, cadence.ScheduleWhenPositive) <= 0 {
-		return 0, false
-	}
-	switch {
-	case cadence.OperatorField != "":
-		return operatorInterval(cfg, spec.Kind, cadence.OperatorField), true
-	case cadence.Fixed > 0:
-		return cadence.Fixed, true
-	}
-	panic("compose: " + spec.Kind + " declares no cadence, so it has no schedule to place — only a dispatcher is scheduled here")
-}
-
-// operatorInterval is the configured duration behind a field path a cadence
-// names, either as the cadence itself or as the dial whose positivity decides
-// whether there is one.
-func operatorInterval(cfg JobRunnerConfig, kind, path string) time.Duration {
-	interval, answered := operatorIntervals(cfg)[path]
-	if !answered {
-		panic("compose: " + kind + " takes its cadence from JobRunnerConfig." + path +
-			", which operatorIntervals does not answer — add it there")
-	}
-	return interval
-}
-
 // configDependencies is what this boot SUPPLIED, keyed by the JobRunnerConfig
 // field path api/jobs.yaml names. Each entry spells its own presence test,
 // because presence is not one rule: a credential custodian is a nil check and
@@ -191,22 +164,5 @@ func configDependencies(cfg JobRunnerConfig) map[string]bool {
 		"WebhookRetry.Deliverer":     cfg.WebhookRetry.Deliverer != nil,
 		"ProviderRuns.Registry":      cfg.ProviderRuns.Registry != nil,
 		"ProviderRuns.Vault":         cfg.ProviderRuns.Vault != nil,
-	}
-}
-
-// operatorIntervals is every cadence an operator dials, keyed by the same
-// field paths, and answered the same way and for the same reasons.
-func operatorIntervals(cfg JobRunnerConfig) map[string]time.Duration {
-	return map[string]time.Duration{
-		"AgentScheduler.Interval":              cfg.AgentScheduler.Interval,
-		"CloseDateInterval":                    cfg.CloseDateInterval,
-		"Geocoding.BackfillInterval":           cfg.Geocoding.BackfillInterval,
-		"TechnicalEnrichment.BackfillInterval": cfg.TechnicalEnrichment.BackfillInterval,
-		"GmailWatch.Interval":                  cfg.GmailWatch.Interval,
-		"GraphWatch.Interval":                  cfg.GraphWatch.Interval,
-		"PrivacyRetention.Interval":            cfg.PrivacyRetention.Interval,
-		"ReconcileInterval":                    cfg.ReconcileInterval,
-		"TimeScanInterval":                     cfg.TimeScanInterval,
-		"WebhookRetry.Interval":                cfg.WebhookRetry.Interval,
 	}
 }

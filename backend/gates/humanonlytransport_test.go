@@ -5,7 +5,7 @@
 
 package gates
 
-// A human-only operation says so at the TRANSPORT, not only in the gate.
+// A human-only operation says so at the transport, not only in the gate.
 //
 // The contract's preamble promises defence in depth: an operation marked
 // `x-agent-access: human-only` also narrows the global `security:` so an agent
@@ -89,6 +89,9 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	"resetPassword":        "redeeming that reset token, still before any session exists",
 	"getAuthCapabilities":  "which authentication methods are operational, read by the login screen before anybody has signed in",
 	"getAssistantProfile":  "the public identity and posture of the AI presence, shown before sign-in",
+
+	// Read by machines that hold no seat and never will.
+	"getStatus": "the reachability probe an external uptime monitor calls: a fixed body, no work, nothing disclosed",
 })
 
 // aDealRoomSession is the scheme the buyer's own room authenticates with.

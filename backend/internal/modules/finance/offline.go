@@ -44,6 +44,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"time"
@@ -124,7 +125,7 @@ func (p *OfflineProvider) InvoicesFor(
 	_ context.Context, externalCustomerID string,
 ) (SourceLedger, error) {
 	if externalCustomerID == "" {
-		return SourceLedger{}, fmt.Errorf("finance: offline provider needs a customer id")
+		return SourceLedger{}, errors.New("finance: offline provider needs a customer id")
 	}
 	// #nosec G404 -- a seeded PCG is the requirement, not a shortcut. This
 	// generator must produce the same ledger for the same customer on every

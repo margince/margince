@@ -4,6 +4,10 @@
 import { describe, expect, it } from "vitest";
 import type { MessageKey } from "../i18n/en";
 import { en } from "../i18n/en";
+import {
+  beforeHistoryWeeklyNumbers,
+  sharedWeeklyNumbers,
+} from "./brief.fixtures";
 import type { WeeklyReview } from "./brief.queries";
 import { weekSentence } from "./brief.weeksentence";
 
@@ -205,4 +209,48 @@ it("recognizes obligations delivered early even without an in-week completion", 
   const review = week({ tasks_due: 3, tasks_done: 3 });
   review.counts.tasks_completed = 0;
   expect(say(review)).toBe(en["brief.week.workRecorded"]);
+});
+
+describe("weekSentence: a source that had not started is no verdict", () => {
+  it("says a week before every source began predates recorded history", () => {
+    const review = {
+      ...week({ tasks_carried_over: 2 }),
+      numeric_summary: beforeHistoryWeeklyNumbers,
+    };
+    expect(say(review)).toBe(en["brief.week.beforeHistory"]);
+  });
+
+  it("skips an unrecorded family when choosing what led the week", () => {
+    const review = {
+      ...week({ deals_won: 0, deals_lost: 0, leads_routed: 4 }),
+      numeric_summary: {
+        ...sharedWeeklyNumbers,
+        figure_coverage: {
+          leads: { status: "not_recorded" as const },
+          tasks: { status: "recorded" as const },
+        },
+      },
+    };
+    expect(say(review)).toBe(en["brief.week.quiet"]);
+  });
+
+  it("still cites a partly recorded family, and leaves out an unrecorded carry", () => {
+    const review = {
+      ...week({ deals_lost: 2, tasks_carried_over: 3 }),
+      numeric_summary: {
+        ...sharedWeeklyNumbers,
+        figure_coverage: {
+          deals: { status: "partial" as const },
+          tasks: { status: "not_recorded" as const },
+        },
+      },
+    };
+    expect(say(review)).toBe("2 deals lost.");
+  });
+
+  it("reads a review frozen before coverage existed as it always did", () => {
+    expect(
+      say({ ...week({ deals_lost: 1 }), numeric_summary: sharedWeeklyNumbers }),
+    ).toBe("1 deal lost.");
+  });
 });

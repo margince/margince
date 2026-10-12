@@ -17,13 +17,14 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       page,
     }) => {
       await page.setViewportSize({ width, height: 1000 });
-      await page.emulateMedia({ colorScheme });
+      // Reduced motion before the page loads: `.analytics-body` is still fading in
+      // when the evidence drawer has closed, and axe would read the blend.
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
       await mockApi(page);
       await page.route("**/v1/me", (route) =>
         route.fulfill({
           json: meFixture({
             rowScope: "all",
-            settingsAvailability: { reporting: true },
             allow: {
               deal: ["read"],
               forecast: ["read"],
@@ -75,11 +76,11 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       );
       await page.goto("/#/analytics");
       const graph = page.getByRole("figure", {
-        name: "Bookings progress",
+        name: "Sales won over time",
       });
       await expect(graph).toBeVisible();
-      await expect(page.locator(".reporting-headline").first()).toHaveText(
-        "€216,000.00",
+      await expect(page.locator(".stat-card-value").first()).toHaveText(
+        "€216k",
       );
       const bounds = await page
         .locator(".report-chart-line")
@@ -114,6 +115,7 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
         page.getByText("Frozen booking receipt", { exact: true }),
       ).toHaveCount(0);
       await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toBeHidden();
       await expect(lastPoint).toBeFocused();
       const accessibility = await new AxeBuilder({ page })
         .include(".reporting-grid")

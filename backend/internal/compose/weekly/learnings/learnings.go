@@ -22,6 +22,7 @@ package learnings
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -129,6 +130,7 @@ const learningsSystem = `You read one rep's week — how its tasks and promises 
 
 Decide first whether the week teaches anything at all:
 - A lesson needs a shape that SEVERAL rows share, such as three deals lost the same way.
+- Several rows with the same recorded outcome ARE such a shape: state that pattern and cite each of those rows. Say what they share, never why — the summary records no cause.
 - A single outcome is not a lesson, and neither is one outcome beside another: a deal won in the same week a promise was kept does not mean the promise won it. The summary records what happened, never why, and a rep would act on a cause you made up.
 - With no shared shape, return {"learnings":[]} — that is a correct answer.
 
@@ -248,7 +250,7 @@ func Parse(reply string, in Input) ([]Learning, error) {
 		return nil, fmt.Errorf("weekly learnings: the reply is not the object asked for: %w", err)
 	}
 	if out.Learnings == nil {
-		return nil, fmt.Errorf("weekly learnings: the reply carries no learnings field")
+		return nil, errors.New("weekly learnings: the reply carries no learnings field")
 	}
 	if len(*out.Learnings) > MaxLearnings {
 		return nil, fmt.Errorf("weekly learnings: %d learnings, over the %d asked for",

@@ -27,7 +27,7 @@ import { useRecordZone } from "../../app/recordzone";
 import { EmailEntry } from "../../design-system/emailentry";
 import { formatDateTime } from "../../format/format";
 import { useLocale } from "../../i18n";
-import { Citations, type Cited } from "./citations";
+import { Citations, type Cited, type OpenReceipt } from "./citations";
 // The basis block is styled beside the citation chips it falls back to, in the
 // stylesheet those rules already live in.
 import "../company360.css";
@@ -102,11 +102,13 @@ export function EvidenceSources({
   sources,
   onOpenEmail,
   onOpenRecord,
+  onOpenReceipt,
   nameOf,
 }: Readonly<{
   sources: readonly Source[];
   onOpenEmail?: (activityId: string) => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt?: OpenReceipt;
   /**
    * The record's own name, from a page that already holds it — passed straight
    * through to the citations this component falls back to. A message needs
@@ -165,6 +167,7 @@ export function EvidenceSources({
           evidence={cited}
           nameOf={nameOf}
           onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
           onOpenEmail={onOpenEmail}
         />
       )}

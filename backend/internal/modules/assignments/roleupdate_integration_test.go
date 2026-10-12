@@ -115,7 +115,7 @@ func TestAdministeringARoleReachesTheDatabase(t *testing.T) {
 	// Relabel. The failing case: this is the call that answered with an
 	// undefined-column error for every role in the vocabulary.
 	renamed, err := e.store.UpdateRecordRole(ctx, ids.UUID(created.Id), UpdateRecordRoleInput{
-		Label: ptr("Renewal lead"),
+		Label: new("Renewal lead"),
 	})
 	if err != nil {
 		t.Fatalf("relabelling a role: %v", err)
@@ -131,7 +131,7 @@ func TestAdministeringARoleReachesTheDatabase(t *testing.T) {
 
 	// Retire. `active = false`, never a delete and never an archived_at.
 	retired, err := e.store.UpdateRecordRole(ctx, ids.UUID(created.Id), UpdateRecordRoleInput{
-		Active: ptr(false),
+		Active: new(false),
 	})
 	if err != nil {
 		t.Fatalf("retiring a role: %v", err)
@@ -143,7 +143,7 @@ func TestAdministeringARoleReachesTheDatabase(t *testing.T) {
 	// And back: a retired role can be reinstated, so an administrator who
 	// retired the wrong one is not stuck with it.
 	revived, err := e.store.UpdateRecordRole(ctx, ids.UUID(created.Id), UpdateRecordRoleInput{
-		Active: ptr(true),
+		Active: new(true),
 	})
 	if err != nil {
 		t.Fatalf("reinstating a role: %v", err)
@@ -176,5 +176,3 @@ func TestTheSeededVocabularyIsReadable(t *testing.T) {
 		t.Fatal("account_manager is missing from the seeded vocabulary")
 	}
 }
-
-func ptr[T any](v T) *T { return &v }

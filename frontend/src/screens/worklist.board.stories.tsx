@@ -31,16 +31,19 @@ const aLoadedTeam: TeamBoardData = {
     {
       user_id: "00000000-0000-4000-8000-000000000001",
       display_name: "Lena Fischer",
+      activation: "active",
       counts: { waiting: 14, at_risk: 3, overdue: 6, promises_due: 2 },
     },
     {
       user_id: "00000000-0000-4000-8000-000000000002",
       display_name: "Marc Weber",
+      activation: "active",
       counts: { waiting: 2, at_risk: 0, overdue: 0, promises_due: 0 },
     },
     {
       user_id: "00000000-0000-4000-8000-000000000003",
       display_name: "Sofia Ruiz",
+      activation: "active",
       counts: { waiting: 0, at_risk: 1, overdue: 0, promises_due: 4 },
     },
   ],
@@ -87,6 +90,28 @@ export const ALoadedTeam: Story = {
 export const CountedToTheBound: Story = {
   render: () =>
     frame(async () => jsonResponse({ ...aLoadedTeam, truncated: true })),
+};
+
+/** A named team whose only other member has been invited and not signed in
+ *  yet. The seat is listed, marked, and says its figures were not measured:
+ *  "—" already means zero on this board. */
+export const AnInvitedSeat: Story = {
+  render: () =>
+    frame(async () =>
+      jsonResponse({
+        ...aLoadedTeam,
+        members: [
+          aLoadedTeam.members[0],
+          {
+            user_id: "00000000-0000-4000-8000-000000000004",
+            display_name: "Ana Novak",
+            activation: "invited",
+            counts: { waiting: 0, at_risk: 0, overdue: 0, promises_due: 0 },
+          },
+        ],
+        unassigned: { waiting: 0, at_risk: 0, overdue: 0, promises_due: 0 },
+      }),
+    ),
 };
 
 /** The board could not be read. It says so and offers the retry; it never

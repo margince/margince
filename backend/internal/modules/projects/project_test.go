@@ -13,8 +13,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-func projectStr(s string) *string { return &s }
-
 // A phase move must announce itself as a phase move. Emitting the generic
 // update envelope instead would leave every consumer reconstructing a
 // transition from a diff — and a consumer that guesses wrong about the
@@ -22,7 +20,7 @@ func projectStr(s string) *string { return &s }
 func TestProjectPhaseChangedPayloadCarriesBothEnds(t *testing.T) {
 	payload := projectPhaseChangedPayload("pursuing", AdvanceProjectPhaseInput{
 		ToPhase: PhaseClosed,
-		Reason:  projectStr("Delivered and handed over to support."),
+		Reason:  new("Delivered and handed over to support."),
 	})
 
 	if payload.EventType() != "project.phase_changed" {
@@ -44,7 +42,7 @@ func TestProjectPhaseChangedPayloadCarriesBothEnds(t *testing.T) {
 func TestProjectPhaseChangedPayloadDropsAnEmptyReason(t *testing.T) {
 	payload := projectPhaseChangedPayload("initiative", AdvanceProjectPhaseInput{
 		ToPhase: "pursuing",
-		Reason:  projectStr(""),
+		Reason:  new(""),
 	})
 	if payload.Reason != nil {
 		t.Errorf("reason = %v, want nil for an empty string", *payload.Reason)
@@ -54,14 +52,14 @@ func TestProjectPhaseChangedPayloadDropsAnEmptyReason(t *testing.T) {
 // The patch must carry only what the caller actually sent: a field the
 // request omitted is not a field set to its zero value.
 func TestProjectUpdatePatchOnlyCarriesSuppliedFields(t *testing.T) {
-	current := crmcontracts.Project{Name: "ERP replacement", Key: projectStr("ERP-27")}
+	current := crmcontracts.Project{Name: "ERP replacement", Key: new("ERP-27")}
 
 	empty, _ := projectUpdatePatch(current, UpdateProjectInput{})
 	if !empty.Empty() {
 		t.Errorf("an empty input produced a patch: %v", empty.After())
 	}
 
-	named, _ := projectUpdatePatch(current, UpdateProjectInput{Name: projectStr("ERP replacement 2027")})
+	named, _ := projectUpdatePatch(current, UpdateProjectInput{Name: new("ERP replacement 2027")})
 	after := named.After()
 	if len(after) != 1 {
 		t.Fatalf("patch touched %d columns, want 1: %v", len(after), after)
@@ -81,8 +79,8 @@ func TestProjectUpdatePatchOnlyCarriesSuppliedFields(t *testing.T) {
 func TestProjectUpdatePatchNeverSetsPhase(t *testing.T) {
 	current := crmcontracts.Project{Name: "ERP replacement"}
 	p, _ := projectUpdatePatch(current, UpdateProjectInput{
-		Name:        projectStr("renamed"),
-		Description: projectStr("still the same body of work"),
+		Name:        new("renamed"),
+		Description: new("still the same body of work"),
 	})
 	if _, touched := p.After()["phase"]; touched {
 		t.Error("the update patch set phase — a transition must go through AdvanceProjectPhase")

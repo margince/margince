@@ -50,7 +50,7 @@ var whatsSlippingCopy = toolCopy{
 		"at_risk_relationships when the question is who a deal rests on rather than whether it " +
 		"is moving.",
 	Retain: "Keep each deal_id if you intend to act; draft_follow_ups_for works over this same " +
-		"ranked set without you re-deriving it.",
+		"ranked set at the default quiet_days without you re-deriving it.",
 }
 
 var reviewCommitmentsCopy = toolCopy{
@@ -166,13 +166,13 @@ var runReportCopy = toolCopy{
 		"workspace's prebuilt reports.",
 	Limits: "Only the named reports exist, each with its own filter, grouping and measure names; " +
 		"anything else is refused. It aggregates: how many and how much, never which record.",
-	Instead: "Use search_records or whats_slipping_this_week when the answer wanted is the " +
-		"records themselves rather than a number over them. Reach for run_analytics_query " +
-		"only when NO prebuilt report answers the question: a report already carries the " +
-		"filter and the grouping, so it is one call where a query is a vocabulary lookup " +
-		"and a query.",
-	Retain: "Call a report with no plan first to see its default answer, then narrow with the " +
-		"names describe_report_vocabulary gives for it.",
+	Instead: "Use search_records or whats_slipping_this_week when the answer is the records " +
+		"rather than a number over them. Reach for run_analytics_query " +
+		"only when NO prebuilt report answers the question — a report is one call, a query " +
+		"is a lookup and a call — or when the figures go into a written document: a " +
+		"report's answer has no run_id, so compose_analytics_report cannot cite it.",
+	Retain: "Call a report with no plan first for its default answer, then narrow with the " +
+		"names describe_report_vocabulary gives.",
 }
 
 var annotateBriefCopy = toolCopy{

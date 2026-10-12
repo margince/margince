@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { brandt } from "./mockapi/fixtures";
+import { page as companyPage } from "./mockapi/server";
 import { mockApi } from "./seed";
 
 /**
@@ -104,6 +106,7 @@ test("Forward returns to the list Back left", async ({ page }) => {
     (request) =>
       companies(request.url()) && searchOf(request.url()) === "brandt",
   );
+  await expect(page).toHaveURL(/[?&]q=brandt/);
 
   await page
     .getByRole("main")
@@ -166,7 +169,7 @@ test("a section is an address, and Back steps between sections", async ({
   page,
 }) => {
   await page.goto("/#/analytics");
-  await page.getByRole("button", { name: "Deals" }).click();
+  await page.getByRole("button", { name: "Pipeline", exact: true }).click();
   await expect(page).toHaveURL(/#\/analytics\/pipeline$/);
 
   await page.goBack();
@@ -195,6 +198,20 @@ test("paging is in the address, and Back returns to the page you left", async ({
   // Page one is spelled by ABSENCE, so an address only carries a page once the
   // reader has moved off the first — a dial in front of somebody who turned
   // nothing is noise.
+  // A second page needs more than one page of companies. An address naming a
+  // page the list does not reach is brought back to its last page.
+  await page.route(/\/companies(\?|$)/, (route) =>
+    route.fulfill({
+      json: companyPage([
+        ...Array.from({ length: 25 }, (_, at) => ({
+          ...brandt,
+          id: `o-filler-${at}`,
+          name: `Filler ${at}`,
+        })),
+        brandt,
+      ]),
+    }),
+  );
   await page.goto("/#/companies");
   await expect(page).not.toHaveURL(/[?&]page=/);
 

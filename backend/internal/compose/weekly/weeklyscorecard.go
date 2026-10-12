@@ -224,9 +224,7 @@ func scoreLeads(
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = sqlUnbounded
-	}
+	scope = orUnbounded(scope)
 	// Activities carry no owner, so their visibility comes from the records
 	// they link to and the audience the writer set — never hand-rolled.
 	meetingScope, err := auth.ActivityContentClause(ctx, "m", arg)
@@ -314,9 +312,7 @@ func hasLeads(ctx context.Context, tx pgx.Tx, userID ids.UUID, by time.Time) (bo
 	if err != nil {
 		return false, err
 	}
-	if scope == "" {
-		scope = sqlUnbounded
-	}
+	scope = orUnbounded(scope)
 	var present bool
 	err = tx.QueryRow(ctx, fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM lead l
@@ -383,9 +379,7 @@ func scoreDeals(
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = sqlUnbounded
-	}
+	scope = orUnbounded(scope)
 
 	taskScope, err := auth.ActivityContentClause(ctx, "task", arg)
 	if err != nil {

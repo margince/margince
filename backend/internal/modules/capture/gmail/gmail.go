@@ -64,7 +64,7 @@ func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
 
 // New returns a Gmail connector over the given OAuth + API surfaces.
 func New(oauth googleconn.Authorizer, api API) *Connector {
-	return &Connector{oauth: oauth, api: api}
+	return &Connector{oauth: timedAuthorizer{oauth}, api: api}
 }
 
 var (
@@ -300,7 +300,7 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	if hasRejectedLabel(fetched.Labels) {
 		return false, nil
 	}
-	msg, err := mailmap.Parse(fetched.RFC822, owner)
+	msg, err := parseTimed(ctx, fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the IMAP connector)
 	}
@@ -309,6 +309,7 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	}
 	msg = msg.AttestSentByOwner(fetched.FiledAsSent)
 	rec := msg.ToRecord(connectorName, fetched.RFC822)
+	rec.ProviderReceivedAt = fetched.ReceivedAt
 	// Where Gmail filed it, so an owner who keeps a label out of the CRM is
 	// answered before the message is stored. Set here rather than in
 	// mailmap.ToRecord because a label is provider metadata off the
@@ -480,14 +481,19 @@ func reportRemovals(ctx context.Context, sink connector.Sink, deleted []string) 
 // the reason Sync does it: the refresh token is this connector's to hold, and a
 // registry that opened the blob to mint a token would be a second place that
 // knows what shape it has.
-func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+// Never truncated: the labels endpoint answers the whole set in one call, so
+// there is no budget for this walk to run out of.
+func (c *Connector) ListContainers(
+	ctx context.Context, auth connector.Auth,
+) ([]connector.NamedContainer, bool, error) {
 	var st authState
 	if err := json.Unmarshal(auth, &st); err != nil {
-		return nil, fmt.Errorf("gmail: malformed auth state: %w", err)
+		return nil, false, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
 	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return c.api.ListLabels(ctx, access)
+	labels, err := c.api.ListLabels(ctx, access)
+	return labels, false, err
 }

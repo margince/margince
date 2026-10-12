@@ -6,7 +6,7 @@
 package gates
 
 // The team's frozen outlook and the rep's are the same fact over different
-// books, so they are the same SHAPE or one of them is lying.
+// books, so they must have the same shape.
 //
 // They cannot be one table: the rep's hangs off weekly_review by foreign key
 // and the team's off team_weekly_review. That leaves two column lists which a
@@ -88,7 +88,7 @@ func outlookColumns(t *testing.T, table string) map[string]string {
 	t.Helper()
 	body := createTableBody(t, table)
 	cols := map[string]string{}
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		m := outlookColumn.FindStringSubmatch(line)
 		if m == nil {
 			continue
@@ -121,16 +121,16 @@ func createTableBody(t *testing.T, table string) string {
 			t.Fatalf("reading %s: %v", file, err)
 		}
 		text := string(raw)
-		start := strings.Index(text, open)
-		if start < 0 {
+		_, after, ok := strings.Cut(text, open)
+		if !ok {
 			continue
 		}
-		rest := text[start+len(open):]
-		end := strings.Index(rest, "\n);")
-		if end < 0 {
+		rest := after
+		before0, _, ok0 := strings.Cut(rest, "\n);")
+		if !ok0 {
 			t.Fatalf("%s: CREATE TABLE %s is not closed", file, table)
 		}
-		return rest[:end]
+		return before0
 	}
 	t.Fatalf("no migration creates %s: the gate's subject is gone, which is not a pass", table)
 	return ""

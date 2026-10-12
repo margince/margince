@@ -5,7 +5,7 @@
 
 package gates
 
-// A field the contract PROMISES and nobody WRITES is invisible.
+// A field the contract promises and nobody writes is invisible.
 //
 // `make drift` proves the generated Go matches api/crm.yaml. Nothing proves a
 // handler fills what the contract advertises, so a schema property with no

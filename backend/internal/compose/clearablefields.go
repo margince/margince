@@ -15,6 +15,8 @@ package compose
 // field named here that the store does not clear is a restore that reports
 // success and changes nothing, which is the one outcome worse than refusing.
 
+import "slices"
+
 // clearableFields are the wire fields each record type's update path can set to
 // NULL. Absences are deliberate and each has a reason:
 //
@@ -28,16 +30,12 @@ package compose
 //     one instruction. deal_partner_attribution_pairing admits no row where one
 //     half survived the other, so forgetting either forgets both, and a reversal
 //     of a partner-add names both halves as null.
-//   - a lead's status and score override are absent because they are lifecycle
-//     positions and a sticky decision, not values.
+//   - a lead's status is absent because it is a lifecycle position, not a value.
+//     The score override pair is absent because every entry that sets or ends
+//     an override records score_computed, which no update request can send, so
+//     the evaluator refuses it as not_restorable_by_this_path.
 //   - a contact's full_name and a company's display_name are absent because
 //     a record with no name is not a record anybody can find again.
-//   - a contract clears its DEAL and nothing else. That one is here because a
-//     human is told to use it: moving a deal to another company is refused while
-//     agreements filed against it still name the old one, and detaching them is
-//     the move the refusal names. Its company is not clearable — an agreement
-//     with no counterparty is not an agreement — and its money is not, for the
-//     reason the deal's is not.
 //
 //nolint:goconst // the rows are wire FIELD names and record types read as data; the constants goconst points at are other concepts that spell the same word — a report field, a filter param — and hiding these behind them would assert a correspondence this table exists to state on its own
 var clearableFields = map[string][]string{
@@ -56,17 +54,11 @@ var clearableFields = map[string][]string{
 	"project": {
 		"description", "owner_id", "started_at", "target_end_date", "ended_at",
 	},
-	"contract": {"deal_id"},
 	"activity": {},
 }
 
 // canClear reports whether this record type's update path can set the field to
 // NULL.
 func canClear(entityType, field string) bool {
-	for _, clearable := range clearableFields[entityType] {
-		if clearable == field {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(clearableFields[entityType], field)
 }

@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export type MagicReceipt = components["schemas"]["MagicReceipt"];
 export type MagicLine = components["schemas"]["MagicLine"];
@@ -32,6 +32,29 @@ const WINDOW_DAYS: Readonly<Record<Exclude<MagicWindow, "brief">, number>> = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// The most lines a lane's page may hold, asked for rather than left to the
+// server's default so the client knows its own bound: the receipt carries no
+// "more" flag, so a lane that FILLS its page may have more beyond it, and every
+// sum taken over that lane is then only a floor.
+export const MAGIC_PAGE_LINES = 100;
+
+// Which lanes the page bounds. Watching is every standing condition there is,
+// read without the bound, so however many it holds it holds them all.
+const PAGE_BOUND: Readonly<Record<MagicLane, boolean>> = {
+  done: true,
+  needs_you: true,
+  could_not_complete: true,
+  watching: false,
+};
+
+/** Whether a lane filled its page, and so may hold more than it shows. */
+export function fillsPage(
+  lane: MagicLane,
+  rows: readonly MagicLine[],
+): boolean {
+  return PAGE_BOUND[lane] && rows.length >= MAGIC_PAGE_LINES;
+}
+
 /** The `since` a window asks for, or undefined to leave it to the server. */
 export function sinceFor(span: MagicWindow, now: Date): string | undefined {
   if (span === "brief") {
@@ -55,13 +78,13 @@ export function useMagic(span: MagicWindow = "brief") {
     queryKey: [...magicKey, span],
     queryFn: async (): Promise<MagicReceipt> => {
       const since = sinceFor(span, new Date());
-      const { data, error } = await api.GET("/magic", {
-        params: { query: since ? { since } : {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/magic", {
+          params: {
+            query: { limit: MAGIC_PAGE_LINES, ...(since ? { since } : {}) },
+          },
+        }),
+      );
     },
   });
 }

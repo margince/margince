@@ -57,11 +57,12 @@ func (s *Store) WithRuntimeEnvironment(env runtimeenv.Environment) *Store {
 // which at least matches the message around it — and the page the link
 // opens carries a language switcher, which is the recovery path.
 func (s *Store) footerLanguage(ctx context.Context, body, subject string) textlang.Lang {
-	var base string
-	if s.baseLanguage != nil {
-		base = s.baseLanguage.BaseLanguage(ctx)
-	}
-	return textlang.FirstKnown([]string{body, subject}, base)
+	return textlang.FirstKnown([]string{body, subject}, func() string {
+		if s.baseLanguage == nil {
+			return ""
+		}
+		return s.baseLanguage.BaseLanguage(ctx)
+	})
 }
 
 // PublicOriginUnusableError is the refusal when a tokenized send cannot

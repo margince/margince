@@ -112,7 +112,7 @@ export function ProjectHealthModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {correcting
           ? t("projectHealth.correctTitle")
@@ -153,19 +153,19 @@ export function ProjectHealthModal({
           <p className="t-caption">{t("projectHealth.correctionNote")}</p>
         )}
         <ErrorLine error={write.error} />
-        <div className="actions">
-          <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={write.isPending || noteMissing}
-          >
-            {correcting
-              ? t("projectHealth.saveCorrection")
-              : t("projectHealth.saveReading")}
-          </Button>
-        </div>
+      </div>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
+          {t("deals.cancel")}
+        </Button>
+        <Button
+          onClick={() => void submit()}
+          disabled={write.isPending || noteMissing}
+        >
+          {correcting
+            ? t("projectHealth.saveCorrection")
+            : t("projectHealth.saveReading")}
+        </Button>
       </div>
     </Modal>
   );

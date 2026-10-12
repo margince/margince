@@ -64,8 +64,7 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 		_, err := e.Deals.UpdateDeal(admin, deal, deals.UpdateDealInput{
 			PartnerCompanyID: &plainCompany,
 		})
-		var notPartner *contacts.NotAPartnerError
-		if !errors.As(err, &notPartner) {
+		if _, ok := errors.AsType[*contacts.NotAPartnerError](err); !ok {
 			t.Fatalf("UpdateDeal naming a non-partner → %v, want NotAPartnerError", err)
 		}
 	})
@@ -121,7 +120,7 @@ func TestMergingAPartnerLeavesItsDealsNamingAPartner(t *testing.T) {
 		t.Fatalf("attributing the deal to the source partner: %v", err)
 	}
 
-	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target)); err != nil {
+	if _, err := e.Contacts.MergeCompany(e.Admin(), companyIDOf(source), companyIDOf(target), nil); err != nil {
 		t.Fatalf("merging the partner into the plain company: %v", err)
 	}
 

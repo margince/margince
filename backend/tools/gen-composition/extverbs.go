@@ -23,6 +23,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -115,7 +116,7 @@ func verbsInContract(base string, units []extensionUnit, raw []byte) ([]declared
 		return nil, nil
 	}
 	if doc.Paths.Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("paths is present but is not a mapping — nothing here can be read as a route")
+		return nil, errors.New("paths is present but is not a mapping — nothing here can be read as a route")
 	}
 	owners := make(map[string]bool, len(units))
 	for _, u := range units {
@@ -149,8 +150,8 @@ const extensionRoutePrefix = extension.RoutePrefix
 // single path segment, so this is exact, not a prefix guess.
 func routeUnit(route string) string {
 	rest := strings.TrimPrefix(route, extensionRoutePrefix)
-	if cut := strings.IndexByte(rest, '/'); cut >= 0 {
-		return rest[:cut]
+	if before, _, ok := strings.Cut(rest, "/"); ok {
+		return before
 	}
 	return rest
 }
@@ -162,7 +163,7 @@ var httpMethodKeys = []string{"get", "put", "post", "delete", "options", "head",
 
 func verbsInPathItem(base, unit, route string, item *yaml.Node) ([]declaredVerb, error) {
 	if item.Kind != yaml.MappingNode {
-		return nil, fmt.Errorf("the path item is not a mapping")
+		return nil, errors.New("the path item is not a mapping")
 	}
 	var out []declaredVerb
 	for i := 0; i+1 < len(item.Content); i += 2 {
@@ -179,7 +180,7 @@ func verbsInPathItem(base, unit, route string, item *yaml.Node) ([]declaredVerb,
 		// asked for it. Refused rather than ignored, because this is exactly the
 		// "published and never read" fault argumentSchema names one level down.
 		if key == "parameters" {
-			return nil, fmt.Errorf("the path item declares shared `parameters` — this generator reads only an " +
+			return nil, errors.New("the path item declares shared `parameters` — this generator reads only an " +
 				"operation's own, so these would be published to every client and read by nothing. " +
 				"Declare them on the operation that takes them")
 		}
@@ -193,7 +194,7 @@ func verbsInPathItem(base, unit, route string, item *yaml.Node) ([]declaredVerb,
 		out = append(out, v)
 	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("the path item declares no operation — a route publishing nothing is a promise to a client that resolves to a 405")
+		return nil, errors.New("the path item declares no operation — a route publishing nothing is a promise to a client that resolves to a 405")
 	}
 	return out, nil
 }
@@ -389,7 +390,7 @@ const rbacActionExtension = "x-rbac-action"
 // a unit needs another annotation, this list gains a reviewed line.
 func checkExtensionKeys(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("the operation is not a mapping")
+		return errors.New("the operation is not a mapping")
 	}
 	for i := 0; i+1 < len(node.Content); i += 2 {
 		key := node.Content[i].Value

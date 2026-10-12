@@ -69,8 +69,8 @@ func (s *Service) reportRevision(ctx context.Context, tx pgx.Tx, report crmcontr
 
 func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcontracts.ReportingReport, in crmcontracts.ReportingScheduleInput) error {
 	if in.Enabled {
-		var configured bool
-		if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM retention_policy WHERE object_type='report_edition' AND action='erase' AND enabled)").Scan(&configured); err != nil {
+		configured, err := scheduleReady(ctx, tx)
+		if err != nil {
 			return err
 		}
 		if !configured {
@@ -235,4 +235,10 @@ func (s *Service) pauseReportSchedules(ctx context.Context, tx pgx.Tx, reportID 
 		}
 	}
 	return nil
+}
+
+func scheduleReady(ctx context.Context, tx pgx.Tx) (bool, error) {
+	var ready bool
+	err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM retention_policy WHERE object_type='report_edition' AND action='erase' AND enabled)").Scan(&ready)
+	return ready, err
 }

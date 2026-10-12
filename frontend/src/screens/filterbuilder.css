@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion
  *
- * The predicate builder's layout. Nesting is shown with an indent and a rule
- * rather than a box inside a box: a group four deep drawn as four nested cards
- * reads as four surfaces, and the reader loses which clause belongs to which
- * join. One line down the left says the same thing in less ink. */
+ * The predicate builder's layout. The root group draws no box, so the first
+ * level does not look like it is inside something. A nested group is an inset
+ * box, because the join word between its rows needs a visible scope: without
+ * one a reader cannot tell which rows an "or" joins. */
 
 .filter-builder {
   display: flex;
@@ -15,47 +15,87 @@
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
-/* A nested group carries the indent and the rule; the root has neither, so the
- * first level does not look like it is inside something. */
-.filter-group[data-depth]:not([data-depth="1"]) {
-  padding-left: var(--space-4);
-  border-left: 1px solid var(--borderSubtle);
+/* A fieldset: its own margin goes, and so does its `min-content` floor, which
+ * would hold the box at its widest row and push it past a phone's width. */
+.filter-group-box {
+  margin: 0;
+  min-inline-size: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
 }
 
 .filter-group-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+.filter-group-title {
+  font-weight: var(--fontWeightMedium);
 }
 
 .filter-group-children {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .filter-group-empty {
   margin: 0;
 }
 
-.filter-group-actions {
+.filter-group-foot {
   display: flex;
+  align-items: center;
   gap: var(--gapActions);
+  flex-wrap: wrap;
+}
+
+/* The join word between two rows, ruled on both sides so it reads as the
+ * link between them rather than as one more control in a row. */
+.filter-connector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filter-connector::before,
+.filter-connector::after {
+  content: "";
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.filter-connector::before {
+  flex: 0 0 var(--space-4);
+}
+
+.filter-connector::after {
+  flex: 1 1 auto;
 }
 
 /* One clause on one line where the width allows, wrapping to its own rows on a
  * narrow viewport rather than compressing three controls into unusable widths.
  * The value control is the one that grows: the field and operator are closed
- * sets whose widest option is known, and a value is not. */
+ * sets whose widest option is known, and a value is not.
+ *
+ * The edge is always drawn, transparent until a model proposed the clause:
+ * the staged edge (panel.css) then only colours it, so the row does not move
+ * when the reader makes it their own and the mark drops. */
 .filter-clause {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+  padding: var(--space-1) var(--space-2);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-md);
 }
 
 .filter-clause > .token-input,

@@ -5,9 +5,9 @@
 
 package gates
 
-// The integration lane's connection demand is a PRODUCT — concurrent packages
-// times what one package may hold — and for most of this repo's life neither
-// factor knew about the third number it had to fit inside. INTEGRATION_JOBS was
+// The integration lane's connection demand is concurrent packages times what
+// one package may hold, and that product has to fit inside the compose
+// Postgres's max_connections. INTEGRATION_JOBS was
 // raised to 16 in CI, database.NewPool's fallback ceiling was 16 per pool, and
 // the compose Postgres never had max_connections set at all, so the lane ran
 // against the stock 100 with a ceiling of 256 for its shared pools alone.

@@ -186,8 +186,7 @@ func TestASendWithNoOriginRefusesRatherThanStartingAConversation(t *testing.T) {
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
 		e.as(principal.RowScopeAll), SendOrigin{}, sendInput("transactional"), stubConsentGate{}, stager)
 
-	var noOrigin *NoSendOriginError
-	if !errors.As(err, &noOrigin) {
+	if _, ok := errors.AsType[*NoSendOriginError](err); !ok {
 		t.Fatalf("send with no origin = %v, want NoSendOriginError", err)
 	}
 	if len(stager.staged) != 0 {
@@ -307,8 +306,7 @@ func TestAnAccountStartedSendRefusesWithNoRecipientDirectoryWired(t *testing.T) 
 	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
 		e.as(principal.RowScopeAll), accountOrigin(company), sendInput("transactional"), stubConsentGate{}, stager)
 
-	var unwired *NoRecipientDirectoryError
-	if !errors.As(err, &unwired) {
+	if _, ok := errors.AsType[*NoRecipientDirectoryError](err); !ok {
 		t.Fatalf("account-started send with no directory = %v, want NoRecipientDirectoryError", err)
 	}
 	if len(stager.staged) != 0 {
@@ -422,8 +420,7 @@ func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
 		Kind: "note", Source: "manual", Links: links,
 	})
 
-	var tooMany *TooManyLinksError
-	if !errors.As(err, &tooMany) {
+	if _, ok := errors.AsType[*TooManyLinksError](err); !ok {
 		t.Fatalf("logging an activity with %d links = %v, want a TooManyLinksError", len(links), err)
 	}
 }
@@ -536,7 +533,7 @@ func TestAReplyNamingALinkItsAnchorAlreadyCarriesFilesItOnce(t *testing.T) {
 func TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
-	for i := 0; i < maxActivityLinks; i++ {
+	for i := range maxActivityLinks {
 		e.linkContact(t, anchor, fmt.Sprintf("Contact %d", i))
 	}
 	company := e.seedCompany(t)
@@ -548,8 +545,7 @@ func TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound(t *testing.T) 
 		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "company", EntityID: company}}),
 		sendInput("transactional"), gate, stager)
 
-	var tooMany *TooManyLinksError
-	if !errors.As(err, &tooMany) {
+	if _, ok := errors.AsType[*TooManyLinksError](err); !ok {
 		t.Fatalf("a reply whose additions push it past the bound = %v, want a TooManyLinksError", err)
 	}
 	if gate.calls != 0 {

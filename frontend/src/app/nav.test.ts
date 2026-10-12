@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { NAV, RAIL_LESS_SCREENS, railTrail } from "./nav";
+import {
+  NAV,
+  RAIL_LESS_SCREENS,
+  railTrail,
+  recordKindOf,
+  reservedPageTitle,
+} from "./nav";
 import { parseHash, routeHash } from "./router";
 
 describe("the rail and a composed unit", () => {
@@ -97,23 +103,26 @@ describe("the filter builder's address", () => {
     );
   });
 
-  // The row IS the page, on every address this screen answers. `#/filters` and
-  // `#/filters/companies` are one page with a different object tab open rather
-  // than a page and something under it — the screen reads that segment as which
-  // vocabulary to offer — so nothing deeper is there to claim what the reader is
-  // looking at, and the row keeps `aria-current="page"` either way. Only a typed
-  // hash or a bookmark reaches the second one today, which is exactly why it
-  // needs a test: nothing in the app links to it for anyone to notice.
-  it("marks itself current, as the page, with or without an object tab", () => {
-    for (const route of [
-      { screen: "filters" },
-      { screen: "filters", id: "companies" },
-    ] as const) {
+  // The row is the page on the library, whichever group an address scrolls
+  // to, and only leads to the page below it: a filter, an opened view, a Live
+  // List's filter or one list. There the top bar's trail ends in that page and
+  // claims it, so the row says `aria-current="true"` instead.
+  it.each([
+    [{ screen: "filters" }, false],
+    [{ screen: "filters", id: "views" }, false],
+    [{ screen: "filters", id: "lists" }, false],
+    [{ screen: "filters", id: "companies" }, true],
+    [{ screen: "filters", id: "contacts", id2: "v1" }, true],
+    [{ screen: "filters", id: "list", id2: "L1" }, true],
+    [{ screen: "lists", id: "L1" }, true],
+  ] as const)(
+    "marks itself current on %o, an ancestor: %s",
+    (route, ancestor) => {
       const [primary] = railTrail(route);
       expect(primary.activeId).toBe("filters");
-      expect(primary.ancestor).toBe(false);
-    }
-  });
+      expect(primary.ancestor).toBe(ancestor);
+    },
+  );
 });
 
 // The other half of the same rule, and why it is not simply "no row is ever an
@@ -130,6 +139,46 @@ describe("a row that leads to a record instead of being one", () => {
   it("is the page again on the list that record was opened from", () => {
     const [primary] = railTrail({ screen: "contacts" });
     expect(primary.ancestor).toBe(false);
+  });
+
+  it("steps back on the import page, which is a page below the list", () => {
+    const [primary] = railTrail(parseHash("#/contacts/import"));
+    expect(primary.activeId).toBe("contacts");
+    expect(primary.ancestor).toBe(true);
+  });
+
+  it("is the page on the deal list with its create form open", () => {
+    const [primary] = railTrail(parseHash("#/deals/new"));
+    expect(primary.activeId).toBe("deals");
+    expect(primary.ancestor).toBe(false);
+  });
+});
+
+// A reserved segment read as an id is a fetch for a contact called "import"
+// and a trail reporting that its name could not load.
+describe("the segments a screen reserves", () => {
+  it.each([
+    ["#/contacts/import", undefined],
+    ["#/contacts/import/overview", undefined],
+    ["#/deals/new", undefined],
+    ["#/contacts/c-1", "contact"],
+    ["#/deals/d-1", "deal"],
+    // Each word is reserved on its own screen only.
+    ["#/leads/import", "lead"],
+    ["#/leads/new", "lead"],
+    ["#/contacts/new", "contact"],
+    ["#/deals/import", "deal"],
+  ])("reads %s as record kind %s", (hash, kind) => {
+    expect(recordKindOf(parseHash(hash))).toBe(kind);
+  });
+
+  it.each([
+    ["#/contacts/import", "vcardImport.title"],
+    ["#/deals/new", undefined],
+    ["#/contacts/c-1", undefined],
+    ["#/leads/import", undefined],
+  ])("names %s's own page as %s", (hash, key) => {
+    expect(reservedPageTitle(parseHash(hash))).toBe(key);
   });
 });
 

@@ -139,7 +139,7 @@ func cannedReply(text string) func(model.Request) string {
 // carries — the one place this call's ids are written down.
 func catalogIDFor(t *testing.T, req model.Request, name string) string {
 	t.Helper()
-	for _, line := range strings.Split(req.Messages[0].Content, "\n") {
+	for line := range strings.SplitSeq(req.Messages[0].Content, "\n") {
 		if !strings.Contains(line, "] "+name+" @") {
 			continue
 		}
@@ -242,6 +242,48 @@ func TestOfferDraftCaseSeparatesTheFourThingsAReplyCanBe(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			outcome, _ := draftOutcome(t, offerDraftKickoffExpected(t), cannedReply(tc.reply))
+			if outcome.Result != tc.wantResult {
+				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
+			}
+			if !strings.Contains(outcome.Detail, tc.wantDetail) {
+				t.Errorf("Detail = %q, want it to name %q", outcome.Detail, tc.wantDetail)
+			}
+		})
+	}
+}
+
+// A conversation that agrees "ten hours at a rate, this much in total" is drafted
+// equally well as ten units at the rate or one unit at the total, and a scenario
+// pinning the line net must accept both and nothing that totals otherwise.
+func TestOfferDraftCaseJudgesALineNetAsQuantityTimesUnitPrice(t *testing.T) {
+	f := offerDraftDealFixture()
+	f.ContextItems[0].Snippet = "They agreed to 10 hours at 150.00 EUR per hour, 1500.00 EUR in total."
+	expected := offerDraftExpectation(t, map[string]offerDraftExpectedLine{
+		offerDraftKickoffSource: {LineNetMinor: new(int64(150000)), PriceGrounded: true},
+	})
+	hoursLine := func(quantity, price string) string {
+		line := draftedLine("Onboarding", f.ContextItems[0].Snippet, offerDraftKickoffSource,
+			`"conversation_price_minor":`+price)
+		return strings.Replace(line, `"quantity":"1"`, `"quantity":"`+quantity+`"`, 1)
+	}
+	cases := []struct {
+		name       string
+		reply      string
+		wantResult string
+		wantDetail string
+	}{
+		{name: "ten units at the hourly rate", reply: draftReply(hoursLine("10", "15000")), wantResult: aitasks.OutcomeAccepted},
+		{name: "one unit at the total", reply: draftReply(hoursLine("1", "150000")), wantResult: aitasks.OutcomeAccepted},
+		{
+			name:       "ten units at the total",
+			reply:      draftReply(hoursLine("10", "150000")),
+			wantResult: aitasks.OutcomeWrongAnswer,
+			wantDetail: `is priced a line net of 1500000 minor units, grounded where the scenario expects a line net of 150000`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			outcome, _ := runOfferDraftCase(t, prepareOfferDraftCase(t, f, expected), cannedReply(tc.reply))
 			if outcome.Result != tc.wantResult {
 				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
 			}

@@ -13,6 +13,7 @@ package integration
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"strings"
 	"testing"
@@ -87,9 +88,7 @@ func mcpBulkDoor(client *apptest.MCPClient) bulkDoor {
 	call := func(t *testing.T, mode string, change AnyMap, retryKey string, out any) string {
 		t.Helper()
 		args := AnyMap{"mode": mode}
-		for k, v := range change {
-			args[k] = v
-		}
+		maps.Copy(args, change)
 		if retryKey != "" {
 			args["idempotency_key"] = retryKey
 		}
@@ -148,6 +147,7 @@ func seedBulkContacts(t *testing.T, e *apptest.AppEnv, n int) []bulkItemDTO {
 	for i := range n {
 		var created bulkItemDTO
 		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+			"source":    "manual",
 			"full_name": "Bulk Door Contact " + ids.NewV7().String(),
 		}, nil, &created); status != http.StatusCreated {
 			t.Fatalf("seeding contact %d → %d", i, status)

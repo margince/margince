@@ -25,18 +25,22 @@ const (
 	ServiceSupport        = "support_site"
 )
 
-// serviceLabels maps a service key to what a reader sees.
-var serviceLabels = map[string]string{
-	ServiceWebshop:        "Webshop",
-	ServiceCustomerPortal: "Kundenportal",
-	ServiceCareers:        "Karriereseite",
-	ServiceAPI:            "Öffentliche API",
-	ServiceVPN:            "VPN-Zugang",
-	ServiceMail:           "Eigene Mail-Infrastruktur",
-	ServiceFileCloud:      "Datei-Cloud",
-	ServiceDevInfra:       "Entwicklungs-Infrastruktur",
-	ServiceStatusPage:     "Statusseite",
-	ServiceSupport:        "Support-Portal",
+// operatedServices is the closed set of services this package classifies.
+//
+// A service carries no label of its own. The label is stored on a record, so
+// it is written where the record's language is known, and this package
+// classifies rather than translates.
+var operatedServices = map[string]bool{
+	ServiceWebshop:        true,
+	ServiceCustomerPortal: true,
+	ServiceCareers:        true,
+	ServiceAPI:            true,
+	ServiceVPN:            true,
+	ServiceMail:           true,
+	ServiceFileCloud:      true,
+	ServiceDevInfra:       true,
+	ServiceStatusPage:     true,
+	ServiceSupport:        true,
 }
 
 // serviceLabelAllowlist maps a subdomain's FIRST label to the service it
@@ -88,23 +92,17 @@ var serviceLabelAllowlist = map[string]string{
 	"docs":         ServiceSupport,
 }
 
-// ServiceLabel is what a reader sees for a service key, and false when the key
-// names no service this package knows.
-//
-// Exported so a caller that remembered a key can re-derive the label rather
-// than storing it: a label reworded here then takes effect everywhere on the
-// next read, instead of surviving in whatever cached it.
-func ServiceLabel(key string) (string, bool) {
-	label, known := serviceLabels[key]
-	return label, known
+// IsService says whether a key names a service this package classifies.
+func IsService(key string) bool {
+	return operatedServices[key]
 }
 
-// ServiceKeys lists the classifiable service keys, sorted, derived from the
-// same map ServiceLabel reads. Exported so a surface that renders its own
-// label per service can walk the owner's set rather than keep a copy of it.
+// ServiceKeys lists the classifiable service keys, sorted. Exported so a
+// surface that renders its own label per service can walk the owner's set
+// rather than keep a copy of it.
 func ServiceKeys() []string {
-	keys := make([]string, 0, len(serviceLabels))
-	for key := range serviceLabels {
+	keys := make([]string, 0, len(operatedServices))
+	for key := range operatedServices {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -150,8 +148,7 @@ func OperatedServices(domain string, hostnames []string) []Signal {
 	services := make([]Signal, 0, len(best))
 	for service, evidence := range best {
 		services = append(services, Signal{
-			Field: FieldOperatedService, Key: service,
-			Label: serviceLabels[service], Evidence: evidence,
+			Field: FieldOperatedService, Key: service, Evidence: evidence,
 		})
 	}
 	sort.Slice(services, func(i, j int) bool { return services[i].Key < services[j].Key })

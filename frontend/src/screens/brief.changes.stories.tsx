@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Panel } from "../design-system/panel";
 import { BriefChanges } from "./brief.changes";
 import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 import {
@@ -30,29 +31,13 @@ export const AppliedChanges: Story = {
       },
       { deal: ["read", "update"] },
     );
+    // A group of Home's receipt, so it is drawn inside a pane the way the
+    // receipt draws it.
     return (
       <StoryProviders>
-        <BriefChanges />
-      </StoryProviders>
-    );
-  },
-};
-export const QuietNight: Story = {
-  render: () => {
-    stubWithSession(
-      {
-        "GET /worklist/handled": () =>
-          jsonResponse({
-            as_of: "2026-09-13T08:00:00Z",
-            receipts: [],
-            truncated: false,
-          }),
-      },
-      {},
-    );
-    return (
-      <StoryProviders>
-        <BriefChanges />
+        <Panel>
+          <BriefChanges />
+        </Panel>
       </StoryProviders>
     );
   },

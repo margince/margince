@@ -5,9 +5,9 @@
 
 package gates
 
-// runner.MinimumPromptWindow is the SUPPORTED FLOOR — the smallest prompt
-// window any provider this build binds will carry — and this holds it equal to
-// the adapter that owns the figure.
+// runner.MinimumPromptWindow is the supported floor (the smallest prompt window
+// any provider this build binds will carry), and this holds it equal to the
+// adapter that owns the figure.
 //
 // TWO NUMBERS USED TO BE ONE, and separating them is what this file now checks.
 // What a RUN may spend on its transcript follows the configured provider
@@ -73,11 +73,13 @@ func goConstValue(t *testing.T, path, name string) int {
 			"which reads as a pass; repoint it rather than deleting it", name, path)
 	}
 	digits := ""
+	var digitsSb76 strings.Builder
 	for _, r := range string(match[1]) {
 		if r != '_' {
-			digits += string(r)
+			digitsSb76.WriteString(string(r))
 		}
 	}
+	digits += digitsSb76.String()
 	value, err := strconv.Atoi(digits)
 	if err != nil {
 		t.Fatalf("const %s in %s is not a number: %v", name, path, err)

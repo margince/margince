@@ -200,6 +200,20 @@ func (c *transcriptProposeCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
 }
 
+// AnswerConfidence is the confidence range over the next steps the reply
+// proposes: each one is a commitment the task-creation threshold is set against.
+func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high float64, ok bool) {
+	var payload transcriptPayload
+	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
+		return 0, 0, false
+	}
+	var confidences []float64
+	for _, step := range payload.proposals() {
+		confidences = append(confidences, float64(step.Confidence))
+	}
+	return spanOf(confidences)
+}
+
 // disagreements names every next step the scenario expects and the reply
 // missed, and every next step the reply proposes and the scenario does not — all
 // of them, because a reading that found one of three is not the near miss one

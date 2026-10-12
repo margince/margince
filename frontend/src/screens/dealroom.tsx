@@ -12,7 +12,7 @@ import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 type DealRoomState = components["schemas"]["DealRoomState"];
 
@@ -93,13 +93,11 @@ export function useDealRoom(dealId: string) {
   return useQuery({
     queryKey: ["deal-rooms", dealId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms", {
-        params: { query: { deal_id: dealId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deal-rooms", {
+          params: { query: { deal_id: dealId } },
+        }),
+      );
     },
   });
 }

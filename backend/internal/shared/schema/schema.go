@@ -70,6 +70,7 @@ const (
 	typeString  = "string"
 	typeNumber  = "number"
 	typeInteger = "integer"
+	typeBoolean = "boolean"
 	typeNull    = "null"
 )
 
@@ -83,6 +84,9 @@ func Number() Node { return Node{Type: typeNumber} }
 // a count or an index decodes into an int, and a model offered `number` is
 // free to answer 3.5 where the reader can only refuse it.
 func Integer() Node { return Node{Type: typeInteger} }
+
+// Boolean is a true/false leaf.
+func Boolean() Node { return Node{Type: typeBoolean} }
 
 // Array is a list whose every item matches items.
 func Array(items Node) Node { return Node{Type: typeArray, Items: &items} }

@@ -26,6 +26,12 @@ const (
 	healthOK        = "ok"
 	healthOwnerless = "ownerless"
 	healthInvalid   = "invalid"
+	// healthRetiredField is a Live List still evaluating on a retired custom
+	// field's kept values, whose clause its steward should replace.
+	healthRetiredField = "retired_field"
+	// healthRetiredTag is a Live List whose filter names an archived tag, which
+	// no longer matches any record, so its steward should name the live one.
+	healthRetiredTag = "retired_tag"
 )
 
 // ExportDetailListID is the system_log detail key a filtered export of a list
@@ -43,17 +49,44 @@ type listSummary struct {
 	Health       string
 	CanEdit      bool
 	Dependencies []listDependency
+	// RetiredFields is the retired custom fields a Live List's filter names.
+	RetiredFields []string
+	// RetiredTags is the archived tags a Live List's filter names.
+	RetiredTags []ids.UUID
+	LastCheck   *listCheck
+	Pulse       *listPulse
+	Joined      []ids.UUID
+	Changes     *changeSummary
 }
 
 type listDependency struct {
 	Kind       string
 	OccurredAt time.Time
 	Actor      *string
+	// Rule is set for an automation rule that depends on the list.
+	Rule *RuleUse
+}
+
+// RuleUse is an active automation rule that watches a Live List or adds to a
+// Shortlist. ID and Name are empty for a reader who may not read automations.
+type RuleUse struct {
+	ID        ids.UUID
+	Name      string
+	Role      string
+	CreatedAt time.Time
+}
+
+// WithRuleUses injects the read of the automation rules that depend on a list.
+func (s *Store) WithRuleUses(read func(ctx context.Context, id ids.ListID) ([]RuleUse, error)) *Store {
+	s.ruleUses = read
+	return s
 }
 
 // summarize counts what this reader may see of a list and judges its health.
 // A Live List whose filter no longer compiles reports invalid and no count
-// rather than failing the read, so the library still opens.
+// rather than failing the read, so the library still opens. A list nobody
+// looks after reports that before a retired field, which only its steward can
+// replace.
 func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
 	out := listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)}
 	count, err := s.CountMembers(ctx, l.ID)
@@ -69,12 +102,22 @@ func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
 	if out.Health != healthOK {
 		return out, nil
 	}
-	gone, err := s.stewardGone(ctx, l)
-	if err != nil {
+	if out.RetiredFields, err = s.retiredFieldsOf(ctx, l); err != nil {
 		return listSummary{}, err
 	}
-	if gone {
+	if out.RetiredTags, err = s.retiredTagsOf(ctx, l); err != nil {
+		return listSummary{}, err
+	}
+	gone, err := s.stewardGone(ctx, l)
+	switch {
+	case err != nil:
+		return listSummary{}, err
+	case gone:
 		out.Health = healthOwnerless
+	case len(out.RetiredFields) > 0:
+		out.Health = healthRetiredField
+	case len(out.RetiredTags) > 0:
+		out.Health = healthRetiredTag
 	}
 	return out, nil
 }
@@ -97,9 +140,28 @@ func (s *Store) stewardGone(ctx context.Context, l listRow) (bool, error) {
 	return !live, err
 }
 
-// Dependencies reads what uses a list. Filtered exports are the one kind in
-// this release; each is a finished extraction, so none blocks a change.
+// Dependencies reads what uses a list: the active automation rules that watch
+// or write it, then its filtered exports, newest first. None blocks a change:
+// an export is a finished extraction, and a rule pauses itself when its list
+// is archived.
 func (s *Store) Dependencies(ctx context.Context, id ids.ListID) ([]listDependency, error) {
+	exports, err := s.exportUses(ctx, id)
+	if err != nil || s.ruleUses == nil {
+		return exports, err
+	}
+	rules, err := s.ruleUses(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]listDependency, 0, len(rules)+len(exports))
+	for i := range rules {
+		out = append(out, listDependency{Kind: "automation", OccurredAt: rules[i].CreatedAt, Rule: &rules[i]})
+	}
+	return append(out, exports...), nil
+}
+
+// exportUses reads the newest filtered exports of a list.
+func (s *Store) exportUses(ctx context.Context, id ids.ListID) ([]listDependency, error) {
 	var out []listDependency
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := readVisibleList(ctx, tx, id); err != nil {
@@ -190,21 +252,22 @@ func (s *Store) explainChosen(ctx context.Context, list listRow, entityID ids.UU
 	return out, err
 }
 
-// HistoryEntry is one change on a list: a Shortlist membership change, or a
-// revision of its definition.
+// HistoryEntry is one change on a list: a Shortlist membership change, a
+// Live List member seen entering or leaving, or a revision of its definition.
 type HistoryEntry struct {
-	ID         ids.UUID
-	Kind       string
-	OccurredAt time.Time
-	Actor      string
-	EntityType *string
-	EntityID   *ids.UUID
-	Reason     *string
-	Note       *string
-	Version    *int64
-	Name       *string
-	Definition map[string]any
-	Sharing    *string
+	ID                ids.UUID
+	Kind              string
+	OccurredAt        time.Time
+	Actor             string
+	EntityType        *string
+	EntityID          *ids.UUID
+	Reason            *string
+	Note              *string
+	DefinitionVersion *int64
+	Version           *int64
+	Name              *string
+	Definition        map[string]any
+	Sharing           *string
 }
 
 // History pages through a list's changes, newest first. A membership change
@@ -258,17 +321,9 @@ func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, curso
 // of records this reader can see, keyset-paged newest first.
 func historySQL(ctx context.Context, list listRow, after *storekit.Cursor, limit int, arg func(any) int) (string, error) {
 	listPos := arg(list.ID)
-	// A reader refused the record type sees none of its membership changes.
-	// Decided before the scope is built, so its arguments are registered only
-	// when its SQL is used.
-	visible := "FALSE"
-	if auth.Require(ctx, list.EntityType, principal.ActionRead) == nil {
-		scope, err := recordScope(ctx, list.EntityType, "e", arg)
-		if err != nil {
-			return "", err
-		}
-		visible = fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = ev.entity_id AND %s)",
-			pgx.Identifier{list.EntityType}.Sanitize(), scope)
+	visible, err := observedVisibleClause(ctx, list.EntityType, arg)
+	if err != nil {
+		return "", err
 	}
 	page := ""
 	if after != nil {
@@ -276,12 +331,12 @@ func historySQL(ctx context.Context, list listRow, after *storekit.Cursor, limit
 	}
 	return fmt.Sprintf(`SELECT h.* FROM (
 		SELECT ev.id, 'member_' || ev.action AS kind, ev.occurred_at, ev.actor,
-		       ev.entity_type, ev.entity_id, ev.reason, ev.note,
+		       ev.entity_type, ev.entity_id, ev.reason, ev.note, ev.definition_version,
 		       NULL::bigint AS version, NULL::text AS name, NULL::jsonb AS definition, NULL::text AS sharing
 		FROM list_member_event ev WHERE ev.list_id = $%[1]d AND %[2]s
 		UNION ALL
 		SELECT r.id, 'revised', r.changed_at, r.changed_by,
-		       NULL, NULL, NULL, NULL, r.version, r.name, r.definition, r.sharing
+		       NULL, NULL, NULL, NULL, NULL, r.version, r.name, r.definition, r.sharing
 		FROM list_revision r WHERE r.list_id = $%[1]d
 	) h %[3]s ORDER BY h.occurred_at DESC, h.id DESC LIMIT $%[4]d`,
 		listPos, visible, page, arg(limit+1)), nil
@@ -290,7 +345,7 @@ func historySQL(ctx context.Context, list listRow, after *storekit.Cursor, limit
 func scanHistory(row pgx.CollectableRow) (HistoryEntry, error) {
 	var h HistoryEntry
 	err := row.Scan(&h.ID, &h.Kind, &h.OccurredAt, &h.Actor, &h.EntityType, &h.EntityID,
-		&h.Reason, &h.Note, &h.Version, &h.Name, &h.Definition, &h.Sharing)
+		&h.Reason, &h.Note, &h.DefinitionVersion, &h.Version, &h.Name, &h.Definition, &h.Sharing)
 	return h, err
 }
 

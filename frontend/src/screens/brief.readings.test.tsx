@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordZoneProvider } from "../app/recordzone";
-import { formatDateTime } from "../format/format";
+import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -229,6 +229,118 @@ describe("the brief readings strip", () => {
     expect(screen.queryByText(en["brief.readings.prepUnknown"])).toBeNull();
   });
 
+  const NEXT_AT = "2026-09-04T09:30:00Z";
+
+  // A zero from a calendar nobody connected measured nothing, and drawing it
+  // tells a rep their day is clear. The door goes where a calendar connects.
+  it.each([
+    [
+      "not_connected",
+      "brief.readings.calendarNotConnected",
+      "brief.readings.calendarNotConnectedWhy",
+    ],
+    [
+      "unreadable",
+      "brief.readings.calendarUnreadable",
+      "brief.readings.calendarUnreadableWhy",
+    ],
+  ] as const)(
+    "reads a %s calendar's zero as no measurement",
+    async (calendar, value, why) => {
+      const user = userEvent.setup();
+      const next_meeting = { activity_id: "a-n", starts_at: NEXT_AT };
+      drawDay({ ...readingsDay({}, [], []), calendar, next_meeting });
+
+      expect(meetingsCard().textContent).toContain(en[value]);
+      // The why stays the line; the hand-booked meeting is the panel's to show.
+      expect(meetingsCard().textContent).toContain(en[why]);
+      expect(meetingsCard().textContent).not.toContain("Next:");
+      expect(
+        meetingsCard().querySelector(".stat-card-value")?.textContent,
+      ).toBe(en[value]);
+      await user.click(
+        screen.getByRole("button", {
+          name: en["stat.open"],
+          description: en["brief.readings.meetings"],
+        }),
+      );
+      expect(window.location.hash).toContain("/settings/connections");
+    },
+  );
+
+  // The meetings a disconnected calendar still left on the page are counted:
+  // only its zero is no measurement.
+  it("keeps the count of meetings a disconnected calendar still carries", () => {
+    drawDay({
+      ...readingsDay({}, [meetingRow("m1", true)]),
+      calendar: "unreadable",
+    });
+
+    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
+      "1",
+    );
+    expect(meetingsCard().textContent).not.toContain(
+      en["brief.readings.calendarUnreadable"],
+    );
+  });
+
+  // A lane that never answered says so, whatever the calendar reports.
+  it("keeps the unavailable reading when the meetings lane failed", () => {
+    const day = {
+      ...readingsDay({}, [], []),
+      calendar: "not_connected" as const,
+    };
+    day.sources_unavailable = [{ source: "meeting", reason: "failed" }];
+    drawDay(day);
+
+    expect(meetingsCard().textContent).toContain(
+      en["brief.readings.unavailable"],
+    );
+    expect(meetingsCard().textContent).not.toContain(
+      en["brief.readings.calendarNotConnected"],
+    );
+  });
+
+  // A failed calendar side read leaves `calendar` unstated: unknown, so the
+  // slot keeps the wording it had before the server could say.
+  it("keeps today's reading when only the calendar read failed", () => {
+    const day = readingsDay({}, [], []);
+    day.sources_unavailable = [
+      { source: "calendar", reason: "failed", category: "meetings" },
+    ];
+    drawDay(day);
+
+    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
+      "0",
+    );
+    expect(meetingsCard().textContent).toContain(
+      en["brief.readings.meetingsBasis"],
+    );
+  });
+
+  // A measured quiet day says when the next conversation is.
+  it("names the next meeting under a connected calendar's zero", () => {
+    const startsAt = "2026-09-04T09:30:00Z";
+    drawDay({
+      ...readingsDay({}, [], []),
+      calendar: "connected",
+      next_meeting: {
+        activity_id: "a-next",
+        starts_at: startsAt,
+        subject: "Weber kickoff",
+      },
+    });
+
+    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
+      "0",
+    );
+    expect(meetingsCard().textContent).toContain(
+      en["brief.readings.nextMeeting"]
+        .replace("{date}", formatDateAbbrev(startsAt, "en", viewerZone()))
+        .replace("{subject}", "Weber kickoff"),
+    );
+  });
+
   // Two questions with no source. Drawing a zero would be a false answer, and
   // dropping the slot would be the page losing a question without saying so.
   // A read that did not land is not a pipeline of nothing. The em dash says the
@@ -365,6 +477,40 @@ describe("the brief readings strip", () => {
     expect(markedFigures()).toContain("3+");
     expect(markedFigures()).toContain("2+");
     expect(markedFigures()).toContain("8+");
+  });
+
+  // A CAPPED TEAM ROSTER cuts the scope, not a lane. Every figure was counted
+  // over the colleagues the roster could name, so all of them are floors — and
+  // none of the rows behind them looks short, which is why the page has to be
+  // told rather than work it out.
+  it("marks every figure when the team scope was answered over a capped roster", () => {
+    const day = readingsDay(
+      { more_available: false, prospecting: 2, review: 8 },
+      [],
+      [wholeMeetings(3)],
+      { urgent: 4 },
+    );
+    day.scope_truncated = true;
+    drawDay(day);
+
+    expect(markedFigures()).toContain("3+");
+    expect(markedFigures()).toContain("2+");
+    expect(markedFigures()).toContain("8+");
+  });
+
+  // The other half: a whole roster leaves the figures exact, so the mark cannot
+  // become something every team page carries.
+  it("leaves the figures exact when the scope was answered whole", () => {
+    const day = readingsDay(
+      { more_available: false, prospecting: 2, review: 8 },
+      [],
+      [wholeMeetings(3)],
+      { urgent: 4 },
+    );
+    day.scope_truncated = false;
+    drawDay(day);
+
+    expect(markedFigures()).toEqual([]);
   });
 
   // Each lane keeps its own mark, asked one lane at a time. The tests above set
@@ -775,7 +921,7 @@ describe("a slot with no figure names its own source", () => {
     unreadable(
       [
         { source: "meeting", reason: "failed", category: "meetings" },
-        { source: "lead_response", reason: "failed", category: "leads" },
+        { source: "task", reason: "failed", category: "tasks" },
         { source: "decision", reason: "failed", category: "decisions" },
       ],
       { prospecting: 2, review: 0 },
@@ -804,7 +950,7 @@ describe("a slot with no figure names its own source", () => {
   // there was nothing to take it over, so the slot must stop saying it.
   it("drops the basis line from the slot that has no figure", () => {
     unreadable(
-      [{ source: "lead_response", reason: "failed", category: "leads" }],
+      [{ source: "task", reason: "failed", category: "tasks" }],
       { prospecting: 2 },
       [],
       [],

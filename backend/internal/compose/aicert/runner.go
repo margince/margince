@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -74,9 +75,9 @@ type RunnerConfig struct {
 	// which one it measured rather than inheriting it from a file.
 	// Routing, when set, resolves the candidate binding PER TASK from a
 	// deployment's own tier→model map instead of Binding naming one model for
-	// every task: each task is certified against the model bound at its LEADING
-	// ladder rung (ai.LeadingTier), which is the model that would actually serve
-	// it, and Profile comes from the file rather than the environment.
+	// every task: each task is certified against every distinct model its ladder
+	// binds — the rung that answers, then each fallback a failed call falls to —
+	// one record each, and Profile comes from the file rather than the environment.
 	//
 	// It exists because a model is not a thing anybody deploys. A hand-typed
 	// MODEL= measures whichever model an engineer chose; a deployment binds
@@ -108,6 +109,14 @@ type RunnerConfig struct {
 	// six-hour window replays the ones it can instead of paying for them
 	// again. Empty = every run is paid for. See resume.go.
 	ResumeDir string
+	// StaleOnly skips every candidate whose committed record is current for
+	// this build, so a sweep pays for what changed. See staleonly.go.
+	StaleOnly bool // MARGINCE_AICERT_STALE_ONLY, default on
+	// current marks the candidates StaleOnly skips (candidateKey), set by Run.
+	current map[string]bool
+	// unservable marks the fallback bindings the pre-flight could not serve
+	// (bindingKey), set by Run: skipped and named, never fatal.
+	unservable map[string]bool
 }
 
 // validateBindings refuses a run that could not produce a trustworthy verdict,
@@ -140,16 +149,6 @@ func validateBindings(cfg RunnerConfig, tasks []ai.Task, log *slog.Logger) error
 	if !cfg.Profile.Valid() {
 		return fmt.Errorf("MARGINCE_AICERT_PROFILE=%q is not an environment class; a record is filed "+
 			"under it, so a run states which one it measured", cfg.Profile)
-	}
-	// The rule a parsed eu_hosted config meets, asked of the candidate a MODEL=
-	// run names: its record is filed under eu_hosted, so the binding has to keep
-	// its text in the EU. A ROUTING= run met it when its file was parsed.
-	if cfg.Profile == ai.ProfileEUHosted {
-		if gap := ai.EURegionPinGap(cfg.Binding); gap != "" {
-			return fmt.Errorf("the candidate %s:%s would be filed under eu_hosted, but %s — pin it with "+
-				"UPSTREAM='{\"only\":[\"<vendor>/eu\"]}' (MARGINCE_AICERT_UPSTREAM), or run it as PROFILE=cloud_frontier",
-				cfg.Binding.Provider, cfg.Binding.Model, gap)
-		}
 	}
 	return refuseSelfJudgedTasks(cfg, tasks)
 }
@@ -195,6 +194,11 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	}
 
 	ctx = ensureWorkspace(ctx)
+	if cfg.StaleOnly {
+		if cfg.current, err = currentBindings(ctx, cfg, byTask, log); err != nil {
+			return nil, fmt.Errorf("aicert: runner: %w", err)
+		}
+	}
 	// TraceDir empty ⇒ tracing off: trace stays nil and every method no-ops.
 	var trace *payloadTrace
 	if cfg.TraceDir != "" {
@@ -225,10 +229,11 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		}
 	}()
 
-	if err := runPreflights(ctx, cfg, journal, byTask, repeats, log); err != nil {
+	if cfg.unservable, err = runPreflights(ctx, cfg, journal, byTask, repeats, log); err != nil {
 		return nil, fmt.Errorf("aicert: runner: %w", err)
 	}
 
+	skipped := fallbacksNotMeasured(ctx, cfg, sortedTasks(byTask), log)
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
@@ -238,35 +243,10 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 			runErrs = append(runErrs, err)
 		}
 	}
+	if len(skipped) > 0 {
+		log.WarnContext(ctx, "aicert: fallbacks not measured", "skipped", strings.Join(skipped, "; "))
+	}
 	return records, errors.Join(runErrs...)
-}
-
-// certifyAndWrite certifies one task and writes its records: the LLM record,
-// then — when the run binds a decisions lane — each decision site's beside it.
-// It returns what it wrote even when a later step failed, so a decision leg
-// that fails never costs the task the LLM record already on disk.
-func certifyAndWrite(ctx context.Context, cfg RunnerConfig, task ai.Task, scenarios []Scenario, repeats int,
-	trace *payloadTrace, journal *runJournal, log *slog.Logger,
-) ([]Record, error) {
-	binding, judge, err := taskBindings(ctx, cfg, task, log)
-	if err != nil {
-		return nil, err
-	}
-	hooks := &certifyHooks{trace: trace, journal: journal.forTask(task, binding, judge)}
-	rec, err := certifyTask(ctx, task, scenarios, cfg.Census, binding, judge, cfg.recordProfile(), repeats, log, hooks)
-	if err != nil {
-		log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
-		return nil, fmt.Errorf("task %s: %w", task, err)
-	}
-	if err := WriteRecord(cfg.RecordDir, rec); err != nil {
-		return nil, fmt.Errorf("task %s: writing record: %w", task, err)
-	}
-	decisions, err := certifyDecisionsFor(ctx, cfg, task, scenarios, binding, rec, hooks, log)
-	if err != nil {
-		log.ErrorContext(ctx, "aicert: decision leg failed — no decision record written", "task", string(task), "err", err)
-		return []Record{rec}, fmt.Errorf("task %s: %w", task, err)
-	}
-	return append([]Record{rec}, decisions...), nil
 }
 
 // runPreflights asks every binding the run will use one question before the
@@ -274,13 +254,20 @@ func certifyAndWrite(ctx context.Context, cfg RunnerConfig, task ai.Task, scenar
 // sends no LLM call and the chat pre-flight would be its one paid call. The
 // decision pre-flight runs regardless: no decision run is journaled, so the
 // leg is paid for on every run and its pre-flight is always worth the call.
-func runPreflights(ctx context.Context, cfg RunnerConfig, journal *runJournal, byTask map[ai.Task][]Scenario, repeats int, log *slog.Logger) error {
+func runPreflights(ctx context.Context, cfg RunnerConfig, journal *runJournal, byTask map[ai.Task][]Scenario, repeats int, log *slog.Logger) (map[string]bool, error) {
+	lost := map[string]bool{}
 	if journal.replaysEverything(ctx, cfg, byTask, repeats) {
 		log.InfoContext(ctx, "aicert: pre-flight skipped — every run replays from the resume journal")
-	} else if err := preflight(ctx, cfg, sortedTasks(byTask), nil, log); err != nil {
-		return err
+	} else {
+		fallbacks, err := preflight(ctx, cfg, sortedTasks(byTask), nil, log)
+		if err != nil {
+			return nil, err
+		}
+		for _, b := range fallbacks {
+			lost[bindingKey(b)] = true
+		}
 	}
-	return preflightDecisions(ctx, cfg, byTask, nil, log)
+	return lost, preflightDecisions(ctx, cfg, byTask, nil, log)
 }
 
 // certifyTask runs every scenario for one task over a fresh

@@ -7,7 +7,7 @@ package gates
 
 // activities.RetractDerivedForActivityTx documents that it is not atomic with
 // the narrowing it follows, and the sentence is only true while every caller is
-// an async consumer reacting to a COMMITTED audience change.
+// an async consumer reacting to a committed audience change.
 //
 // A caller added inside the narrowing's own transaction would make the comment
 // false in the safe direction — atomic after all — but the write-side re-checks

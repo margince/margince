@@ -54,6 +54,8 @@ type LiftInput struct {
 
 // Lift revokes one suppression, if this caller outranks the level that wrote it.
 func (s *Store) Lift(ctx context.Context, in LiftInput) error {
+	// What is judged and what is stored are the same words.
+	in.Reason = strings.TrimSpace(in.Reason)
 	sub, level, err := admitLift(ctx, in)
 	if err != nil {
 		return err

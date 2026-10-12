@@ -193,3 +193,15 @@ func TestTheAbsentBeforeImageOfACreateIsNotAnUnclearableField(t *testing.T) {
 		t.Errorf("a create's absent image reads as unclearable: %v", unclearable)
 	}
 }
+
+// A moved first observation is capture's or a merge's to write, and no
+// relationship patch can put it back. Offering the button would undo nothing
+// and report that it had.
+func TestAMovedFirstObservationIsNotOfferedAsReversible(t *testing.T) {
+	row := edgeRow("update", `{"first_observed_at":"2026-03-02T09:00:00Z"}`, `{"first_observed_at":"2025-06-03T09:00:00Z"}`)
+	answer := judgeEdge(t, edgeEvaluator(employmentEdge()), row)
+	if answer.Reason != ReasonNotRestorableByThisPath || answer.Detail != "first_observed_at" {
+		t.Errorf("a moved first observation: %q/%q, want %q naming the field",
+			answer.Reason, answer.Detail, ReasonNotRestorableByThisPath)
+	}
+}

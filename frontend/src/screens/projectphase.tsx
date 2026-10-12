@@ -9,7 +9,7 @@ import { Field, Textarea } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { StageLadder } from "../design-system/stageladder";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import {
   PHASE_LABEL,
   PROJECT_PHASES,
@@ -79,17 +79,15 @@ export function useAdvanceProject(onDone: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (move: PhaseMove) => {
-      const { data, error } = await api.POST("/projects/{id}/advance", {
-        params: {
-          path: { id: move.projectId },
-          ...ifMatch(requireVersion(move.version)),
-        },
-        body: { to_phase: move.to, reason: move.reason || null },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/projects/{id}/advance", {
+          params: {
+            path: { id: move.projectId },
+            ...ifMatch(requireVersion(move.version)),
+          },
+          body: { to_phase: move.to, reason: move.reason || null },
+        }),
+      );
     },
     onSuccess: (_data, move) => {
       queryClient.invalidateQueries({ queryKey: ["project", move.projectId] });

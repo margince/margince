@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Card } from "../design-system/atoms";
+import { LIVE_ID, liveList } from "../screens/lists.fixtures";
+import { LISTS_KEY, type List } from "../screens/lists.queries";
 import {
   installFetchStub,
   meRoute,
@@ -120,13 +122,16 @@ function stubSession() {
  * brand block honestly shows the product name alone. `[kind, "ref", id]` is
  * `useEntityName`'s entry, which is where the last segment of a record's trail
  * comes from — the trail is a READ, and a story that left it unresolved would be
- * showing a uuid where the product shows a name.
+ * showing a uuid where the product shows a name. A list's name is the list
+ * page's read, and the bar draws no page, so it is seeded the same way.
  */
 function SeedCache({
   record,
+  list,
   children,
 }: Readonly<{
   record?: { id: string; name: string };
+  list?: List;
   children: ReactNode;
 }>) {
   const client = useQueryClient();
@@ -135,6 +140,9 @@ function SeedCache({
     client.getQueryData(["contact", "ref", record.id]) === undefined
   ) {
     client.setQueryData(["contact", "ref", record.id], record.name);
+  }
+  if (list && client.getQueryData([LISTS_KEY, "one", list.id]) === undefined) {
+    client.setQueryData([LISTS_KEY, "one", list.id], list);
   }
   return (
     <WithInstallationBrand brand={{ display_name: "Gradion GmbH" }}>
@@ -306,6 +314,42 @@ export const RecordRoute: Story = {
       record={{ id: "p-anna", name: "Anna Weber" }}
     />
   ),
+};
+
+/** The bar on a Live List's filter, the list's name already read. */
+function ListFilterBar() {
+  stubSession();
+  return (
+    <StoryProviders>
+      <SeedCache list={liveList}>
+        <BarFrame route={{ screen: "filters", id: "list", id2: LIVE_ID }} />
+      </SeedCache>
+    </StoryProviders>
+  );
+}
+
+/**
+ * A Live List's filter: three stops, the library, the list and the page.
+ *
+ * The page sits below Filters and views, so the trail ends in it and the
+ * sidebar's Filters row only leads there. The list's name is the page's own
+ * read, which the trail watches rather than asks for.
+ */
+export const BelowFiltersAndViews: Story = {
+  name: "below Filters and views — a Live List's filter",
+  render: () => <ListFilterBar />,
+};
+
+/**
+ * The same trail on a phone. The row has room for two stops, so the list folds
+ * away and the trail keeps the way back to the library and the page; the page
+ * names the list it edits.
+ */
+export const BelowFiltersAndViewsPhone: Story = {
+  name: "below Filters and views — on a phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <ListFilterBar />,
 };
 
 /**

@@ -14,6 +14,8 @@ package compose
 import (
 	"log/slog"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
@@ -24,12 +26,12 @@ import (
 // registry and nothing else, and the Graph pass takes a SECOND condition of its
 // own — a notification URL. A subscription registered against no URL notifies
 // nobody, so a deployment that never opted into Outlook push keeps the poll.
-func addGraphWatchJobs(reg *jobRegistry, cfg JobRunnerConfig, log *slog.Logger) {
+func addGraphWatchJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
 	if !GraphWatchWillRun(cfg.GmailRegistry, cfg.GraphWatch) {
 		return
 	}
 	addDeclaredWorker[GraphWatchArgs](reg, &graphWatchWorker{
-		registry: cfg.GmailRegistry, renewWithin: cfg.GraphWatch.RenewWithin, log: log,
+		registry: cfg.GmailRegistry, pool: pool, log: log,
 	})
 	addDeclaredWorker[GraphWatchRenewArgs](reg, &graphWatchRenewWorker{
 		registry: cfg.GmailRegistry, notificationURL: cfg.GraphWatch.NotificationURL,

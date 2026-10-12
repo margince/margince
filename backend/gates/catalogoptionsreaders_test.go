@@ -5,7 +5,7 @@
 
 package gates
 
-// Who may read a custom field's OPTIONS.
+// Who may read a custom field's options.
 //
 // fieldcatalog.Column carries three things with two different disclosure rules
 // (the port's own doc states them): Name and Type are schema, ambient to any

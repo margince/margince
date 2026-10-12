@@ -269,8 +269,17 @@ const fanOutByReach = [...fanOut].sort(
 // tag moves the browser instead of asking the manager to.
 const EXPECTED_ERROR_TAG = "uat-expected-console-error";
 const PHONE_TAG = "uat-phone";
+// The same phone on its side, for a layout keyed on height running out.
+const PHONE_ON_ITS_SIDE_TAG = "uat-phone-on-its-side";
 const DESKTOP = { width: 1024, height: 720 };
 const PHONE = { width: 390, height: 844 };
+const PHONE_ON_ITS_SIDE = { width: 844, height: 390 };
+
+function viewportFor(tags) {
+  if (tags.includes(PHONE_TAG)) return PHONE;
+  if (tags.includes(PHONE_ON_ITS_SIDE_TAG)) return PHONE_ON_ITS_SIDE;
+  return DESKTOP;
+}
 
 // What counts as painted. The canvas is the usual answer, but `Modal`
 // (src/design-system/atoms.tsx) returns `createPortal(…, document.body)` — a
@@ -342,7 +351,7 @@ async function captureStory(page, port, story) {
   const expectsConsoleError = tags.includes(EXPECTED_ERROR_TAG);
   // Set before navigating: a resize after first paint measures a reflow rather
   // than the layout the story is about.
-  await page.setViewportSize(tags.includes(PHONE_TAG) ? PHONE : DESKTOP);
+  await page.setViewportSize(viewportFor(tags));
   page.on("console", (m) => {
     if (m.type() === "error" && !expectsConsoleError) errors.push(m.text());
   });

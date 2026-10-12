@@ -46,6 +46,12 @@ const approvalTokenHeader = "X-Approval-Token"
 // mutation; anything larger is not a plausible contract payload.
 const maxGatedBody = 1 << 20
 
+// gatedBodyLimit widens that bound to what the operation's tool takes in one
+// call, which is wider only for a tool that carries a file.
+func gatedBodyLimit(spec mcp.ToolSpec) int64 {
+	return max(maxGatedBody, spec.MaxArgsBytes)
+}
+
 func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, ownership agents.FieldOwnership, imports agents.Imports, tags agents.Tags, gate *auth.Gate) func(http.Handler) http.Handler {
 	// ONE set of read-side dependencies for both questions this door asks of a
 	// command: what tier it runs at, and what an approval of it would bind to.
@@ -55,7 +61,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			p, ok := principal.Actor(ctx)
-			if !ok || p.Type != principal.PrincipalAgent {
+			if !ok || p.Type != principal.PrincipalAgent || servedByTheRegistry(r) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -102,6 +108,14 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 			})
 		})
 	}
+}
+
+// servedByTheRegistry reports a route whose handler runs its tool through
+// Registry.Invoke, which admits the call itself. Admitting it here too would
+// charge the agent twice and stage a confirm-first call twice.
+func servedByTheRegistry(r *http.Request) bool {
+	pattern := chi.RouteContext(r.Context()).RoutePattern()
+	return agentPolicies[r.Method+" "+pattern].ServedBy == servedByRegistry
 }
 
 // refuseAgentRead answers a NON-mutating agent call: its governance class
@@ -152,13 +166,23 @@ func refuseAgentRead(w http.ResponseWriter, r *http.Request, next http.Handler, 
 // human's RBAC and row scope at the store, unchanged.
 func refusedAsHumanOnly(w http.ResponseWriter, r *http.Request) bool {
 	pattern := chi.RouteContext(r.Context()).RoutePattern()
-	pol, known := agentPolicies[r.Method+" "+pattern]
-	if !known || pol.Access == accessTool {
+	pol, admitted := routeAdmitsAgents(r.Method, pattern)
+	if admitted {
 		return false
 	}
 	httperr.Write(w, r, fmt.Errorf(
 		"agent gate: %s is %s: %w", pol.Op, pol.Access, apperrors.ErrPermissionDenied))
 	return true
+}
+
+// routeAdmitsAgents asks whether an agent may call the route at all, and returns its policy, zero if none.
+// A read is admitted unless marked, and a mutation only under a tool policy.
+func routeAdmitsAgents(method, pattern string) (agentPolicy, bool) {
+	pol, known := agentPolicies[method+" "+pattern]
+	if !known {
+		return pol, !mutatingMethod(method)
+	}
+	return pol, pol.Access == accessTool
 }
 
 // prepareAgentGate resolves the admission inputs for a mutating agent call:
@@ -172,13 +196,13 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 	// router registered; a mutating route it doesn't know is refused, never
 	// admitted ungated (ADR-0055 §2).
 	pattern := chi.RouteContext(ctx).RoutePattern()
-	pol, known := agentPolicies[r.Method+" "+pattern]
-	if !known {
+	pol, admitted := routeAdmitsAgents(r.Method, pattern)
+	if pol.Op == "" {
 		httperr.Write(w, r, fmt.Errorf(
 			"agent gate: %s %s carries no autonomy tier: %w", r.Method, pattern, apperrors.ErrPermissionDenied))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
-	if pol.Access != accessTool {
+	if !admitted {
 		// human-only governance (the credential class: lending authority,
 		// recording consent, moving what the tiers read) and the
 		// session/bootstrap machinery: an agent principal is rejected
@@ -200,8 +224,9 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 			"agent gate: %s %s: %w", pol.Op, reason, apperrors.ErrPermissionDenied))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
-	body, err := io.ReadAll(io.LimitReader(r.Body, maxGatedBody+1))
-	if err != nil || len(body) > maxGatedBody {
+	limit := gatedBodyLimit(spec)
+	body, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
+	if err != nil || int64(len(body)) > limit {
 		httperr.Write(w, r, httperr.Validation("body", "too_large", "request body unreadable or exceeds the gated limit"))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}

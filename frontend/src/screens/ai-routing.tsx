@@ -7,23 +7,35 @@ import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { stable } from "../format/collate";
-import { formatNumber } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useAiStatus } from "./ai-admin";
-import { BindingEditor, reachableProviders } from "./ai-binding-editor";
+import { BindingEditor } from "./ai-binding-editor";
+import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
 import { useAiHealth } from "./ai-health";
 import {
   type ModelCatalogue,
   unkeyedProviders,
   useAiModelCatalogue,
+  withBorrowedRows,
 } from "./ai-models";
-import { useProviderKeys } from "./ai-provider-keys";
+import { invalidateProviderHealth } from "./ai-provider-health";
+import { useProviderKeys } from "./ai-provider-key-hooks";
+import { providerName } from "./ai-provider-names";
+import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
 import { PanelTitle, TermLegend } from "./ai-terms";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import {
+  problemMessageOf,
+  QueryGate,
+  QueryStates,
+  throwProblem,
+  useMe,
+} from "./common";
 import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 
@@ -66,25 +78,38 @@ export function AiRoutingCard() {
   );
 }
 
-// The ladder, cheapest to most capable. A tier this list does not know still
-// renders, last and in a stable order: the vocabulary comes from the task
-// contract, so a new one must appear rather than vanish from the only screen
-// that binds it.
-const TIER_ORDER = [
-  "local_small",
-  "cheap_cloud",
-  "premium",
-  "frontier",
-  "local_large",
-];
-
+// A tier off the ladder still renders, last: it must appear rather than vanish
+// from the only screen that binds it.
 function orderedTiers(tiers: Routing["tiers"] | undefined): string[] {
-  const rank = (tier: string) => {
-    const i = TIER_ORDER.indexOf(tier);
-    return i === -1 ? TIER_ORDER.length : i;
-  };
   return Object.keys(tiers ?? {}).sort(
-    (a, b) => rank(a) - rank(b) || stable(a, b),
+    (a, b) => tierRank(a) - tierRank(b) || stable(a, b),
+  );
+}
+
+// A bound provider with no key fails every lane on it closed; said once here, not per row.
+function UnkeyedNote({
+  lanes,
+  unkeyed,
+}: Readonly<{ lanes: readonly Lane[]; unkeyed: ReadonlySet<string> | null }>) {
+  const t = useT();
+  const stranded = lanes.filter(
+    (lane) => lane.binding && unkeyed?.has(lane.binding.provider),
+  );
+  if (stranded.length === 0) return null;
+  const providers = [
+    ...new Set(stranded.flatMap((lane) => lane.binding?.provider ?? [])),
+  ];
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("aiRouting.unkeyed.title")}
+    >
+      {t("aiRouting.unkeyed.body", {
+        providers: providers.map((p) => providerName(p, t)).join(", "),
+        lanes: stranded.map((lane) => tierLabel(lane.name, t)).join(", "),
+      })}
+    </Callout>
   );
 }
 
@@ -103,34 +128,31 @@ function HealthOnly() {
   const me = useMe();
   return (
     <Panel title={<PanelTitle term="tier">{t("aiRouting.title")}</PanelTitle>}>
-      <PanelBody>
-        {canDiagnose ? (
-          <QueryGate query={health} pendingLabel={t("aiRouting.title")}>
-            {(read) =>
-              read.rungs.length === 0 ? (
-                <EmptyState>
-                  {t("aiHealth.noCalls", {
-                    hours: formatNumber(read.window_hours, locale),
-                  })}
-                </EmptyState>
-              ) : (
-                <TiersTable
-                  lanes={[]}
-                  health={read}
-                  features={undefined}
-                  catalogue={undefined}
-                  unkeyed={null}
-                  canManage={false}
-                />
-              )
-            }
-          </QueryGate>
-        ) : (
+      {canDiagnose && health.isSuccess && health.data.rungs.length > 0 ? (
+        <TiersTable
+          lanes={[]}
+          health={health.data}
+          features={undefined}
+          catalogue={undefined}
+          canManage={false}
+        />
+      ) : canDiagnose ? (
+        <PanelBody>
+          <QueryStates query={health} pendingLabel={t("aiRouting.title")}>
+            <EmptyState>
+              {t("aiHealth.noCalls", {
+                hours: formatNumber(health.data?.window_hours ?? 0, locale),
+              })}
+            </EmptyState>
+          </QueryStates>
+        </PanelBody>
+      ) : (
+        <PanelBody>
           <QueryGate query={me} pendingLabel={t("aiRouting.title")}>
             {() => <EmptyState>{t("aiRouting.withheld")}</EmptyState>}
           </QueryGate>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
     </Panel>
   );
 }
@@ -150,14 +172,15 @@ function ModelTiers({
   // Which vendors hold a credential, joined into the rows and the editor. Same
   // grant as this card, so no second denial to answer.
   const keys = useProviderKeys(true);
+  const sheet = withBorrowedRows(catalogue.data, keys.data?.providers);
   const canDiagnose = useCan("ai_diagnostics", "read");
   const canBudget = useCan("ai_budget", "read");
   const health = useAiHealth(canDiagnose).data;
   const features = useAiStatus(canDiagnose && canBudget).data?.features;
   const [editing, setEditing] = useState<Editing | null>(null);
   const unkeyed = unkeyedProviders(keys.data?.providers);
-  const open = (initial: SliceValue, label: string) =>
-    setEditing({ opened: read, initial, label });
+  const open = (initial: SliceValue, lane: string) =>
+    setEditing({ opened: read, initial, label: tierLabel(lane, t) });
 
   // Defensive on a field the contract marks required: a client that dies on an
   // unexpected shape takes the whole settings page with it.
@@ -180,7 +203,7 @@ function ModelTiers({
 
   // One row per bound lane. The embedder binds SEPARATELY on purpose: retrieval
   // has to survive a chat-budget exhaustion, and its model is a different one
-  // even on the same vendor. Names are the document's own words, raw.
+  // even on the same vendor.
   const editDecisions = () =>
     open(
       {
@@ -231,13 +254,13 @@ function ModelTiers({
         <p className="t-sub" data-testid="ai-routing-profile">
           {t("aiRouting.profileLine", { profile: routing.profile })}
         </p>
+        <UnkeyedNote lanes={lanes} unkeyed={unkeyed} />
       </PanelBody>
       <TiersTable
         lanes={lanes}
         health={health}
         features={features}
-        catalogue={catalogue.data}
-        unkeyed={unkeyed}
+        catalogue={sheet}
         canManage={canManage}
         onAddDecisions={routing.decisions ? undefined : editDecisions}
       />
@@ -247,7 +270,7 @@ function ModelTiers({
           initial={editing.initial}
           label={editing.label}
           keys={keys.data?.providers}
-          catalogue={catalogue.data}
+          catalogue={sheet}
           canManage={canManage}
           onClose={() => setEditing(null)}
         />
@@ -261,12 +284,15 @@ function ModelTiers({
 // and the refresh is the way past it.
 function SheetFooter({ catalogue }: Readonly<{ catalogue: ModelCatalogue }>) {
   const t = useT();
+  const { locale } = useLocale();
   const asOf = sheetAsOf(catalogue);
   return (
     <div className="ai-sheet-age">
       <span className="t-caption">
         {asOf
-          ? t("aiRouting.sheetAsOf", { date: asOf })
+          ? t("aiRouting.sheetAsOf", {
+              date: formatDate(asOf, locale, viewerZone()),
+            })
           : t("aiRouting.sheetUnknown")}
       </span>
     </div>
@@ -311,6 +337,7 @@ function FirstBinding({
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      await invalidateProviderHealth(queryClient);
     },
   });
   const startable = startableProviders(providers);
@@ -382,32 +409,34 @@ function startableProviders(
 // The stored profile is kept when it is one: an operator who declared eu_hosted
 // before binding anything must not be moved off it by a first click. A fresh
 // installation stores an empty profile, which is no member of the enum, and
-// then `cloud_frontier` — what both cloud presets need — is written instead.
+// then the preset's own profile is written instead.
 export function firstBinding(
   id: keyof typeof SETUP_PROVIDERS,
   stored: string,
 ): Routing {
   const p = SETUP_PROVIDERS[id];
+  const host = p.baseUrl ? { base_url: p.baseUrl } : {};
   const lane = {
     provider: p.provider,
     model: p.chatModel,
-    ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+    ...host,
+    ...(p.location ? { location: p.location } : {}),
   };
   return {
-    profile: isProfile(stored) ? stored : "cloud_frontier",
+    profile: isProfile(stored) ? stored : p.profile,
     tiers: Object.fromEntries(TIER_ORDER.map((t) => [t, { ...lane }])),
     embeddings: {
       provider: p.provider,
       model: p.embedModel,
-      ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
+      ...host,
+      ...(p.embedLocation ? { location: p.embedLocation } : {}),
     },
   };
 }
 
 // The day the price sheet was last written, which is the day its model list was
-// last true: the NEWEST effective date across the sheet, since a sheet is
-// re-priced row by row. Rendered as the wire's own ISO day — a calendar day
-// rather than an instant, so a zone could shift it by one.
+// last true. A sheet is re-priced row by row, so that day is its newest
+// effective date.
 function sheetAsOf(catalogue: ModelCatalogue): string | null {
   return (catalogue ?? []).reduce<string | null>(
     (latest, rate) =>
@@ -418,11 +447,9 @@ function sheetAsOf(catalogue: ModelCatalogue): string | null {
   );
 }
 
-const PROFILES: readonly Routing["profile"][] = [
-  "eu_hosted",
-  "sovereign",
-  "cloud_frontier",
-];
+// A declared mirror of the server's profiles, held both ways by
+// backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
+const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 
 function isProfile(value: string): value is Routing["profile"] {
   return PROFILES.some((p) => p === value);

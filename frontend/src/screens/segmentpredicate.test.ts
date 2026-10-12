@@ -16,6 +16,7 @@ import {
   removeNode,
   replaceNode,
   resetIDsForTest,
+  rootGroup,
   toggleJoin,
 } from "./segmentpredicate";
 
@@ -112,24 +113,29 @@ describe("editing the tree", () => {
 });
 
 describe("encoding to the wire", () => {
-  it("strips every editor id, at every depth", () => {
+  it("strips every editor id and proposal mark, at every depth", () => {
     // Deliberately deep: a two-level tree would pass even if encode only
     // stripped the root, and that is the mistake this asserts against.
-    const deep = newGroup("and", [
-      newLeaf("owner_id", "eq", "u1"),
-      newGroup("or", [
-        newLeaf("status", "eq", "open"),
-        newGroup("and", [
-          newLeaf("cf_tier", "eq", "gold"),
-          newGroup("or", [newLeaf("tag", "exists", true)]),
+    const deep = (proposed: boolean) =>
+      newGroup("and", [
+        newLeaf("owner_id", "eq", "u1"),
+        newGroup("or", [
+          newLeaf("status", "eq", "open"),
+          newGroup("and", [
+            proposed
+              ? { ...newLeaf("cf_tier", "eq", "gold"), proposed: true }
+              : newLeaf("cf_tier", "eq", "gold"),
+            newGroup("or", [newLeaf("tag", "exists", true)]),
+          ]),
         ]),
-      ]),
-    ]);
+      ]);
 
-    const wire = JSON.stringify(encode(deep));
+    const wire = JSON.stringify(encode(deep(true)));
 
     expect(wire).not.toContain('"id"');
     expect(wire).not.toContain("n1");
+    expect(wire).not.toContain("proposed");
+    expect(wire).toBe(JSON.stringify(encode(deep(false))));
   });
 
   it("answers the canonical shape the engine stores", () => {
@@ -358,5 +364,23 @@ describe("a relative date operand", () => {
     expect(
       decode({ field: "d", op: "lt", value: { days_ago: 3, weeks: 1 } }),
     ).toBeNull();
+  });
+});
+
+describe("the root the builder holds", () => {
+  it("wraps a stored single clause, which decodes to a bare leaf, in an AND group", () => {
+    const stored = decode({ field: "city", op: "eq", value: "Berlin" });
+    if (stored === null || isGroup(stored)) {
+      throw new Error("a single stored clause should decode to a leaf");
+    }
+    const root = rootGroup(stored);
+    expect(root.join).toBe("and");
+    expect(root.children).toEqual([stored]);
+    expect(encode(root)).toEqual({ and: [encode(stored)] });
+  });
+
+  it("hands a group back as it is", () => {
+    const group = newGroup("or", [newLeaf("city", "eq", "Berlin")]);
+    expect(rootGroup(group)).toBe(group);
   });
 });

@@ -22,7 +22,6 @@ package compose
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -51,11 +50,10 @@ func (GeocodeBackfillArgs) Kind() string { return "geocode_backfill" }
 // periodic insert supplies uniqueness and no attempt policy of its own — the
 // same reason webhook_retry states one.
 func (GeocodeBackfillArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       geocodeQueue,
+	return *jobs.QueuedAs[GeocodeBackfillArgs](&river.InsertOpts{
 		MaxAttempts: 3,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 // addGeocodeBackfillJobs registers the sweep and returns its schedule.
@@ -170,19 +168,4 @@ func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UU
 // gated read with no one behind it.
 func geocodeBackfillActor(ctx context.Context) context.Context {
 	return principal.SystemActing(ctx, "system:geocode-backfill")
-}
-
-// GeocodingConfig is the backfill's cadence.
-//
-// Separate from the Geocoder itself because they answer to different roles: the
-// provider is what this installation may call, and the interval is how often it
-// goes looking for work. A zero interval registers the worker and no schedule —
-// the posture the declaration states — so an operator can turn the sweep off
-// without giving up geocoding on write.
-type GeocodingConfig struct {
-	// BackfillInterval is how often the sweep looks for companies never asked
-	// about. It runs on start too, so configuring a geocoder on a database that
-	// already holds its customers begins locating them at boot rather than at
-	// the first tick.
-	BackfillInterval time.Duration
 }

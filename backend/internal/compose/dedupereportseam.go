@@ -44,6 +44,7 @@ func openDuplicatesFor(pool *pgxpool.Pool) agents.OpenDuplicatesFor {
 				other = r.LeftID
 			}
 			out = append(out, agents.DuplicateCandidate{
+				CandidateID:   r.ID.String(),
 				OtherRecordID: other.String(),
 				Confidence:    r.Confidence,
 				Evidence:      decodeEvidence(r.Evidence),

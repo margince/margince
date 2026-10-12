@@ -46,9 +46,9 @@ const evidenceKeyRetentionAction = "retention_action"
 // once so the tombstones a supervisory authority reads use one vocabulary.
 const (
 	evidenceKeyCause = "cause"
-	// The three causes a collateral tombstone can carry: an Art. 17 erasure of
-	// a subject, a retention sweep clearing a record on its own schedule, and a
-	// controller ending a restriction by hand.
+	// The four causes a collateral tombstone can carry. An Art. 17 erasure of
+	// a subject; a retention sweep clearing a record on its own schedule; a
+	// controller ending a restriction; hidden noise mail destroyed.
 	causeContactErasure = "contact_erasure"
 	causeRetention      = "retention"
 	// causeControllerRelease is the third: a restriction a controller ended by
@@ -56,9 +56,11 @@ const (
 	// and the collateral tombstones that release leaves behind both take their
 	// cause from here, so a supervisory authority reading the two sees one act.
 	causeControllerRelease = "controller_release"
-	evidenceKeyClass       = "class"
-	evidenceKeyBasis       = "basis"
-	evidenceKeyReason      = "reason"
+	// causeNoiseDisposition is the capture sweep destroying hidden noise mail.
+	causeNoiseDisposition = "noise_disposition"
+	evidenceKeyClass      = "class"
+	evidenceKeyBasis      = "basis"
+	evidenceKeyReason     = "reason"
 )
 
 // EraseContact removes the subject's PII in ONE transaction: contact row
@@ -79,14 +81,12 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		return err
 	}
 	subject := ids.From[ids.ContactKind](contactID)
-	// The statutory correspondence floor the retention engine applies to its
-	// activity selectors applies here too: erasing the contact a Handelsbrief
-	// hangs off must not destroy the correspondence itself below its floor.
-	floorInterval, floorAnchor := statutoryFloorArgs()
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := requireErasableContact(ctx, tx, subject); err != nil {
+		floor, err := e.erasableUnderFloor(ctx, tx, subject)
+		if err != nil {
 			return err
 		}
+		floorCurrent, floorCarried := floor.sqlArgs()
 		keys, err := subjectIdentifiers(ctx, tx, subject)
 		emails, identities := keys.emails, keys.identities
 		if err != nil {
@@ -126,14 +126,14 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := lockSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities)); err != nil {
 			return err
 		}
-		activitiesRedacted, err := redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor)
+		activitiesRedacted, err := redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor)
 		if err != nil {
 			return err
 		}
 		// What the floor shielded from the statement above is held instead
 		// (erasure_restrict.go): the same three id sets, selected BY the
 		// floor rather than against it, so every row is one of the two.
-		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor, e.payloads)
+		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, e.payloads)
 		if err != nil {
 			return err
 		}
@@ -162,7 +162,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		// this first would take that row out of `pending` under it, so the
 		// withdrawal would stop reaching the run and it would wait forever
 		// holding the payload this cascade exists to destroy.
-		if err := redactApprovalsCitingActivities(ctx, tx, append(activitiesRedacted, activitiesHeld...), ErasedSourceWithdrawal); err != nil {
+		if err := redactQuotationsOf(ctx, tx, append(activitiesRedacted, activitiesHeld...), reason); err != nil {
 			return err
 		}
 		// What the subject's name is left standing in inside somebody else's
@@ -175,7 +175,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		// transaction (objects first). A failure here — including a
 		// misconfigured store — rolls the whole erasure back, so it stays
 		// retryable and never commits a half-erasure.
-		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
+		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorCurrent, floorCarried); err != nil {
 			return err
 		}
 		// The activities this erasure just destroyed travel with the subject:
@@ -329,7 +329,7 @@ func anonymizeSubjectRows(
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE contact SET first_name = NULL, last_name = NULL, full_name = $2,
-		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
+		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
 		  source_author_name = NULL,
@@ -371,6 +371,12 @@ func anonymizeSubjectRows(
 	if err := deleteSubjectListMemberships(ctx, tx, contactID, wiped); err != nil {
 		return nil, err
 	}
+	// The duplicate-pair snapshots naming either end, which hold the name,
+	// address and phone number as the detector read them. Both ends, because a
+	// promoted subject is a contact AND the lead twins just wiped.
+	if err := scrubDedupeEvidence(ctx, tx, []ids.UUID{contactID.UUID}, wiped); err != nil {
+		return nil, err
+	}
 	if err := purgeContactDerivedRows(ctx, tx, contactID, subjects); err != nil {
 		return nil, err
 	}
@@ -380,14 +386,18 @@ func anonymizeSubjectRows(
 // purgeContactDerivedRows deletes what the system DERIVED about the subject and
 // keyed on their contact id.
 //
-// The four tables share a posture that makes them one step rather than four:
+// The five tables share a posture that makes them one step rather than five:
 // none is anonymizable. An embedding is an opaque vector of the text, a
 // provenance row says where a now-erased field came from, an enrichment row
 // holds the subject's title and employer with the verbatim sentence it was
 // read from, and a correction verdict is what a human typed over what the
-// system inferred. Nulling any of them leaves a row asserting something about
-// a contact nobody may now assert anything about, so all four are deleted.
+// system inferred, and a cached brief is what a model wrote about them. Nulling
+// any of them leaves a row asserting something about a contact nobody may now
+// assert anything about, so all five are deleted.
 func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, subjects []ids.UUID) error {
+	if err := purgeSubjectBriefCache(ctx, tx, contactID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM embedding WHERE entity_type = 'contact' AND entity_id = $1`, contactID); err != nil {
 		return err
@@ -408,10 +418,7 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, contactID); err != nil {
 		return err
 	}
-	if err := purgeProviderPurchases(ctx, tx, subjects); err != nil {
-		return err
-	}
-	return nil
+	return purgeProviderPurchases(ctx, tx, subjects)
 }
 
 // deleteSubjectIdentifierRows drops every row that stores an identifier the

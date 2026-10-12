@@ -78,7 +78,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 		t.Fatal(err)
 	}
 	t.Cleanup(publicationPool.Close)
-	worker := &reportScheduleSweepWorker{enabled: true, pool: publicationPool, now: func() time.Time { return at }}
+	worker := &reportScheduleSweepWorker{pool: publicationPool, now: func() time.Time { return at }}
 	if err := worker.Work(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +96,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 	if *edition.Evaluation.Metrics[0].Value != 21600000 || len(edition.Evaluation.Charts) != 2 {
 		t.Fatalf("wrong frozen result: %+v", edition)
 	}
+	assertReportingEditionTransports(human, t, e, edition)
 	amount := int64(5000000)
 	if _, err := writer.UpdateDeal(writerCtx, ids.From[ids.DealKind](ids.UUID(closed.Id)), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
 		t.Fatal(err)
@@ -142,7 +143,7 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 			t.Fatalf("live and frozen references disagree: %+v", blocks)
 		}
 		for _, value := range blocks[0].Values {
-			if value.Unit == nil || *value.Unit != "EUR" || value.DefinitionVersion == nil || *value.DefinitionVersion != "1" || value.Coverage == nil || value.Context == nil {
+			if value.Unit == nil || *value.Unit != "EUR" || value.DefinitionVersion == nil || *value.DefinitionVersion != "2" || value.Coverage == nil || value.Context == nil {
 				t.Fatalf("reference lost metric metadata: %+v", value)
 			}
 		}

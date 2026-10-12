@@ -1,0 +1,44 @@
+name: we_promise_revised_pricing_by_friday
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+commitment_band: firm
+fixture:
+  - direction: inbound
+    subject: 'Re: Graz tiering'
+    sent: '2026-09-07'
+    body: |
+      Hi Lars,
+
+      thanks for the call. With the volumes up, can you tell us what the
+      pricing looks like now?
+
+      Ines
+  - direction: outbound
+    subject: 'Re: Graz tiering'
+    sent: '2026-09-07'
+    body: |
+      Hi Ines,
+
+      I'll send the revised pricing by Friday.
+
+      Lars
+expect:
+  outcome: accepted
+  answer:
+    - kind: commitment_made
+      message: 2
+  rubric: >
+    One message makes one plain promise of ours: "I'll send the revised pricing
+    by Friday" is a commitment_made — a specific thing, by a named day, owed by
+    the sender. Cite it on message 2, the message that makes it, and put the
+    due date on the Friday after 2026-09-07. Reporting it on message 1, where
+    the customer only asks a question, is wrong, and so is any other kind. A
+    promise this plain deserves a confident reading: score the confidence as a
+    real judgement, and a hesitant one for a stated, dated promise lower. Then
+    score the summary as one plain sentence a colleague could act on.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

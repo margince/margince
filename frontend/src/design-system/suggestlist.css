@@ -62,3 +62,12 @@
 .suggest-option[aria-selected="true"].is-active {
   background: var(--accentLight);
 }
+/* Select's disabled row, for the same reason: no highlight, because a
+   highlight promises that a press does something. The second selector
+   outranks the selected-active one above. */
+.suggest-option.is-disabled,
+.suggest-option[aria-selected="true"].is-disabled {
+  cursor: not-allowed;
+  background: none;
+  color: var(--textSecondary);
+}

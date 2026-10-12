@@ -456,6 +456,8 @@ var goEqualNamePairs = []goEqualNamePair{
 	// Greek final sigma: full folding maps ς onto σ, lower() does not, so this
 	// pair is one contact in Go and — until the arm folded it too — two in SQL.
 	{"greek final sigma", "Οδυσσεύς Παππάς", "ΟΔΥΣΣΕΥΣ ΠΑΠΠΑΣ"},
+	// The apostrophe the SQL arm folds, which the key folds to agree with it.
+	{"apostrophe", "Sean O'Brien", "Sean OBrien"},
 }
 
 // The arm's own claim, asked of the arm. The reachability test below cannot ask

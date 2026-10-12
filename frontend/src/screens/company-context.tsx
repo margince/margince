@@ -20,6 +20,11 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
+import {
   EvidenceMark,
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
@@ -38,6 +43,7 @@ import {
   QueryGate,
   type QueryLike,
   throwProblem,
+  unwrap,
   useMe,
   WriteRefused,
 } from "./common";
@@ -141,11 +147,7 @@ export function useCompanyContextCapabilities(enabled = true) {
     queryKey: companyContextCapabilitiesQueryKey,
     enabled,
     queryFn: async (): Promise<Capabilities> => {
-      const { data, error } = await api.GET("/company/context/capabilities");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/company/context/capabilities"));
     },
   });
 }
@@ -159,13 +161,11 @@ export function ManualCompanySetup() {
   const [form, setForm] = useState<CompanyInput>(EMPTY_COMPANY_INPUT);
   const save = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.PUT("/company", {
-        body: trimCompanyInput(form),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/company", {
+          body: trimCompanyInput(form),
+        }),
+      );
     },
     onSuccess: (profile) => {
       storeCompany(queryClient, profile);
@@ -353,11 +353,7 @@ export function CompanyContextCard() {
 
   const save = useMutation({
     mutationFn: async (body: CompanyInput) => {
-      const { data, error } = await api.PUT("/company", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.PUT("/company", { body }));
     },
     onSuccess: (profile) => {
       storeCompany(queryClient, profile);
@@ -390,14 +386,12 @@ export function CompanyContextCard() {
       if (!website) {
         throwProblem({ title: t("settings.companyWebsiteRequired") });
       }
-      const { data, error } = await api.POST("/company/site-reads", {
-        params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-        body: { url: absoluteWebsite(website) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/company/site-reads", {
+          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+          body: { url: absoluteWebsite(website) },
+        }),
+      );
     },
     onSuccess: (read) => {
       setReadID(read.id);
@@ -410,13 +404,11 @@ export function CompanyContextCard() {
     queryKey: ["company-context-refresh", readID],
     enabled: readID !== null,
     queryFn: async (): Promise<SiteRead> => {
-      const { data, error } = await api.GET("/company/site-reads/{readId}", {
-        params: { path: { readId: readID ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/company/site-reads/{readId}", {
+          params: { path: { readId: readID ?? "" } },
+        }),
+      );
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -667,66 +659,63 @@ function CompanyFactsCard({
             null instead, because a capability this installation does not have
             is not a fact about the reader. */}
         {readOnly && <p>{t("settings.companyReadOnly")}</p>}
-        <QueryGate
-          query={company}
-          pendingLabel={t("settings.companySourceTitle")}
-        >
-          {(profile) =>
-            profile !== null &&
-            form && (
-              <>
-                {/* The company's FACE, above the statements about it. It is the
-                    one thing on this card a reader recognises at a glance, and
-                    the only one that also stands at the top of the sidebar. */}
-                <CompanyMark profile={profile} canEdit={canEdit} />
-                <SettingList>
-                  {ESSENTIALS.fields.map((field) => (
-                    <CompanyFactRow
-                      key={field}
-                      field={field}
-                      value={String(form[field] ?? "")}
-                      profile={profile}
-                      canEdit={canEdit}
-                      onEdit={() => onEdit(field)}
-                    />
-                  ))}
-                  {/* The elaborations, closed. Thirteen optional statements
-                      against the three the save DEMANDS, and open by default
-                      they buried the three that decide whether this profile is
-                      usable at all. A Disclosure inside the list is the
-                      settings page's own answer for a card's secondary half:
-                      its summary sits on the same beat as the labels above. */}
-                  {ELABORATIONS.map((group) => (
-                    <Disclosure key={group.title} summary={t(group.title)}>
-                      <SettingList>
-                        {group.fields.map((field) => (
-                          <CompanyFactRow
-                            key={field}
-                            field={field}
-                            value={String(form[field] ?? "")}
-                            profile={profile}
-                            canEdit={canEdit}
-                            onEdit={() => onEdit(field)}
-                          />
-                        ))}
-                      </SettingList>
-                    </Disclosure>
-                  ))}
-                </SettingList>
-                {/* The save landed and the dialog it landed in is gone, so the
-                    confirmation is left on the card that now shows the new
-                    values. A refusal stays in the dialog, beside the fields it
-                    refused. */}
-                {saved && (
+        {/* The company's FACE, above the statements about it: the one thing
+            here a reader recognises at a glance, and the sidebar's too. */}
+        {company.data && !company.isError && form && (
+          <CompanyMark profile={company.data} canEdit={canEdit} />
+        )}
+      </PanelBody>
+      <QueryGate
+        query={company}
+        pendingLabel={t("settings.companySourceTitle")}
+      >
+        {(profile) =>
+          profile !== null &&
+          form && (
+            <>
+              <SettingList bleed="settings">
+                {ESSENTIALS.fields.map((field) => (
+                  <CompanyFactRow
+                    key={field}
+                    field={field}
+                    value={String(form[field] ?? "")}
+                    profile={profile}
+                    canEdit={canEdit}
+                    onEdit={() => onEdit(field)}
+                  />
+                ))}
+                {/* Closed, so thirteen optional facts do not bury the three
+                    the save requires. */}
+                {ELABORATIONS.map((group) => (
+                  <Disclosure key={group.title} summary={t(group.title)}>
+                    <SettingList>
+                      {group.fields.map((field) => (
+                        <CompanyFactRow
+                          key={field}
+                          field={field}
+                          value={String(form[field] ?? "")}
+                          profile={profile}
+                          canEdit={canEdit}
+                          onEdit={() => onEdit(field)}
+                        />
+                      ))}
+                    </SettingList>
+                  </Disclosure>
+                ))}
+              </SettingList>
+              {/* The dialog closes on save, so the confirmation lands here; a
+                  refusal stays in the dialog beside the fields it refused. */}
+              {saved && (
+                <PanelBody>
                   <div className="settings-panel-commit">
                     <SavedNotice />
                   </div>
-                )}
-              </>
-            )
-          }
-        </QueryGate>
-      </PanelBody>
+                </PanelBody>
+              )}
+            </>
+          )
+        }
+      </QueryGate>
     </Panel>
   );
 }
@@ -762,65 +751,59 @@ function CompanySourceCard({
     <Panel title={t("settings.companySourceTitle")}>
       <PanelBody>
         <PanelIntro>{t("settings.companyTrust")}</PanelIntro>
-        <SettingList>
+      </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("settings.companyWebsite")}
+          description={t("settings.companyWebsiteHint")}
+          value={website === "" ? t("field.unset") : website}
+          control={
+            canEdit ? (
+              <Button
+                variant="ghost"
+                aria-label={t("settings.companyEditField", {
+                  field: t("settings.companyWebsite"),
+                })}
+                onClick={onEdit}
+              >
+                {t("settings.companyEdit")}
+              </Button>
+            ) : null
+          }
+        />
+        {/* Reading the website rewrites this profile, so the server asks for
+            the same grant as a save. */}
+        {canEdit && (
           <SettingRow
-            label={t("settings.companyWebsite")}
-            description={t("settings.companyWebsiteHint")}
-            value={website === "" ? t("field.unset") : website}
+            label={t("settings.companyRefreshRow")}
+            description={t("settings.companyRefreshHint")}
             control={
-              canEdit ? (
-                <Button
-                  variant="ghost"
-                  aria-label={t("settings.companyEditField", {
-                    field: t("settings.companyWebsite"),
-                  })}
-                  onClick={onEdit}
-                >
-                  {t("settings.companyEdit")}
-                </Button>
-              ) : null
+              <Button
+                variant="primary"
+                reason={
+                  website === ""
+                    ? t("settings.companyWebsiteRequired")
+                    : undefined
+                }
+                pending={refreshing}
+                onClick={onRefresh}
+              >
+                <RefreshCw aria-hidden /> {t("settings.companyRefresh")}
+              </Button>
             }
           />
-          {/* Reading the website is a WRITE of this profile: the server admits
-              the read on the same create-or-update the save needs, because a
-              read exists to change what the record says. Absent without that
-              grant, like every other verb on these two cards — the posture is
-              stated once, on the card above.
-
-              This is the one card on the page that exists to make a MOVE, which
-              is what earns the primary. The refusal it can state is stated:
-              with no website there is nothing to read, in the same sentence the
-              start itself would answer with. */}
-          {canEdit && (
-            <SettingRow
-              label={t("settings.companyRefreshRow")}
-              description={t("settings.companyRefreshHint")}
-              control={
-                <Button
-                  variant="primary"
-                  reason={
-                    website === ""
-                      ? t("settings.companyWebsiteRequired")
-                      : undefined
-                  }
-                  pending={refreshing}
-                  onClick={onRefresh}
-                >
-                  <RefreshCw aria-hidden /> {t("settings.companyRefresh")}
-                </Button>
-              }
-            />
-          )}
-        </SettingList>
-        {failure !== null && (
+        )}
+      </SettingList>
+      {failure !== null && (
+        <PanelBody>
           <div className="settings-panel-commit">
             <WriteRefused
               titleKey="settings.companyRefreshFailed"
               message={failure}
             />
           </div>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
     </Panel>
   );
 }
@@ -905,13 +888,8 @@ function derivedSource(
 }
 
 /**
- * The one form every row's Edit verb opens.
- *
- * One dialog rather than one per group, because ONE PUT writes this profile:
- * three dialogs would each be committing the other two groups' unsaved draft
- * without showing it. The groups survive as the dialog's own sections, which is
- * where a form's headings belong — on the page they were three heading levels
- * deep on top of the card's own title.
+ * The one form every row's Edit verb opens. One drawer, because ONE PUT writes
+ * the profile: a dialog per group would commit the others' unsaved drafts.
  */
 function CompanyProfileDialog({
   form,
@@ -933,12 +911,9 @@ function CompanyProfileDialog({
 }>) {
   const t = useT();
   const titleId = useId();
-  // Focus lands on the field whose Edit was pressed — programmatic rather than
-  // the `autoFocus` attribute, so the a11y lint's blanket rule against
-  // autofocus stays intact. A callback rather than a ref handed down: the field
-  // it lands on is an input for some rows and a textarea for others, and one
-  // callback taking the element they have in common beats two refs the caller
-  // would have to pick between.
+  const formId = useId();
+  // Not `autoFocus`: the a11y lint refuses it. A callback, because the field
+  // it lands on is an input for some rows and a textarea for others.
   const asked = useRef<HTMLElement | null>(null);
   const capture = (node: HTMLElement | null) => {
     asked.current = node;
@@ -947,69 +922,71 @@ function CompanyProfileDialog({
     asked.current?.focus();
   }, []);
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} size="wide">
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {t("settings.companyTitle")}
-      </Heading>
-      <form
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        {/* The site the read starts from, above the statements a read would
-            propose changes to: it is the precondition for everything below. */}
-        <CompanyFieldInput
-          field="website"
-          form={form}
-          asked={focus === "website" ? capture : undefined}
-          onChange={onChange}
-        />
-        {PROFILE_GROUPS.map((group) => (
-          <div className="form-stack" key={group.title}>
-            <SectionHeader title={t(group.title)} level={3} />
-            {group.fields.map((field) => (
-              <CompanyFieldInput
-                key={field}
-                field={field}
-                form={form}
-                asked={focus === field ? capture : undefined}
-                onChange={onChange}
-              />
-            ))}
-          </div>
-        ))}
-        {error !== null && (
-          <WriteRefused titleKey="settings.companySaveFailed" message={error} />
-        )}
-        <div className="form-actions">
-          <Button variant="ghost" type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          {/* The three the server demands are the three the button waits for —
-              the same condition the page's Save carried, now beside the fields
-              that satisfy it. */}
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!pending && !requiredComplete(form)}
-            pending={pending}
-            busyLabel={t("common.saving")}
-          >
-            {t("settings.companySave")}
-          </Button>
-        </div>
-      </form>
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2">
+          {t("settings.companyTitle")}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        <form
+          id={formId}
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          {/* The site the read starts from, above the statements a read would
+              propose changes to: it is the precondition for everything below. */}
+          <CompanyFieldInput
+            field="website"
+            form={form}
+            asked={focus === "website" ? capture : undefined}
+            onChange={onChange}
+          />
+          {PROFILE_GROUPS.map((group) => (
+            <div className="form-stack" key={group.title}>
+              <SectionHeader title={t(group.title)} level={3} />
+              {group.fields.map((field) => (
+                <CompanyFieldInput
+                  key={field}
+                  field={field}
+                  form={form}
+                  asked={focus === field ? capture : undefined}
+                  onChange={onChange}
+                />
+              ))}
+            </div>
+          ))}
+          {error !== null && (
+            <WriteRefused
+              titleKey="settings.companySaveFailed"
+              message={error}
+            />
+          )}
+        </form>
+      </DrawerBody>
+      <DrawerFoot className="actions">
+        <Button variant="ghost" type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={!pending && !requiredComplete(form)}
+          pending={pending}
+          busyLabel={t("common.saving")}
+        >
+          {t("settings.companySave")}
+        </Button>
+      </DrawerFoot>
     </Modal>
   );
 }
 
-/**
- * One field of that form. `Field` owns the id and draws a real `<label for>`,
- * so the words above the box are the box's own click target and its accessible
- * name.
- */
+/** One field of that form; `Field` draws the real `<label for>`. */
 function CompanyFieldInput({
   field,
   form,

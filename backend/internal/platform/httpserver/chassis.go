@@ -8,8 +8,8 @@
 package httpserver
 
 import (
+	"errors"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -84,6 +84,17 @@ func bodyCeiling(ceiling BodyCeiling, r *http.Request) int64 {
 	return ceiling(r)
 }
 
+// PermissionsPolicy denies every powerful browser feature the app does not
+// use. The one it does, writing to the clipboard (the copy buttons), is
+// allowed for this origin alone. frontend/nginx.conf sends the same value on
+// the app shell, and a test there holds the two equal.
+const PermissionsPolicy = "accelerometer=(), autoplay=(), camera=(), clipboard-read=(), " +
+	"clipboard-write=(self), display-capture=(), encrypted-media=(), fullscreen=(), " +
+	"geolocation=(), gyroscope=(), hid=(), idle-detection=(), magnetometer=(), " +
+	"microphone=(), midi=(), payment=(), picture-in-picture=(), " +
+	"publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), " +
+	"xr-spatial-tracking=()"
+
 // SecureHeaders sets the browser-facing response headers on everything —
 // UI and API alike. SameSite=Strict on the session cookie covers CSRF;
 // these close what it does not: framing (clickjacking), MIME sniffing,
@@ -109,6 +120,15 @@ func SecureHeaders(next http.Handler) http.Handler {
 		// two years and forbid a downgrade on the next visit. A browser
 		// ignores it on the plain-HTTP hop, so it is safe to set always.
 		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+		h.Set("Permissions-Policy", PermissionsPolicy)
+		// same-origin on both: every first-party sign-in and connector
+		// flow is a full-page redirect, never a popup, so no window of this
+		// origin needs a handle on another, and nothing here is meant to be
+		// embedded by another origin. An MCP client that opens /oauth/authorize
+		// in a popup loses its handle on that window; the grant still
+		// completes, since the code reaches the client at its redirect_uri.
+		h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		next.ServeHTTP(w, r)
 	})
 }
@@ -168,10 +188,15 @@ func Correlate(next http.Handler) http.Handler {
 // opaque 500 instead of killing the connection (and taking pre-Go-1.21
 // servers down with it). The panic value and stack are logged — the one
 // place observability matters most must never be a silent 500.
+// http.ErrAbortHandler passes through, so net/http drops a connection whose
+// body has begun; answering it here would end that stream cleanly.
 func RecoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
+				if aborted, isErr := rec.(error); isErr && errors.Is(aborted, http.ErrAbortHandler) {
+					panic(rec)
+				}
 				log.ErrorContext(r.Context(), "handler panic",
 					"panic", rec, "method", r.Method, "path", capabilitypath.Redact(r.URL.Path),
 					"stack", string(debug.Stack()))
@@ -182,22 +207,4 @@ func RecoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(w, r)
 	})
-}
-
-// ClientIP is the ONE client-IP throttle key in this process — the login and
-// password-reset limits in identity, the anonymous booking and preference
-// paths, and every connector edge. It is here rather than in either caller
-// because two copies meant a deployment could harden one edge and leave the
-// other keyed differently, and nothing would say so.
-//
-// RemoteAddr is the DIRECT peer. A raw X-Forwarded-For is attacker-chosen and
-// deliberately never read: a deployment fronted by a proxy terminates rate
-// limiting there, or extends this to a *trusted* Forwarded header — never
-// trusted blindly.
-func ClientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

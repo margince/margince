@@ -5,10 +5,14 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // retractPrivateContactsTx withdraws the contacts a personal verdict has just
@@ -39,7 +43,7 @@ func (e *ConfidentialityVerdictEngine) retractPrivateContactsTx(
 		return err
 	}
 	for _, contact := range orphaned {
-		retracted, err := e.contacts.RetractCaptureOnlyContactTx(ctx, tx, contact.ContactID, contact.OwnerID)
+		retracted, err := retractCapturedContactTx(ctx, tx, e.contacts, contact.ContactID, contact.OwnerID)
 		if err != nil {
 			return err
 		}
@@ -54,4 +58,18 @@ func (e *ConfidentialityVerdictEngine) retractPrivateContactsTx(
 			"contact", contact.ContactID.String())
 	}
 	return nil
+}
+
+// retractCapturedContactTx withdraws one capture-made contact and ends the
+// notice duties it owed, in the caller's transaction, so a withdrawn record
+// leaves no duty on the worklist.
+func retractCapturedContactTx(
+	ctx context.Context, tx pgx.Tx, store *contacts.Store, id ids.ContactID, owner ids.UUID,
+) (bool, error) {
+	retracted, err := store.RetractCaptureOnlyContactTx(ctx, tx, id, owner)
+	if err != nil || !retracted {
+		return retracted, err
+	}
+	_, err = consent.SettleWhenCaptureWithdrewTx(ctx, tx, id.UUID, time.Now().UTC())
+	return true, err
 }

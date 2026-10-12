@@ -164,6 +164,10 @@ type ModelPath struct {
 	// the only thing left to read it from would be the job title, which is the
 	// inference the contract forbids. So its endpoint declares 501 instead.
 	ProposeRoles completer
+	// NlSearch reads a list described in plain words into filter clauses. No
+	// floor: a sentence has no deterministic reading, so its endpoint answers
+	// 409 without a lane rather than guessing one.
+	NlSearch completer
 	// VoiceBuild is the durable Voice DNA build lane: the builder pass and
 	// its evaluation drafts ride the same task label and budget.
 	VoiceBuild completer
@@ -319,6 +323,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		DealHealth:                    brain(ai.TaskDealHealth),
 		AccountScan:                   brain(ai.TaskAccountScan),
 		ProposeRoles:                  brain(ai.TaskProposeRoles),
+		NlSearch:                      brain(ai.TaskNlSearch),
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),
@@ -421,7 +426,8 @@ func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Resp
 		return model.Response{}, runner.Meta{}, err
 	}
 	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
-	return resp, runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier)}, err
+	meta := runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier), Reject: func() { b.router.Reject(info) }}
+	return resp, meta, err
 }
 
 // PromptWindow is the window of the agent loop's own ladder, read fresh on

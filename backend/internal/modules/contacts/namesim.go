@@ -12,6 +12,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The string metric behind the dedupe fuzzy tier (PO-F-1/PO-F-2
@@ -143,8 +144,20 @@ func dropAccents(decomposed string) string {
 // Deliberately not normalizeName itself, which also feeds nameSimilarity:
 // that input is pinned by PO-PARAM-JW-2 so the spec's worked examples stay
 // reproducible against this code.
-func NormalizeContactName(s string) string {
-	return strings.Join(strings.Fields(normalizeName(s)), " ")
+func NormalizeContactName(s string) string { return foldedNameKey(s) }
+
+// foldedNameKey is the key both dedupe lanes compare on: normalizeName's fold
+// and unaccent, the ASCII apostrophe, and a collapse of internal whitespace.
+//
+// EXACTLY the ASCII apostrophe, because that is what the SQL arm in front of
+// this removes. Folding the typographic one as well would make the key call
+// equal a pair that arm does not admit, and the arm owes reachability for every
+// Go-equal pair — TestTheNameKeyArmAdmitsEveryGoEqualPair fails in that
+// direction, which is the one that loses a duplicate silently.
+//
+// One helper because the contact lane and the company lane ask one question.
+func foldedNameKey(s string) string {
+	return collapseSpaces(strings.ReplaceAll(normalizeName(s), "'", ""))
 }
 
 // NormalizeCompanyName is normalizeName plus the PO-PARAM-1 legal-suffix
@@ -221,10 +234,7 @@ const nameScoringMaxRunes = 256
 // past the bound score as identical, which for names this long is the same
 // answer any metric would give.
 func boundedForScoring(s string) string {
-	if r := []rune(s); len(r) > nameScoringMaxRunes {
-		return string(r[:nameScoringMaxRunes])
-	}
-	return s
+	return textcut.Runes(s, nameScoringMaxRunes)
 }
 
 func jaroWinkler(a, b string) float64 {
@@ -252,10 +262,7 @@ func jaro(a, b string) float64 {
 		return 0
 	}
 
-	window := max(len(ra), len(rb))/2 - 1
-	if window < 0 {
-		window = 0
-	}
+	window := max(max(len(ra), len(rb))/2-1, 0)
 
 	matchedA := make([]bool, len(ra))
 	matchedB := make([]bool, len(rb))

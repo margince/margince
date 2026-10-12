@@ -284,6 +284,7 @@ function MessageAudience({
         open={open}
         onClose={() => setOpen(false)}
         title={t("compose.audienceTitle")}
+        intent="form"
         confirmLabel={t("compose.audienceConfirm")}
         confirmDisabled={
           unchanged || (choice === "selected" && members.length === 0)

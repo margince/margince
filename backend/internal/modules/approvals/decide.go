@@ -19,10 +19,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AlreadyDecidedError maps to 409.
+// AlreadyDecidedError answers 409 already_decided on every surface: it
+// unwraps to ErrConflict for the status and carries the code through the
+// shared taxonomy, so the REST and MCP doors cannot word it differently.
 type AlreadyDecidedError struct{ Status string }
 
 func (e *AlreadyDecidedError) Error() string { return "approval is already " + e.Status }
+
+// MessageFault names the standing verdict so a caller can branch on the code.
+func (e *AlreadyDecidedError) MessageFault() (code, message string) {
+	return "already_decided", e.Error()
+}
+
+func (e *AlreadyDecidedError) Unwrap() error { return apperrors.ErrConflict }
 
 // InvalidEditError maps to 422: an edited payload that is not a JSON
 // object cannot be canonicalized, so it cannot become an authority.
@@ -62,10 +71,16 @@ func (s *Service) Decide(ctx context.Context, id ids.ApprovalID, approve bool, r
 // principal, so the stores' own RBAC and row-scope gates cannot be relied on
 // to re-check what the human wrote.
 func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited json.RawMessage) (row, error) {
+	return s.DecideEditedFor(ctx, id, edited, nil)
+}
+
+// DecideEditedFor is DecideEdited with the approver's reason, which is recorded
+// with the decision as a rejection's is.
+func (s *Service) DecideEditedFor(ctx context.Context, id ids.ApprovalID, edited json.RawMessage, reason *string) (row, error) {
 	if len(edited) == 0 {
 		return row{}, &InvalidEditError{Cause: errors.New("empty payload")}
 	}
-	return s.recordDecision(ctx, id, true, nil, edited, decidedByContact)
+	return s.recordDecision(ctx, id, true, reason, edited, decidedByContact)
 }
 
 // decider says whether a contact answered this or the product applied it under
@@ -144,12 +159,28 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 	}
 	a, err := s.Get(ctx, id)
 	if err != nil {
-		// Not this function's refusal to make. The decision below re-reads the
-		// row under its own authority gate and answers about scope, existence
-		// and status there; answering here would decide the same question from
-		// the place with less context, and would turn a 404 into whatever this
-		// path happened to return.
-		return nil //nolint:nilerr // the decision re-reads and refuses properly
+		// Refused here too, with Get's own gated answer. Passing on would let a
+		// card that becomes decidable between this read and the decision be
+		// approved with its precheck never run, and an edit the precheck would
+		// refuse would land.
+		return err
+	}
+	// A decided card is answered as decided, before the kind's precheck runs.
+	// The precheck asks whether the effect COULD run.
+	//
+	// Without this, a stale second click on a rejected draft is told to
+	// reconnect a mailbox that is not the problem.
+	//
+	// The refusal inside the transaction is still the authority. This is the
+	// same question asked early, so the answer names the card's state rather
+	// than the estate's.
+	// An approved row still owed its effect passes on to the re-drive, whose
+	// effect asks every question of its write again (effectIsStillOwed).
+	if st := a.effectiveStatus(s.now()); st != "pending" {
+		if st == approvalStatusApproved && s.owesItsEffect(a) {
+			return nil
+		}
+		return &AlreadyDecidedError{Status: st}
 	}
 	check, ok := s.prechecks[a.Kind]
 	if !ok || !serverProposed(a) {
@@ -163,7 +194,7 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 }
 
 // countIfAContactDecided records the track record, and records nothing for an
-// automatic apply.
+// automatic apply or for a release an agent carried, which the human never saw.
 //
 // The counters are one contact's experience of one kind, and the clean-approval
 // column is the one a promotion offer is read from — so a pass running every
@@ -171,13 +202,13 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 // evidence that they keep agreeing, about proposals they never saw. The ladder
 // is climbed by decisions, not by the automation a previous rung enabled.
 func countIfAContactDecided(
-	ctx context.Context, tx pgx.Tx, userID ids.UUID, kind string,
+	ctx context.Context, tx pgx.Tx, p principal.Principal, kind string,
 	approve bool, edited json.RawMessage, by decider,
 ) error {
-	if by != decidedByContact {
+	if by != decidedByContact || p.Type == principal.PrincipalAgent {
 		return nil
 	}
-	return countDecisionTx(ctx, tx, userID, kind, decisionOutcomeOf(approve, edited))
+	return countDecisionTx(ctx, tx, p.UserID, kind, decisionOutcomeOf(approve, edited))
 }
 
 // landEditedPayload writes a modify-then-approve edit, and refuses the one kind
@@ -234,8 +265,15 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// this module keeps everywhere. Before the status check, because what a
 	// credential may release is a question about the credential and not about
 	// how far this particular proposal has got.
-	if err := agentMayDecide(p, a, approve); err != nil {
+	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)); err != nil {
 		return row{}, err
+	}
+	// An agent never edits what it releases, whoever staged it: what a credential
+	// may release is judged on the staged payload, so an edit would release
+	// something that was never classified. The contact edits in the CRM.
+	if p.Type == principal.PrincipalAgent && edited != nil {
+		return row{}, fmt.Errorf("an agent never edits what it releases; the contact edits and "+
+			"releases it in the CRM: %w", apperrors.ErrPermissionDenied)
 	}
 	if st := a.effectiveStatus(s.now()); st != "pending" {
 		// The ROW travels with the refusal. recordDecision has to tell an
@@ -245,6 +283,12 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		// is the answer that decides whether a human's yes is honoured or
 		// refused.
 		return a, &AlreadyDecidedError{Status: st}
+	}
+	// A retired kind is governed only so its decided cards stay readable;
+	// nothing applies it, so a yes would be recorded and do nothing.
+	if approve && retiredKinds[a.Kind] {
+		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
+			a.Kind, apperrors.ErrConflict)
 	}
 
 	status, action, verdict := approvalStatusRejected, "reject", approvalStatusRejected
@@ -283,7 +327,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// transaction as the decision it counts. A counter that could outlive a
 	// rolled-back approval would offer a rep autonomy on evidence of a decision
 	// they never made.
-	if err := countIfAContactDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
+	if err := countIfAContactDecided(ctx, tx, p, a.Kind, approve, edited, by); err != nil {
 		return row{}, err
 	}
 	// An approval's whole content is a state transition, so the images are the

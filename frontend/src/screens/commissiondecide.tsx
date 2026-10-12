@@ -2,18 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { Button, Field, Modal, Textarea } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
+import { Button, Field, Textarea } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { isVersionSkew, ProblemError, throwProblem } from "./common";
-import "./commissiondecide.css";
+import { isVersionSkewOf, problemMessageOf, unwrap } from "./common";
 import "./common.css";
 
 // Moving one commission entry through the ledger's lifecycle.
@@ -84,24 +82,22 @@ async function decide(
   decision: Decision,
   reason: string,
 ): Promise<CommissionEntry> {
-  const { data, error } = await api.POST("/commissions/{id}/decide", {
-    params: {
-      path: { id: entry.id },
-      // The entry carries its own version, so two contacts deciding the same
-      // row at once get a 409 rather than the second one silently winning.
-      ...ifMatch(entry.version ?? 0),
-    },
-    body: {
-      decision,
-      // Only void takes a reason, and the server requires it. Sending an
-      // empty string on the other two would be a value nobody asked for.
-      ...(decision === "void" ? { reason } : {}),
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/commissions/{id}/decide", {
+      params: {
+        path: { id: entry.id },
+        // The entry carries its own version, so two contacts deciding the same
+        // row at once get a 409 rather than the second one silently winning.
+        ...ifMatch(entry.version ?? 0),
+      },
+      body: {
+        decision,
+        // Only void takes a reason, and the server requires it. Sending an
+        // empty string on the other two would be a value nobody asked for.
+        ...(decision === "void" ? { reason } : {}),
+      },
+    }),
+  );
 }
 
 /**
@@ -124,7 +120,6 @@ export function CommissionDecision({
   const t = useT();
   const { show: showToast } = useToast();
   const queryClient = useQueryClient();
-  const headingId = useId();
   const [open, setOpen] = useState(false);
   // Where focus goes when the dialog closes. On success the row re-renders
   // into its new status and the verb that opened this is gone, so without a
@@ -148,7 +143,7 @@ export function CommissionDecision({
       // so the retry carries the version the server now holds, and say what
       // happened rather than showing the server's own "apply commission
       // decision: version skew".
-      if (err instanceof ProblemError && isVersionSkew(err.problem)) {
+      if (isVersionSkewOf(err)) {
         queryClient.invalidateQueries({
           queryKey: ["partner-commissions", companyId],
         });
@@ -169,6 +164,11 @@ export function CommissionDecision({
     },
   });
 
+  function refusal(): string | null {
+    if (!mutation.isError) return null;
+    return problemMessageOf(mutation.error, t);
+  }
+
   function submit() {
     if (needsReason && !reasonGiven) {
       setShowReasonFault(true);
@@ -187,7 +187,7 @@ export function CommissionDecision({
       >
         {t(copy.label)}
       </Button>
-      <Modal
+      <ConfirmModal
         open={open}
         // A write in flight refuses the dismissal too, not only the Cancel
         // button. Escape and the backdrop reach past a disabled button, and
@@ -200,59 +200,40 @@ export function CommissionDecision({
             setOpen(false);
           }
         }}
-        labelledBy={headingId}
+        title={t(copy.label)}
+        confirmLabel={t(copy.label)}
+        confirmVariant={decision === "void" ? "danger" : "primary"}
+        onConfirm={submit}
+        pending={mutation.isPending}
+        error={refusal()}
         // On success the row re-renders into its new status and the verb that
         // opened this is gone, so a keyboard reader would be dropped to the
         // top of the document without a named target.
         returnFocusTo={() => triggerRef.current}
       >
-        <Heading size="large" id={headingId} className="t-h2 modal-title">
-          {t(copy.label)}
-        </Heading>
-        <p className="commissiondecide-confirm">{t(copy.confirm)}</p>
+        <p>{t(copy.confirm)}</p>
         {needsReason && (
-          <div className="commissiondecide-reason">
-            <Field
-              label={t("commission.decide.reasonLabel")}
-              required
-              error={
-                showReasonFault && !reasonGiven
-                  ? t("commission.decide.reasonRequired")
-                  : undefined
-              }
-            >
-              {(control) => (
-                <Textarea
-                  {...control}
-                  value={reason}
-                  rows={3}
-                  onChange={(e) => setReason(e.target.value)}
-                  data-testid="commission-void-reason"
-                />
-              )}
-            </Field>
-          </div>
-        )}
-        {mutation.error instanceof ProblemError &&
-        isVersionSkew(mutation.error.problem) ? (
-          <ErrorLine>{t("edit.versionSkew")}</ErrorLine>
-        ) : (
-          <ErrorLine error={mutation.error} />
-        )}
-        <div className="actions">
-          <Button onClick={() => setOpen(false)} disabled={mutation.isPending}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant={decision === "void" ? "danger" : "primary"}
-            onClick={submit}
-            pending={mutation.isPending}
-            data-testid={`commission-${decision}-confirm`}
+          <Field
+            label={t("commission.decide.reasonLabel")}
+            required
+            error={
+              showReasonFault && !reasonGiven
+                ? t("commission.decide.reasonRequired")
+                : undefined
+            }
           >
-            {t(copy.label)}
-          </Button>
-        </div>
-      </Modal>
+            {(control) => (
+              <Textarea
+                {...control}
+                value={reason}
+                rows={3}
+                onChange={(e) => setReason(e.target.value)}
+                data-testid="commission-void-reason"
+              />
+            )}
+          </Field>
+        )}
+      </ConfirmModal>
     </>
   );
 }

@@ -57,6 +57,24 @@ const (
 // same event, which is why this is an alias rather than a second literal.
 const ExceptionConditionCleared = OutcomeConditionCleared
 
+// ExceptionSubjectDeparted is a finding whose SUBJECT left the eligible set:
+// the deal was won, lost or archived. Not an outcome a contact can give and not
+// one the scan gives about the condition — nothing was answered and nothing
+// cleared, the record stopped being checkable. It has no resolution-row twin,
+// so it is a status constant rather than an alias like the one above.
+const ExceptionSubjectDeparted = "subject_departed"
+
+// reopenableStatuses are the closings NOBODY ANSWERED, as a SQL literal list
+// for the upsert's CASE arms. A finding in one of them is reopened by
+// re-detection: the scan closed it, so the scan may open it again. Resolved and
+// expired are absent because a contact's answer and an aged-out finding are
+// both decisions that re-detection must not quietly undo.
+//
+// Spelled from the constants rather than written into the statement, because a
+// status that stopped being reopenable here while staying closable elsewhere
+// would strand its findings with nothing failing.
+const reopenableStatuses = `'` + ExceptionConditionCleared + `', '` + ExceptionSubjectDeparted + `'`
+
 // Source coverage states.
 const (
 	CoverageChecked           = "checked"
@@ -187,18 +205,21 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		ON CONFLICT (logical_key) DO UPDATE
 		SET last_seen_at = now(),
 		    updated_at = now(),
-		    -- A cleared row REOPENS on re-detection: the scan closed it because
-		    -- the condition left the record, so the condition being back is a
-		    -- new fact for a contact. A resolved row does not — somebody
-		    -- answered that one, and re-detection must not un-ask them.
-		    status = CASE WHEN assurance_exception.status = 'condition_cleared'
+		    -- A row CLOSED WITHOUT AN ANSWER reopens on re-detection: the scan
+		    -- closed it because the condition left the record, or because the
+		    -- record left the eligible set, and neither is a decision anybody
+		    -- made. A deal that is restored or reopened is walked again, so its
+		    -- old finding is the same finding and not a second one. A resolved
+		    -- row does not reopen — somebody answered that one, and
+		    -- re-detection must not un-ask them.
+		    status = CASE WHEN assurance_exception.status IN (`+reopenableStatuses+`)
 		                  THEN 'open' ELSE assurance_exception.status END,
 		    -- Only while it is still somebody's problem. A resolved row keeps
 		    -- the value it was resolved against, which is what lets a later
 		    -- scan tell "still true" from "changed since you answered".
-		    observed = CASE WHEN assurance_exception.status IN ('open', 'condition_cleared')
+		    observed = CASE WHEN assurance_exception.status IN ('open', `+reopenableStatuses+`)
 		                    THEN EXCLUDED.observed ELSE assurance_exception.observed END,
-		    severity = CASE WHEN assurance_exception.status IN ('open', 'condition_cleared')
+		    severity = CASE WHEN assurance_exception.status IN ('open', `+reopenableStatuses+`)
 		                    THEN EXCLUDED.severity ELSE assurance_exception.severity END`,
 		LogicalKey(f), f.Type, subjectID, claim, observed,
 		f.Severity, f.AffectedMinor, nullIfEmpty(f.Currency),
@@ -206,64 +227,6 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		return fmt.Errorf("assurance: recording the finding: %w", err)
 	}
 	return nil
-}
-
-// CloseCleared closes every open finding of the named types, on the named
-// subjects, that this pass no longer observes. Both bounds carry meaning: the
-// types are the rules whose required sources were actually read tonight — for
-// the others "not observed" means "not looked" — and the subjects are the
-// deals this pass actually evaluated, because absence is only a fact about
-// what was walked. A deal that left the eligible set is deliberately NOT
-// cleared here; its findings are a different question with a different answer.
-//
-// A finding under a LIVE deferral is left alone: "remind me next week" is an
-// answer about when, and a condition that dips out for one night — a push
-// count rolling off its window does this on its own — must not eat the
-// reminder. If the condition is truly gone next week, the reminder fires over
-// a clean record and clears then.
-//
-// No per-finding resolution row is written: assurance_resolution attributes an
-// answer to a contact (actor_id is NOT NULL because an answer is BY somebody),
-// and the scan is not one. The night's clearing is recorded once, on the run's
-// own audit row, where FinishRun carries the cleared count.
-func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, subjects, seen []string) (int64, error) {
-	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
-		return 0, err
-	}
-	if len(types) == 0 || len(subjects) == 0 {
-		return 0, nil
-	}
-	if seen == nil {
-		// A pass that found NOTHING has an empty seen set, not an absent one.
-		// pgx encodes a nil slice as SQL NULL, and `NOT (x = ANY(NULL))` is
-		// NULL — which silently filters every row and clears nothing, on
-		// exactly the night everything should clear.
-		seen = []string{}
-	}
-	// The deferral carve-out compares against OutcomeRemindLater, spelled from
-	// the constant rather than written into the SQL. It read 'deferred' until
-	// this fix — the vocabulary this table shipped with, renamed by migration
-	// 1788416000 before any row existed — so the clause matched nothing and a
-	// deferred finding cleared like any other. A literal here agrees with the
-	// writer only until somebody renames an outcome, which is exactly what
-	// happened.
-	tag, err := tx.Exec(ctx, `
-		UPDATE assurance_exception
-		SET status = $1, updated_at = now()
-		WHERE status = 'open'
-		  AND subject_kind = 'deal'
-		  AND subject_id = ANY($2::uuid[])
-		  AND type = ANY($3)
-		  AND NOT (logical_key = ANY($4))
-		  AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
-		                   WHERE r.exception_id = assurance_exception.id
-		                     AND r.outcome = $5
-		                     AND r.remind_at > now())`,
-		ExceptionConditionCleared, subjects, types, seen, OutcomeRemindLater)
-	if err != nil {
-		return 0, fmt.Errorf("assurance: closing cleared findings: %w", err)
-	}
-	return tag.RowsAffected(), nil
 }
 
 // FinishRun closes a pass with what it found and what it could reach.

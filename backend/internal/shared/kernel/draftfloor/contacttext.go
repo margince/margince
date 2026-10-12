@@ -81,6 +81,23 @@ func FirstName(full string) string {
 	return fields[0]
 }
 
+// GreetingName is the name a greeting to a colleague uses: the greeting name
+// they chose when there is one, else the first word of their display name,
+// which is wrong for "Dr. Sofia Meier" and for a family name written first.
+// The screen applies the same rule in frontend/src/format/greetingname.ts.
+func GreetingName(greeting, display string) string {
+	if chosen := NameLine(greeting); chosen != "" {
+		return chosen
+	}
+	return FirstName(display)
+}
+
+// NameLine is a typed name as one line: every run of whitespace, line breaks
+// included, becomes one space, so "Sofia\nP.S." stays two words.
+func NameLine(name string) string {
+	return OneLine(strings.Join(strings.Fields(name), " "))
+}
+
 // NamesContact reports whether the text names somebody, as a WORD.
 //
 // Two things a plain Contains gets wrong, in opposite directions. It is

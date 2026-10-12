@@ -108,7 +108,11 @@ describe("the header's core record verbs — edit, merge, archive", () => {
     });
 
     await pressRecordVerb("archive-record");
-    await userEvent.click(await screen.findByTestId("archive-confirm"));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
 
     await waitFor(() => expect(archived).toBe(true));
   });

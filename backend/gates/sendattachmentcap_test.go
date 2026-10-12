@@ -5,7 +5,8 @@
 
 package gates
 
-// The attachment-per-message cap as a fitness function.
+// The attachment-per-message cap is the same number in the contract, the send's
+// Go bound and each sending connector's carriage.
 //
 // The number appears in five places and NOTHING makes them agree: `maxItems` on
 // three request schemas in the contract, prose in the channel directory's

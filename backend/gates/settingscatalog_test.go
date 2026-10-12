@@ -5,7 +5,9 @@
 
 package gates
 
-// The settings-catalog fitness gates (ADR-0090/A135 §7). Moving a setting's
+// Every registered setting key is unique, well-formed and governed, names the
+// module that declares it, and does not also exist in margince.yaml's runtime
+// surface. Moving a setting's
 // validation out of Postgres and into Go is only sound if the obligations the
 // CHECK constraints used to carry are DERIVED from the system rather than
 // maintained as a list somebody remembers to update. These three tests are

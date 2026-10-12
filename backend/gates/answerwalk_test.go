@@ -17,6 +17,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -30,10 +31,11 @@ const answerWalkOwner = "internal/modules/activities/answered.go:threadAnswerArm
 // answerWalksAdmitted are the thread walks that ask something other than
 // "was this inbound answered", keyed by file and declaration.
 var answerWalksAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/awaitingreply.go:awaitingRepliesSQL": "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
 	answerWalkOwner: "the thread arm of the one answer: every surface that shows needs-reply, a waiting row, request review or the response time reads it through answeredSQL or firstAnswerAtSQL",
 	"internal/modules/activities/waitingsql.go:waitingRepliesSQL":           "the Engaged column asks whether we wrote on the thread BEFORE the message arrived, to rank the row; it is reported, never used to hide one",
-	"internal/modules/activities/ourownoutbound.go:ourOutboundInThisThread": "the settlement pass and the owed-verdict prior message find OUR attested message to one correspondent, to stamp what a request was judged through or to show the model what we last wrote. A reply settles no request by itself, so this decides no badge and no lane row; widening the settlement evidence to the answer arms changes that AI task's inputs and ships with its re-certification",
-	"internal/compose/requestsettle.go:requestConversation":                 "reads the request and the messages after it, both directions, bound to one attested correspondent, as the settlement model's evidence; it answers nothing itself",
+	"internal/modules/activities/ourownoutbound.go:ourOutboundInThisThread": "the settlement pass and the owed-verdict prior message find OUR attested message to one correspondent, to stamp what a request was judged through or to show the model what we last wrote. A reply settles no request by itself, so this decides no badge and no lane row; the settlement's answers off the thread come from answered.go's own arms",
+	"internal/compose/requestsettle.go:conversationRows":                    "reads the request and the messages after it, both directions, bound to one attested correspondent, as the settlement model's evidence, or the one such message a verdict is recorded through; it answers nothing itself",
 	"internal/modules/capture/sinkreply.go:emitReply":                       "capture's reply formula: an inbound on a thread we wrote on is a reply for the engagement score, whichever came first; a question about the counterparty, not about whether this message is owed",
 	"internal/modules/capture/correspondencegate.go:wroteOnTwoThreadsTx":    "counts the separate threads we wrote to one address on, as evidence of a relationship for the first-time-sender gate; it reads no inbound and answers nothing",
 	"internal/modules/capture/correspondencegate.go:wroteBackTx":            "the first-time-sender gate asks whether the workspace has a conversation with this address on this thread at all, deliberately unordered in time so a post-dated Date header cannot defeat it; not whether one message was answered",
@@ -72,11 +74,8 @@ func answerWalkSites(path string, file *ast.File) []string {
 	var sites []string
 	for _, decl := range file.Decls {
 		name := declarationName(decl)
-		for _, sql := range gatekit.SQLStatementsOf(decl) {
-			if walksForOutbound(sql) {
-				sites = append(sites, path+":"+name)
-				break
-			}
+		if slices.ContainsFunc(gatekit.SQLStatementsOf(decl), walksForOutbound) {
+			sites = append(sites, path+":"+name)
 		}
 	}
 	return sites

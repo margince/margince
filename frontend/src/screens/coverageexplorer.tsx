@@ -9,6 +9,7 @@ import {
   Skeleton,
   TableScroll,
 } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { forReader } from "../format/collate";
@@ -82,12 +83,16 @@ export function CoverageExplorer({
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={titleId}
-        size="wide"
+        intent="drawer"
       >
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {t("acctCoverage.title")}
-        </Heading>
-        {everOpened && <CoverageGrid companyId={companyId} />}
+        <DrawerHead>
+          <Heading size="large" id={titleId} className="t-h2">
+            {t("acctCoverage.title")}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          {everOpened && <CoverageGrid companyId={companyId} />}
+        </DrawerBody>
       </Modal>
     </>
   );

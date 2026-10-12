@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { ContactBriefCard } from "./contactbrief";
@@ -1204,14 +1205,8 @@ export const RailUnsetFields: Story = {
 
 // --- Brief states: the band's populated and empty readings side by side ----
 
-// A record with no open deal, no committed loop and no captured priority —
-// the reading the band exists for, where the three panels below it would
-// otherwise each repeat the same "nothing here" three times over.
-//
-// `commercial` is PRESENT and empty rather than absent, which is the whole
-// distinction: the section arrives with a null deal when there is none to
-// show, and arrives not at all when the reader may not see deals. Dropping it
-// here would make an empty record claim a permission boundary.
+// No open deal, loop or priority: the reading the band exists for.
+// `commercial` is PRESENT and empty; absent would claim a permission boundary.
 const emptyBand: View = {
   ...populated,
   commercial: { role: null, committee: [] },
@@ -1566,20 +1561,30 @@ export const OverviewGaps: Story = {
 
 // --- Drawers: the surfaces the page opens over itself ------------------------
 //
-// Each renders `open`, since a closed drawer paints nothing and would capture as
-// a blank frame — the point of these stories is the drawer itself.
-//
-// Writing to the contact is NOT among them: it is the one composer every record
-// in the product opens, and its stories live with it in compose.stories.tsx.
-// There were two for a while, and the page picking between them by transport is
-// what this retired.
+// Each renders open, since a closed drawer paints nothing. Writing to the
+// contact is the one composer every record opens: compose.stories.tsx.
 
-// The research drawer under ADR-0096 D4's supported configuration: no
-// provider is registered. `providerProfile` is PRESENT with state
-// "not_connected" rather than absent — absent means the caller lacks the
-// grant, and this reader has one; there is simply no provider behind it to
-// report on, which is a fact about the deployment and not a permission
-// boundary.
+const opensDialog = (name: string) => async () => {
+  await userEvent.click(await screen.findByRole("button", { name }));
+  await screen.findByRole("dialog");
+};
+
+export const ConsentDrawer: Story = {
+  name: "Page · consent drawer",
+  render: () => <Page />,
+  play: opensDialog("Manage consent and proof history"),
+};
+
+export const DetailsOnPhone: Story = {
+  name: "Page · details on a phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <Page />,
+  play: opensDialog("Show details and permissions"),
+};
+
+// No provider is registered. The profile is PRESENT as "not_connected": absent
+// would mean the reader lacks the grant, which is a different fact.
 const providerNotConnected: components["schemas"]["ContactProviderProfile"] = {
   provider: "surfe",
   state: "not_connected",
@@ -1801,10 +1806,7 @@ export const MeetingBrief: Story = {
 };
 
 // --- Provider section: the not-configured state -----------------------------
-//
-// The state a stack with no provider key actually renders (PI-AC-9) — the
-// server answers 501 code:not_implemented, the same shape connectors.tsx
-// stubs for a connector nobody wired.
+// No provider key: the server answers 501 code:not_implemented.
 export const ProviderNotConfigured: Story = {
   render: () => {
     installFetchStub({
@@ -1825,11 +1827,8 @@ export const ProviderNotConfigured: Story = {
 
 // --- The tabs beside Overview -----------------------------------------------
 //
-// Each of the three reads the SAME 360 the overview reads, so a tab can never
-// show a record the tab beside it is withholding. Both fixtures are rendered
-// for each: what a permitted reader sees, and what a reader whose grant does
-// not reach the section sees — the withheld half is the one a stubbed empty
-// state would silently misreport as "there is none".
+// Each reads the overview's 360, permitted and withheld: the withheld half is
+// the one a stubbed empty state would misreport as "there is none".
 
 // Tabs read the session for viewer attribution and available actions.
 function tabViewer(): void {

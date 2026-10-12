@@ -94,8 +94,9 @@ func troubledLine(run automation.TroubledAutomationRun) crmcontracts.MagicLine {
 			Values: &values,
 		},
 		Entity: &crmcontracts.MagicEntityRef{
-			Type: "automation",
-			Id:   openapi_types.UUID(run.AutomationID.UUID),
+			Type:  "automation",
+			Id:    openapi_types.UUID(run.AutomationID.UUID),
+			Label: &run.Name,
 		},
 		Consequence: &consequence,
 		Actor: crmcontracts.MagicActor{

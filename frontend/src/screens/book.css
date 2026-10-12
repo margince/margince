@@ -110,7 +110,108 @@
   }
 }
 
-.book-mode {
-  margin-block: var(--space-5);
-  max-width: 360px;
+.book-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: var(--gapCards);
+  align-items: start;
+  margin-top: var(--space-5);
+}
+.book-picker,
+.book-review {
+  display: grid;
+  gap: var(--space-4);
+}
+.book-picker-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.book-picker-bar > fieldset {
+  margin-inline-start: auto;
+}
+.book-picker-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+  padding-top: var(--space-3);
+}
+.book-picks {
+  display: grid;
+  gap: var(--space-2);
+}
+.book-picks-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.book-picks-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.book-picks-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--accentLight);
+}
+@media (max-width: 900px) {
+  .book-compose {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.meeting-quicklink {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--padCard);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+/* The trailing action keeps to the end edge even on a line of its own, where
+   space-between would put a lone item at the start. */
+.book-picker-foot > .btn,
+.meeting-quicklink > .btn {
+  margin-inline-start: auto;
+}
+.meeting-quicklink-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.meeting-quicklink-url {
+  overflow-wrap: anywhere;
+}
+.meeting-checklist {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.meeting-checklist li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.meeting-checklist svg {
+  width: var(--controlIcon);
+  height: var(--controlIcon);
+  flex-shrink: 0;
+}
+.meeting-checklist li[data-done="true"] {
+  color: var(--textSecondary);
 }

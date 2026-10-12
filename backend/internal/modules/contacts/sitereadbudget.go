@@ -13,10 +13,18 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 )
 
-// BudgetDeferredSiteReads shares the status/recovery predicate for saved reads.
-const BudgetDeferredSiteReads = "status = 'deferred' AND status_code = 'budget_deferred' AND next_attempt_at IS NOT NULL"
+const deferredSiteReads = "status = 'deferred' AND status_code = 'budget_deferred' AND next_attempt_at IS NOT NULL"
+
+// BudgetDeferredSiteReads shares the status/recovery predicate for saved reads
+// a budget raise would resume; a read waiting on the provider is not among them.
+const BudgetDeferredSiteReads = deferredSiteReads + " AND " + providerwait.NotClause
+
+// ProviderDeferredSiteReads selects saved reads waiting for the provider's next
+// probe, which resume by themselves and which a budget raise does not wake.
+const ProviderDeferredSiteReads = deferredSiteReads + " AND " + providerwait.Clause
 
 // BudgetReadResume binds queue recovery to the original dossier and requester.
 type BudgetReadResume func(context.Context, pgx.Tx, BudgetRead) (bool, error)
@@ -34,7 +42,7 @@ func (s *Store) ResumeBudgetReads(ctx context.Context, resume BudgetReadResume) 
 			return nil, err
 		}
 		return pgx.CollectRows(rows, pgx.RowToStructByPos[BudgetRead])
-	}, func(row BudgetRead) ids.UUID { return row.ID }, func(tx pgx.Tx, row BudgetRead) error {
+	}, func(row BudgetRead) ids.UUID { return row.ID }, func(ctx context.Context, tx pgx.Tx, row BudgetRead) error {
 		// The recovery caller and the original requester are separate principals;
 		// the callback checks the latter before it advances the job.
 		if err := RequireSiteReadAuthority(ctx, tx, row.CompanyID, row.TargetKind); err != nil {

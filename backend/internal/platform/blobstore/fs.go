@@ -109,7 +109,7 @@ func (f *fsStore) path(tree, key string) (string, error) {
 	if key == "" || strings.HasPrefix(key, "/") || strings.ContainsRune(key, '\\') {
 		return "", fmt.Errorf("%w: %q", ErrInvalidKey, key)
 	}
-	for _, element := range strings.Split(key, "/") {
+	for element := range strings.SplitSeq(key, "/") {
 		// A leading dot covers "." and ".." and one more thing: it is what makes
 		// this store's own scratch distinguishable from an object. countFiles
 		// skips dotfiles so a `.tmp-*` staging file is never counted as an

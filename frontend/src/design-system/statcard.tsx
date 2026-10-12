@@ -99,6 +99,13 @@ function Meter({ filled, total }: Readonly<{ filled: number; total: number }>) {
   );
 }
 
+export const STAT_CARD_TONES = [
+  "info",
+  "success",
+  "warning",
+  "danger",
+] as const;
+
 export function StatCard({
   label,
   value,
@@ -108,6 +115,7 @@ export function StatCard({
   source,
   alert,
   onOpen,
+  href,
   meter,
   narrow,
 }: Readonly<{
@@ -122,6 +130,10 @@ export function StatCard({
   // ONE control and not two — the basis trigger layers above it and keeps its
   // own press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
+  // The same door as a link, for a reading that names one record.
+  // The card goes to that record's page, which a reader can open in a new tab.
+  // A card given both draws the link.
+  href?: string;
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
   // three signals) and as one filled track when there are not (two of ten
@@ -138,7 +150,7 @@ export function StatCard({
   // directions, and a verdict that is fine reads as fine rather than as one
   // nobody has judged yet. `info` is the reading a job has not finished
   // writing, which is a different thing from one nobody has judged.
-  tone?: "info" | "success" | "warning" | "danger";
+  tone?: (typeof STAT_CARD_TONES)[number];
   // Where the figure came from, named on the card that shows it. A money
   // reading a reader cannot trace is one they must verify elsewhere.
   source?: ReactNode;
@@ -172,7 +184,9 @@ export function StatCard({
     .filter(Boolean)
     .join(" ");
   return (
-    <section className={cardClass}>
+    // The full figure on hover, on the CARD: the door's overlay covers the value,
+    // and a tooltip shows the nearest title above the pointer.
+    <section className={cardClass} title={value}>
       <span className="stat-card-label">
         {/* Its own box, so a clamp on the name spares the badge and trigger. */}
         <span className="stat-card-label-text" id={labelId}>
@@ -215,27 +229,52 @@ export function StatCard({
       {/* THE CARD'S FOOT: the way out, at the end of the card a reader
           finishes on rather than up beside the reading's name, where it
           competed with the label for the first glance. */}
-      {onOpen && (
+      {(href || onOpen) && (
         <span className="stat-card-foot">
           {/* THE DOOR SAYS "Open", ALWAYS. One word for one control: a caller
               naming its own destination gave the product several spellings of
               the same door, and the reading a door belongs to is already said
               beside it. Which reading it opens reaches a screen reader as this
-              button's DESCRIPTION — folded into the NAME it read "Open Open
+              door's DESCRIPTION — folded into the NAME it read "Open Open
               pipeline", so it is `aria-describedby` and never the word. */}
-          <button
-            type="button"
-            className="stat-card-open"
-            onClick={onOpen}
-            aria-describedby={labelId}
-          >
+          <Door href={href} onOpen={onOpen} describedBy={labelId}>
             {t("stat.open")}
             <span className="stat-card-arrow" aria-hidden="true">
               {"\u2192"}
             </span>
-          </button>
+          </Door>
         </span>
       )}
     </section>
+  );
+}
+
+function Door({
+  href,
+  onOpen,
+  describedBy,
+  children,
+}: Readonly<{
+  href?: string;
+  onOpen?: () => void;
+  describedBy: string;
+  children: ReactNode;
+}>) {
+  if (href) {
+    return (
+      <a className="stat-card-open" href={href} aria-describedby={describedBy}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="stat-card-open"
+      onClick={onOpen}
+      aria-describedby={describedBy}
+    >
+      {children}
+    </button>
   );
 }

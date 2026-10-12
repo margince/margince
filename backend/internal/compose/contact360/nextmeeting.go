@@ -17,7 +17,6 @@ package contact360
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -26,14 +25,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// meetingParticipantCap bounds who is named. This is "who is in the room" for
-// prep, not the attendee list — past a handful the reader is scanning names
-// instead of noticing they are single-threaded.
-const meetingParticipantCap = 8
 
 // nextMeetingSection reads the soonest booked meeting and who is in it.
 //
@@ -52,25 +46,11 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 	if err != nil {
 		return err
 	}
-	participantScope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
+	// Who is in the room and which deal it is about, under the same grants
+	// the Worklist names a next meeting's room with.
+	room, err := activities.MeetingRoomColumns(ctx, arg)
 	if err != nil {
 		return err
-	}
-	if participantScope == "" {
-		participantScope = scopeAll
-	}
-	// The linked deal is a REFERENCE, and it is served as a link the reader is
-	// invited to open — so it carries the deal's own scope, exactly as the
-	// participants beside it carry the contact's. Without it a rep who may see
-	// the meeting is handed the id of a deal whose own read refuses them: a
-	// well-formed answer naming a record they cannot open, which is the whole
-	// failure this pairing exists to prevent.
-	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
-	if err != nil {
-		return err
-	}
-	if dealScope == "" {
-		dealScope = scopeAll
 	}
 
 	var meeting crmcontracts.Contact360NextMeeting
@@ -79,21 +59,7 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 	var dealID *ids.UUID
 	var participants []byte
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.id, a.occurred_at, a.subject,
-		       (SELECT dl.deal_id FROM activity_link dl
-		          JOIN deal d ON d.id = dl.deal_id AND d.archived_at IS NULL
-		         WHERE dl.activity_id = a.id AND (%s) LIMIT 1),
-		       COALESCE((
-		         SELECT json_agg(json_build_object('contact_id', p.id, 'full_name', p.full_name)
-		                         ORDER BY p.full_name, p.id)
-		         FROM (
-		           SELECT DISTINCT ap.contact_id
-		           FROM activity_participant ap
-		           WHERE ap.activity_id = a.id
-		         ) parts
-		         JOIN contact p ON p.id = parts.contact_id AND p.archived_at IS NULL
-		         WHERE %s
-		       ), '[]'::json)
+		SELECT a.id, a.occurred_at, a.subject, %s
 		FROM activity a
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
@@ -101,7 +67,7 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 		  AND `+fmt.Sprintf(contactReachesActivity, bind(linkPos))+`
 		  AND (%s)%s
 		ORDER BY a.occurred_at, a.id
-		LIMIT 1`, dealScope, participantScope, nowPos, scope, projectScope(opts, arg)), args...).
+		LIMIT 1`, room, nowPos, scope, projectScope(opts, arg)), args...).
 		Scan(&activityID, &meeting.StartsAt, &subject, &dealID, &participants)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing booked. That IS the answer, and the strip renders "None".
@@ -113,43 +79,11 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 
 	meeting.ActivityId = openapi_types.UUID(activityID)
 	meeting.Subject = subject
-	if dealID != nil {
-		linked := openapi_types.UUID(*dealID)
-		meeting.LinkedDealId = &linked
-	}
-	attendees, err := decodeParticipants(participants)
+	inRoom, err := activities.ScanMeetingRoom(dealID, participants)
 	if err != nil {
 		return err
 	}
-	meeting.Participants = &attendees
+	inRoom.Onto(&meeting)
 	out.NextMeeting = &meeting
 	return nil
-}
-
-// attendee is one name in the room.
-//
-// It is a type ALIAS, not a definition: the contract types Participants as an
-// anonymous struct, so the decode has to land in exactly that shape and the
-// field spelling is the generator's rather than this package's.
-//
-//nolint:staticcheck // ST1003: ContactId is the generated contract's spelling; renaming it here would not compile against the wire type
-type attendee = struct {
-	ContactId openapi_types.UUID `json:"contact_id"`
-	FullName  string             `json:"full_name"`
-}
-
-// decodeParticipants reads the lateral sub-select's JSON into the wire shape.
-//
-// It is capped here rather than in SQL so the cap is visible beside the type it
-// bounds; the sub-select already carries the row-scope predicate that decides
-// WHICH names may appear at all.
-func decodeParticipants(raw []byte) ([]attendee, error) {
-	var decoded []attendee
-	if err := json.Unmarshal(raw, &decoded); err != nil {
-		return nil, fmt.Errorf("decode the meeting participants: %w", err)
-	}
-	if len(decoded) > meetingParticipantCap {
-		decoded = decoded[:meetingParticipantCap]
-	}
-	return decoded, nil
 }

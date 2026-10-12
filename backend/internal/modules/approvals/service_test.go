@@ -242,7 +242,7 @@ func TestAgentReleaseSpendsTheCapsTheReleaseSpends(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := agentMayDecide(tc.p, row{Kind: tc.kind}, tc.approve)
+			err := agentMayDecide(tc.p, row{Kind: tc.kind}, tc.approve, ownReleaseRefused)
 			if tc.want && err != nil {
 				t.Fatalf("refused: %v", err)
 			}
@@ -264,16 +264,15 @@ func TestAgentReleaseSpendsTheCapsTheReleaseSpends(t *testing.T) {
 // releases put on the wire is a message — one governed on the timeline object.
 // A misspelling fails here rather than silently admitting the send it meant to
 // bound.
-// The rule the whole confirm-first tier rests on: a credential does not release
-// the proposal it made. Without it a passport stages a 🟡 action, approves its
-// own row and re-issues the call, and the confirmation was of nothing.
+// A credential acts for its human, so it releases what that human could — but
+// not its own proposal when the release cannot be taken back, and never a
+// proposal staged for somebody else.
 //
 // It needs its own test rather than a row in the caps table above, because it is
 // the only rule about the PAIRING of a row and a principal — every principal in
 // that table carries a zero PassportID, which short-circuits this condition
-// before it is reached. That is how the rule went untested through several
-// refactors (#2585): the function was covered, this branch of it was not.
-func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
+// before it is reached.
+func TestACredentialReleasesOnlyTheUndoableProposalItMade(t *testing.T) {
 	mine := ids.NewV7()
 	theirs := ids.NewV7()
 	lender := ids.NewV7()
@@ -297,35 +296,40 @@ func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
 		name    string
 		a       row
 		approve bool
+		own     ownRelease
 		want    bool // admitted
 	}{
-		{"the proposer cannot approve its own row", stagedBy(mine, lender), true, false},
+		{"the proposer cannot approve its own irreversible row", stagedBy(mine, lender), true, ownReleaseRefused, false},
+		// A credential acts for its human: a change the human could approve in
+		// the CRM, and could put back afterwards, it may approve itself.
+		{"the proposer approves its own undoable row", stagedBy(mine, lender), true, ownReleaseAllowed, true},
 		// Deliberately allowed: an agent that changes its mind takes its own
 		// request off somebody's desk rather than leaving it there.
-		{"but it may still reject its own row", stagedBy(mine, lender), false, true},
+		{"but it may still reject its own row", stagedBy(mine, lender), false, ownReleaseRefused, true},
 		// Another CREDENTIAL of the same human: the lender could have answered
 		// this in the CRM themselves, so answering it on a second credential they
 		// minted is the same contact answering.
-		{"another credential of the same human it may approve", stagedBy(theirs, lender), true, true},
+		{"another credential of the same human it may approve", stagedBy(theirs, lender), true, ownReleaseRefused, true},
 		// Another CONTACT's, which is the loop the tier exists to stop: two
 		// passports lent by two contacts push a confirm-first action through end to
-		// end and no human ever looks.
-		{"another contact's row it does not approve", stagedBy(theirs, someoneElse), true, false},
-		{"but it may still reject another contact's row", stagedBy(theirs, someoneElse), false, true},
+		// end and no human ever looks. Undoable or not.
+		{"another contact's row it does not approve", stagedBy(theirs, someoneElse), true, ownReleaseRefused, false},
+		{"not even an undoable one", stagedBy(theirs, someoneElse), true, ownReleaseAllowed, false},
+		{"but it may still reject another contact's row", stagedBy(theirs, someoneElse), false, ownReleaseRefused, true},
 		// serverProposed: a row nobody's passport staged is not self-approval,
 		// and one staged on nobody's behalf is the unattended policy apply,
 		// bounded by the owner's own authority rather than by a staging.
-		{"a server-proposed row is nobody's own", row{Kind: "advance_deal"}, true, true},
+		{"a server-proposed row is nobody's own", row{Kind: "advance_deal"}, true, ownReleaseRefused, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := agentMayDecide(proposer, tc.a, tc.approve)
+			err := agentMayDecide(proposer, tc.a, tc.approve, tc.own)
 			if tc.want && err != nil {
 				t.Fatalf("refused a decision it may make: %v", err)
 			}
 			if !tc.want {
 				if err == nil {
-					t.Fatal("a credential released the proposal it made")
+					t.Fatal("a credential released a proposal it may not")
 				}
 				// The SENTINEL, not merely an error: swapping the refusal for an
 				// unrelated internal failure would leave a bare non-nil check
@@ -349,7 +353,7 @@ func TestTheHumanBehindACredentialStillDecidesItsProposal(t *testing.T) {
 	lender := ids.NewV7()
 	passport := ids.From[ids.PassportKind](lender)
 	human := principal.Principal{Type: principal.PrincipalHuman, UserID: lender}
-	if err := agentMayDecide(human, row{Kind: "advance_deal", PassportID: &passport}, true); err != nil {
+	if err := agentMayDecide(human, row{Kind: "advance_deal", PassportID: &passport}, true, ownReleaseRefused); err != nil {
 		t.Fatalf("a human was refused a proposal their own credential staged: %v", err)
 	}
 }

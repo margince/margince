@@ -29,7 +29,7 @@ import { eyebrowKeyFor } from "./worklist.eyebrow";
 import { hasPane, lastTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
-import { contactHref } from "./worklist.row.captions";
+import { contactHref, rowTouch } from "./worklist.row.captions";
 
 import "./brief.feed.css";
 
@@ -204,11 +204,10 @@ export function Triage({
  * it would otherwise open a second page for: when they last wrote, and when
  * we did. Which direction went last is the whole question — a customer we
  * mailed yesterday is answered differently from one nobody has written to
- * since March. The moments come off the contact's own 360 read, the SAME
- * read the pane beside the queue makes and the same words it prints, so the
- * row in hand and the pane cannot describe one relationship two ways; and
- * because it is the same key, opening the pane afterwards costs no request.
- * A record that is not a contact is linked and no moments are claimed.
+ * since March. The moments come off the row itself (`rowTouch`), the pair
+ * every queue row prints in the pane's words, so the row in hand and the
+ * pane cannot describe one relationship two ways. A contact's row and a
+ * company's carry them; any other record is linked and no moments are claimed.
  */
 function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
@@ -220,7 +219,7 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const label = contact?.label ?? item.subject?.label;
   const href = contact?.label ? contactHref(contact) : subjectHref(item);
   if (!label || !href) return null;
-  const touch = lastTouch(contact?.touch, t, locale, viewerZone());
+  const touch = lastTouch(rowTouch(item), t, locale, viewerZone());
   // Where the message sits — the team's inbox, the reader's own — in the
   // access badge's own words, as one more fact about whose row it is.
   const inbox = item.email_summary?.display_status;

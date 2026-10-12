@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type tagRow struct {
@@ -26,17 +27,19 @@ type tagRow struct {
 	Name        string
 	Color       *string
 	Description *string
+	// Suggestible lets the tag scout propose this tag from captured evidence.
+	Suggestible bool
 	Version     int64
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	ArchivedAt  *time.Time
 }
 
-const tagColumns = `id, name, color, description, version, created_at, updated_at, archived_at`
+const tagColumns = `id, name, color, description, suggestible, version, created_at, updated_at, archived_at`
 
 func scanTag(r pgx.Row) (tagRow, error) {
 	var t tagRow
-	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.Description, &t.Version,
+	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.Description, &t.Suggestible, &t.Version,
 		&t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt)
 	return t, err
 }
@@ -52,32 +55,38 @@ func (s *Store) ListTags(ctx context.Context, archived storekit.ArchivedFilter) 
 	var out []tagRow
 	truncated := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		sql := "SELECT " + tagColumns + " FROM tag"
-		if archived != storekit.IncludeArchived {
-			sql += " WHERE archived_at IS NULL"
-		}
-		rows, err := tx.Query(ctx, sql+" ORDER BY lower(name) LIMIT $1", catalogCap+1)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			t, err := scanTag(rows)
-			if err != nil {
-				return err
-			}
-			out = append(out, t)
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if len(out) > catalogCap {
-			out = out[:catalogCap]
-			truncated = true
-		}
-		return nil
+		var err error
+		out, truncated, err = listTagRows(ctx, tx, archived)
+		return err
 	})
 	return out, truncated, err
+}
+
+func listTagRows(ctx context.Context, tx pgx.Tx, archived storekit.ArchivedFilter) ([]tagRow, bool, error) {
+	sql := "SELECT " + tagColumns + " FROM tag"
+	if archived != storekit.IncludeArchived {
+		sql += " WHERE archived_at IS NULL"
+	}
+	rows, err := tx.Query(ctx, sql+" ORDER BY lower(name) LIMIT $1", catalogCap+1)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+	var out []tagRow
+	for rows.Next() {
+		t, err := scanTag(rows)
+		if err != nil {
+			return nil, false, err
+		}
+		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+	if len(out) > catalogCap {
+		return out[:catalogCap], true, nil
+	}
+	return out, false, nil
 }
 
 // CreateTag coins a word. Colour and description are both optional and both
@@ -212,7 +221,7 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 	var out taggableRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var applyErr error
-		out, applyErr = applyTagTx(ctx, tx, tagID, entityType, entityID)
+		out, applyErr = applyTagTx(ctx, tx, tagID, entityType, entityID, nil)
 		return applyErr
 	})
 	return out, err
@@ -238,7 +247,7 @@ func (s *Store) ApplyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, enti
 	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
 		return taggableRow{}, err
 	}
-	return applyTagTx(ctx, tx, tagID, entityType, entityID)
+	return applyTagTx(ctx, tx, tagID, entityType, entityID, nil)
 }
 
 // applyTagTx is the write itself, shared by both entry points above so a change
@@ -247,7 +256,8 @@ func (s *Store) ApplyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, enti
 //
 // The gates are the callers' — each runs them before reaching here, because a
 // transaction is the wrong place to discover a caller had no authority.
-func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) (taggableRow, error) {
+// evidence lands on the audit row: an accepted suggestion names itself there.
+func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID, evidence map[string]any) (taggableRow, error) {
 	var out taggableRow
 	err := func() error {
 		var archived *time.Time
@@ -264,7 +274,7 @@ func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType stri
 		// live-visibility probe first and only narrows with the write arm —
 		// so a record that does not exist or is archived still answers
 		// not-found rather than confirming it exists by refusing differently.
-		if err := auth.EnsureWritableLive(ctx, tx, entityType, entityID); err != nil {
+		if err := holdTagTarget(ctx, tx, entityType, entityID); err != nil {
 			return err
 		}
 		by, byKind := assigningPrincipal(ctx)
@@ -281,88 +291,31 @@ func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType stri
 		if err != nil {
 			return err
 		}
-		_, err = storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{
-			"applied": map[string]any{"entity_type": entityType, "entity_id": entityID},
-		})
+		_, err = auditTagLink(ctx, tx, tagID, tagApplied, linkImage{EntityType: entityType, EntityID: entityID}, evidence)
 		return err
 	}()
 	return out, err
 }
 
-// RemoveTag takes ONE tag off ONE record, leaving the tag itself alone.
-//
-// The vocabulary had no way back. ApplyTag added a tagging and ArchiveTag
-// retired a tag from the whole workspace, so the only way to undo a mistaken
-// tag was to retire the tag for everybody — which is not undo, it is a second
-// mistake with a wider blast radius.
-//
-// Same gates as applying, for the same reasons: the target's own UPDATE
-// object grant, and EnsureWritableLive because taking a tag off a record
-// changes it — a caller who may only see the row must not be able to. A
-// record that does not exist or is archived still answers not-found rather
-// than confirming it exists by refusing differently.
-// Removing a tagging that is not there is NOT an error — the caller asked for
-// a state, and the state is already true (idempotent by intent, which is what
-// makes a retry safe).
-func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType string, entityID ids.UUID) error {
-	if err := httperr.RequireBodyID(entityIDField, entityID); err != nil {
+// holdTagTarget is the row gate of a write that adds a tagging, and it holds the
+// record FOR SHARE until commit. A sender purge locks a contact, asks whether a
+// colleague tagged it, then anonymises it. A tagging that held nothing could
+// commit between that question and the scrub, and be erased with the record.
+func holdTagTarget(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) error {
+	if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
-		return err
-	}
-	if !memberEntityTables[entityType] {
-		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
-	}
-	// UPDATE on the target, the same gate applying holds: taking a tag off a
-	// record changes the record, and a caller who may only read it must not be
-	// able to. This is the OBJECT grant only; the ROW scope is
-	// EnsureWritableLive below.
-	if err := auth.Require(ctx, entityType, principal.ActionUpdate); err != nil {
-		return err
-	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// A RETIRED WORD IS STILL REMOVABLE, which is the one place this differs
-		// from applyTagTx and the reason the archived_at read is not shared with
-		// it. Applying a retired word is coining it again and is refused. Taking
-		// one OFF a record is the cleanup retiring the word left behind, and
-		// refusing it strands the record: recordTagRows returns archived
-		// assignments deliberately — flagged, sorted after the live ones,
-		// "history that belongs after what is current" — so the surface hands a
-		// caller a retired tag and then answered not-found when they tried to
-		// take it off. Nothing else could take it off either, since retiring the
-		// tag is what put it in that state.
-		//
-		// Only a tag that never existed is not-found here.
-		var exists bool
-		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1)`, tagID).Scan(&exists); err != nil {
-			return err
-		}
-		if !exists {
-			return apperrors.ErrNotFound
-		}
-		// Same reasoning as applyTagTx: removing a tag CHANGES the record too,
-		// so the gate is write authority, not merely visibility.
-		if err := auth.EnsureWritableLive(ctx, tx, entityType, entityID); err != nil {
-			return err
-		}
-		tag, err := tx.Exec(ctx, `
-			DELETE FROM taggable WHERE tag_id = $1 AND entity_type = $2 AND entity_id = $3`,
-			tagID, entityType, entityID)
-		if err != nil {
-			return err
-		}
-		// Audited only when something was actually removed: an audit row for a
-		// tagging that was never there describes an event that did not happen.
-		if tag.RowsAffected() == 0 {
-			return nil
-		}
-		_, err = storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{
-			"removed": map[string]any{"entity_type": entityType, "entity_id": entityID},
-		})
-		return err
-	})
+	return auth.EnsureWritableLive(ctx, tx, entityType, entityID)
+}
+
+// The keys a tag audit row files a tagging under.
+const (
+	tagApplied = "applied"
+	tagRemoved = "removed"
+)
+
+func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string, link linkImage, evidence map[string]any) (ids.UUID, error) {
+	return storekit.AuditEventWithEvidence(ctx, tx, "update", "tag", tagID.UUID, map[string]any{change: link}, evidence)
 }
 
 // EnsureTaggable refuses a record this caller may not tag.
@@ -413,7 +366,7 @@ func NormalizeTagName(name string) string {
 // name and an over-long one are the caller's to fix, so both name the field.
 func ValidateTagName(name string) (string, error) {
 	normalized := NormalizeTagName(name)
-	if normalized == "" {
+	if !values.HasVisibleText(normalized) {
 		return "", &BadInputError{Field: "name", Reason: "must not be empty"}
 	}
 	if utf8.RuneCountInString(normalized) > maxTagNameRunes {

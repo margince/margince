@@ -52,10 +52,13 @@
   margin: 0;
 }
 
-/* A table row's verbs, side by side in their own cell. Two screens had spelled
-   this as an inline `style` on the cell's wrapper — the same two lines, twice,
-   in the shape a sheet exists to hold. */
-.listsection-rowverbs {
-  display: flex;
-  gap: var(--space-2);
+/* A price with its period under it keeps the column's end edge, and on a
+   phone card, where figures start at the label, its start edge. */
+.listsection td.lt-num .cell-stack {
+  align-items: flex-end;
+}
+@media (max-width: 720px) {
+  .listsection td.lt-num .cell-stack {
+    align-items: flex-start;
+  }
 }

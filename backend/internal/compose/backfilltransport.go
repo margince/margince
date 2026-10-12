@@ -12,7 +12,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"maps"
@@ -209,7 +208,7 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 	}
 	if string(req.Window) == "none" {
 		// An honest zero: no window, no scan, no spend.
-		writeBackfillJSON(w, http.StatusOK, crmcontracts.BackfillPreview{
+		httperr.WriteJSON(w, http.StatusOK, crmcontracts.BackfillPreview{
 			Window: crmcontracts.BackfillPreviewWindow(req.Window), ComputedAt: time.Now().UTC(),
 		})
 		return
@@ -266,7 +265,7 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 			}
 		}
 	}
-	writeBackfillJSON(w, http.StatusOK, preview)
+	httperr.WriteJSON(w, http.StatusOK, preview)
 }
 
 func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
@@ -325,7 +324,14 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	// is kept out of the closure's return path so the failure keeps its own
 	// status and copy instead of the generic connector-fault mapping.
 	var enqueueErr error
-	run, err := h.registry.StartBackfill(r.Context(), string(provider), userID, months, estimate,
+	// Continue a run that stopped on an error unless the caller asked to start
+	// over: re-reading a mailbox from the newest message repeats hours of
+	// provider calls for messages already captured.
+	start := h.registry.StartBackfill
+	if req.StartOver != nil && *req.StartOver {
+		start = h.registry.StartBackfillOver
+	}
+	run, err := start(r.Context(), string(provider), userID, months, estimate,
 		func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
 			enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
 				Workspace: ws, BackfillID: backfillID.String(),
@@ -351,7 +357,7 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 		h.writeBackfillError(w, r, err)
 		return
 	}
-	writeBackfillJSON(w, http.StatusAccepted, h.statusPayload(&run))
+	httperr.WriteJSON(w, http.StatusAccepted, h.statusPayload(&run))
 }
 
 func (h backfillHandlers) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
@@ -367,7 +373,7 @@ func (h backfillHandlers) GetConnectorBackfillStatus(w http.ResponseWriter, r *h
 		h.writeBackfillError(w, r, err)
 		return
 	}
-	writeBackfillJSON(w, http.StatusOK, h.statusPayload(run))
+	httperr.WriteJSON(w, http.StatusOK, h.statusPayload(run))
 }
 
 func (h backfillHandlers) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
@@ -383,7 +389,7 @@ func (h backfillHandlers) CancelConnectorBackfill(w http.ResponseWriter, r *http
 		h.writeBackfillError(w, r, err)
 		return
 	}
-	writeBackfillJSON(w, http.StatusAccepted, h.statusPayload(run))
+	httperr.WriteJSON(w, http.StatusAccepted, h.statusPayload(run))
 }
 
 // statusPayload maps a run (or its absence — state "none") onto the wire, and
@@ -426,13 +432,16 @@ func backfillStatusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
+		Failed           *int `json:"failed,omitempty"`
 		MessagesScanned  *int `json:"messages_scanned,omitempty"`
 		Skipped          *int `json:"skipped,omitempty"`
 	}{
-		MessagesScanned: &run.Scanned, Captured: &run.Captured, Skipped: &run.Skipped,
+		MessagesScanned: &run.Scanned, Captured: &run.Captured, Skipped: &run.Skipped, Failed: &run.Failed,
 		ContactsCreated: &run.Contacts, CompaniesCreated: &run.Companies,
 	}
 	st.LastErrorClass = run.ErrorClass
+	resumable := run.Resumable
+	st.Resumable = &resumable
 	return st
 }
 
@@ -475,15 +484,4 @@ func (h backfillHandlers) writeBackfillError(w http.ResponseWriter, r *http.Requ
 			Detail: "The provider could not be reached for this operation.",
 		})
 	}
-}
-
-// writeBackfillJSON is the ONE spelling of a backfill success response. The
-// header has to be set before the status is written — net/http sniffs an
-// undeclared body into text/plain, and a typed client reading a JSON run row
-// under that content type is the transport lying about what it sent.
-func writeBackfillJSON[T any](w http.ResponseWriter, status int, v T) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	//craft:ignore swallowed-errors terminal response encode; the client sees a broken body, retrying changes nothing
-	_ = json.NewEncoder(w).Encode(v)
 }

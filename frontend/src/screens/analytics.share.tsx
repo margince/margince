@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { useCan, useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
-import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { type AnalyticsScope, writableScope } from "./analytics.context";
@@ -13,7 +13,7 @@ import {
   OPEN_SHARES_KEY,
   SharedLinksButton,
 } from "./analytics.sharelist";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 
 // Sharing a forecast view.
 //
@@ -115,24 +115,20 @@ function ShareDialog({
       if (!named || (input.kind === "snapshot" && !input.snapshotId)) {
         throw new Error("Choose a supported population and captured snapshot.");
       }
-      const { data, error } = await api.POST("/forecast/shares", {
-        body: {
-          kind: input.kind,
-          target: input.target,
-          // The population the issuer was reading, not the installation. Fixed
-          // to the workspace, this shared a wider set than the screen showed —
-          // and a share is exactly where that matters, because the recipient
-          // never sees the screen it was issued from.
-          ...named,
-          ...(input.kind === "snapshot" && input.snapshotId
-            ? { snapshot_id: input.snapshotId }
-            : {}),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/forecast/shares", {
+          body: {
+            kind: input.kind,
+            target: input.target,
+            // The population the issuer was reading, not the whole workspace. The
+            // recipient never sees the issuing screen, so a wider set would mislead.
+            ...named,
+            ...(input.kind === "snapshot" && input.snapshotId
+              ? { snapshot_id: input.snapshotId }
+              : {}),
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       setIssued({
@@ -170,6 +166,7 @@ function ShareDialog({
           },
           {
             value: "snapshot",
+            disabled: !snapshotId,
             label: t("analytics.share.snapshotLabel"),
             description: snapshotId
               ? t("analytics.share.snapshotHelp")
@@ -248,9 +245,11 @@ function ShareLinkReveal({
       }
     >
       <p id={headingId}>{t("analytics.share.linkWarning")}</p>
-      <pre className="code-block" data-testid="forecast-share-link">
-        {url}
-      </pre>
+      <CopyableText
+        text={url}
+        label={t("analytics.share.linkTitle")}
+        testId="forecast-share-link"
+      />
       {copy.notice}
       {!copy.copied && <p>{t("analytics.share.leaveWarning")}</p>}
     </ConfirmModal>

@@ -10,7 +10,7 @@
   /* Twice the top at the bottom: the save bar sticks 16px off the floor, so
      the page has to clear it below the last row. */
   padding: var(--space-12) var(--space-5) calc(var(--space-12) * 2);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .pref-center {
@@ -68,17 +68,6 @@
 
 .pref-label {
   color: var(--textPrimary);
-}
-
-.pref-save-bar {
-  position: sticky;
-  bottom: 16px;
-  margin-top: var(--space-6);
-  background: var(--bgElevated);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-pop);
-  padding: var(--space-4);
 }
 
 .pref-not-saved {
@@ -154,7 +143,7 @@
   height: 48px;
   border-radius: 50%;
   corner-shape: round;
-  color: var(--success);
+  color: var(--successText);
   background: var(--successBg);
 }
 
@@ -198,5 +187,5 @@
 }
 
 .pref-check:not(:has(input:disabled)):hover {
-  background: var(--bgCard);
+  background: var(--bgInset);
 }

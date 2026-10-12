@@ -5,7 +5,7 @@
 
 package gates
 
-// Who may settle a duplicate pair has ONE answer, and the card must ask the
+// Who may settle a duplicate pair has one answer, and the card must ask the
 // same thing the write asks.
 //
 // Two surfaces decide it. The disposition endpoint refuses a caller who cannot

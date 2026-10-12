@@ -22,6 +22,23 @@ const PREVIEW_FETCHERS: readonly string[] = [
   "MicrosoftPreview",
 ];
 
+// The AI crawlers and training-data tokens robots.txt refuses by name.
+const AI_CRAWLERS: readonly string[] = [
+  "GPTBot",
+  "ChatGPT-User",
+  "ClaudeBot",
+  "Claude-Web",
+  "anthropic-ai",
+  "Google-Extended",
+  "CCBot",
+  "PerplexityBot",
+  "Bytespider",
+  "Applebot-Extended",
+  "meta-externalagent",
+  "cohere-ai",
+  "Amazonbot",
+];
+
 type Attribute = "property" | "name";
 type Meta = { attribute: Attribute; key: string; content: string };
 type Rule = { allow: boolean; path: string };
@@ -265,14 +282,24 @@ describe("robots.txt lets link previews through and nothing else", () => {
     expect(allowed(agent, "/")).toBe(true);
   });
 
-  it("names no crawler outside the preview fetchers", () => {
-    const fetchers = new Set(
-      PREVIEW_FETCHERS.map((agent) => agent.toLowerCase()),
+  it("names no crawler outside the preview fetchers and the refused AI crawlers", () => {
+    const named = new Set(
+      [...PREVIEW_FETCHERS, ...AI_CRAWLERS].map((agent) => agent.toLowerCase()),
     );
     const others = robotsGroups()
       .flatMap((group) => group.agents)
-      .filter((agent) => agent !== "*" && !fetchers.has(agent));
+      .filter((agent) => agent !== "*" && !named.has(agent));
     expect(others).toEqual([]);
+  });
+
+  it.each(AI_CRAWLERS)("refuses %s by name, everywhere", (agent) => {
+    const naming = robotsGroups().filter((group) =>
+      group.agents.includes(agent.toLowerCase()),
+    );
+    expect(naming).toHaveLength(1);
+    expect(naming[0].rules).toEqual([{ allow: false, path: "/" }]);
+    expect(allowed(agent, "/")).toBe(false);
+    expect(allowed(agent, "/assets/app.js")).toBe(false);
   });
 
   it("asks every other crawler not to fetch at all", () => {

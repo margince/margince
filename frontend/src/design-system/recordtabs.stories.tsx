@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
@@ -79,6 +80,37 @@ export const Single: Story = {
       trailing={<Button aria-pressed={false}>Details</Button>}
     />
   ),
+};
+
+// The lone label squeezed on a phone: it never becomes a scroll box with nothing
+// a keyboard can reach. The trailing control wraps under it, and a label wider
+// than the row wraps its own words.
+export const SingleSqueezed: Story = {
+  tags: ["uat-phone"],
+  render: () => (
+    <RecordTabs
+      label="Record"
+      options={["overview"]}
+      value="overview"
+      labels={{
+        ...LABELS,
+        overview: "Overview of the account and everything we know about it",
+      }}
+      trailing={<Button aria-pressed={false}>Details</Button>}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const strip = canvasElement.querySelector(".recordtabs-strip");
+    const tab = within(canvasElement).getByText(/^Overview of the account/);
+    const details = within(canvasElement).getByRole("button", {
+      name: "Details",
+    });
+    if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    await expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
+    await expect(details.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      tab.getBoundingClientRect().bottom,
+    );
+  },
 };
 
 // The row's far end carries the control that opens the record's details

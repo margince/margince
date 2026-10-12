@@ -31,6 +31,7 @@ import {
   QueryStates,
   resetToSignedOut,
   throwProblem,
+  unwrap,
 } from "./common";
 import { CreateAction } from "./create";
 
@@ -190,8 +191,23 @@ describe("problemMessage", () => {
 
   it("keeps the server detail for an unrelated code even with a translator", () => {
     expect(
-      problemMessage({ code: "version_skew", detail: "record changed" }, t),
-    ).toBe("record changed");
+      problemMessage({ code: "conflict", detail: "name already taken" }, t),
+    ).toBe("name already taken");
+  });
+
+  it("says a lost version race in the reader's language", () => {
+    const german = (key: Parameters<typeof translate>[1]) =>
+      translate("de", key);
+    expect(
+      problemMessage(
+        {
+          code: "version_skew",
+          detail:
+            "This record changed after you opened it. Reload it to see the change, then make yours again.",
+        },
+        german,
+      ),
+    ).toBe(german("common.versionSkew"));
   });
 });
 
@@ -290,6 +306,33 @@ describe("problemFieldErrors", () => {
     ]);
     expect(problemFieldErrorsOf(new Error("network down"))).toEqual([]);
     expect(problemFieldErrorsOf(problem)).toEqual([]);
+  });
+});
+
+describe("unwrap", () => {
+  const response = new Response();
+
+  it("answers the data of a call that succeeded", () => {
+    expect(unwrap({ data: { id: "c1" }, response })).toEqual({ id: "c1" });
+  });
+
+  it("throws the same problem throwProblem does", () => {
+    const problem = { code: "not_found", detail: "contact c1 not found" };
+    const thrown = (run: () => unknown): unknown => {
+      try {
+        run();
+      } catch (error) {
+        return error;
+      }
+      return undefined;
+    };
+    const fromUnwrap = thrown(() => unwrap({ error: problem, response }));
+    const fromThrowProblem = thrown(() => throwProblem(problem));
+    expect(fromUnwrap).toBeInstanceOf(ProblemError);
+    expect(fromUnwrap).toEqual(fromThrowProblem);
+    expect(fromUnwrap instanceof ProblemError && fromUnwrap.problem).toBe(
+      problem,
+    );
   });
 });
 

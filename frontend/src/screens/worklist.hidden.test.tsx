@@ -231,8 +231,29 @@ describe("the hidden-backlog panel", () => {
     draw(backlog({ clear: false, truncated: true, past_horizon: 2 }));
 
     await waitFor(() =>
-      expect(screen.getByText(/Each figure is a minimum/)).toBeTruthy(),
+      expect(screen.getByText(/these figures are minimums/)).toBeTruthy(),
     );
+  });
+
+  // At the limit every figure is the difference of two capped reads, so a
+  // zero there means "not counted". The rule stays on screen and openable
+  // instead of vanishing behind a caveat over an empty list.
+  it("keeps a rule it could not count on screen at the reading limit", async () => {
+    draw(backlog({ clear: false, truncated: true, past_horizon: 0 }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
+    );
+    expect(screen.getAllByText("Not counted").length).toBeGreaterThan(0);
+
+    // Opened, an empty page there is out of reach, never "nothing held back".
+    await userEvent.setup().click(screen.getByText("Too old for the Worklist"));
+    expect(
+      await screen.findByText(/None could be read at this size/),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Nothing is held back by this rule now."),
+    ).toBeNull();
   });
 
   // Zeros are this surface's HEALTHY answer, so a failed read drawn as zeros

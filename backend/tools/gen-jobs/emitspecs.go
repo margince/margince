@@ -160,8 +160,6 @@ func timeoutLiteral(t timeoutDef) string {
 	switch {
 	case t.None:
 		return "TimeoutPolicy{None: true}"
-	case t.Operator != "":
-		return fmt.Sprintf("TimeoutPolicy{OperatorField: %q}", t.Operator)
 	case t.Derived != "":
 		return fmt.Sprintf("TimeoutPolicy{Fixed: %s, DerivedFrom: %q}", goDuration(t.Fixed), t.Derived)
 	default:
@@ -185,11 +183,11 @@ func cadenceLiteral(c *cadenceDef) string {
 	if c.Fixed != 0 {
 		fields = append(fields, "Fixed: "+goDuration(c.Fixed))
 	}
-	if c.Operator != "" {
-		fields = append(fields, fmt.Sprintf("OperatorField: %q", c.Operator))
+	if c.Setting != "" {
+		fields = append(fields, fmt.Sprintf("Setting: %q", c.Setting))
 	}
-	if c.ScheduleWhenPositive != "" {
-		fields = append(fields, fmt.Sprintf("ScheduleWhenPositive: %q", c.ScheduleWhenPositive))
+	if c.OffAtZero {
+		fields = append(fields, "OffAtZero: true")
 	}
 	return "Cadence{" + strings.Join(fields, ", ") + "}"
 }

@@ -1,73 +1,67 @@
+<!-- prose:plain -->
 # Every mutation leaves a trace
 
-**A change to a domain row, the audit record of that change, and the event
-announcing it commit together or not at all.** One transaction, three rows.
+**A change to a domain row, the audit record of that change, and the event that reports it commit
+together or not at all.** One transaction, three rows.
 
-The binding form is *The write shape*
-in the rulebook, spelled once in `platform/database/storekit` (`Audit` + `Emit`)
-and called by every module store. This page is why it is shaped that way.
+The rule a change must follow is *The write shape* in the rulebook. It exists once, in
+`platform/database/storekit` (`Audit` + `Emit`), and every module store calls it. What follows is
+why it has that shape.
 
-## What the single transaction buys
+## What one transaction buys
 
-Three failures become impossible rather than unlikely:
+Three problems can never happen, where without it they happen once in a while:
 
-- **A change nobody can account for.** If the audit row could fail
-  independently, the interesting case — the write that succeeded under
-  circumstances someone later asks about — is exactly the one most likely to be
-  missing its record.
-- **An event that describes a row that does not exist**, or a row that changed
-  with no outbox record. Note what the transaction does and does not buy: it
-  guarantees the *staging* is atomic — after the commit there is a durable
-  outbox row or there is no change at all. Getting that row onto the bus is the
-  relay's job, and it is at-least-once with retries, not a delivery guarantee.
-  Atomic staging is what makes the dual-write problem go away; monitoring the
-  relay is a separate obligation.
-- **A caller-supplied actor.** `captured_by` is stamped from the authenticated
-  principal, never from the request body. An audit trail whose actor field is an
-  input is not a trail.
+- **A change no one can account for.** Say the audit row could fail on its own. The write that
+  someone asks about later is one that worked in a case out of the normal. That write then has the
+  most risk of missing its record.
+- **An event with no row**: an event for a row that does not exist, or a row that changed with no
+  outbox record. The transaction makes the write to the outbox atomic. After the commit there is an
+  outbox row that lasts, or there is no change at all. Getting that row to the bus is the job of the
+  relay. The relay sends each row at least once and sends it a second time after a failed send, but it
+  does not promise delivery. The atomic outbox write is what ends the problem of writing to two
+  places; watching the relay is a separate obligation.
+- **A caller that says who it is.** `captured_by` comes from the signed-in user or agent, never
+  from the request body.
 
-## The method
+## How to use it
 
-**Never write a domain row outside a module store's entry point.** The store
-owns the transactional shape. A handler that reaches for SQL has skipped both
-the audit and the gate.
+**Write domain rows only through a store.** The entry point of a module store owns the transaction
+shape. A handler that reaches for SQL skips both the audit and the gate.
 
-**Publishing is ALWAYS through the outbox.** `platform/events.Relay` ships it;
-no direct XADD from domain code. The bus is at-least-once, so consumers wrap
-handlers in `events.Dedupe` — a consumer that assumes exactly-once is a bug
-waiting for a redelivery.
+**Every event goes out through the outbox.** `platform/events.Relay` ships it; domain code never
+sends an XADD of its own. The bus sends each event at least once, so every handler that reads events
+runs through `events.Dedupe`. A handler that expects each event to come once breaks the first time an
+event comes twice.
 
-**Trace the request end to end.** The HTTP layer mints one `correlation_id` per
-request; `Audit()` returns the audit row id; `Emit()` links both. A trace that
-starts at the event has lost the half that says who asked.
+**Trace the request from start to end.** The HTTP code makes one `correlation_id` per request;
+`Audit()` returns the audit row ID; `Emit()` links both. A trace that starts at the event is missing
+the part that says who asked.
 
-**Every store entry point is RBAC-gated**, and the two denials are different
-facts:
+**Every store entry point has an RBAC gate**, and the two denials mean two other things:
 
-| Denial | Sentinel | Wire | Why |
+| Denial | Error value | HTTP status | Why |
 |---|---|---|---|
-| object denied | `apperrors.ErrPermissionDenied` | 403 | the caller may not perform this verb |
-| row out of scope | `apperrors.ErrNotFound` | 404 | existence-hiding — a 403 here would confirm the row exists |
+| object denial | `apperrors.ErrPermissionDenied` | 403 | the caller may not take this action |
+| row out of scope | `apperrors.ErrNotFound` | 404 | it keeps secret that the row exists: a 403 here confirms the row is there |
 
-**Anything that returns a record is a read** and carries the row-scope gate —
-including replay, conflict and error paths. That last clause is where this rule
-is usually broken: an error path that echoes the conflicting row has just served
-it.
+**A path returning a record is a read** and has the row-scope gate, including replay,
+conflict and error paths. Error paths are where this rule breaks most: an error path that returns
+the conflicting row has served it.
 
-**A new seam owes the whole shape.** Audit-only mutations do exist and are
-legitimate — installation configuration writes an audit row and no event,
-because the closed event catalog defines no type for it and inventing one
-build-side is forbidden. But they are *enumerated*: `backend/gates/writeshape_test.go`
-carries each one with the argument for why, and the gate refuses an audit-only
-function that is not on the list — as well as a listed one that no longer
-exists. So the rule for a new write path is: audit implies event, unless you can
-write the paragraph that earns a place on that list.
+**A new seam must have the whole shape.** A write with an audit row and no event may happen in
+some cases. Installation config is one. It writes an audit row and no event, because the closed
+event catalog has no type for it and the build may not add one. These cases are *listed*:
+`backend/gates/writeshape_test.go` names each one with the reason for it. The gate refuses an
+audit-only function that is not on the list, or a listed one that does not exist any more.
+
+For a new write path, an audit row means an event too, unless you can write the reason that puts it
+on that list.
 
 ## What this does not ask for
 
-- **Not an audit row per read.** Reads are gated, not journalled.
-- **Not that evidence tables join the shape.** `raw_capture` is evidence, not a
-  domain row; it neither audits nor emits, and that is correct.
-- **Not a bespoke event per column.** The envelope is the
-  `shared/kernel/events` contract; a new event kind is a catalog change, not a
-  free-form payload.
+- **Not an audit row for each read.** Reads have a gate, not a log.
+- **Not that evidence tables follow the shape.** `raw_capture` is evidence, not a domain row. It
+  writes no audit row and no event, and that is right.
+- **Not a custom event for each column.** The outer shape of an event is the
+  `shared/kernel/events` contract. A new kind of event is a catalog change, not a free-form payload.

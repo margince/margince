@@ -87,19 +87,20 @@ type Service struct {
 	duplicates Duplicates
 	// suggestions is OPTIONAL: an unbound feed shows none (suggestionlane.go).
 	suggestions DealSuggestions
-	tasks       Tasks
-	receipts    Receipts
-	briefing    Briefing
-	// commitments is OPTIONAL: nil means this feed serves no commitments lane,
-	// and Assemble then leaves the field unset rather than sending an empty
-	// array. The contract makes the lane optional for exactly that reason.
+	// tagSuggestions is OPTIONAL the same way (tagsuggestionlane.go).
+	tagSuggestions TagSuggestions
+	tasks          Tasks
+	receipts       Receipts
+	briefing       Briefing
+	// commitments is OPTIONAL: nil means no commitments lane, and Assemble
+	// leaves the field unset rather than sending an empty array.
 	commitments Commitments
 	// atRisk is OPTIONAL for the reason commitments is: absent lane, not empty.
 	atRisk AtRisk
-	// waiting is OPTIONAL like the lanes above it: an installation that does
-	// not read the mail stream cannot say who is waiting, which is different
-	// from saying nobody is.
-	waiting Waiting
+	// waiting and its mirror awaiting are OPTIONAL: without the mail stream
+	// nobody can say who is waiting, which differs from saying nobody is.
+	waiting  Waiting
+	awaiting Awaiting
 	// decay is OPTIONAL for the same reason, and says nothing about atRisk:
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
@@ -108,6 +109,7 @@ type Service struct {
 	// an installation can prepare a rep for their day without asking them to
 	// close off what already happened.
 	meetingsAwaitingOutcome MeetingsAwaitingOutcome
+	horizon                 MeetingHorizon
 	// zone resolves the installation timezone the day boundary is measured in;
 	// nil is UTC, for the reason WithZone gives.
 	zone   Zone
@@ -162,6 +164,11 @@ type Service struct {
 	// contactTouch is OPTIONAL in the same way: nil means a row names its
 	// contact and not when either side last wrote.
 	contactTouch ContactTouch
+	// companyTouch is OPTIONAL in the same way, for a row about an account.
+	companyTouch CompanyTouch
+	// employers is OPTIONAL in the same way: nil means a meeting row names who
+	// it was with and not which account they work for.
+	employers ContactEmployers
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves DealMoves
@@ -198,10 +205,9 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
-	// leads is the inbound leads still owed a first reply. Optional in the
-	// ordinary way: nil is a feed that does not read leads at all, which the
-	// queue reports as an absent source rather than as an empty one.
-	leads LeadResponses
+	followUps   followUpRead
+	// planCoverage is whose plans a team read looked at; nil under every other scope.
+	planCoverage *crmcontracts.WorklistPlanCoverage
 	// overdueLoad is the team board's COUNTING reader for tasks, beside the
 	// bounded listing reader the ranked queue uses. Required BY THE BOARD —
 	// teamLoad refuses without it — and read by nothing else, so a feed
@@ -229,6 +235,9 @@ type Service struct {
 	taskOwner ids.UUID
 	// noticeOwners is a team roster; nil leaves the visible agenda unrestricted.
 	noticeOwners []ids.UUID
+	// teamRoster is the roster scope=team resolved with, which degradableRoster
+	// answers from rather than asking again; nil under every other scope.
+	teamRoster *rosterRead
 }
 
 // forOwner returns a copy that reads one named contact's queue. Same
@@ -301,14 +310,14 @@ func (s *Service) countingDecisions() *Service {
 // brief ran empty would inherit them because nothing would overwrite what
 // nothing wrote. That is another rep's mail-derived prose on this rep's row,
 // and an unsynchronised map write under concurrent requests besides.
-func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theNight, error) {
+func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besideDay, error) {
 	asOf := s.now().UTC()
 	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
 	// is judged against the same instant, and the installation is asked for its
 	// timezone once rather than per lane.
 	until, loc, err := s.endOfDay(ctx, asOf)
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 	// Every lane starts as an empty slice, never nil. The contract declares
 	// them as arrays, and a withheld lane leaves its field unset — which
@@ -330,7 +339,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 		out.ThisMorningState = &night.state
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
 	needsYou, count, err := s.decisionsToDepth(ctx, s.decisionsDepth())
@@ -342,9 +351,11 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 			out.Counts.DuplicatesOpen = &open
 		}
 		out.Counts.DealSuggestionsOpen = count.suggestions
+		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
+	beside := besideDay{failed: count.failed, until: until}
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
 	planned, plannedTotal, err := s.planned(ctx, asOf, until, loc, s.taskScope)
@@ -353,7 +364,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 		out.Counts.Planned = plannedTotal
 	})
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
 	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
@@ -361,14 +372,14 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 	for _, lane := range s.optionalLanes(ctx, asOf, until, &out) {
 		omitted, err = lane.collect(omitted)
 		if err != nil {
-			return crmcontracts.Attention{}, theNight{}, err
+			return crmcontracts.Attention{}, besideDay{}, err
 		}
 	}
 
 	done, err := s.done(ctx, asOf)
 	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
 	if err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
 	if len(omitted) > 0 {
@@ -377,17 +388,20 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 	// Last, over the assembled lanes: every card that names a record gets its
 	// display name under this reader's own grants (labels.go).
 	if err := s.fillSubjectLabels(ctx, &out); err != nil {
-		return crmcontracts.Attention{}, theNight{}, err
+		return crmcontracts.Attention{}, besideDay{}, err
 	}
-	return out, night, nil
+	beside.night = night
+	return out, beside, nil
 }
 
 // laneCount carries the totals behind a lane the reader only sees a slice of.
 type laneCount struct {
 	items      int
 	duplicates int
-	// suggestions is nil when the reader may not read suggestions at all.
-	suggestions *int
+	// suggestions is nil when the reader may not read suggestions at all, or
+	// when the read failed — and then failed names it.
+	suggestions, tagSuggestions *int
+	failed                      []*crmcontracts.WorklistSourceUnavailable
 }
 
 // decisions is the needs_you lane: staged approvals, open duplicate pairs and
@@ -458,15 +472,9 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	suggestions, openSuggested, err := s.openSuggestionItems(ctx, depth)
-	if err != nil {
-		return nil, laneCount{}, err
-	}
-	count := laneCount{items: openPairs + openStaged, duplicates: openPairs, suggestions: openSuggested}
-	if openSuggested != nil {
-		count.items += *openSuggested
-	}
-	return interleave(depth, duplicates, approvals, suggestions), count, nil
+	count := laneCount{items: openPairs + openStaged, duplicates: openPairs}
+	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
+	return interleave(depth, duplicates, approvals, suggestions, tagged), count, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

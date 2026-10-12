@@ -9,8 +9,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func companyIDPtr(id ids.CompanyID) *ids.CompanyID { return &id }
-
 // PO-F-1's worked examples pin the arithmetic end to end; these assert
 // the confidence AND which side of the threshold it lands on, because
 // the number only matters through that comparison.
@@ -22,7 +20,7 @@ func TestContactConfidenceReproducesTheSpecWorkedExamples(t *testing.T) {
 		// "Jon Doe" vs "John Doe", both current-primary at Acme:
 		// 0.55*0.9667 + 0.45*1.0 = 0.982 ≥ 0.72 → 🟡, not merged.
 		got := contactConfidence(
-			ContactCandidate{FullName: "Jon Doe", CurrentPrimaryCompanyID: companyIDPtr(acme)},
+			ContactCandidate{FullName: "Jon Doe", CurrentPrimaryCompanyID: new(acme)},
 			contactCandidateRow{fullName: "John Doe", companyID: &acme},
 		)
 		if !closeToPrinted(got, 0.982) {
@@ -37,7 +35,7 @@ func TestContactConfidenceReproducesTheSpecWorkedExamples(t *testing.T) {
 		// Same names, Globex vs Acme: 0.55*0.9667 + 0.45*0.0 = 0.532
 		// < 0.72 → NO_MATCH. Two different contacts who share a name.
 		got := contactConfidence(
-			ContactCandidate{FullName: "Jon Doe", CurrentPrimaryCompanyID: companyIDPtr(globex)},
+			ContactCandidate{FullName: "Jon Doe", CurrentPrimaryCompanyID: new(globex)},
 			contactCandidateRow{fullName: "John Doe", companyID: &acme},
 		)
 		if !closeToPrinted(got, 0.532) {
@@ -64,7 +62,7 @@ func TestCompanyMatchPrefersTheMostSpecificEvidence(t *testing.T) {
 
 	t.Run("shared current-primary employer scores 1.0", func(t *testing.T) {
 		got := companyMatch(
-			ContactCandidate{CurrentPrimaryCompanyID: companyIDPtr(acme)},
+			ContactCandidate{CurrentPrimaryCompanyID: new(acme)},
 			contactCandidateRow{companyID: &acme, companyDomain: &domain},
 		)
 		if got != 1.0 {
@@ -74,7 +72,7 @@ func TestCompanyMatchPrefersTheMostSpecificEvidence(t *testing.T) {
 
 	t.Run("shared email domain scores 0.8", func(t *testing.T) {
 		got := companyMatch(
-			ContactCandidate{Emails: []string{"NEW.HIRE@Acme.com"}, CurrentPrimaryCompanyID: companyIDPtr(other)},
+			ContactCandidate{Emails: []string{"NEW.HIRE@Acme.com"}, CurrentPrimaryCompanyID: new(other)},
 			contactCandidateRow{companyID: &acme, companyDomain: &domain},
 		)
 		if got != 0.8 {

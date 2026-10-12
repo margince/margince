@@ -34,10 +34,11 @@ import (
 // surface, through EdgesForContact — which carries the contact grant AND the row
 // probe, so an unpromoted captured contact 404s here exactly as it does on the
 // HTTP path rather than leaking through the agent.
-func whoKnowsLister(pool *pgxpool.Pool) agents.WhoKnowsLister {
-	return func(ctx context.Context, contactID ids.UUID) ([]agents.KnownColleague, bool, error) {
+func whoKnowsLister(pool *pgxpool.Pool, store *contacts.Store) agents.WhoKnowsLister {
+	return func(ctx context.Context, contactID ids.UUID) (agents.WhoKnowsReading, error) {
 		var out []agents.KnownColleague
 		var truncated bool
+		var contactName string
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 			// Over-fetch, rank by warmth, THEN cap — the same three steps the
 			// HTTP surface takes, for the same reason. EdgesForContact orders
@@ -80,9 +81,18 @@ func whoKnowsLister(pool *pgxpool.Pool) agents.WhoKnowsLister {
 				}
 				out = append(out, colleague)
 			}
+			// The anchor's own name, read in the transaction the edges came
+			// from and under the same contact grant EdgesForContact already
+			// required. A caller who may not see the row gets no name rather
+			// than an error, which is what ContactNamesTx answers with.
+			anchor, err := store.ContactNamesTx(ctx, tx, []ids.ContactID{ids.From[ids.ContactKind](contactID)})
+			if err != nil {
+				return err
+			}
+			contactName = anchor[contactID]
 			return nil
 		})
-		return out, truncated, err
+		return agents.WhoKnowsReading{ContactName: contactName, Colleagues: out, Truncated: truncated}, err
 	}
 }
 

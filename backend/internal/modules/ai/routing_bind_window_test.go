@@ -38,7 +38,7 @@ func TestATasksPromptWindowIsTheSmallestItsLadderMightLandOn(t *testing.T) {
 				ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, BaseURL: "https://x", Model: "e"},
 				Dimensions:     defaultEmbedDimensions,
 			},
-		}.WithKeys(allCloudKeys())
+		}.WithKeys(allCloudKeys(t))
 	}
 
 	t.Run("an all-cloud ladder plans around no limit", func(t *testing.T) {
@@ -111,7 +111,7 @@ func TestARungTheCallCanDegradeOntoBindsTheLane(t *testing.T) {
 			ProviderConfig: ProviderConfig{Provider: providerOpenAICompatible, BaseURL: "https://x", Model: "e"},
 			Dimensions:     defaultEmbedDimensions,
 		},
-	}.WithKeys(allCloudKeys()), nil, nil, nil, false, nil)
+	}.WithKeys(allCloudKeys(t)), nil, nil, nil, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

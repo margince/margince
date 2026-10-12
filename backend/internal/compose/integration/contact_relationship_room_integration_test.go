@@ -820,7 +820,7 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 	}
 
 	if _, err := e.Contacts.MergeContact(e.Admin(),
-		ids.From[ids.ContactKind](duplicate), ids.From[ids.ContactKind](survivor)); err != nil {
+		ids.From[ids.ContactKind](duplicate), ids.From[ids.ContactKind](survivor), nil); err != nil {
 		t.Fatalf("MergeContact: %v", err)
 	}
 

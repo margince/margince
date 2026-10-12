@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -86,11 +87,17 @@ func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput)
 		if err := scanRun(row, &run); err != nil {
 			return fmt.Errorf("creating import run: %w", err)
 		}
-		_, err := storekit.Audit(ctx, tx, "create", importRunObject, run.ID, nil, map[string]any{
+		if _, err := storekit.Audit(ctx, tx, "create", importRunObject, run.ID, nil, map[string]any{
 			"connector": run.Connector, auditFieldStatus: run.Status, "source_ref": run.SourceRef,
 			"object": in.Mapping.Object,
-		})
-		return err
+		}); err != nil {
+			return err
+		}
+		// Retired on THIS transaction, now that a run names the source. A profile
+		// the contact abandons never reaches here, which is the point: the bytes
+		// were stored to be profiled and nothing adopts them, so the ledger
+		// collects them a grace period later instead of keeping them forever.
+		return storedobjects.Clear(ctx, tx, in.SourceRef)
 	})
 	if err != nil {
 		return Run{}, err
@@ -270,4 +277,53 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 		run.UndoReport = &rep
 	}
 	return run, nil
+}
+
+// UnreferencedImportKeys answers which of these keys no import run's source names.
+//
+// Answered here because import_run is this module's table. An abandoned profile
+// legitimately has no run: the key is handed to the client, and only a submitted
+// mapping makes it durable — so "unreferenced" is the ordinary outcome rather than
+// a fault, and a grace period is what separates abandoned from in-flight.
+func (s *RunStore) UnreferencedImportKeys(ctx context.Context, keys []string) ([]string, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	var out []string
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT k FROM unnest($1::text[]) AS k
+			 WHERE NOT EXISTS (SELECT 1 FROM import_run r WHERE r.source_ref = k)`, keys)
+		if err != nil {
+			return fmt.Errorf("check which import source keys are unreferenced: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var key string
+			if err := rows.Scan(&key); err != nil {
+				return fmt.Errorf("read an unreferenced import source key: %w", err)
+			}
+			out = append(out, key)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RecordImportSourceIntent declares an uploaded source's key provisional.
+//
+// The same grant the upload itself takes: this row exists because that upload is
+// about to put bytes, and a caller who may not create an import run has no business
+// recording one's source either.
+func (s *RunStore) RecordImportSourceIntent(ctx context.Context, key string) error {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
+		return err
+	}
+	return storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindImport, key)
 }

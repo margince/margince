@@ -89,8 +89,8 @@ func TestE2ECertify(t *testing.T) {
 	// Two ways to say what to certify, and they are different questions.
 	//
 	// ROUTING= names a DEPLOYMENT: its seeds.ai_routing binds a model per tier,
-	// and each task is certified against the model at its leading rung — the one
-	// that would actually serve it. MODEL= names one candidate and binds it to
+	// and each task is certified against every distinct model its ladder binds,
+	// the answering rung first. MODEL= names one candidate and binds it to
 	// every tier, which is how a prompt fix is A/B'd against a single model.
 	//
 	// Neither is a default read off the runner's disk. A verdict recorded against
@@ -185,6 +185,9 @@ func TestE2ECertify(t *testing.T) {
 		// unset = every run is paid for. `make e2e-ai` sets it to the repo-root
 		// .tmp/aicert/resume default (RESUME=1); pass RESUME= to disable.
 		ResumeDir: os.Getenv("MARGINCE_AICERT_RESUME"),
+		// MARGINCE_AICERT_STALE_ONLY=0 re-measures records already current;
+		// anything else, unset included, pays only for what changed.
+		StaleOnly: os.Getenv("MARGINCE_AICERT_STALE_ONLY") != "0",
 	}
 
 	records, runErr := aicert.Run(context.Background(), cfg, slog.Default())
@@ -192,7 +195,7 @@ func TestE2ECertify(t *testing.T) {
 		t.Fatalf("certification run failed: %v", runErr)
 	}
 	if len(records) == 0 {
-		t.Fatal("the run produced no records — check MARGINCE_AICERT_TASK against the corpus")
+		t.Log("no record written: every candidate's record is current (STALE_ONLY=0 to re-measure)")
 	}
 	for _, r := range records {
 		t.Logf("%s: %s (reliability=%.2f judge_score_p50=%d self_judged=%v)",
@@ -249,7 +252,7 @@ func upstreamFromEnv(t *testing.T, name string) *ai.OpenRouterRouting {
 	// and the run then reports the default's numbers under a tuned run's name —
 	// the exact way this measurement can lie without failing. ai.ParseRouting
 	// applies the same check to a config file; this is the env var's door to it.
-	if err := routing.Validate(); err != nil {
+	if err := routing.Validate(name); err != nil {
 		t.Fatalf("%s=%s: %v", name, raw, err)
 	}
 	t.Logf("%s: %s", name, raw)

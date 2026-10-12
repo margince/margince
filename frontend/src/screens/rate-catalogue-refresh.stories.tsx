@@ -23,6 +23,8 @@ const REPORT = {
       outcome: "updated",
       updated: 2,
       unchanged: 1,
+      added: 1,
+      kept: 1,
       models: ["a/b"],
       unlisted: ["e/typo"],
     },
@@ -31,6 +33,8 @@ const REPORT = {
       outcome: "not_available",
       updated: 0,
       unchanged: 0,
+      added: 0,
+      kept: 0,
       models: [],
       unlisted: [],
     },
@@ -39,6 +43,8 @@ const REPORT = {
       outcome: "unreachable",
       updated: 0,
       unchanged: 0,
+      added: 0,
+      kept: 0,
       models: [],
       unlisted: [],
     },
@@ -51,8 +57,14 @@ function Panels() {
     <>
       <RefreshModelPricesButton refresh={refresh} />
       <RefreshSummary refresh={refresh} />
-      <ProviderRefreshLine refresh={refresh} provider="openai_compatible" />
-      <ProviderRefreshLine refresh={refresh} provider="gemini" />
+      <ProviderRefreshLine
+        line={refresh.data?.providers.find(
+          (p) => p.provider === "openai_compatible",
+        )}
+      />
+      <ProviderRefreshLine
+        line={refresh.data?.providers.find((p) => p.provider === "gemini")}
+      />
     </>
   );
 }

@@ -84,6 +84,9 @@ func stagingSpec(name string) (runner.AgentSpec, bool) {
 			Tools:      []string{"search_records", "read_record", "enrich"},
 		}, true
 	}
+	if name == releasingSpecName {
+		return releasingSpec, true
+	}
 	// The shipped agents fall back to the COMPOSE resolver, not the runner
 	// catalog: the catalog carries no tools, and this lane's whole subject is
 	// what an allowlist refuses.
@@ -278,7 +281,7 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Unknown Co"}, nil, &contact); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Unknown Co"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
@@ -336,7 +339,7 @@ func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Keep Me"}, nil, &contact); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Keep Me"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
@@ -425,7 +428,7 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Resume Once"}, nil, &contact); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"source": "manual", "display_name": "Resume Once"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
@@ -500,7 +503,7 @@ func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/contacts", integration.AnyMap{"full_name": "Stale Duplicate"}, nil, &contact); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/contacts", integration.AnyMap{"source": "manual", "full_name": "Stale Duplicate"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 
@@ -556,6 +559,7 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 		ID string `json:"id"`
 	}
 	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{
+		"source":       "manual",
 		"display_name": "Authority Dies Parked",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
@@ -616,6 +620,7 @@ func TestATerminalWriteThatFailsLeavesTheRunResumable(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{
+		"source":       "manual",
 		"display_name": "Close Failed Retriable",
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)

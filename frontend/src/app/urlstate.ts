@@ -137,6 +137,20 @@ export function replaceParams(params: UrlParams): void {
 }
 
 /**
+ * One dial over the address as it stands now: set, or cleared when `value` is
+ * empty. Every other dial rides along, so turning one never resets another.
+ */
+export function replaceDial(key: string, value: string | undefined): void {
+  const next = new Map(currentParams());
+  if (value) {
+    next.set(key, value);
+  } else {
+    next.delete(key);
+  }
+  replaceParams(next);
+}
+
+/**
  * The dials the address carries, and the one way to change them.
  *
  * The setter is module-level and therefore stable, so a caller may depend on it

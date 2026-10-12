@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -87,6 +88,16 @@ func (s PurgeSubject) Total() int {
 // uuid, because `subject_ref` is free text and a row holding anything else
 // would fail the whole query rather than simply not match.
 //
+// EVERY ADDRESS THE PURGE CAN MATCH ON, not only the counterparty. A workspace rule
+// reaches a message through a To or Cc line, so a subject who was copied rather than
+// written to is matched by the purge — and a shield that read the counterparty alone
+// would hand over exactly that message while reporting a clean success. The shield
+// has to reach at least as far as the widest arm using it.
+//
+// No colleague filter here, unlike the match clause. There it keeps a rule naming the
+// workspace's own domain from matching everything; here the question is only whether
+// the subject's own address is on the message, and a wider shield fails safe.
+//
 // It reaches two tables this module does not own, and only reads them: which
 // correspondence a request covers is a question about the request, and there is
 // no seam that answers it without them.
@@ -94,7 +105,11 @@ const underAnOpenRequest = `EXISTS (
 		    SELECT 1 FROM data_subject_request d
 		     WHERE d.status IN ('open', 'in_progress')
 		       AND EXISTS (SELECT 1 FROM contact_email ce
-		                    WHERE lower(ce.email) = lower(a.counterparty_email)
+		                    WHERE (lower(ce.email) = lower(a.counterparty_email)
+		                           OR EXISTS (SELECT 1 FROM activity_participant ap
+		                                       WHERE ap.activity_id = a.id
+		                                         AND ap.address IS NOT NULL
+		                                         AND lower(ap.address) = lower(ce.email)))
 		                      AND (ce.contact_id = d.contact_id
 		                           OR ce.contact_id::text = d.subject_ref)))`
 
@@ -124,8 +139,8 @@ func SelectPurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       `+withheldReason(shielded, floor.shieldedAs(), true)+` AS withheld,
-		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
+		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
+		       `+importersOfActivity+` AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
 		 WHERE `+match+`
@@ -231,7 +246,7 @@ func addressMatch(kind, col, arg string) string {
 // with a user and the workspace clause has none, so the pairing is theirs.
 func matchValue(kind, value string) string {
 	if kind == ExclusionKindDomain {
-		return escapeLikeValue(value)
+		return storekit.EscapeLike(value)
 	}
 	return value
 }
@@ -270,14 +285,6 @@ func workspaceMatchClause(kind, value string) (string, []any) {
 		           -- today, and this does not depend on all four continuing to.
 		           AND ` + addressMatch(kind, "lower(ap.address)", "$1") + `))`,
 		[]any{matchValue(kind, value)}
-}
-
-// escapeLikeValue neutralises the LIKE metacharacters, so a rule value is
-// matched as the text somebody typed.
-func escapeLikeValue(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	value = strings.ReplaceAll(value, "%", `\%`)
-	return strings.ReplaceAll(value, "_", `\_`)
 }
 
 // ReleaseImportTx drops this seat's claim on a message a colleague also
@@ -321,8 +328,10 @@ func ReleaseEveryImportTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) e
 	return nil
 }
 
-// SelectPurgeableContactsTx finds the contacts a purge may anonymise: those this
-// seat's capture minted from the mail being destroyed, whom nothing else holds.
+// SelectPurgeableContactsTx finds the contacts that only this seat's mail being
+// destroyed explains, whom nothing else holds. It is the mailbox half of the
+// answer. The purger narrows it with contacts.CaptureMintedForSeatTx to the
+// contacts capture created and no human worked on.
 //
 // "Nothing else holds them" is the whole rule, and it is deliberately
 // conservative. A contact the owner later linked to a deal, gave a second
@@ -335,7 +344,7 @@ func ReleaseEveryImportTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) e
 // because deleting it would cascade into records that legitimately reference it
 // and leave a colleague's deal pointing at nothing.
 func SelectPurgeableContactsTx(
-	ctx context.Context, tx pgx.Tx, user ids.UUID, kind, value string,
+	ctx context.Context, tx pgx.Tx, user ids.UUID, kind, value string, floor StatutoryFloor,
 ) ([]ids.UUID, error) {
 	if user == ids.Nil || value == "" {
 		return nil, nil
@@ -346,6 +355,7 @@ func SelectPurgeableContactsTx(
 	match, args := purgeMatchClause(user, kind, value)
 	match = strings.ReplaceAll(match, "a.counterparty_email", "pe.email")
 	outside := strings.ReplaceAll(match, "pe.email", "other.email")
+	shielded, args := floor.column(len(args), args)
 	// Four conditions, and every one of them is somebody else's claim on this
 	// record:
 	//
@@ -357,11 +367,6 @@ func SelectPurgeableContactsTx(
 	//     independently of this mailbox;
 	//   no import of this seat's own — then this seat's mail is not why the
 	//     record exists, and the rule has no standing over it.
-	//
-	// "capture minted them" is asked through the import row, not through
-	// contact.source: source carries the PROVIDER name (gmail, outlook), so a
-	// filter on the literal 'capture' would match nothing and silently
-	// anonymise no one.
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id
 		  FROM contact p
@@ -390,6 +395,13 @@ func SelectPurgeableContactsTx(
 		       JOIN activity ma ON ma.id = mine.activity_id
 		      WHERE lower(ma.counterparty_email) = lower(pe.email)
 		        AND mine.user_id <> $1)
+		   -- Mail the purge keeps (a hold, the statutory floor, an open request)
+		   -- still needs its sender on file, so the contact stays with it.
+		   AND NOT EXISTS (
+		     SELECT 1 FROM contact_email ke
+		       JOIN activity a ON lower(a.counterparty_email) = lower(ke.email)
+		      WHERE ke.contact_id = p.id
+		        AND (`+withheldReason(shielded, floor.shieldedAs())+`) <> '')
 		 ORDER BY p.id`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: selecting the contacts a purge may anonymise: %w", err)
@@ -433,7 +445,7 @@ func SelectWorkspacePurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       `+withheldReason(shielded, floor.shieldedAs(), false)+` AS withheld
+		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld
 		  FROM activity a
 		 WHERE `+match+`
 		   AND EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id = a.id)
@@ -453,11 +465,12 @@ func SelectWorkspacePurgeSubjectTx(
 			// installation owes somebody else is not the workspace's to
 			// destroy, and it is REPORTED rather than silently skipped.
 			//
-			// Defence in depth, deliberately. A CHECK constraint on the
-			// destroying statement refuses a restricted row anyway, so removing
-			// this arm does not leak the mail — it turns a clean count into a
-			// failed purge that destroys nothing at all, including the rows the
-			// admin could have had.
+			// The only thing that keeps it. Destruction erases the id it is
+			// handed — `UPDATE activity SET body = NULL ... WHERE id = $1` —
+			// and the table's restriction CHECKs constrain what a restriction
+			// looks like, not what may be erased. So a row that falls out of
+			// this branch is destroyed, with the count reporting it as a clean
+			// success.
 			subject.Restricted = append(subject.Restricted, id)
 			subject.noteWithheld(withheld, id)
 			continue

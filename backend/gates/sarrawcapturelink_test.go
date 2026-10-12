@@ -5,7 +5,7 @@
 
 package gates
 
-// The SAR's raw-capture correlation is spelled ONCE.
+// The SAR's raw-capture correlation is spelled once.
 //
 // The clause asks it four times — twice to decide whether a provider original's
 // content may be disclosed, twice to withhold the payload on the same answer.

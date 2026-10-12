@@ -20,7 +20,7 @@ import {
   problemCodeOf,
   problemMessageOf,
   QueryStates,
-  throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import {
@@ -31,6 +31,7 @@ import {
 import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
+import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
@@ -71,9 +72,8 @@ export function useRecordHistory(
     enabled,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET(
-        "/records/{entity_type}/{id}/history",
-        {
+      return unwrap(
+        await api.GET("/records/{entity_type}/{id}/history", {
           params: {
             path: { entity_type: kind, id },
             query: {
@@ -82,12 +82,8 @@ export function useRecordHistory(
               ...(action ? { action } : {}),
             },
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     getNextPageParam: (last) => last?.page?.next_cursor ?? null,
   });
@@ -140,6 +136,10 @@ export type RecordRestore = Readonly<{
   // must arrive together or the new `restore` entry describes a record on
   // screen that does not yet show it.
   onRestored: () => void;
+  // Set by the history panel itself, never by a caller: the notice about what
+  // an archive's restore left behind belongs to the panel, because the refetch
+  // after the press regroups the entry and unmounts the button that pressed.
+  onLeftBehind?: (count: number) => void;
 }>;
 
 // A refusal in the reader's own words.
@@ -163,6 +163,14 @@ function refusalSentence(
   // written down.
   return detail ?? undefined;
 }
+
+// What undoing an entry of each of these verbs does to the record, said before
+// the press lands. The verbs are the audit trail's own.
+const INVERSE_CONFIRM: Readonly<Record<string, MessageKey | undefined>> = {
+  create: "history.undo.confirmCreateBody",
+  archive: "history.undo.confirmArchiveBody",
+  promote: "history.undo.confirmPromoteBody",
+};
 
 function UndoButton({
   entry,
@@ -197,14 +205,16 @@ function UndoButton({
   const [refused, setRefused] = useState<string | null>(null);
 
   const putBack = useRecordRestore({
-    onSuccess: () => {
+    onSuccess: (done) => {
       setRefused(null);
+      restore.onLeftBehind?.(done.left_behind?.length ?? 0);
       setConfirming(false);
       client.invalidateQueries({ queryKey: ["record-history", kind, id] });
       client.invalidateQueries({ queryKey: ["field-history", kind, id] });
       restore.onRestored();
     },
     onError: (error) => {
+      restore.onLeftBehind?.(0);
       const code = problemCodeOf(error);
       if (code === VERSION_SKEW_CODE) {
         // The record moved rather than the change being unrestorable. Re-read
@@ -229,6 +239,10 @@ function UndoButton({
     return null;
   }
 
+  // An undo that archives, un-archives or demotes says so first: it moves the
+  // whole record rather than a field.
+  // A link's own entries keep the link's wording.
+  const verbBody = entry.edge ? undefined : INVERSE_CONFIRM[entry.action];
   const upFront = advisory.undoable
     ? undefined
     : (refusalSentence(advisory.reason, advisory.detail, t) ??
@@ -242,7 +256,7 @@ function UndoButton({
     // connection between two records rather than editing a value on this one.
     // An edge entry carries no field changes at all, so the field count alone
     // would wave through the more consequential of the two.
-    if (changes.length > 1 || entry.edge) {
+    if (changes.length > 1 || entry.edge || verbBody) {
       setConfirming(true);
       return;
     }
@@ -271,29 +285,33 @@ function UndoButton({
           putBack.mutate({ kind, id, auditId: entry.id, version })
         }
       >
-        <p>
-          {entry.edge
-            ? t("history.undo.confirmEdgeBody", {
-                other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
-              })
-            : plural("history.undo.confirmBody", changes.length, {
-                count: formatNumber(changes.length, locale),
-              })}
-        </p>
-        <ul className="entry-fields">
-          {changes.map((change) => (
-            <li key={change.field} className="entry-field">
-              <span>{historyFieldLabel(change.field, t)}</span>
-              <span>
-                {historyValue(change.field, change.oldValue, {
-                  currency,
-                  locale,
-                  zone: recordZone,
-                }) ?? t("history.cleared")}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div>
+          <p>
+            {verbBody
+              ? t(verbBody)
+              : entry.edge
+                ? t("history.undo.confirmEdgeBody", {
+                    other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
+                  })
+                : plural("history.undo.confirmBody", changes.length, {
+                    count: formatNumber(changes.length, locale),
+                  })}
+          </p>
+          <ul className="entry-fields">
+            {changes.map((change) => (
+              <li key={change.field} className="entry-field">
+                <span>{historyFieldLabel(change.field, t)}</span>
+                <span>
+                  {historyValue(change.field, change.oldValue, {
+                    currency,
+                    locale,
+                    zone: recordZone,
+                  }) ?? t("history.cleared")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </ConfirmModal>
     </span>
   );
@@ -390,6 +408,8 @@ export function RecordHistory({
   const { locale } = useLocale();
   const query = useRecordHistory(kind, id);
   const entries = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const left = useLeftBehind(kind, id);
+  const panelRestore = restore && { ...restore, onLeftBehind: left.report };
 
   // Honest state matrix (§3a): the pending/error halves are QueryStates'
   // (shared with FieldHistoryTimeline and QueryGate); empty vs. the list is
@@ -416,7 +436,7 @@ export function RecordHistory({
                   id={id}
                   locale={locale}
                   currency={currency}
-                  restore={restore}
+                  restore={panelRestore}
                   undoLabel="history.undo.redo"
                 />
                 <HistoryEntryRow
@@ -425,7 +445,7 @@ export function RecordHistory({
                   id={id}
                   locale={locale}
                   currency={currency}
-                  restore={restore}
+                  restore={panelRestore}
                   note={t("history.reversal.undoneBy", {
                     undoer: actorName(row.reversal.actor_name, t),
                   })}
@@ -439,7 +459,7 @@ export function RecordHistory({
                 id={id}
                 locale={locale}
                 currency={currency}
-                restore={restore}
+                restore={panelRestore}
                 note={
                   row.kind === "unpairedReversal"
                     ? t("history.reversal.unpaired")
@@ -461,6 +481,7 @@ export function RecordHistory({
 
   return (
     <Card className="history-card">
+      <LeftBehindNotice count={left.count} />
       <QueryStates query={query} pendingLabel={t("tab.timeline")}>
         {body}
       </QueryStates>

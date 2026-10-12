@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button } from "../design-system/atoms";
-import { DataTable } from "../design-system/datatable";
+import { Badge, Button, Disclosure } from "../design-system/atoms";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   type ResolveAnswer,
@@ -15,17 +15,12 @@ import {
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
 type Resolution = { id: string; answer: ResolveAnswer };
-type CheckColumn = {
-  key: string;
-  header: string;
-  render: (check: InputCheck) => ReactNode;
-};
 
 // What should be checked before the call.
 //
@@ -77,6 +72,19 @@ export function ForecastReview() {
   );
 }
 
+// The open findings this reader may see, under the one key every reader of
+// them shares, so answering one here clears it everywhere it is counted.
+export function useInputChecks(enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: ["input-checks"],
+    queryFn: async () => {
+      const data = unwrap(await api.GET("/forecast/assurance/exceptions", {}));
+      return data.data;
+    },
+  });
+}
+
 function ReviewPanel({
   run,
   locale,
@@ -84,27 +92,18 @@ function ReviewPanel({
 }: Readonly<{ run: Assurance; locale: Locale; title: string }>) {
   const t = useT();
 
-  const checks = useQuery({
-    queryKey: ["input-checks"],
-    queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/forecast/assurance/exceptions",
-        {},
-      );
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data;
-    },
-  });
+  const checks = useInputChecks();
 
   return (
     <Panel title={title} titleAction={<ReadinessBadge run={run} />}>
       <PanelBody>
-        {/* Coverage first and SEPARATE. A reader who takes "no findings" for a
-            clean pipeline when nobody could look has been told the opposite of
-            what happened. */}
-        <CoverageLine sources={run.sources} />
+        {run.sources?.some((source) => source.state !== "checked") ? (
+          <CoverageLine sources={run.sources} />
+        ) : (
+          <Disclosure summary={t("analytics.sectionCoverage")}>
+            <CoverageLine sources={run.sources} />
+          </Disclosure>
+        )}
         {/* Beside the coverage line rather than in the header: a recheck is an
             answer to what the coverage line just said, and the header already
             carries the verdict. */}
@@ -287,7 +286,7 @@ function checkColumns(
   locale: Locale,
   zone: string,
   answer: (check: InputCheck, button: HTMLElement) => void,
-): CheckColumn[] {
+): DataTableColumn<InputCheck>[] {
   return [
     {
       key: "severity",
@@ -327,6 +326,7 @@ function checkColumns(
     {
       key: "answer",
       header: t("table.actions"),
+      headerHidden: true,
       render: (check) => (
         <div className="cell-actions">
           <Button onClick={(event) => answer(check, event.currentTarget)}>
@@ -347,9 +347,8 @@ function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, answer }: Resolution) => {
-      const { error } = await api.POST(
-        "/forecast/assurance/exceptions/{id}/resolve",
-        {
+      unwrap(
+        await api.POST("/forecast/assurance/exceptions/{id}/resolve", {
           params: { path: { id } },
           body: {
             outcome: answer.outcome,
@@ -357,11 +356,8 @@ function useResolveCheck(onResolved: (id: string) => void) {
             remind_at: answer.remindAt,
             expires_at: answer.expiresAt,
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: async (_data, { id }) => {
       // Both lists move: the finding leaves this one, and the run's readiness

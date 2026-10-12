@@ -58,7 +58,7 @@ func (d *deliveryEnv) sent(t *testing.T, subject string) ids.UUID {
 	t.Helper()
 	body := "As discussed."
 	logged, _, err := d.Activities.LogActivity(d.author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("outbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: new("outbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: d.contact}},
 	})
 	if err != nil {
@@ -91,7 +91,7 @@ func (d *deliveryEnv) stage(t *testing.T, activity ids.UUID, messageID string, f
 func (d *deliveryEnv) timelineRow(who context.Context, t *testing.T, activity ids.UUID) *crmcontracts.EmailSummary {
 	t.Helper()
 	page, _, err := d.Activities.ListActivities(who, activities.ListActivitiesInput{
-		EntityType: StrPtr("contact"), EntityID: &d.contact,
+		EntityType: new("contact"), EntityID: &d.contact,
 	})
 	if err != nil {
 		t.Fatalf("listing the timeline: %v", err)

@@ -19,7 +19,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -41,7 +43,7 @@ const (
 	counterpartyTargetType = "activity"
 	// counterpartyExecutorActor is the principal the accept executes as, in the
 	// contract's declared grammar for captured_by.
-	counterpartyExecutorActor = "agent:" + counterpartyProposalKind
+	counterpartyExecutorActor = contacts.CaptureAcceptActor
 )
 
 // stageCounterpartyReview offers one unresolvable sender to a human. Returns the
@@ -67,6 +69,7 @@ func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, said a
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     counterpartyTargetType,
 		TargetID:       row.ActivityID,
+		TargetLabel:    counterpartyLabel(row),
 		Summary:        fmt.Sprintf(said.counterpartyWorthKeeping, row.Email),
 		// The verdict pass is an at-least-once worker: a retried batch must
 		// return the existing offer rather than multiply inbox rows.
@@ -76,6 +79,16 @@ func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, said a
 		return ids.Nil, err
 	}
 	return id.UUID, nil
+}
+
+// counterpartyLabel names the sender a counterparty proposal is about, so the
+// receipt and the inbox say who wrote rather than which message.
+func counterpartyLabel(row capture.PendingCounterparty) *string {
+	label := row.Email
+	if name := strings.TrimSpace(row.DisplayName); name != "" {
+		label = name + " <" + row.Email + ">"
+	}
+	return &label
 }
 
 // counterpartyAcceptEffect builds the approvals.ApprovedEffect for kind
@@ -96,7 +109,7 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 		}
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: counterparty accept without a deciding principal")
+			return errors.New("compose: counterparty accept without a deciding principal")
 		}
 		// The records are created by the accept executor on behalf of the human
 		// who released it: their approval is on the decision's own audit row,

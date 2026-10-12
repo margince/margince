@@ -76,6 +76,10 @@ func TestCorrectingYourNameWritesTheSeatItsAuditAndItsEvent(t *testing.T) {
 	if seat.UserID.UUID != userID {
 		t.Errorf("the answer names user %s, want the caller %s", seat.UserID, userID)
 	}
+	if textOf(seat.GreetingName) != textOf(storedGreetingName(t, svc, userID)) {
+		t.Errorf("the answer reports greeting name %q, the seat holds %q",
+			textOf(seat.GreetingName), textOf(storedGreetingName(t, svc, userID)))
+	}
 	// Through the column every other surface reads, not through the answer: a
 	// write that returned the right name and stored the old one would pass an
 	// assertion on `seat` alone.

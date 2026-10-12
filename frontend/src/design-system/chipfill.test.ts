@@ -13,8 +13,11 @@ import {
   type Rule,
   rules,
   subjectClasses,
+  subjectOf,
 } from "../../scripts/lib/css-rules";
 import {
+  type DrawnElement,
+  drawnElements,
   landsOn,
   overriddenInside,
   renderedInside,
@@ -39,13 +42,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 // prefix, so `.segmented-mark` stays out; a rule that paints a ground of its
 // OWN is skipped, its ink answering to that ground.
 //
-// What it still cannot see, stated rather than reasoned away: an ink inherited
-// from OUTSIDE the chip's subtree. A chip that declares no colour at all reads
-// whatever the row around it is drawn in — `.pn-relay-owner`'s own sentence is
-// one, its due date having been given an explicit ink and its lead line not —
-// and no amount of reading these sheets says what that ground's ink is. The axe
-// sweep over the real routes in `e2e/ac.spec.ts` is what covers that shape, and
-// it is the gate that found this one.
+// An ink inherited from OUTSIDE the chip's subtree is what no sheet can say, so
+// the chip is made to name one instead: a chip that declared no colour read
+// whatever its row was drawn in, and a neutral Badge in a caption came out at
+// 4.07:1. The check for that reads the components for which classes an
+// element carries and whether it draws any text.
 describe("the chip fill's call sites", () => {
   // Both scans read the whole of src/, and reading it is what this file costs:
   // parsing every component to see who renders inside whom takes seconds, so
@@ -54,6 +55,7 @@ describe("the chip fill's call sites", () => {
   const sources = join(here, "..");
   const allRules = rules(sources);
   const inside = renderedInside(sources);
+  const drawn = drawnElements(sources);
 
   // WCAG 1.4.3 exempts an inactive control, which is the whole point of the
   // dimmed tone a disabled segment takes.
@@ -206,6 +208,97 @@ describe("the chip fill's call sites", () => {
       }
     }
     expect([...new Set(offenders)].join("\n")).toBe("");
+  });
+
+  // The half the scan above cannot see: a chip that sets no ink reads whatever
+  // its row is drawn in, which no sheet says. So every element drawn on the
+  // fill names one, through some class it carries — its own rule, a base the
+  // modifier sits on, or a rule spelled exactly as the chip's. A contextual
+  // rule does not count: `.overflow-menu-items .btn` inks a button in a menu,
+  // not one on a stage ladder. A track that draws no text is exempt.
+  it("names the ink of everything it draws on --bgChip", () => {
+    const chips = allRules.filter(({ body }) =>
+      /background(?:-color)?:[^;]*var\(--bgChip\)/.test(body),
+    );
+    expect(chips.length).toBeGreaterThan(0);
+    expect(drawn.length).toBeGreaterThan(0);
+
+    // A type in the selector must be the element's own: `button.foo` inks no
+    // `<span className="foo">`, and an element whose tag is unknown takes only
+    // a rule that names no type.
+    const tagOf = (compound: string) => /^[a-z][\w-]*/.exec(compound)?.[0];
+    const stateOf = (compound: string) =>
+      compound.replace(/\.[\w-]+/g, "").replace(/^[a-z][\w-]*/, "");
+    const inked = allRules.filter((rule) => inks(rule.body).length > 0);
+    const names = (chipSelector: string, element: DrawnElement) =>
+      inked.some((rule) =>
+        alternativesOf(rule.selector).some((selector) => {
+          if (selector === chipSelector) return true;
+          const parts = compounds(selector);
+          const compound = parts[0] ?? "";
+          const own = classesOf(compound);
+          const tag = tagOf(compound);
+          return (
+            parts.length === 1 &&
+            own.size > 0 &&
+            [...own].every((name) => element.classes.has(name)) &&
+            (tag === undefined || tag === element.tag) &&
+            ["", stateOf(subjectOf(chipSelector))].includes(stateOf(compound))
+          );
+        }),
+      );
+
+    const offenders: string[] = [];
+    for (const { chip, selector, wanted } of chipSubjects(chips)) {
+      if (wanted.size === 0 || isDisabledState(selector)) continue;
+      if (inks(chip.body).length > 0) continue;
+      const carriers = drawn.filter(({ classes }) =>
+        [...wanted].every((name) => classes.has(name)),
+      );
+      // A class only ever computed is drawn nowhere this can read, so it is
+      // held to its own name rather than waved through.
+      const read: DrawnElement[] =
+        carriers.length > 0
+          ? carriers.filter(({ textless }) => !textless)
+          : [{ classes: wanted, tag: undefined, textless: false }];
+      for (const element of read) {
+        if (names(selector, element)) continue;
+        offenders.push(
+          `${relative(join(here, ".."), chip.file)}: ${selector} paints ` +
+            `--bgChip under [${[...element.classes].join(" ")}], which names no ink ` +
+            `and reads in whatever its row is drawn in`,
+        );
+      }
+    }
+    expect([...new Set(offenders)].join("\n")).toBe("");
+  });
+
+  // The element reader, falsified: a track holding only its fill is textless,
+  // a chip holding a label is not, and a modifier is read beside its base.
+  it("reads what each element draws and what it is drawn beside", () => {
+    // Each check is asked of a class the components DO draw, because `every`
+    // over nothing passes and would prove the reader blind rather than right.
+    const carrying = (name: string) => {
+      const found = drawn.filter(({ classes }) => classes.has(name));
+      expect(found.length, `no element draws .${name}`).toBeGreaterThan(0);
+      return found;
+    };
+    expect(carrying("capture-bar").every(({ textless }) => textless)).toBe(
+      true,
+    );
+    expect(carrying("ai-latency-track").every(({ textless }) => textless)).toBe(
+      true,
+    );
+    expect(carrying("token").some(({ textless }) => !textless)).toBe(true);
+    expect(
+      carrying("token-standalone").every(({ classes }) => classes.has("token")),
+    ).toBe(true);
+    // An icon draws in the ink it inherits, so an `<svg>` is never textless,
+    // and every element read off a lowercase tag knows which tag it is.
+    const svgs = drawn.filter(({ tag }) => tag === "svg");
+    expect(svgs.length).toBeGreaterThan(0);
+    expect(svgs.every(({ textless }) => !textless)).toBe(true);
+    expect(carrying("token").every(({ tag }) => tag !== undefined)).toBe(true);
   });
 
   // The other way the fill goes wrong, and the one that broke the segmented

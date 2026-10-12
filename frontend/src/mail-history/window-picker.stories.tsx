@@ -44,7 +44,7 @@ export const TenYearsDark: Story = { ...TenYears, globals: { theme: "dark" } };
 // spread; nothing is keyed on it.
 const openTheList: Story["play"] = async ({ canvasElement }) => {
   await userEvent.click(
-    within(canvasElement).getByRole("combobox", { name: "Import window" }),
+    within(canvasElement).getByRole("combobox", { name: "How far back" }),
   );
   await within(canvasElement.ownerDocument.body).findByRole("option", {
     name: "10 years",

@@ -1,0 +1,36 @@
+/* StrengthMeter — a relationship's band as three bars over its word. A COMPONENT
+ * sheet: strengthmeter.tsx imports it, and the MCP App views import it through
+ * mcp-apps/view.css. */
+
+.strength-meter {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+.strength-meter-bars {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-end;
+  height: 14px;
+}
+.strength-meter-bars i {
+  display: block;
+  width: 5px;
+  border-radius: var(--r-xs);
+  corner-shape: round;
+  background: var(--borderStrong);
+}
+.strength-meter-bars i:nth-child(1) {
+  height: 6px;
+}
+.strength-meter-bars i:nth-child(2) {
+  height: 10px;
+}
+.strength-meter-bars i:nth-child(3) {
+  height: 14px;
+}
+.strength-meter[data-band="strong"] i,
+.strength-meter[data-band="moderate"] i:nth-child(-n + 2),
+.strength-meter[data-band="weak"] i:nth-child(1) {
+  background: var(--accent);
+}

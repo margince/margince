@@ -55,6 +55,8 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"CrossDoorIdentity": "what a record is called to EVERY door, which is a CLAIM rather than a description: a record stating one asks to be bound to whatever row already holds it, and binding is what makes two rows' content reachable through each other. " +
 		"Deliberately unpublishable, for the reason participantsAreProviderAttested is. The values are provider-stated — an RFC Message-ID, an iCal UID — and a unit able to assert one could name an identity it never observed and reach the activity holding it. That is the same forgery the inbound-mail rule refuses for a Cc line, reached through a different field. " +
 		"The core fills it only from what a connector read out of the provider's own payload. A unit's record carries none, binds to nothing, and lands under its own natural key — which is what every record did before cross-door identity existed, so the absence costs a unit nothing it had",
+	"WithheldParties": "the list the participant cap refused, from which capture binds the workspace's seats on an ATTESTED list only. " +
+		"A unit's record is never attested, so a withheld list it supplied would bind nobody; the field stays the core connectors' own",
 	"participantsAreProviderAttested": "the attestation that a PROVIDER enumerated the party list, which is what lets capture bind an invited colleague's user_id from it. " +
 		"Deliberately unpublishable rather than merely unpublished: it is the core's answer about the SOURCE, stamped from the registry that ran the connector, and a unit able to assert it could manufacture an interaction edge naming any colleague — the exact forgery the inbound-mail rule refuses. " +
 		"Unexported so it cannot be set by assignment either, which means a unit's record arrives un-attested and keeps the strict mail rule",
@@ -77,18 +79,20 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"Fields": "the envelope's `any`. The published surface is typed instead — Record.Activity — so a unit cannot hand the sink a shape it does not switch on",
 	"DeliveredTo": "the receiving server's own delivery header, and it is a CORE judgement rather than a field to publish: the value is trusted only from a header position a sender could not have authored, which mailmap.TopDeliveredTo decides once. " +
 		"A unit supplying it would be supplying the conclusion instead of the evidence — and the conclusion adds an address to a seat's own self-set, which is the one thing a unit must not be able to assert. Empty from a unit means what it means everywhere: no trustworthy claim, so no alias is learned",
+	"ProviderReceivedAt": "a mailbox provider's own arrival time (Gmail's internalDate, Graph's receivedDateTime), which excuses a privacy notice for mail a mailbox already held before it was connected. " +
+		"Only the core mail connectors read it off a provider API they authenticate to. A unit-supplied time would be the unit's claim, and a backdated one would excuse a duty. Zero from a unit means no arrival time is known, so its mail never counts as already held",
 })
 
 // TestThePublishedRecordMirrorsTheCaptureEnvelope walks the core envelope and
 // requires each field to be published or waived.
 func TestThePublishedRecordMirrorsTheCaptureEnvelope(t *testing.T) {
-	published := fieldsOf(reflect.TypeOf(extension.Record{}))
-	envelope := reflect.TypeOf(connector.NormalizedRecord{})
+	published := fieldsOf(reflect.TypeFor[extension.Record]())
+	envelope := reflect.TypeFor[connector.NormalizedRecord]()
 	if envelope.NumField() == 0 {
 		t.Fatal("the capture envelope reflected as empty — this walk would then pass over anything")
 	}
-	for i := range envelope.NumField() {
-		name := envelope.Field(i).Name
+	for field := range envelope.Fields() {
+		name := field.Name
 		if published[name] || waivedEnvelopeFields.Waived(t, name) {
 			continue
 		}
@@ -123,13 +127,12 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 // activity shape is the payload the sink switches on, and a field added there
 // is one a unit's captured message would silently never carry.
 func TestThePublishedActivityMirrorsTheCoreOne(t *testing.T) {
-	published := fieldsOf(reflect.TypeOf(extension.ActivityFields{}))
-	core := reflect.TypeOf(capture.ActivityFields{})
+	published := fieldsOf(reflect.TypeFor[extension.ActivityFields]())
+	core := reflect.TypeFor[capture.ActivityFields]()
 	if core.NumField() == 0 {
 		t.Fatal("the core activity shape reflected as empty")
 	}
-	for i := range core.NumField() {
-		field := core.Field(i)
+	for field := range core.Fields() {
 		if !published[field.Name] && !waivedActivityFields.Waived(t, field.Name) {
 			t.Errorf("capture.ActivityFields.%s is not on extension.ActivityFields — a unit cannot state it, so every ingested activity takes the zero value. "+
 				"Publish it, or waive it in this file with the reason the zero value is correct", field.Name)
@@ -153,8 +156,8 @@ func TestThePublishedActivityMirrorsTheCoreOne(t *testing.T) {
 // published the roster, and without this walk the port could have carried a
 // party the core stores and a unit can never name.
 func TestThePublishedParticipantMirrorsTheCoreOne(t *testing.T) {
-	published := fieldsOf(reflect.TypeOf(extension.Participant{}))
-	core := reflect.TypeOf(connector.MessageParticipant{})
+	published := fieldsOf(reflect.TypeFor[extension.Participant]())
+	core := reflect.TypeFor[connector.MessageParticipant]()
 	if core.NumField() == 0 {
 		t.Fatal("the core participant shape reflected as empty")
 	}
@@ -176,8 +179,7 @@ func TestThePublishedParticipantMirrorsTheCoreOne(t *testing.T) {
 		"ChannelUserID": "Account",
 		"Role":          "Role",
 	}
-	for i := range core.NumField() {
-		field := core.Field(i)
+	for field := range core.Fields() {
 		want, paired := publishedName[field.Name]
 		if !paired {
 			t.Errorf("connector.MessageParticipant.%s has no published name in this walk — a party field the core stores and a unit cannot state. Publish it and pair it here, or waive it", field.Name)
@@ -208,10 +210,9 @@ var waivedCounterpartyFields = gatekit.Waive(map[string]string{
 })
 
 func TestThePublishedCounterpartyCarriesWhatAUnitMaySay(t *testing.T) {
-	published := fieldsOf(reflect.TypeOf(extension.Counterparty{}))
-	core := reflect.TypeOf(connector.Counterparty{})
-	for i := range core.NumField() {
-		field := core.Field(i)
+	published := fieldsOf(reflect.TypeFor[extension.Counterparty]())
+	core := reflect.TypeFor[connector.Counterparty]()
+	for field := range core.Fields() {
 		// An unexported field is already unstatable by anything outside its
 		// package — sentByOwner is the T1 attestation, kept that way on
 		// purpose — so it needs no waiver here.
@@ -270,10 +271,9 @@ func TestTheMergeKeyVocabulariesAgree(t *testing.T) {
 // string where the core wants a time is the obvious one, and it is the one a
 // hand-written bridge makes possible.
 func TestThePublishedActivityTypesMatchTheCores(t *testing.T) {
-	core := reflect.TypeOf(capture.ActivityFields{})
-	published := reflect.TypeOf(extension.ActivityFields{})
-	for i := range core.NumField() {
-		field := core.Field(i)
+	core := reflect.TypeFor[capture.ActivityFields]()
+	published := reflect.TypeFor[extension.ActivityFields]()
+	for field := range core.Fields() {
 		mirrored, ok := published.FieldByName(field.Name)
 		if !ok {
 			continue // reported by the mirror test above
@@ -285,15 +285,15 @@ func TestThePublishedActivityTypesMatchTheCores(t *testing.T) {
 	// The one that would hurt most, asserted by name as well as by the walk:
 	// an occurred-at that stopped being a time would leave the timeline
 	// ordered by whatever a unit's string sorted as.
-	if occurred, ok := published.FieldByName("OccurredAt"); !ok || occurred.Type != reflect.TypeOf(time.Time{}) {
+	if occurred, ok := published.FieldByName("OccurredAt"); !ok || occurred.Type != reflect.TypeFor[time.Time]() {
 		t.Error("extension.ActivityFields.OccurredAt is not a time.Time")
 	}
 }
 
 func fieldsOf(t reflect.Type) map[string]bool {
 	out := make(map[string]bool, t.NumField())
-	for i := range t.NumField() {
-		out[t.Field(i).Name] = true
+	for field := range t.Fields() {
+		out[field.Name] = true
 	}
 	return out
 }

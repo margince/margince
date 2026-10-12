@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -72,6 +74,9 @@ type Sink struct {
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
 	// the behaviour that predates the take-over.
 	takeOverAsserted AssertedTakeOver
+	// claimOwnSentMail corrects a colleague's earlier reading of this seat's
+	// sent mail; nil leaves the first reading standing.
+	claimOwnSentMail OwnSentMailClaim
 	// mailIdentityKind is activities.IdentityKindMail, and the two identity
 	// seams below are that module's own resolve and claim. All three are set
 	// together by WithMessageIdentity or none is: an empty kind is what
@@ -205,6 +210,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 	// it is the skip's sentence to the connector, so it names the rule, never
 	// an address.
 	var dropped string
+	txStart := time.Now()
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A channel record's account id IS personal data, and THIS transaction is
 		// the one that makes it durable — so the erasure is excluded here, under
@@ -227,35 +233,38 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			return nil
 		}
 
-		// Stamped back onto the record, so the activity below can name the
-		// original it was read from and a purge can follow the link instead of
-		// joining on two writers' keys and hoping they agree. rec is a value
-		// copy; this settles it for every reader downstream of here.
-		storedOriginal, err := storeRawCapture(ctx, tx, rec)
-		if err != nil {
-			return err
-		}
-		rec.StoredOriginal = storedOriginal
-
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
-			// BEFORE the activity is captured, so a message that completes the
-			// corroboration is judged under the claim it just proved rather
-			// than being the last one read as mail from a stranger.
-			if err := s.noteAliasSightingTx(ctx, tx, actor.UserID, rec.DeliveredTo, rec.Source); err != nil {
+			// FIRST of everything that touches an activity row in this
+			// transaction, alias adoption included: adoption recomputes the
+			// audience of every message it adopts, which locks those rows, and a
+			// transaction holding one before it asks for the merge lock is the
+			// cycle takeMergeLockFirst exists to break.
+			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
 				return err
 			}
 			var err error
+			if rec, fields, err = s.readAgainstTheSeatsAddressesTx(ctx, tx, actor.UserID, rec, fields); err != nil {
+				return err
+			}
+			// Stored only now, so the original's privacy question sees the record
+			// staging sees, after it was read against the seat's own addresses.
+			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+				return err
+			}
 			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
 			return err
 		case LeadFields:
-			var err error
+			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+				return err
+			}
 			ref, dedupeHit, dedupeFields, err = s.captureLead(ctx, tx, rec, fields)
 			return err
 		default:
 			return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
 		}
 	})
+	capturemetrics.ObserveStage(ctx, capturemetrics.StageSink, time.Since(txStart))
 	if err != nil {
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
@@ -268,6 +277,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// irreversible, and why the own-domain set is admin-visible (ADR-0082 §4).
 		return datasource.EntityRef{}, fmt.Errorf("%w: %s", connector.ErrSkip, dropped)
 	}
+	// Everything after the commit, merge staging included, is the ensure stage.
+	ensureStart := time.Now()
+	defer func() { capturemetrics.ObserveStage(ctx, capturemetrics.StageEnsure, time.Since(ensureStart)) }()
 	if activityCreated {
 		// The tier ladder already decided, and recorded its decision, inside
 		// the transaction above. Creation runs AFTER that commit, in its own

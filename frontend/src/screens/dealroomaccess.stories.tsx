@@ -212,6 +212,33 @@ export const Phone: Story = {
   ]),
 };
 
+/** The invite form, before anyone is named. */
+export const Inviting: Story = {
+  render: access([]),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Invite" }),
+    );
+    await screen.findByRole("dialog");
+  },
+};
+
+/** A seat's permissions, changed from its row's menu. */
+export const ChangingPermissions: Story = {
+  render: access([participant()]),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Actions for Dana Buyer",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change permissions" }),
+    );
+    await screen.findByRole("dialog");
+  },
+};
+
 /**
  * The clipboard refused the one-time link.
  *

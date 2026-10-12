@@ -408,20 +408,6 @@ func (m *CallMeter) EnsureConfig(ctx context.Context, snap ConfigSnapshot) error
 // it to its own sentinel so the trace does not mislabel a successful call.
 var errMeteringFailed = errors.New("ai: metering failed")
 
-// The sentinels of an attempt a model answered. The health read keys on them to
-// tell a tier that responds from one that does not, so they are spelled once.
-// Held by: TestTheAnsweredErrorsClassifyToExactlyTheAnsweredSentinels (backend/internal/modules/ai/callstore_test.go)
-const (
-	sentinelMeteringFailed  = "metering_failed"
-	sentinelOutputWithheld  = "output_withheld"
-	sentinelRequestRejected = "request_rejected"
-)
-
-// answeredSentinels are the sentinels the health read does not count as a
-// failure: metering_failed is an answer whose usage write failed, and the other
-// two are outcomes — the model was reached and decided.
-var answeredSentinels = []string{sentinelMeteringFailed, sentinelOutputWithheld, sentinelRequestRejected}
-
 // classifyError maps a completion terminal error to a short, stable code
 // for ai_call.error_sentinel. It never stores raw error text — that could
 // leak provider internals into the trace store; the code is enough to
@@ -438,6 +424,10 @@ func classifyError(err error) string {
 		return "budget_unavailable"
 	case errors.Is(err, errRequestFailed):
 		return "request_failed"
+	// A deadline, the attempt's own or one the caller set, and never the
+	// caller's own cancellation: a job shut down mid-call is not a slow model.
+	case isDeadline(err):
+		return sentinelTimeout
 	// A REFUSAL IS NOT A FAILURE TO ANSWER, and the three are ordered widest
 	// last because a volume budget and a throttle both wrap a refusal.
 	//
@@ -459,9 +449,21 @@ func classifyError(err error) string {
 		return sentinelOutputWithheld
 	case errors.Is(err, model.ErrRequestRejected):
 		return sentinelRequestRejected
+	case errors.Is(err, ErrOutputRejected):
+		return sentinelOutputRejected
 	default:
 		return "provider_error"
 	}
+}
+
+// isDeadline reports whether err is a deadline firing. The HTTP client's own
+// timeout reports itself through Timeout() rather than as the context error.
+func isDeadline(err error) bool {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var timeout interface{ Timeout() bool }
+	return errors.As(err, &timeout) && timeout.Timeout()
 }
 
 // The two non-provider failure classes the trace store distinguishes so an

@@ -156,6 +156,9 @@ type DeliveryRequest struct {
 	Subject  string
 	Body     string // the unsubscribe footer, when there is one, is already applied
 	HTMLBody string // the markup alternative, empty for a plain-text send
+	// InlineLogoKey is the stored logo HTMLBody embeds by content id, empty
+	// when it embeds none.
+	InlineLogoKey string
 	// FromName is the sender's display name, snapshotted so a retry renders the
 	// same From header the first attempt did.
 	FromName string
@@ -384,11 +387,18 @@ func primaryCounterparty(to, recipients []string) string {
 // a mail header, and it is asked of the connector seam rather than spelled
 // again here: the identity a send transmits under and the identity a header is
 // derived from must agree on what counts.
+//
+// The shared key first, because a mailbox that could prove nothing about a
+// colliding row files the message under a key scoped to its own seat. Which
+// seat holds the row says nothing about which message it is, and reading the
+// stored key raw would refuse the shape and start a new conversation instead of
+// threading the reply onto the message it answers.
 func messageIdentity(kind, value string) string {
-	if kind != "email" || !connector.ValidMessageID(value) {
+	shared := connector.SharedMailKey(value)
+	if kind != "email" || !connector.ValidMessageID(shared) {
 		return ""
 	}
-	return value
+	return shared
 }
 
 // threading is the RFC 5322 conversation chain one outbound message

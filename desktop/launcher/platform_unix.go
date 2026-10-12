@@ -41,8 +41,8 @@ func localTimezone() string {
 	}
 	// /var/db/timezone/zoneinfo/Europe/Berlin -> Europe/Berlin
 	const marker = "/zoneinfo/"
-	if idx := strings.Index(target, marker); idx >= 0 {
-		return target[idx+len(marker):]
+	if _, after, ok := strings.Cut(target, marker); ok {
+		return after
 	}
 	return "UTC"
 }

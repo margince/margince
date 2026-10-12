@@ -33,21 +33,20 @@ import (
 func everyItemLane(out *crmcontracts.Attention) []*[]crmcontracts.AttentionItem {
 	var lanes []*[]crmcontracts.AttentionItem
 	value := reflect.ValueOf(out).Elem()
-	sliceType := reflect.TypeOf([]crmcontracts.AttentionItem(nil))
-	for i := range value.NumField() {
-		field := value.Field(i)
+	sliceType := reflect.TypeFor[[]crmcontracts.AttentionItem]()
+	for _, field := range value.Fields() {
 		// A required lane is addressable and gives its own pointer; an optional
 		// one already IS the pointer. Both assertions are guarded by the type
 		// test beside them rather than trusted — a panic inside a feed read
 		// would take down the whole day over a field somebody added.
 		if field.Type() == sliceType {
-			if lane, ok := field.Addr().Interface().(*[]crmcontracts.AttentionItem); ok {
+			if lane, ok := reflect.TypeAssert[*[]crmcontracts.AttentionItem](field.Addr()); ok {
 				lanes = append(lanes, lane)
 			}
 			continue
 		}
 		if field.Type() == reflect.PointerTo(sliceType) && !field.IsNil() {
-			if lane, ok := field.Interface().(*[]crmcontracts.AttentionItem); ok {
+			if lane, ok := reflect.TypeAssert[*[]crmcontracts.AttentionItem](field); ok {
 				lanes = append(lanes, lane)
 			}
 		}
@@ -102,10 +101,22 @@ type Names interface {
 // was hidden from their account when nothing of the kind is true — the
 // same lie face() (render.go) refuses for a merge card's sides.
 func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Attention) error {
+	var subjects []*crmcontracts.AttentionSubject
+	for _, lane := range everyItemLane(out) {
+		for i := range *lane {
+			subjects = append(subjects, (*lane)[i].Subject)
+		}
+	}
+	return s.labelSubjects(ctx, subjects)
+}
+
+// labelSubjects names each subject the reader may read, in place. It is the one
+// label pass behind the feed and the handled-for-you page; nil entries and
+// subjects already named are left alone.
+func (s *Service) labelSubjects(ctx context.Context, subjects []*crmcontracts.AttentionSubject) error {
 	if s.names == nil {
 		return nil
 	}
-	lanes := everyItemLane(out)
 	// Gathered before anything is asked, so each type is one question. The
 	// ids are DEDUPED per type — the same contact on three cards is one id in
 	// the query — and the order they were met in is kept, so a store that
@@ -113,22 +124,19 @@ func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Atten
 	// a different set each read.
 	wanted := map[crmcontracts.AttentionSubjectType][]ids.UUID{}
 	seen := map[crmcontracts.AttentionSubjectType]map[ids.UUID]bool{}
-	for _, lane := range lanes {
-		for i := range *lane {
-			subject := (*lane)[i].Subject
-			if subject == nil || subject.Label != nil {
-				continue
-			}
-			id := ids.UUID(subject.Id)
-			if seen[subject.Type] == nil {
-				seen[subject.Type] = map[ids.UUID]bool{}
-			}
-			if seen[subject.Type][id] {
-				continue
-			}
-			seen[subject.Type][id] = true
-			wanted[subject.Type] = append(wanted[subject.Type], id)
+	for _, subject := range subjects {
+		if subject == nil || subject.Label != nil {
+			continue
 		}
+		id := ids.UUID(subject.Id)
+		if seen[subject.Type] == nil {
+			seen[subject.Type] = map[ids.UUID]bool{}
+		}
+		if seen[subject.Type][id] {
+			continue
+		}
+		seen[subject.Type][id] = true
+		wanted[subject.Type] = append(wanted[subject.Type], id)
 	}
 
 	resolved := map[crmcontracts.AttentionSubjectType]map[ids.UUID]string{}
@@ -140,16 +148,13 @@ func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Atten
 		resolved[kind] = labels
 	}
 
-	for _, lane := range lanes {
-		for i := range *lane {
-			subject := (*lane)[i].Subject
-			if subject == nil || subject.Label != nil {
-				continue
-			}
-			if label, ok := resolved[subject.Type][ids.UUID(subject.Id)]; ok {
-				name := label
-				subject.Label = &name
-			}
+	for _, subject := range subjects {
+		if subject == nil || subject.Label != nil {
+			continue
+		}
+		if label, ok := resolved[subject.Type][ids.UUID(subject.Id)]; ok {
+			name := label
+			subject.Label = &name
 		}
 	}
 	return nil

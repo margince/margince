@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { ExtensionAccessCard } from "./extension-access";
+import { ExtensionAccessCard, objectLabel } from "./extension-access";
 import { rolesKey } from "./roles.queries";
 
 // The extension-access card renders the composed unit inventory and one
@@ -262,16 +262,10 @@ const render = (ui: ReactNode) =>
     ui,
   );
 
-// The matrix for one object, found by its ACCESSIBLE NAME — the only thing that
-// distinguishes two tables of identically-labelled columns. The name comes from
-// the stacked `SettingRow`'s own label through `aria-labelledby`, so asking for
-// it by role and name is also the assertion that the wiring holds: a grid whose
-// row label came adrift would be a table announced as "read create update
-// delete" with no subject, and this lookup would stop finding it.
+// The matrix for one object, found by its accessible name: the only thing that
+// tells two tables of identical columns apart.
 function matrixFor(object: string): HTMLElement {
-  return screen.getByRole("table", {
-    name: `Permissions for ${object}`,
-  });
+  return screen.getByRole("table", { name: objectLabel("notes", object) });
 }
 
 // One cell of the matrix. `role: "switch"` is load-bearing rather than
@@ -280,7 +274,7 @@ function matrixFor(object: string): HTMLElement {
 // intent something later submits. There is no later here.
 function cell(object: string, role: string, action: string) {
   const control = within(matrixFor(object)).getByRole("switch", {
-    name: `Allow ${role} to ${action} ${object}`,
+    name: `Allow ${role} to ${action} ${objectLabel("notes", object)}`,
   });
   if (!(control instanceof HTMLButtonElement)) {
     throw new Error(`the ${action} cell for ${role} is not a switch`);
@@ -361,16 +355,15 @@ describe("ExtensionAccessCard", () => {
     // NAMED by the row that holds it: the object is what a reader landing on a
     // tick in the middle of one has to be able to trace back to.
     expect(within(unit).getAllByRole("table").length).toBe(2);
+    const note = within(unit).getByRole("table", { name: "Note" });
     expect(
-      within(unit).getByRole("table", {
-        name: "Permissions for ext_notes_note",
-      }),
+      within(unit).getByRole("table", { name: "Signing key" }),
     ).toBeTruthy();
+    // Named by the group head itself, so the name is said once, not copied.
+    expect(note.hasAttribute("aria-label")).toBe(false);
     expect(
-      within(unit).getByRole("table", {
-        name: "Permissions for ext_notes_signing_key",
-      }),
-    ).toBeTruthy();
+      document.getElementById(note.getAttribute("aria-labelledby") ?? ""),
+    ).toBe(within(unit).getByRole("heading", { name: "Note", level: 3 }));
   });
 
   it("links to the page of a unit the SPA registry resolves, naming the unit in the link", async () => {
@@ -572,18 +565,16 @@ describe("ExtensionAccessCard", () => {
     // The signing key: granted to nobody, which is exactly the state that
     // renders the extension's own screens empty.
     expect(
-      screen.getByText(/No role has read access to ext_notes_signing_key/),
+      screen.getByText(/No role has read access to Signing key/),
     ).toBeTruthy();
     // The note object has a reader, so it carries no such warning.
-    expect(
-      screen.queryByText(/No role has read access to ext_notes_note/),
-    ).toBeNull();
+    expect(screen.queryByText(/No role has read access to Note/)).toBeNull();
 
     // Granting read to a role clears the warning for that object.
     await userEvent.click(cell("ext_notes_signing_key", "Rep", "Read").control);
     await waitFor(() =>
       expect(
-        screen.queryByText(/No role has read access to ext_notes_signing_key/),
+        screen.queryByText(/No role has read access to Signing key/),
       ).toBeNull(),
     );
   });
@@ -813,7 +804,7 @@ describe("ExtensionAccessCard", () => {
     expect(
       within(table)
         .getAllByRole("rowheader")
-        .map((header) => header.textContent?.replace("Built-in role", "")),
+        .map((header) => header.textContent),
     ).toEqual(["Admin", "Rep"]);
     for (const header of within(table).getAllByRole("columnheader")) {
       expect(header.getAttribute("scope")).toBe("col");
@@ -886,5 +877,70 @@ describe("ExtensionAccessCard unit identity", () => {
         name: en["extAccess.openUnit"].replace("{name}", "quiet"),
       }),
     ).toBeNull();
+  });
+});
+
+describe("ExtensionAccessCard object matrices", () => {
+  it("names an object by its key less the unit's prefix, in sentence case", () => {
+    expect(objectLabel("openchannel", "ext_openchannel_endpoint")).toBe(
+      "Endpoint",
+    );
+    expect(objectLabel("notes", "ext_notes_signing_key")).toBe("Signing key");
+    expect(objectLabel("notes", "ext_other_thing")).toBe("Other thing");
+    expect(objectLabel("notes", "ext_notes_")).toBe("Notes");
+  });
+
+  it("warns once per unit, naming every object no role can read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        rolesBody: {
+          roles: ROLES.roles.map((role) => ({ ...role, objects: {} })),
+        },
+      }),
+    );
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+
+    const warnings = screen.getAllByText(en["extAccess.nobodyReadsTitle"]);
+    expect(warnings).toHaveLength(1);
+    expect(
+      screen.getByText(/No role has read access to Note and Signing key/),
+    ).toBeTruthy();
+  });
+
+  it("marks only the kind of role that is fewer in the grid", async () => {
+    const custom = {
+      key: "partner_desk",
+      name: "Partner desk with a long descriptive role name",
+      is_system: false,
+      version: 1,
+      objects: {},
+    };
+    vi.stubGlobal(
+      "fetch",
+      backend([], { rolesBody: { roles: [...ROLES.roles, custom] } }),
+    );
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+
+    const heads = within(matrixFor("ext_notes_note")).getAllByRole("rowheader");
+    expect(heads.map((head) => head.textContent)).toEqual([
+      "Admin",
+      "Rep",
+      `${custom.name}${en["extAccess.customRole"]}`,
+    ]);
+  });
+
+  it("stands each matrix straight in the unit's pane with the role column pinned", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+
+    const scroller = matrixFor("ext_notes_note").parentElement;
+    expect([...(scroller?.classList ?? [])]).toEqual(
+      expect.arrayContaining(["table-scroll-bleed", "table-scroll-sticky"]),
+    );
+    expect(scroller?.parentElement?.classList.contains("panel")).toBe(true);
   });
 });

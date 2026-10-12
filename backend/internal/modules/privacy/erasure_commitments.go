@@ -19,10 +19,11 @@ import (
 )
 
 // redactWorkingRecords clears the subject's name where it survives inside
-// somebody else's working record: an automation run addressed to them, and a
-// commitment a colleague wrote about them on their own weekly plan.
+// somebody else's working record: an automation run addressed to them, a commitment a
+// colleague wrote about them on their own weekly plan, and an introduction one
+// colleague asked another for about them.
 //
-// The two are one step because they answer one question — what does an erasure
+// The three are one step because they answer one question — what does an erasure
 // owe a record that is not the subject's and not about them, but names them in
 // passing — and because EraseContact reads as a sequence of such questions
 // rather than a list of tables.
@@ -30,14 +31,20 @@ func redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.ContactID,
 	if err := redactWorkflowRuns(ctx, tx, emails); err != nil {
 		return err
 	}
-	return redactCommitmentsNaming(ctx, tx, subject)
+	if err := redactCommitmentsNaming(ctx, tx, subject); err != nil {
+		return err
+	}
+	// And what they wrote about the subject while asking each other for an
+	// introduction, which is the same shape one table further out
+	// (erasureintroductions.go).
+	return redactIntroductionRequests(ctx, tx, subject)
 }
 
-// erasedCommitment is what a commitment naming an erased subject says instead.
-// A tombstone rather than an empty label, because the table refuses a blank one
-// (weekly_plan_commitment_label_present) and because the rep's week is still
-// entitled to say that a commitment was there.
-const erasedCommitment = "(erased: the contact this named exercised erasure)"
+// erasedMention is what a colleague's own record says instead of the subject's name.
+// A tombstone rather than a blank, for two reasons that recur: the tables refuse an
+// empty one (weekly_plan_commitment_label_present, intro_request_reason_present) and
+// the colleague's record is still entitled to say that something was there.
+const erasedMention = "(erased: the contact this named exercised erasure)"
 
 // redactCommitmentsNaming clears what a rep wrote about the subject on their
 // weekly plan, in the single erasure transaction.
@@ -91,7 +98,7 @@ func redactCommitmentsNaming(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		       linked_record_type = NULL,
 		       linked_record_id = NULL
 		 WHERE linked_record_type = 'contact' AND linked_record_id = $1`,
-		contactID, erasedCommitment); err != nil {
+		contactID, erasedMention); err != nil {
 		return fmt.Errorf("privacy: redacting the weekly commitments naming the subject: %w", err)
 	}
 	return nil

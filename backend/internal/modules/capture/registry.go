@@ -53,11 +53,10 @@ type Registry struct {
 	vault keyvault.Vault
 
 	// The scheduling state machine's knobs (ADR-0063): now is injected so
-	// the backoff/pacing arithmetic is testable; syncInterval paces a
-	// healthy connection (next_sync_at = success + interval);
-	// progressPacing paces the running page's live tally write.
+	// the backoff/pacing arithmetic is testable; progressPacing paces the
+	// running page's live tally write. A healthy connection's own pace is a
+	// setting (MailSyncIntervalSeconds), read when the sync records itself.
 	now            func() time.Time
-	syncInterval   time.Duration
 	progressPacing time.Duration
 
 	// digestProjects answers the morning digest's projects section
@@ -68,10 +67,6 @@ type Registry struct {
 	// (digestreview.go); nil leaves those counts at zero.
 	digestReview DigestReviewSource
 }
-
-// defaultSyncInterval paces a healthy connection between syncs; the push
-// webhook (when live) makes this the safety net, not the latency floor.
-const defaultSyncInterval = 2 * time.Minute
 
 // NewRegistry builds the connector registry over the pool, the capture Sink,
 // the live-authority resolver, and the keyvault that seals/resolves each
@@ -85,18 +80,8 @@ func NewRegistry(db *database.DB, sink *Sink, authority authz.Resolver, vault ke
 		authority:      authority,
 		vault:          vault,
 		now:            time.Now,
-		syncInterval:   defaultSyncInterval,
 		progressPacing: defaultProgressPacing,
 	}
-}
-
-// WithSyncInterval overrides the healthy-connection pacing (the worker's
-// --gmail-sync-interval flag lands here).
-func (r *Registry) WithSyncInterval(d time.Duration) *Registry {
-	if d > 0 {
-		r.syncInterval = d
-	}
-	return r
 }
 
 // WithClock replaces the source of the instants this registry STAMPS — the

@@ -27,7 +27,7 @@ import (
 // composedConstructors are the Node constructors the test below composes. The
 // census after it reads the builder's source, so a constructor added there and
 // not here fails rather than going unasked.
-var composedConstructors = []string{"Array", "Enum", "Integer", "Number", "Object", "Optional", "Record", "String"}
+var composedConstructors = []string{"Array", "Boolean", "Enum", "Integer", "Number", "Object", "Optional", "Record", "String"}
 
 func TestTheStrictCensusComposesEveryNodeConstructor(t *testing.T) {
 	sources, err := filepath.Glob("../../shared/schema/*.go")
@@ -66,6 +66,7 @@ func TestEverySchemaTheBuilderComposesIsStrictEligible(t *testing.T) {
 		"string":    schema.String(),
 		"number":    schema.Number(),
 		"integer":   schema.Integer(),
+		"boolean":   schema.Boolean(),
 		"enum":      schema.Enum("a", "b"),
 		"described": schema.String().Describe("what it means"),
 	}

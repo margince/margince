@@ -20,7 +20,7 @@ package capture
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -59,14 +59,14 @@ func (s *Sink) RemoveMessage(ctx context.Context, key connector.NaturalKey) erro
 		return nil
 	}
 	if key.SourceSystem == "" || key.SourceID == "" {
-		return fmt.Errorf("capture: acting on a provider-side deletion needs a natural key")
+		return errors.New("capture: acting on a provider-side deletion needs a natural key")
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		// No seat on the context is a wiring fault, not a message to drop: a
 		// removal acted on under nobody's authority would destroy whichever
 		// copy the query happened to find.
-		return fmt.Errorf("capture: a provider-side deletion arrived with no seat on the context")
+		return errors.New("capture: a provider-side deletion arrived with no seat on the context")
 	}
 	return s.purgeRemoved(ctx, actor.UserID, key.SourceSystem, key.SourceID)
 }

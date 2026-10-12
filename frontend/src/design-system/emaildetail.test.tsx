@@ -149,6 +149,30 @@ describe("the email drawer's attachments", () => {
     expect(screen.queryByText(/0 byte/)).toBeNull();
   });
 
+  it("names a private message's withheld file without a download", async () => {
+    stubRead(
+      presentation({
+        attachments: [
+          {
+            id: "01a05500-0000-7000-8000-0000000000f3",
+            filename: "payslip.pdf",
+            byte_size: 120000,
+            content_type: "application/pdf",
+            bytes_withheld: true,
+          },
+        ],
+      }),
+    );
+    draw(open());
+
+    await waitFor(() => expect(screen.getByText("payslip.pdf")).toBeTruthy());
+    expect(screen.getByText("payslip.pdf").closest("a")).toBeNull();
+    expect(
+      screen.getByText("Not kept, because the message is private."),
+    ).toBeTruthy();
+    expect(screen.getByText("120 kB")).toBeTruthy();
+  });
+
   it("draws no region for a message that carried nothing", async () => {
     stubRead(
       presentation({

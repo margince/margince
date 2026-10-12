@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 const (
@@ -37,7 +38,8 @@ const (
 const scopeAll = "TRUE"
 
 // readWords reads the newest exchanges on the account, oldest first, with
-// their own words.
+// their own words. A canceled or no-show meeting is no exchange, and would
+// push real correspondence out of the window.
 //
 // Gated on ActivityContentClause, not the discover clause: the bodies go into
 // a prompt, and a reader allowed to know a message exists is not thereby
@@ -73,12 +75,13 @@ func readWords(
 		       coalesce(left(a.body, $%[3]d), ''),
 		       greatest(coalesce(char_length(a.body), 0) - $%[3]d, 0)
 		  FROM activity a
-		 WHERE a.kind IN ('email','message','call','meeting') AND a.archived_at IS NULL
+		 WHERE %[6]s AND a.archived_at IS NULL
 		   AND a.occurred_at >= $%[2]d AND (%[5]s)
 		   AND %[1]s
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT $%[4]d`,
-		activities.CompanyLinkedActivityExists(companyPos), sincePos, charsPos, capPos, scope), args...)
+		activities.CompanyLinkedActivityExists(companyPos), sincePos, charsPos, capPos, scope,
+		relstrength.InteractionCountsSQL("a")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("companyscan: reading the account's exchanges: %w", err)
 	}

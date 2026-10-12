@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { LeadBoard, StatusBadge } from "./leadpresentation";
 import { LeadScreen } from "./leads";
 import { LeadsScreen } from "./leads.list";
@@ -222,6 +223,17 @@ export const LeadPromotedAfterMerge: Story = {
         <LeadScreen id="l-1" />
       </StoryProviders>
     );
+  },
+};
+
+export const LeadPromotedDemoting: Story = {
+  render: LeadPromotedAfterMerge.render,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Reverse qualification" }),
+    );
+    await body.findByRole("dialog");
   },
 };
 

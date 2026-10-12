@@ -42,6 +42,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -88,6 +89,7 @@ Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate
 - description, quantity, tax_rate, evidence_snippet, source_id are required for every line.
 - evidence_snippet MUST be text copied VERBATIM from the numbered context items below, and source_id MUST be that item's id.
 - conversation_price_minor is an INTEGER count of minor currency units (e.g. cents) and is set ONLY when the evidence itself states a price the customer discussed — omit it otherwise.
+- conversation_price_minor is the price of ONE unit of the line's quantity; the line's total is quantity × conversation_price_minor.
 - product_id is set ONLY when a rate-card product below is the clear match for the line — omit it otherwise.
 - Never invent a price: a line with neither a conversation price nor a matching product is still returned, just without either field.
 - OMIT any line you cannot evidence — never guess a line into existence.`
@@ -221,7 +223,7 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 
 	decider, ok := principal.Actor(ctx)
 	if !ok {
-		return DraftResult{}, fmt.Errorf("compose: offer draft without a deciding principal")
+		return DraftResult{}, errors.New("compose: offer draft without a deciding principal")
 	}
 	execCtx := principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalSystem,
@@ -241,7 +243,7 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 	added, removed, changed := diffOfferLines(linesOf(before), linesOf(after))
 	disclosure := draftfloor.AIProvenanceNotice(textlang.Lang(identity.BaseLanguageForPrompt(ctx, d.pool)))
 	diff := buildOfferDiff(added, removed, changed)
-	after.AiGenerated = boolPtr(true)
+	after.AiGenerated = new(true)
 	after.AiDisclosure = &disclosure
 	after.DiffFromPrevious = diff
 
@@ -399,11 +401,11 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 		// zero/negative line is not a real offer line, and a decimal the
 		// store's stricter parser would reject (ratFromDecimal) must drop
 		// HERE rather than error the whole AddStagedOfferLines batch below.
-		quantity, qty, ok := validDecimal(c.Quantity, 0, 1e12)
-		if !ok || qty <= 0 {
+		quantity, ok := validDecimal(c.Quantity)
+		if !ok {
 			continue
 		}
-		taxRate, _, ok := validDecimal(c.TaxRate, 0, 100)
+		taxRate, ok := validDecimal(c.TaxRate)
 		if !ok {
 			continue
 		}
@@ -416,6 +418,11 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 		}
 		if err := d.resolvePrice(ctx, c, snippet, currency, &line); err != nil {
 			return nil, err
+		}
+		// The store's own figures check: a line it would refuse is dropped
+		// here and never errors the whole batch.
+		if deals.CheckStagedLine(line) != nil {
+			continue
 		}
 		out = append(out, line)
 	}

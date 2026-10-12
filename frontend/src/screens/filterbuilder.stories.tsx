@@ -4,8 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { FilterBuilder } from "./filterbuilder";
+import { ClauseRow } from "./filterclause";
 import type { VocabularyField } from "./filterdata";
-import { type Node, newGroup, newLeaf } from "./segmentpredicate";
+import { isGroup, type Node, newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The predicate builder: a tree of clauses, each offering only what the server's
@@ -62,6 +63,9 @@ const FIELDS: VocabularyField[] = [
     type: "picklist",
     operators: ["eq", "neq", "in", "exists"],
     custom: true,
+    // The vocabulary always carries a picklist's values, so the capture shows
+    // the picker a real one gets rather than a box over a closed set.
+    options: ["gold", "silver", "bronze"],
   },
 ];
 
@@ -127,7 +131,7 @@ export const OperatorAnswersTheQuestion: Story = {
 
 export const NestedGroups: Story = {
   // ALL over ANY, which is the shape a real filter takes once it has more than
-  // one idea in it.
+  // one idea in it: an inset box headed "Any of these", with its own "or".
   render: story(
     newGroup("and", [
       newLeaf("full_name", "contains", "ann"),
@@ -137,4 +141,103 @@ export const NestedGroups: Story = {
       ]),
     ]),
   ),
+};
+
+export const Connector: Story = {
+  // From two conditions the join is the word between them, and the switch.
+  render: story(
+    newGroup("and", [
+      newLeaf("full_name", "contains", "ann"),
+      newLeaf("created_at", "gt", "2026-01-01"),
+    ]),
+  ),
+};
+
+export const NestedGroupDepth3: Story = {
+  // Boxes inside boxes, each with its own join and its own More.
+  render: story(
+    newGroup("and", [
+      newLeaf("full_name", "contains", "ann"),
+      newGroup("or", [
+        newLeaf("cf_loyalty_tier", "eq", "gold"),
+        newGroup("and", [
+          newLeaf("created_at", "gt", "2026-01-01"),
+          newLeaf("owner_id", "eq", "u-1"),
+        ]),
+      ]),
+    ]),
+  ),
+};
+
+export const EmptyGroup: Story = {
+  // The reader removed a group's last condition: the group says what it does.
+  render: story(
+    newGroup("and", [newLeaf("full_name", "contains", "ann"), newGroup("or")]),
+  ),
+};
+
+export const ProposedRow: Story = {
+  // A model proposed both conditions: the staged edge and the Proposed badge.
+  render: story(
+    newGroup("and", [
+      { ...newLeaf("full_name", "contains", "Lee"), proposed: true },
+      { ...newLeaf("created_at", "lt", { days_ago: 45 }), proposed: true },
+    ]),
+  ),
+};
+
+export const ProposedRowEdited: Story = {
+  // The reader changed the first: it is theirs, solid and neutral, and the
+  // row has not moved.
+  render: story(
+    newGroup("and", [
+      newLeaf("full_name", "contains", "Lees"),
+      { ...newLeaf("created_at", "lt", { days_ago: 45 }), proposed: true },
+    ]),
+  ),
+};
+
+// Dark: the staged edge and the AI badge are token mixes dark re-derives.
+export const ProposedRowDark: Story = {
+  ...ProposedRow,
+  globals: { theme: "dark" },
+};
+
+export const ProposedRowEditedDark: Story = {
+  ...ProposedRowEdited,
+  globals: { theme: "dark" },
+};
+
+/** One condition alone, as the builder draws each of its rows. */
+function OneClause() {
+  const [tree, setTree] = useState<Node>(() =>
+    newGroup("and", [newLeaf("cf_loyalty_tier", "eq", "gold")]),
+  );
+  const leaf = isGroup(tree) ? tree.children[0] : undefined;
+  if (leaf === undefined || isGroup(leaf)) {
+    return null;
+  }
+  return (
+    <ClauseRow
+      leafID={leaf.id}
+      field={leaf.field}
+      op={leaf.op}
+      value={leaf.value}
+      fields={FIELDS}
+      tree={tree}
+      onChange={setTree}
+    />
+  );
+}
+
+export const OneCondition: Story = {
+  // A custom field's condition: its badge is neutral, like every label.
+  render: () => {
+    routes();
+    return (
+      <StoryProviders>
+        <OneClause />
+      </StoryProviders>
+    );
+  },
 };

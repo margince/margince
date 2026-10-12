@@ -164,12 +164,6 @@ func (s RestoreSeam) decideEdge(ctx context.Context, entityType string, id ids.U
 		answer, err = pinned.Evaluate(ctx, tx, row, Binding)
 		return err
 	})
-	if errors.Is(err, apperrors.ErrVersionSkew) {
-		// Unwrapped: the sentinel's own sentence is what the 409 carries, and a
-		// caller reading `code: version_skew` is told to re-read and decide again
-		// rather than shown this path's internal narration.
-		return contacts.EdgeFacts{}, Undoability{}, err
-	}
 	if err != nil {
 		return contacts.EdgeFacts{}, Undoability{},
 			fmt.Errorf("compose: decide whether the link can be put back: %w", err)

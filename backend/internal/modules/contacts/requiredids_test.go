@@ -36,10 +36,10 @@ func TestAnOmittedMergeTargetOrStakeholderIsNamed(t *testing.T) {
 	store := NewStore(nil)
 	ctx := context.Background()
 
-	_, err := store.MergeContact(ctx, ids.New[ids.ContactKind](), ids.ContactID{})
+	_, err := store.MergeContact(ctx, ids.New[ids.ContactKind](), ids.ContactID{}, nil)
 	faulttest.AssertNamesOmittedID(t, err, "target_id")
 
-	_, err = store.MergeCompany(ctx, ids.New[ids.CompanyKind](), ids.CompanyID{})
+	_, err = store.MergeCompany(ctx, ids.New[ids.CompanyKind](), ids.CompanyID{}, nil)
 	faulttest.AssertNamesOmittedID(t, err, "target_id")
 
 	_, err = store.SetProjectStakeholder(ctx, SetProjectStakeholderInput{

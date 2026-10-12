@@ -1,0 +1,27 @@
+name: we_promise_the_integration_spec_by_a_day
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+commitment_band: firm
+fixture:
+  - 'Ines: Before we finish — what do you need from us to start the Graz integration?'
+  - 'Lars: Mostly the interface list. I will send the integration spec by Friday.'
+  - 'Ines: Great, that unblocks our developers.'
+  - 'Lars: Anything else on your side?'
+  - 'Ines: No, that covers it.'
+expect:
+  outcome: accepted
+  answer:
+    - line: 2
+  rubric: >
+    One speaker states one plain promise: "I will send the integration spec by
+    Friday" — a specific thing, by a named day, owed by Lars. Cite it on line 2
+    and give it a confident reading; hesitation over a stated, dated promise
+    scores lower. Proposing anything from the other lines, which only
+    acknowledge it, is wrong. Then score the summary as one plain sentence a
+    colleague could act on and the owner as the transcript names them.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

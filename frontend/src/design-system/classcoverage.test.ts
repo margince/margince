@@ -6,9 +6,9 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { appStylesheets } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
-  extensionLayers,
   filesMatching,
   filesUnder,
   parseSource,
@@ -52,12 +52,7 @@ function fromFrontend(path: string): string {
  * walk found the tree rather than a corner of it.
  */
 function sheets(): string[] {
-  const units = extensionLayers(extensionsRoot).flatMap((layer) =>
-    filesMatching(layer, /\.css$/),
-  );
-  return filesMatching(sourceRoot, /\.css$/)
-    .concat(units)
-    .map(fromFrontend);
+  return appStylesheets(frontendRoot).map(fromFrontend);
 }
 
 /**
@@ -367,6 +362,12 @@ describe("what a className can be shown to produce", () => {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: the placeholder is the SUBJECT of this case, not an interpolation that failed to happen — the string is the source text the reader under test parses, and turning it into a template literal would evaluate the very thing the test hands it verbatim
     expect(names("<p className={`${prefix}-tail head`}>x</p>")).toEqual([
       "head",
+    ]);
+  });
+
+  it("reads a concatenation as the text it joins", () => {
+    expect(names('<p className={"card tone-" + level}>x</p>')).toEqual([
+      "card",
     ]);
   });
 

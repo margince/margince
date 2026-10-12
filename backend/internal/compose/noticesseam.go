@@ -14,8 +14,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -54,6 +59,22 @@ func (n noticesNotifier) Notify(
 	return err
 }
 
+// NotifyTx writes an automation notice on the caller's transaction, for a
+// notice that must commit with the change it announces: a rule pausing itself.
+func (n noticesNotifier) NotifyTx(
+	ctx context.Context, tx pgx.Tx, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string,
+) error {
+	_, err := n.store.CreateTx(ctx, tx, notices.NewNotice{
+		Recipient: ids.From[ids.UserKind](recipient),
+		Kind:      noticeKindAutomation,
+		DedupeKey: dedupe,
+		Subject:   subject,
+		Body:      body,
+		Target:    notices.Target{Type: string(target.Type), ID: target.ID},
+	})
+	return err
+}
+
 // NewBacklogStallNotifier raises the capture-backlog notice for one seat.
 //
 // Straight to notices.Store.Create rather than through the Notifier seam,
@@ -62,16 +83,18 @@ func (n noticesNotifier) Notify(
 // and the pass that finds it runs hourly, so without a key it writes one line
 // per sweep forever, and with a key that named only the seat it would write one
 // line ever and go unnoticed on the second week.
-func NewBacklogStallNotifier(store *notices.Store, clock func() time.Time) BacklogNotifier {
+func NewBacklogStallNotifier(
+	store *notices.Store, pool *pgxpool.Pool, clock func() time.Time,
+) BacklogNotifier {
 	return func(ctx context.Context, seat ids.UUID, waiting int) error {
+		// The notice is stored and the digest mail quotes its subject, so it
+		// speaks the installation's language in both places.
+		words := mailcopy.For(identity.BaseLanguageForPrompt(ctx, pool))
 		_, err := store.Create(ctx, notices.NewNotice{
 			Recipient: ids.From[ids.UserKind](seat),
 			Kind:      noticeKindCaptureBacklog,
-			Subject:   "Your captured mail is waiting on the classifier",
-			Body: fmt.Sprintf(
-				"%d sender decisions have been waiting without an answer. Mail stays withheld from "+
-					"your colleagues while this lasts — nothing is lost, and it clears on its own "+
-					"once the classifier answers again.", waiting),
+			Subject:   words.NoticeBacklogSubject,
+			Body:      fmt.Sprintf(words.NoticeBacklogBody, waiting),
 			DedupeKey: fmt.Sprintf("capture_backlog_stalled:%s:%s",
 				seat, clock().UTC().Format(time.DateOnly)),
 		})

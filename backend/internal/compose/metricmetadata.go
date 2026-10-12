@@ -29,11 +29,11 @@ func reportingMetricMetadata(spec metricSpec) crmcontracts.ReportingMetricDefini
 	attribution := "Current owner; current-state capture time"
 	switch out.Id {
 	case reportingBookingsWon, reportingClosedWinRate:
-		attribution = "Owner and pipeline at the current valid closing occurrence"
+		attribution = "Current deal owner and pipeline; current valid closing date"
 	case reportingQualifiedPipelineCreated:
 		attribution = "Owner, pipeline and valuation at the first valid qualifying stage transition"
 	case reportingMeetingsHeld:
-		attribution = "Host at the confirmed held transition; scheduled customer meeting occurrence"
+		attribution = "Recorded host at the held transition; current host and customer links for older meetings without attribution history"
 	case reportingAcceptedOpportunities:
 		attribution = "Originating SDR on the earliest accepted handoff per opportunity"
 	}

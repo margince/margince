@@ -112,7 +112,7 @@ func (e *cimdEnv) client(t *testing.T, clientID string) (name, via string, redir
 // A validated document becomes an ORDINARY client row. That is the whole
 // integration: oauth_grant carries a foreign key onto this table, and it is
 // what makes a connection revocable — a CIMD client with no row would be a
-// connection an admin can see the passport for and never the client.
+// connection its human can see the passport for and never the client.
 func TestAValidatedDocumentBecomesAnOrdinaryClientRow(t *testing.T) {
 	e := setupCIMD(t, "cimd-row")
 	clientID := e.docs.URL + "/client.json"

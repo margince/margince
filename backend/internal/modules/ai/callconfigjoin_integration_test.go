@@ -53,7 +53,7 @@ func TestACallResolvesTheConfigurationItRanUnder(t *testing.T) {
 	}
 
 	reader := diagnosticsReader(ws)
-	page, err := NewCallReadStore(db).ListCalls(reader, nil, nil, nil)
+	page, err := NewCallReadStore(db).ListCalls(reader, nil, nil, CallListFilter{})
 	if err != nil {
 		t.Fatalf("listing calls: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestACallNamingNoConfigurationResolvesToNothing(t *testing.T) {
 	}
 
 	reader := diagnosticsReader(ws)
-	page, err := NewCallReadStore(db).ListCalls(reader, nil, nil, nil)
+	page, err := NewCallReadStore(db).ListCalls(reader, nil, nil, CallListFilter{})
 	if err != nil {
 		t.Fatalf("listing calls: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestAStoredJSONNullIsNotReadAsAnEmptyParameterSet(t *testing.T) {
 	}
 
 	reader := diagnosticsReader(ws)
-	page, err := NewCallReadStore(db).ListCalls(reader, nil, nil, nil)
+	page, err := NewCallReadStore(db).ListCalls(reader, nil, nil, CallListFilter{})
 	if err != nil {
 		t.Fatalf("listing calls: %v", err)
 	}

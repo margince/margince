@@ -16,15 +16,17 @@ import type { components } from "../api/schema";
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
 import { Button } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";
+import "./brief.css";
 
 type MagicLineRecord = components["schemas"]["MagicLineRecord"];
 type MagicFieldChange = components["schemas"]["MagicFieldChange"];
@@ -39,16 +41,14 @@ function useLineRecords(lineId: string, since: string, open: boolean) {
     enabled: open,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/magic/lines/{id}/records", {
-        params: {
-          path: { id: lineId },
-          query: { since, ...(pageParam ? { cursor: pageParam } : {}) },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/magic/lines/{id}/records", {
+          params: {
+            path: { id: lineId },
+            query: { since, ...(pageParam ? { cursor: pageParam } : {}) },
+          },
+        }),
+      );
     },
     getNextPageParam: (last) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
@@ -56,8 +56,9 @@ function useLineRecords(lineId: string, since: string, open: boolean) {
 }
 
 /**
- * The line's About cell when it stands for more than one record: the summary,
- * and the control that opens the list.
+ * A line's record count, as the control that opens every record it stands
+ * for. A link rather than a boxed button: it is a way in, standing in the
+ * line's text, and the one boxed verb a line carries is Undo.
  */
 export function LineRecordsOpener({
   line,
@@ -69,17 +70,23 @@ export function LineRecordsOpener({
   const titleId = useId();
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{summary}</Button>
+      <Button variant="link" onClick={() => setOpen(true)}>
+        {summary}
+      </Button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={titleId}
-        size="wide"
+        intent="drawer"
       >
-        <Heading size="medium" as="h2" id={titleId} className="modal-title">
-          {t("magic.records.title")}
-        </Heading>
-        {open && <LineRecordsList line={line} since={since} />}
+        <DrawerHead>
+          <Heading size="large" id={titleId} className="t-h2 modal-title">
+            {t("magic.records.title")}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          {open && <LineRecordsList line={line} since={since} />}
+        </DrawerBody>
       </Modal>
     </>
   );

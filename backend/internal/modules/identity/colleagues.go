@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -67,8 +68,7 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 	// `%` and `_` are LIKE metacharacters, and the tool advertises this as a
 	// plain narrowing filter — a caller typing an underscore in a name means
 	// that character, not "any character".
-	escaped := strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(trimmed)
-	pattern := "%" + escaped + "%"
+	pattern := "%" + storekit.EscapeLike(trimmed) + "%"
 	var out []Colleague
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `

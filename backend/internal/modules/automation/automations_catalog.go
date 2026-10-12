@@ -11,6 +11,7 @@ package automation
 // engine would choke on never reaches the table.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -28,6 +29,9 @@ type CatalogEntry struct {
 	Tier         string // auto_execute | confirmation_required (from the handler, never the caller)
 	ParamsSchema map[string]any
 	Validate     func(params map[string]any) error
+	// ValidateRefs, when set, asks as the author whether the records the
+	// params name exist for them: a list rule's lists, say.
+	ValidateRefs func(ctx context.Context, lists Lists, params map[string]any) error
 	// Seeded marks the entry as one of the SIX starter templates
 	// SeedStarterAutomationsTx (automations.go) enrolls into a fresh
 	// workspace on bootstrap (UAT.md:72 — "exactly the six
@@ -54,6 +58,8 @@ const (
 	schemaKeyMaximum         = "maximum"
 	schemaKeyDefault         = "default"
 	schemaKeyEnum            = "enum"
+	schemaKeyFormat          = "format"
+	schemaKeyRequired        = "required"
 )
 
 // minParamDays is the lower bound every "how many days" knob shares: a
@@ -203,11 +209,13 @@ const assignLeadOwnerName = "assign_lead_owner"
 
 // Catalog returns the closed automation library — the full authorable
 // set: the six Seeded starter templates (seededCatalogEntries) plus the
-// authorable-only entries (authorableOnlyCatalogEntries) that never
-// enroll into a fresh workspace unasked. Split into two builders so
-// each stays a short, single-purpose list rather than one long literal.
+// authorable-only entries (authorableOnlyCatalogEntries) and the list
+// rules (listRuleEntries, listrules.go), none of which enroll into a fresh
+// workspace unasked. Split into builders so each stays a short,
+// single-purpose list rather than one long literal.
 func Catalog() []CatalogEntry {
-	return append(seededCatalogEntries(), authorableOnlyCatalogEntries()...)
+	entries := append(seededCatalogEntries(), authorableOnlyCatalogEntries()...)
+	return append(entries, listRuleEntries()...)
 }
 
 // seededCatalogEntries is UAT.md:72's pinned six — the exact set

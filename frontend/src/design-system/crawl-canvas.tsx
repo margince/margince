@@ -7,6 +7,7 @@ import {
   type CrawlNode,
   crawlAges,
   layOutCrawl,
+  moteHome,
   motePath,
 } from "./crawl-graph";
 import { drawCrawl, drawMotes } from "./crawl-paint";
@@ -212,14 +213,18 @@ function paintMotes(
   }
   fitBackingStore(layer, ctx, box);
   const from = graph.getBoundingClientRect();
-  const to = core.getBoundingClientRect();
+  const home = moteHome(core.getBoundingClientRect(), {
+    x: box.left,
+    y: box.top,
+  });
+  if (home === null) {
+    ctx.clearRect(0, 0, box.width, box.height);
+    return;
+  }
   drawMotes(ctx, {
     nodes: motePath(nodes, { x: from.left - box.left, y: from.top - box.top }),
     ages,
-    home: {
-      x: to.left + to.width / 2 - box.left,
-      y: to.top + to.height / 2 - box.top,
-    },
+    home,
     width: box.width,
     height: box.height,
     ink,

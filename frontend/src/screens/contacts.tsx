@@ -8,7 +8,7 @@ import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useBulkSelection } from "./bulkverbs";
-import { throwProblem, useViewerId } from "./common";
+import { unwrap, useViewerId } from "./common";
 import { contactCreateFields, mapContactBody } from "./contactformfields";
 import { CreateAction, type CreateField, type FormRows } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
@@ -20,8 +20,6 @@ import {
   ListTable,
   listFetchLimit,
   useListQuery,
-  useOwnerChips,
-  useTagChips,
 } from "./listquery";
 import {
   createdColumn,
@@ -30,10 +28,11 @@ import {
   ownerColumn,
   standardViews,
   tagsColumn,
+  useOwnerTagChips,
 } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { listQueryParams } from "./tagfilter";
-import { VCardImport } from "./vcard-import";
+import { VCardImportAction, VCardImportPage } from "./vcard-import";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the
@@ -48,23 +47,20 @@ async function fetchContactsPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Contact>> {
-  const { data, error } = await api.GET("/contacts", {
-    params: {
-      query: {
-        q: query.q || undefined,
-        sort: query.sort || undefined,
-        include_archived: query.includeArchived || undefined,
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        ...listQueryParams(query.filters),
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: {
+        query: {
+          q: query.q || undefined,
+          sort: query.sort || undefined,
+          include_archived: query.includeArchived || undefined,
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          ...listQueryParams(query.filters),
+        },
       },
-    },
-  });
-  if (error) {
-    // A LIST read's honest-error path only needs a message to render — the
-    // dedupe "view existing" link is a create/update-only concern.
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {
@@ -80,14 +76,15 @@ async function createContact(
   rows: FormRows | undefined,
   customFields: Record<string, unknown>,
   t: (key: MessageKey) => string,
+  idempotencyKey: string,
 ): Promise<Contact> {
-  const { data, error } = await api.POST("/contacts", {
-    body: { ...mapContactBody(values, rows ?? {}), ...customFields },
-  });
-  if (error) {
-    throwProblem(error, t);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/contacts", {
+      params: { header: { "Idempotency-Key": idempotencyKey } },
+      body: { ...mapContactBody(values, rows ?? {}), ...customFields },
+    }),
+    t,
+  );
 }
 
 // Quick capture: the six things somebody reading a public profile in another
@@ -130,25 +127,23 @@ async function quickCaptureContact(
   values: Record<string, string>,
   t: (key: MessageKey) => string,
 ): Promise<Contact> {
-  const { data, error } = await api.POST("/contacts/quick-capture", {
-    body: {
-      full_name: values.full_name?.trim() ?? "",
-      title: statedValue(values, "title"),
-      // The contract lets an id win over a name; sending only one of them
-      // keeps the request saying exactly what the reader chose.
-      ...companyChoice(values),
-      // Normalized here rather than server-side for the same reason the contact
-      // rail normalizes on save: a bare `linkedin.com/in/jdoe` is an address
-      // somebody typed, and storing it unusable makes the row permanently
-      // unlinkable on every surface that reads it.
-      profile_url: profileUrlOrUndefined(values.profile_url),
-      email: statedValue(values, "email"),
-      phone: statedValue(values, "phone"),
-    },
-  });
-  if (error) {
-    throwProblem(error, t);
-  }
+  const data = unwrap(
+    await api.POST("/contacts/quick-capture", {
+      body: {
+        full_name: values.full_name?.trim() ?? "",
+        title: statedValue(values, "title"),
+        // The contract lets an id win over a name; sending only one of them
+        // keeps the request saying what the reader chose.
+        ...companyChoice(values),
+        // Normalized here, as the contact rail does on save. A bare
+        // `linkedin.com/in/jdoe` stored as typed is unlinkable on every surface.
+        profile_url: profileUrlOrUndefined(values.profile_url),
+        email: statedValue(values, "email"),
+        phone: statedValue(values, "phone"),
+      },
+    }),
+    t,
+  );
   return data.contact;
 }
 
@@ -164,7 +159,15 @@ function profileUrlOrUndefined(raw: string | undefined) {
   return stated ? normalizeProfileUrl(stated) : undefined;
 }
 
-export function ContactsScreen() {
+// `#/contacts/import` is this screen's reserved segment (app/nav.ts), so the
+// list's reads never start for the import page.
+export function ContactsScreen({
+  importing = false,
+}: Readonly<{ importing?: boolean }>) {
+  return importing ? <VCardImportPage /> : <ContactsList />;
+}
+
+function ContactsList() {
   const t = useT();
   const pageName = usePageName("contacts");
   const { locale } = useLocale();
@@ -172,8 +175,7 @@ export function ContactsScreen() {
   // Offered only once /me has answered: a chip whose value is still "" reads
   // as "clear this filter", so a half-built owner dial narrows nothing.
   const viewerId = useViewerId();
-  const ownerChips = useOwnerChips();
-  const tagChips = useTagChips();
+  const ownerChips = useOwnerTagChips();
   const savedViews = useSavedViewTabs("contacts");
   const cf = useObjectCustomFields("contact");
   // The form that never closes gives no other feedback: without this, six
@@ -218,8 +220,8 @@ export function ContactsScreen() {
               label={t("create.contact")}
               invalidate="contacts"
               screen="contacts"
-              create={(values, rows) =>
-                createContact(values, rows, cf.toBody(values), t)
+              create={(values, rows, key) =>
+                createContact(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "contacts", id })}
               fields={[...contactCreateFields(t), ...cf.formFields]}
@@ -229,7 +231,7 @@ export function ContactsScreen() {
                 one contact. Beside the others all the same: a handed-over card
                 is a way a contact comes to exist, and every one of those
                 belongs on this list. */}
-            <VCardImport />
+            <VCardImportAction />
           </>
         }
         columns={[
@@ -305,7 +307,7 @@ export function ContactsScreen() {
         rowKey={(contact) => contact.id}
         rowRoute={(contact) => ({ screen: "contacts", id: contact.id })}
         selection={selection}
-        dataChips={[...ownerChips, ...tagChips]}
+        dataChips={ownerChips}
         dataViews={savedViews}
         views={[...standardViews(viewerId)]}
       />

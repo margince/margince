@@ -390,7 +390,7 @@ func (s *Store) ensureCompanyAndEmployment(ctx context.Context, tx pgx.Tx, in En
 		return err
 	}
 
-	return plantEmploymentEdge(ctx, tx, in, res.ContactID, companyID)
+	return plantEmploymentEdge(ctx, tx, in, base, res.ContactID, companyID)
 }
 
 // linkActivityToContact attaches the captured activity to the contact —

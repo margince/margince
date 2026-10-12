@@ -12,10 +12,11 @@ import { leadIdentityName } from "../format/leadname";
 import { toMinorUnits } from "../format/minorunits";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import { leadPromotePreviewKey, leadWriteKeys } from "./leadkeys";
 import { usePipelines } from "./pipelines.queries";
+import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
 type PromoteLeadRequest = components["schemas"]["PromoteLeadRequest"];
@@ -38,13 +39,12 @@ function usePromotePreview(id: string, open: boolean) {
     // the dialog opens, and a 30s-old "create" can be a merge by now.
     staleTime: 0,
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}/promote-preview", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}/promote-preview", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
   });
 }
@@ -163,14 +163,13 @@ export function QualifyDialog({
 
   const qualify = useMutation({
     mutationFn: async (body: PromoteLeadRequest) => {
-      const { data, error } = await api.POST("/leads/{id}/promote", {
-        params: { path: { id: lead.id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/leads/{id}/promote", {
+          params: { path: { id: lead.id } },
+          body,
+        }),
+        t,
+      );
     },
     onSuccess: (result) => {
       // leadWriteKeys carries the history key: the promotion WROTE the audit
@@ -186,11 +185,7 @@ export function QualifyDialog({
     },
   });
 
-  // A promotion in flight is not something to walk away from: the dialog
-  // stays until the server has answered, then closes on success or shows
-  // the refusal.
   const close = () => {
-    if (qualify.isPending) return;
     qualify.reset();
     onClose();
   };
@@ -225,9 +220,7 @@ export function QualifyDialog({
     <ConfirmModal
       open={open}
       onClose={close}
-      // Wide, because the body is a form the reader has to READ before an act
-      // that creates a contact and possibly a deal — not a yes/no box.
-      size="wide"
+      intent="form"
       title={t("lead.qualify.title", { name })}
       confirmLabel={
         withDeal ? t("lead.qualify.confirmWithDeal") : t("lead.qualify.confirm")
@@ -237,103 +230,99 @@ export function QualifyDialog({
       pending={qualify.isPending}
       error={qualify.isError ? problemMessageOf(qualify.error, t) : undefined}
     >
-      <div className="lead-qualify">
-        <section className="lead-qualify-block">
-          <Heading size="xsmall" as="h3">
-            {t("lead.qualify.contact")}
-          </Heading>
-          <PreviewSentence preview={preview} t={t} />
-        </section>
+      <section className="lead-qualify-block">
+        <Heading size="xsmall" as="h3">
+          {t("lead.qualify.contact")}
+        </Heading>
+        <PreviewSentence preview={preview} t={t} />
+      </section>
 
-        <section className="lead-qualify-block">
-          <Checkbox
-            label={t("lead.qualify.alsoDeal")}
-            checked={withDeal}
-            data-testid="lead-qualify-with-deal"
-            onChange={(event) => setWithDeal(event.target.checked)}
-          />
-          {withDeal && (
-            <div className="lead-qualify-deal">
-              <Field label={t("lead.qualify.pipeline")}>
-                {(control) => (
-                  <Select
-                    {...control}
-                    value={chosenPipeline?.id ?? ""}
-                    onChange={(value) => {
-                      setPipelineId(value);
-                      setStageId("");
-                    }}
-                    options={(pipelines.data ?? []).map((p) => ({
-                      value: p.id,
-                      label: p.name,
-                    }))}
-                  />
-                )}
-              </Field>
-              <Field label={t("lead.qualify.stage")}>
-                {(control) => (
-                  <Select
-                    {...control}
-                    value={chosenStage?.id ?? ""}
-                    onChange={setStageId}
-                    options={stages.map((s) => ({
-                      value: s.id,
-                      label: s.name,
-                    }))}
-                  />
-                )}
-              </Field>
-              <Field label={t("lead.qualify.dealName")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    data-testid="lead-qualify-deal-name"
-                    value={dealName}
-                    placeholder={suggestedName}
-                    onChange={(event) => setDealName(event.target.value)}
-                  />
-                )}
-              </Field>
-              <Field
-                label={t("lead.qualify.amount", { currency: currency ?? "" })}
-                hint={t("lead.qualify.amountHint")}
-                error={
-                  amountInvalid
-                    ? t("lead.qualify.amountInvalid")
-                    : amountWaitsForCurrency
-                      ? t("lead.qualify.amountNoCurrency")
-                      : undefined
-                }
-              >
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    inputMode="decimal"
-                    value={amount}
-                    onChange={(event) => setAmount(event.target.value)}
-                  />
-                )}
-              </Field>
-            </div>
-          )}
-        </section>
-
-        <section className="lead-qualify-block">
-          <Heading size="xsmall" as="h3">
-            {t("lead.qualify.why")}
-          </Heading>
-          <p>{reasonSentence(lead, t, locale, zone)}</p>
-          <Field label={t("lead.evidenceNote")}>
+      <Checkbox
+        label={t("lead.qualify.alsoDeal")}
+        checked={withDeal}
+        data-testid="lead-qualify-with-deal"
+        onChange={(event) => setWithDeal(event.target.checked)}
+      />
+      {withDeal && (
+        <div className="lead-qualify-deal">
+          <Field label={t("lead.qualify.pipeline")}>
             {(control) => (
-              <Textarea
+              <Select
                 {...control}
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
+                value={chosenPipeline?.id ?? ""}
+                onChange={(value) => {
+                  setPipelineId(value);
+                  setStageId("");
+                }}
+                options={(pipelines.data ?? []).map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                }))}
               />
             )}
           </Field>
-        </section>
-      </div>
+          <Field label={t("lead.qualify.stage")}>
+            {(control) => (
+              <Select
+                {...control}
+                value={chosenStage?.id ?? ""}
+                onChange={setStageId}
+                options={stages.map((s) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
+              />
+            )}
+          </Field>
+          <Field label={t("lead.qualify.dealName")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                data-testid="lead-qualify-deal-name"
+                value={dealName}
+                placeholder={suggestedName}
+                onChange={(event) => setDealName(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("lead.qualify.amount", { currency: currency ?? "" })}
+            hint={t("lead.qualify.amountHint")}
+            error={
+              amountInvalid
+                ? t("lead.qualify.amountInvalid")
+                : amountWaitsForCurrency
+                  ? t("lead.qualify.amountNoCurrency")
+                  : undefined
+            }
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+              />
+            )}
+          </Field>
+        </div>
+      )}
+
+      <section className="lead-qualify-block">
+        <Heading size="xsmall" as="h3">
+          {t("lead.qualify.why")}
+        </Heading>
+        <p>{reasonSentence(lead, t, locale, zone)}</p>
+      </section>
+      <Field label={t("lead.evidenceNote")}>
+        {(control) => (
+          <Textarea
+            {...control}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        )}
+      </Field>
     </ConfirmModal>
   );
 }

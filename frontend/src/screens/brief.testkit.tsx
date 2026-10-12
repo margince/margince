@@ -37,15 +37,18 @@ export function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-export function render(ui: ReactNode): RenderResult {
+// The client comes back with the render so a case can wait on a read having
+// answered, where the screen draws the same nothing while it loads.
+export function render(ui: ReactNode): RenderResult & { client: QueryClient } {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
+  const result = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...result, client };
 }
 
 export const emptyPage = {
@@ -136,6 +139,8 @@ const DEFAULTS: Routes = {
   // the fallback is exactly what nothing could see before.
   "GET /users": () => jsonResponse(emptyPage),
   "GET /agent-tools": () => jsonResponse(emptyPage),
+  // A row names its owner by id; naming nobody leaves the id as the label.
+  "GET /users/names": () => jsonResponse({ data: [] }),
 };
 
 /**

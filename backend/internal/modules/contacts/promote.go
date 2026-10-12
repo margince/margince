@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -130,13 +131,23 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 		return PromoteOutcome{}, err
 	}
 
-	var out PromoteOutcome
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = s.promoteLeadTx(ctx, tx, id, in, by, active)
-		return err
-	})
-	return out, err
+	// The retry is outside the transaction, so a restart rolls back every
+	// write of the attempt it replaces. A move is caught before the first one.
+	for range promoteAttempts {
+		var out PromoteOutcome
+		err = s.tx(ctx, func(tx pgx.Tx) error {
+			candidate, err := s.promoteCandidate(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			out, err = s.promoteLeadTx(ctx, tx, id, in, by, active, candidate)
+			return err
+		})
+		if _, moved := errors.AsType[*promoteTargetMovedError](err); !moved {
+			return out, err
+		}
+	}
+	return PromoteOutcome{}, apperrors.ErrConflict
 }
 
 // carryLeadConsent carries the promoted lead's consent onto the contact it
@@ -295,6 +306,9 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 	if lead.ArchivedAt != nil {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
+	if err := refuseWebsiteLeadNotYetTold(ctx, tx, id.UUID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	// Read through the same derivation the ladder matches on, not through a
 	// nil check: a full_name that is present and empty passes `!= nil` and
 	// names nobody, so such a lead promotes into a contact with no name at all.
@@ -322,7 +336,11 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 // minted the twin. The exact-email answer is unchanged; a near-match still
 // creates (DEDUPE_FUZZY_AUTOMERGE is pinned never) and now leaves the pair on
 // the review queue instead of nothing at all.
-func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, merged *bool) (ids.ContactID, map[string]any, error) {
+//
+// locked is the contact the caller locked before the lead. A match on any
+// other contact answers promoteTargetMovedError, because locking it now would
+// take the lead's lock before the contact's.
+func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, merged *bool) (ids.ContactID, map[string]any, error) {
 	candidate, err := s.leadContactCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.ContactID{}, nil, err
@@ -336,6 +354,9 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 		return ids.ContactID{}, nil, err
 	}
 	if match.Decision == DecisionExactCollision {
+		if match.ContactID != locked {
+			return ids.ContactID{}, nil, &promoteTargetMovedError{}
+		}
 		// Merging CHANGES the matched contact — the lead's fields land on it —
 		// and returns it, so the probe asks for write authority and the refusal
 		// still discloses nothing: a match the promoter cannot change answers a
@@ -348,7 +369,7 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 			return ids.ContactID{}, nil, apperrors.ErrConflict
 		}
 		*merged = true
-		mergeFields, merr := s.mergeLeadIntoContact(ctx, tx, lead, match.ContactID)
+		mergeFields, merr := s.mergeLeadIntoContact(ctx, tx, lead, match.ContactID, by)
 		return match.ContactID, mergeFields, merr
 	}
 
@@ -357,6 +378,12 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 	if lead.Email != nil {
 		leadEmails = []ContactEmailInput{{
 			Email: string(*lead.Email), EmailType: emailTypeWork, IsPrimary: true, Position: 1,
+		}}
+	}
+	var leadPhones []ContactPhoneInput
+	if lead.Phone != nil && *lead.Phone != "" {
+		leadPhones = []ContactPhoneInput{{
+			Phone: *lead.Phone, PhoneType: phoneTypeWork, IsPrimary: true, Position: 1,
 		}}
 	}
 	id, err := createContact(ctx, tx, match, ContactSpec{
@@ -371,6 +398,7 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 		OwnerID:             ownerFromUUID(uuidPtrToIDs(lead.OwnerId)),
 		ConvertedFromLeadID: &leadID,
 		Emails:              leadEmails,
+		Phones:              leadPhones,
 		Source:              lead.Source,
 		CapturedBy:          by,
 	})
@@ -390,7 +418,7 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 // so contact.updated.changed_fields reports the real delta — not a fixed
 // converted_from_lead_id that lies when the field was already set, and never
 // omitting a title it just filled. A no-op merge returns a nil map.
-func (s *Store) mergeLeadIntoContact(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, contactID ids.ContactID) (map[string]any, error) {
+func (s *Store) mergeLeadIntoContact(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, contactID ids.ContactID, by string) (map[string]any, error) {
 	// BEFORE the contact row lock. Recording a stop takes consent's lock on the
 	// contact and then reads the contact row; taking the row first here and
 	// consent's lock later (in carryStopsTx, once the promotion knows this is
@@ -408,6 +436,14 @@ func (s *Store) mergeLeadIntoContact(ctx context.Context, tx pgx.Tx, lead crmcon
 	current, err := readContact(ctx, tx, contactID, storekit.LiveOnly, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read merge-target contact: %w", err)
+	}
+	// The number the lead carried, onto a contact that does not already hold
+	// it. A phone is not the key this merge matched on, unlike the email beside
+	// it. The surviving contact has no reason to carry it yet. Added rather
+	// than replacing: a contact's numbers are a list, and a lead's one number
+	// is another entry in it.
+	if err := carryLeadPhone(ctx, tx, lead, contactID, by); err != nil {
+		return nil, err
 	}
 	p := storekit.NewPatch()
 	if current.ConvertedFromLeadId == nil {
@@ -436,4 +472,25 @@ func uuidPtrToIDs(u *openapi_types.UUID) *ids.UUID {
 	}
 	converted := ids.UUID(*u)
 	return &converted
+}
+
+// carryLeadPhone lands a promoted lead's number on the contact it merged into.
+// It does nothing when that contact already holds the same number.
+//
+// Not primary. The surviving contact's own numbers were there first, and a
+// promotion is not a reason to re-rank them.
+func carryLeadPhone(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, contactID ids.ContactID, by string) error {
+	if lead.Phone == nil || *lead.Phone == "" {
+		return nil
+	}
+	held, err := heldContactPhones(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	if len(held[*lead.Phone]) > 0 {
+		return nil
+	}
+	return insertContactPhones(ctx, tx, contactID, lead.Source, by, []ContactPhoneInput{{
+		Phone: *lead.Phone, PhoneType: phoneTypeWork, Position: len(held) + 1,
+	}})
 }

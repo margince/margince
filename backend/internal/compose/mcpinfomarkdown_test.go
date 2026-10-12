@@ -107,21 +107,17 @@ func writeMCPInfoHead(page *strings.Builder, doc mcpInfo) {
 	fmt.Fprintf(page, "| Approx. wire tokens | %d |\n", doc.Totals.ApproxTokens)
 	fmt.Fprintf(page, "| Largest tool | `%s` (%s) |\n", doc.Totals.LargestToolNam, humanBytes(doc.Totals.LargestToolB))
 	fmt.Fprintf(page, "| Scopes rendered | %s |\n\n", "`"+strings.Join(doc.Scopes, "`, `")+"`")
-	page.WriteString("Those are the WIRE bytes: they carry each tool's output schema and the governance\n")
-	page.WriteString("clause the transport appends. The Surface-B listing a run re-sends every step is\n")
-	page.WriteString("smaller — name, description and input schema only — and is held against its own\n")
-	page.WriteString("budget in `agenttooldescriptions_test.go`. What that listing costs each SCHEDULED\n")
+	page.WriteString("Those are the bytes on the wire: they carry each tool's output schema and the\n")
+	page.WriteString("governance clause the transport appends. The listing a run re-sends every step is\n")
+	page.WriteString("smaller (name, description and input schema only) and is held against its own\n")
+	page.WriteString("budget in `agenttooldescriptions_test.go`. What that listing costs each scheduled\n")
 	page.WriteString("agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).\n\n")
 	writeMCPInfoComposition(page, doc.Totals)
 }
 
-// writeMCPInfoComposition prints what the wire total is made of, because the
-// paragraph above has warned in prose since this page existed and the number in
-// the table is still the one contacts act on.
-//
-// The last column is the point: the largest component is the one no prompt
-// carries, so "shorten the descriptions" attacks a quarter of the bytes and
-// spends the only part with a measured effect on tool selection.
+// writeMCPInfoComposition prints what the wire total is made of: the largest
+// component is the one no prompt carries, so the headline total overstates
+// what a run pays.
 func writeMCPInfoComposition(page *strings.Builder, totals mcpInfoTotals) {
 	split := totals.Composition
 	page.WriteString("### What the tool catalog is made of\n\n")
@@ -131,7 +127,7 @@ func writeMCPInfoComposition(page *strings.Builder, totals mcpInfoTotals) {
 		bytes  int
 		prompt string
 	}{
-		{"Output schemas", split.OutputSchemaBytes, "**No** — a result's shape, never listed to a model"},
+		{"Output schemas", split.OutputSchemaBytes, "**No**: a result's shape, never listed to a model"},
 		{"Descriptions (incl. governance clause)", split.DescriptionBytes, "Yes, every step"},
 		{"Input schemas", split.InputSchemaBytes, "Yes, every step"},
 	} {
@@ -143,20 +139,15 @@ func writeMCPInfoComposition(page *strings.Builder, totals mcpInfoTotals) {
 		(totals.ToolBytes-split.OutputSchemaBytes-split.DescAndInputBytes)*100/totals.ToolBytes)
 	fmt.Fprintf(page, "| **Description + input schema** | **%s** | **%d%%** | **the recurring cost** |\n\n",
 		humanBytes(split.DescAndInputBytes), split.DescAndInputBytes*100/totals.ToolBytes)
-	page.WriteString("So the headline total is dominated by the part a model is never charged for, and\n")
-	page.WriteString("descriptions are a minority of it. Trimming the copy to shrink the total trades a\n")
-	page.WriteString("MEASURED gain — the same copy took gemini's tool selection from 0.80 to 0.87, and\n")
-	page.WriteString("one restraint scenario from 0/3 to 3/3 on a single sentence — for bytes that were\n")
-	page.WriteString("not the cost. `agenttooldescriptions_test.go` records that argument and the\n")
-	page.WriteString("budget decision it produced; the room is bought by publishing a vocabulary as a\n")
-	page.WriteString("resource, the way `margince://schema/record-fields` did, not by writing less.\n\n")
+	page.WriteString("Output schemas are the largest part of the total and are never sent to a model;\n")
+	page.WriteString("descriptions and input schemas are what each step pays for.\n\n")
 }
 
 func writeMCPInfoIndex(page *strings.Builder, tools []mcpToolEntry, resources []mcpResourceEntry) {
 	page.WriteString("## Index\n\n")
 	fmt.Fprintf(page, "### Resources (%d)\n\n", len(resources))
 	for _, r := range resources {
-		fmt.Fprintf(page, "- [`%s`](#%s) — %s\n", r.URI, anchor(r.Name), r.Title)
+		fmt.Fprintf(page, "- [`%s`](#%s): %s\n", r.URI, anchor(r.Name), r.Title)
 	}
 	fmt.Fprintf(page, "\n### Tools (%d)\n\n", len(tools))
 	page.WriteString("| Tool | What it is for | Read-only | View | Size |\n|---|---|:-:|---|---:|\n")
@@ -166,7 +157,7 @@ func writeMCPInfoIndex(page *strings.Builder, tools []mcpToolEntry, resources []
 			mark = "yes"
 		}
 		view := ""
-		if tool.Meta.UI != nil {
+		if tool.Meta.UI != nil && tool.Meta.UI.ResourceURI != "" {
 			view = "[`" + tool.Meta.UI.ResourceURI + "`](#" + anchor(viewNameOf(tool.Meta.UI.ResourceURI)) + ")"
 		}
 		fmt.Fprintf(page, "| [`%s`](#%s) | %s | %s | %s | %s |\n",
@@ -178,7 +169,7 @@ func writeMCPInfoIndex(page *strings.Builder, tools []mcpToolEntry, resources []
 func writeMCPInfoResources(page *strings.Builder, resources []mcpResourceEntry) {
 	page.WriteString("## Resources\n\n")
 	page.WriteString("A resource takes no arguments and changes nothing, so it carries no autonomy\n")
-	page.WriteString("tier — but it is scope-filtered exactly as a tool is, so a passport holding\n")
+	page.WriteString("tier. It is scope-filtered as a tool is, so a passport holding\n")
 	page.WriteString("fewer scopes is served fewer documents.\n\n")
 	for _, r := range resources {
 		fmt.Fprintf(page, "### %s\n\n", r.Name)
@@ -186,7 +177,7 @@ func writeMCPInfoResources(page *strings.Builder, resources []mcpResourceEntry) 
 		if r.Title != "" {
 			fmt.Fprintf(page, "**%s**\n\n", r.Title)
 		}
-		page.WriteString(r.Description + "\n\n")
+		page.WriteString(verbatimBlock(r.Description) + "\n")
 		if len(r.Meta) > 0 {
 			page.WriteString("<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>\n\n```json\n")
 			page.WriteString(indentJSON(r.Meta) + "\n```\n\n</details>\n\n")
@@ -201,8 +192,8 @@ func writeMCPInfoTools(page *strings.Builder, tools []mcpToolEntry) {
 		if tool.Title != "" {
 			fmt.Fprintf(page, "**%s**\n\n", tool.Title)
 		}
-		page.WriteString(tool.Description + "\n\n")
-		if tool.Meta.UI != nil {
+		page.WriteString(verbatimBlock(tool.Description) + "\n")
+		if tool.Meta.UI != nil && tool.Meta.UI.ResourceURI != "" {
 			fmt.Fprintf(page, "Renders its result in [`%s`](#%s), visible to %s.\n\n",
 				tool.Meta.UI.ResourceURI, anchor(viewNameOf(tool.Meta.UI.ResourceURI)),
 				"`"+strings.Join(tool.Meta.UI.Visibility, "`, `")+"`")
@@ -218,7 +209,7 @@ func writeMCPInfoTools(page *strings.Builder, tools []mcpToolEntry) {
 
 // viewNameOf turns a view's URI into the heading its section is published
 // under, so the index can link a tool straight to the document that renders it.
-// ui://margince/company-brief.html is the company_brief_view section.
+// ui://margince/create-followups.html is the create_followups_view section.
 func viewNameOf(uri string) string {
 	file := uri[strings.LastIndexByte(uri, '/')+1:]
 	return strings.ReplaceAll(strings.TrimSuffix(file, ".html"), "-", "_") + "_view"

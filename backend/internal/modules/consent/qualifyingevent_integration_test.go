@@ -311,7 +311,7 @@ func TestRecordingTheSameExchangeTwiceKeepsOneRow(t *testing.T) {
 		Note:       "Handed me their card at the Frankfurt trade fair, stand B12.",
 		OccurredAt: time.Now().Add(-24 * time.Hour).Truncate(time.Second),
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if _, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, in); err != nil {
 			t.Fatalf("recording pass %d: %v", i+1, err)
 		}

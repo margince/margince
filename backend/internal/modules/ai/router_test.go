@@ -32,6 +32,10 @@ func (m *memMeter) MonthTokens(context.Context) (int64, error) { return m.spent,
 // failingClient errors every call — the fallback trigger.
 type failingClient struct{ model.Client }
 
+func (failingClient) Health() model.ProviderHealthStatus {
+	return model.ProviderHealthStatus{Health: model.HealthOK}
+}
+
 func (failingClient) Complete(context.Context, model.Request) (model.Response, error) {
 	return model.Response{}, errors.New("provider down")
 }
@@ -41,6 +45,10 @@ func (failingClient) Complete(context.Context, model.Request) (model.Response, e
 type fixedResponseClient struct {
 	model.Client
 	resp model.Response
+}
+
+func (fixedResponseClient) Health() model.ProviderHealthStatus {
+	return model.ProviderHealthStatus{Health: model.HealthOK}
 }
 
 func (c fixedResponseClient) Complete(context.Context, model.Request) (model.Response, error) {

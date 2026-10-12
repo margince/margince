@@ -131,17 +131,19 @@ func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, pr
 	return wasRelink, nil
 }
 
-// LoginViaFederatedIdentity resolves a verified (provider, subject, email)
-// tuple to a session, mirroring Service.Login's shape: mint the token first,
-// then one transaction that links/resolves, mints the session row, and
-// audits — the same unexported session helpers Login already uses, no
+// LoginViaFederatedIdentity resolves the verified (provider, subject, email)
+// tuple read off the claims to a session, mirroring Service.Login's shape: mint
+// the token first, then one transaction that links/resolves, mints the session
+// row, and audits — the same unexported session helpers Login already uses, no
 // parallel implementation. Sessions carry no workspace column (ADR-0091 §8),
 // so unlike Login this needs no bound installation context.
 //
-// groups is the token's `groups` claim; the mapped roles it grants
-// (grouprolesync.go) commit in the same transaction as the session, so a
-// member never holds a session that predates the grant their sign-in earned.
-func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subject, email string, groups []string) (string, error) {
+// The token's groups grant mapped roles (grouprolesync.go) in the same
+// transaction as the session, so a member never holds a session that predates
+// the grant their sign-in earned. Its given name fills an empty greeting name
+// on the first link only.
+func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string, claims OIDCClaims) (string, error) {
+	subject, email, groups := claims.Subject, claims.Email, claims.Groups
 	rawToken, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return "", fmt.Errorf("identity: mint session token: %w", err)
@@ -165,6 +167,10 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subje
 		wasRelink, linkErr := linkFederatedIdentity(ctx, tx, userID, provider, subject, email)
 		if linkErr != nil {
 			return linkErr
+		}
+		if err := fillGreetingNameFromProvider(ctx, tx, userID, provider, claims.GivenName,
+			firstLink && !wasRelink); err != nil {
+			return err
 		}
 		// The map is read HERE, inside the transaction the grant commits in and
 		// only once the member is admitted: a pre-transaction read could grant

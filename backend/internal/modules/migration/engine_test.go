@@ -64,6 +64,13 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 				[]IdentityPair{{ExternalID: "1", NativeID: ids.NewV7()}})
 		}},
 		{"Resume", func() error { return s.Resume(ctx, runID) }},
+		{"RecordImportSourceIntent", func() error {
+			return s.RecordImportSourceIntent(ctx, "ws/import/x")
+		}},
+		{"UnreferencedImportKeys", func() error {
+			_, err := s.UnreferencedImportKeys(ctx, []string{"ws/import/x"})
+			return err
+		}},
 		{"CreateStagedRun", func() error {
 			_, err := s.CreateStagedRun(ctx, CreateStagedRunInput{
 				Connector: ConnectorCSV, SourceRef: "x", Source: "t",
@@ -80,6 +87,10 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
 			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
+		}},
+		{"LookupBinding", func() error {
+			_, _, err := s.LookupBinding(ctx, "legacy_crm", "contact", "1")
+			return err
 		}},
 		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
 	} {
@@ -622,17 +633,23 @@ func TestTheRepairRunsEvenWhenNoCheckpointWasEverRecorded(t *testing.T) {
 // stops being complete the moment somebody adds a method. This derives the
 // obligation from the type instead: every exported RunStore method that takes a
 // context must appear in the refusal table.
+//
+// What each entry is held to is its OWN admission gate, not one grant for all of
+// them: most take the import-run grant, and UnreferencedImportKeys takes the system
+// principal, which is what the stored-object sweep runs under. Both refuse an
+// ungranted human, which is what this table proves.
 func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 	checked := map[string]bool{
 		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
 		"CreateStagedRun": true, "AwaitApproval": true, "Approve": true,
 		"ResumeApproved": true, "FailValidation": true, "GetStaged": true,
-		"RecordIdentityTx": true, "Undo": true,
+		"RecordIdentityTx": true, "LookupBinding": true, "Undo": true,
+		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
 	}
-	rt := reflect.TypeOf(&RunStore{})
-	for i := range rt.NumMethod() {
-		name := rt.Method(i).Name
+	rt := reflect.TypeFor[*RunStore]()
+	for method := range rt.Methods() {
+		name := method.Name
 		if !checked[name] {
 			t.Errorf("RunStore.%s is an exported entry point with no line in the ungranted-role table", name)
 		}

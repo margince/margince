@@ -47,8 +47,15 @@ export type RowReadings = Readonly<{
   sample: readonly string[];
   /** The zone a verdict's timestamps are read in. */
   zone: string;
-  /** The record the row is about, linked, where the row does not link it. */
-  about?: Readonly<{ href: string; label: string }>;
+  /** The record the row is about, linked, where the row does not link it,
+   *  with the account a meeting's contact works for. */
+  about?: Readonly<{
+    href: string;
+    label: string;
+    company?: Readonly<{ href: string; label: string }>;
+  }>;
+  /** Who hosted the meeting the row is about. */
+  host?: string | null;
   /** When the contact last wrote and when we did, in the row's own words. */
   touch: readonly { term: string; value: string }[];
 }>;

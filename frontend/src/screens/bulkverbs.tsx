@@ -16,23 +16,32 @@ import {
   type BulkRow,
 } from "./bulkchange";
 import { ShortlistVerb } from "./bulkshortlist";
+import { TagVerbs } from "./bulktag";
+import { TaskVerb } from "./bulktask";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 
-type BulkRecordType = components["schemas"]["BulkRecordType"];
+// The record lists' types: a Worklist item has its own bar
+// (worklist.bulkdone.tsx) and takes none of these verbs.
+type BulkRecordType = Exclude<
+  components["schemas"]["BulkRecordType"],
+  "worklist_item"
+>;
 type BulkVerb = components["schemas"]["BulkVerb"];
 
 /**
  * The verbs every record list offers over its selection: hand the rows to an
- * owner, or archive them. Both open `BulkChangeDialog`; nothing is written
- * before the reader has seen the preview.
+ * owner, tag them, file a task under each, put them on a Shortlist, or archive
+ * them. Each opens `BulkChangeDialog`; nothing is written before the reader has
+ * seen the preview.
  *
- * `children` are a list's own further verbs, drawn between the two.
+ * `children` are a list's own further verbs, drawn after the owner's.
  */
 export function BulkVerbs({
   recordType,
   rows,
   busy = false,
   onDone,
+  shortlist,
   children,
 }: Readonly<{
   recordType: BulkRecordType;
@@ -41,6 +50,8 @@ export function BulkVerbs({
   /** Another verb of the caller's own is running. */
   busy?: boolean;
   onDone: (result: BulkChangeResult) => void;
+  /** The Shortlist these rows are shown on, which the rows can be taken off. */
+  shortlist?: Readonly<{ id: string; name: string }>;
   children?: ReactNode;
 }>) {
   const t = useT();
@@ -65,13 +76,17 @@ export function BulkVerbs({
     setOwnerId("");
   }
 
-  const open = (verb: BulkVerb) =>
+  const open = (
+    verb: BulkVerb,
+    also: Pick<BulkChangeRequest, "list" | "tag" | "task"> = {},
+  ) =>
     setRequest({
       recordType,
       verb,
       rows: [...rows],
       ownerId: verb === "reassign_owner" ? ownerId : undefined,
       openId: crypto.randomUUID(),
+      ...also,
     });
 
   const idle = !busy && rows.length > 0;
@@ -103,22 +118,31 @@ export function BulkVerbs({
         {t("bulk.assign")}
       </Button>
       {children}
+      <TagVerbs disabled={!idle} onPick={(verb, tag) => open(verb, { tag })} />
+      <TaskVerb
+        disabled={!idle}
+        onReady={(task) => open("create_task", { task })}
+      />
       <ShortlistVerb
         recordType={recordType}
         disabled={!idle}
-        onPick={(list) =>
-          setRequest({
-            recordType,
-            verb: "add_to_list",
-            rows: [...rows],
-            list,
-            openId: crypto.randomUUID(),
-          })
-        }
+        exclude={shortlist?.id}
+        onPick={(list) => open("add_to_list", { list })}
       />
-      <Button disabled={!idle} onClick={() => open("archive")}>
-        {t("bulk.archive")}
-      </Button>
+      {shortlist && (
+        <Button
+          disabled={!idle}
+          onClick={() => open("remove_from_list", { list: shortlist })}
+        >
+          {t("bulk.removeFromThisShortlist")}
+        </Button>
+      )}
+      {/* A lead has no archive: it leaves the queue by being disqualified. */}
+      {recordType !== "lead" && (
+        <Button disabled={!idle} onClick={() => open("archive")}>
+          {t("bulk.archive")}
+        </Button>
+      )}
       {/* Last, after every verb: the bar is one wrapping flex row, and a
           sentence between the picker and its button is where the row would
           break, splitting the control from its verb. */}

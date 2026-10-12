@@ -23,10 +23,14 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // waitingHorizonSpread is what the derivation measures: how long this
@@ -112,19 +116,90 @@ const (
 	waitingHorizonWindowDays = 365
 )
 
-// waitingHorizonFor measures this installation's own response spread and
-// derives the horizon from it, inside the caller's transaction.
+// waitingHorizonFor is this installation's horizon as of asOf: remembered when
+// it was measured within the hour (waitinghorizoncache.go), measured inside the
+// caller's transaction otherwise.
 //
 // UNGATED, and that is the one thing about this read worth arguing. Every other
 // figure in this package is taken under the caller's own visibility, because it
 // is about their work. The horizon is not: it decides which rows the queue
 // contains, so two colleagues reading one shared thread have to be judged by
 // one number. Derived per reader it would make the queue's contents depend on
-// who is looking, twice over and invisibly.
+// who is looking, twice over and invisibly. The same argument is what makes it
+// safe to remember per workspace: a value no reader shapes is a value every
+// reader may be handed.
 //
 // What that costs is a duration and a count over the installation, and no
 // content: nothing here names a conversation, a contact or a record.
 func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
+	// The workspace this store's transaction already resolved; a handle that
+	// cannot name it simply measures, which is the answer before the cache.
+	ws, wsErr := s.db.Workspace(ctx)
+	if wsErr == nil {
+		if days, ok := s.horizons.lookup(ws, asOf, s.now()); ok {
+			return days, nil
+		}
+	}
+	days, measured, err := s.measureWaitingHorizonOrDefault(ctx, tx, asOf)
+	if err != nil {
+		return 0, err
+	}
+	// The compiled horizon standing in for a measurement is remembered too, but
+	// briefly, so a read of several pages does not re-run a measurement that
+	// just ran out of time.
+	if wsErr == nil {
+		ttl := waitingHorizonTTL
+		if !measured {
+			ttl = waitingHorizonFallbackTTL
+		}
+		s.horizons.remember(ws, asOf, s.now(), days, ttl)
+	}
+	return days, nil
+}
+
+// waitingHorizonSavepoint fences the measurement off from the caller's
+// transaction.
+const waitingHorizonSavepoint = "waiting_horizon"
+
+// measureWaitingHorizonOrDefault measures the horizon inside a savepoint, and
+// answers the compiled one when the measurement is stopped before it answers.
+//
+// The horizon only bounds which waits the queue holds, so a measurement that
+// outruns the statement timeout is no reason to fail the read or the
+// owed_verdict sweep that asked for it: the compiled horizon is what an
+// installation too new to measure is judged by as well. A timed-out statement
+// aborts the whole transaction, and rolling back to the savepoint is what
+// leaves it usable for the caller's own statements.
+//
+// A cancelled CONTEXT is not that case. Postgres raises the same 57014 for the
+// caller going away, and the caller's next statement fails on its own, so the
+// error is returned as it is. measured is false whenever the compiled horizon
+// is answered.
+func (s *Store) measureWaitingHorizonOrDefault(ctx context.Context, tx pgx.Tx, asOf time.Time) (days int, measured bool, err error) {
+	if _, err := tx.Exec(ctx, `SAVEPOINT `+waitingHorizonSavepoint); err != nil {
+		return 0, false, fmt.Errorf("activities: opening the waiting horizon's savepoint: %w", err)
+	}
+	days, err = s.measureWaitingHorizon(ctx, tx, asOf)
+	if err == nil {
+		if _, err := tx.Exec(ctx, `RELEASE SAVEPOINT `+waitingHorizonSavepoint); err != nil {
+			return 0, false, fmt.Errorf("activities: releasing the waiting horizon's savepoint: %w", err)
+		}
+		return days, true, nil
+	}
+	if !storekit.IsQueryCanceled(err) || ctx.Err() != nil {
+		return 0, false, err
+	}
+	if _, rbErr := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+waitingHorizonSavepoint+`; RELEASE SAVEPOINT `+waitingHorizonSavepoint); rbErr != nil {
+		return 0, false, errors.Join(err, fmt.Errorf("activities: rolling back the waiting horizon's savepoint: %w", rbErr))
+	}
+	slog.WarnContext(ctx, "activities: the waiting horizon could not be measured in time; using the compiled horizon",
+		"default_days", waitingHorizonDays, "err", err)
+	return waitingHorizonDays, false, nil
+}
+
+// measureWaitingHorizon takes the response spread and derives the horizon
+// from it — the year-long percentile the cache exists to avoid repeating.
+func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
 	args := []any{asOf.AddDate(0, 0, -waitingHorizonWindowDays), asOf}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	ownDomains, err := s.ownDomainList(ctx, tx)

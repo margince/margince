@@ -21,6 +21,7 @@ const (
 	ActionTypeSetField        ActionType = "set_field"
 	ActionTypeDraftEmail      ActionType = "draft_email"
 	ActionTypeRequestApproval ActionType = "request_approval"
+	ActionTypeAddToShortlist  ActionType = "add_to_shortlist"
 )
 
 // Tier vocabulary for ActionDef.Tier, named so the registry reads in one
@@ -166,6 +167,12 @@ var actionDefs = map[ActionType]ActionDef{
 		Type: ActionTypeRequestApproval, Tier: tierConfirmationRequired, Executor: workflow.ActionEmitFlowEvent,
 		RequiredPermission: Permission{Shape: PermissionPinned, Object: rbacObjActivity, Action: rbacVerbCreate},
 	},
+	// The write is a Shortlist membership, whatever record type it names; the
+	// list's own steward and sharing rules are asked again at fire time.
+	ActionTypeAddToShortlist: {
+		Type: ActionTypeAddToShortlist, Tier: tierAutoExecute, Executor: workflow.ActionAddListMember,
+		RequiredPermission: Permission{Shape: PermissionPinned, Object: rbacObjList, Action: rbacVerbUpdate},
+	},
 }
 
 // AllActionTypes is the closed set, in declaration order. The closure
@@ -174,7 +181,7 @@ var actionDefs = map[ActionType]ActionDef{
 func AllActionTypes() []ActionType {
 	return []ActionType{
 		ActionTypeCreateTask, ActionTypeNotify, ActionTypeAssignOwner,
-		ActionTypeSetField, ActionTypeDraftEmail, ActionTypeRequestApproval,
+		ActionTypeSetField, ActionTypeDraftEmail, ActionTypeRequestApproval, ActionTypeAddToShortlist,
 	}
 }
 

@@ -5,8 +5,8 @@
 
 package gates
 
-// Every gate here runs in parallel with the others, and this is what keeps that
-// true as gates are added.
+// Every gate in this package calls t.Parallel, so a new gate cannot run alone
+// while the others share the machine.
 //
 // These gates are readers, and the tail is flat: a hundred independent walks of
 // the same tree, no single one of them hot. That is the shape parallelism

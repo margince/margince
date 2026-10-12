@@ -207,7 +207,7 @@ func stringAt(body, path string) (string, error) {
 	if err := json.Unmarshal([]byte(body), &node); err != nil {
 		return "", apperrors.ErrNotFound
 	}
-	for _, segment := range strings.Split(path, ".") {
+	for segment := range strings.SplitSeq(path, ".") {
 		object, ok := node.(map[string]any)
 		if !ok {
 			return "", apperrors.ErrNotFound

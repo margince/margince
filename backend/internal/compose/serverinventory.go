@@ -125,13 +125,16 @@ type Server struct {
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
 	claimHandlers
+	dealCommitmentHandlers
 	importHandlers
 	channelHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers
 	filterPreviewHandlers
+	filterProposalHandlers
 	exportBundleHandlers
+	agentBundleHandlers
 	companyRollupHandlers
 	strengthHandlers
 	recordAccessHandlers
@@ -145,9 +148,9 @@ type Server struct {
 	jobHealthHandlers
 	captureHealthHandlers
 	extensionIngestHealthHandlers
-	// The composed-extension inventory (handlers_extensions.go). Stateless — it
-	// reads the package's own boot-written accessors — so it is embedded as the
-	// zero value rather than assembled in serverassembly.go.
+	recoveryHealthHandlers
+	// The composed-extension inventory (handlers_extensions.go): stateless, it reads
+	// boot-written accessors, so it is embedded as the zero value.
 	extensionsHandlers
 	// The transport directory (handlers_channelproviders.go): stateless, embedded the same way.
 	channelProvidersHandlers
@@ -245,6 +248,11 @@ type Server struct {
 	// credential to carry over an untrusted network. See gateMetrics in
 	// routes.go.
 	metricsToken string
+	// trustedProxies are the direct peers whose X-Forwarded-* headers this process
+	// believes, from WithTrustedProxies. The zero value trusts nobody.
+	trustedProxies httpserver.TrustedProxies
+	apiBaseURL     string // --api-base-url, from WithAPIBaseURL; empty where the public origin serves the API
+
 	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
 	// explicit --metrics-access=open for a deployment whose network boundary
 	// already contains the port.
@@ -295,6 +303,9 @@ type Server struct {
 	// it feeds a /readyz probe and backs the capture connector-credential
 	// path; nil means a role that resolves no stored connector credentials.
 	vault keyvault.Vault
+	// priceCatalogues are shared by the routing picker and the price sync, so
+	// WithKeyvault can rebuild the sync over the vault on the same caches.
+	priceCatalogues aiPriceCatalogues
 
 	// mfaSigner and mfaSignerUnusable carry WithMFAChallengeSigner's outcome so
 	// armMFAEnrolment can couple it with the vault in either option order: TOTP
@@ -306,14 +317,14 @@ type Server struct {
 	mfaSigner         identity.MFAChallengeSigner
 	mfaSignerUnusable bool
 
-	// The three parts of the lane the installation's own mail rides, each
-	// supplied by a different option (WithOperatorMail, WithPublicBaseURL,
-	// WithControllerMail) and joined by rewireConfirmationLane. Held rather
-	// than assembled on arrival because options compose in any order, so no one
-	// of them can assume the others have run.
+	// The three parts of the lane the installation's own mail rides. Each comes
+	// from its own option (WithOperatorMail, WithPublicBaseURL, WithControllerMail),
+	// and rewireConfirmationLane joins them in any order. siteLeadNotices is that
+	// lane, as the site-lead accept sees it.
 	controllerRelay comms.ControllerRelay
 	confirmLinkBase string
 	confirmRunner   *jobs.Runner
+	siteLeadNotices *siteLeadNoticeLane
 
 	// captureConfig is the deployment's capture suppression-list config
 	// (CAP-PARAM-5/6, ADR-0072), injected by WithCaptureConfig. The options
@@ -443,6 +454,8 @@ type Server struct {
 	// reason company360Svc is: the relationship brief is assembled from THIS gated
 	// read rather than a second one that could drift from what the page shows.
 	contact360Svc *contact360.Service
+	// firstDrafts are the composer's drafting engines, which draft_email reaches too.
+	firstDrafts firstMessageEngines
 	// meetingBriefSvc is held so an option can bind its model lane after the
 	// handler sets are built.
 	meetingBriefSvc *meetingbrief.Service
@@ -475,8 +488,11 @@ type Server struct {
 	resetRuntime ResetRuntime
 
 	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
-	listsEnabled     bool
-	reportingEnabled bool
+	listsEnabled bool
+
+	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
+	// leaves /.well-known/security.txt unmounted.
+	securityTxt string
 }
 
 var _ crmcontracts.ServerInterface = Server{}

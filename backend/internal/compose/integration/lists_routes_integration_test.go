@@ -51,8 +51,8 @@ func mustCall(t *testing.T, e *apptest.AppEnv, method, path string, body any, wa
 func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	e, _ := listsApp(t, true)
 	var a, b, company AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"full_name": "Route Alpha"}, http.StatusCreated, &a)
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"full_name": "Route Beta"}, http.StatusCreated, &b)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Alpha"}, http.StatusCreated, &a)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Beta"}, http.StatusCreated, &b)
 	mustCall(t, e, "POST", "/v1/companies", AnyMap{"display_name": "Route Account", "source": "manual"}, http.StatusCreated, &company)
 
 	var live, short listWire
@@ -126,9 +126,15 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	mustCall(t, e, "PATCH", "/v1/lists/"+live.ID, AnyMap{
 		"version": live.Version + 1, "definition": AnyMap{"field": "no_such_field", "op": "eq", "value": "x"},
 	}, http.StatusUnprocessableEntity, nil)
-	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members/remove", AnyMap{
-		"entity_type": "contact", "entity_id": b["id"], "note": "declined",
-	}, http.StatusNoContent, nil)
+	takeOffB := AnyMap{"entity_type": "contact", "entity_id": b["id"], "note": "declined"}
+	var undo, back AnyMap
+	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members/remove", takeOffB, http.StatusOK, &undo)
+	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members/restore", undo, http.StatusOK, &back)
+	if back["note"] != "picked" || back["entity_id"] != b["id"] {
+		t.Fatalf("the restored member = %v, want b with the note it was added with", back)
+	}
+	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members/restore", undo, http.StatusConflict, nil)
+	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members/remove", takeOffB, http.StatusOK, nil)
 	mustCall(t, e, "DELETE", "/v1/lists/"+short.ID, nil, http.StatusOK, nil)
 	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members", AnyMap{
 		"entity_type": "contact", "entity_id": b["id"],
@@ -151,9 +157,19 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	}
 	mustCall(t, e, "GET", "/v1/lists/"+short.ID+"/history?limit=50&cursor="+*history.Page.NextCursor, nil, http.StatusOK, &history)
 
-	// The Live List exported, then named among its uses.
+	// A first visit, and one straight after it that only extends it, have no
+	// earlier visit to count from.
+	var firstVisit, secondVisit AnyMap
+	mustCall(t, e, "POST", "/v1/lists/"+live.ID+"/visit", nil, http.StatusOK, &firstVisit)
+	mustCall(t, e, "POST", "/v1/lists/"+live.ID+"/visit", nil, http.StatusOK, &secondVisit)
+	if firstVisit["previous_visit_at"] != nil || secondVisit["previous_visit_at"] != nil || secondVisit["visited_at"] == nil {
+		t.Fatalf("visits answered %v then %v", firstVisit, secondVisit)
+	}
+
+	// Both kinds export — a Shortlist its members — and the Live List is then
+	// named among its uses.
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": live.ID, "format": "json"}, http.StatusOK, nil)
-	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": short.ID, "format": "json"}, http.StatusUnprocessableEntity, nil)
+	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": short.ID, "format": "json"}, http.StatusOK, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": "not-a-uuid", "format": "json"}, http.StatusUnprocessableEntity, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": live.ID, "object": "contact", "format": "json"}, http.StatusUnprocessableEntity, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"object": "contact", "format": "json"}, http.StatusUnprocessableEntity, nil)
@@ -198,7 +214,7 @@ func TestACompanysShortlistsAndTheOtherRecordListsNarrowByList(t *testing.T) {
 func TestTheAgentsListModesAnswerAsTheRoutesDo(t *testing.T) {
 	e, agent := listsApp(t, true)
 	var contact AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"full_name": "Agent Pick"}, http.StatusCreated, &contact)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Agent Pick"}, http.StatusCreated, &contact)
 	var created struct {
 		Result listWire `json:"result"`
 	}

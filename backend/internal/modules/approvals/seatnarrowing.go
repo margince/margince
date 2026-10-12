@@ -82,8 +82,10 @@ var decidedByTheSeatStagedFor = map[string]bool{
 	// The nightly reconciliation's "this conversation left no next step" card,
 	// staged for the deal's owner.
 	kindDealFollowUp: true,
-	// A next step a transcript recorded somebody committing to, staged for the
-	// rep who asked for the recording to be read.
+	// A promise read out of a conversation, staged for the colleague who made
+	// it, or for the reader of the conversation when nobody could be named.
+	kindCommitmentTask: true,
+	// Retired; its decided cards stay with the seat they were staged for.
 	kindTranscriptProposal: true,
 }
 

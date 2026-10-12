@@ -43,6 +43,9 @@ var ErrMultipleWorkspaces = errors.New("identity: more than one active workspace
 // every binary of this installation must agree on it.
 const installationLockKey = int64(0x4d61726761_0001) // "Marga"+1
 
+// countryUnchosen is the refusal code of a claim that chose no jurisdiction.
+const countryUnchosen = "required"
+
 // InstallationBootstrap is the creation input for the singleton company.
 //
 // It arrives one of two ways and never both: from the deployment
@@ -52,10 +55,14 @@ const installationLockKey = int64(0x4d61726761_0001) // "Marga"+1
 // company retires every setup token — so neither can correct the other
 // afterwards.
 type InstallationBootstrap struct {
-	CompanyName   string
-	BaseCurrency  string
-	BaseLanguage  string
-	Timezone      string
+	CompanyName  string
+	BaseCurrency string
+	BaseLanguage string
+	Timezone     string
+	// Country is the jurisdiction the installation runs under. Nil means the
+	// input did not state one and nothing is seeded; a pointer to "" is the
+	// explicit choice of no pack.
+	Country       *string
 	AdminEmail    string
 	AdminName     string
 	AdminPassword string
@@ -212,6 +219,9 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 	if err != nil {
 		return ids.WorkspaceID{}, err
 	}
+	if origin == originClaimed && in.Country == nil {
+		return ids.WorkspaceID{}, settings.InvalidValue{Setting: Country.Key(), Code: countryUnchosen, Reason: "choose a jurisdiction, or no jurisdiction pack"}
+	}
 	hash, err := password.Hash(boot.AdminPassword)
 	if err != nil {
 		return ids.WorkspaceID{}, err
@@ -234,6 +244,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 		zone:     boot.Timezone,
 		currency: currency,
 		language: language,
+		country:  in.Country,
 	})
 	if err != nil {
 		return ids.WorkspaceID{}, err
@@ -350,6 +361,7 @@ type installationIdentity struct {
 	zone     string
 	currency string
 	language string
+	country  *string
 }
 
 // seedInstallationIdentity writes the settings rows that ARE the
@@ -379,6 +391,16 @@ func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, id installationIde
 		if !stored {
 			discarded = append(discarded, seed.entry.Key())
 		}
+	}
+	if id.country == nil {
+		return discarded, nil
+	}
+	stored, err := settings.SeedValue(ctx, tx, Country, *id.country)
+	if err != nil {
+		return nil, err
+	}
+	if !stored {
+		discarded = append(discarded, Country.Key())
 	}
 	return discarded, nil
 }

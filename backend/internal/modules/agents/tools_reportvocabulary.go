@@ -79,6 +79,7 @@ func (t describeReportVocabulary) Spec() mcp.ToolSpec {
 		Description:   describeReportVocabularyCopy.render(),
 		Instead:       describeReportVocabularyCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "describeReportVocabulary",
 		// No arguments. The document is the same for every caller, so a
 		// `report` filter would only let one narrow what it already receives,
 		// at the cost of a name it could spell wrong — which is the failure

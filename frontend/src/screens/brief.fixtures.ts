@@ -640,45 +640,24 @@ export function meetingRow(
 export function leadRow(id: string, due?: string): WorklistItem {
   return {
     id,
-    source: "lead_response",
+    source: "task",
     level: due === undefined ? 1 : 2,
-    category: "leads",
-    title: "Weber GmbH · inbound enquiry",
-    because:
-      due === undefined
-        ? // A breached lead the way the lane really builds one: the overdue
-          // reason plus how long it has been waiting. The second reason CARRIES
-          // A VALUE, which is what makes this fixture able to tell a slot that
-          // filters on the reason kind from one that merely takes the first
-          // value it meets.
-          [
-            { kind: "response_overdue" },
-            { kind: "waiting_days", value: { kind: "days", days: 3 } },
-          ]
-        : [{ kind: "response_due_soon", value: { kind: "date", date: due } }],
-    consequence: "buyer_waits",
-    actions: ["open"],
+    category: "tasks",
+    title: "Call Weber GmbH",
+    subject: { type: "lead", id },
+    due_at: due,
+    because: [{ kind: due === undefined ? "overdue" : "due_today" }],
+    consequence: "task_slips",
+    actions: ["complete", "snooze"],
   };
 }
 
-/** A leads count the page carries whole — considered, shown and read to the end. */
 export function wholeLeads(n: number): WorklistCount {
-  return {
-    category: "leads",
-    considered: n,
-    shown: n,
-    more_available: false,
-  };
+  return { category: "tasks", considered: n, shown: n, more_available: false };
 }
 
-/** A leads count whose read stopped at its bound: more exist than the page shows. */
 export function boundedLeads(considered: number, shown: number): WorklistCount {
-  return {
-    category: "leads",
-    considered,
-    shown,
-    more_available: true,
-  };
+  return { category: "tasks", considered, shown, more_available: true };
 }
 
 type WorklistItem = components["schemas"]["WorklistItem"];
@@ -929,3 +908,66 @@ export const unavailableWeeklyNumbers: components["schemas"]["WeeklyNumericSumma
       reason: "Some meeting history predates confirmed outcomes.",
     },
   };
+
+// A week that closed before any source in scope held a record: every family
+// reads `not_recorded`, so its zeros measured nothing.
+const unrecorded = (reason: string) => ({
+  status: "not_recorded" as const,
+  recorded_since: "2026-09-21T09:00:00Z",
+  reason,
+});
+export const beforeHistoryWeeklyNumbers: components["schemas"]["WeeklyNumericSummary"] =
+  {
+    ...sharedWeeklyNumbers,
+    won_minor: 0,
+    bookings_coverage: { status: "no_data", withheld: false },
+    meetings_coverage: { status: "no_data", withheld: false },
+    figure_coverage: {
+      deals: unrecorded("The first deal was recorded after this week."),
+      tasks: unrecorded("The first task was recorded after this week."),
+      meetings: unrecorded("The calendar holds no meeting before this week."),
+      leads: unrecorded("The first lead was recorded after this week."),
+      commitments: unrecorded("No commitment was recorded before this week."),
+    },
+  };
+
+// Deals counted from midweek, meetings read only in part by the reporting
+// source, and leads not recorded at all.
+export const partlyRecordedWeeklyNumbers: components["schemas"]["WeeklyNumericSummary"] =
+  {
+    ...sharedWeeklyNumbers,
+    meetings_coverage: {
+      status: "partial",
+      withheld: false,
+      reason: "Some meeting history predates confirmed outcomes.",
+    },
+    figure_coverage: {
+      deals: { status: "partial", recorded_since: "2026-09-10T08:00:00Z" },
+      tasks: { status: "recorded", recorded_since: "2026-03-02T08:00:00Z" },
+      meetings: { status: "recorded", recorded_since: "2026-03-02T08:00:00Z" },
+      leads: { status: "not_recorded", reason: "No lead source in scope." },
+      commitments: { status: "recorded" },
+    },
+  };
+
+/** The counts a week before recorded history was frozen with: all zero. */
+export const zeroWeekCounts: WeeklyReview["counts"] = {
+  tasks_completed: 0,
+  tasks_due: 0,
+  tasks_done: 0,
+  tasks_carried_over: 0,
+  deals_moved: 0,
+  deals_won: 0,
+  deals_lost: 0,
+  proposals_accepted: 0,
+  proposals_rejected: 0,
+  brief_items_acted: 0,
+  brief_items_dismissed: 0,
+  commitments_due: 0,
+  commitments_kept: 0,
+  leads_routed: 0,
+  leads_answered_in_target: 0,
+  leads_breached: 0,
+  meetings_held: 0,
+  meetings_with_next_step: 0,
+};

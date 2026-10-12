@@ -6,7 +6,7 @@
 package gates
 
 // Who may bind an arrival to the activity already holding its identity is
-// decided in ONE place: activities.bindableIdentityUnder, which both exported
+// decided in one place: activities.bindableIdentityUnder, which both exported
 // entry points delegate to.
 //
 // Two ingestion doors ask the question — the import door through

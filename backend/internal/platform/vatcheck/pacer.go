@@ -7,6 +7,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 )
 
 // Pacer holds this installation to one VAT consultation per interval.
@@ -39,7 +41,7 @@ type Pacer struct {
 
 // NewPacer builds a real-clock pacer at the given floor.
 func NewPacer(interval time.Duration) *Pacer {
-	return &Pacer{interval: interval, now: time.Now, sleep: sleepCtx}
+	return &Pacer{interval: interval, now: time.Now, sleep: backoff.Sleep}
 }
 
 // Wait blocks until this installation may make its next consultation.
@@ -61,17 +63,4 @@ func (p *Pacer) Wait(ctx context.Context) error {
 	}
 	p.lastStart = p.now()
 	return nil
-}
-
-// sleepCtx sleeps, or gives up when the caller does — a consultation nobody is
-// waiting for any more must not hold the queue.
-func sleepCtx(ctx context.Context, d time.Duration) error {
-	timer := time.NewTimer(d)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
 }

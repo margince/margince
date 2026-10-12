@@ -5,11 +5,11 @@
 
 package gates
 
-// The census as a fitness function: the contract says which AI tasks ship and
-// what their invocation sites are called, and this build must register exactly
-// those. A shipped task whose site nobody wrote, a site the contract never
-// declared, and a planned task someone quietly implemented are all wiring
-// defects that used to be invisible.
+// The contract says which AI tasks ship and what their invocation sites are
+// called, and this build must register those and no others. A shipped task
+// whose site nobody wrote, a site the contract never declared, and a planned
+// task someone quietly implemented are all wiring defects that used to be
+// invisible.
 
 import (
 	"testing"

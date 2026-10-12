@@ -11,7 +11,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -37,40 +36,6 @@ func reportingGap(status crmcontracts.ReportingStatus, reason string) crmcontrac
 	return crmcontracts.ReportingCoverage{Status: status, Reason: &reason}
 }
 
-func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
-	if frame.PipelineId != nil {
-		return nil, reportingGap("unsupported", "Meetings have no pipeline dimension; choose all pipelines"), nil
-	}
-	var b reportingBindings
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), "held.host_id_at_change", b.arg, unownedIsExcluded)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	if population == "" {
-		population = sqlUnnarrowed
-	}
-	visible, err := auth.ActivityContentClause(ctx, "a", b.arg)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	if visible == "" {
-		visible = sqlUnnarrowed
-	}
-	fieldScope, withheld, err := reportingFieldScope(ctx, string(recordTypeActivity), "a", reportingMeetingFields(), &b)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	visible += " AND " + fieldScope
-	query := `SELECT held.id::text,a.id,COALESCE(a.subject,'Meeting'),held.host_id_at_change,COALESCE(u.display_name,''),held.scheduled_start
- FROM activity a JOIN LATERAL(SELECT h.* FROM activity_meeting_history h WHERE h.activity_id=a.id AND h.effective_at<=` + b.add(frame.EvaluatedAt) + ` ORDER BY h.effective_at DESC,h.id DESC LIMIT 1) held ON true
- LEFT JOIN app_user u ON u.id=held.host_id_at_change
- WHERE a.kind='meeting' AND a.archived_at IS NULL AND held.status='held' AND held.customer_eligible_at_change AND NOT held.partial_pre_history
- AND held.scheduled_start >= ` + b.add(reportingEarliest(frame)) + " AND held.scheduled_start < " + b.add(frame.EvaluatedAt) + " AND " + population + " AND " + visible + " ORDER BY held.id LIMIT " + b.add(reportingFactLimit+1)
-	facts, coverage, err := readOutcomeFacts(ctx, tx, frame, reportingMeetingsHeld, string(recordTypeActivity), query, b)
-	coverage.Withheld = withheld
-	return facts, coverage, err
-}
-
 func readReportingAccepted(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
 		return nil, reportingGap("unsupported", "Acceptance credit has no historical pipeline dimension; choose all pipelines"), nil
@@ -84,7 +49,7 @@ func readReportingAccepted(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		population = sqlUnnarrowed
 	}
 	// Primary credit is deduplicated before narrowing the SDR population.
-	query := `SELECT credit.id::text,credit.handoff_id,'Accepted opportunity',credit.submitter_id_at_change,COALESCE(u.display_name,''),credit.occurred_at
+	query := `SELECT credit.id::text,credit.handoff_id,'Accepted opportunity',credit.submitter_id_at_change,COALESCE(u.display_name,''),credit.occurred_at,'accepted_handoff'
  FROM (SELECT DISTINCT ON (e.deal_id_at_change) e.* FROM sdr_handoff_event e JOIN sdr_handoff h ON h.id=e.handoff_id
  WHERE e.to_status='accepted' AND e.deal_id_at_change IS NOT NULL ORDER BY e.deal_id_at_change,e.occurred_at,e.id) credit
  LEFT JOIN app_user u ON u.id=credit.submitter_id_at_change
@@ -100,7 +65,7 @@ func readOutcomeFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 	facts, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (reporting.Fact, error) {
 		fact := reporting.Fact{Metric: metric, SourceType: source}
 		var owner *ids.UUID
-		err := row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt)
+		err := row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &fact.Provenance)
 		one := 1.0
 		fact.Row.Value = &one
 		if owner != nil {

@@ -673,34 +673,21 @@ export const SETTINGS_PAGES = [
   {
     id: "privacy",
     group: "governance",
-    // Installation: retention is installation-wide on both endpoints the card
-    // writes — `/retention/settings` is "the installation's retention posture"
-    // and `/retention-policies` lists "the installation's retention policies".
-    // What this page destroys, it destroys everywhere.
+    // Installation: both retention endpoints the card writes are
+    // installation-wide, so what this page destroys, it destroys everywhere.
     scope: "installation",
-    // `contact` is deliberately NOT an arm, though the purposes card reads
-    // through it. `contact:read` is held by every seeded role, so that arm put
-    // the governance page in front of the whole workspace — the retention
-    // ladder, the subject-request queue and the restricted-record list, none of
-    // which a rep can act on.
-    //
-    // The purposes LIST stays gated on `contact` server-side and must not move:
-    // that endpoint feeds the Contact 360, and narrowing it would 403 every rep
-    // on a screen they use all day. A card narrower than its page is the safe
-    // direction — the card withholds itself.
-    //
-    // `consent_config` buys no read either (consent/store.go ListPurposes is on
-    // `contact`), so it is not an arm; its holders all hold retention or the
-    // request queue anyway.
+    // `contact` is not an arm, though the purposes card reads through it:
+    // every seeded role holds `contact:read`, so it would open the page to the
+    // whole workspace. The purposes list stays gated on `contact` server-side,
+    // because the Contact 360 reads it. A card narrower than its page
+    // withholds itself. `consent_config` alone buys no read
+    // (consent/store.go ListPurposes is on `contact`).
     requires: anyOf(
       reads("retention_policy"),
       reads("privacy_request"),
-      // The consent vocabulary, as a PAIR. `contact:read` is what the purposes
-      // endpoint asks (consent/store.go ListPurposes) and every seeded role
-      // holds it, so it cannot open the page alone. `consent_config` is who the
-      // vocabulary belongs to — management is seeded its read and nothing else
-      // on this page, so without this arm the one role deliberately granted the
-      // vocabulary could not reach the only page that renders it.
+      // The consent vocabulary, as a pair. `contact:read` is what the purposes
+      // endpoint asks. `consent_config` is whose vocabulary it is, and the one
+      // read management holds on this page.
       allOf(reads("contact"), reads("consent_config")),
     ),
     // Four cards, four objects. `contact:update` is what PrivacyInboxCard asks to
@@ -712,6 +699,18 @@ export const SETTINGS_PAGES = [
       destroys("retention_policy"),
       writes("privacy_request", ["update"]),
       writes("contact", ["update"]),
+    ),
+  },
+  {
+    id: "jurisdiction",
+    group: "governance",
+    scope: "installation",
+    // The update, as on Company: every role holds `installation_settings:read`.
+    requires: writes("installation_settings", ["update"]),
+    // A weakening change also writes the carried floor, retention's object.
+    changes: acts(
+      writes("installation_settings", ["update"]),
+      writes("retention_policy", ["update"]),
     ),
   },
   {
@@ -730,19 +729,19 @@ export const SETTINGS_PAGES = [
     id: "system-health",
     group: "governance",
     scope: "installation",
-    // Either card's grant. `JobHealthCard` asks `job_health:read` and the
-    // reindex card asks its own, so a reader holding one finds that card and
-    // the other withheld — which is the union being a union rather than one
-    // object with a decorative term.
-    requires: anyOf(reads("job_health"), reads("embedding_reindex")),
-    // EmbedReindexCard spends tokens to rebuild the embed store. Watching the
-    // queue beside it is a read, and watching a stalled queue is an operator
-    // acting, so the job-health read is the second arm.
-    // The reindex is a mutation and takes the seat; watching the queue beside it
-    // is a read, and watching a stalled queue is an operator acting — so that arm
-    // stands outside the ceiling.
+    // Any card's grant, so a reader holding one finds that card and the others
+    // withheld. The schedules answer to the settings editor's grant, not the
+    // read every role holds.
+    requires: anyOf(
+      reads("job_health"),
+      reads("embedding_reindex"),
+      writes("installation_settings", ["update"]),
+    ),
+    // The reindex and the schedules are writes and take the seat; watching a
+    // stalled queue is an operator acting, so that arm stands outside it.
     changes: anyOf(
       acts(writes("embedding_reindex", ["update"])),
+      acts(writes("installation_settings", ["update"])),
       reads("job_health"),
     ),
   },

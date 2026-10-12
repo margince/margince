@@ -157,6 +157,10 @@ func concernLine(c CaptureConcern, asOf time.Time) (crmcontracts.MagicLine, bool
 		Entity: &crmcontracts.MagicEntityRef{
 			Type: "capture_connection",
 			Id:   openapi_types.UUID(c.ConnectionID),
+			// The mailbox as its owner named it. Absent rather than invented
+			// when the connection carries none: a seat with one mailbox never
+			// labelled it, and "capture_connection" is not a name.
+			Label: labelOrNil(c.AccountLabel),
 		},
 		Consequence: &condition.consequence,
 		Actor: crmcontracts.MagicActor{
@@ -166,4 +170,13 @@ func concernLine(c CaptureConcern, asOf time.Time) (crmcontracts.MagicLine, bool
 		// A condition is not a change, so there is nothing to put back.
 		Undo: &crmcontracts.MagicUndo{Undoable: false, Reason: &nothingToUndo},
 	}, true
+}
+
+// labelOrNil answers a name only where there is one, which is what the contract
+// asks of every entity reference: absent beats a blank a client would draw.
+func labelOrNil(label string) *string {
+	if label == "" {
+		return nil
+	}
+	return &label
 }

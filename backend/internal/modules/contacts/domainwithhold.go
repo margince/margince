@@ -77,10 +77,7 @@ func withholdForStaleEvidence(
 	// negative age would otherwise read as the freshest evidence possible and
 	// wave the question through, which is the one direction this gate must not
 	// fail in.
-	age := time.Since(*prior.LastEvidenceAt)
-	if age < 0 {
-		age = 0
-	}
+	age := max(time.Since(*prior.LastEvidenceAt), 0)
 	if age < staleEvidenceYears*365*24*time.Hour {
 		return false, nil
 	}

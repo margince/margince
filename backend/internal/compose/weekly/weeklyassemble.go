@@ -188,15 +188,24 @@ func (e *Engine) measureWeek(
 	// happened to run. CloseWeek is idempotent, so the dispatcher's extra
 	// ticks inside a week do not re-settle a commitment the rep completed
 	// after the first pass.
+	planned := false
 	if e.plan != nil {
 		c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now)
 		// A seat without plan authority still has recorded work to review.
 		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
 		}
+		planned = err == nil
 	}
 	if review.Deals, err = readWeekDeals(ctx, tx, userID, start, end); err != nil {
 		return err
+	}
+	// Frozen inside the numeric summary, so a review computed without the
+	// metric engine states no coverage rather than one nobody measured against.
+	if review.NumericSummary != nil {
+		if err := measureRepCoverage(ctx, tx, review.NumericSummary, userID, start, end, planned); err != nil {
+			return err
+		}
 	}
 	// The week this one is measured against: the rep's most recent EARLIER
 	// review, whenever it was.

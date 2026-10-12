@@ -1,28 +1,19 @@
+<!-- prose:plain -->
 # Using Margince
 
-Guides for the colleague **working in** Margince — a rep, a delivery lead, an
-account owner. No code, no API: a sign-in and the app.
+Guides for anyone who works in Margince: a rep, a delivery lead, an account
+owner. You need no code and no API, only a sign-in and the app. You follow each
+guide once, from start to end. Documentation for changing the code is in
+[`docs/`](../docs/README.md).
 
-They live here rather than under [`docs/`](../docs/README.md) because that tree is
-mostly for the contact **changing** the code: how a module is shaped, which gate
-holds which invariant, how to add an endpoint.
-
-The split is by document TYPE, not strictly by tree, and it is worth being exact
-about that. `docs/how-to/` holds both kinds — how to add an endpoint sits beside
-how to work your pipeline — because a how-to is what you come back to for one
-answer, and that is as true of a field reference for a rep as of a recipe for an
-engineer. What lives HERE is the other shape: a walkthrough you follow once, end
-to end.
-
-- [run-your-first-project.md](run-your-first-project.md) — one ERP rollout followed
-  from the first conversation, through the deal, into delivery and close: the key
-  that files email to it, the phase moves, a partner brought in, and the AI scoped
-  to the project.
-- [run-a-partner-program.md](run-a-partner-program.md) — what a partner program is,
+- [run-your-first-project.md](run-your-first-project.md): one ERP rollout followed
+  from the first conversation, through the deal, into delivery and close. It covers the key
+  that files email to it, the phase moves, a partner brought in, and the AI scoped to the
+  project.
+- [run-a-partner-program.md](run-a-partner-program.md): what a partner program is,
   and one deal followed from the introduction to the money it earns.
 
-The one-answer lookups these walkthroughs assume live in the handbook, because
-they are what you come back to rather than read once:
+The quick answers these walkthroughs assume are in the handbook:
 [leads-deals-and-projects.md](../docs/handbook/leads-deals-and-projects.md),
 [capture.md](../docs/handbook/capture.md) and
 [partners.md](../docs/handbook/partners.md).

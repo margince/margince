@@ -3,3 +3,37 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--gapActions);
 }
+.meeting-week {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: var(--space-3);
+}
+.meeting-week-day {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+.meeting-week-head {
+  display: grid;
+  justify-items: center;
+  padding-bottom: var(--space-1);
+}
+.meeting-week-empty {
+  text-align: center;
+}
+
+/* A time in a preview week takes a slot button's footprint, so a week that
+   turns from pickable to preview keeps its height; without the button's fill
+   and shadow it does not offer itself to be pressed. */
+.meeting-week-time {
+  display: grid;
+  place-items: center;
+  min-block-size: var(--controlHeight);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-control);
+  color: var(--textSecondary);
+}

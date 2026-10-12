@@ -5,11 +5,9 @@
 
 package gates
 
-// Extension-tier fitness functions (ADR-0120 §3): the compiler already
-// walls extensions off from internal/** (their module paths sit outside
-// the backend module), these tests hold the rest of the import contract
-// from the tree — every extension source dir (enabled or fixture) is
-// enrolled the moment it exists.
+// Every extension source directory (enabled or fixture) is held to the
+// extension tier's import contract from the moment it exists; the compiler
+// already walls extensions off from internal/**.
 
 import (
 	"fmt"
@@ -61,7 +59,7 @@ func extensionModulePaths(t *testing.T, trees map[string]string) map[string]stri
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, line := range strings.Split(string(raw), "\n") {
+		for line := range strings.SplitSeq(string(raw), "\n") {
 			if rest, ok := strings.CutPrefix(strings.TrimSpace(line), "module "); ok {
 				paths[dir] = strings.TrimSpace(rest)
 				break
@@ -124,7 +122,7 @@ func allowlistedSurface(t *testing.T) map[string]bool {
 		if err != nil {
 			return err
 		}
-		for _, line := range strings.Split(string(src), "\n") {
+		for line := range strings.SplitSeq(string(src), "\n") {
 			if strings.TrimSpace(line) == extensionSurfaceMarker {
 				marked[modulePath+"/"+filepath.ToSlash(filepath.Dir(path))] = true
 				break

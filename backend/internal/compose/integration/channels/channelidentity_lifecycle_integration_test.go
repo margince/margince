@@ -172,7 +172,7 @@ func TestMergeRelinksTheChannelIdentityOntoTheSurvivor(t *testing.T) {
 	target := e.SeedContact(t, "Ada Target", nil)
 	seedChannelIdentity(t, e, source, "40404", "ada")
 
-	survivor, err := e.Contacts.MergeContact(e.Admin(), integration.ContactIDOf(source), integration.ContactIDOf(target))
+	survivor, err := e.Contacts.MergeContact(e.Admin(), integration.ContactIDOf(source), integration.ContactIDOf(target), nil)
 	if err != nil {
 		t.Fatalf("MergeContact: %v", err)
 	}

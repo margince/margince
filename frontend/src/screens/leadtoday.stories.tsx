@@ -9,11 +9,7 @@ import { leadTodoRows } from "./leadtoday";
 import { TodayPanel } from "./record360/today";
 import { StoryProviders } from "./story-utils";
 
-// What a lead asks of a rep today, in the panel that hosts it. Two rows and no
-// more: answer the lead if nobody has, and the next task if it carries one. The
-// states worth looking at are the CLOCKS — a first response owed, one at risk,
-// one already breached — because the row's tone is the only thing that tells
-// them apart at a glance.
+// Recorded lead tasks, including an imported prospect with no planned work.
 
 type Lead = components["schemas"]["Lead"];
 
@@ -56,15 +52,7 @@ function Today({
   return (
     <>
       <TodayPanel onOpenTasks={() => {}} tasksLabel={t("today.workQueue")}>
-        {leadTodoRows(
-          lead(over),
-          t,
-          locale,
-          recordZone,
-          () => {},
-          () => {},
-          refused,
-        )}
+        {leadTodoRows(lead(over), t, locale, recordZone, () => {})}
       </TodayPanel>
       {/* The page's ONE sentence about why this lead takes no writes. It is
           rendered here because `reasonId` points at it: an id naming nothing
@@ -80,46 +68,20 @@ const today = (over?: Partial<Lead>, refused?: string) => (
   </StoryProviders>
 );
 
-/** Nobody has answered yet, and the clock has not started: owed, undated. */
-export const AnswerOwed: Story = { render: () => today() };
-
-/** The clock is running and still has room — the caution before the fact. */
-export const FirstResponseAtRisk: Story = {
-  render: () =>
-    today({ sla_state: "at_risk", sla_deadline_at: "2026-09-20T09:00:00Z" }),
+export const ImportedWithoutTask: Story = {
+  render: () => today({ source: "import", status: "new" }),
 };
-
-/** The clock ran out. Danger, because there is nothing left to stop. */
-export const FirstResponseBreached: Story = {
-  render: () =>
-    today({ sla_state: "breached", sla_deadline_at: "2026-09-10T09:00:00Z" }),
-};
-
-/**
- * A lead the reader may not write to. The Reply verb keeps its place and points
- * at the page's one sentence — a press that did nothing would say less than a
- * refusal that says why.
- */
-export const ReplyRefused: Story = {
-  render: () => today({}, "lead-read-only"),
-};
-
-/** Both rows: the answer owed, and the task the lead already carries. */
-export const AnswerAndTask: Story = {
+export const PlannedOutreach: Story = {
   render: () =>
     today({
-      next_task_subject: "Send the fleet pricing sheet",
+      next_task_subject: "Call selected prospect",
       next_task_due_at: "2026-09-19T09:00:00Z",
     }),
 };
-
-/** A closed lead is not worked, so it draws no rows at all. */
+export const PlannedOutreachDark: Story = {
+  globals: { theme: "dark" },
+  render: PlannedOutreach.render,
+};
 export const ClosedDrawsNothing: Story = {
   render: () => today({ archived_at: "2026-09-01T00:00:00Z" }),
-};
-
-export const FirstResponseBreachedDark: Story = {
-  globals: { theme: "dark" },
-  render: () =>
-    today({ sla_state: "breached", sla_deadline_at: "2026-09-10T09:00:00Z" }),
 };

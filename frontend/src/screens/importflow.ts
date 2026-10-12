@@ -15,14 +15,14 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../app/storage";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import type {
   ImportObject,
   ImportProfile,
   ImportReport,
   ImportRun,
 } from "./importtypes";
-import { DONT_IMPORT } from "./importtypes";
+import { DONT_IMPORT, isImportObject } from "./importtypes";
 
 // A mutation's answer, stamped with the flow generation it was asked in.
 type Generational<T> = Readonly<{ at: number; value: T }>;
@@ -73,10 +73,6 @@ function asProfile(payload: unknown): ImportProfile {
 
 const unreadableUpload =
   "the upload answered something this screen cannot read";
-
-function isImportObject(value: unknown): value is ImportObject {
-  return value === "lead" || value === "company" || value === "contact";
-}
 
 function isMapping(value: unknown): value is Record<string, string> {
   return (
@@ -200,7 +196,7 @@ type ValidateInput = Readonly<{
 // Three steps, each of which invalidates the ones after it: a profile from one
 // file beside a report from another is the one way this screen could lie about
 // what is being imported.
-export function useImportFlow() {
+export function useImportFlow(initialObject: ImportObject) {
   const queryClient = useQueryClient();
   // Which flow a response belongs to. A dry run over a whole file is a real
   // multi-second window, and the human can switch object or upload again inside
@@ -211,7 +207,7 @@ export function useImportFlow() {
   const generation = useRef(0);
   const current = () => generation.current;
 
-  const [object, setObject] = useState<ImportObject>("lead");
+  const [object, setObject] = useState<ImportObject>(initialObject);
   const [profile, setProfile] = useState<ImportProfile | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   // The word this run's created records are filed under. Chosen once, before
@@ -274,19 +270,19 @@ export function useImportFlow() {
       forgetRememberedRun();
     }
     if (recovery.data.kind === "run" && run === null && profile === null) {
+      setObject(recovery.data.value.run.object);
       setRun(recovery.data.value.run);
       setReport(recovery.data.value.report);
       setResumed(true);
     }
   }
 
-  // Every step clears what the steps after it said. A profile from one file
-  // beside a report from another is the one way this screen could lie about
-  // what is being imported.
   // clearAnswers drops everything the previous file answered and moves the
   // generation on, so a reply still in flight cannot put any of it back.
   const clearAnswers = () => {
     generation.current += 1;
+    // The reader's newer choice outranks a recovery still in flight.
+    setConsidered(true);
     validate.reset();
     commit.reset();
     undo.reset();
@@ -355,30 +351,27 @@ export function useImportFlow() {
   const validate = useMutation({
     mutationFn: async (input: ValidateInput) => {
       const at = current();
-      const { data, error } = await api.POST("/imports", {
-        body: {
-          connector: "csv",
-          object: input.object,
-          source_ref: input.profile.source_ref,
-          mapping: mappedOnly(input.mapping),
-          // Omitted rather than sent empty: the endpoint refuses a tag id that
-          // names no word, and "" is not a choice the reader made.
-          ...(input.contextTagID === ""
-            ? {}
-            : { context_tag_id: input.contextTagID }),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      const created = data;
-      const { data: fetched, error: reportError } = await api.GET(
-        "/imports/{id}/report",
-        { params: { path: { id: created.id } } },
+      const data = unwrap(
+        await api.POST("/imports", {
+          body: {
+            connector: "csv",
+            object: input.object,
+            source_ref: input.profile.source_ref,
+            mapping: mappedOnly(input.mapping),
+            // Omitted rather than sent empty: the endpoint refuses a tag id that
+            // names no word, and "" is not a choice the reader made.
+            ...(input.contextTagID === ""
+              ? {}
+              : { context_tag_id: input.contextTagID }),
+          },
+        }),
       );
-      if (reportError) {
-        throwProblem(reportError);
-      }
+      const created = data;
+      const fetched = unwrap(
+        await api.GET("/imports/{id}/report", {
+          params: { path: { id: created.id } },
+        }),
+      );
       return { at, value: { run: created, report: fetched } };
     },
     onSuccess: ({ at, value }) => {

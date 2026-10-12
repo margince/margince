@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -109,6 +108,7 @@ func TestEmbedLaneKeepsATighterCallerDeadline(t *testing.T) {
 // deadlineSpyEmbedder answers a valid embedding and records the deadline it was
 // called under, which is the only place the lane's bound is observable.
 type deadlineSpyEmbedder struct {
+	model.NoHealth
 	hadDeadline bool
 	remaining   time.Duration
 }
@@ -147,8 +147,8 @@ func routerWithEmbedder(t *testing.T, embedder model.Client) *Router {
 	t.Helper()
 	cfg := FakeRoutingConfig()
 	cfg.Embeddings = EmbeddingsConfig{
-		ProviderConfig: ProviderConfig{Provider: ProviderFake, Model: "spy"},
-		Dimensions:     4,
+		Provider: ProviderFake, Model: "spy",
+		Dimensions: 4,
 	}
 	router, err := NewRouter(cfg, nil, nil, nil, false, nil)
 	if err != nil {
@@ -181,12 +181,15 @@ func TestEveryCloudAdapterUsesTheHardenedTransport(t *testing.T) {
 
 	// Every cloud adapter needs its BYOK key present or SelectBrain refuses
 	// before it builds a client; the value is never sent anywhere here.
-	keys := config.Lookup(func(string) string { return "k" })
+	keys := allCloudKeys(t)
 	for _, provider := range KnownProviders() {
 		if provider == ProviderFake {
 			continue // the offline stub makes no outbound call at all
 		}
 		cfg := ProviderConfig{Provider: provider, Model: "m", BaseURL: "https://vendor.example"}
+		if provider == providerGeminiVertex {
+			cfg.BaseURL, cfg.Location = "", "eu"
+		}
 		client, err := SelectBrain(cfg, keys)
 		if err != nil {
 			t.Fatalf("SelectBrain(%s): %v", provider, err)

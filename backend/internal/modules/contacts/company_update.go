@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -107,7 +108,7 @@ func (s *Store) updateCompanyInTx(
 	if err := refuseUnreadableCompany(current, in); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	if err := ensureHandedOnOwnerAssignable(ctx, tx, current.OwnerId, in.OwnerID); err != nil {
+	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
@@ -122,6 +123,9 @@ func (s *Store) updateCompanyInTx(
 		return crmcontracts.Company{}, err
 	}
 	if p.Empty() {
+		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
+			return crmcontracts.Company{}, err
+		}
 		return current, nil
 	}
 	if in.Visibility != nil {
@@ -132,6 +136,9 @@ func (s *Store) updateCompanyInTx(
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
 			return crmcontracts.Company{}, &RequiredFieldError{Field: filterOwnerID}
+		}
+		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "company_linkedin_url_key" {
+			return crmcontracts.Company{}, apperrors.ErrConflict
 		}
 		return crmcontracts.Company{}, fmt.Errorf("apply company patch: %w", err)
 	}
@@ -208,12 +215,14 @@ func renamesInPatch(p *storekit.Patch) bool {
 }
 
 // lockCompanyNameWritesForEdit takes the name lock when — and only when — this edit
-// writes a name.
+// writes a name or the domain set.
 //
-// Only a rename needs it, and only a rename should pay for it: the key is
+// Only those need it, and only those should pay for it: the key is
 // workspace-wide, so taking it for an owner change would serialize every
-// company write behind an edit that cannot create a duplicate. It is taken
-// ahead of the patch's row lock, per the ordering rule on lockCompanyNameWrites.
+// company write behind an edit that cannot create a duplicate. A domain claim
+// files the companies named after the domain (fileNameDomainTwins), which is a
+// name read. It is taken ahead of the patch's row lock, per the ordering rule
+// on lockCompanyNameWrites.
 //
 // And ahead of the READ, because the read is what the rename is judged against.
 // Taken after it, a concurrent rename landing in between left `current` holding
@@ -221,7 +230,7 @@ func renamesInPatch(p *storekit.Patch) bool {
 // before-image said the name had not moved, and the provenance stamp was
 // skipped for an edit that really did change the name.
 func lockCompanyNameWritesForEdit(ctx context.Context, tx pgx.Tx, in UpdateCompanyInput) error {
-	if !renamesACompany(in) {
+	if !renamesACompany(in) && in.Domains == nil {
 		return nil
 	}
 	return lockCompanyNameWrites(ctx, tx)

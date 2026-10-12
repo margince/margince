@@ -10,6 +10,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -101,7 +102,7 @@ func (m *Meter) UsageReport(ctx context.Context, budget BudgetPolicy, rates *Rat
 	}
 	rawWS, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		return nil, BudgetStatus{}, fmt.Errorf("ai: usage report outside workspace context")
+		return nil, BudgetStatus{}, errors.New("ai: usage report outside workspace context")
 	}
 	monthly, err := budget.MonthlyTokenBudget(ctx, ids.From[ids.WorkspaceKind](rawWS))
 	if err != nil {

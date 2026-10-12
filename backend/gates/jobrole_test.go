@@ -5,9 +5,9 @@
 
 package gates
 
-// Every River job declares its role, and the declaration is the contract:
-// a job either does tenant work for ONE workspace (jobs.WorkspaceScoped,
-// method WorkspaceID) or only scans and enqueues (jobs.FleetWide). A job
+// Every River job declares its role, and the declaration is the contract: a job
+// either does tenant work for one workspace (jobs.WorkspaceScoped, method
+// WorkspaceID) or only scans and enqueues (jobs.FleetWide). A job
 // that declares neither is the shape this gate exists to prevent — an
 // inline `for each workspace` loop inside one job row, whose per-workspace
 // failures have nowhere durable to land, so River records success while

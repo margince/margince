@@ -33,7 +33,7 @@ func TestListFoldersFollowsEveryPage(t *testing.T) {
 	srv = httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	got, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
+	got, _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
 	if err != nil {
 		t.Fatalf("ListFolders: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestListFoldersRefusesAnOffOriginNextLink(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	if _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1"); err == nil {
+	if _, _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1"); err == nil {
 		t.Fatal("an off-origin nextLink was followed")
 	}
 }
@@ -73,7 +73,7 @@ func TestListFoldersNamesWhatItCanAndDropsWhatItCannot(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	got, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
+	got, _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
 	if err != nil {
 		t.Fatalf("ListFolders: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestListContainersReadsTheMailboxsFolders(t *testing.T) {
 	api := &fakeAPI{folders: []connector.NamedContainer{{ID: "f1", Name: "Privat"}}}
 	c := pinnedConn(api)
 
-	got, err := c.ListContainers(context.Background(), authBytes(t))
+	got, _, err := c.ListContainers(context.Background(), authBytes(t))
 	if err != nil {
 		t.Fatalf("ListContainers: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestListContainersReadsTheMailboxsFolders(t *testing.T) {
 // answer.
 func TestListContainersRefusesMalformedAuth(t *testing.T) {
 	c := pinnedConn(&fakeAPI{})
-	if _, err := c.ListContainers(context.Background(), []byte("not json")); err == nil {
+	if _, _, err := c.ListContainers(context.Background(), []byte("not json")); err == nil {
 		t.Fatal("a malformed auth bundle listed containers instead of failing")
 	}
 }
@@ -131,7 +131,7 @@ func TestListFoldersDescendsIntoChildFolders(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	got, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
+	got, _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
 	if err != nil {
 		t.Fatalf("ListFolders: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestListFoldersDoesNotAskLeavesForChildren(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	if _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1"); err != nil {
+	if _, _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1"); err != nil {
 		t.Fatalf("ListFolders: %v", err)
 	}
 	if asked {
@@ -192,11 +192,64 @@ func TestListFoldersStopsOnAnEndlesslyNestedMailbox(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	got, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
+	got, _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
 	if err != nil {
 		t.Fatalf("ListFolders: %v", err)
 	}
 	if len(got) == 0 || len(got) > folderListMaxPages {
 		t.Fatalf("got %d folders, want a bounded non-empty listing", len(got))
+	}
+}
+
+// A WALK THAT RAN OUT OF BUDGET SAYS SO.
+//
+// The bound is generous and deliberate — a long list that stops beats no list
+// at all — but the picker has to be told. Somebody whose folder is missing from
+// a list presented as complete concludes the mailbox has no such folder, and
+// stops looking for the thing they came to exclude.
+func TestListFoldersSaysWhenTheBudgetRanOut(t *testing.T) {
+	var srv *httptest.Server
+	mux := http.NewServeMux()
+	// Every page offers another, so the walk can only ever end by running out.
+	mux.HandleFunc("/me/mailFolders", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value":           []map[string]string{{"id": "f", "displayName": "Ordner"}},
+			"@odata.nextLink": srv.URL + "/me/mailFolders?page=next",
+		})
+	})
+	srv = httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	got, truncated, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
+	if err != nil {
+		t.Fatalf("ListFolders: %v", err)
+	}
+	if len(got) != folderListMaxPages {
+		t.Fatalf("read %d folder(s) from an endless mailbox, want the page budget of %d",
+			len(got), folderListMaxPages)
+	}
+	if !truncated {
+		t.Error("a walk that spent its whole page budget reports a complete mailbox")
+	}
+}
+
+// A mailbox the walk finished reports complete, so the flag cannot become
+// something every listing carries.
+func TestListFoldersSaysNothingWhenItFinished(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/me/mailFolders", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value": []map[string]string{{"id": "f1", "displayName": "Privat"}},
+		})
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	got, truncated, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
+	if err != nil {
+		t.Fatalf("ListFolders: %v", err)
+	}
+	if len(got) != 1 || truncated {
+		t.Errorf("a finished walk over %d folder(s) reports truncated=%v", len(got), truncated)
 	}
 }

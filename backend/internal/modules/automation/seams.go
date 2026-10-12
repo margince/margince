@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -176,6 +177,47 @@ type Executors struct {
 	// Language is the installation's base language every staged summary is
 	// written in; nil writes English.
 	Language baselanguage.Resolver
+	// Lists backs the list trigger and add_to_shortlist; nil refuses both.
+	Lists Lists
+	// Authority resolves a rule owner's live grants, so a list firing reads
+	// and writes only what its owner could.
+	Authority authz.Resolver
+}
+
+// ListRef is what a list rule needs to know about one list.
+type ListRef struct {
+	ID         ids.UUID
+	Name       string
+	EntityType string
+	Live       bool
+	Archived   bool
+	Version    int64
+	// Invalid says the list's latest check could not evaluate its filter.
+	Invalid bool
+}
+
+// ListChange is one record a Live List's check saw joining or leaving.
+type ListChange struct {
+	EventID ids.UUID
+	Record  datasource.EntityRef
+	Action  string
+}
+
+// Lists is the seam onto the collections module's lists. Every call answers
+// for the principal on ctx: a list or record that principal cannot find reads
+// as apperrors.ErrNotFound.
+type Lists interface {
+	Find(ctx context.Context, id ids.UUID) (ListRef, error)
+	// ObservedChanges answers the entered or left events (actions) one check
+	// recorded at checkedAt under version, of records the caller can see now:
+	// at most limit of them, and how many there are in all.
+	ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int) ([]ListChange, int, error)
+	// CheckShortlist says whether the caller may change the Shortlist's
+	// membership for records of entityType.
+	CheckShortlist(ctx context.Context, id ids.UUID, entityType string) error
+	// AddMember puts record on the Shortlist, admitted as the principal on
+	// admit and written as the one on ctx; false when it was already there.
+	AddMember(ctx, admit context.Context, id ids.UUID, record datasource.EntityRef) (bool, error)
 }
 
 // EntityAnchor is one ActivityScan candidate: an entity whose most recent

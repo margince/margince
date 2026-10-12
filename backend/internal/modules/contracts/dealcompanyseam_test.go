@@ -33,7 +33,6 @@ func TestTheCrossCompanyRefusalTellsARepWhatToDo(t *testing.T) {
 	for what, phrase := range map[string]string{
 		"the rule":           "must name the same company",
 		"detaching":          "detach them from this deal",
-		"re-filing":          "record them against the new company",
 		"which edit refused": "before moving it",
 	} {
 		if !strings.Contains(blocked.Error(), phrase) {

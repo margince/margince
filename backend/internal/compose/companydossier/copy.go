@@ -18,23 +18,14 @@ package companydossier
 
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// phrase is one label in every language, kept together so a translator reads
-// the three side by side.
-type phrase struct{ en, de, vi string }
-
-func (p phrase) in(lang textlang.Lang) string {
-	switch lang {
-	case textlang.German:
-		return p.de
-	case textlang.Vietnamese:
-		return p.vi
-	default:
-		return p.en
-	}
-}
+// phrase is one label in every language; the primitive it is built from is
+// shared, because six private copies of one three-field struct is six places
+// for a fallback to differ.
+type phrase = langcopy.Phrase
 
 // dossierLabels answers every profile field the floor can state, in all three
 // languages. Held by TestEveryShippedLanguageLabelsTheDossier — fieldSentence
@@ -42,49 +33,49 @@ func (p phrase) in(lang textlang.Lang) string {
 // statement fewer rather than one statement in English.
 var dossierLabels = map[crmcontracts.CompanyProfileFieldField]phrase{
 	crmcontracts.CompanyProfileFieldFieldIcp: {
-		en: "Ideal customer", de: "Idealer Kunde", vi: "Khách hàng lý tưởng",
+		En: "Ideal customer", De: "Idealer Kunde", Vi: "Khách hàng lý tưởng",
 	},
 	crmcontracts.CompanyProfileFieldFieldIndustry: {
-		en: "Industry", de: "Branche", vi: "Ngành",
+		En: "Industry", De: "Branche", Vi: "Ngành",
 	},
 	crmcontracts.CompanyProfileFieldFieldCustomerPains: {
-		en: "Customer pains", de: "Probleme der Kunden", vi: "Vấn đề của khách hàng",
+		En: "Customer pains", De: "Probleme der Kunden", Vi: "Vấn đề của khách hàng",
 	},
 	crmcontracts.CompanyProfileFieldFieldDesiredOutcomes: {
-		en: "Desired outcomes", de: "Gewünschte Ergebnisse", vi: "Kết quả mong muốn",
+		En: "Desired outcomes", De: "Gewünschte Ergebnisse", Vi: "Kết quả mong muốn",
 	},
 	crmcontracts.CompanyProfileFieldFieldOfferSummary: {
-		en: "What they offer", de: "Was sie anbieten", vi: "Họ cung cấp gì",
+		En: "What they offer", De: "Was sie anbieten", Vi: "Họ cung cấp gì",
 	},
 	crmcontracts.CompanyProfileFieldFieldBuyingCenter: {
-		en: "Buying centre", de: "Entscheidergremium", vi: "Nhóm ra quyết định mua",
+		En: "Buying centre", De: "Entscheidergremium", Vi: "Nhóm ra quyết định mua",
 	},
 	crmcontracts.CompanyProfileFieldFieldBuyingIntents: {
-		en: "Buying intents", de: "Kaufabsichten", vi: "Ý định mua",
+		En: "Buying intents", De: "Kaufabsichten", Vi: "Ý định mua",
 	},
 	crmcontracts.CompanyProfileFieldFieldSalesMotion: {
-		en: "How they sell", de: "Wie sie verkaufen", vi: "Họ bán theo cách nào",
+		En: "How they sell", De: "Wie sie verkaufen", Vi: "Họ bán theo cách nào",
 	},
 	crmcontracts.CompanyProfileFieldFieldCommonObjections: {
-		en: "Common objections", de: "Häufige Einwände", vi: "Phản đối thường gặp",
+		En: "Common objections", De: "Häufige Einwände", Vi: "Phản đối thường gặp",
 	},
 	crmcontracts.CompanyProfileFieldFieldUsp: {
-		en: "What sets them apart", de: "Was sie auszeichnet", vi: "Điều làm họ nổi bật",
+		En: "What sets them apart", De: "Was sie auszeichnet", Vi: "Điều làm họ nổi bật",
 	},
 	crmcontracts.CompanyProfileFieldFieldValueProposition: {
-		en: "Value proposition", de: "Nutzenversprechen", vi: "Giá trị mang lại",
+		En: "Value proposition", De: "Nutzenversprechen", Vi: "Giá trị mang lại",
 	},
 	crmcontracts.CompanyProfileFieldFieldLegalName: {
-		en: "Legal name", de: "Firmenname", vi: "Tên pháp lý",
+		En: "Legal name", De: "Firmenname", Vi: "Tên pháp lý",
 	},
 	crmcontracts.CompanyProfileFieldFieldRegisterVat: {
-		en: "Registration", de: "Registereintrag", vi: "Đăng ký kinh doanh",
+		En: "Registration", De: "Registereintrag", Vi: "Đăng ký kinh doanh",
 	},
 	crmcontracts.CompanyProfileFieldFieldRegisteredAddress: {
-		en: "Registered address", de: "Eingetragene Anschrift", vi: "Địa chỉ đăng ký",
+		En: "Registered address", De: "Eingetragene Anschrift", Vi: "Địa chỉ đăng ký",
 	},
 	crmcontracts.CompanyProfileFieldFieldHistory: {
-		en: "History", de: "Historie", vi: "Lịch sử",
+		En: "History", De: "Historie", Vi: "Lịch sử",
 	},
 }
 
@@ -96,7 +87,7 @@ func labelFor(field crmcontracts.CompanyProfileFieldField, lang string) (string,
 		return "", false
 	}
 	if textlang.Known(lang) {
-		return p.in(textlang.Lang(lang)), true
+		return p.In(textlang.Lang(lang)), true
 	}
-	return p.in(textlang.English), true
+	return p.In(textlang.English), true
 }

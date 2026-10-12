@@ -137,7 +137,8 @@ func ensureCompanyDomainsUnclaimed(ctx context.Context, tx pgx.Tx, domains []Com
 
 // insertCompanyDomains lands the company's domains; the unique index remains the
 // structural guarantee under races, mapping uq_company_domain to the typed
-// 409 and a second primary domain to a plain conflict.
+// 409 and a second primary domain to a plain conflict. Each claim files the
+// companies named after its domain for review.
 func insertCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, domains []CompanyDomainInput) error {
 	for _, d := range domains {
 		if _, err := tx.Exec(ctx,
@@ -151,6 +152,9 @@ func insertCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 				return apperrors.ErrConflict // e.g. a second primary domain
 			}
 			return fmt.Errorf("insert company domain: %w", err)
+		}
+		if err := fileNameDomainTwins(ctx, tx, companyID, normalizeDomain(d.Domain), source, by); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -41,7 +41,7 @@ func TestReportingHTTPCompleteMonthComparisonAndHistoryPagination(t *testing.T) 
 	}
 	path := "reports/" + report.Id.String()
 	editions := []crmcontracts.ReportingEdition{}
-	worker := &reportScheduleSweepWorker{enabled: true, pool: f.env.Pool, now: func() time.Time { return f.at }}
+	worker := &reportScheduleSweepWorker{pool: f.env.Pool, now: func() time.Time { return f.at }}
 	for _, month := range []time.Month{time.October, time.November} {
 		f.at = time.Date(2026, month, 1, 12, 0, 0, 0, time.UTC)
 		run, err := f.service.Freeze(f.human, ids.UUID(report.Id), report.Revision, month.String())

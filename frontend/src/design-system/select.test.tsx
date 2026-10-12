@@ -204,6 +204,69 @@ describe("the trigger", () => {
   });
 });
 
+describe("the button appearance", () => {
+  // The face changes and nothing else does: a caller reaching for the button
+  // shape must not lose the combobox contract every Select keeps.
+  it("wears the button's box instead of the field's, and stays a combobox", async () => {
+    const user = userEvent.setup();
+    const { trigger, changes } = renderSelect({
+      appearance: "button",
+      value: "qualify",
+    });
+    expect(trigger.classList.contains("btn")).toBe(true);
+    expect(trigger.classList.contains("btn-primary")).toBe(true);
+    expect(trigger.classList.contains("input")).toBe(false);
+    expect(trigger.classList.contains("select-control")).toBe(false);
+    expect(trigger.textContent).toContain("Qualify");
+    await pickOption(user, trigger, "Won");
+    expect(changes).toEqual(["won"]);
+  });
+
+  it("is the field box when no appearance is asked for", () => {
+    const { trigger } = renderSelect();
+    expect(trigger.classList.contains("select-control")).toBe(true);
+    expect(trigger.classList.contains("btn")).toBe(false);
+  });
+
+  // The busy claim was accepted at the call site and dropped before the
+  // trigger, so a write in flight drew as a refusal. It reaches the button now.
+  it("carries aria-busy and the test id onto the trigger", () => {
+    const { trigger } = renderSelect({
+      "aria-busy": true,
+      testId: "stage-control",
+    });
+    expect(trigger.getAttribute("aria-busy")).toBe("true");
+    expect(trigger.getAttribute("data-testid")).toBe("stage-control");
+  });
+
+  // The button face hands busy to Button's `pending`: refused, but focusable,
+  // so the reader who just picked is not dropped to the page body.
+  it("stays focusable while busy in the button face", () => {
+    const { trigger } = renderSelect({
+      appearance: "button",
+      "aria-busy": true,
+    });
+    expect(trigger.getAttribute("aria-busy")).toBe("true");
+    expect(trigger.getAttribute("aria-disabled")).toBe("true");
+    expect(trigger.hasAttribute("disabled")).toBe(false);
+  });
+
+  // Busy refuses the keyboard as it refuses the pointer: a list opened
+  // mid-write would offer a pick the write in flight then drops.
+  it("opens no list from the keyboard while busy", async () => {
+    const user = userEvent.setup();
+    const { trigger } = renderSelect({
+      appearance: "button",
+      "aria-busy": true,
+    });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    await user.keyboard("{ArrowDown}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+});
+
 describe("the popup", () => {
   it("is not in the document at all while closed", () => {
     renderSelect();
@@ -259,16 +322,15 @@ describe("the popup", () => {
 
     const listbox = screen.getByRole("listbox");
     expect(listbox.closest(".scroll")).toBeNull();
-    expect(listbox.parentElement?.parentElement).toBe(document.body);
+    expect(listbox.parentElement).toBe(document.body);
     // The geometry arrives as inline coordinates measured against the viewport
     // (`.select-popup` declares `position: fixed`, which jsdom applies no
     // stylesheet to assert) — an absolutely positioned popup would instead be
     // laid out against `.scroll` and scroll away from its own trigger.
-    const box = listbox.parentElement;
-    expect(box?.className).toBe("select-popup");
-    expect(box?.style.top).not.toBe("");
-    expect(box?.style.left).not.toBe("");
-    expect(box?.style.maxHeight).not.toBe("");
+    expect(listbox.className).toBe("select-popup");
+    expect(listbox.style.top).not.toBe("");
+    expect(listbox.style.left).not.toBe("");
+    expect(listbox.style.maxHeight).not.toBe("");
   });
 
   it("closes when the trigger scrolls out of view", async () => {
@@ -299,7 +361,7 @@ describe("the popup", () => {
 
     await user.click(trigger);
 
-    const box = screen.getByRole("listbox").parentElement;
+    const box = screen.getByRole("listbox");
     expect(box?.dataset.above).toBe("true");
     expect(box?.style.bottom).not.toBe("");
     expect(box?.style.top).toBe("");
@@ -330,7 +392,7 @@ describe("the popup", () => {
 
     await user.click(trigger);
 
-    const box = screen.getByRole("listbox").parentElement;
+    const box = screen.getByRole("listbox");
     // The popup opens at the trigger, so the room is the trigger's own width
     // plus nothing: everything past it is off the screen.
     expect(box?.style.getPropertyValue("--popupRoom")).toBe(`${width}px`);
@@ -348,7 +410,7 @@ describe("the popup", () => {
 
     await user.click(trigger);
 
-    const box = screen.getByRole("listbox").parentElement;
+    const box = screen.getByRole("listbox");
     expect(box?.style.getPropertyValue("--popupRoom")).toBe(
       `${globalThis.innerWidth - 16}px`,
     );
@@ -371,7 +433,7 @@ describe("the popup", () => {
 
     // Down, because 44px below beats 38px above — and clamped to that 44: the
     // trigger's bottom (84) plus the 4px gap plus 44 lands on the 8px margin.
-    const below = screen.getByRole("listbox").parentElement;
+    const below = screen.getByRole("listbox");
     expect(below?.dataset.above).toBeUndefined();
     expect(below?.style.top).toBe("88px");
     expect(below?.style.maxHeight).toBe("44px");
@@ -385,7 +447,7 @@ describe("the popup", () => {
 
     // Flipped, with 4px below and 78px above, and clamped to that 78 — a popup
     // anchored 54px off the bottom and taller than 78 starts above the window.
-    const above = screen.getByRole("listbox").parentElement;
+    const above = screen.getByRole("listbox");
     expect(above?.dataset.above).toBe("true");
     expect(above?.style.bottom).toBe("54px");
     expect(above?.style.maxHeight).toBe("78px");
@@ -400,8 +462,7 @@ describe("the popup", () => {
 
     await user.click(trigger);
     const listbox = screen.getByRole("listbox");
-    const popup = listbox.parentElement;
-    expect(popup?.style.top).toBe("138px");
+    expect(listbox.style.top).toBe("138px");
 
     // The trigger has moved, but this scroll came from the popup's own scroller:
     // the reader is working down a long option list, and re-anchoring on every
@@ -410,13 +471,13 @@ describe("the popup", () => {
     act(() => {
       listbox.dispatchEvent(new Event("scroll"));
     });
-    expect(popup?.style.top).toBe("138px");
+    expect(listbox.style.top).toBe("138px");
 
     // The same moved trigger, reported by a scroll of the page: that one counts.
     act(() => {
       globalThis.dispatchEvent(new Event("scroll"));
     });
-    expect(popup?.style.top).toBe("238px");
+    expect(listbox.style.top).toBe("238px");
   });
 });
 
@@ -813,7 +874,7 @@ describe("reduced motion", () => {
 
     await user.click(trigger);
 
-    const box = screen.getByRole("listbox").parentElement;
+    const box = screen.getByRole("listbox");
     expect(box?.dataset.motion).toBe("none");
     // The end state, not nothing: the list is there to be read.
     expect(screen.getAllByRole("option")).toHaveLength(3);
@@ -826,9 +887,7 @@ describe("reduced motion", () => {
 
     await user.click(trigger);
 
-    expect(screen.getByRole("listbox").parentElement?.dataset.motion).toBe(
-      "in",
-    );
+    expect(screen.getByRole("listbox").dataset.motion).toBe("in");
   });
 
   // The chevron's turn is resolved the same way as the popup's entry, in the

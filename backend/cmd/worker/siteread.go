@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/cliflags"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 type siteReadFlags struct {
@@ -328,11 +329,11 @@ func renderExtraction(w io.Writer, r compose.SiteReadDebugReport) {
 	p("\nFIELDS (%d)\n", len(r.Extraction.Fields))
 	for _, f := range r.Extraction.Fields {
 		p("  %-20s %.2f  %q\n", f.Field, f.Confidence, f.Value)
-		p("  %20s       evidence: %q  (%s)\n", "", truncate(f.EvidenceSnippet, 100), f.SourceURL)
+		p("  %20s       evidence: %q  (%s)\n", "", textcut.RunesMarked(f.EvidenceSnippet, 100, "…"), f.SourceURL)
 	}
 	p("\nFACTS (%d)\n", len(r.Extraction.Facts))
 	for _, f := range r.Extraction.Facts {
-		p("  %-9s %-15s %.2f  %q  (%s)\n", f.Category, f.Field, f.Confidence, truncate(f.Value, 80), f.SourceURL)
+		p("  %-9s %-15s %.2f  %q  (%s)\n", f.Category, f.Field, f.Confidence, textcut.RunesMarked(f.Value, 80, "…"), f.SourceURL)
 	}
 	p("\nCONTACTS (%d)\n", len(r.Extraction.Contacts))
 	for _, contact := range r.Extraction.Contacts {
@@ -349,7 +350,7 @@ func renderExtraction(w io.Writer, r compose.SiteReadDebugReport) {
 	if len(r.Extraction.Dropped) > 0 {
 		p("\nDROPPED BY THE EVIDENCE GATE (%d)\n", len(r.Extraction.Dropped))
 		for _, d := range r.Extraction.Dropped {
-			p("  %-24s %-18s %-20s %q  (%s)\n", d.Reason, d.Lane, d.Field, truncate(d.Value, 60), d.PageURL)
+			p("  %-24s %-18s %-20s %q  (%s)\n", d.Reason, d.Lane, d.Field, textcut.RunesMarked(d.Value, 60, "…"), d.PageURL)
 		}
 	}
 
@@ -389,14 +390,6 @@ func renderModelCalls(w io.Writer, r compose.SiteReadDebugReport) {
 	if r.Proposal == nil {
 		p("\nPROPOSAL: none — nothing survived the evidence gate\n")
 	}
-}
-
-func truncate(s string, limit int) string {
-	runes := []rune(s)
-	if len(runes) <= limit {
-		return s
-	}
-	return string(runes[:limit]) + "…"
 }
 
 func byteSize(n int) string {

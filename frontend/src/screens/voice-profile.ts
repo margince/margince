@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 
@@ -17,10 +17,7 @@ export function useVoiceProfile(enabled = true) {
     enabled,
     queryKey: ["voice-profile"],
     queryFn: async (): Promise<VoiceProfile | null> => {
-      const { data, error } = await api.GET("/voice-profiles");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/voice-profiles"));
       return data.data[0] ?? null;
     },
   });

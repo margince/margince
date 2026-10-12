@@ -25,6 +25,9 @@
 #     do FLUSHDB between tests — so a shared index is a corruption, not
 #     contention. See REDIS_DBS in scripts/test-integration-parallel.sh.
 
+# shellcheck source=scripts/lib-diskspace.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-diskspace.sh"
+
 # lane_timed_out LOG — did go test KILL this package for exceeding its budget?
 #
 # Matched on go test's OWN two spellings: the panic it raises itself, and the
@@ -364,6 +367,9 @@ build_template() {
 # stderr instead of reading as "missing" and force-rebuilding a healthy
 # template over a transient error.
 ensure_template() {
+  # Before any of it, because a lane that starts on a full disk fails as
+  # Postgres being unreachable and reads as a broken fixture (lib-diskspace.sh).
+  require_disk_headroom "the integration lane" || return 1
   local exists
   if ! exists="$(db_admin db-exists --name "$TEMPLATE_NAME")"; then
     echo "FAIL: could not probe for template ${TEMPLATE_NAME} — fix the error above; a failed probe is not 'missing'" >&2

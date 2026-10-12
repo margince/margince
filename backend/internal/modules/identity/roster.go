@@ -42,11 +42,12 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
-	// IncludeInvited widens the roster to invited seats for ANY member. It is
-	// for naming the owners records already point at — an import assigns the
-	// portal to colleagues before anyone is let in, and an owner left off the
-	// roster showed as a raw id. The pickers leave it off, so the default stays
-	// the list of members who can open what they are given.
+	// IncludeInvited widens the roster to invited seats for any member.
+	//
+	// Deprecated: naming the owners a record points at is SeatNames, which
+	// answers id and display name alone; a roster row carries the member's
+	// email and seat status with it. The pickers leave it off, so the default
+	// stays the list of members who can open what they are given.
 	IncludeInvited bool
 	// Actor is the human asking, when one is. The management view carries each
 	// member's allowed actions for a human caller only, because every member
@@ -72,8 +73,11 @@ type userRow struct {
 	// archived team is absent — every reader of team_membership joins a live
 	// team, so a membership of an archived one resolves nothing and must not
 	// read as one that does.
-	TeamIDs   []ids.UUID
-	CreatedAt time.Time
+	TeamIDs []ids.UUID
+	// LastActiveAt is nil when the read did not ask, the caller may not see it,
+	// or the member never signed in.
+	LastActiveAt *time.Time
+	CreatedAt    time.Time
 }
 
 // roleKeys aggregates the member's assigned role keys, sorted so a member
@@ -100,7 +104,15 @@ const teamIDs = `CASE WHEN $1::boolean THEN
 	     WHERE tm.user_id = app_user.id AND t.archived_at IS NULL)
 	  ELSE NULL::uuid[] END`
 
-const userColumns = `id, email, display_name, status, is_agent, seat_type, ` + roleKeys + `, ` + teamIDs + `, created_at`
+// lastActive is gated by the same $1 as roleKeys. app_user.last_active_at holds
+// what the session reaper deleted; greatest ignores either side being NULL.
+const lastActive = `CASE WHEN $1::boolean THEN
+	  greatest(app_user.last_active_at,
+	    (SELECT max(s.last_seen_at) FROM session s WHERE s.user_id = app_user.id))
+	  ELSE NULL::timestamptz END`
+
+const userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
+	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at`
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -125,9 +137,9 @@ var listUsersFilteredQuery = `
 	ORDER BY created_at, id
 	LIMIT $5`
 
-// The naming roster: the live members plus the invited ones. See
-// ListUsersInput.IncludeInvited.
-var listUsersNamingQuery = `
+// The live members plus the invited seats, for the deprecated include_invited.
+// Naming an id is SeatNames. See ListUsersInput.IncludeInvited.
+var listUsersInvitedQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + ActivatableMemberSQL("") + `
@@ -135,7 +147,7 @@ var listUsersNamingQuery = `
 	ORDER BY created_at, id
 	LIMIT $4`
 
-var listUsersNamingFilteredQuery = `
+var listUsersInvitedFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + ActivatableMemberSQL("") + `
@@ -165,7 +177,8 @@ const listUsersAllFilteredQuery = `
 
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
-	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType, &u.Roles, &u.TeamIDs, &u.CreatedAt)
+	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
+		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt)
 	return u, err
 }
 
@@ -187,7 +200,7 @@ const getUserQuery = `SELECT ` + userColumns + ` FROM app_user
 // carrying user_admin.delete without user_admin.read may deactivate a seat, so
 // demanding read here would commit the deactivation and then answer 403 — the
 // account changed and the response says it did not.
-func (s *Service) GetUser(ctx context.Context, userID ids.UserID) (userRow, error) {
+func (s *Service) GetUser(ctx context.Context, actor Identity, userID ids.UserID) (userRow, error) {
 	if err := auth.RequireAny(ctx, objectUserAdmin,
 		principal.ActionRead, principal.ActionCreate,
 		principal.ActionUpdate, principal.ActionDelete); err != nil {
@@ -202,7 +215,13 @@ func (s *Service) GetUser(ctx context.Context, userID ids.UserID) (userRow, erro
 		if scanErr != nil {
 			return scanErr
 		}
-		u = row
+		rows := []userRow{row}
+		grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
+		if err != nil {
+			return err
+		}
+		withholdActivity(ctx, &actor, rows, grants)
+		u = rows[0]
 		return nil
 	})
 	return u, err
@@ -232,7 +251,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 	case mayManage && in.IncludeInactive:
 		plain, filtered = listUsersAllQuery, listUsersAllFilteredQuery
 	case in.IncludeInvited:
-		plain, filtered = listUsersNamingQuery, listUsersNamingFilteredQuery
+		plain, filtered = listUsersInvitedQuery, listUsersInvitedFilteredQuery
 	}
 	rows, page, err := listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
 		plain:     plain,
@@ -242,14 +261,39 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 		cursorKey: func(u userRow) (time.Time, ids.UUID) { return u.CreatedAt, u.ID },
 	})
 	if err != nil || !mayManage || in.Actor == nil {
+		withholdActivity(ctx, nil, rows, nil)
 		return RosterPage{Users: rows, Page: page, Management: mayManage}, err
 	}
 	var actions map[ids.UUID][]memberAction
-	err = s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
-		actions, err = s.allowedMemberActions(ctx, tx, *in.Actor, rows)
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
+		if err != nil {
+			return err
+		}
+		withholdActivity(ctx, in.Actor, rows, grants)
+		actions, err = s.allowedMemberActions(ctx, tx, *in.Actor, rows, grants)
 		return err
 	})
 	return RosterPage{Users: rows, Page: page, Management: true, Actions: actions}, err
+}
+
+// withholdActivity clears last-active wherever the caller could not list the member's sessions:
+// no human caller, no user_admin read, or a target beyond ListUserSessions' ceiling.
+func withholdActivity(ctx context.Context, actor *Identity, rows []userRow, grants map[ids.UUID]seatGrants) {
+	mayList := actor != nil && auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
+	for i := range rows {
+		if !mayList || callerOutranks(*actor, grants[rows[i].ID], reachDenial) != nil {
+			rows[i].LastActiveAt = nil
+		}
+	}
+}
+
+func rowIDs(rows []userRow) []ids.UUID {
+	out := make([]ids.UUID, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, row.ID)
+	}
+	return out
 }
 
 // RosterPage is one roster read: the rows, the keyset position, and WHICH VIEW
@@ -396,7 +440,7 @@ func listRosterPage[T userRow | teamRow](
 		var rows pgx.Rows
 		var err error
 		if q != nil && *q != "" {
-			args := append(append([]any{}, spec.leadArgs...), "%"+*q+"%", after.createdAt, after.id, limit+1)
+			args := append(append([]any{}, spec.leadArgs...), "%"+storekit.EscapeLike(*q)+"%", after.createdAt, after.id, limit+1)
 			rows, err = tx.Query(ctx, spec.filtered, args...)
 		} else {
 			args := append(append([]any{}, spec.leadArgs...), after.createdAt, after.id, limit+1)

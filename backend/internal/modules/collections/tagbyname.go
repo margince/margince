@@ -113,3 +113,9 @@ func (s *Store) TagIsLive(ctx context.Context, id ids.TagID) (bool, error) {
 	})
 	return live, err
 }
+
+// MayCreateTag says whether this caller could coin a word, by the same gate
+// CreateTag takes, so an offer never proposes a write the store would refuse.
+func (s *Store) MayCreateTag(ctx context.Context) bool {
+	return auth.Require(ctx, "tag", principal.ActionCreate) == nil
+}

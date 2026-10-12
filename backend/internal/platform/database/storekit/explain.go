@@ -40,6 +40,9 @@ type ExplainNode struct {
 	// masked column, a withheld field, or a fact on a linked record.
 	Value  *string `json:"value,omitempty"`
 	Hidden bool    `json:"hidden,omitempty"`
+	// ValueLabel names the record a reference value points at, when the
+	// reader may open it.
+	ValueLabel *string `json:"value_label,omitempty"`
 }
 
 // Explanation is the verdict for one record: whether the filter selects it,
@@ -244,47 +247,46 @@ func combine(node *ExplainNode) {
 func and3(a, b *bool) *bool {
 	switch {
 	case isFalse(a) || isFalse(b):
-		return boolPtr(false)
+		return new(false)
 	case a == nil || b == nil:
 		return nil
 	default:
-		return boolPtr(true)
+		return new(true)
 	}
 }
 
 func or3(a, b *bool) *bool {
 	switch {
 	case isTrue(a) || isTrue(b):
-		return boolPtr(true)
+		return new(true)
 	case a == nil || b == nil:
 		return nil
 	default:
-		return boolPtr(false)
+		return new(false)
 	}
 }
 
 func isTrue(b *bool) bool  { return b != nil && *b }
 func isFalse(b *bool) bool { return b != nil && !*b }
-func boolPtr(b bool) *bool { return &b }
 
 // withholdUnseenReferences hides each shown value that names a row the reader
 // may not open, as the record read would: the verdict stays, the id does not.
+// A row they may open is named beside its id.
 func withholdUnseenReferences(ctx context.Context, tx pgx.Tx, leaves []explainLeaf) error {
 	for _, leaf := range leaves {
 		if leaf.references == "" || leaf.node.Value == nil {
 			continue
 		}
-		id, err := ids.Parse(*leaf.node.Value)
+		seen, err := seenReferences(ctx, tx, leaf.references, []string{*leaf.node.Value})
 		if err != nil {
-			return fmt.Errorf("explain: a %s reference is not an id: %w", leaf.references, err)
+			return fmt.Errorf("explain: %w", err)
 		}
-		visible, err := auth.VisibleSubset(ctx, tx, leaf.references, []ids.UUID{id})
-		if err != nil {
-			return err
-		}
-		if !visible[id] {
+		label, ok := seen[*leaf.node.Value]
+		if !ok {
 			leaf.node.Value, leaf.node.Hidden = nil, true
+			continue
 		}
+		leaf.node.ValueLabel = label
 	}
 	return nil
 }

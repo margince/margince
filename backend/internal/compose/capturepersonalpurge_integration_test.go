@@ -341,3 +341,52 @@ func sweepPersonal(t *testing.T, e *integration.Env) int {
 	}
 	return n
 }
+
+// An open request keeps personal mail past its window.
+//
+// This sweep destroys on a timer with nobody confirming, which makes it the
+// arm where the omission cost most: a pending access request loses the records
+// it was going to report, and the only trace is a count nobody reads as wrong.
+func TestPersonalMailAnOpenRequestIsAboutSurvivesItsWindow(t *testing.T) {
+	e := integration.Setup(t)
+	const address = "anwalt@kanzlei.example"
+	mail := seedPurgeableMail(t, e, address, "Mandat", e.Rep1)
+	resolvePersonal(t, e, address, mail, e.Rep1, true)
+	agePersonalMail(t, e, mail, address, 8*24*time.Hour)
+
+	// Read BEFORE the request, so the silence afterwards is the shield's doing and
+	// not a census that never saw this seat's mail: an empty answer to a question
+	// nobody is asking passes the assertion below while proving nothing.
+	if due := seatsDueForPersonalSweep(t, e); len(due) != 1 {
+		t.Fatalf("the census calls %d seat(s) due before any request exists, want 1 — "+
+			"the rest of this test cannot tell a working shield from an empty query", len(due))
+	}
+	seedRequestFor(t, e, address, "open", "")
+
+	// A seat whose every due message is held has no work, and censusing it hands the
+	// sweep a seat it finds nothing to destroy for.
+	if due := seatsDueForPersonalSweep(t, e); len(due) != 0 {
+		t.Errorf("the census calls %d seat(s) due when every due message is held", len(due))
+	}
+	if n := sweepPersonal(t, e); n != 0 {
+		t.Fatalf("destroyed %d messages, want 0 — a request still open is what the records are for", n)
+	}
+	if body := activityBody(t, e, mail); body == "" {
+		t.Fatal("personal mail an open request is about was destroyed by the timed sweep")
+	}
+}
+
+// seatsDueForPersonalSweep asks the census the sweep asks before it selects.
+func seatsDueForPersonalSweep(t *testing.T, e *integration.Env) []ids.UUID {
+	t.Helper()
+	var seats []ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		seats, err = capture.SeatsWithPersonalMailDueTx(
+			context.Background(), tx, capture.DefaultPersonalPurgeWindows(), 100)
+		return err
+	}); err != nil {
+		t.Fatalf("asking which seats have personal mail due: %v", err)
+	}
+	return seats
+}

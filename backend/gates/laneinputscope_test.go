@@ -5,7 +5,7 @@
 
 package gates
 
-// A path-filtered lane runs on a change to the scripts it EXECUTES.
+// A path-filtered lane runs on a change to the scripts it executes.
 //
 // CI classifies a pull request with dorny/paths-filter and gates each lane on
 // one of the resulting scopes. That is a real saving and it has one failure
@@ -178,7 +178,7 @@ func parseRecipes(t *testing.T, path string) (map[string]*recipeTarget, map[stri
 	vars := readLiteralVars(string(body))
 	targets := map[string]*recipeTarget{}
 	var current []string
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		if strings.HasPrefix(line, "\t") {
 			for _, name := range current {
 				targets[name].recipes = append(targets[name].recipes, line)

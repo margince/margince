@@ -142,7 +142,7 @@ func TestACalendarPartDoesNotDisplaceAUserFile(t *testing.T) {
 	b.WriteString("--bb\r\n")
 	b.WriteString("Content-Type: text/calendar; charset=UTF-8; method=REQUEST\r\n\r\n")
 	b.WriteString("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n")
-	for i := 0; i < extension.MaxInboundFiles; i++ {
+	for i := range extension.MaxInboundFiles {
 		b.WriteString("--bb\r\n")
 		fmt.Fprintf(&b, "Content-Type: application/pdf; name=\"doc%d.pdf\"\r\n", i)
 		fmt.Fprintf(&b, "Content-Disposition: attachment; filename=\"doc%d.pdf\"\r\n\r\n", i)

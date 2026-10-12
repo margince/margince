@@ -6,8 +6,10 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -19,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -51,7 +54,7 @@ You may offer to apply one value a dossier source states: ask whether to use it,
 You only propose; the administrator saves. Say what you propose — "I'm proposing Nordhafen as the display name" — never that you set, updated or saved anything, because nothing changes until they save. Do not apologize unless acknowledging a concrete error or correction.
 Use only these fields: display_name, legal_name, registered_address, legal_form, register_court, register_number, register_vat, industry, history, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion.
 register_number is the court's commercial-register entry ("HRB 12345 B") and register_vat is the tax identifier ("DE123456789") — never put one in the other's place.
-Return JSON with kind, message, proposed_changes (at most 5 objects with field, value, reason, source_ids), offers (at most 1 object with field, value, source_ids), and global source_ids. Every dossier-derived proposed or offered value must carry the dossier source ids that contain that value, and those ids must also appear in global source_ids. Use an empty per-change source_ids list only when the value comes from an administrator statement. Cite only source ids supplied in the dossier. Do not invent a source, legal identity, address, registration, VAT/UID number, product, customer, or market.`
+Return JSON with kind, message, proposed_changes (at most 5 objects with field, value, reason, source_ids), offers (at most 1 object with field, value, source_ids), and global source_ids. Every dossier-derived proposed or offered value must carry the dossier source ids that contain that value, and those ids must also appear in global source_ids. Use an empty per-change source_ids list only when the value comes from an administrator statement. A yes accepting your_previous_offer is not such a statement: the change copies that offer's source_ids, because its value still comes from the evidence the offer cited. Cite only source ids supplied in the dossier. Do not invent a source, legal identity, address, registration, VAT/UID number, product, customer, or market.`
 
 type companyReadEvidence struct {
 	ID    string `json:"source_id"`
@@ -185,7 +188,7 @@ func validateCompanyReadReplyShape(reply companyReadModelReply) error {
 		return fmt.Errorf("compose: company read answer has unsupported response kind %q", clampToken(reply.Kind))
 	}
 	if strings.TrimSpace(reply.Message) == "" {
-		return fmt.Errorf("compose: company read answer is empty")
+		return errors.New("compose: company read answer is empty")
 	}
 	if len(reply.ProposedChanges) > companyReadChangeLimit {
 		return fmt.Errorf("compose: company read answer proposes more than %d changes", companyReadChangeLimit)
@@ -202,7 +205,7 @@ func validateCompanyReadChanges(replyKind string, changes []companyReadProposedC
 			return fmt.Errorf("compose: company read answer proposes unsupported field %q", clampToken(change.Field))
 		}
 		if strings.TrimSpace(change.Value) == "" || strings.TrimSpace(change.Reason) == "" {
-			return fmt.Errorf("compose: company read answer proposes an incomplete change")
+			return errors.New("compose: company read answer proposes an incomplete change")
 		}
 		if !authorization.allows(change) {
 			return fmt.Errorf("compose: company read answer proposes %q without an administrator change request", clampToken(change.Field))
@@ -213,7 +216,7 @@ func validateCompanyReadChanges(replyKind string, changes []companyReadProposedC
 		}
 		if len(changeSources) == 0 {
 			if !textContainsValue(administratorStatements, change.Value) {
-				return fmt.Errorf("compose: uncited company read change is not present in an administrator statement")
+				return errors.New("compose: uncited company read change is not present in an administrator statement")
 			}
 			continue
 		}
@@ -222,7 +225,7 @@ func validateCompanyReadChanges(replyKind string, changes []companyReadProposedC
 			return err
 		}
 		if !supported && !companyRecommendationSupportsSynthesis(replyKind, change.Field, changeSources, known) {
-			return fmt.Errorf("compose: company read change value is not supported by its cited evidence")
+			return errors.New("compose: company read change value is not supported by its cited evidence")
 		}
 	}
 	return nil
@@ -252,9 +255,9 @@ type companyChangeAuthorization struct {
 
 func newCompanyChangeAuthorization(message string, history []model.Message, directField string) companyChangeAuthorization {
 	authorization := companyChangeAuthorization{currentMessage: message, directField: directField}
-	for i := len(history) - 1; i >= 0; i-- {
-		if history[i].Role == chatRoleUser {
-			authorization.previousRequest = history[i].Content
+	for _, h := range slices.Backward(history) {
+		if h.Role == chatRoleUser {
+			authorization.previousRequest = h.Content
 			break
 		}
 	}
@@ -419,8 +422,8 @@ func companyReadEvidenceSet(read contacts.SiteRead) []companyReadEvidence {
 		}
 		evidence = append(evidence, companyReadEvidence{
 			ID: fmt.Sprintf("S%d", len(evidence)+1), Kind: kind, Field: field,
-			Value: boundedRunes(value, companyReadSourceMaxRunes),
-			Quote: boundedRunes(quote, companyReadSourceMaxRunes), URL: sourceURL,
+			Value: textcut.Runes(value, companyReadSourceMaxRunes),
+			Quote: textcut.Runes(quote, companyReadSourceMaxRunes), URL: sourceURL,
 		})
 	}
 	for _, entity := range read.LegalEntities {

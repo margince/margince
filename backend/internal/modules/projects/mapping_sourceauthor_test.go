@@ -22,7 +22,7 @@ func TestTheProjectDoorsAdmitAnAuthorOnlyFromTheImporter(t *testing.T) {
 	hubspot := "mirror:hubspot"
 	body := func(sourceSystem *string) crmcontracts.CreateProjectRequest {
 		return crmcontracts.CreateProjectRequest{
-			Name: "Imported", SourceSystem: sourceSystem, SourceAuthorName: &name,
+			Name: "Imported", Source: "manual", SourceSystem: sourceSystem, SourceAuthorName: &name,
 			CompanyId: openapi_types.UUID(ids.NewV7()),
 		}
 	}
@@ -36,8 +36,7 @@ func TestTheProjectDoorsAdmitAnAuthorOnlyFromTheImporter(t *testing.T) {
 		"client door":           errOf(projectCreateInput(body(&legacy))),
 		"importer from nowhere": errOf(projectCreateInputFromImporter(body(nil))),
 	} {
-		var refused *provenance.AuthorError
-		if !errors.As(err, &refused) {
+		if _, ok := errors.AsType[*provenance.AuthorError](err); !ok {
 			t.Errorf("%s admitted an author: %v", door, err)
 		}
 	}

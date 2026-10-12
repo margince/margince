@@ -29,9 +29,11 @@ type Handlers struct {
 // hit rendering the generic way. `partnerMarks` answers which companies carry a
 // live partner programme; compose supplies the contacts store's own reader, and
 // a nil one leaves every company hit unmarked rather than marked "no".
+// `companyLogos` answers a company hit's logo the same way, and a nil one
+// leaves every company hit without one.
 func NewHandlers(
 	db *database.DB, tagReach TagReachCounter,
-	emailRows EmailSummaryReader, partnerMarks PartnerMarker,
+	emailRows EmailSummaryReader, partnerMarks PartnerMarker, companyLogos CompanyLogoReader,
 ) Handlers {
 	// THE CEILING RIDES THE HANDLE THE CALLER PASSES, and compose passes a
 	// bounded one (server.go). It is not armed here, and that is deliberate:
@@ -44,7 +46,8 @@ func NewHandlers(
 	// this surface opens — the lexical ranking, and the vector one through the
 	// retriever. A ceiling armed at a single Query would leave the other lane as
 	// unbounded as it was before anybody thought about it.
-	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows).WithPartnerMarks(partnerMarks)
+	store := NewStore(db).WithTagReach(tagReach).WithEmailSummaries(emailRows).
+		WithPartnerMarks(partnerMarks).WithCompanyLogos(companyLogos)
 	// Embedder is nil, and stays nil: the only thing this retriever serves is
 	// AssembleContext, which walks the context graph and never embeds. The
 	// request-path embed lane compose binds is for the RANKED half, and
@@ -66,6 +69,8 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	if params.Limit != nil {
 		in.Limit = *params.Limit
 	}
+	in.PerType = params.PerType
+	in.WithEmployees = params.WithEmployees != nil && *params.WithEmployees
 
 	page, err := h.store.Search(r.Context(), in)
 	if err != nil {
@@ -73,11 +78,26 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 		return
 	}
 
+	httperr.WriteJSON(w, http.StatusOK, wirePage(page))
+}
+
+// wirePage renders a page as the contract's response. `types_with_more` is
+// present on a grouped page alone, empty when every type fit, so a client can
+// tell "nothing more of any type" from "this was a ranked page".
+func wirePage(page Page) crmcontracts.SearchResponse {
 	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
 		pageInfo.NextCursor = &page.NextCursor
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo})
+	response := crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo}
+	if page.TypesWithMore != nil {
+		more := make([]crmcontracts.SearchResponseTypesWithMore, 0, len(page.TypesWithMore))
+		for _, entity := range page.TypesWithMore {
+			more = append(more, crmcontracts.SearchResponseTypesWithMore(entity))
+		}
+		response.TypesWithMore = &more
+	}
+	return response
 }
 
 // wireHits renders a page of hits as the contract's results.
@@ -92,34 +112,40 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		result := crmcontracts.SearchResult{
 			Id:    openapi_types.UUID(hit.ID),
 			Type:  crmcontracts.SearchResultType(hit.Type),
-			Score: ptr(float32(hit.Score)),
+			Score: new(float32(hit.Score)),
 			// Unconditionally, on every hit: this search reads the store the
 			// record lives in, so a hit is never a copy of somebody else's
 			// and there is no case here that could be anything but
 			// authoritative. Leaving it nil would say UNKNOWN, which is a
 			// different and weaker statement than the one we can make.
-			TrustTier: ptr(crmcontracts.SearchResultTrustTierSearchResultTrustTierAuthoritative),
+			TrustTier: new(crmcontracts.SearchResultTrustTierSearchResultTrustTierAuthoritative),
 		}
 		if hit.Title != "" {
-			result.Title = ptr(hit.Title)
+			result.Title = new(hit.Title)
 		}
 		if hit.Snippet != "" {
-			result.Snippet = ptr(hit.Snippet)
+			result.Snippet = new(hit.Snippet)
 		}
 		// Copied by VALUE, so the response owns what it carries and shares no
 		// pointee with the page it was rendered from.
 		if hit.CarriedBy != nil {
-			result.CarriedBy = ptr(*hit.CarriedBy)
+			result.CarriedBy = new(*hit.CarriedBy)
 		}
 		if hit.EmailSummary != nil {
-			result.EmailSummary = ptr(*hit.EmailSummary)
+			result.EmailSummary = new(*hit.EmailSummary)
 		}
 		if hit.IsPartner != nil {
-			result.IsPartner = ptr(*hit.IsPartner)
+			result.IsPartner = new(*hit.IsPartner)
+		}
+		if hit.WorksAt != nil {
+			result.WorksAt = &crmcontracts.SearchHitEmployer{
+				CompanyId: openapi_types.UUID(hit.WorksAt.CompanyID), CompanyName: hit.WorksAt.CompanyName,
+			}
+		}
+		if hit.LogoURL != nil {
+			result.LogoUrl = new(*hit.LogoURL)
 		}
 		data = append(data, result)
 	}
 	return data
 }
-
-func ptr[T any](v T) *T { return &v }

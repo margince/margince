@@ -3,14 +3,11 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import type { components } from "../api/schema";
+import { useCanWriteRecord } from "../app/capability";
 import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
+import { ListPopover } from "../design-system/listpopover";
 import { Panel, PanelBody } from "../design-system/panel";
-import {
-  RecordPicker,
-  type RecordPickerCandidate,
-} from "../design-system/recordpicker";
 import { useT } from "../i18n";
 // The row and section shapes this file draws (record-card, co-deal-card,
 // co-project-card, co-sect) are the account rail's own, defined in
@@ -23,11 +20,13 @@ import "./companyrailprojects.css";
 import { problemMessageOf } from "./common";
 import { SectionSummary } from "./companyrailshared";
 import { useEntityName } from "./entityref";
+import { LeadFillFromContact } from "./leadfillfromcontact";
 import type { LeadWriter } from "./leads";
 import { useProjectRecord } from "./projectrecord";
 import { PhaseBadge } from "./projects";
 import type { Project } from "./projects.form";
 import { searchProjectReferences } from "./recordreferences";
+import { TagsPanel } from "./tagspanel";
 
 // The lead's own two doors out: the deal it opened once qualified, and the
 // project its Details name. Split out of leads.tsx so that file's own length
@@ -74,6 +73,7 @@ export function LeadRail({
     // way the same two read on an account.
     <div className="co-rail">
       {details}
+      <LeadFillFromContact writer={writer} reasonId={reasonId} />
       <Panel>
         <LeadDealSection
           lead={lead}
@@ -82,7 +82,25 @@ export function LeadRail({
         />
         <LeadProjectSection lead={lead} writer={writer} reasonId={reasonId} />
       </Panel>
+      <LeadTagsSection lead={lead} writer={writer} />
     </div>
+  );
+}
+
+// Applying a tag writes to the lead, so the panel takes the same two answers
+// every other write here does: the seat may write this row, and the page has
+// not closed it to changes.
+function LeadTagsSection({
+  lead,
+  writer,
+}: Readonly<{ lead: Lead; writer: LeadWriter }>) {
+  const canUpdate = useCanWriteRecord("lead", lead);
+  return (
+    <TagsPanel
+      entityType="lead"
+      entityID={lead.id}
+      canEdit={canUpdate && !writer.readOnly}
+    />
   );
 }
 
@@ -228,10 +246,8 @@ function LeadProjectBody({ lead }: Readonly<{ lead: Lead }>) {
 // Attaches `project_id` through the SAME writer the Details card's own
 // project row saves through, reused rather than opening a second patch
 // path, so one inline edit and this verb cannot invalidate different caches
-// or send a different If-Match. Picking IS the act, the shape the account's
-// own project attach draws (design-system/projectlinks.tsx's AttachDialog):
-// the picker's confirm never fires, kept only so a refused write has
-// ConfirmModal's pending and error slots to appear in.
+// or send a different If-Match. Picking IS the act, so the list closes once
+// the write lands and stays open over a refusal.
 function LeadProjectAttachButton({
   lead,
   writer,
@@ -244,7 +260,7 @@ function LeadProjectAttachButton({
     : t("lead.rail.project.attach");
   // THIS write's own outcome, not any write on the lead: the mutation is
   // shared with the Details card and the ladder, so `isSuccess`/`isError`
-  // alone would react to a save this dialog never made (LeadScoreCard states
+  // alone would react to a save this picker never made (LeadScoreCard states
   // the same rule for its own override save).
   const thisWrite =
     writer.patch.variables?.body !== undefined &&
@@ -257,40 +273,31 @@ function LeadProjectAttachButton({
     }
   }, [saved]);
   return (
-    <>
-      <div className="card-actions">
-        <Button
-          variant="ghost"
-          reasonId={reasonId}
-          onClick={() => setOpen(true)}
-        >
-          {label}
-        </Button>
-      </div>
-      <ConfirmModal
+    <div className="card-actions">
+      <ListPopover
+        label={label}
+        title={label}
+        searchLabel={t("projectLinks.searchLabel")}
+        reasonId={reasonId}
         open={open}
-        onClose={() => {
-          if (!writer.patch.isPending) {
-            setOpen(false);
+        onOpenChange={(next) => {
+          if (next || !writer.patch.isPending) {
+            setOpen(next);
           }
         }}
-        title={label}
-        confirmLabel={label}
-        confirmDisabled
-        onConfirm={() => undefined}
-        pending={writer.patch.isPending}
-        error={failed ? problemMessageOf(writer.patch.error, t) : null}
-      >
-        <RecordPicker
-          label={t("projectLinks.searchLabel")}
-          searchTargets={searchProjectReferences}
-          disabled={writer.patch.isPending}
-          onPick={(candidate: RecordPickerCandidate) =>
-            writer.save({ project_id: candidate.id })
+        search={searchProjectReferences}
+        selected={lead.project_id ?? undefined}
+        onPick={(option, done) => {
+          if (option.id === lead.project_id) {
+            done();
+            return;
           }
-        />
-      </ConfirmModal>
-    </>
+          writer.save({ project_id: option.id });
+        }}
+        pending={writer.patch.isPending}
+        error={failed ? problemMessageOf(writer.patch.error, t) : undefined}
+      />
+    </div>
   );
 }
 

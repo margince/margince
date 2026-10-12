@@ -73,7 +73,7 @@ describe("the question builder", () => {
   it("refuses to ask until a report is chosen, and says why", async () => {
     const user = userEvent.setup();
     const asked = renderBuilder();
-    const ask = screen.getByRole("button", { name: "Ask" });
+    const ask = screen.getByRole("button", { name: "Run report" });
     expect(description(ask)).toBe("Choose a report to ask about.");
     await user.click(ask);
     expect(asked).toEqual([]);
@@ -83,7 +83,7 @@ describe("the question builder", () => {
       screen.getByRole("combobox", { name: "Report" }),
       "All deals by stage",
     );
-    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await user.click(screen.getByRole("button", { name: "Run report" }));
     expect(asked.map((draft) => draft.entity)).toEqual(["deals-by-stage"]);
   });
 
@@ -107,9 +107,9 @@ describe("the question builder", () => {
       (option) => option.textContent,
     );
     expect(offered).toEqual(["Amount", "Weighted amount"]);
-    expect(description(screen.getByRole("button", { name: "Ask" }))).toBe(
-      "Choose a field for every measure.",
-    );
+    expect(
+      description(screen.getByRole("button", { name: "Run report" })),
+    ).toBe("Choose a field for every measure.");
   });
 
   it("draws a filter's value by the field's shape, and none for a null test", async () => {
@@ -178,7 +178,7 @@ describe("the question builder", () => {
     await user.click(screen.getByRole("option", { name: "Currency" }));
     await user.keyboard("{Escape}");
     expect(groupBy.textContent).toBe("Currency, Stage");
-    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await user.click(screen.getByRole("button", { name: "Run report" }));
     expect(asked[0]?.groupBy).toEqual(["currency", "stage_id"]);
   });
 

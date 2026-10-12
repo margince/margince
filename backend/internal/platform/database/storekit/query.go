@@ -53,6 +53,14 @@ type Query struct {
 // contacts's. One point of composition means "is this scoped?" has one answer for
 // every caller.
 func (q Query) predicateWhere(ctx context.Context, p Predicate) (string, []any, error) {
+	return q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
+		return CompilePredicate(p, q.Fields, arg)
+	})
+}
+
+// scopedWhere is predicateWhere for any narrowing clause: the gate, the base
+// clause, the narrowing and the row scope, composed in the one place.
+func (q Query) scopedWhere(ctx context.Context, narrow func(arg func(any) int) (string, error)) (string, []any, error) {
 	if err := auth.Require(ctx, q.Table, principal.ActionRead); err != nil {
 		return "", nil, err
 	}
@@ -63,7 +71,7 @@ func (q Query) predicateWhere(ctx context.Context, p Predicate) (string, []any, 
 	if q.BaseWhere != "" {
 		where = append(where, q.BaseWhere)
 	}
-	compiled, err := CompilePredicate(p, q.Fields, arg)
+	compiled, err := narrow(arg)
 	if err != nil {
 		return "", nil, err
 	}
@@ -117,18 +125,66 @@ func (q Query) CountMatching(ctx context.Context, tx pgx.Tx, p Predicate) (int, 
 //
 // The read gate and the row-scope clause both come from predicateWhere — see
 // there for why they live together — so a predicate can only ever narrow what
-// the caller is already allowed to see. The cap stays here rather than in the
-// helper: it bounds a PAGE, and a count must not inherit it.
+// the caller is already allowed to see. The cap stays with the select rather than in
+// predicateWhere: it bounds a PAGE, and a count must not inherit it.
 func (q Query) SelectIDs(ctx context.Context, tx pgx.Tx, p Predicate, limit int) ([]ids.UUID, error) {
-	if limit <= 0 || limit > PredicateRowLimit {
-		limit = PredicateRowLimit
-	}
 	where, args, err := q.predicateWhere(ctx, p)
 	if err != nil {
 		return nil, err
 	}
-	sql := fmt.Sprintf("SELECT t.id FROM %s t WHERE %s ORDER BY t.id LIMIT %d",
-		q.Table, where, limit)
+	return q.selectCapped(ctx, tx, where, args, limit)
+}
+
+// SelectMemberIDs is SelectIDs over a list's members instead of a predicate:
+// the same gate, base clause, row scope and cap, narrowed by members.
+func (q Query) SelectMemberIDs(ctx context.Context, tx pgx.Tx, members ListMemberFilter, limit int) ([]ids.UUID, error) {
+	where, args, err := q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
+		return members("t.id", arg)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return q.selectCapped(ctx, tx, where, args, limit)
+}
+
+func (q Query) selectCapped(ctx context.Context, tx pgx.Tx, where string, args []any, limit int) ([]ids.UUID, error) {
+	if limit <= 0 || limit > PredicateRowLimit {
+		limit = PredicateRowLimit
+	}
+	return q.selectOrdered(ctx, tx, where, args, fmt.Sprintf(" LIMIT %d", limit))
+}
+
+// ExportRowLimit bounds one export: a file is built in memory, so a slice past
+// it is refused rather than read. It is far above PredicateRowLimit, which
+// bounds a page of a list.
+const ExportRowLimit = 50000
+
+// SelectExportIDs is SelectIDs for an export: every row the predicate selects
+// for this caller, up to ExportRowLimit. It answers one more than the limit
+// when the slice is larger, so the caller can refuse it instead of handing out
+// a file that is silently short.
+func (q Query) SelectExportIDs(ctx context.Context, tx pgx.Tx, p Predicate) ([]ids.UUID, error) {
+	where, args, err := q.predicateWhere(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	return q.selectOrdered(ctx, tx, where, args, fmt.Sprintf(" LIMIT %d", ExportRowLimit+1))
+}
+
+// SelectExportMemberIDs is SelectExportIDs over a list's members.
+func (q Query) SelectExportMemberIDs(ctx context.Context, tx pgx.Tx, members ListMemberFilter) ([]ids.UUID, error) {
+	where, args, err := q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
+		return members("t.id", arg)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return q.selectOrdered(ctx, tx, where, args, fmt.Sprintf(" LIMIT %d", ExportRowLimit+1))
+}
+
+func (q Query) selectOrdered(ctx context.Context, tx pgx.Tx, where string, args []any, limitClause string) ([]ids.UUID, error) {
+	sql := fmt.Sprintf("SELECT t.id FROM %s t WHERE %s ORDER BY t.id%s",
+		q.Table, where, limitClause)
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("predicate query on %s: %w", q.Table, err)

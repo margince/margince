@@ -7,6 +7,7 @@ package attention
 
 import (
 	"context"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -37,4 +38,14 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		return err
 	})
 	return day, err
+}
+
+// besideDay is what assembleDay learned that the wire day does not carry: the
+// night's reading, and the sources inside the day that failed. /attention has
+// no vocabulary for a failed source; the worklist names each one.
+type besideDay struct {
+	night  theNight
+	failed []*crmcontracts.WorklistSourceUnavailable
+	// until is where the day's lanes stopped reading, so a read past today starts there.
+	until time.Time
 }

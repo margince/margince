@@ -53,7 +53,7 @@ func contractReasonEnum(t *testing.T) []string {
 			"must be a value the contract admits")
 	}
 	var members []string
-	for _, member := range strings.Split(block[1], ",") {
+	for member := range strings.SplitSeq(block[1], ",") {
 		member = strings.TrimSpace(strings.Trim(strings.TrimSpace(member), "\n"))
 		member = strings.Join(strings.Fields(member), "")
 		if member == "" || member == "null" {
@@ -317,7 +317,7 @@ func conditionReadsTheMode(cond ast.Expr) bool {
 // reasonConstantName turns a wire reason into the Go constant's suffix.
 func reasonConstantName(reason string) string {
 	var name strings.Builder
-	for _, word := range strings.Split(reason, "_") {
+	for word := range strings.SplitSeq(reason, "_") {
 		if word == "" {
 			continue
 		}

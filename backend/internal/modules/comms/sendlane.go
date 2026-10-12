@@ -81,6 +81,39 @@ type laneSend struct {
 	// names ONE address, and a send carrying a CC would otherwise blame the
 	// first name on it for a refusal that came from another.
 	Recipient string
+	// Channel and ChannelRecipient name a send that has no subject line.
+	//
+	// The channel is the provider's own label from `channel_provider`, where
+	// the product spells its name. The identifier stands in when a provider
+	// has no row. No map here, because providers are registered rows that an
+	// extension may add to, and a map would go stale the day one does.
+	//
+	// The recipient is the counterparty as that provider knows them. It is the
+	// name reported on the participant row, or the handle the contact's
+	// channel identity records. Never the CRM record's own name, which a
+	// reader of this lane may not be allowed to see.
+	Channel          string
+	ChannelRecipient string
+}
+
+// cardTitle is what a card is headed by. It is the subject line when the send
+// has one, and otherwise the channel and the counterparty it was aimed at.
+//
+// One helper rather than a branch per channel, and no body text in either
+// case. The message is unsent, so its words are not shown on a shared queue.
+// Which record it was filed under is the card's own subject reference, so
+// naming it here would print it twice.
+func (s laneSend) cardTitle() string {
+	if s.Subject != "" {
+		return s.Subject
+	}
+	if s.Channel == "" {
+		return ""
+	}
+	if s.ChannelRecipient == "" {
+		return s.Channel
+	}
+	return s.Channel + " to " + s.ChannelRecipient
 }
 
 // statement joins each send to the contact its activity is filed under.
@@ -108,13 +141,27 @@ func (l sendLane) statement(ctx context.Context, userID ids.UUID, since time.Tim
 	}
 	return fmt.Sprintf(`
 SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.contact_id,
-       %s
+       %s, COALESCE(NULLIF(cp.label, ''), o.provider, ''), COALESCE(p.display_name, '')
   FROM comms_outbound o
   LEFT JOIN LATERAL (
     SELECT al.contact_id FROM activity_link al
      WHERE al.activity_id = o.activity_id AND al.entity_type = 'contact' AND `+visible+`
      ORDER BY al.contact_id LIMIT 1
   ) l ON true
+  LEFT JOIN channel_provider cp ON cp.provider = o.provider
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(NULLIF(ap.display_name, ''), NULLIF(cci.username, '')) AS display_name
+      FROM (SELECT 1) one
+      LEFT JOIN activity_participant ap
+        ON ap.activity_id = o.activity_id
+       AND ap.channel_user_id IS NOT NULL
+       AND ap.channel_user_id = o.channel_user_id
+      LEFT JOIN contact_channel_identity cci
+        ON cci.provider = o.provider
+       AND cci.channel_user_id = o.channel_user_id
+       AND cci.archived_at IS NULL
+     LIMIT 1
+  ) p ON true
  WHERE o.user_id = $%d
    AND %s
    AND o.%s >= $%d
@@ -160,7 +207,8 @@ func (s *Store) readSendLane(ctx context.Context, lane sendLane, what string, si
 		for rows.Next() {
 			var send laneSend
 			var contact *ids.UUID
-			if scanErr := rows.Scan(&send.ID, &send.Subject, &send.Reason, &send.At, &contact, &send.Recipient); scanErr != nil {
+			if scanErr := rows.Scan(&send.ID, &send.Subject, &send.Reason, &send.At, &contact,
+				&send.Recipient, &send.Channel, &send.ChannelRecipient); scanErr != nil {
 				return scanErr
 			}
 			if contact != nil {

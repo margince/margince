@@ -32,15 +32,17 @@ type recordingComms struct {
 	accountSent []RecordLink
 	// accountDrafted is that evidence for the FIRST-message draft.
 	accountDrafted []RecordLink
+	// grounding is what the first-message engine reports it wrote from.
+	grounding []EvidenceRef
 }
 
 func (c *recordingComms) DraftEmail(context.Context, ids.UUID, string) (string, string, error) {
 	return "", "", nil
 }
 
-func (c *recordingComms) DraftCompanyEmail(_ context.Context, links []RecordLink, _ string) (string, string, error) {
+func (c *recordingComms) DraftCompanyEmail(_ context.Context, links []RecordLink, _ string) (FirstDraft, error) {
 	c.accountDrafted = links
-	return "Following up", "As discussed.", nil
+	return FirstDraft{Subject: "Following up", Body: "As discussed.", Grounding: c.grounding}, nil
 }
 
 func (c *recordingComms) SendEmail(context.Context, ids.UUID, SendEmailArgs) (SendEmailResult, error) {
@@ -251,8 +253,7 @@ func TestSendMessageToolRefusesToStageAnEmptyBody(t *testing.T) {
 
 			_, err := tool.StageInfo(context.Background(),
 				json.RawMessage(`{"activity_id":"`+ids.NewV7().String()+`","body":"`+body+`","consent_purpose":"support"}`))
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Errorf("StageInfo err = %v, want *BadArgsError for a %s body", err, name)
 			}
 		})
@@ -268,8 +269,7 @@ func TestSendMessageToolRefusesToStageANonChannelAnchor(t *testing.T) {
 
 	_, err := tool.StageInfo(context.Background(),
 		json.RawMessage(`{"activity_id":"`+ids.NewV7().String()+`","body":"b","consent_purpose":"support"}`))
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Errorf("StageInfo err = %v, want *BadArgsError for a non-channel anchor kind", err)
 	}
 }
@@ -445,8 +445,7 @@ func TestStagingRefusesASendOrBookingExecutionWouldRefuse(t *testing.T) {
 
 			_, err := registry.Invoke(sendCtx(), tc.tool, json.RawMessage(tc.args))
 
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("Invoke err = %v, want a BadArgsError refusing it before staging", err)
 			}
 			if !strings.Contains(err.Error(), tc.wantNamed) {
@@ -561,8 +560,7 @@ func TestDraftEmailRefusesNeitherShapeAndBothAtOnce(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, err := draftEmailTool{comms: &recordingComms{}, p: unreadableProvider{}}.Handle(
 				context.Background(), json.RawMessage(args))
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("answered %v, want a BadArgsError naming what to send", err)
 			}
 		})
@@ -601,8 +599,7 @@ func TestDraftingAFirstMessageAppliesTheSendsLinkCap(t *testing.T) {
 	_, err := draftEmailTool{comms: &recordingComms{}, p: unreadableProvider{}}.Handle(
 		context.Background(),
 		json.RawMessage(`{"links":[`+strings.Join(links, ",")+`],"intent":"hello"}`))
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("drafting with %d links answered %v, want the cap refusal the send applies",
 			maxRecordLinks+1, err)
 	}

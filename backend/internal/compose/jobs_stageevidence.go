@@ -37,22 +37,20 @@ func (StageEvidenceReadArgs) Kind() string { return "stage_evidence_read" }
 // workspace and work in another.
 func (a StageEvidenceReadArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// stageEvidenceReadInsertOpts routes the reading to the model-call queue and
-// deduplicates by args.
+// stageEvidenceReadInsertOpts deduplicates the reading by args.
 //
 // ByArgs is what makes the at-least-once bus safe here: the same activity
 // delivered twice collapses to one reading, and a reading of a DIFFERENT
 // activity on the same deal still queues — which is right, because each new
 // message is new text that may settle a criterion the last one did not.
 func stageEvidenceReadInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue: transcriptReadQueue,
+	return jobs.QueuedAs[StageEvidenceReadArgs](&river.InsertOpts{
 		// One-off: nothing re-asks for this reading. An activity lands once,
 		// and a message that could not be read this time will not read
 		// differently on a third attempt.
 		MaxAttempts: oneOffJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true},
-	}
+	})
 }
 
 // stageEvidenceReadWorker runs one queued reading.

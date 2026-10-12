@@ -76,7 +76,7 @@ export function EmploymentEdit({
   });
   const valid = validDateEntry(start) && validDateEntry(end);
   return (
-    <Modal open={open} onClose={onClose} labelledBy={id}>
+    <Modal open={open} onClose={onClose} labelledBy={id} intent="form">
       <Heading size="large" id={id} className="t-h2 modal-title">
         {t("employment.edit")}
       </Heading>
@@ -141,7 +141,13 @@ export function EmploymentEdit({
           onChange={(e) => setPrimary(e.target.checked)}
         />
         <ErrorLine error={saving.error} />
+      </div>
+      <div className="actions">
+        <Button onClick={onClose} disabled={saving.isPending}>
+          {t("create.cancel")}
+        </Button>
         <Button
+          variant="primary"
           disabled={!valid || saving.isPending}
           onClick={() => {
             const started = datePatch(start),

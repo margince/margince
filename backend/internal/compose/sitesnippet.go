@@ -39,7 +39,7 @@ const (
 // Deterministic: same text, same passages, always.
 func segmentPassages(text string) []string {
 	var units []string
-	for _, block := range strings.Split(text, "\n") {
+	for block := range strings.SplitSeq(text, "\n") {
 		block = strings.TrimSpace(block)
 		if block == "" {
 			continue
@@ -340,7 +340,7 @@ func joinedByPunctuation(valueNorm string) bool {
 // gate: a German page paraphrased into an English value legitimately
 // shares nothing lexically.
 func contentWordOverlap(value, passageNorm string) bool {
-	for _, word := range strings.Fields(normalizeEvidence(value)) {
+	for word := range strings.FieldsSeq(normalizeEvidence(value)) {
 		if utf8.RuneCountInString(word) >= 4 && strings.Contains(passageNorm, word) {
 			return true
 		}

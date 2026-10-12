@@ -244,13 +244,13 @@ func (a *httpAPI) FindByMessageID(ctx context.Context, accessToken, id string) (
 	return out.Messages[0].ID, true, nil
 }
 
-// postJSON performs an authorized POST with a JSON body and JSON-decodes the
+// postJSONOnce performs an authorized POST with a JSON body and JSON-decodes the
 // response into out — the same bounded client, bearer header, status
 // classification, and bounded read as get, so a POST call is diagnosable
 // exactly like a GET call rather than forking a second error-mapping path.
 //
 //craft:ignore naked-any payload/out are the caller-supplied JSON encode/decode values — the concrete type varies per endpoint
-func (a *httpAPI) postJSON(ctx context.Context, accessToken, path string, payload, out any) error {
+func (a *httpAPI) postJSONOnce(ctx context.Context, accessToken, path string, payload, out any) error {
 	reqBody, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("gmail: encoding %s request: %w", path, err)

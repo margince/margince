@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/continuity"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
@@ -87,7 +88,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	loadChannelProviderDirectoryOrLog(pool, log)
 	// Said once, where an operator reads it: whether this build knows what the
 	// law requires it to keep.
-	announceStatutoryFloor(log)
+	announceStatutoryFloorFrom(pool, log)
 
 	srv := newServer(pool, log, authH, dealsH)
 	for _, opt := range opts {
@@ -95,10 +96,6 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
-	srv.authHandlers = srv.WithReportingAvailable(srv.reportingEnabled)
-	if srv.reportingEnabled {
-		srv.reportMetrics = srv.service
-	}
 	// The tool registry is built HERE, after the options, on the Server that is
 	// actually served — so every engine an option installed is one the tools can
 	// reach. The rebuild each option performs keeps a half-configured Server
@@ -113,6 +110,11 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// first_run for it rather than only for a role that wired one. Reuses
 	// identitySvc — see its own comment below for why the process holds one.
 	srv.authHandlers = srv.WithFirstRunFn(srv.firstRunAnswer(identitySvc))
+	// After the option loop, because the two bases and the trusted proxies
+	// arrive by options in any order.
+	agentOrigin := agentAPIOrigin{api: srv.apiBaseURL, public: srv.send.PublicBaseURL, proxies: srv.trustedProxies}
+	srv.agentBundleHandlers = newAgentBundleHandlers(agentOrigin, log)
+	srv.authHandlers = srv.WithAgentAPIBase(agentOrigin.baseFor)
 	// After the option loop, so /me's answer and the endpoints' gate resolve one
 	// rollout value whether or not WithCompanyContextRollout ran.
 	srv.publishCompanyContextAvailability()
@@ -128,9 +130,15 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// with its own 307 before any registered handler runs, and that redirect
 	// echoes the cleaned path — credential segment and all — into a Location
 	// header. Mounted deeper, the middleware never saw those answers.
+	//
+	// ResolveClientIP sits just inside the panic guard and outside everything
+	// else, so every per-IP limiter behind it — /v1, /oauth, /mcp, the
+	// webhooks, the extension inbound routes — keys on the one address it
+	// decided rather than on whichever proxy the request happened to arrive by.
 	return httpserver.RecoverPanics(log,
-		httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
-			httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))
+		httpserver.ResolveClientIP(srv.trustedProxies,
+			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is
@@ -176,7 +184,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
 			InstallationDB(pool).Bounded(database.CallerPredicateBudget),
-			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch),
+			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
+			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.
@@ -186,6 +195,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{
 			pool: pool, now: func() time.Time { return time.Now().UTC() },
+		},
+		recoveryHealthHandlers: recoveryHealthHandlers{
+			ledger: continuity.NewStore(InstallationDB(pool)),
+			now:    func() time.Time { return time.Now().UTC() },
 		},
 		consentHandlers:     newConsentHandlers(pool),
 		collectionsHandlers: newCollectionsHandlers(pool),
@@ -214,8 +227,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// controller placing a litigation hold, which reads as "no such record"
 		// rather than as "this installation cannot hold one".
 		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)).
+			WithCountry(identity.CountryForDecision).
 			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
-			WithLegalHoldWriter(NewLegalHoldSeam(pool)),
+			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
+			WithRecordLabeler(newAttentionNames(InstallationDB(pool))),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the
@@ -228,7 +243,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		automationHandlers: automation.NewHandlers(InstallationDB(pool)).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
-		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)),
+		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).
+			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
 		// unwired because a tool answers in ids.
@@ -267,12 +283,12 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		strengthHandlers: strengthHandlers{
 			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},
-		recordAccessHandlers: recordAccessHandlers{access: NewRecordAccessReads(pool)},
+		access: NewRecordAccessReads(pool),
 		// The schema-change pool is boot-optional; nil
 		// here means Create/SetOptions stay their generated 501 until the
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
-		knowledgeHandlers:    knowledgeHandlers{module: knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument)},
+		module:               knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument),
 		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
 		// the store bounds "today" at midnight in the clock's own location, and a
 		// UTC clock would name the wrong day on a non-UTC installation for the
@@ -288,13 +304,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// human was already shown (RD-AC-N-5) rather than producing one, so it
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
-		attachmentExtractionHandlers: attachmentExtractionHandlers{accept: NewExtractionAccept(pool)},
+		accept: NewExtractionAccept(pool),
 		// A review joins two modules' halves, so the seam is constructed here
 		// rather than either module owning the other.
-		outcomeReviewHandlers: outcomeReviewHandlers{
-			reviews:    NewOutcomeReviews(pool),
-			activities: activities.NewStore(InstallationDB(pool)),
-		},
+		reviews:    NewOutcomeReviews(pool),
+		activities: activities.NewStore(InstallationDB(pool)),
 		// Outbound webhooks (E10/S-E10.6): the read surface works
 		// unconditionally; create/rotate/replay need a deployment signing
 		// key, wired by WithWebhookSigningKey (the api role sources it from
@@ -311,7 +325,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// the gate and the registry take: a step-up refused against one counter and
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
-	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
+	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
 	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//

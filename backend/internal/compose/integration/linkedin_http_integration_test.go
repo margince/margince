@@ -116,6 +116,7 @@ func TestAnExactAddressMatchConfirmsOverHTTP(t *testing.T) {
 	// A contact carrying the address the export names.
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Dana Buyer",
 		"emails":    []AnyMap{{"email": "dana@acme.test", "is_primary": true}},
 	}, nil, &contact); status != http.StatusCreated {

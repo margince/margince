@@ -9,6 +9,7 @@ import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { netChanges, type PairRow } from "./historyreversal";
 import { historyValue } from "./historyvalues";
+import "./history.css";
 
 // The reversal and the change it reversed, drawn as ONE line the reader can
 // open.

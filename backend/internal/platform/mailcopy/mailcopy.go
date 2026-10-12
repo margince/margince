@@ -134,6 +134,11 @@ type Copy struct {
 	UnsubscribeLabel       string
 	ManagePreferencesLabel string
 
+	// The closing a send appends for a sender who has written no signature of
+	// their own, above their name. Plain, because the sender chose no words
+	// for it.
+	SignOffClosing string
+
 	// The password reset a colleague asked for.
 	ResetSubject string
 	ResetIntro   string
@@ -321,6 +326,20 @@ type Copy struct {
 	DigestIntro   string
 	DigestAndMore string
 	DigestOpen    string
+
+	// The worklist notices the product raises for itself.
+	//
+	// Stored on the notice row rather than rendered per reader, and the digest
+	// mail quotes the subject verbatim.
+	//
+	// So a notice is this installation's copy in both places, or it disagrees
+	// with itself in one.
+	//
+	// NoticeBacklogBody counts the waiting decisions, so it carries one %d.
+	NoticeSLASubject     string
+	NoticeSLABody        string
+	NoticeBacklogSubject string
+	NoticeBacklogBody    string
 }
 
 // OneLine collapses any run of line breaks and other control separators into

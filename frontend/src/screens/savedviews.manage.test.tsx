@@ -3,13 +3,23 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import type { ListQuery } from "./listquery";
 import { SaveViewAction } from "./savedviews";
+import { ManageViewsButton } from "./savedviews.manage";
+import { type SavedView, useSaveView } from "./savedviews.queries";
 
 // A saved view the reader no longer wants, or whose name no longer says what
 // it shows, used to be permanent: a tab can be pressed and nothing else. The
@@ -57,7 +67,9 @@ function stubServer(
     vi.fn(async (request: Request) => {
       const { pathname } = new URL(request.url);
       const body =
-        request.method === "PATCH" ? await request.clone().json() : undefined;
+        request.method === "PATCH" || request.method === "POST"
+          ? await request.clone().json()
+          : undefined;
       seen.push({
         method: request.method,
         path: pathname,
@@ -86,16 +98,28 @@ function stubServer(
   return seen;
 }
 
-function draw() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  render(
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      }),
+  );
+  return (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <SaveViewAction resource="companies" query={UNNARROWED} />
-      </LocaleProvider>
-    </QueryClientProvider>,
+      <LocaleProvider initial="en">{children}</LocaleProvider>
+    </QueryClientProvider>
+  );
+}
+
+function draw(query: ListQuery = UNNARROWED) {
+  render(
+    <Providers>
+      <SaveViewAction resource="companies" query={query} />
+    </Providers>,
   );
 }
 
@@ -133,6 +157,40 @@ describe("managing saved views", () => {
       ifMatch: "3",
       body: { name: "DACH customers" },
     });
+  });
+
+  it("holds a rename to the version its row opened on, though a newer one was read since", async () => {
+    const row: SavedView = {
+      ...VIEW,
+      resource: "companies",
+      shared_scope: "private",
+    };
+    const seen = stubServer([row]);
+    const user = userEvent.setup();
+    const { rerender } = render(<ManageViewsButton views={[row]} />, {
+      wrapper: Providers,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Manage views" }));
+    await user.click(
+      screen.getByRole("button", { name: "Rename German customers" }),
+    );
+    rerender(
+      <ManageViewsButton
+        views={[{ ...row, name: "DACH customers", version: 4 }]}
+      />,
+    );
+    await user.type(screen.getByLabelText("Name"), " 2");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(seen.find((call) => call.method === "PATCH")).toEqual({
+        method: "PATCH",
+        path: "/v1/views/v-1",
+        ifMatch: "3",
+        body: { name: "German customers 2" },
+      }),
+    );
   });
 
   it("will not save an empty name", async () => {
@@ -176,6 +234,35 @@ describe("managing saved views", () => {
     );
   });
 
+  // One write serves every resource, so the resource travels with the save
+  // rather than being fixed when the write was set up.
+  it("saves a narrowed list as a view of the resource it lists", async () => {
+    const seen = stubServer([]);
+    const user = userEvent.setup();
+    draw({ ...UNNARROWED, q: "berlin" });
+
+    await user.click(await screen.findByRole("button", { name: "Save view" }));
+    await user.type(screen.getByLabelText("Name"), "Berlin customers");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(seen.some((call) => call.method === "POST")).toBe(true),
+    );
+    expect(seen.find((call) => call.method === "POST")?.body).toEqual({
+      resource: "companies",
+      name: "Berlin customers",
+      query: {
+        list: {
+          q: "berlin",
+          sort: "",
+          includeArchived: false,
+          filters: {},
+          perPage: 25,
+        },
+      },
+    });
+  });
+
   it("keeps the row open with the server's reason when a rename is refused", async () => {
     stubServer([VIEW], () =>
       Response.json(
@@ -208,5 +295,26 @@ describe("managing saved views", () => {
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
       "German customers 2",
     );
+  });
+
+  // An opened view saves its filter back over itself: the stored query whole,
+  // and nothing else, so a name changed in another tab is not written back.
+  it("saves a view's query alone, against the version it was read at", async () => {
+    const seen = stubServer([VIEW]);
+    const { result } = renderHook(() => useSaveView(), { wrapper: Providers });
+    const query = {
+      ...VIEW.query,
+      filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] },
+    };
+
+    await act(() =>
+      result.current.saveQuery.mutateAsync({ id: "v-1", version: 3, query }),
+    );
+    expect(seen.find((call) => call.method === "PATCH")).toEqual({
+      method: "PATCH",
+      path: "/v1/views/v-1",
+      ifMatch: "3",
+      body: { query },
+    });
   });
 });

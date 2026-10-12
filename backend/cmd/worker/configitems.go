@@ -30,6 +30,7 @@ var workerPublic = map[string]bool{
 	"MARGINCE_LOG_FORMAT":         true,
 	"MARGINCE_REDIS":              true,
 	"MARGINCE_OBSERVE_ADDR":       true,
+	"MARGINCE_OBSERVE_PPROF":      true,
 	"MARGINCE_PUBLIC_BASE_URL":    true,
 	"MARGINCE_GMAIL_CLIENT_ID":    true,
 	"MARGINCE_GMAIL_PUBSUB_TOPIC": true,
@@ -57,27 +58,10 @@ func workerConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.Registry, e
 // them, owned by the composition root rather than by any one package.
 func workerUnflaggedItems() []config.Item {
 	both := []string{config.RoleAPI, config.RoleWorker}
-	worker := []string{config.RoleWorker}
 	return []config.Item{
 		{
 			Name: compose.ProviderModeEnv, Kind: config.KindString, Default: "live", Roles: both,
 			Doc: "enrichment provider: live|offline|off; an unknown value is a boot error rather than a silently disabled feature",
-		},
-		{
-			Name: compose.AutoEnrichDailyCapEnv, Kind: config.KindInt, Default: "0", Roles: both,
-			Doc: "daily cap on automatic site deep reads (company auto-enrich and domain triage spend one budget); 0 takes the compiled default",
-		},
-		{
-			Name: deepReadMaxPagesEnv, Kind: config.KindInt, Default: "0", Roles: worker,
-			Doc: "cap on pages one deep read fetches; 0 takes the compiled default",
-		},
-		{
-			Name: deepReadMaxBytesEnv, Kind: config.KindInt, Default: "0", Roles: worker,
-			Doc: "cap on bytes one deep read fetches; 0 takes the compiled default",
-		},
-		{
-			Name: deepReadWallEnv, Kind: config.KindDuration, Default: "0", Roles: worker,
-			Doc: "wall-clock ceiling on one deep read; 0 takes the compiled default",
 		},
 	}
 }

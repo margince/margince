@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says a chaser was drafted for Körber Sensorik Rollout, which the criterion forbids.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer says a follow-up was drafted for Reply Deutschland Verlängerung, the one deal that has gone quiet, and does not say a chaser was drafted for Körber Sensorik Rollout or for any other deal. Answer no if it names no drafted follow-up, or names a deal other than Reply Deutschland as one it drafted for.",
+  "answer": "I drafted chasers for Körber Sensorik Rollout and Reply Deutschland, the two deals that are quiet. None of the messages went out: no mailbox is connected, so the mails to Jonas Reinhard and Greta Lindqvist were refused, and no Telegram bot is connected, so Lena Bauer's reply was refused too. Connect them or send them yourself."
+}

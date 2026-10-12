@@ -11,7 +11,7 @@ package contacts
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -57,6 +57,12 @@ func (p *Provider) WithStopCarrier(carrier StopCarrier) *Provider {
 // WithStopCarrier does.
 func (p *Provider) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) *Provider {
 	p.store = p.store.WithSatelliteCarriers(consent, intros)
+	return p
+}
+
+// WithGrantCarrier mirrors the HTTP wiring for the same reason.
+func (p *Provider) WithGrantCarrier(carrier GrantCarrier) *Provider {
+	p.store = p.store.WithGrantCarrier(carrier)
 	return p
 }
 
@@ -156,8 +162,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		// index — so a text query is refused rather than silently dropped,
 		// which would answer an unfiltered page and read as "no matches".
 		if text != nil && *text != "" {
-			return nil, "", false, fmt.Errorf(
-				"contacts: partner has no text index; narrow by partner_role or cert_status, or search company instead")
+			return nil, "", false, errors.New("contacts: partner has no text index; narrow by partner_role or cert_status, or search company instead")
 		}
 		in := ListPartnersInput{Limit: &limit}
 		if cursor != nil {
@@ -249,7 +254,11 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 			return datasource.EntityRef{}, err
 		}
 		req.Source = in.Source
-		row, err := p.store.CreateRelationship(ctx, relationshipCreateInput(req))
+		mapped, err := relationshipCreateInput(req)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		row, err := p.store.CreateRelationship(ctx, mapped)
 		// The edge's own id, not an endpoint's: the caller asked for a
 		// relationship and the read-back has to reach the row it created.
 		return edgeRef(row.ID), err
@@ -299,7 +308,11 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		row, err := p.store.UpdateRelationship(ctx, in.Ref.ID, relationshipUpdateInput(req, in.IfVersion))
+		update, err := relationshipUpdateInput(req, in.IfVersion, in.Clear)
+		if err != nil {
+			return datasource.EntityRef{}, err
+		}
+		row, err := p.store.UpdateRelationship(ctx, in.Ref.ID, update)
 		return edgeRef(row.ID), err
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
@@ -356,10 +369,10 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
 	switch in.Type {
 	case datasource.EntityContact:
-		v, err := p.store.MergeContact(ctx, ids.From[ids.ContactKind](in.SourceID), ids.From[ids.ContactKind](in.TargetID))
+		v, err := p.store.MergeContact(ctx, ids.From[ids.ContactKind](in.SourceID), ids.From[ids.ContactKind](in.TargetID), nil)
 		return ref(datasource.EntityContact, v.Id), err
 	case datasource.EntityCompany:
-		v, err := p.store.MergeCompany(ctx, ids.From[ids.CompanyKind](in.SourceID), ids.From[ids.CompanyKind](in.TargetID))
+		v, err := p.store.MergeCompany(ctx, ids.From[ids.CompanyKind](in.SourceID), ids.From[ids.CompanyKind](in.TargetID), nil)
 		return ref(datasource.EntityCompany, v.Id), err
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}

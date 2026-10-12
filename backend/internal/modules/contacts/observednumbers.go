@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -264,8 +265,8 @@ func numberThisReplaces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	if err := tx.QueryRow(ctx, `
 		SELECT id, phone FROM contact_phone
 		WHERE contact_id = $1 AND phone_type = $2 AND archived_at IS NULL
-		  AND starts_with(phone, $3) AND observed_at < $4
-		ORDER BY is_primary DESC, position, created_at
+		  AND starts_with(phone, $3) AND observed_at < $4`+
+		contactaddress.ReachablePhoneOrder+`
 		LIMIT 1`,
 		contactID, phoneType, country, observedAt).Scan(&supersededID, &phone); err != nil &&
 		!errors.Is(err, pgx.ErrNoRows) {

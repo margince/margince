@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -60,8 +61,8 @@ func unansweredSubjects(t *testing.T, e *integration.Env, now time.Time) []strin
 func TestAMeetingLeftUnansweredYesterdayIsStillAskedAbout(t *testing.T) {
 	e := integration.Setup(t)
 	now := todayAt(14 * time.Hour)
-	bookMeeting(t, e, "Yesterday morning", now.AddDate(0, 0, -1).Truncate(24*time.Hour).Add(9*time.Hour), "")
-	bookMeeting(t, e, "This morning", now.Truncate(24*time.Hour).Add(9*time.Hour), "")
+	bookCustomerMeeting(t, e, "Yesterday morning", now.AddDate(0, 0, -1).Truncate(24*time.Hour).Add(9*time.Hour), "")
+	bookCustomerMeeting(t, e, "This morning", now.Truncate(24*time.Hour).Add(9*time.Hour), "")
 
 	got := unansweredSubjects(t, e, now)
 	if len(got) != 2 {
@@ -81,8 +82,8 @@ func TestAMeetingLeftUnansweredYesterdayIsStillAskedAbout(t *testing.T) {
 func TestTheOutcomeLaneReachesBackAFortnightAndNoFurther(t *testing.T) {
 	e := integration.Setup(t)
 	now := todayAt(14 * time.Hour)
-	bookMeeting(t, e, "Last week", now.AddDate(0, 0, -7), "")
-	bookMeeting(t, e, "Well outside the window", now.AddDate(0, 0, -30), "")
+	bookCustomerMeeting(t, e, "Last week", now.AddDate(0, 0, -7), "")
+	bookCustomerMeeting(t, e, "Well outside the window", now.AddDate(0, 0, -30), "")
 
 	got := unansweredSubjects(t, e, now)
 	if len(got) != 1 || got[0] != "Last week" {
@@ -99,11 +100,11 @@ func TestAnAnsweredMeetingLeavesTheOutcomeLane(t *testing.T) {
 	e := integration.Setup(t)
 	now := todayAt(14 * time.Hour)
 	at := now.Truncate(24 * time.Hour).Add(9 * time.Hour)
-	bookMeeting(t, e, "Nobody has said", at, "")
-	bookMeeting(t, e, "Still booked", at, "booked")
-	bookMeeting(t, e, "Already held", at, "held")
-	bookMeeting(t, e, "Called off", at, "canceled")
-	bookMeeting(t, e, "Nobody came", at, "no_show")
+	bookCustomerMeeting(t, e, "Nobody has said", at, "")
+	bookCustomerMeeting(t, e, "Still booked", at, "booked")
+	bookCustomerMeeting(t, e, "Already held", at, "held")
+	bookCustomerMeeting(t, e, "Called off", at, "canceled")
+	bookCustomerMeeting(t, e, "Nobody came", at, "no_show")
 
 	got := unansweredSubjects(t, e, now)
 	if len(got) != 2 {
@@ -137,7 +138,7 @@ func TestABacklogDeeperThanThePageStillLeadsWithTheOldest(t *testing.T) {
 		if at.Before(now.Truncate(24*time.Hour).AddDate(0, 0, -14)) {
 			break
 		}
-		bookMeeting(t, e, fmt.Sprintf("Unanswered %02d", back), at, "")
+		bookCustomerMeeting(t, e, fmt.Sprintf("Unanswered %02d", back), at, "")
 	}
 
 	got := unansweredSubjects(t, e, now)
@@ -156,5 +157,25 @@ func TestABacklogDeeperThanThePageStillLeadsWithTheOldest(t *testing.T) {
 	if got[0] != oldest {
 		t.Errorf("the lane leads with %q, want %q — the newest-first page dropped the "+
 			"oldest debt, which is the row the ordering exists to surface", got[0], oldest)
+	}
+}
+
+// bookCustomerMeeting books a meeting with a customer: the outcome lane asks
+// only about meetings linked to a customer record.
+func bookCustomerMeeting(t *testing.T, e *integration.Env, subject string, at time.Time, status string) {
+	t.Helper()
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Customer for " + subject})
+	if err != nil {
+		t.Fatalf("creating the customer for %q: %v", subject, err)
+	}
+	in := activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.UUID(contact.Id)}},
+	}
+	if status != "" {
+		in.MeetingStatus = &status
+	}
+	if _, _, err := e.Activities.LogActivity(e.Admin(), in); err != nil {
+		t.Fatalf("booking %q: %v", subject, err)
 	}
 }

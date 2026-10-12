@@ -209,6 +209,15 @@
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
 }
 
+/* The release at the foot of the menu. It takes the rows' inset so it stands on
+   their left edge, and like the identity block it sits outside the row rule — no
+   hover and no pointer, because it goes nowhere. */
+.acctversion {
+  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
+  color: var(--textSecondary);
+  overflow-wrap: anywhere;
+}
+
 /* ===== the theme flyout =====
    The seat is what the flyout is measured against; it is `role="none"` in the
    markup and draws nothing of its own. */

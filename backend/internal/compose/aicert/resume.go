@@ -368,9 +368,8 @@ func (j *runJournal) replaysEverything(ctx context.Context, cfg RunnerConfig, by
 	if j == nil || len(byTask) == 0 {
 		return false
 	}
-	quiet := slog.New(slog.DiscardHandler)
 	for task, scenarios := range byTask {
-		candidate, judge, err := taskBindings(ctx, cfg, task, quiet)
+		cands, _, err := taskCandidates(cfg, task)
 		if err != nil {
 			return false
 		}
@@ -378,8 +377,10 @@ func (j *runJournal) replaysEverything(ctx context.Context, cfg RunnerConfig, by
 		if err != nil {
 			return false
 		}
-		if !j.forTask(task, candidate, judge).replaysRounds(scenarios, stamps, repeats) {
-			return false
+		for _, c := range cands {
+			if !j.forTask(task, c.Binding, c.Judge).replaysRounds(scenarios, stamps, repeats) {
+				return false
+			}
 		}
 	}
 	return true

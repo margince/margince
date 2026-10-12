@@ -5,10 +5,9 @@
 
 package gates
 
-// The idempotency allowlist as a fitness function: the contract is the
-// authority on which operations promise Idempotency-Key retry safety,
-// and internal/compose's hand-maintained replayableOperations map must
-// mirror it exactly. A declared operation missing from the map silently
+// The contract decides which operations promise Idempotency-Key retry safety,
+// and internal/compose's hand-maintained replayableOperations map must list the
+// same operations. A declared operation missing from the map silently
 // drops the promise (a retried create duplicates the row); a mapped
 // operation the contract no longer declares claims keys for a promise
 // nobody made. Like the other root fitness tests, this walks the

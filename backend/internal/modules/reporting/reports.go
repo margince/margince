@@ -8,6 +8,7 @@ import (
 	"errors"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
@@ -98,7 +100,7 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 		}
 		where += " AND d.archived_at IS NULL"
 		if scheduled {
-			where += " AND EXISTS(SELECT 1 FROM report_schedule scheduled WHERE scheduled.report_id=d.id AND scheduled.enabled)"
+			where += " AND EXISTS(SELECT 1 FROM report_schedule scheduled WHERE scheduled.report_id=d.id)"
 		}
 		if after != nil {
 			where += " AND d.id>" + b.add(*after)
@@ -122,7 +124,7 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 }
 
 func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingReportInput) error {
-	if strings.TrimSpace(in.Name) == "" || len(in.Name) > 160 {
+	if !values.HasVisibleText(in.Name) || utf8.RuneCountInString(in.Name) > 160 {
 		return invalid("name the report in at most 160 characters")
 	}
 	if err := s.validateSelection(ctx, in.Selection); err != nil {

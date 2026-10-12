@@ -249,6 +249,37 @@ describe("a record timeline you can work in", () => {
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
+  it("switched off, answers nothing it had read, and pages no further", async () => {
+    const feed = activityFeed({
+      first: { data: [NEWEST], page: { has_more: true, next_cursor: "c-2" } },
+    });
+    vi.stubGlobal("fetch", feed.fetcher);
+    const client = newQueryClient();
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useRecordTimeline("contact", "p-1", { enabled }),
+      {
+        initialProps: { enabled: true },
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={client}>
+            <RecordZoneProvider zone={INSTALLATION_ZONE}>
+              {children}
+            </RecordZoneProvider>
+          </QueryClientProvider>
+        ),
+      },
+    );
+    await waitFor(() => expect(result.current.activities).toEqual([NEWEST]));
+
+    // The record's own read now withholds its activities: the cached page
+    // must not stay on screen, and Load more must not reach past it.
+    rerender({ enabled: false });
+    expect(result.current.activities).toEqual([]);
+    expect(result.current.hasNextPage).toBe(false);
+    await result.current.fetchNextPage();
+    expect(feed.calls).toHaveLength(1);
+  });
+
   it("seeded from the 360's own page, fetches nothing on open and continues from that page's cursor", async () => {
     const user = userEvent.setup();
     const feed = activityFeed({

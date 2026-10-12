@@ -14,13 +14,14 @@ package mailmap
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -67,6 +68,11 @@ type Message struct {
 	// calendarNotice answers only the OUTBOUND contact-minting question, and an
 	// inbound invitation is a fact about the message either way.
 	hasCalendarPart bool
+	// deliveryReport is the RFC 3464 shape — `multipart/report` carrying
+	// `report-type=delivery-status`. Kept in its own right beside
+	// hasCalendarPart, and for the same reason: it is a fact about the message
+	// rather than the verdict any one rule draws from it.
+	deliveryReport  bool
 	listUnsubscribe bool // an RFC 2369 List-Unsubscribe header — transactional-gate corroboration
 	sentByOwner     bool // the PROVIDER attested the owner sent this — set by AttestSentByOwner, never parsed
 	// participants are everyone on To, Cc and Bcc who is neither the mailbox
@@ -121,6 +127,10 @@ func Parse(raw []byte, owner string) (Message, error) {
 	occurredAt, _ := header.Date()
 
 	fromList, _ := header.AddressList("From")
+	groupOriginal, viaGroup := googleGroupSender(header)
+	if viaGroup {
+		fromList = groupOriginal
+	}
 	toList, _ := header.AddressList("To")
 	// A malformed Cc line yields no addresses rather than failing the message:
 	// the mail is already read off the wire, and losing the CCs is a smaller
@@ -149,6 +159,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		counterpartyName = displayName(toList, counterparty)
 	}
 
+	deliveryReport := isDeliveryReport(header)
 	autoSubmitted, precedence := header.Values("Auto-Submitted"), header.Values("Precedence")
 	autoReply := isAutoReply(autoSubmitted, precedence)
 	machineTouched := isMachineTouched(autoSubmitted, precedence, hasMachineHandledHeader(header))
@@ -187,7 +198,8 @@ func Parse(raw []byte, owner string) (Message, error) {
 		machineTouched:   machineTouched,
 		calendarNotice:   calendarNotice,
 		hasCalendarPart:  hasCalendarPart,
-		listUnsubscribe:  strings.TrimSpace(header.Get("List-Unsubscribe")) != "",
+		deliveryReport:   deliveryReport,
+		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		parts:            parts,
@@ -312,8 +324,8 @@ func replyIDs(references, inReplyTo, messageID string) []string {
 	refs := strings.Fields(references)
 	candidates := make([]string, 0, len(refs)+1)
 	candidates = append(candidates, strings.Fields(inReplyTo)...)
-	for i := len(refs) - 1; i >= 0; i-- {
-		candidates = append(candidates, refs[i])
+	for _, ref := range slices.Backward(refs) {
+		candidates = append(candidates, ref)
 	}
 	seen := make(map[string]bool, len(candidates))
 	out := make([]string, 0, len(candidates))
@@ -373,7 +385,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 	if m.body != "" {
 		body = header + "\n\n" + m.body
 	}
-	body = truncate(body, maxBodyLen)
+	body = textcut.BytesMarked(body, maxBodyLen, "…")
 
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
@@ -432,19 +444,6 @@ func orDash(s string) string {
 		return "-"
 	}
 	return s
-}
-
-func truncate(s string, limit int) string {
-	if len(s) <= limit {
-		return s
-	}
-	// Back off to a rune boundary so the stored excerpt is never a broken
-	// UTF-8 sequence.
-	cut := limit
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
 }
 
 // recordParts hands the collected files to the seam.

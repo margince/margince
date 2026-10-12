@@ -688,6 +688,20 @@ export const SectionPhone: Story = {
   ),
 };
 
+export const SectionSwitcherOpen: Story = {
+  name: "a section — the head's switcher, open",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: SectionPhone.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /change section/ }),
+    );
+    await within(document.body).findByRole("dialog");
+  },
+};
+
 /**
  * The More sheet, open — the phone's whole sidebar.
  *

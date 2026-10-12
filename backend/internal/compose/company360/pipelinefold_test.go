@@ -43,8 +43,6 @@ func deal(amount *int64, currency string, rateDate *time.Time) openRow {
 	return row
 }
 
-func amount(minor int64) *int64 { return &minor }
-
 // The case the whole figure rests on, and the one a column-only read gets
 // wrong: an ordinary open deal in the workspace's own currency. It has no
 // frozen FX rate — the rate freezes on close — so amount_minor_base is null,
@@ -52,8 +50,8 @@ func amount(minor int64) *int64 { return &minor }
 // nothing on every installation.
 func TestAnOpenDealInTheBaseCurrencyIsPricedWithoutAnyFxRate(t *testing.T) {
 	out := foldPipeline([]openRow{
-		deal(amount(250000), "EUR", nil),
-		deal(amount(150000), "EUR", nil),
+		deal(new(int64(250000)), "EUR", nil),
+		deal(new(int64(150000)), "EUR", nil),
 	})
 
 	if out.Priced != 2 {
@@ -73,8 +71,8 @@ func TestAnOpenDealInTheBaseCurrencyIsPricedWithoutAnyFxRate(t *testing.T) {
 // partial figure rather than a silently short one.
 func TestAForeignOpenDealWithNoFrozenRateStaysOutOfTheTotal(t *testing.T) {
 	out := foldPipeline([]openRow{
-		deal(amount(100000), "EUR", nil),
-		deal(amount(999999), "USD", nil),
+		deal(new(int64(100000)), "EUR", nil),
+		deal(new(int64(999999)), "USD", nil),
 	})
 
 	if out.ValueMinorBase != 100000 {
@@ -112,9 +110,9 @@ func TestAPipelineWhoseDealsCarryNoAmountIsPricedAtNothing(t *testing.T) {
 // takes a partial figure for the whole one.
 func TestAPartialTotalReportsHowManyDealsItCovers(t *testing.T) {
 	out := foldPipeline([]openRow{
-		deal(amount(150000), "EUR", nil),
+		deal(new(int64(150000)), "EUR", nil),
 		deal(nil, "EUR", nil),
-		deal(amount(50000), "EUR", nil),
+		deal(new(int64(50000)), "EUR", nil),
 	})
 
 	if out.ValueMinorBase != 200000 {
@@ -132,9 +130,9 @@ func TestAPartialTotalReportsHowManyDealsItCovers(t *testing.T) {
 func TestAConvertedTotalCarriesTheOldestRateDateBehindIt(t *testing.T) {
 	recent, older := day(t, "2026-07-01"), day(t, "2026-02-14")
 	out := foldPipeline([]openRow{
-		deal(amount(100000), "USD", &recent),
-		deal(amount(100000), "CHF", &older),
-		deal(amount(100000), "EUR", nil),
+		deal(new(int64(100000)), "USD", &recent),
+		deal(new(int64(100000)), "CHF", &older),
+		deal(new(int64(100000)), "EUR", nil),
 	})
 
 	if out.Converted != 2 {
@@ -148,8 +146,8 @@ func TestAConvertedTotalCarriesTheOldestRateDateBehindIt(t *testing.T) {
 // A same-currency total has no rate behind it, and must not claim one.
 func TestASameCurrencyTotalNamesNoConversion(t *testing.T) {
 	out := foldPipeline([]openRow{
-		deal(amount(100000), "EUR", nil),
-		deal(amount(25000), "EUR", nil),
+		deal(new(int64(100000)), "EUR", nil),
+		deal(new(int64(25000)), "EUR", nil),
 	})
 
 	if out.Converted != 0 {
@@ -180,7 +178,7 @@ func TestTheNextCloseIsTheNearestDateAnyOpenDealNames(t *testing.T) {
 }
 
 func TestAPipelineWithNoExpectedCloseNamesNoDate(t *testing.T) {
-	out := foldPipeline([]openRow{deal(amount(1000), "EUR", nil)})
+	out := foldPipeline([]openRow{deal(new(int64(1000)), "EUR", nil)})
 
 	if out.NextCloseOn != nil {
 		t.Fatalf("NextCloseOn = %v, want nil — no deal here names a close date", out.NextCloseOn)
@@ -196,8 +194,8 @@ func TestAPipelineWithNoExpectedCloseNamesNoDate(t *testing.T) {
 func TestADealThatWouldOverflowTheTotalIsCountedAndLeftOutOfIt(t *testing.T) {
 	huge := int64(math.MaxInt64 - 100)
 	out := foldPipeline([]openRow{
-		deal(amount(huge), "EUR", nil),
-		deal(amount(1_000), "EUR", nil),
+		deal(new(huge), "EUR", nil),
+		deal(new(int64(1_000)), "EUR", nil),
 	})
 	if out.ValueMinorBase != huge {
 		t.Errorf("total = %d, want %d — the second deal must not wrap the sum", out.ValueMinorBase, huge)

@@ -15,6 +15,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -85,7 +86,7 @@ type recordTool struct {
 func (r recordTool) Spec() mcp.ToolSpec { return r.spec }
 
 func (r recordTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
-	return json.Marshal(searchResult(ctx, datasource.SearchResult{Records: r.records}))
+	return json.Marshal(searchResult(ctx, nil, datasource.SearchResult{Records: r.records}))
 }
 
 // derivedTool answers the way an aggregate does: from records it read and does
@@ -538,12 +539,7 @@ func warningNamed(env Envelope, code string) (Warning, bool) {
 }
 
 func slicesContains(haystack []string, needle string) bool {
-	for _, candidate := range haystack {
-		if candidate == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 // readingAgent is the caller these tests dispatch as; how much of the workspace

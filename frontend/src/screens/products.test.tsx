@@ -1,6 +1,11 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -60,10 +65,12 @@ function productsStub({
   allow,
   seat = "full",
   onPost,
+  rows = [product],
 }: {
   allow: GrantSpec;
   seat?: "full" | "read";
   onPost?: () => Response;
+  rows?: readonly object[];
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -76,10 +83,19 @@ function productsStub({
       return onPost();
     }
     return jsonResponse({
-      data: [product],
+      data: rows,
       page: { next_cursor: null, has_more: false },
     });
   });
+}
+
+function rowMenu() {
+  return screen.queryByRole("button", { name: "Actions for Consulting Day" });
+}
+async function openRowMenu() {
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Actions for Consulting Day" }),
+  );
 }
 
 function newButton() {
@@ -142,8 +158,7 @@ describe("ProductsAdmin", () => {
     expect(await screen.findByText("Consulting Day")).toBeTruthy();
     expect(postureLine()).toBeTruthy();
     expect(newButton()).toBeNull();
-    expect(editButton()).toBeNull();
-    expect(archiveButton()).toBeNull();
+    expect(rowMenu()).toBeNull();
     // With both row verbs withheld the column goes too, rather than standing
     // there headed and empty.
     expect(screen.queryByRole("columnheader", { name: "Actions" })).toBeNull();
@@ -155,14 +170,15 @@ describe("ProductsAdmin", () => {
     expect(
       await screen.findByRole("button", { name: "New product" }),
     ).toBeTruthy();
-    expect(editButton()).toBeNull();
-    expect(archiveButton()).toBeNull();
+    expect(await screen.findByText("Consulting Day")).toBeTruthy();
+    expect(rowMenu()).toBeNull();
     expect(postureLine()).toBeNull();
   });
 
   it("offers Edit on product:update alone", async () => {
     vi.stubGlobal("fetch", productsStub({ allow: { product: ["update"] } }));
     render(<ProductsAdmin />);
+    await openRowMenu();
     expect(
       await screen.findByRole("button", { name: "Edit product" }),
     ).toBeTruthy();
@@ -175,6 +191,7 @@ describe("ProductsAdmin", () => {
   it("offers Archive on product:delete alone", async () => {
     vi.stubGlobal("fetch", productsStub({ allow: { product: ["delete"] } }));
     render(<ProductsAdmin />);
+    await openRowMenu();
     expect(
       await screen.findByRole("button", { name: "Archive product" }),
     ).toBeTruthy();
@@ -194,7 +211,102 @@ describe("ProductsAdmin", () => {
     expect(await screen.findByText("Consulting Day")).toBeTruthy();
     expect(postureLine()).toBeTruthy();
     expect(newButton()).toBeNull();
-    expect(editButton()).toBeNull();
-    expect(archiveButton()).toBeNull();
+    expect(rowMenu()).toBeNull();
+  });
+
+  it("prices a recurring product per period and badges only a status that is not active", async () => {
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        rows: [
+          { ...product, billing_model: "one_time" },
+          {
+            ...product,
+            id: "p-2",
+            name: "Support Plan",
+            sku: null,
+            unit_price_minor: 9900,
+            billing_model: "recurring",
+            billing_interval_months: 1,
+            active: false,
+          },
+          {
+            ...product,
+            id: "p-3",
+            name: "Old Workshop",
+            archived_at: "2026-06-02T08:00:00Z",
+          },
+        ],
+      }),
+    );
+    render(<ProductsAdmin />);
+    const row = async (name: string) =>
+      within(await screen.findByRole("row", { name: new RegExp(name) }));
+    const oneOff = await row("Consulting Day");
+    expect(oneOff.getByText("One-time")).toBeTruthy();
+    expect(oneOff.queryByText("Active")).toBeNull();
+    const plan = await row("Support Plan");
+    expect(plan.getByText("€99.00")).toBeTruthy();
+    expect(plan.getByText("per month")).toBeTruthy();
+    expect(plan.getByText("Monthly")).toBeTruthy();
+    expect(plan.getByText("Inactive")).toBeTruthy();
+    const old = await row("Old Workshop");
+    expect(old.getByText("Not specified")).toBeTruthy();
+    expect(old.getByText("Archived")).toBeTruthy();
+  });
+
+  it("offers every billing choice in words on the New product form", async () => {
+    vi.stubGlobal("fetch", productsStub({ allow: PRODUCT_MANAGER }));
+    render(<ProductsAdmin />);
+    await userEvent.click(await screen.findByTestId("new-record"));
+    const offered = async (field: string) => {
+      await userEvent.click(
+        await screen.findByRole("combobox", { name: field }),
+      );
+      const labels = within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+      await userEvent.keyboard("{Escape}");
+      return labels;
+    };
+    expect(await offered("Billing")).toEqual([
+      "Not specified",
+      "One-time",
+      "Recurring",
+    ]);
+    expect(await offered("Billing period")).toEqual([
+      "Not specified",
+      "Monthly",
+      "Quarterly",
+      "Every six months",
+      "Yearly",
+    ]);
+  });
+
+  it("opens Edit and Archive from the row's menu", async () => {
+    vi.stubGlobal("fetch", productsStub({ allow: PRODUCT_MANAGER }));
+    render(<ProductsAdmin />);
+    await openRowMenu();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Edit product" }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Edit product" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: /Name/ })).toHaveProperty(
+      "value",
+      "Consulting Day",
+    );
+    // Closing the dialog hands focus back to the menu, still open.
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Archive product" }),
+    );
+    expect(
+      await screen.findByText(
+        "Archive this product? Existing offer lines keep their snapshot.",
+      ),
+    ).toBeTruthy();
   });
 });

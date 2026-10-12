@@ -62,6 +62,7 @@ export MARGINCE_TEST_DSN     ?= postgres://margince_owner:dev@localhost:$(PG_POR
 # drops the schema and seeds a quarter of a million rows, and every per-package
 # clone is copied from that template — see bench_db in scripts/lib-testdb.sh.
 BENCH_DB_NAME                ?= margince_bench
+BENCH_DAILY_DB_NAME          ?= margince_bench_daily
 export MARGINCE_TEST_APP_DSN ?= postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(TEST_DB_NAME)
 export MARGINCE_TEST_REDIS    ?= localhost:$(REDIS_PORT)
 export MARGINCE_TEST_REDIS_DB ?= 15
@@ -255,7 +256,12 @@ test-uncached: composition
 	# deleting the config schema's provider restriction left the ai gate
 	# reporting `ok (cached)`. CI is cold and never saw it; the engineer who
 	# broke it locally would not either.
-	$(GOWORK_COMPOSED) $(GO) test -count=1 $(UNCACHED_TEST_PKGS)
+	# -timeout, because the default is ten minutes and nobody chose it. The
+	# gates package reached that cold on CI and tipped over intermittently,
+	# which fails a pull request for the lane's own size rather than for
+	# anything in the diff. The perf lanes below name theirs for the same
+	# reason.
+	$(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this
@@ -329,6 +335,9 @@ endif
 # `RESUME=<dir>` picks a directory; `RESUME=` (empty) turns it off, which is how
 # a run is forced to measure everything fresh.
 RESUME ?= 1
+# STALE_ONLY skips a model whose committed record is already current for this
+# build, so a sweep pays only for what changed. `STALE_ONLY=0` re-measures it.
+STALE_ONLY ?= 1
 ifeq ($(RESUME),1)
 override RESUME := $(CURDIR)/../.tmp/aicert/resume
 endif
@@ -345,9 +354,9 @@ endif
 AICERT_TIMEOUT ?= 90m
 
 # ROUTING= certifies a DEPLOYMENT rather than a model: it reads that config's
-# `seeds.ai_routing` and certifies each task against the model bound at the task's
-# LEADING ladder rung — the one that would actually serve it. One run therefore
-# writes records across several models, which is what the config binds.
+# `seeds.ai_routing` and certifies each task against every distinct model its
+# ladder binds — the rung that answers, then each fallback a failed call falls
+# to. One run therefore writes records across several models.
 #
 # It is mutually exclusive with MODEL=, and the run refuses both: one names a
 # deployment, the other one candidate to A/B a prompt fix against. Under ROUTING=
@@ -364,7 +373,7 @@ AICERT_TIMEOUT ?= 90m
 # than 5 — about 1.4 calls a run, more on a model that scores low. A
 # borderline scenario extends from 3 runs to at most 9, so one scenario costs at
 # most 9 candidate and 27 judge calls; a settled one 3 runs and about 4.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run. Under ROUTING= every distinct rung of a task's ladder is certified, fallback included; STALE_ONLY=0 re-measures records already current
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
@@ -373,7 +382,7 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 	  MARGINCE_AICERT_PROFILE=$(if $(PROFILE),$(PROFILE),$(MARGINCE_AICERT_PROFILE)) \
 	  MARGINCE_AICERT_UPSTREAM='$(if $(UPSTREAM),$(UPSTREAM),$(MARGINCE_AICERT_UPSTREAM))' \
 	  MARGINCE_AICERT_JUDGE_UPSTREAM='$(JUDGE_UPSTREAM)' \
-	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" \
+	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" MARGINCE_AICERT_STALE_ONLY=$(STALE_ONLY) \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
@@ -521,8 +530,12 @@ bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record writte
 # second time, to the nanosecond, having measured nothing. A benchmark that can
 # answer from cache reports the past as the present, which is worse than not
 # running: the number looks fresh and is not.
+# A private database like bench-perf's: the harness resets whatever it is given,
+# and the default DSN is the template every integration clone is copied from.
 bench-record: composition ## PERF-1/PERF-4 record open + save budgets, measured over HTTP (needs db-up)
-	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestRecordOpenAndSaveBudgets -count=1 -v -timeout 15m ./internal/compose/integration
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     $(GO) test -tags "integration bench" -run TestRecordOpenAndSaveBudgets -count=1 -v -timeout 15m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
 
 bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (needs db-up)
@@ -542,13 +555,28 @@ bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (
 bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over the seeded dataset (needs db-up)
 	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset -count=1 -v -timeout 15m ./internal/compose/integration
 
+# Leaves its database behind: the corpus and its plans are what you debug a slow
+# row with, and bench-daily-clean is the only thing that drops it. A failed run
+# has still written its record but stops before perfdoc; `make perfdoc` renders it.
+# cache_statement is pgx's default, which the API's pool keeps and the test pool
+# overrides: without it no generic plan can appear. `|| exit` stops a failed bench_db.
+bench-daily: composition ## Daily-use screens for a rep and a manager over HTTP, mid-market tier; records and re-renders the budget pages (needs db-up; leaves margince_bench_daily, see bench-daily-clean; after a failed run, make perfdoc)
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
+	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
+	  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement" \
+	  $(GO) test -tags "integration bench" -run "^TestDailyUseBudgets$$" -count=1 -v -timeout 120m ./internal/compose/integration'
+	@$(MAKE) --no-print-directory perfdoc
+
+bench-daily-clean: ## Drop margince_bench_daily, the database bench-daily leaves behind
+	@bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && db_admin drop-db --name $(BENCH_DAILY_DB_NAME)'
+
 # The published page is re-rendered from EVERY record, not only the one the run
 # just wrote, so a partial run still produces a complete and current page: the
 # rows it did not measure keep their own stamps and their own dates.
 #
 # Its own target as well as a step, because a reader who edits the budget table
 # in gen-perfdoc needs to re-render without paying for a measurement.
-perfdoc: ## Re-render docs/reference/performance-budgets.md from the committed benchmark records
+perfdoc: ## Re-render docs/reference/performance-budgets.md and benchmark.md from the committed benchmark records
 	@$(GOWORK_ROOT) $(GO) run ./tools/gen-perfdoc
 
 # golangci-lint is the one gate tool this Makefile installs rather than
@@ -651,9 +679,12 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-queryenums -in api/crm.yaml -out internal/compose/queryenums_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentcontract -in api/crm.yaml -catalog migrations/testdata/head_catalog.txt \
+		-out internal/compose/agentbundle/agentcontract_gen.yaml -index internal/compose/agentbundle/agentindex_gen.txt
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-recordfields -in api/crm.yaml -out internal/modules/agents/recordshapes_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json -routing-go internal/modules/ai/routingschema_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
@@ -670,7 +701,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md
+	git diff --exit-code -- '*_gen.go' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.
@@ -679,10 +710,10 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# Same blind spot, same guard: a handbook page copied in by handbook-embed
 	# and never `git add`ed is untracked, so the diff above sees nothing while
 	# the binary would ship a page no reviewer read.
-	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md')"; \
-		[ -z "$$u" ] || { echo "drift: uncommitted embedded handbook page(s):" >&2; echo "$$u" >&2; exit 1; }
+	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt ../docs/reference/ai-provider-outages.md ../docs/reference/benchmark.md internal/modules/agents/apps/actions.json)"; \
+		[ -z "$$u" ] || { echo "drift: uncommitted generated page(s):" >&2; echo "$$u" >&2; exit 1; }
 
-# The MCP App admission vocabulary is AUTHORED in frontend/src/mcp-apps, where
+# The MCP App admission vocabulary and the per-view action lists are AUTHORED in frontend/src/mcp-apps, where
 # the build-time validator imports it, and copied here because go:embed cannot
 # reach outside its own package directory. Two validators in two languages are a
 # defect unless they cannot disagree: a document that passes the build check and
@@ -691,6 +722,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 # drifting, and `drift` fails a stale one.
 mcp-apps-vocab: ## Copy the MCP App admission vocabulary in from the frontend
 	cp ../frontend/src/mcp-apps/forbidden.json internal/modules/agents/apps/forbidden.json
+	cp ../frontend/src/mcp-apps/actions.json internal/modules/agents/apps/actions.json
 
 # The operator handbook is AUTHORED in docs/handbook and copied here for the
 # same reason as the vocabulary above: go:embed cannot reach outside its own
@@ -737,12 +769,13 @@ vuln: ## Scan dependencies for known vulnerabilities (govulncheck)
 # runs from an install rather than a pinned `go run`; the lint target
 # resolves it out of GOPATH/bin itself (see GOLANGCI_LINT above), so no
 # PATH entry is required. This version must stay identical to the pin in
-# .tool-versions and the golangci-lint-action version in ci.yml — bump all
-# three together. arch-lint and vuln already run their tools via pinned
+# .tool-versions; bump both together. Bump them with the Go toolchain too:
+# a golangci-lint older than the toolchain cannot read its export data.
+# arch-lint and vuln already run their tools via pinned
 # `go run`, so those installs just pre-warm the module cache (and give the
 # binaries a PATH home for direct use). Installs are unconditional: a cached
 # binary at a different version must be overwritten, or the pin doesn't bind.
-GOLANGCI_LINT_VERSION ?= v2.13.0
+GOLANGCI_LINT_VERSION ?= v2.14.0
 # The contract-breaking gate (scripts/check-contract-breaking.sh) runs oasdiff
 # via pinned `go run`, so this install is a convenience binary for direct use —
 # keep the version identical to the pin in that script; bump both together.

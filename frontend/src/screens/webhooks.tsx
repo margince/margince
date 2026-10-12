@@ -19,7 +19,7 @@ import {
   OverflowMenu,
   SectionHeader,
 } from "../design-system/atoms";
-import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
@@ -37,6 +37,7 @@ import {
   QueryGate,
   QueryStates,
   throwProblem,
+  unwrap,
   useMe,
 } from "./common";
 import {
@@ -216,16 +217,14 @@ function useCreateWebhookSubscription(onCreated: (secret: string) => void) {
     mutationFn: async (
       values: Record<string, string>,
     ): Promise<WebhookSubscriptionCreated> => {
-      const { data, error } = await api.POST("/webhook-subscriptions", {
-        body: {
-          target_url: values.target_url.trim(),
-          event_types: splitMultiselectValue(values.event_types ?? ""),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/webhook-subscriptions", {
+          body: {
+            target_url: values.target_url.trim(),
+            event_types: splitMultiselectValue(values.event_types ?? ""),
+          },
+        }),
+      );
     },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["webhook-subscriptions"] });
@@ -242,17 +241,15 @@ function updateWebhookSubscription(
   subscription: WebhookSubscription,
 ): (values: Record<string, unknown>) => Promise<WebhookSubscription> {
   return async (values) => {
-    const { data, error } = await api.PATCH("/webhook-subscriptions/{id}", {
-      params: {
-        path: { id: subscription.id },
-        ...ifMatch(subscription.version),
-      },
-      body: mapWebhookUpdate(values),
-    });
-    if (error) {
-      throwProblem(error);
-    }
-    return data;
+    return unwrap(
+      await api.PATCH("/webhook-subscriptions/{id}", {
+        params: {
+          path: { id: subscription.id },
+          ...ifMatch(subscription.version),
+        },
+        body: mapWebhookUpdate(values),
+      }),
+    );
   };
 }
 
@@ -262,12 +259,11 @@ function updateWebhookSubscription(
 async function archiveWebhookSubscription(
   subscription: WebhookSubscription,
 ): Promise<WebhookSubscription> {
-  const { data, error } = await api.DELETE("/webhook-subscriptions/{id}", {
-    params: { path: { id: subscription.id } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.DELETE("/webhook-subscriptions/{id}", {
+      params: { path: { id: subscription.id } },
+    }),
+  );
   return data ?? subscription;
 }
 
@@ -287,14 +283,11 @@ function RotateSecretAction({
   const [confirming, setConfirming] = useState(false);
   const mutation = useMutation({
     mutationFn: async (): Promise<WebhookSubscriptionCreated> => {
-      const { data, error } = await api.POST(
-        "/webhook-subscriptions/{id}/rotate-secret",
-        { params: { path: { id: subscription.id } } },
+      return unwrap(
+        await api.POST("/webhook-subscriptions/{id}/rotate-secret", {
+          params: { path: { id: subscription.id } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ["webhook-subscriptions"] });
@@ -354,7 +347,7 @@ function SecretRevealModal({
   });
 
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="confirm">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("webhooks.secret.title")}
       </Heading>
@@ -362,16 +355,16 @@ function SecretRevealModal({
           secret and the copy attempt do not each set a margin of their own. */}
       <div className="form-stack">
         <p>{t("webhooks.secret.warning")}</p>
-        <pre className="code-block" data-testid="webhook-signing-secret">
-          {secret}
-        </pre>
+        <CopyableText
+          text={secret}
+          label={t("webhooks.secret.title")}
+          testId="webhook-signing-secret"
+        />
         {copy.notice}
       </div>
-      {/* Dismissing is what DESTROYS the only copy of the secret: it lives in
-          this component's state and is never re-derivable from any read. So
-          Copy is the primary act here and Done is the quiet one. Done stays
-          available before a copy — abandoning a subscription must be possible —
-          but the caution says in words what it costs. */}
+      {/* Dismissing destroys the only copy of the secret, which no read can
+          re-derive: Copy is primary, and Done stays available before a copy
+          with a caution saying what leaving costs. */}
       {!copy.copied && (
         // ds:ignore a caution, not a refusal
         <p className="webhook-secret-caution">
@@ -418,14 +411,11 @@ function useWebhookDeliveries(subscriptionId: string) {
   const query = useQuery({
     queryKey: ["webhook-deliveries", subscriptionId, limit],
     queryFn: async (): Promise<WebhookDeliveryListResponse> => {
-      const { data, error } = await api.GET(
-        "/webhook-subscriptions/{id}/deliveries",
-        { params: { path: { id: subscriptionId }, query: { limit } } },
+      return unwrap(
+        await api.GET("/webhook-subscriptions/{id}/deliveries", {
+          params: { path: { id: subscriptionId }, query: { limit } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     // Keeps the current page's rows on screen while the bigger page loads,
     // instead of flashing back to a skeleton on every "Load more" click.
@@ -452,14 +442,12 @@ function useReplayWebhookDelivery(subscriptionId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (deliveryId: string): Promise<WebhookDelivery> => {
-      const { data, error } = await api.POST(
-        "/webhook-subscriptions/{id}/deliveries/{deliveryId}/replay",
-        { params: { path: { id: subscriptionId, deliveryId } } },
+      return unwrap(
+        await api.POST(
+          "/webhook-subscriptions/{id}/deliveries/{deliveryId}/replay",
+          { params: { path: { id: subscriptionId, deliveryId } } },
+        ),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

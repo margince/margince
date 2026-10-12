@@ -74,7 +74,7 @@ func TestRemovingATagNeedsUpdateOnTheTarget(t *testing.T) {
 		"tag":     {Read: true},
 		"project": {Read: true},
 	})
-	err := store.RemoveTag(ctx, ids.New[ids.TagKind](), "project", ids.NewV7())
+	_, err := store.RemoveTag(ctx, ids.New[ids.TagKind](), "project", ids.NewV7())
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a seat holding project.read but not project.update removed a tag: %v", err)
 	}

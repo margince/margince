@@ -94,6 +94,7 @@ describe("LeadDealSection", () => {
   });
 
   it("offers Qualify, the header's own door, while there is still a deal to earn", async () => {
+    const user = userEvent.setup();
     const onQualify = vi.fn();
     render(
       <LeadDealSection
@@ -103,9 +104,7 @@ describe("LeadDealSection", () => {
     );
 
     await screen.findByText(en["lead.rail.deal.empty"]);
-    await userEvent.click(
-      screen.getByRole("button", { name: en["lead.promote"] }),
-    );
+    await user.click(screen.getByRole("button", { name: en["lead.promote"] }));
     expect(onQualify).toHaveBeenCalled();
   });
 
@@ -206,6 +205,7 @@ describe("LeadScreen: the rail's own deal and project verbs", () => {
   });
 
   it("the rail's Attach verb opens the picker, and picking patches project_id", async () => {
+    const user = userEvent.setup();
     const patched: unknown[] = [];
     stubLeadScreenFetch(async (url, method, request) => {
       if (method === "GET" && url.includes("/projects")) {
@@ -231,25 +231,70 @@ describe("LeadScreen: the rail's own deal and project verbs", () => {
 
     await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
     const rail = document.querySelector(".co-rail") as HTMLElement;
-    await userEvent.click(
+    await user.click(
       within(rail).getByRole("button", {
         name: en["lead.rail.project.attach"],
       }),
     );
     const dialog = screen.getByRole("dialog");
-    await userEvent.type(within(dialog).getByRole("searchbox"), "Beacon");
-    await userEvent.click(
-      await within(dialog).findByRole("button", { name: /Beacon rollout/ }),
+    await user.type(within(dialog).getByRole("combobox"), "Beacon");
+    await user.click(
+      await within(dialog).findByRole("option", { name: /Beacon rollout/ }),
     );
 
     await waitFor(() => expect(patched.length).toBe(1));
     expect(patched[0]).toMatchObject({ project_id: "pr-2" });
-    // The dialog closes on the write it made, the same shape the account's
-    // own project attach follows.
+    // The list closes on the write it made.
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("keeps the picker open over a refused attach, saying why, until Escape hands focus back", async () => {
+    const user = userEvent.setup();
+    stubLeadScreenFetch(async (url, method) => {
+      if (method === "GET" && url.includes("/projects")) {
+        return jsonResponse({
+          data: [{ id: "pr-2", name: "Beacon rollout", key: "BEA" }],
+        });
+      }
+      if (method === "PATCH" && url.includes("/leads/l-1")) {
+        return jsonResponse(
+          { title: "Forbidden", detail: "This lead is locked." },
+          403,
+        );
+      }
+      if (url.includes("/leads/l-1")) {
+        return jsonResponse(lead);
+      }
+      return jsonResponse({ data: [] });
+    });
+
+    render(
+      <RecordShell>
+        <LeadScreen id="l-1" />
+      </RecordShell>,
+    );
+
+    await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
+    const rail = document.querySelector(".co-rail") as HTMLElement;
+    const attach = within(rail).getByRole("button", {
+      name: en["lead.rail.project.attach"],
+    });
+    await user.click(attach);
+    const dialog = within(screen.getByRole("dialog"));
+    await user.type(dialog.getByRole("combobox"), "Beacon");
+    await user.click(
+      await dialog.findByRole("option", { name: /Beacon rollout/ }),
+    );
+
+    expect(await dialog.findByText("This lead is locked.")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(attach);
+  });
+
   it("the rail's Qualify verb opens the same dialog the header's own does", async () => {
+    const user = userEvent.setup();
     stubLeadScreenFetch(async (url) => {
       if (url.includes("/leads/l-1")) {
         return jsonResponse(lead);
@@ -265,7 +310,7 @@ describe("LeadScreen: the rail's own deal and project verbs", () => {
 
     await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
     const rail = document.querySelector(".co-rail") as HTMLElement;
-    await userEvent.click(
+    await user.click(
       within(rail).getByRole("button", { name: en["lead.promote"] }),
     );
     // The dialog's own reason line, derived from the lead rather than any
@@ -344,6 +389,7 @@ describe("LeadScreen: Deals & projects tab", () => {
   });
 
   it("carries the account's own tab label, and opens onto the lead's deal and project", async () => {
+    const user = userEvent.setup();
     stubLeadScreenFetch((url) => {
       if (url.includes("/deals/d-9")) {
         return jsonResponse({ id: "d-9", name: "Nordwind Renewal" });
@@ -374,7 +420,7 @@ describe("LeadScreen: Deals & projects tab", () => {
     const tab = await screen.findByRole("button", {
       name: en["tab.dealsProjects"],
     });
-    await userEvent.click(tab);
+    await user.click(tab);
 
     // The rail carries the same two cards beside the tab, so both the deal
     // and the project name may sit in the document twice: once in the tab

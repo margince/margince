@@ -53,6 +53,7 @@ function List({ activities }: Readonly<{ activities: Activity[] }>) {
               : undefined
           }
           onOpenRecord={() => {}}
+          onOpenEmail={() => {}}
         />
       </div>
     </StoryProviders>

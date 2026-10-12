@@ -1,0 +1,24 @@
+{
+  "scenario": "case20_put_it_in_the_board_pack",
+  "criteria": [
+    1,
+    3
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "usage": {
+    "input_tokens": 100170,
+    "output_tokens": 7489,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 708864,
+    "runs_measured": 3,
+    "runs_costed": 0,
+    "cost_usd": null
+  }
+}

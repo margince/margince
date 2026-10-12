@@ -20,7 +20,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "./activitykeys";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import type { CreateField } from "./create";
 import {
   type Candidate,
@@ -122,12 +122,11 @@ export function scopeCopy(scope: RelationshipScope): {
 export async function fetchRelationships(
   scope: RelationshipScope,
 ): Promise<Relationship[]> {
-  const { data, error } = await api.GET("/relationships", {
-    params: { query: scopeQuery(scope) },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/relationships", {
+      params: { query: scopeQuery(scope) },
+    }),
+  );
   return data.data;
 }
 
@@ -378,11 +377,7 @@ export function AddRelationshipAction({
         ...scopeQuery(scope),
         ...endpointBody(chosen.field, chosen.target.id),
       };
-      const { data, error } = await api.POST("/relationships", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/relationships", { body }));
     },
     onSuccess: (created) => {
       invalidateAfterEdge(queryClient, created.deal_id != null);
@@ -421,7 +416,7 @@ export function AddRelationshipAction({
       >
         {t(copy.add)}
       </Button>
-      <Modal open={open} onClose={close} labelledBy={headingId}>
+      <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t(copy.add)}
         </Heading>
@@ -493,7 +488,7 @@ export function AddRelationshipAction({
             )}
           </Field>
           {target && (
-            <p className="relationships-confirm">
+            <p>
               {t("rel.addConfirm", {
                 target: target.name,
                 kind: t(KIND_LABELS[kind]),
@@ -501,28 +496,28 @@ export function AddRelationshipAction({
             </p>
           )}
           <ErrorLine error={mutation.error} />
-          <div className="form-actions">
-            <Button onClick={close} disabled={mutation.isPending}>
-              {t("create.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              disabled={!target || mutation.isPending}
-              onClick={() =>
-                target &&
-                mutation.mutate({
-                  target,
-                  kind,
-                  field: endpoint.field,
-                  role,
-                  startedAt,
-                })
-              }
-              data-testid="add-relationship-submit"
-            >
-              {t("create.save")}
-            </Button>
-          </div>
+        </div>
+        <div className="actions">
+          <Button onClick={close} disabled={mutation.isPending}>
+            {t("create.cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={!target || mutation.isPending}
+            onClick={() =>
+              target &&
+              mutation.mutate({
+                target,
+                kind,
+                field: endpoint.field,
+                role,
+                startedAt,
+              })
+            }
+            data-testid="add-relationship-submit"
+          >
+            {t("create.save")}
+          </Button>
         </div>
       </Modal>
     </>

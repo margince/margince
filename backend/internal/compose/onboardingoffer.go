@@ -57,7 +57,7 @@ func validateCompanyReadOffers(offers []companyReadOffer, globalSources map[stri
 			return fmt.Errorf("compose: company read answer offers unsupported field %q", clampToken(offer.Field))
 		}
 		if strings.TrimSpace(offer.Value) == "" {
-			return fmt.Errorf("compose: company read answer offers an empty value")
+			return errors.New("compose: company read answer offers an empty value")
 		}
 		sources, err := validateCompanyReadSourceIDs(offer.SourceIDs, known)
 		if err != nil {
@@ -68,7 +68,7 @@ func validateCompanyReadOffers(offers []companyReadOffer, globalSources map[stri
 			return err
 		}
 		if !supported {
-			return fmt.Errorf("compose: company read offer value is not supported by its cited evidence")
+			return errors.New("compose: company read offer value is not supported by its cited evidence")
 		}
 	}
 	return nil
@@ -108,12 +108,7 @@ var companyBareAgreements = []string{
 // change it granted, which is what the offer slot's audit names.
 func offerAccepted(offer *companyReadOffer, message string, reply companyReadModelReply) bool {
 	grant := companyChangeAuthorization{currentMessage: message}.withStandingOffer(offer).acceptedOffer
-	for _, change := range reply.ProposedChanges {
-		if grant.covers(change) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(reply.ProposedChanges, grant.covers)
 }
 
 // exactGrant is authority over one field with one value, compared after

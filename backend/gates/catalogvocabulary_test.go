@@ -5,8 +5,8 @@
 
 package gates
 
-// The tool catalog calls the record a COMPANY, and this is what stops the other
-// word coming back to it.
+// The tool catalog calls the record a company, and the other word for it fails
+// here.
 //
 // companyvocabulary_test.go holds the whole tree against the record type's
 // RETIRED name, and says in its own doc why it does not also hold it against

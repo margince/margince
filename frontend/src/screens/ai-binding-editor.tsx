@@ -2,20 +2,28 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
-import { api } from "../api/client";
+import { useCallback, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { useT } from "../i18n";
+import { isConflict, readLatest, writeSlice } from "./ai-binding-write";
+import { TierRecentCalls } from "./ai-call-figures";
+import { type ModelCatalogue, useAvailableModels } from "./ai-models";
+import { invalidateProviderHealth } from "./ai-provider-health";
 import {
-  type AvailableModels,
-  type ModelCatalogue,
-  useAvailableModels,
-} from "./ai-models";
+  missingKey,
+  reachableProviders,
+  useKeylessProbes,
+} from "./ai-provider-reach";
 import {
   AdapterFields,
   DECISION_PROVIDERS,
@@ -23,24 +31,15 @@ import {
   openRouterPreset,
   PROVIDERS,
 } from "./ai-routing-fields";
+import { ROUTING_KEY, type RoutingRead } from "./ai-routing-query";
+import { type SliceValue, sameSlice, sliceOf } from "./ai-routing-slice";
 import {
-  boundProviders,
-  fetchRouting,
-  ROUTING_KEY,
-  type RoutingRead,
-} from "./ai-routing-query";
-import {
-  type SliceValue,
-  sameSlice,
-  sliceOf,
-  withSlice,
-} from "./ai-routing-slice";
-import {
-  problemCode,
-  problemCodeOf,
-  problemMessageOf,
-  throwProblem,
-} from "./common";
+  laneBrokered,
+  ServingSection,
+  servingBlocked,
+} from "./ai-serving-editor";
+import { problemMessageOf } from "./common";
+import { savedVertexLocation, VERTEX_PROVIDER } from "./vertex-location";
 
 // One binding's editor: provider, model, and whatever else only that lane has.
 //
@@ -53,9 +52,6 @@ import {
 
 type KeyStatus = components["schemas"]["AiProviderKeyStatus"];
 type DecisionsBinding = components["schemas"]["AiDecisionsBinding"];
-
-// The slice moved under the editor between open and Save.
-class SliceMoved extends Error {}
 
 export function BindingEditor({
   opened,
@@ -82,6 +78,14 @@ export function BindingEditor({
   const [base, setBase] = useState(() => sliceOf(opened.routing, initial));
   const [draft, setDraft] = useState(initial);
   const [conflict, setConflict] = useState(false);
+  // A serving block the server has not yet cleared holds the save, so a value
+  // it would refuse never reaches the write.
+  // Unchecked until the serving preview answers: Save waits for the server.
+  const [servingValid, setServingValid] = useState(false);
+  const onServingValid = useCallback(
+    (valid: boolean) => setServingValid(valid),
+    [],
+  );
   // A move away mid-edit asks first, as the page's other editors do.
   useUnsavedGuard(!sameSlice(draft, initial));
   const save = useMutation({
@@ -90,6 +94,7 @@ export function BindingEditor({
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      await invalidateProviderHealth(queryClient);
     },
   });
 
@@ -123,54 +128,92 @@ export function BindingEditor({
   const keyMissing = binding ? missingKey(binding.provider, keys) : false;
   const busy = !canManage || save.isPending;
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {draft.kind === "decisions" && base.binding === undefined
-          ? t("aiRouting.decisions.add")
-          : t("aiRouting.editTitle", { lane: label })}
-      </Heading>
-      {binding && (
-        <div className="form-stack">
-          <SliceFields
-            draft={draft}
-            current={base.binding?.provider}
-            routing={opened.routing}
-            keys={keys}
-            catalogue={catalogue}
-            disabled={busy}
-            onChange={setDraft}
-          />
-          <NotListedHint
-            provider={binding.provider}
-            model={binding.model}
-            lane={laneName(draft)}
-          />
-        </div>
-      )}
-      {keyMissing && (
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={t("aiRouting.keyMissing")}
-        >
-          {t("aiRouting.keyMissingHelp", { provider: binding?.provider ?? "" })}
-        </Callout>
-      )}
-      {conflict && (
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={t("aiAdmin.routingStale")}
-        >
-          {t("aiRouting.conflictHelp")}
-        </Callout>
-      )}
-      {save.isError && !isConflict(save.error) && (
-        <Callout tone="danger" kind="outcome" title={t("aiRouting.saveFailed")}>
-          {problemMessageOf(save.error, t)}
-        </Callout>
-      )}
-      <div className="actions">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={headingId}
+      intent="drawer-reading"
+    >
+      <DrawerHead>
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
+          {draft.kind === "decisions" && base.binding === undefined
+            ? t("aiRouting.decisions.add")
+            : t("aiRouting.editTitle", { lane: label })}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        {binding && (
+          <div className="form-stack">
+            <SliceFields
+              draft={draft}
+              current={base.binding?.provider}
+              routing={opened.routing}
+              keys={keys}
+              catalogue={catalogue}
+              disabled={busy}
+              onChange={setDraft}
+            />
+            <NotListedHint
+              provider={binding.provider}
+              model={binding.model}
+              lane={laneName(draft)}
+            />
+            <TierRecentCalls
+              tier={callTier(draft)}
+              broker={laneBrokered(draft.binding, opened.routing)}
+            />
+            <ServingSection
+              key={`${binding.provider}|${binding.model}`}
+              value={draft}
+              routing={opened.routing}
+              disabled={busy}
+              onValid={onServingValid}
+              onChange={(next) => {
+                if (draft.kind === "tier")
+                  setDraft({
+                    ...draft,
+                    binding: { ...draft.binding, routing: next },
+                  });
+                if (draft.kind === "embeddings")
+                  setDraft({
+                    ...draft,
+                    binding: { ...draft.binding, routing: next },
+                  });
+              }}
+            />
+          </div>
+        )}
+        {keyMissing && (
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("aiRouting.keyMissing")}
+          >
+            {t("aiRouting.keyMissingHelp", {
+              provider: binding?.provider ?? "",
+            })}
+          </Callout>
+        )}
+        {conflict && (
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("aiAdmin.routingStale")}
+          >
+            {t("aiRouting.conflictHelp")}
+          </Callout>
+        )}
+        {save.isError && !isConflict(save.error) && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("aiRouting.saveFailed")}
+          >
+            {problemMessageOf(save.error, t)}
+          </Callout>
+        )}
+      </DrawerBody>
+      <DrawerFoot className="actions">
         {draft.kind === "decisions" && base.binding !== undefined && (
           <span className="actions-lead">
             <Button
@@ -194,7 +237,8 @@ export function BindingEditor({
               !canManage ||
               !binding ||
               binding.model.trim() === "" ||
-              keyMissing
+              keyMissing ||
+              (servingBlocked(draft, opened.routing) === null && !servingValid)
             }
             reason={canManage ? undefined : t("aiRouting.adminOnly")}
             onClick={() => submit(draft)}
@@ -202,7 +246,7 @@ export function BindingEditor({
             {t("aiRouting.saveBinding")}
           </Button>
         </span>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }
@@ -229,6 +273,11 @@ function SliceFields({
   const t = useT();
   const label = t("aiRouting.provider.label");
   const probes = useKeylessProbes(laneName(draft), draft.kind !== "decisions");
+  // A lane newly pointed at Vertex starts at the provider's location, which
+  // every tier on it is served from; else where another saved Vertex lane is.
+  const vertexLocation =
+    routing.providers?.[VERTEX_PROVIDER]?.location ??
+    savedVertexLocation([...Object.values(routing.tiers), routing.embeddings]);
   switch (draft.kind) {
     case "tier":
       return (
@@ -238,6 +287,8 @@ function SliceFields({
           laneName={draft.tier}
           binding={draft.binding}
           catalogue={catalogue}
+          vertexLocation={vertexLocation}
+          providerSettings={routing.providers?.[draft.binding.provider] ?? {}}
           disabled={disabled}
           providers={reachableProviders(
             PROVIDERS,
@@ -258,6 +309,8 @@ function SliceFields({
             laneName="embeddings"
             binding={draft.binding}
             catalogue={catalogue}
+            vertexLocation={vertexLocation}
+            providerSettings={routing.providers?.[draft.binding.provider] ?? {}}
             disabled={disabled}
             providers={reachableProviders(
               PROVIDERS,
@@ -279,6 +332,7 @@ function SliceFields({
       return draft.binding ? (
         <DecisionFields
           binding={draft.binding}
+          providers={routing.providers}
           current={current}
           keys={keys}
           catalogue={catalogue}
@@ -291,6 +345,7 @@ function SliceFields({
 
 function DecisionFields({
   binding,
+  providers,
   current,
   keys,
   catalogue,
@@ -298,6 +353,7 @@ function DecisionFields({
   onChange,
 }: Readonly<{
   binding: DecisionsBinding;
+  providers: RoutingRead["routing"]["providers"];
   current: string | undefined;
   keys: readonly KeyStatus[] | undefined;
   catalogue: ModelCatalogue;
@@ -305,6 +361,7 @@ function DecisionFields({
   onChange: (next: DecisionsBinding) => void;
 }>) {
   const t = useT();
+  const settings = providers?.[binding.provider] ?? {};
   return (
     <AdapterFields
       label={t("aiRouting.provider.label")}
@@ -313,11 +370,18 @@ function DecisionFields({
       binding={binding}
       catalogue={catalogue}
       disabled={disabled}
+      providerSettings={settings}
       providers={reachableProviders(DECISION_PROVIDERS, keys, current)}
       onChange={(next) => onChange(reboundDecision(binding, next))}
       // The endpoint is a full URL nobody remembers, and OpenRouter's is the
       // one most installations want; the key is the one thing it cannot fill.
-      providerAside={openRouterPreset(binding, disabled, onChange, t)}
+      providerAside={openRouterPreset(
+        binding,
+        settings.base_url,
+        disabled,
+        onChange,
+        t,
+      )}
     />
   );
 }
@@ -349,70 +413,6 @@ function NotListedHint({
   );
 }
 
-// The adapters an editor offers: those this installation can use, and the one
-// the binding names now even if it no longer can — dropping that would erase
-// the lane's own state from its own editor. A vendor with a key row is usable
-// once a key is sealed; a keyless one (ollama, vllm) once the availability
-// probe reached it; `fake` only where the routing document already binds it.
-// While the key list has not arrived nothing is hidden; once it has, a keyless
-// adapter stays out until its probe answers, since an option that appears late
-// costs less than one offered and then refused.
-export function reachableProviders(
-  all: readonly string[],
-  keys: readonly KeyStatus[] | undefined,
-  current: string | undefined,
-  probes: KeylessProbes = NO_PROBES,
-  routing?: RoutingRead["routing"],
-): readonly string[] {
-  if (!keys) return all;
-  const status = new Map(keys.map((k) => [k.provider, k]));
-  return all.filter((provider) => {
-    if (provider === current) return true;
-    if (provider === "fake") {
-      return (
-        routing !== undefined && boundProviders(routing)?.has(provider) === true
-      );
-    }
-    if (isKeyless(provider)) {
-      const answer = probes.get(provider);
-      return answer !== undefined && !answer.unavailable;
-    }
-    const entry = status.get(provider);
-    return !entry || entry.configured || entry.optional;
-  });
-}
-
-const KEYLESS_ADAPTERS = ["ollama", "vllm"] as const;
-
-function isKeyless(provider: string): boolean {
-  return KEYLESS_ADAPTERS.some((adapter) => adapter === provider);
-}
-
-type KeylessProbes = ReadonlyMap<string, AvailableModels | undefined>;
-const NO_PROBES: KeylessProbes = new Map();
-
-// What each keyless chat adapter answers when asked, for the lane being edited.
-// Two queries that fire only while the editor is mounted, and not at all for
-// the decision lane, whose adapters both take a key.
-function useKeylessProbes(lane: string, enabled: boolean): KeylessProbes {
-  const ollama = useAvailableModels("ollama", lane, enabled);
-  const vllm = useAvailableModels("vllm", lane, enabled);
-  return new Map([
-    ["ollama", ollama.data],
-    ["vllm", vllm.data],
-  ]);
-}
-
-// A provider that takes a key and holds none. Keyless adapters (no entry in
-// the key list) and optional-key ones are never missing a key.
-export function missingKey(
-  provider: string,
-  keys: readonly KeyStatus[] | undefined,
-): boolean {
-  const entry = keys?.find((k) => k.provider === provider);
-  return entry !== undefined && !entry.configured && !entry.optional;
-}
-
 // A decision model and its host name one adapter's endpoint, so a provider
 // switch starts the binding over rather than pointing the new adapter at the
 // old one's address.
@@ -425,48 +425,18 @@ function reboundDecision(
     : { provider: next.provider, model: "" };
 }
 
+/** The tier a lane's calls are recorded under in the call record. */
+function callTier(value: SliceValue): string {
+  switch (value.kind) {
+    case "tier":
+      return value.tier;
+    case "embeddings":
+      return "embed";
+    case "decisions":
+      return "decide";
+  }
+}
+
 function laneName(value: SliceValue): string {
   return value.kind === "tier" ? value.tier : value.kind;
-}
-
-function isConflict(error: unknown): boolean {
-  return error instanceof SliceMoved || problemCodeOf(error) === "version_skew";
-}
-
-function readLatest(
-  queryClient: ReturnType<typeof useQueryClient>,
-): Promise<RoutingRead> {
-  return queryClient.fetchQuery({
-    queryKey: ROUTING_KEY,
-    queryFn: fetchRouting,
-    staleTime: 0,
-  });
-}
-
-// Puts one slice onto the latest document. A 409 means some write landed
-// between the re-read and the PUT; it is retried once, because the re-read
-// then tells a colleague's edit to ANOTHER lane — which is no conflict — from
-// one to this lane, which throws SliceMoved as it would have at first.
-export async function writeSlice(
-  latestRead: () => Promise<RoutingRead>,
-  base: SliceValue,
-  edit: SliceValue,
-): Promise<RoutingRead> {
-  for (let attempt = 0; ; attempt++) {
-    const latest = await latestRead();
-    if (!sameSlice(sliceOf(latest.routing, base), base)) {
-      throw new SliceMoved();
-    }
-    const { data, error, response } = await api.PUT("/ai/routing", {
-      body: withSlice(latest.routing, edit),
-      // Always sent: an absent If-Match is an unconditional overwrite.
-      headers: { "If-Match": latest.version },
-    });
-    if (error) {
-      if (attempt === 0 && problemCode(error) === "version_skew") continue;
-      throwProblem(error);
-    }
-    if (!data) throw new Error("AI routing unavailable");
-    return { routing: data, version: response.headers.get("ETag") ?? "" };
-  }
 }

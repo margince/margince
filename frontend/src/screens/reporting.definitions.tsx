@@ -1,3 +1,4 @@
+import "./reporting.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -9,6 +10,7 @@ import {
   Checkbox,
   Disclosure,
   Field,
+  SegmentedControl,
   TextInput,
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
@@ -18,88 +20,112 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { metricLabel } from "./reporting.model";
 
 type Framework = components["schemas"]["ReportingFramework"];
 export function ReportingDefinitions() {
   const { locale } = useLocale();
   const t = useT();
+  const [section, setSection] = useState("definitions");
   const canPublish = useCanWrite("reporting_framework", "update");
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const framework = useQuery({
+    enabled: canPublish && section === "setup",
     queryKey: ["reporting-framework"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/framework");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/framework"));
     },
   });
   return (
     <>
-      <Panel title={t("reporting.definitions")}>
-        <PanelBody>
-          <QueryGate query={catalog} pendingLabel={t("reporting.definitions")}>
-            {(catalog) => (
-              <>
-                {catalog.metrics.map((metric) => (
-                  <Disclosure
-                    key={metric.id}
-                    summary={metricLabel(metric.id, t)}
-                  >
-                    <p>{metric.definition}</p>
-                    <p className="t-caption">{metric.attribution}</p>
-                    <p className="t-caption">{metric.incomplete_policy}</p>
-                    <p className="t-caption">
-                      {t("reporting.revision", {
-                        revision: String(metric.version),
-                      })}{" "}
-                      · {metric.unit} · {metric.temporal_basis}
-                    </p>
-                  </Disclosure>
-                ))}
-              </>
-            )}
-          </QueryGate>
-        </PanelBody>
-      </Panel>
-      <Panel title={t("reporting.framework")}>
-        <PanelBody>
-          <QueryGate query={framework} pendingLabel={t("reporting.framework")}>
-            {(framework) => (
-              <>
-                <p>
-                  {t("reporting.revision", {
-                    revision: formatNumber(framework.revision, locale),
-                  })}{" "}
-                  · {t(`reporting.${framework.definition.template}`)}
-                </p>
-                <PanelIntro>{t("reporting.prospective")}</PanelIntro>
-                {canPublish ? (
+      {canPublish && (
+        <SegmentedControl
+          label={t("reporting.settings")}
+          options={["definitions", "setup"]}
+          value={section}
+          onChange={setSection}
+          labels={{
+            definitions: t("reporting.definitions"),
+            setup: t("reporting.framework"),
+          }}
+        />
+      )}
+      {section === "definitions" && (
+        <Panel title={t("reporting.definitions")}>
+          <PanelBody>
+            <QueryGate
+              query={catalog}
+              pendingLabel={t("reporting.definitions")}
+            >
+              {(catalog) => (
+                <>
+                  {catalog.metrics.map((metric) => (
+                    <Disclosure
+                      key={metric.id}
+                      summary={metricLabel(metric.id, t)}
+                    >
+                      <p>{metric.definition}</p>
+                      <p className="t-caption">{metric.attribution}</p>
+                      <p className="t-caption">{metric.incomplete_policy}</p>
+                      <p className="t-caption">
+                        {t("reporting.revision", {
+                          revision: String(metric.version),
+                        })}{" "}
+                        ·{" "}
+                        {metric.unit === "count"
+                          ? t("reporting.countUnit")
+                          : metric.unit === "days"
+                            ? t("reporting.daysUnit")
+                            : metric.unit === "money"
+                              ? t("reporting.amountUnit")
+                              : "%"}{" "}
+                        ·{" "}
+                        {t(
+                          metric.temporal_basis === "event_period"
+                            ? "reporting.period"
+                            : "reporting.currentState",
+                        )}
+                      </p>
+                    </Disclosure>
+                  ))}
+                </>
+              )}
+            </QueryGate>
+          </PanelBody>
+        </Panel>
+      )}
+      {section === "setup" && canPublish && (
+        <Panel title={t("reporting.framework")}>
+          <PanelBody>
+            <QueryGate
+              query={framework}
+              pendingLabel={t("reporting.framework")}
+            >
+              {(framework) => (
+                <>
+                  <p>
+                    {t("reporting.revision", {
+                      revision: formatNumber(framework.revision, locale),
+                    })}{" "}
+                    · {t(`reporting.${framework.definition.template}`)}
+                  </p>
+                  <PanelIntro>{t("reporting.prospective")}</PanelIntro>
                   <FrameworkEditor
                     key={framework.version}
                     framework={framework}
                   />
-                ) : (
-                  framework.definition.qualification.map((qualification) => (
-                    <p key={qualification.pipeline_id}>
-                      {formatNumber(qualification.stage_ids.length, locale)} ·{" "}
-                      {t("reporting.qualification")}
-                    </p>
-                  ))
-                )}
-              </>
-            )}
-          </QueryGate>
-        </PanelBody>
-      </Panel>
+                </>
+              )}
+            </QueryGate>
+          </PanelBody>
+        </Panel>
+      )}
     </>
   );
 }
@@ -113,11 +139,11 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
   const pipelines = useQuery({
     queryKey: ["reporting-framework-pipelines"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
     },
   });
   const write = useMutation({
@@ -128,12 +154,12 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
       version: number;
       definition: Framework["definition"];
     }) => {
-      const { data, error } = await api.PUT("/analytics/framework", {
-        params: { ...ifMatch(version) },
-        body: definition,
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.PUT("/analytics/framework", {
+          params: { ...ifMatch(version) },
+          body: definition,
+        }),
+      );
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["reporting-framework"] });

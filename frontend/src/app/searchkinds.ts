@@ -19,21 +19,72 @@ export type SearchHitType = NonNullable<
   components["schemas"]["SearchResult"]["type"]
 >;
 
-// The display order the results screen groups by, and the tie-break the palette
-// falls back on. Records first, most-asked-for first; a tag last because it is a
-// WORD, and somebody who typed a name is usually after the records rather than
-// the label they were filed under.
-export const SEARCH_HIT_ORDER = [
+// What a reader calls a hit, which is not always its wire type. An activity
+// that is a message is an EMAIL to anybody scanning the results, and filing it
+// under "Activities" beside calls and notes is how a search for an account read
+// as a list of mail threads with nothing saying what they were.
+export type SearchHitGroup = SearchHitType | "email";
+
+// The order both surfaces draw their groups in. Records first, most-asked-for
+// first; then what was SAID about them, because a thread that names an account
+// ten times is still not the account; a tag last because it is a WORD, and
+// somebody who typed a name is usually after the records rather than the label
+// they were filed under.
+export const SEARCH_GROUP_ORDER = [
   "contact",
   "company",
   "deal",
+  "lead",
   "project",
   "product",
   "offer_template",
+  "email",
   "activity",
-  "lead",
   "tag",
-] as const satisfies readonly SearchHitType[];
+] as const satisfies readonly SearchHitGroup[];
+
+// The types a reader can narrow to, in the same order. An email narrows as the
+// activity it is, so it has no pill of its own.
+export const SEARCH_HIT_ORDER: readonly SearchHitType[] =
+  SEARCH_GROUP_ORDER.filter(
+    (group): group is SearchHitType => group !== "email",
+  );
+
+/** Which group a hit is drawn in: its type, unless it is a message. */
+export function searchHitGroup(
+  hit: Readonly<{ type: SearchHitType; email_summary?: unknown }>,
+): SearchHitGroup {
+  return hit.email_summary ? "email" : hit.type;
+}
+
+/** The type a group narrows to, and the type the server counts it under. */
+export function searchGroupType(group: SearchHitGroup): SearchHitType {
+  return group === "email" ? "activity" : group;
+}
+
+/**
+ * The kinds drawn with the record's own mark — a contact and a company, the
+ * two records a chip stands for — on the results page and in the palette.
+ */
+export type SearchRecordCardType = "contact" | "company";
+export function searchHitHasCard(
+  type: SearchHitType,
+): type is SearchRecordCardType {
+  return type === "contact" || type === "company";
+}
+
+/**
+ * A page of hits, grouped and in SEARCH_GROUP_ORDER, each group in the order
+ * the server ranked it. Empty groups are absent.
+ */
+export function groupSearchHits<
+  Hit extends Readonly<{ type: SearchHitType; email_summary?: unknown }>,
+>(hits: readonly Hit[]): { group: SearchHitGroup; hits: Hit[] }[] {
+  return SEARCH_GROUP_ORDER.map((group) => ({
+    group,
+    hits: hits.filter((hit) => searchHitGroup(hit) === group),
+  })).filter(({ hits: members }) => members.length > 0);
+}
 
 // The heading a group of these hits carries. One key per member of the contract
 // enum, so a type the server learns to return cannot reach the screen without a
@@ -50,6 +101,20 @@ export const SEARCH_HIT_GROUP_KEY: Readonly<Record<SearchHitType, MessageKey>> =
     lead: "search.group.lead",
     tag: "search.group.tag",
   };
+
+// The heading of each group a hit can be drawn in.
+export const SEARCH_GROUP_KEY: Readonly<Record<SearchHitGroup, MessageKey>> = {
+  ...SEARCH_HIT_GROUP_KEY,
+  email: "search.group.email",
+};
+
+// The label of each pill that narrows to a type. The activity pill narrows to
+// emails AND the calls, notes and meetings beside them, and says so; every
+// other pill reads as its group's heading.
+export const SEARCH_FILTER_KEY: Readonly<Record<SearchHitType, MessageKey>> = {
+  ...SEARCH_HIT_GROUP_KEY,
+  activity: "search.filter.activity",
+};
 
 // The SINGULAR name of the kind, for the line under one hit's title. The group
 // headings above are plural because they head a set; a row says what that one

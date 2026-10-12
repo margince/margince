@@ -77,6 +77,11 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 	if line.Entity == nil || ids.UUID(line.Entity.Id) != deal {
 		t.Errorf("entity = %+v, want the deal the proposal is about", line.Entity)
 	}
+	// A decision waiting has nothing to undo, so the line carries no undo and
+	// no refusal: the client draws "Decide" instead.
+	if line.Undo != nil {
+		t.Errorf("undo = %+v, want none on a decision nobody has made", *line.Undo)
+	}
 	if receipt.Totals.NeedsYou != len(receipt.NeedsYou) {
 		t.Errorf("totals.needs_you says %d over %d drawn lines",
 			receipt.Totals.NeedsYou, len(receipt.NeedsYou))

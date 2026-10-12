@@ -48,3 +48,24 @@ func TestAnUnrelatedLaterWriteSupersedesNothing(t *testing.T) {
 		t.Errorf("reportedAs(title moved, full_name asked) = %v, want none", got)
 	}
 }
+
+// A timestamp is one instant however the writer's zone spelled it, and
+// anything that is not two timestamps is not an instant at all: a string that
+// is not a time must stay different, or a changed name would read as unmoved.
+func TestTwoSpellingsOfOneInstantAreTheSameValue(t *testing.T) {
+	for name, tc := range map[string]struct {
+		live, stated string
+		want         bool
+	}{
+		"same instant, other zone": {`"2026-12-09T10:00:00+00:00"`, `"2026-12-09T17:00:00+07:00"`, true},
+		"different instants":       {`"2026-12-09T10:00:00+00:00"`, `"2026-12-09T11:00:00+00:00"`, false},
+		"plain text":               {`"Ada"`, `"Ada Lovelace"`, false},
+		"live is not a string":     {`42`, `"2026-12-09T10:00:00Z"`, false},
+		"stated is not a string":   {`"2026-12-09T10:00:00Z"`, `null`, false},
+		"stated is not a time":     {`"2026-12-09T10:00:00Z"`, `"tomorrow"`, false},
+	} {
+		if got := sameInstant(json.RawMessage(tc.live), json.RawMessage(tc.stated)); got != tc.want {
+			t.Errorf("%s: sameInstant(%s, %s) = %v, want %v", name, tc.live, tc.stated, got, tc.want)
+		}
+	}
+}

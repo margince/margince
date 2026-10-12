@@ -10,8 +10,9 @@ import { identifierNumber } from "../format/format";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { VoiceDegradedNotice } from "./compose.notices";
-import { DraftReasons, openCited } from "./composedraftcontext";
+import { DraftReasons } from "./composedraftcontext";
 import { useOpenEmail } from "./openemail";
+import { openCitation } from "./record360";
 
 type EmailDraft = components["schemas"]["EmailDraft"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
@@ -78,7 +79,7 @@ export function DraftBand({
         </p>
         <DraftReasons
           reasons={reasons}
-          onOpenRecord={openCited}
+          onOpenRecord={openCitation}
           onOpenEmail={setOpenEmail}
         />
         <OpenEmailDrawer

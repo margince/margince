@@ -8,7 +8,7 @@ import {
   useInstallState,
 } from "../app/pwa";
 import { Button } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { logUnexpectedError } from "./common";
@@ -26,11 +26,9 @@ export function InstallPanel({ install }: Readonly<{ install: InstallState }>) {
   }
   return (
     <Panel title={t("settings.deviceCard")}>
-      <PanelBody>
-        <SettingList>
-          <InstallRow install={install} />
-        </SettingList>
-      </PanelBody>
+      <SettingList bleed="settings">
+        <InstallRow install={install} />
+      </SettingList>
     </Panel>
   );
 }

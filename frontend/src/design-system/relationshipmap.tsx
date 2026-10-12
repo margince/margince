@@ -293,7 +293,7 @@ function Edge({
   const bend = 48;
   return (
     <path
-      className={`rmap-edge rmap-edge-${edge.kind} rmap-band-${edge.band ?? "none"}`}
+      className={`rmap-edge rmap-edge-${edge.kind}${edge.band ? ` rmap-band-${edge.band}` : ""}`}
       data-lit={lit ? "true" : undefined}
       data-faded={faded ? "true" : undefined}
       d={`M ${x1} ${y1} C ${x1 + bend} ${y1} ${x2 - bend} ${y2} ${x2} ${y2}`}

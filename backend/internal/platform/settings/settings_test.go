@@ -391,3 +391,60 @@ func TestSeedValueRefusesAValueItCannotEncode(t *testing.T) {
 		t.Error("a value that never became JSON was reported as stored")
 	}
 }
+
+// ReadForDecision refuses an unset setting, exactly as RequireTx does.
+//
+// Both exist for callers that are about to act on the value, and an absent row
+// must not read as the registered default for either: a freeze taken against a
+// default nobody chose is the same wrong answer whether or not the row was
+// held while it was taken.
+func TestReadForDecisionRefusesAnUnsetSetting(t *testing.T) {
+	e := Define[string]("installation.probe_base", "installation_settings", "update", "EUR", nil)
+
+	_, err := ReadForDecision(readerCtx("installation_settings"), &settingRowTx{absent: true}, e)
+	var unset UnsetValue
+	if !errors.As(err, &unset) {
+		t.Fatalf("an unset setting answered %v; a caller deciding against it must be refused, "+
+			"not handed the registered default", err)
+	}
+	if unset.Setting != "installation.probe_base" {
+		t.Errorf("the refusal names %q", unset.Setting)
+	}
+}
+
+// And it carries the same read gate: holding a row is not a way around the
+// object grant the value's own screen is protected by.
+func TestReadForDecisionCarriesTheReadGate(t *testing.T) {
+	e := Define[string]("installation.probe_base2", "installation_settings", "update", "EUR", nil)
+
+	_, err := ReadForDecision(context.Background(), &settingRowTx{stored: json.RawMessage(`"EUR"`)}, e)
+	if err == nil {
+		t.Fatal("a caller with no grant read the setting by asking to decide against it")
+	}
+}
+
+// A stored value the decoder cannot read is an error, not a zero value. A
+// freeze taken against "" would convert every amount by a rate to nowhere.
+func TestReadForDecisionRefusesAValueItCannotDecode(t *testing.T) {
+	e := Define[string]("installation.probe_base3", "installation_settings", "update", "EUR", nil)
+
+	_, err := ReadForDecision(readerCtx("installation_settings"),
+		&settingRowTx{stored: json.RawMessage(`{"not":"a string"}`)}, e)
+	if err == nil {
+		t.Fatal("a value of the wrong shape decoded silently; the caller would freeze against the zero value")
+	}
+}
+
+// A database that refuses the row lock stops the write, rather than letting it
+// proceed unserialized. The lock is what a guard between here and the write
+// depends on, so a failure to take it is not something to carry on past.
+func TestLockForWriteStopsWhenTheRowCannotBeHeld(t *testing.T) {
+	err := LockForWrite(context.Background(),
+		&settingRowTx{execErr: errors.New("connection lost")}, "installation.base_currency")
+	if err == nil {
+		t.Fatal("the write carried on without the lock it needs to be serialized by")
+	}
+	if !strings.Contains(err.Error(), "installation.base_currency") {
+		t.Errorf("the failure does not name the setting it could not lock: %v", err)
+	}
+}

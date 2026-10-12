@@ -61,7 +61,7 @@ const FIELDS = [
 
 const RECORD = {
   cf_fleet_size: 220,
-  cf_retrofit_budget: "48000.00",
+  cf_retrofit_budget: 4_800_000,
   cf_depot_region: "North",
   cf_framework: true,
 };

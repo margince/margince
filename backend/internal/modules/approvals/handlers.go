@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -91,15 +92,13 @@ func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.Det
 		status := string(*params.Status)
 		in.Status = &status
 	}
-	if params.Limit != nil {
-		in.Limit = *params.Limit
-	}
+	in.Limit = storekit.ClampLimit(params.Limit)
 	if params.Cursor != nil {
 		in.Cursor = *params.Cursor
 	}
-	if (params.TargetEntityType == nil) != (params.TargetEntityId == nil) {
-		return ListInput{}, httperr.Validation("target_entity_type", "requires_pair",
-			"filtering by target needs both target_entity_type and target_entity_id; supply both or neither")
+	if err := httperr.RequirePair("target_entity_type", params.TargetEntityType,
+		"target_entity_id", params.TargetEntityId); err != nil {
+		return ListInput{}, err
 	}
 	if params.TargetEntityId != nil {
 		targetID := ids.UUID(*params.TargetEntityId)
@@ -137,9 +136,9 @@ func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crm
 			httperr.Write(w, r, httperr.Validation("edited_payload", "malformed_json", marshalErr.Error()))
 			return
 		}
-		a, err = h.svc.DecideEdited(r.Context(), approvalID, edited)
+		a, err = h.svc.DecideEditedFor(r.Context(), approvalID, edited, req.Reason)
 	} else {
-		a, err = h.svc.Decide(r.Context(), approvalID, true, nil)
+		a, err = h.svc.Decide(r.Context(), approvalID, true, req.Reason)
 	}
 	if err != nil {
 		writeErr(w, r, err)
@@ -206,25 +205,15 @@ func (h Handlers) decideBundle(w http.ResponseWriter, r *http.Request, bundleID 
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
-	var oversized *BundleTooLargeError
-	if errors.As(err, &oversized) {
+	if oversized, ok := errors.AsType[*BundleTooLargeError](err); ok {
 		httperr.Write(w, r, httperr.Validation("bundle_id", "bundle_too_large", oversized.Error()))
 		return
 	}
-	var decided *AlreadyDecidedError
-	if errors.As(err, &decided) {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "already_decided", Detail: decided.Error(),
-		})
-		return
-	}
-	var retargeted *RetargetedEditError
-	if errors.As(err, &retargeted) {
+	if retargeted, ok := errors.AsType[*RetargetedEditError](err); ok {
 		httperr.Write(w, r, httperr.Validation("edited_payload", "retargeted", retargeted.Error()))
 		return
 	}
-	var edit *InvalidEditError
-	if errors.As(err, &edit) {
+	if edit, ok := errors.AsType[*InvalidEditError](err); ok {
 		httperr.Write(w, r, httperr.Validation("edited_payload", "malformed", edit.Error()))
 		return
 	}
@@ -268,8 +257,10 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		out.TargetEntityId = &v
 	}
 	if len(a.ProposedChange) > 0 {
-		var change map[string]any
-		if json.Unmarshal(a.ProposedChange, &change) == nil {
+		// diffhash's decode, not a plain Unmarshal: a reader shown an amount
+		// rounded to the nearest float64 would be shown a change nobody proposed,
+		// and this is the value they approve from.
+		if change, err := diffhash.DecodeObject(a.ProposedChange); err == nil {
 			out.ProposedChange = &change
 		}
 	}

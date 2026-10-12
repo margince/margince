@@ -92,6 +92,10 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("webread: %s answered %d", e.URL, e.Status)
 }
 
+// HTTPStatus is the status the site answered, for a caller that classifies a
+// failure by its shape without importing this package.
+func (e *StatusError) HTTPStatus() int { return e.Status }
+
 // Retryable reports whether the status is one that commonly changes on its own.
 // Bot protection (403, 429) and server faults (5xx) do; a 404 does not.
 func (e *StatusError) Retryable() bool {
@@ -143,11 +147,20 @@ func newFetcher(transport http.RoundTripper) *Fetcher {
 		// disallow — every hop re-passes the robots gate too. The robots
 		// fetches themselves are exempt or a redirecting robots.txt would
 		// recurse into its own policy lookup.
+		//
+		// Exempt by the chain's FIRST request, not by where the hop points:
+		// a robots.txt that redirects to an ordinary page (thainakonintimex.com
+		// sends it to /TH/home.html) is still the robots fetch. Keyed on the
+		// hop's target instead, that hop asked the gate, the gate fetched
+		// robots.txt again, and that redirected again — each level a new
+		// request, so the five-hop cap never tripped, and each wrapping the
+		// error below it, so one deep read formatted half a gigabyte of error
+		// text before failing.
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return errors.New("webread: too many redirects")
 			}
-			if req.URL.Path == "/robots.txt" {
+			if via[0].URL.Path == "/robots.txt" || req.URL.Path == "/robots.txt" {
 				return nil
 			}
 			allowed, err := f.pathAllowed(req.Context(), req.URL)

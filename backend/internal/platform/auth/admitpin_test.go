@@ -24,8 +24,6 @@ import (
 // approval carries its own pin, taken at the moment the human was shown the
 // record), and not on a human (the gate does not govern them at all).
 
-func version(v int64) *int64 { return &v }
-
 // dynamicSpec is the one dynamic-tier tool on the surface, with its resolver
 // stubbed to the verdict a case is about: what Admit does with the version is
 // a property of the OUTCOME, not of how the resolver reached it.
@@ -43,7 +41,7 @@ func resolvesTo(in mcp.TierResolverInput) func() (mcp.TierResolverInput, error) 
 func TestAdmitPinsTheVersionADynamicTierWasReadFrom(t *testing.T) {
 	spec := dynamicSpec(mcp.TierAutoExecute)
 	resolve := resolvesTo(mcp.TierResolverInput{
-		SourceStageSemantic: "open", TargetStageSemantic: "open", ObservedVersion: version(9),
+		SourceStageSemantic: "open", TargetStageSemantic: "open", ObservedVersion: new(int64(9)),
 	})
 
 	admitted, err := fullSeatGate().Admit(agentCtx(principal.ScopeWrite), spec, resolve)
@@ -92,18 +90,18 @@ func TestAdmitPinsNothingItDidNotAdmitAtTheAutoExecuteTier(t *testing.T) {
 		"a static tier read no record to decide itself": {
 			agentCtx(principal.ScopeWrite),
 			mcp.ToolSpec{Name: "create_record", RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute},
-			resolvesTo(mcp.TierResolverInput{ObservedVersion: version(4)}),
+			resolvesTo(mcp.TierResolverInput{ObservedVersion: new(int64(4))}),
 		},
 		"a raised tier is carried by the approval's own pin": {
 			agentCtx(principal.ScopeWrite),
 			dynamicSpec(mcp.TierConfirmationRequired),
-			resolvesTo(mcp.TierResolverInput{ObservedVersion: version(4)}),
+			resolvesTo(mcp.TierResolverInput{ObservedVersion: new(int64(4))}),
 		},
 		"a human does not ride the gate's tier model at all": {
 			principal.WithActor(principal.WithWorkspaceID(context.Background(), testWorkspace),
 				principal.Principal{Type: principal.PrincipalHuman, ID: "user:test"}),
 			dynamicSpec(mcp.TierAutoExecute),
-			resolvesTo(mcp.TierResolverInput{ObservedVersion: version(4)}),
+			resolvesTo(mcp.TierResolverInput{ObservedVersion: new(int64(4))}),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

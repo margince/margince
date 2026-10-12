@@ -265,8 +265,8 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       },
       { field: "to_stage_name", label: "approval.field.to_stage", as: "text" },
     ],
-    // Read out of a call transcript. The step is the proposal; the evidence
-    // chips beneath carry the quoted lines it was read from.
+    // Retired: nothing stages it, but cards already decided under it read
+    // with the layout they were decided in.
     transcript_proposal: [
       {
         field: "summary",
@@ -275,7 +275,20 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         lead: true,
       },
       { field: "owner", label: "approval.field.owner", as: "text" },
-      // The day the transcript stated, editable before the task exists. The
+      { field: "due_date", label: "approval.field.due_date", as: "date" },
+    ],
+    // A promise read out of a meeting or a mail thread. The party is who made
+    // it, as the conversation names them; accepting a promise nobody could be
+    // named for makes it the reader's own task.
+    commitment_task: [
+      {
+        field: "summary",
+        label: "approval.field.step",
+        as: "prose",
+        lead: true,
+      },
+      { field: "party", label: "approval.field.owner", as: "text" },
+      // The day the conversation stated, editable before the task exists. The
       // calendar control rather than a text box, because the payload wants
       // 2026-09-08 and a reviewer typing the date the way they say it out loud
       // writes something acceptance refuses.

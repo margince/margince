@@ -5,7 +5,7 @@
 
 package gates
 
-// Every mail connector tells the sink where the provider FILED a message.
+// Every mail connector tells the sink where the provider filed a message.
 //
 // A capture exclusion may name a container — a Gmail label, a Graph folder, an
 // IMAP mailbox — and the rule is matched against NormalizedRecord.Containers on

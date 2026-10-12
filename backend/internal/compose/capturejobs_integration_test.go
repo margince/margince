@@ -46,12 +46,9 @@ func TestBackfillCompletionBuildsTheDigest(t *testing.T) {
 	}
 
 	runner, err := NewJobRunner(b.env.Pool, quiet, JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		GmailRegistry:     b.registry,
-		ClassifyBrain:     &scriptedClassifyBrain{},
-		EnrichBrain:       &signatureScriptBrain{},
+		GmailRegistry: b.registry,
+		ClassifyBrain: &scriptedClassifyBrain{},
+		EnrichBrain:   &signatureScriptBrain{},
 	})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)
@@ -157,10 +154,7 @@ func TestCaptureOvernightJobsRegisterAndRun(t *testing.T) {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	runner, err := NewJobRunner(b.env.Pool, quiet, JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-		GmailRegistry:     b.registry,
+		GmailRegistry: b.registry,
 		// Zero-value scripts: the classify brain labels whatever backlog
 		// the fake connector synced; the enrich pass finds no
 		// connector-created contact (this registry wires no ensurer) and

@@ -16,9 +16,10 @@ import (
 )
 
 type stubSuggestions struct {
-	rows []crmcontracts.DealSuggestion
-	open int
-	err  error
+	rows     []crmcontracts.DealSuggestion
+	open     int
+	err      error
+	countErr error
 }
 
 func (s *stubSuggestions) OpenSuggestions(_ context.Context, limit int) ([]crmcontracts.DealSuggestion, error) {
@@ -29,6 +30,9 @@ func (s *stubSuggestions) OpenSuggestions(_ context.Context, limit int) ([]crmco
 }
 
 func (s *stubSuggestions) CountOpen(context.Context) (int, error) {
+	if s.countErr != nil {
+		return 0, s.countErr
+	}
 	if s.open > 0 {
 		return s.open, nil
 	}
@@ -119,10 +123,49 @@ func TestAReaderWhoMayNotReadSuggestionsKeepsTheRestOfTheLane(t *testing.T) {
 	}
 }
 
-func TestABrokenSuggestionReadFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
-	svc := decisionsService(stubApprovals{}, stubDuplicates{}).
-		WithDealSuggestions(&stubSuggestions{err: errors.New("the database is unreachable")})
-	if _, err := svc.Assemble(pageReader()); err == nil {
-		t.Fatal("a suggestion read that FAILED was reported as an empty lane")
+func TestABrokenSuggestionReadIsNamedFailedAndTheRestOfTheDayStillLoads(t *testing.T) {
+	stalled := errors.New("canceling statement due to statement timeout")
+	for name, suggestions := range map[string]*stubSuggestions{
+		"the list fails": {err: stalled},
+		"the list answers and then the count fails": {rows: suggestionRows(3), countErr: stalled},
+	} {
+		t.Run(name, func(t *testing.T) {
+			svc := decisionsService(stubApprovals{rows: []crmcontracts.Approval{approval("a staged send")}}, stubDuplicates{}).
+				WithDealSuggestions(suggestions)
+
+			day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
+			if err != nil {
+				t.Fatalf("a stalled suggestion read failed the whole worklist: %v", err)
+			}
+			if seen := tallyByWorklistSource(day.Queue); len(day.Queue) != 1 || seen[sourceDealSuggestion] != 0 {
+				t.Fatalf("the queue carries %v, want only the staged approval: a failed read shows no suggestions", seen)
+			}
+			named := false
+			for _, missing := range day.SourcesUnavailable {
+				if missing.Source == sourceDealSuggestion && missing.Reason == crmcontracts.WorklistSourceUnavailableReasonFailed {
+					named = true
+				}
+			}
+			if !named {
+				t.Fatalf("sources_unavailable = %+v, want deal_suggestion named as failed", day.SourcesUnavailable)
+			}
+
+			lanes, err := svc.Assemble(pageReader())
+			if err != nil {
+				t.Fatalf("a stalled suggestion read failed the lane feed: %v", err)
+			}
+			if lanes.Counts.DealSuggestionsOpen != nil || tallyBySource(lanes.NeedsYou)[sourceDealSuggestion] != 0 {
+				t.Fatalf("lane = %v, suggestion count %v; want neither: a read that failed must not print a confident zero",
+					tallyBySource(lanes.NeedsYou), lanes.Counts.DealSuggestionsOpen)
+			}
+		})
 	}
+}
+
+func tallyByWorklistSource(queue []crmcontracts.WorklistItem) map[string]int {
+	seen := map[string]int{}
+	for _, item := range queue {
+		seen[string(item.Source)]++
+	}
+	return seen
 }

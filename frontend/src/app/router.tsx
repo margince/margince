@@ -418,7 +418,13 @@ function announce(): void {
   }
 }
 
+// Set once this page load has moved between addresses: only then does
+// `history.back()` land on an earlier screen of this app.
+let movedSinceLoad = false;
+export const backStaysInApp = (): boolean => movedSinceLoad;
+
 function addressChanged(): void {
+  movedSinceLoad = true;
   // A second link pasted into an open tab is a hash change and nothing else:
   // the screen does not remount for one, and whatever renders next is decided
   // above the route. So the credential comes out of the new address before

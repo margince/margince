@@ -10,6 +10,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { type Locale, LocaleProvider } from "../i18n";
 import { meFixture } from "./mefixture";
 import { NotificationBell } from "./notificationbell";
@@ -217,6 +219,56 @@ describe("NotificationBell", () => {
     expect(items[1]?.textContent).toContain("An automation could not run");
   });
 
+  it("heads a notice that is only field pairs with its class, not the pairs", async () => {
+    const fields = "into_tag_id=01a11ecb-0000, to_stage_id=01a0ced5-0000";
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", fields, { kind: "approval_pending" }),
+        notice("n2", "Update a deal, setting amount_minor: amount_minor=100", {
+          kind: "approval_pending",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const [bare, sentence] = await screen.findAllByRole("listitem");
+    expect(within(bare).getByText("Approvals waiting on you")).toBeTruthy();
+    expect(within(bare).getByText(fields)).toBeTruthy();
+    // A subject that is a sentence is still the headline, untouched.
+    expect(
+      within(sentence).getByText(
+        "Update a deal, setting amount_minor: amount_minor=100",
+      ),
+    ).toBeTruthy();
+    expect(within(sentence).queryByText("Approvals waiting on you")).toBeNull();
+  });
+
+  it("says when each notice was raised", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          created_at: "2026-09-15T09:00:00Z",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const [row] = await screen.findAllByRole("listitem");
+    const when = row.querySelector("time");
+    expect(when?.getAttribute("datetime")).toBe("2026-09-15T09:00:00Z");
+    expect(when?.textContent).toBe(
+      formatDateTime("2026-09-15T09:00:00Z", "en", viewerZone()),
+    );
+  });
+
   // The chrome's one dismissal, so the centre closes the way every other
   // popover in the strip does.
   it("closes again on Escape", async () => {
@@ -332,6 +384,32 @@ describe("NotificationBell", () => {
     });
     expect(link.getAttribute("href")).toBe(
       "#/leads/11111111-1111-4111-8111-111111111111",
+    );
+  });
+
+  it("links a notice asking for a decision to that decision", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "Is boris@customer.example a contact worth keeping?", {
+          kind: "approval_pending",
+          target: {
+            type: "approval",
+            id: "22222222-2222-4222-8222-222222222222",
+          },
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const link = await screen.findByRole("link", {
+      name: "Is boris@customer.example a contact worth keeping?",
+    });
+    expect(link.getAttribute("href")).toBe(
+      "#/home?approval=22222222-2222-4222-8222-222222222222",
     );
   });
 

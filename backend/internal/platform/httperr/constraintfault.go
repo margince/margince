@@ -66,7 +66,7 @@ func constraintFault(err error) (Fault, bool) {
 		return Fault{
 			Status: http.StatusUnprocessableEntity, Code: "value_wrong_type",
 			Detail: "a value in this request is not of the type the field it names holds — a " +
-				"malformed id, a number where text was sent, a date that is not one. Check each " +
+				"malformed id, a number where text was sent, a date that is not one, a control character such as NUL. Check each " +
 				"value against this operation's schema; do not retry unchanged.",
 			InfraCause: err,
 		}, true
@@ -113,7 +113,7 @@ func sideEffectFault(err error) (Fault, bool) {
 	}
 	return Fault{
 		Status:     http.StatusInternalServerError,
-		Code:       "internal",
+		Code:       codeInternal,
 		InfraCause: err,
 	}, true
 }
@@ -150,8 +150,7 @@ func retentionHoldFault(err error) (Fault, bool) {
 			"closes. Do not retry: an administrator holding the retention authority may release it, which is its own audited operation.",
 		InfraCause: err,
 	}
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		if m := retentionHoldUntil.FindStringSubmatch(pgErr.Message); m != nil {
 			fault.Details = map[string]any{"retain_until": m[1]}
 		}

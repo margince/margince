@@ -1,11 +1,9 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { App } from "../App";
 import { en } from "../i18n/en";
-import { memoryStorage } from "../testing/appharness";
 import { parseHash, type Route } from "./router";
 import { PageTitle, Shell } from "./shell";
 import {
@@ -50,13 +48,12 @@ vi.mock("@composition/extensions", () => ({
 // there instead). It yields whole on a surface that names itself — a record, a
 // composed unit's screen — or the document would offer two page titles.
 //
-// What the SHELL itself owes: body[data-screen], exactly one element claiming
-// the page on every route, the reading-column policy, the top bar mounted above
+// What the SHELL itself owes: body[data-screen], every claim of the page naming
+// the one page on screen, the reading-column policy, the top bar mounted above
 // the scroller with the page's name inside it, ⌘B reaching the state behind the
 // bar's toggle, the agent dock once at the foot of the content column, and no
-// chrome at all on the rail-less surfaces. Sign-out closes the file, driven
-// through the whole shell because the account menu is only reachable through the
-// chrome that mounts it.
+// chrome at all on the rail-less surfaces. Sign-out, driven through the whole
+// shell, is shell.signout.test.tsx's.
 //
 // The SIDEBAR — the destinations, the badges, the collapsed tooltips, the phone
 // bar and a section's entries as a second level — is rail.test.tsx's. The TOP
@@ -223,7 +220,7 @@ describe("PageTitle", () => {
     });
     const sub = container.querySelector(".pagesub");
     expect(sub?.textContent).toBe(
-      "Build a filter, preview its matches and save it as a view.",
+      "Every saved view and list you can use, and where a new filter starts.",
     );
     // Directly under the name it explains, inside the title's own text column —
     // not beside the actions, where it would read as product chrome. The
@@ -245,11 +242,16 @@ describe("PageTitle", () => {
     expect(container.querySelector(".pagesub")).toBeNull();
   });
 
-  // Brief greets the reader by name in its own h1, so the shell adds none: two
-  // top-level headings is no document outline at all. Same yield-whole rule as
-  // a record route below, for the same reason.
-  it("renders nothing at all on a screen that heads itself", () => {
-    const { container } = render(<PageTitle route={{ screen: "home" }} />);
+  // Brief greets the reader by name in its own h1, and a focused filter page
+  // names what it holds, so the shell adds none: two top-level headings is no
+  // document outline at all. Same yield-whole rule as a record route below.
+  it.each([
+    "#/home",
+    "#/filters/contacts",
+    "#/filters/contacts/v1",
+    "#/filters/list/L1",
+  ])("renders nothing at all on %s, which heads itself", (hash) => {
+    const { container } = render(<PageTitle route={parseHash(hash)} />);
     expect(container.querySelector(".pagetitle")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
@@ -306,7 +308,7 @@ describe("PageTitle", () => {
   // to the top bar or to the dock now, and a button appearing here without a
   // caller asking for it is chrome creeping back into the content column.
   // The heading block is a NAME, not a toolbar. A screen's own verbs stand in
-  // its `.list-head`, where the list they act on is; the shell used to thread a
+  // the header row of the list they act on; the shell used to thread a
   // `pageActions` slot down to here and no screen ever filled it.
   it("carries no control at all", () => {
     render(<PageTitle route={{ screen: "deals" }} />);
@@ -507,24 +509,45 @@ describe("Shell", () => {
     expect(row?.getAttribute("aria-current")).toBe("true");
   });
 
-  // On the list itself the row IS the page, so it keeps the stronger claim and
-  // agrees with the trail beside it. Two elements naming one page is what a
-  // breadcrumb and a navigation row are for; two naming different pages is the
-  // case above.
-  it("lets the sidebar's row claim the page on the list it names", () => {
-    window.location.hash = "#/contacts";
-    const { container } = render(
-      <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
-    );
-    const claims = [...container.querySelectorAll('[aria-current="page"]')];
-    expect(claims.map((claim) => claim.textContent)).toEqual([
-      "Contacts",
-      "Contacts",
-    ]);
-    expect(
-      container.querySelector("nav.rail a.navitem.active")?.textContent,
-    ).toBe("Contacts");
-  });
+  // Where the row IS the page it keeps the stronger claim and agrees with the
+  // trail: two elements naming one page is what a breadcrumb and a navigation
+  // row are for. Below the Filters and views library the trail ends in a page
+  // the row only leads to, so the row yields as it does on a record. Unread,
+  // each leaf is its page's fallback name. More stands in for a row only at
+  // phone width and is hidden above it, so its claim is rail.test.tsx's.
+  it.each([
+    ["#/contacts", "Contacts", "page", ["Contacts", "Contacts"]],
+    [
+      "#/filters",
+      "Filters and views",
+      "page",
+      ["Filters and views", "Filters and views"],
+    ],
+    [
+      "#/filters/companies",
+      "Filters and views",
+      "true",
+      ["New company filter"],
+    ],
+    ["#/filters/contacts/v1", "Filters and views", "true", ["Saved view"]],
+    ["#/filters/list/L1", "Filters and views", "true", ["Edit filter"]],
+    ["#/lists/L1", "Filters and views", "true", ["List"]],
+  ])(
+    "on %s the %s row claims %s and the page is claimed by %j",
+    (hash, row, rowClaim, claims) => {
+      window.location.hash = hash;
+      const { container } = render(
+        <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
+      );
+      const active = container.querySelector("nav.rail a.navitem.active");
+      expect(active?.textContent).toBe(row);
+      expect(active?.getAttribute("aria-current")).toBe(rowClaim);
+      const claimed = container.querySelectorAll(
+        '[aria-current="page"]:not(.railmore)',
+      );
+      expect([...claimed].map((claim) => claim.textContent)).toEqual(claims);
+    },
+  );
 
   // The a11y hole this restructure closes: the page's name used to be a span in
   // the top bar, so a railed route had no level-1 heading to jump to at all.
@@ -676,7 +699,7 @@ describe("Shell", () => {
     expect(headings).toHaveLength(1);
     expect(headings[0].textContent).toBe("Filters and views");
     expect(container.querySelector(".pagesub")?.textContent).toBe(
-      "Build a filter, preview its matches and save it as a view.",
+      "Every saved view and list you can use, and where a new filter starts.",
     );
   });
 
@@ -883,107 +906,5 @@ describe("Shell", () => {
     expect(
       screen.getByRole("navigation", { name: "Primary navigation" }),
     ).toBeTruthy();
-  });
-});
-
-// Sign-out is reached from the account menu in the top bar. What the menu does
-// with focus and layers is account.test.tsx's; what is proved here is that the
-// shell's copy of it actually ends the session — the mutation, the cache, and
-// the gate that follows them. Driven through the whole SHELL because the menu is
-// only reachable through the chrome that mounts it: a rail rendered on its own
-// has carried no account affordance since the sidebar became destinations only.
-describe("Sign-out (AS-1)", () => {
-  it("posts /auth/logout and clears the query cache on click", async () => {
-    const user = userEvent.setup();
-    let loggedOut = false;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input instanceof Request ? input.url : input);
-        const method = input instanceof Request ? input.method : "GET";
-        if (url.endsWith("/v1/auth/logout") && method === "POST") {
-          loggedOut = true;
-          return new Response(null, { status: 204 });
-        }
-        if (url.endsWith("/v1/me")) {
-          return new Response(null, { status: loggedOut ? 401 : 200 });
-        }
-        return new Response(null, { status: 404 });
-      }),
-    );
-    // Seed the ["me"] cache so we can observe the mutation clearing it — the
-    // gate re-probe hangs off this exact entry going away (queryClient.clear()).
-    const client = newClient();
-    client.setQueryData(["me"], { user: { id: "u1", email: "ada@acme.test" } });
-    window.location.hash = "#/deals";
-    renderWith(client, <Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
-    expect(client.getQueryData(["me"])).toBeTruthy();
-    // Sign-out lives inside the account menu, so it takes opening first.
-    await user.click(screen.getByRole("button", { name: /Account$/ }));
-    await user.click(screen.getByText("Sign out"));
-    // POST fired AND the whole cache was cleared — the ["me"] entry is gone,
-    // so the auth gate re-probes → 401 → login. This assertion bites: it fails
-    // if `onSuccess: () => queryClient.clear()` is removed from useLogout.
-    await waitFor(() => expect(loggedOut).toBe(true));
-    await waitFor(() => expect(client.getQueryData(["me"])).toBeUndefined());
-  });
-
-  // queryClient.clear() alone empties the cache but does NOT force a mounted
-  // ["me"] observer to refetch — a component still watching it can keep
-  // rendering its last (stale, authenticated) snapshot. Render THROUGH the real
-  // AuthGate (App, not just the rail in isolation) and prove sign-out actually
-  // lands the user back on the login screen, driven by a real /v1/me re-probe —
-  // not merely that the cache entry disappeared.
-  it("drives the AuthGate back to the login screen after sign-out (bites on stale-cache regressions)", async () => {
-    const user = userEvent.setup();
-    let loggedOut = false;
-    let meCalls = 0;
-    vi.stubGlobal("localStorage", memoryStorage());
-    globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input instanceof Request ? input.url : input);
-        const method = input instanceof Request ? input.method : "GET";
-        if (url.endsWith("/v1/auth/logout") && method === "POST") {
-          loggedOut = true;
-          return new Response(null, { status: 204 });
-        }
-        if (url.endsWith("/v1/me")) {
-          meCalls += 1;
-          if (loggedOut) {
-            return new Response(JSON.stringify({ code: "unauthenticated" }), {
-              status: 401,
-              headers: { "Content-Type": "application/problem+json" },
-            });
-          }
-          return new Response(
-            JSON.stringify({ user: { id: "u1" }, roles: [], teams: [] }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        return new Response(JSON.stringify({ code: "unavailable" }), {
-          status: 503,
-          headers: { "Content-Type": "application/problem+json" },
-        });
-      }),
-    );
-    renderWith(newClient(), <App />);
-
-    // Authenticated: the chrome (and its account menu) is on screen.
-    const account = await screen.findByRole("button", { name: /Account$/ });
-    expect(meCalls).toBe(1);
-
-    await user.click(account);
-    await user.click(screen.getByText("Sign out"));
-
-    // The gate must re-probe /v1/me (not just drop the cache entry) and,
-    // seeing 401, render the auth (signup/login) screen — the rail must be
-    // gone. AuthScreen defaults to its signup mode, so assert on that
-    // heading rather than assuming "Sign in" is the first thing shown.
-    await screen.findByRole("heading", { name: "Sign in to Margince" });
-    expect(screen.queryByRole("navigation")).toBeNull();
-    expect(loggedOut).toBe(true);
-    expect(meCalls).toBeGreaterThanOrEqual(2);
   });
 });

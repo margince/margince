@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -45,14 +47,27 @@ func (h Handlers) ListTags(w http.ResponseWriter, r *http.Request, params crmcon
 	if params.IncludeArchived != nil && *params.IncludeArchived {
 		archived = storekit.IncludeArchived
 	}
-	tags, truncated, err := h.store.ListTags(r.Context(), archived)
+	var tags []tagRow
+	var reach map[ids.TagID]int
+	var truncated bool
+	var err error
+	if params.WithCarriedBy != nil && *params.WithCarriedBy {
+		tags, reach, truncated, err = h.store.ListTagsCarried(r.Context(), archived)
+	} else {
+		tags, truncated, err = h.store.ListTags(r.Context(), archived)
+	}
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
 	data := make([]crmcontracts.Tag, 0, len(tags))
 	for _, t := range tags {
-		data = append(data, wireTag(t))
+		tag := wireTag(t)
+		if reach != nil {
+			carriedBy := reach[t.ID]
+			tag.CarriedBy = &carriedBy
+		}
+		data = append(data, tag)
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.TagListResponse{Data: data, Page: crmcontracts.PageInfo{HasMore: truncated}})
 }
@@ -69,7 +84,7 @@ func (h Handlers) CreateTag(w http.ResponseWriter, r *http.Request) {
 		c := string(*req.Color)
 		color = &c
 	}
-	tag, err := h.store.CreateTag(r.Context(), req.Name, color, tagDescriptionOrNone(req.Description))
+	tag, err := h.store.CreateTag(r.Context(), req.Name, color, TagDescriptionOrNone(req.Description))
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -117,11 +132,30 @@ func (h Handlers) RemoveTag(w http.ResponseWriter, r *http.Request, id crmcontra
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.RemoveTag(r.Context(), pathID[ids.TagKind](id), string(req.EntityType), ids.UUID(req.EntityId)); err != nil {
+	removal, err := h.store.RemoveTag(r.Context(), pathID[ids.TagKind](id), string(req.EntityType), ids.UUID(req.EntityId))
+	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	if removal == ids.Nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RemovalUndo{AuditId: openapi_types.UUID(removal)})
+}
+
+// RestoreTagApplication puts back a tagging the caller's own removal took off.
+func (h Handlers) RestoreTagApplication(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.RemovalUndo
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	restored, err := h.store.RestoreTagRemoval(r.Context(), pathID[ids.TagKind](id), ids.UUID(req.AuditId))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireTaggable(restored))
 }
 
 // GetFilterVocabulary answers what a filter may say about one record type.// GetFilterVocabulary answers what a filter may say about one record type.
@@ -220,6 +254,10 @@ func (h Handlers) UpdateSavedView(w http.ResponseWriter, r *http.Request, id crm
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	if err := httperr.RefuseNull(r, "name"); err != nil {
+		writeErr(w, r, err)
+		return
+	}
 	in := UpdateSavedViewInput{Name: req.Name, IfVersion: ifVersion}
 	if req.Query != nil {
 		q := *req.Query
@@ -245,8 +283,7 @@ func (h Handlers) ArchiveSavedView(w http.ResponseWriter, r *http.Request, id cr
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	// A rejected dynamic-segment / saved-view filter surfaces the offending
 	// field and machine-readable code (data-model §13.5 → 422).
-	var pred *storekit.PredicateError
-	if errors.As(err, &pred) {
+	if pred, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		httperr.Write(w, r, httperr.Validation(pred.Field, pred.Code, pred.Message))
 		return
 	}

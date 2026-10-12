@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -31,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // The identity vocabulary, the Go spelling of the table's CHECKs. The kinds
@@ -131,6 +133,9 @@ func (s *OwnerIdentityStore) List(ctx context.Context) ([]OwnerIdentity, error) 
 		if err != nil {
 			return fmt.Errorf("capture: listing owner identities: %w", err)
 		}
+		out = slices.DeleteFunc(out, func(identity OwnerIdentity) bool {
+			return discoveredMachineAddress(identity.Source, identity.Value)
+		})
 		return nil
 	})
 	return out, err
@@ -161,6 +166,11 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	}
 	var out OwnerIdentity
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if kind == IdentityKindAddress {
+			if err := lockOwnAddressTx(ctx, tx, value); err != nil {
+				return err
+			}
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
 			VALUES ($1, $2, $3, $4, $5)
@@ -284,9 +294,9 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	// It is read rather than declared because nobody should have to declare who
 	// they are to the product they are signed in to.
 	rows, err := tx.Query(ctx, `
-		SELECT kind, value FROM capture_owner_identity WHERE user_id = $1
+		SELECT kind, value, source FROM capture_owner_identity WHERE user_id = $1
 		 UNION ALL
-		SELECT 'address', account_label FROM capture_connection
+		SELECT 'address', account_label, '' FROM capture_connection
 		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
 `, user)
 	if err != nil {
@@ -295,9 +305,12 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	defer rows.Close()
 	var addresses, domains []string
 	for rows.Next() {
-		var kind, value string
-		if err := rows.Scan(&kind, &value); err != nil {
+		var kind, value, source string
+		if err := rows.Scan(&kind, &value, &source); err != nil {
 			return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
+		}
+		if discoveredMachineAddress(source, value) {
+			continue
 		}
 		if kind == IdentityKindDomain {
 			domains = append(domains, value)
@@ -346,15 +359,13 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 // liveness condition here is a second lock on a door that is already shut, and
 // it is spelled correctly so that it stays one if that ever changes.
 //
-// The liveness predicate is spelled out rather than calling identity's helper:
-// identity owns app_user and capture may not import a sibling module. Both
-// halves are named, which is the thing that matters — either alone would go on
-// offering a departed colleague's address.
+// The liveness predicate is the shared one and names both halves. Either alone
+// offers a departed colleague's address.
 func seatLoginAddressTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (string, error) {
 	var email string
 	if err := tx.QueryRow(ctx, `
 		SELECT coalesce(email, '') FROM app_user
-		 WHERE id = $1 AND status = 'active' AND archived_at IS NULL`, user).Scan(&email); err != nil {
+		 WHERE id = $1 AND `+workforce.LiveMemberSQL(""), user).Scan(&email); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", nil
 		}

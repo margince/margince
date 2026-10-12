@@ -10,6 +10,7 @@ import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { problemMessageOf, useMe } from "./common";
+import { ListRuleUses, ruleUsesOf } from "./listrules";
 import { type List, useUpdateList } from "./lists.queries";
 import { type ListAudience, ListAudienceFields } from "./listsharing";
 
@@ -43,6 +44,7 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
+        intent="form"
         title={t("lists.settingsTitle")}
         confirmLabel={t("lists.save")}
         confirmDisabled={name.trim() === ""}
@@ -84,6 +86,14 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
           value={audience}
           onChange={setAudience}
           ownerIsReader={list.owner_id === me.data?.user.id}
+        />
+        <ListRuleUses
+          rules={ruleUsesOf(list)}
+          lead={t(
+            list.list_type === "dynamic"
+              ? "lists.rules.settingsLeadLive"
+              : "lists.rules.settingsLead",
+          )}
         />
       </ConfirmModal>
     </>

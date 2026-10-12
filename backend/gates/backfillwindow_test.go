@@ -5,9 +5,9 @@
 
 package gates
 
-// The CAP-PARAM-4 window set as a fitness function: the contract's four
-// enums, the Go validator and the capture_backfill CHECK all state the
-// SAME set, derived from the tree rather than remembered here.
+// The capture backfill window set is the same in the contract's four enums, the
+// Go validator and the capture_backfill CHECK, derived from the tree rather
+// than remembered here.
 //
 // Five statements of one closed set is what makes this worth a gate. They
 // fail apart silently and in the direction that reads as working: a picker

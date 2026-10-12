@@ -29,7 +29,7 @@ import (
 // MergeCompany merges company source→target and returns the
 // survivor. The company half additionally re-homes the hierarchy (A's
 // children become B's) and the deal/partner attributions.
-func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.CompanyID) (crmcontracts.Company, error) {
+func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.CompanyID, ifVersion *int64) (crmcontracts.Company, error) {
 	// Same rule, same reason as MergeContact: an omitted target_id is not caught
 	// by the self-merge check and would answer not-found for a survivor the
 	// caller never named.
@@ -50,7 +50,7 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = mergeCompanyTx(ctx, tx, sourceID, targetID, active)
+		out, err = s.mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
 	return out, err
@@ -64,8 +64,8 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 // write and this merge together. The dedupe queue is the one that needs it: it
 // marks a candidate 'merged' and then merges, and two transactions there leave
 // a candidate claiming a merge that never happened (#1970).
-func mergeCompanyTx(
-	ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, active []fieldcatalog.Column,
+func (s *Store) mergeCompanyTx(
+	ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, ifVersion *int64, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
 	// A merge fills the survivor's legal_name from the record it retires
 	// (fillCompanySurvivorship), so it is a name writer like any other and owes
@@ -82,7 +82,7 @@ func mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, readCompanyMergeState)
+	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -106,6 +106,12 @@ func mergeCompanyTx(
 	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Company{}, err
+	}
+	if err := s.carryGrantsTx(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("carry the merged-away company's grants: %w", err)
+	}
+	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
 	}
 	filled, err := fillCompanySurvivorship(ctx, tx, src, tgt, targetIsPartner, tgtLock)
 	if err != nil {
@@ -181,6 +187,8 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 	fillString(p, fieldLegalName, tgt.LegalName, src.LegalName)
 	fillString(p, "description", tgt.Description, src.Description)
 	fillString(p, "industry", tgt.Industry, src.Industry)
+	// The source is already archived, which frees its unique slot on the address.
+	fillString(p, "linkedin_url", tgt.LinkedinUrl, src.LinkedinUrl)
 	// The postal address moves as ONE block, on the same rule as the contact
 	// merge (buildSurvivorshipPatch): a survivor with no address at all takes
 	// the retired record's whole address, and a survivor that has one keeps
@@ -206,18 +214,13 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 			return nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
 	}
-	// An inherited description arrives with its author still attached. Without
-	// this the survivor holds a contact's sentence that field_provenance says
-	// nobody wrote, and the next site read of the survivor replaces it — the
-	// merge would quietly strip a human's claim on words it did not change.
-	// The RETIRED record's author is carried across, not the contact running the
-	// merge: a merge moves a value, it does not author one.
-	if _, inherited := p.After()["description"]; inherited {
-		if err := carryDescriptionAuthor(ctx, tx,
-			ids.CompanyID{UUID: ids.UUID(src.Id)},
-			ids.CompanyID{UUID: ids.UUID(tgt.Id)}); err != nil {
-			return nil, err
-		}
+	// An inherited value arrives with its author still attached. Without this
+	// the survivor holds a sentence that field_provenance says nobody wrote, and
+	// the next site read replaces it. The retired record's author is carried,
+	// not the contact running the merge: a merge moves a value, it authors none.
+	if err := carryFieldAuthors(ctx, tx,
+		ids.CompanyID{UUID: ids.UUID(src.Id)}, ids.CompanyID{UUID: ids.UUID(tgt.Id)}, p.After()); err != nil {
+		return nil, err
 	}
 	return p.After(), nil
 }
@@ -226,9 +229,6 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 // write shape — audit row plus company.merged event in the one
 // transaction — then returns the reloaded survivor.
 func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, filled map[string]any, active []fieldcatalog.Column) (crmcontracts.Company, error) {
-	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
-	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", "company", sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
 		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filled})
@@ -296,15 +296,29 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// records carry program state the survivor's stands and the
 	// source's rides its archived company untouched (recoverable, never
 	// silently blended).
+	//
+	// THE MOVE IS UNFILTERED AND THE VERDICT IS NOT. A retired row still
+	// occupies the 1:1 slot, so the vacancy check has to see it or two rows
+	// would land on one company — but carrying it over says nothing about
+	// whether the survivor runs a partner programme. Typed from the row's mere
+	// existence, the survivor carries `partner` while its own partner endpoint
+	// answers 404, which is the half-state the relationship-type invariant
+	// exists to make impossible.
+	//
+	// Both arms read liveness the way GetPartner reads it. The moved row is
+	// judged from RETURNING rather than re-read: this statement's SELECT sees
+	// the pre-update snapshot, so a row it just moved is not on the target yet,
+	// and the second arm is the row the target already had.
 	var targetIsPartner bool
 	if err := tx.QueryRow(ctx, `
 		WITH moved AS (
 		  UPDATE partner SET company_id = $2
 		  WHERE company_id = $1
 		    AND NOT EXISTS (SELECT 1 FROM partner WHERE company_id = $2)
-		  RETURNING 1)
-		SELECT EXISTS (SELECT 1 FROM moved)
-		    OR EXISTS (SELECT 1 FROM partner WHERE company_id = $2)`,
+		  RETURNING archived_at)
+		SELECT EXISTS (SELECT 1 FROM moved WHERE `+livePartnerSQL("")+`)
+		    OR EXISTS (SELECT 1 FROM partner
+		                WHERE company_id = $2 AND `+livePartnerSQL("")+`)`,
 		sourceID, targetID).Scan(&targetIsPartner); err != nil {
 		return false, fmt.Errorf("move partner extension: %w", err)
 	}

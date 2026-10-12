@@ -2,16 +2,12 @@ import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { Avatar, Badge, Button } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import {
-  contactNamedBy,
-  type RecordContact,
-} from "../design-system/participants";
+import type { RecordContact } from "../design-system/participants";
 import {
   formatDayMonth,
   formatNumber,
@@ -19,9 +15,9 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
-import { contactTabRoute } from "./contacttab";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
 import { groupChronology } from "./timelinegroups";
+import { openContactTab } from "./worklist.return";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).
 //
@@ -115,7 +111,7 @@ export function ContactMemory({
       footer={
         <Button
           variant="link"
-          onClick={() => navigate(contactTabRoute(view.contact.id, "timeline"))}
+          onClick={() => openContactTab(view.contact.id, "timeline")}
         >
           {t("contact.memory.showAll")} <ChevronRight aria-hidden="true" />
         </Button>
@@ -316,7 +312,11 @@ function whoFor(
 ): Row["who"] {
   const counterparty = activity?.email_summary?.counterparty;
   if (!counterparty) return { name: contact.full_name, key: contact.id };
-  const named = contactNamedBy(counterparty, activity?.links, contact);
+  // The server's own answer for which contact the phrase names. Matching the
+  // phrase against this page's contact by NAME is what this replaces: it missed
+  // a contact renamed since capture, and could not tell two contacts sharing a
+  // name apart.
+  const named = activity?.email_summary?.counterparty_contact_id;
   return { name: counterparty, key: named ?? counterparty };
 }
 

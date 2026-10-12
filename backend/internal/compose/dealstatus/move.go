@@ -349,20 +349,29 @@ func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
 
 // lastContact is the newest exchange that has already happened. The timeline's
 // first rows can be scheduled meetings with future times, which are plans and
-// not contact.
+// not contact; a canceled or no-show meeting is no contact at all.
 func lastContact(f facts) (crmcontracts.Activity, bool) {
 	for _, a := range f.timeline {
-		if !a.OccurredAt.After(f.now) && relstrength.IsInteractionKind(string(a.Kind)) {
+		var status string
+		if a.MeetingStatus != nil {
+			status = string(*a.MeetingStatus)
+		}
+		if !a.OccurredAt.After(f.now) && relstrength.InteractionCounts(string(a.Kind), status) {
 			return a, true
 		}
 	}
 	return crmcontracts.Activity{}, false
 }
 
+// noContactYet is the claim an absent last contact supports. A note, a booked
+// meeting and a canceled one sit on the timeline without being contact, so
+// "nothing logged" would be false.
+const noContactYet = "No contact has taken place on this deal yet"
+
 func nextStepReason(f facts) string {
 	last, ok := lastContact(f)
 	if !ok {
-		return "Nothing has been logged on this deal yet — agree the next step."
+		return noContactYet + " — agree the next step."
 	}
 	return fmt.Sprintf("The last contact was %s and nothing is booked — agree the next step.",
 		since(f.now, last.OccurredAt))

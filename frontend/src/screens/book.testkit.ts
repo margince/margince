@@ -50,3 +50,24 @@ export const bookingHours = {
     timezone: "Europe/Berlin",
   },
 };
+
+export const bookingProposals: components["schemas"]["MeetingProposal"][] = [
+  {
+    id: "0198f011-aaaa-7000-8000-00000000000a",
+    subject: "Project discovery",
+    duration_minutes: 30,
+    options: bookingSlots,
+    url: "https://crm.example.test/#/book/proposal-personal-link",
+    created_at: "2026-09-28T10:00:00Z",
+    expires_at: "2026-10-05T10:00:00Z",
+  },
+  {
+    id: "0198f011-aaaa-7000-8000-00000000000b",
+    subject: "Intro call",
+    duration_minutes: 30,
+    options: [],
+    url: "https://crm.example.test/#/book/proposal-intro-link",
+    created_at: "2026-09-29T10:00:00Z",
+    expires_at: "2026-10-06T10:00:00Z",
+  },
+];

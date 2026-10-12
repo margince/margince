@@ -1,21 +1,13 @@
 import type { components } from "../api/schema";
-import { formatDateAbbrev, formatDateTime } from "../format/format";
+import { formatDateAbbrev } from "../format/format";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { Grounding, StandingTone } from "./record360";
 
 type Lead = components["schemas"]["Lead"];
 
-// Where a lead stands, as the call at the head of its page.
-//
-// A lead has no server verdict the way a deal has its standing card and a
-// contact its moment. What it has is a small set of FACTS the server already
-// decides — the ladder status, whether a first response went out and whether
-// it was on time, how the lead was closed — and every call here is one of
-// those facts said in a word, with the fact under it as what the call rests
-// on. Nothing is inferred from tone or from dates the server did not judge:
-// "your move" on a new lead is the server's own first-response clock, not this
-// page's reading of a silence.
+// Lead standing reports recorded status and responses; a missing response
+// does not establish that somebody asked us for anything.
 
 export type LeadStanding = {
   label: string;
@@ -74,9 +66,6 @@ export function leadStanding(
   zone: string,
 ): LeadStanding {
   const when = (at: string) => formatDateAbbrev(at, locale, zone);
-  // The first-response target is set in hours, so its deadline is an instant
-  // and prints with its time — the same precision the readings card gives it.
-  const instant = (at: string) => formatDateTime(at, locale, zone);
   // Merged away is read FIRST, because it is the one ending the ladder does
   // not record: the merge archives the loser and points it at the survivor
   // and leaves `status` exactly where it stood. A lead merged away while it
@@ -130,28 +119,8 @@ export function leadStanding(
       ],
     };
   }
-  // An open lead nobody has answered: the move is ours, and how loudly it is
-  // ours is the server's own first-response clock.
   if (!lead.first_response_at) {
-    return {
-      label: t("lead.standing.yourMove"),
-      tone: slaTone(lead.sla_state),
-      because: unansweredBecause(lead, t, instant),
-      restsOn: [
-        {
-          key: "captured",
-          quote: t("lead.standing.rests.captured", {
-            at: when(lead.created_at),
-          }),
-          from: t("lead.standing.rests.record"),
-        },
-        {
-          key: "response",
-          quote: t("lead.standing.rests.noResponse"),
-          from: t("lead.standing.rests.record"),
-        },
-      ],
-    };
+    return unansweredStanding(lead.status, t);
   }
   // Answered. Engaged means they came back or a meeting is on the calendar;
   // contacted means the ball is with them.
@@ -183,30 +152,20 @@ export function leadStanding(
   };
 }
 
-// How loud an unanswered lead is: the server's own three-state clock. No
-// clock at all — an installation with no first-response target — is simply our
-// move, without alarm.
-function slaTone(state: Lead["sla_state"]): StandingTone {
-  switch (state) {
-    case "breached":
-      return "danger";
-    case "at_risk":
-      return "warning";
-    default:
-      return "accent";
-  }
-}
-
-function unansweredBecause(
-  lead: Lead,
+function unansweredStanding(
+  status: "new" | "contacted" | "engaged",
   t: Translator,
-  instant: (at: string) => string,
-): string {
-  const clock = firstResponseClock(lead);
-  if (!clock) {
-    return t("lead.standing.noResponse");
-  }
-  return clock.state === "breached"
-    ? t("lead.standing.overdueSince", { at: instant(clock.deadline) })
-    : t("lead.standing.dueBy", { at: instant(clock.deadline) });
+): LeadStanding {
+  const engaged = status === "engaged";
+  const label = t(`lead.status.${status}`);
+  return {
+    label,
+    tone: engaged ? "accent" : "unknown",
+    because: t(
+      engaged ? "lead.standing.engagedBecause" : "lead.standing.noResponse",
+    ),
+    restsOn: [
+      { key: "status", quote: label, from: t("lead.standing.rests.ladder") },
+    ],
+  };
 }

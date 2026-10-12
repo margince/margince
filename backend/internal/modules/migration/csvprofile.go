@@ -10,6 +10,7 @@ import (
 	"io"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // The profile's shape, and why it is not just a header list (IEM-WIRE-8): a
@@ -38,7 +39,18 @@ var (
 	// Two columns cannot both own one target, and picking one silently drops
 	// the other's data.
 	ErrHeaderInvalid = errors.New("import source header is unusable")
+	// ErrNotUTF8 reports a file in another encoding, such as a Windows export
+	// saved as Latin-1, whose accents would land as broken text.
+	ErrNotUTF8 = errors.New("import source is not UTF-8")
 )
+
+// CheckUTF8 refuses a file that is not valid UTF-8, naming the fix.
+func CheckUTF8(body []byte) error {
+	if utf8.Valid(body) {
+		return nil
+	}
+	return fmt.Errorf("%w: the file is not saved as UTF-8; save it as CSV UTF-8 and upload it again", ErrNotUTF8)
+}
 
 // Column is one column of an uploaded file, described well enough to map it
 // without opening the file somewhere else.

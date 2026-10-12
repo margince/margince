@@ -130,6 +130,9 @@ func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 func (h importHandlers) profileAndStore(
 	ctx context.Context, object string, body []byte,
 ) (crmcontracts.ImportSourceProfile, error) {
+	if err := migration.CheckUTF8(body); err != nil {
+		return crmcontracts.ImportSourceProfile{}, importProblem(err)
+	}
 	profile, err := migration.ProfileCSV(bytes.NewReader(body), migration.ProfileRowLimit)
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, importProblem(err)
@@ -144,6 +147,12 @@ func (h importHandlers) profileAndStore(
 			"no workspace is bound to this request: %w", apperrors.ErrPermissionDenied)
 	}
 	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), importBlobKind, ids.NewV7().String())
+	// Declared before the bytes exist. This key is handed back to the client and only
+	// a submitted mapping makes it durable, so the ordinary outcome for an abandoned
+	// profile is an object nothing ever names — which until now stayed forever.
+	if err := migration.NewRunStore(h.db).RecordImportSourceIntent(ctx, key); err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
+	}
 	if err := h.blobs.Put(ctx, key, bytes.NewReader(body), int64(len(body)), "text/csv"); err != nil {
 		return crmcontracts.ImportSourceProfile{}, fmt.Errorf("storing the import source: %w", err)
 	}

@@ -16,7 +16,7 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { ContractForm } from "./contractform";
 import {
   ContractCancelModal,
@@ -126,15 +126,14 @@ export function CompanyContractsCard({
     queryKey: ["companyContracts", companyId, activeOnly],
     enabled: mayRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/contracts", {
-        params: {
-          path: { id: companyId },
-          query: activeOnly ? { under_contract_only: true } : {},
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies/{id}/contracts", {
+          params: {
+            path: { id: companyId },
+            query: activeOnly ? { under_contract_only: true } : {},
+          },
+        }),
+      );
       return data?.data ?? [];
     },
   });
@@ -273,12 +272,11 @@ function ContractRow({
   // held.
   const archive = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/contracts/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/contracts/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: () => {
       setAsking(false);

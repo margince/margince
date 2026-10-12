@@ -46,7 +46,7 @@
   color: var(--textPrimary);
   cursor: pointer;
 }
-.calendar-day:hover {
+.calendar-day:hover:not(:disabled) {
   background: var(--bgHover);
 }
 .calendar-day:focus-visible {
@@ -73,7 +73,15 @@
   background: var(--accent);
   color: var(--textOnAccentControl);
 }
-.calendar-day[aria-pressed="true"]:hover {
+.calendar-day[aria-pressed="true"]:hover:not(:disabled) {
   background: var(--accent);
   filter: brightness(1.05);
+}
+
+/* A day nothing can be chosen on: secondary ink and a line through it, so the
+   refusal is read as well as seen, and no hover that would promise a press. */
+.calendar-day:disabled {
+  color: var(--textSecondary);
+  text-decoration: line-through;
+  cursor: default;
 }

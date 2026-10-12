@@ -176,7 +176,7 @@ test("AC-meeting-brief-4: the brief is wide enough to prepare in", async ({
 }) => {
   await openBrief(page);
   const drawer = await boxOf(page, DRAWER);
-  // 52vw of the 1280 the suite pins. A narrower drawer put the close plan's
+  // The reading drawer's --drawerReadingWidth. A narrower drawer put the close plan's
   // three columns at 100px each, which is not a plan anybody can read.
   expect(drawer.width).toBeGreaterThan(600);
 });

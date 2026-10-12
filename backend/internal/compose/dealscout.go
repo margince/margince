@@ -29,6 +29,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -73,13 +74,26 @@ func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (D
 	if pass.Superseded, err = deals.SupersedeStaleSuggestionsTx(ctx, tx); err != nil {
 		return pass, err
 	}
+	pairs, err := contacts.OpenDuplicateCompanyPairsTx(ctx, tx)
+	if err != nil {
+		return pass, err
+	}
+	raisedTwice, err := deals.SupersedeDuplicateSuggestionsTx(ctx, tx, pairs)
+	if err != nil {
+		return pass, err
+	}
+	pass.Superseded += raisedTwice
 	items, err := readScoutEvidence(ctx, tx, now.Add(-dealScoutWindow), now, companyCap)
 	if err != nil {
 		return pass, err
 	}
 	for _, company := range byCompany(items) {
 		pass.Considered++
-		raised, err := deals.RecordSuggestionTx(ctx, tx, draftSuggestion(company))
+		draft := draftSuggestion(company)
+		if draft.DuplicateOf, err = contacts.OpenDuplicateCompaniesTx(ctx, tx, draft.CompanyID); err != nil {
+			return pass, err
+		}
+		raised, err := deals.RecordSuggestionTx(ctx, tx, draft)
 		if err != nil {
 			return pass, err
 		}

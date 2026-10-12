@@ -87,8 +87,7 @@ func TestAConnectorRefusesAWordTheVocabularyDoesNotOffer(t *testing.T) {
 			word := tc.word(t, env)
 
 			_, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), "gmail", &word)
-			var unknown *capturemod.UnknownContextTagError
-			if !errors.As(err, &unknown) {
+			if _, ok := errors.AsType[*capturemod.UnknownContextTagError](err); !ok {
 				t.Fatalf("setting %s word: err = %v, want an unknown-word refusal", tc.name, err)
 			}
 			// 422 on the wire, which is what a caller naming a word that is not

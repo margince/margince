@@ -12,6 +12,7 @@ import {
 } from "react";
 import { AskFromAddress } from "./app/askfromaddress";
 import { isPublicBookingId } from "./app/bookingroute";
+import { AuthSplash } from "./app/bootsplash";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
 import {
@@ -19,7 +20,7 @@ import {
   EXTENSION_SCREEN,
   findExtension,
 } from "./app/extensions";
-import { CREATE_ID } from "./app/nav";
+import { opensReservedPage } from "./app/nav";
 import {
   CommandPalette,
   useBuiltinCommands,
@@ -302,11 +303,11 @@ function ScreenPending() {
 }
 
 // Split out of the dispatch table purely to keep the deals list/detail split in
-// one place: `#/deals/new` carries CREATE_ID and is the LIST with its form open,
-// which is the same reading the shell's layout policy takes from that segment.
+// one place: `#/deals/new` is the reserved segment that is the LIST with its form
+// open, which is the same reading the shell's layout policy takes from it.
 function DealsRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
-  if (!id || id === CREATE_ID) {
-    return <DealsScreen startCreating={id === CREATE_ID} />;
+  if (!id || opensReservedPage({ screen: "deals", id })) {
+    return <DealsScreen startCreating={id !== undefined} />;
   }
   return id2 === "room" ? <DealRoomPage dealId={id} /> : <DealScreen id={id} />;
 }
@@ -446,10 +447,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // An unknown segment falls back to overview rather than rendering an
     // empty page: a mistyped link should land somewhere, not nowhere.
     contacts: ({ id, id2 }) =>
-      id ? (
-        <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
+      !id || opensReservedPage({ screen: "contacts", id }) ? (
+        <ContactsScreen importing={id !== undefined} />
       ) : (
-        <ContactsScreen />
+        <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
       ),
     companies: ({ id }) =>
       id ? <CompanyScreen id={id} /> : <CompaniesScreen />,
@@ -732,7 +733,7 @@ function UnavailableOrClaimable({
     // A successful claim provisions the installation, so the same /v1/me probe
     // that sent us here now answers — the boundary re-resolves rather than this
     // screen deciding where to go next.
-    return <SetupClaimScreen onClaimed={onRetry} />;
+    return <SetupClaimScreen onClaimed={onRetry} status={claimable.data} />;
   }
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
@@ -985,19 +986,6 @@ function RaillessFrame({ children }: Readonly<{ children: ReactNode }>) {
       <main className="main">
         <div className="scroll">{children}</div>
       </main>
-    </div>
-  );
-}
-
-function AuthSplash() {
-  const t = useT();
-  // A plain column. It used to borrow onboarding's `.ob-top`, which is that
-  // flow's sticky blurred header — so the splash drew a bar with a bottom
-  // border across a screen that has no header, and took that class's
-  // horizontal padding on top of the column's own.
-  return (
-    <div className="wrap narrow">
-      <EmptyState>{t("auth.checking")}</EmptyState>
     </div>
   );
 }

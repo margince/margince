@@ -20,11 +20,17 @@ import (
 // displayNameContract is a one-task contract with the name substituted in, so
 // each case below differs in exactly the field under test.
 func displayNameContract(display string) string {
+	return taskContract(display, `"Decides what a mail domain's website is."`)
+}
+
+// taskContract is a one-task contract with its name and summary substituted.
+func taskContract(display, summary string) string {
 	return `tiers: [alpha]
 degrade_to: {alpha: alpha}
 tasks:
   site_triage:
     display_name: ` + display + `
+    summary: ` + summary + `
     ladder: [alpha]
     execution_mode: background
     on_budget_exhausted: queue
@@ -96,6 +102,43 @@ func TestTheGeneratedLookupCarriesEveryDisplayName(t *testing.T) {
 		"var taskDisplayNames = map[Task]string{",
 		`TaskSiteTriage: "Website triage",`,
 		"func DisplayName(t Task) string",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the generated file does not carry %q", want)
+		}
+	}
+}
+
+// A task's summary is the sentence a settings screen shows behind its name, so
+// a task without one is a name the reader has to guess the meaning of.
+func TestATaskSummaryIsOneRequiredSentence(t *testing.T) {
+	for name, tc := range map[string]struct{ summary, says string }{
+		"missing":              {`""`, "summary is required"},
+		"surrounding space":    {`" Decides it. "`, "surrounding whitespace"},
+		"no closing full stop": {`"Decides what a website is"`, "ends with a full stop"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := parseContract([]byte(taskContract(`"Website triage"`, tc.summary)))
+			if err == nil || !strings.Contains(err.Error(), tc.says) {
+				t.Fatalf("summary %s parsed with %v, want a refusal saying %q", tc.summary, err, tc.says)
+			}
+		})
+	}
+}
+
+func TestTheGeneratedLookupCarriesEverySummary(t *testing.T) {
+	c, err := parseContract([]byte(displayNameContract(`"Website triage"`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := emitGo(c, "deadbeef")
+	if err != nil {
+		t.Fatalf("emitting: %v", err)
+	}
+	for _, want := range []string{
+		"var taskSummaries = map[Task]string{",
+		`TaskSiteTriage: "Decides what a mail domain's website is.",`,
+		"func Summary(t Task) string",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the generated file does not carry %q", want)

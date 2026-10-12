@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -13,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { DealsScreen } from "./deals";
+import { SEARCH_DEBOUNCE_MS } from "./listquery";
 
 // What narrowed the pipeline has to be readable ON the surface that is
 // narrowed.
@@ -200,7 +203,7 @@ describe("a saved view over the deals board", () => {
     expect(viewTab(VIEW_NAME).getAttribute("aria-pressed")).toBe("true");
     // The rail is the whole rail: the screen's own preset stands beside the
     // reader's view, unlit, so switching between them is one press either way.
-    expect(viewTab("Newest").getAttribute("aria-pressed")).toBe("false");
+    expect(viewTab("All").getAttribute("aria-pressed")).toBe("false");
 
     await user.click(screen.getByRole("button", { name: "Table" }));
     expect(viewTab(VIEW_NAME).getAttribute("aria-pressed")).toBe("true");
@@ -293,5 +296,57 @@ describe("a saved view over the deals board", () => {
 
     await user.click(screen.getByRole("button", { name: "Table" }));
     expect(await screen.findByRole("button", { name: "Display" })).toBeTruthy();
+  });
+});
+
+describe("the deals list narrows like every other record list", () => {
+  it("sends the search to the server and withholds the stage totals it cannot count", async () => {
+    const dealUrls: string[] = [];
+    vi.stubGlobal("fetch", stubBackend({ deals: [deal({})], dealUrls }));
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByPlaceholderText("Search"), {
+        target: { value: "retrofit" },
+      });
+      act(() => {
+        vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await waitFor(() =>
+      expect(dealUrls.some((url) => url.includes("q=retrofit"))).toBe(true),
+    );
+    // The per-stage report takes no search, so a total over the column would
+    // count deals the search is keeping off the board.
+    // One stage, so one column states it.
+    expect(
+      await screen.findAllByText(
+        "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("offers Mine beside All, and Mine asks for the viewer's own deals", async () => {
+    const dealUrls: string[] = [];
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", stubBackend({ deals: [deal({})], dealUrls }));
+    render(<DealsScreen />);
+    // The list opens unnarrowed, which is what All names, so All is lit.
+    await waitFor(() =>
+      expect(viewTab("All").getAttribute("aria-pressed")).toBe("true"),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Mine" }));
+
+    await waitFor(() =>
+      expect(dealUrls.at(-1)?.includes("owner_id=u-me")).toBe(true),
+    );
+    expect(viewTab("Mine").getAttribute("aria-pressed")).toBe("true");
+    expect(viewTab("All").getAttribute("aria-pressed")).toBe("false");
   });
 });

@@ -37,7 +37,7 @@ func (h Handlers) oauthToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.PostForm.Get("grant_type") {
-	case "authorization_code":
+	case oauthGrantAuthorizationCode:
 		h.tokenFromAuthCode(w, r)
 	case oauthRefreshToken:
 		h.tokenFromRefresh(w, r)
@@ -98,7 +98,6 @@ func (h Handlers) tokenFromRefresh(w http.ResponseWriter, r *http.Request) {
 		Scopes:            strings.Fields(r.PostForm.Get(oauthParamScope)),
 		Resource:          r.PostForm.Get(oauthParamResource),
 		CanonicalResource: h.mcpResource,
-		AccessTokenTTL:    h.accessTokenTTL(),
 	})
 	switch {
 	case errors.Is(err, errRefreshScope):
@@ -186,9 +185,13 @@ func (h Handlers) exchangeAuthCode(r *http.Request, code, verifier string) (issu
 		// The label names the client the consent was for; the grant is what
 		// actually binds the passport to it.
 		label := oauthPassportLabel(redeemed.ClientID)
+		ttl, err := oauthAccessTokenTTL(ctx, tx)
+		if err != nil {
+			return err
+		}
 		issued, err = mintPassport(ctx, tx,
 			Identity{UserID: redeemed.UserID, WorkspaceID: redeemed.WorkspaceID},
-			IssuePassportInput{Label: &label, Scopes: passportScopes, TTL: h.accessTokenTTL()}, &grantID)
+			IssuePassportInput{Label: &label, Scopes: passportScopes, TTL: &ttl}, &grantID)
 		return err
 	})
 	if err != nil {

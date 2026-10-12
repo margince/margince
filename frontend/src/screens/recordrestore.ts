@@ -17,9 +17,10 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import type { EntityKind } from "../app/entity";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 // The variables one press carries. A mutationFn takes what it needs rather
 // than closing over render state: the click belongs to the committed render,
@@ -38,24 +39,22 @@ export type RestorePress = Readonly<{
 // at all: last-write-wins is not a choice an undo may make on somebody else's
 // later edit.
 export function useRecordRestore(handlers: {
-  onSuccess: () => void;
+  onSuccess: (entry: components["schemas"]["AuditHistoryEntry"]) => void;
   onError: (error: unknown) => void;
 }) {
   return useMutation({
     mutationFn: async ({ kind, id, auditId, version }: RestorePress) => {
-      const { data, error } = await api.POST(
-        "/records/{entity_type}/{id}/history/{audit_id}/restore",
-        {
-          params: {
-            path: { entity_type: kind, id, audit_id: auditId },
-            ...ifMatch(version),
+      return unwrap(
+        await api.POST(
+          "/records/{entity_type}/{id}/history/{audit_id}/restore",
+          {
+            params: {
+              path: { entity_type: kind, id, audit_id: auditId },
+              ...ifMatch(version),
+            },
           },
-        },
+        ),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: handlers.onSuccess,
     onError: handlers.onError,

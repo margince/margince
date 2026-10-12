@@ -65,7 +65,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// to remove.
 	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
-		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{lists: srv.listsEnabled, reporting: srv.reportingEnabled},
+		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{lists: srv.listsEnabled},
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
@@ -80,6 +80,9 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	api := crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL: httpserver.BaseURL,
 		Middlewares: []crmcontracts.MiddlewareFunc{
+			// Innermost: a caller refused for who they are hears that before
+			// they hear their query was wrong.
+			refuseUnknownQueryEnum,
 			agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
 			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
 			// Outermost, so the measurement covers the admission gate and the
@@ -91,7 +94,6 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 			// them after chi has matched, which is what makes chiRoutePattern
 			// able to answer at all.
 			srv.httpMetrics.Measure(chiRoutePattern),
-			reportingAvailability(srv.reportingEnabled),
 		},
 		// Keep query/path/header parse failures on the problem+json path:
 		// the generated default writes err.Error() as text/plain, an
@@ -194,7 +196,10 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		Backlog:   func(ctx context.Context) (int64, error) { return events.OutboxBacklog(ctx, pool) },
 		Published: events.PublishedTotal,
 		Extra:     srv.writeMetricsSections,
-		JobStats:  jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
+		JobStats: fleetSections(
+			jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
+			backfillFleetSection(backfillFleetReader(pool)),
+		),
 	})))
 	// The anonymous public edges sit between the session middleware (which
 	// lets /v1/public/ through without session or workspace) and the
@@ -260,6 +265,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	}
 	mountProviderPushWebhooks(mux, srv, log)
 	mountInbound(mux, identitySvc, log)
+	mountSecurityTxt(mux, srv.securityTxt)
 	return mux
 }
 
@@ -360,6 +366,16 @@ func gateMetrics(token string, open bool, next http.HandlerFunc) http.HandlerFun
 func WithMetricsToken(token string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.metricsToken = token
+	}
+}
+
+// WithTrustedProxies names the reverse proxies whose X-Forwarded-For this
+// process believes when it keys a per-IP limit — see
+// httpserver.ResolveClientIP. Called unconditionally at boot; the empty set
+// keys every limit on the TCP peer.
+func WithTrustedProxies(trusted httpserver.TrustedProxies) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.trustedProxies = trusted
 	}
 }
 

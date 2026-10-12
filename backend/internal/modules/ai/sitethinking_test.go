@@ -152,7 +152,7 @@ func TestSiteThinkingLevelsNamesTheSitesServedOffTheBindingsLevel(t *testing.T) 
 	if got := SiteThinkingLevels(broker, TaskColdStart); !maps.Equal(got, want) {
 		t.Errorf("a broker rung asks the floor, got %v, want %v", got, want)
 	}
-	broker.Routing = &OpenRouterRouting{ReasoningEffort: "none"}
+	broker.Routing = &OpenRouterRouting{Reasoning: &OpenRouterReasoning{Effort: "none"}}
 	if got := SiteThinkingLevels(broker, TaskColdStart); got != nil {
 		t.Errorf("a broker rung whose binding sets its own effort reports %v", got)
 	}

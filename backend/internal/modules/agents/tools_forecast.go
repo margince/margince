@@ -117,6 +117,17 @@ type ForecastReadingsResult struct {
 	// CurrentCall is the standing call for this period, when somebody has made
 	// one. Absent means nobody has, which is a real answer.
 	CurrentCall json.RawMessage `json:"current_call,omitempty"`
+
+	// Snapshots are this period's frozen states, newest first — the ids
+	// forecast_movement takes. Empty is a real answer: nothing was frozen.
+	Snapshots []ForecastSnapshotRefResult `json:"snapshots"`
+}
+
+// ForecastSnapshotRefResult is one frozen state a movement can start or end at.
+type ForecastSnapshotRefResult struct {
+	ID      string `json:"id"`
+	TakenAt string `json:"taken_at"`
+	Trigger string `json:"trigger"`
 }
 
 // MovementRequest is one movement's arguments, validated by this surface's own
@@ -219,7 +230,10 @@ func (t forecastInputChecks) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t forecastInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t forecastInputChecks) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.read(ctx)
 }
@@ -278,7 +292,10 @@ func (t listInputChecks) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t listInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t listInputChecks) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.read(ctx)
 }
@@ -338,7 +355,10 @@ func (t dataCoverage) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t dataCoverage) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t dataCoverage) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.read(ctx)
 }

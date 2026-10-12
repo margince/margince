@@ -17,6 +17,7 @@ import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import {
+  currentClaim,
   entryLabel,
   type NavCounts,
   type NavLevelEntry,
@@ -224,7 +225,7 @@ function NavLevelRow({
       className={active ? "navitem t-body active" : "navitem t-body"}
       href={navEntryHref(level.path, entry)}
       aria-label={label}
-      aria-current={active ? (level.ancestor ? "true" : "page") : undefined}
+      aria-current={active ? currentClaim(level) : undefined}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
       onFocus={() => state.onTip(key)}

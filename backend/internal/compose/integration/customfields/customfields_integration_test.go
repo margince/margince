@@ -157,8 +157,7 @@ func TestCustomFieldCreate_UnclaimedColumnAnswersColumnTaken(t *testing.T) {
 	})
 
 	_, err := svc.Create(e.As(e.Rep1, nil, integration.CustomFieldAdminPerms), dateSpec("Renewal date"))
-	var taken *customfieldsmod.ColumnTakenError
-	if !errors.As(err, &taken) {
+	if _, ok := errors.AsType[*customfieldsmod.ColumnTakenError](err); !ok {
 		t.Fatalf("a column the table already carries must answer ColumnTakenError, got %v", err)
 	}
 	if !errors.Is(err, apperrors.ErrConflict) {

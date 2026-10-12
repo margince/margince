@@ -83,29 +83,20 @@
 /* The status ladder under the lead header: five steps on one line, the
    filled ones up to the current step, the terminal pair set apart. */
 
-/* The qualify and disqualify dialogs: three blocks, each its own section. */
-.lead-qualify {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: min(32rem, 90vw);
-}
-
+/* A section heading in the qualify dialog and the one sentence it introduces,
+   held closer than the dialog's rows so the pair reads as one. */
 .lead-qualify-block {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-/* Two fields per line only while two fit. The dialog is capped at
-   `min(32rem, 90vw)`, so on a phone the pair had ~160px each — a Select showing
-   a pipeline name and a label above it, in a box narrower than the name. The
-   fold is on the TRACK rather than in a media query because what runs out is
-   the dialog's width, not the viewport's. */
+/* Folds on the track, not a media query: what runs out is the dialog's width.
+   On a phone a paired Select is narrower than the pipeline name it shows. */
 .lead-qualify-deal {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .lead-qualify-deal > .field:nth-child(3) {

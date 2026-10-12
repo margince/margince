@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -195,8 +194,8 @@ func TestVoicedDraftInjectsTheProfileAndStampsTheVersion(t *testing.T) {
 }
 
 func TestVoicedDraftRetriesOnceOnAntiAIViolations(t *testing.T) {
-	violating := `{"subject":"Re: plan","body":"Here's the thing: it's not about tools, but transformation. What do you think?"}`
-	clean := `{"subject":"Re: plan","body":"The plan holds. We ship Monday."}`
+	violating := `{"subject":"Re: plan","body":"Hi Anna,\n\nHere's the thing: it's not about tools, but transformation. What do you think?"}`
+	clean := `{"subject":"Re: plan","body":"Hi Anna,\n\nThe plan holds. We ship Monday."}`
 	brain := &sequencedBrainStub{responses: []model.Response{
 		{Text: violating},
 		{Text: clean},
@@ -214,17 +213,17 @@ func TestVoicedDraftRetriesOnceOnAntiAIViolations(t *testing.T) {
 	if !strings.Contains(brain.requests[1].Messages[0].Content, "violated these hard rules") {
 		t.Fatal("the retry must name the violations")
 	}
-	if version == nil || draft.Body != "The plan holds. We ship Monday." {
+	if version == nil || draft.Body != "Hi Anna,\n\nThe plan holds. We ship Monday." {
 		t.Fatalf("draft = %+v version = %v", draft, version)
 	}
 }
 
 func TestVoicedDraftFallsBackToPlainWhenViolationsSurvive(t *testing.T) {
-	violating := `{"subject":"Re: plan","body":"Here's the thing: it's not about tools, but transformation. What do you think?"}`
+	violating := `{"subject":"Re: plan","body":"Hi Anna,\n\nHere's the thing: it's not about tools, but transformation. What do you think?"}`
 	brain := &sequencedBrainStub{responses: []model.Response{
 		{Text: violating},
 		{Text: violating},
-		{Text: `{"subject":"Re: plan","body":"A plain professional reply."}`},
+		{Text: `{"subject":"Re: plan","body":"Hi Anna,\n\nA plain professional reply."}`},
 	}}
 	drafter := replyDrafter{brain: brain}
 
@@ -236,7 +235,7 @@ func TestVoicedDraftFallsBackToPlainWhenViolationsSurvive(t *testing.T) {
 	if version != nil {
 		t.Fatalf("a fallback draft must not claim a voice version, got %v", version)
 	}
-	if draft.Body != "A plain professional reply." {
+	if draft.Body != "Hi Anna,\n\nA plain professional reply." {
 		t.Fatalf("draft = %+v, want the plain fallback", draft)
 	}
 	if len(brain.requests) != 3 {
@@ -249,7 +248,7 @@ func TestVoicedDraftFallsBackToPlainWhenViolationsSurvive(t *testing.T) {
 
 func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	brain := &sequencedBrainStub{responses: []model.Response{
-		{Text: `{"subject":"Re: plan","body":"A plain professional reply."}`},
+		{Text: `{"subject":"Re: plan","body":"Hi Anna,\n\nA plain professional reply."}`},
 	}}
 	drafter := replyDrafter{brain: brain}
 	_, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
@@ -358,9 +357,9 @@ func TestAnEnglishThreadIsDraftedInEnglishUnderAGermanVoice(t *testing.T) {
 	}
 
 	if _, err := drafter.complete(context.Background(), replyActivityData{
-		Envelope: draftfloor.Envelope{Language: "en", ConversationState: "fresh"},
-		Subject:  "Outstanding invoice",
-		Body:     "Hello, I am writing about the invoice outstanding since December.",
+		Language: "en", ConversationState: "fresh",
+		Subject: "Outstanding invoice",
+		Body:    "Hello, I am writing about the invoice outstanding since December.",
 	}, germanVoice); err != nil {
 		t.Fatalf("complete: %v", err)
 	}
@@ -393,13 +392,13 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	// The violation is a canned opener, which the sanitizer does NOT remove —
 	// so the fallback below is reached and the case pins the log rather than
 	// accidentally proving the sanitizer's behaviour.
-	violating := `{"subject":"Re: plan","body":"Here's the thing: it's not about tools, but transformation. What do you think?"}`
+	violating := `{"subject":"Re: plan","body":"Hi Anna,\n\nHere's the thing: it's not about tools, but transformation. What do you think?"}`
 	retryFailed := errors.New("upstream model refused the retry")
 	brain := &sequencedBrainStub{
 		responses: []model.Response{
 			{Text: violating},
 			{},
-			{Text: `{"subject":"Re: plan","body":"A plain professional reply."}`},
+			{Text: `{"subject":"Re: plan","body":"Hi Anna,\n\nA plain professional reply."}`},
 		},
 		errs: []error{nil, retryFailed, nil},
 	}
@@ -420,7 +419,7 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	// reader whether the draft it kept was one violation off or twelve.
 	first := replyDraft{
 		Subject: "Re: plan",
-		Body:    "Here's the thing: it's not about tools, but transformation. What do you think?",
+		Body:    "Hi Anna,\n\nHere's the thing: it's not about tools, but transformation. What do you think?",
 	}
 	wantCount := len(voiceDraftViolations(first))
 	if wantCount == 0 {
@@ -434,7 +433,7 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	if version != nil {
 		t.Errorf("a fallback draft must not claim a voice version, got %v", version)
 	}
-	if draft.Body != "A plain professional reply." {
+	if draft.Body != "Hi Anna,\n\nA plain professional reply." {
 		t.Errorf("draft = %+v, want the plain fallback", draft)
 	}
 	if len(brain.requests) != 3 {
@@ -455,5 +454,87 @@ func TestARetryThatDidNotClearNamesTheDraftItServed(t *testing.T) {
 			!strings.Contains(line, `phrase="as discussed"`) {
 			t.Errorf("served=%v logged %q, want %s with the rule and phrase", served, line, want)
 		}
+	}
+}
+
+// Both model attempts open without a greeting: the reply is served with the
+// floor's greeting in the draft's language, by the recipient's name.
+func TestAnUngreetedReplyIsServedWithTheFloorGreeting(t *testing.T) {
+	ungreeted := model.Response{Text: `{"subject":"Re: Termin","body":"Seit unserem Treffen sind zehn Tage vergangen.\n\nPasst Mittwoch?"}`}
+	brain := &sequencedBrainStub{responses: []model.Response{ungreeted, ungreeted}}
+	drafter := replyDrafter{brain: brain}
+	data := replyActivityData{
+		Language: "de", ConversationState: "weeks", SilenceDays: "10",
+		Recipient: "Dietmar", Subject: "Termin", Thread: "inbound_mail",
+	}
+
+	draft, _, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(), data, draftvoice.Context{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(brain.requests) != 2 {
+		t.Fatalf("calls = %d, want the first attempt and one retry", len(brain.requests))
+	}
+	if want := "Hallo Dietmar,\n\nSeit unserem Treffen"; !strings.HasPrefix(draft.Body, want) {
+		t.Errorf("body = %q, want it to open %q", draft.Body, want)
+	}
+}
+
+// The greeting is added after the model's body passed its bound, so the served
+// draft is held to the bound again: a body the greeting carries past it is
+// refused, which sends the caller to its deterministic draft, while one the
+// greeting brings exactly to it is served. Every lane that greets is held.
+func TestAGreetingThatCarriesTheBodyPastItsBoundIsRefused(t *testing.T) {
+	data := replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna", Intent: "confirm the plan"}
+	line := strings.TrimSuffix(draftcheck.EnsureGreeting("x", data.Envelope, data.Recipient, ""), "x")
+	lanes := map[string]func(*replyBrainStub) (replyDraft, error){
+		"reply": func(brain *replyBrainStub) (replyDraft, error) {
+			draft, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), ids.NewV7(), data, draftvoice.Context{})
+			return draft, err
+		},
+		"voiced reply": func(brain *replyBrainStub) (replyDraft, error) {
+			draft, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), ids.NewV7(), data, testVoiceContext())
+			return draft, err
+		},
+		"first message": func(brain *replyBrainStub) (replyDraft, error) {
+			return replyDrafter{brain: brain}.completeFirstVoiced(context.Background(), data, draftvoice.Context{})
+		},
+	}
+	for lane, draft := range lanes {
+		for bodyRunes, wantServed := range map[int]bool{
+			replyDraftBodyMaxRunes:                         false,
+			replyDraftBodyMaxRunes - len([]rune(line)) + 1: false,
+			replyDraftBodyMaxRunes - len([]rune(line)):     true,
+		} {
+			body := strings.Repeat("b", bodyRunes)
+			brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: plan","body":"` + body + `"}`}}
+			served, err := draft(brain)
+			if wantServed && (err != nil || served.Body != line+body) {
+				t.Errorf("%s, %d-rune body: err = %v, want it served greeted at the bound", lane, bodyRunes, err)
+			}
+			if !wantServed && err == nil {
+				t.Errorf("%s, %d-rune body: served %d runes past the %d-rune bound", lane, bodyRunes,
+					len([]rune(served.Body)), replyDraftBodyMaxRunes)
+			}
+		}
+	}
+}
+
+// The greeting repair runs after the voice floor, so a canned opener the model
+// wrote is still caught at the start of its own text rather than hidden behind
+// the floor's greeting line.
+func TestAGreetingRepairDoesNotHideACannedOpenerFromTheVoiceFloor(t *testing.T) {
+	violating := model.Response{Text: `{"subject":"Re: plan","body":"Here's the thing: the plan holds and we ship on Monday."}`}
+	plain := model.Response{Text: `{"subject":"Re: plan","body":"Hi Anna,\n\nA plain professional reply."}`}
+	brain := &sequencedBrainStub{responses: []model.Response{violating, violating, violating, plain}}
+	drafter := replyDrafter{brain: brain}
+
+	draft, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
+		replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna"}, testVoiceContext())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != nil || draft.Body != "Hi Anna,\n\nA plain professional reply." {
+		t.Errorf("served %q (voice version %v), want the plain fallback", draft.Body, version)
 	}
 }

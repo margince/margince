@@ -46,6 +46,11 @@ func (h Handlers) ListLists(w http.ResponseWriter, r *http.Request, params crmco
 		v := string(*params.ListType)
 		filter.ListType = &v
 	}
+	if params.Sharing != nil {
+		for _, sharing := range *params.Sharing {
+			filter.Sharing = append(filter.Sharing, string(sharing))
+		}
+	}
 	if params.IncludeArchived != nil && *params.IncludeArchived {
 		filter.Archived = storekit.IncludeArchived
 	}
@@ -97,6 +102,15 @@ func (h Handlers) UpdateList(w http.ResponseWriter, r *http.Request, id crmcontr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	for _, err := range []error{
+		httperr.RequireSent(r, versionField, "name the version you read, so a change nobody saw is not overwritten"),
+		httperr.RefuseNull(r, nameField),
+	} {
+		if err != nil {
+			writeErr(w, r, err)
+			return
+		}
+	}
 	cleared := httperr.ClearedFields(r)
 	in := UpdateListInput{
 		Name: req.Name, Purpose: req.Purpose, IfVersion: &req.Version,
@@ -138,8 +152,23 @@ func (h Handlers) ListListMembers(w http.ResponseWriter, r *http.Request, id crm
 		return
 	}
 	limit, cursor := pageParams(params.Limit, params.Cursor)
-	page, err := h.store.MembersPage(r.Context(), pathID[ids.ListKind](id), limit, cursor)
+	read := MemberRead{Limit: limit, Cursor: cursor}
+	if params.EntityId != nil {
+		for _, recordID := range *params.EntityId {
+			read.Only = append(read.Only, ids.UUID(recordID))
+		}
+	}
+	page, err := h.store.MembersPage(r.Context(), pathID[ids.ListKind](id), read)
 	respond(w, r, http.StatusOK, page, err)
+}
+
+// GetRecordLists serves GET /records/{entity_type}/{entity_id}/lists.
+func (h Handlers) GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityID openapi_types.UUID) {
+	if h.listsOff(w, r) {
+		return
+	}
+	found, err := h.store.RecordListsFor(r.Context(), entityType, ids.UUID(entityID))
+	respond(w, r, http.StatusOK, crmcontracts.RecordListsResponse{Data: found.Lists, Truncated: found.Truncated}, err)
 }
 
 // AddListMember serves POST /lists/{id}/members.
@@ -164,11 +193,21 @@ func (h Handlers) RemoveListMember(w http.ResponseWriter, r *http.Request, id cr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.RemoveMember(r.Context(), pathID[ids.ListKind](id), memberChange(req)); err != nil {
-		writeErr(w, r, err)
+	removed, err := h.store.RemoveMember(r.Context(), pathID[ids.ListKind](id), memberChange(req))
+	respond(w, r, http.StatusOK, crmcontracts.RemovalUndo{AuditId: openapi_types.UUID(removed)}, err)
+}
+
+// RestoreListMember serves POST /lists/{id}/members/restore.
+func (h Handlers) RestoreListMember(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.listsOff(w, r) {
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	var req crmcontracts.RemovalUndo
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	member, err := h.store.RestoreMemberRemoval(r.Context(), pathID[ids.ListKind](id), ids.UUID(req.AuditId))
+	respond(w, r, http.StatusOK, wireMember(member), err)
 }
 
 // ExplainListMember serves GET /lists/{id}/members/{recordId}/why.
@@ -188,6 +227,15 @@ func (h Handlers) ListListHistory(w http.ResponseWriter, r *http.Request, id crm
 	limit, cursor := pageParams(params.Limit, params.Cursor)
 	page, err := h.store.HistoryPage(r.Context(), pathID[ids.ListKind](id), limit, cursor)
 	respond(w, r, http.StatusOK, page, err)
+}
+
+// VisitList serves POST /lists/{id}/visit.
+func (h Handlers) VisitList(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.listsOff(w, r) {
+		return
+	}
+	visit, err := h.store.VisitView(r.Context(), pathID[ids.ListKind](id))
+	respond(w, r, http.StatusOK, visit, err)
 }
 
 // memberChange is a wire membership change as the membership writer takes it. The

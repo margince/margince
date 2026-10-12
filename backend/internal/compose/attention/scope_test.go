@@ -191,15 +191,15 @@ func TestAPageOfTheReadersOwnIsNotShortenedByColleaguesRows(t *testing.T) {
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	at := []crmcontracts.AttentionItem{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		at = append(at, dealItem("theirs-"+string(rune('a'+i)), colleague))
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		at = append(at, dealItem("mine-"+string(rune('a'+i)), reader))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: &at}
 
-	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 3, waitingRead{}, worklistCursor{}, nil)
 
 	if len(out.Queue) != 3 {
 		t.Fatalf("a reader with three of their own rows got a page of %d", len(out.Queue))
@@ -451,7 +451,7 @@ func TestOpeningAnothersQueueCarriesTheirWorkAndNotTheReadersOwn(t *testing.T) {
 	}
 	reader := &Service{taskOwner: lena, taskScope: TasksOwnedBy}
 
-	out := reader.worklistFrom(context.Background(), day, scopeMine, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	out := reader.worklistFrom(context.Background(), day, scopeMine, "", 25, waitingRead{}, worklistCursor{}, nil)
 
 	var ids []string
 	for _, row := range out.Queue {

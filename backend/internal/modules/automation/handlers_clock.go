@@ -23,9 +23,8 @@ package automation
 // below, anchorReminderTaskEffect in taskeffect.go) exist so that
 // difference is the ONLY thing their Match/Plan/IdempotencyKey bodies
 // spell out. renewal_reminder rides a different anchor (a custom
-// renewal-date field's value, not a last-touch timestamp) and its own
-// doc below explains why TimeScanner has no candidate source wired for
-// it yet.
+// renewal-date field's value, not a last-touch timestamp), scanned by
+// dateFieldScanHandlers in timescan.go.
 
 import (
 	"context"

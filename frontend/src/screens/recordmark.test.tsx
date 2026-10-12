@@ -8,12 +8,8 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { meshOf, meshStyle } from "../design-system/avatarmesh";
 import { LocaleProvider } from "../i18n";
 import { CompaniesScreen, CompanyScreen } from "./companies";
-import {
-  company,
-  company360,
-  jsonResponse,
-  stubFetch,
-} from "./company.fixtures";
+import { company, company360, jsonResponse } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 import { mount, view } from "./contactpage.testkit";
 import { WriteToHost } from "./writeto";
 
@@ -136,12 +132,24 @@ describe("a record's mark", () => {
   });
 
   it("is the same on a contact's page and on the message that contact sent", async () => {
-    const faces = await facesOnThread(view.contact.full_name);
+    const faces = await facesOnThread(view.contact.full_name, view.contact.id);
     expect(faces).toEqual([
       meshKeyedOn(view.contact.id),
       meshKeyedOn(view.contact.id),
     ]);
     expect(headMesh()).toBe(meshKeyedOn(view.contact.id));
+  });
+
+  // A CONTACT RENAMED SINCE CAPTURE keeps one face. The phrase is frozen at the
+  // words the message carried, so matching it against the contact's name today
+  // finds nothing and draws a second colour for the same human. The id the
+  // server resolved does not go stale.
+  it("keys on the contact when the phrase holds the name they had then", async () => {
+    const faces = await facesOnThread("Dana Lang", view.contact.id);
+    expect(faces).toEqual([
+      meshKeyedOn(view.contact.id),
+      meshKeyedOn(view.contact.id),
+    ]);
   });
 
   // Filed against this contact, sent by somebody else: the phrase names the
@@ -161,9 +169,10 @@ const danaCarded = { ...dana, full_name: "Dana Buyer-Lang" };
 type Activity = components["schemas"]["Activity"];
 
 // Two inbound messages filed against the page's contact, one conversation,
-// each naming its sender with the server's phrase: the thread card draws each
-// sender's face from it.
-const thread = (sender: string): Activity[] =>
+// each naming its sender with the server's phrase AND the contact that phrase
+// resolved to. The card draws the face from the id: a sender who is nobody here
+// carries none, and the phrase is then all there is to key on.
+const thread = (sender: string, senderContactId?: string): Activity[] =>
   ["m-2", "m-1"].map((id, at) => ({
     id,
     kind: "email",
@@ -184,6 +193,7 @@ const thread = (sender: string): Activity[] =>
       subject: "Fleet renewal",
       preview: "Can you hold the price?",
       counterparty: sender,
+      counterparty_contact_id: senderContactId,
       direction: "inbound",
       display_status: "team",
       move: "needs_reply",
@@ -191,10 +201,13 @@ const thread = (sender: string): Activity[] =>
     },
   }));
 
-async function facesOnThread(sender: string): Promise<string[]> {
+async function facesOnThread(
+  sender: string,
+  senderContactId?: string,
+): Promise<string[]> {
   mount("timeline", {
     ...view,
-    activities: { data: thread(sender), page: noMore },
+    activities: { data: thread(sender, senderContactId), page: noMore },
   });
   await screen.findByRole("heading", {
     level: 1,

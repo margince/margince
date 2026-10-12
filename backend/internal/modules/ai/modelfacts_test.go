@@ -45,11 +45,9 @@ func TestACatalogReadInFlightIsJoinedNotRepeated(t *testing.T) {
 	failures := make([]error, 3)
 	var wg sync.WaitGroup
 	for i := range answers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			answers[i], failures[i] = facts.get(context.Background(), ask)
-		}()
+		})
 	}
 	close(release)
 	wg.Wait()
@@ -69,7 +67,7 @@ func TestAModelListPastItsBoundIsRefused(t *testing.T) {
 		_, _ = w.Write([]byte(strings.Repeat(" ", listBodyLimit+1)))
 	}))
 	t.Cleanup(srv.Close)
-	_, err := getListBody(context.Background(), srv.Client(), "openai-compat", srv.URL, func(*http.Request) {})
+	_, err := getListBody(context.Background(), srv.Client(), "openai-compat", srv.URL, signedBy(func(*http.Request) {}))
 	if err == nil || !strings.Contains(err.Error(), "larger than") {
 		t.Fatalf("an oversized list = %v, want it refused as too large", err)
 	}

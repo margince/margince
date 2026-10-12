@@ -5,10 +5,9 @@
 
 package gates
 
-// The workflow.Handler read/write contract as a fitness function
-// (ports/workflow.Handler): Match is a pure predicate and Plan computes
-// the typed Effect WITHOUT applying it — "this is what makes dry-run and
-// diff preview possible". Only Apply writes, and only through
+// A workflow.Handler's Match is a pure predicate and its Plan computes the
+// typed Effect without applying it, which is what makes dry-run and diff
+// preview possible. Only Apply writes, and only through
 // ApplyActions / the injected seams. A Match or Plan that mutates breaks
 // preview (a dry-run would have a side effect) AND the run lifecycle: a
 // pre-Apply failure is claimed terminal (automation/engine_run.go), so a

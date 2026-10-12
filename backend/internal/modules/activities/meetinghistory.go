@@ -21,6 +21,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -102,7 +103,7 @@ func recordMeetingTransition(ctx context.Context, tx pgx.Tx, in meetingTransitio
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return fmt.Errorf("activities: recording a meeting transition without an actor")
+		return errors.New("activities: recording a meeting transition without an actor")
 	}
 	// The pair travels together or not at all — the column CHECK says so, and
 	// half a key would index a transition nothing can match on replay.
@@ -118,7 +119,7 @@ func recordMeetingTransition(ctx context.Context, tx pgx.Tx, in meetingTransitio
 	recordedParameter := fmt.Sprintf("$%d", len(args))
 	_, err := tx.Exec(ctx, `INSERT INTO activity_meeting_history
         (activity_id,status,scheduled_start,actor,source_system,source_id,host_id_at_change,effective_at,customer_eligible_at_change)
-        SELECT `+placeholders+`,a.host_user_id,COALESCE(`+recordedParameter+`::timestamptz,now()),EXISTS(SELECT 1 FROM activity_link al WHERE al.activity_id=a.id AND (al.contact_id IS NOT NULL OR al.lead_id IS NOT NULL OR al.company_id IS NOT NULL)) FROM activity a WHERE a.id=`+activityParameter, args...)
+        SELECT `+placeholders+`,a.host_user_id,COALESCE(`+recordedParameter+`::timestamptz,now()),`+CustomerMeetingSQL("a")+` FROM activity a WHERE a.id=`+activityParameter, args...)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			// This exact connector event is already on record.

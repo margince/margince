@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// A provider handler set that can queue a RUN must carry the pool its
+// A provider handler set that can queue a run must carry the pool its
 // visibility check reads through.
 //
 // The check refuses a paid lookup on a contact the caller cannot open. It

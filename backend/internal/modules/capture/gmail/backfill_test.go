@@ -213,19 +213,44 @@ func TestBackfillPageWithoutAReporterWalksNormally(t *testing.T) {
 
 func TestBackfillPageStopsWithoutAdvancingOnFetchFault(t *testing.T) {
 	api := &pagedAPI{pages: map[string][]string{"": {"m1@mail.gmail.com"}}}
-	api.getErr = errors.New("transient 503")
+	api.getErr = ErrUnreachable
 	c := New(fakeOAuth{access: "access-1"}, api)
 	if _, err := c.BackfillPage(context.Background(), authBytes(t), time.Now(), "", &recordingSink{}); err == nil {
 		t.Fatal("a fetch fault must stop the page so the committed token is retried")
 	}
 }
 
-func TestBackfillPageSurfacesSinkFault(t *testing.T) {
-	api := &pagedAPI{pages: map[string][]string{"": {"m1@mail.gmail.com"}}}
-	api.raws = map[string][]byte{"m1@mail.gmail.com": rawMsg("m1@mail.gmail.com", "alice@acme.com")}
+func TestBackfillPageWalksPastAMessageTheCaptureRefuses(t *testing.T) {
+	// One message the capture cannot write is that message's problem: the page
+	// counts it as failed and carries on, so the import is not ended by it.
+	api := &pagedAPI{pages: map[string][]string{"": {"m1@mail.gmail.com", "m2@mail.gmail.com"}}}
+	api.raws = map[string][]byte{
+		"m1@mail.gmail.com": rawMsg("m1@mail.gmail.com", "alice@acme.com"),
+		"m2@mail.gmail.com": rawMsg("m2@mail.gmail.com", "bob@acme.com"),
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &refusingSink{refuse: map[string]bool{"m1@mail.gmail.com": true}}
+	res, err := c.BackfillPage(context.Background(), authBytes(t), time.Now(), "", sink)
+	if err != nil {
+		t.Fatalf("one refused message ended the page: %v", err)
+	}
+	if res.Failed != 1 || res.Captured != 1 || res.Skipped != 0 || res.Scanned != 2 {
+		t.Fatalf("page = %+v, want 1 failed and 1 captured of 2", res)
+	}
+}
+
+func TestBackfillPageEndsWhenMessagesKeepFailing(t *testing.T) {
+	// A run of failures is the database or the capture, not the messages, and
+	// walking past them would skip mail that captures fine later.
+	ids := []string{"m1@mail.gmail.com", "m2@mail.gmail.com", "m3@mail.gmail.com", "m4@mail.gmail.com", "m5@mail.gmail.com", "m6@mail.gmail.com"}
+	api := &pagedAPI{pages: map[string][]string{"": ids}}
+	api.raws = map[string][]byte{}
+	for _, id := range ids {
+		api.raws[id] = rawMsg(id, "alice@acme.com")
+	}
 	c := New(fakeOAuth{access: "access-1"}, api)
 	if _, err := c.BackfillPage(context.Background(), authBytes(t), time.Now(), "", failingSink{err: errors.New("db down")}); err == nil {
-		t.Fatal("a real sink write fault must stop the page, not be counted as skipped")
+		t.Fatal("five failures in a row must stop the page so the committed token is retried")
 	}
 }
 

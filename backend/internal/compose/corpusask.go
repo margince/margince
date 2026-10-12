@@ -347,12 +347,17 @@ func (e *corpusAskEngine) ask(w http.ResponseWriter, r *http.Request, id crmcont
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	state, passages, err := e.store.Retrieve(r.Context(), ids.UUID(id), req.Question, e.embedder)
+	question, err := knowledge.RequireQuestion(req.Question)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	state, passages, err := e.store.Retrieve(r.Context(), ids.UUID(id), question, e.embedder)
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return
 	}
-	answer := AnswerCorpus(r.Context(), e.lane, state, req.Question, passages,
+	answer := AnswerCorpus(r.Context(), e.lane, state, question, passages,
 		identity.BaseLanguageForPrompt(r.Context(), e.pool), e.log)
 	httperr.WriteJSON(w, http.StatusOK, answer)
 }
@@ -365,6 +370,14 @@ func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger
 		if embedder == nil {
 			embedder = unboundEmbedder{}
 		}
+		if log != nil {
+			identity, _ := embedder.EmbedIdentity()
+			knowledge.WarnIfUngated(log, identity)
+		}
+		s.module = s.module.WithEmbedIdentity(func() string {
+			identity, _ := embedder.EmbedIdentity()
+			return identity
+		})
 		engine := &corpusAskEngine{
 			store:    knowledge.NewStore(InstallationDB(pool)),
 			embedder: embedder,

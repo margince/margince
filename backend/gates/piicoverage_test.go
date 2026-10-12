@@ -5,18 +5,20 @@
 
 package gates
 
-// PII reach as a fitness function. tableownership_test.go proves a package
-// only writes tables it owns; it says NOTHING about whether Art. 17 erasure
-// reaches every table that holds a data subject. Without that guarantee the
-// activity timeline and attachments survive an erasure verbatim, still
-// full-text searchable. This test closes it: piiTables is the explicit
-// registry of PII-bearing tables, and every entry must be a WRITE target of
-// privacy/erasure.go (so erasure reaches it) and — unless it is an opaque
-// derived artifact — a READ target of privacy/sar.go (so an Art. 15 SAR
-// discloses it). A new PII table that skips erasure or SAR fails here instead
-// of shipping a silent leak.
+// Every table registered as holding personal data is reached by Art. 17 erasure
+// and, unless it is an opaque derived artifact, by the Art. 15 access report.
+// tableownership_test.go proves a package only writes tables it owns; it says
+// NOTHING about whether Art. 17 erasure reaches every table that holds a data
+// subject. Without that guarantee the activity timeline and attachments survive
+// an erasure verbatim, still full-text searchable. This test closes it:
+// piiTables is the explicit registry of PII-bearing tables, and every entry
+// must be a WRITE target of privacy/erasure.go (so erasure reaches it) and —
+// unless it is an opaque derived artifact — a READ target of privacy/sar.go (so
+// an Art. 15 SAR discloses it). A new PII table that skips erasure or SAR fails
+// here instead of shipping a silent leak.
 
 import (
+	"maps"
 	"regexp"
 	"sort"
 	"strings"
@@ -175,6 +177,8 @@ var piiTables = map[string]piiHandling{
 			// rather than the row. Same ruling as reply_verdict on the sibling
 			// eraser: a conclusion drawn from content does not outlive it.
 			"language = NULL",
+			// The classifier's reading of the reply, for the same reason.
+			"reply_verdict = NULL",
 		},
 		// Columns a sibling eraser clears and the sweep deliberately does not.
 		// counterparty_email and the channel identity are the same ruling: the
@@ -291,6 +295,13 @@ var piiTables = map[string]piiHandling{
 	// over this table passes this gate silently, which is the cost of leaving
 	// it open and is named here so the next reader is not surprised by it.
 	"conversation_claim": {erasureWrite: true},
+	// A stage-evidence snippet quotes the message a claim about a deal was read
+	// from, so it goes when the message's text goes. The row stays.
+	//
+	// Art. 15 hands it back on the reply verdicts' ground. Whether the words
+	// agreed or proposed, and how sure the writer was, is a conclusion drawn
+	// from what the subject wrote.
+	"deal_stage_evidence": {erasureWrite: true, sarRead: true},
 	// A handoff names the subject it was about, and its note is what one seat
 	// wrote about them to another. The judgement — accepted, or refused for this
 	// reason — is a decision contacts made about that contact, the same holding
@@ -305,6 +316,9 @@ var piiTables = map[string]piiHandling{
 	// archive runs to remove them, and the erasure deletes both itself.
 	"list_member":       {erasureWrite: true, sarRead: true},
 	"list_member_event": {erasureWrite: true, sarRead: true},
+	// A Live List's last check says which filters picked the subject out and
+	// since when; erasure removes them from it before the next check could.
+	"list_live_member": {erasureWrite: true, sarRead: true},
 	// The capture disposition ledger keys on the subject's own address and
 	// keeps the display name their mail arrived with (CAP-DDL-8).
 	"capture_pending_counterparty": {erasureWrite: true, sarRead: true},
@@ -414,6 +428,20 @@ var piiTables = map[string]piiHandling{
 	// reason: a contact asking what is held about them is owed the record that
 	// they said stop, and when.
 	"communication_suppression": {erasureWrite: true, sarRead: true},
+	// A rep's standing vouch that a machine-level refusal may be overruled.
+	// Not consent, not a lawful basis, but a human decision on the record
+	// about this subject — erased with them like the suppression above, and
+	// disclosed for the same reason: a subject is owed the record that a
+	// human decided to write to them anyway, and why.
+	//
+	// The retention sweep deletes it outright, by contact in retentionactions.go
+	// and by lead in retention_leadrecord.go, so each arm is declared and a
+	// sweep that stops deleting either one fails here.
+	"communication_override": {
+		erasureWrite:   true,
+		sarRead:        true,
+		retentionPurge: []string{"contact_id = $1", "lead_id = $1"},
+	},
 
 	"preference_token": {erasureWrite: true, sarForbidden: true},
 
@@ -494,6 +522,7 @@ var sarAssemblyFiles = []string{
 var sarReachedButNotAssembly = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/scheduledsends.go":    "reached because sarmessages.go calls loweredAddresses, a string helper living here. Its own SQL is the queued-send scrub's, on the erasure path",
 	"internal/modules/privacy/erasure_approvals.go": "reached because sarmessages.go calls addressPatterns, likewise. Its SQL erases staged proposals and discloses nothing",
+	"internal/modules/privacy/erasure_channels.go":  "reached because sarjudgements.go calls channelIdentityPairs, a pairing helper living here. Its SQL reads and erases the subject's channel identities on the erasure path",
 	"internal/modules/privacy/erasure_consent.go":   "reached because sarcommunication.go calls lowerAll, likewise. Its SQL revokes consent capabilities, which are other contacts' secrets rather than this subject's data",
 })
 
@@ -577,9 +606,7 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	// text, for the reason assembledSweepTargets gives.
 	assembled := map[string]string{}
 	for _, path := range retentionSweepFiles {
-		for table, fragment := range assembledSweepTargets(t, path) {
-			assembled[table] = fragment
-		}
+		maps.Copy(assembled, assembledSweepTargets(t, path))
 		for _, lit := range sqlLiterals(t, path) {
 			// Before the split, whether the split can be trusted. A quoting
 			// form the scan cannot track leaves it inverted, and an inverted

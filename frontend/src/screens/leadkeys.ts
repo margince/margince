@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { QueryKey } from "@tanstack/react-query";
+import { derivedRecordKeys } from "./activitykeys";
 
 // Which cached reads a write to ONE lead makes stale, and the keys those reads
 // are filed under — spelled here rather than at each site, the way
@@ -43,6 +44,15 @@ export const LEAD_STATUS_COUNTS_KEY: QueryKey = [
  */
 export function leadTerminalKey(status: string): QueryKey {
   return [...LEAD_LIST_KEY, "terminal", status];
+}
+
+/**
+ * The live lead a contact is worked through, which the contact page reads.
+ * Under the list prefix, so every lead write that could open or close one
+ * refreshes it.
+ */
+export function contactLeadKey(contactId: string): QueryKey {
+  return [...LEAD_LIST_KEY, "from-contact", contactId];
 }
 
 /** The detail page. Its children — the score and the manual signals below — are prefix-reached from here. */
@@ -87,5 +97,10 @@ export function leadPromotePreviewKey(id: string): QueryKey {
  * page whether it was written alone or as one of forty.
  */
 export function leadWriteKeys(id: string): QueryKey[] {
-  return [LEAD_LIST_KEY, leadKey(id), ["record-history", "lead", id]];
+  return [
+    LEAD_LIST_KEY,
+    leadKey(id),
+    ["record-history", "lead", id],
+    ...derivedRecordKeys("lead", id),
+  ];
 }

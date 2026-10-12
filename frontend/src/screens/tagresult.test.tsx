@@ -22,6 +22,7 @@ function tagRead(usage: {
   contacts: number;
   companies: number;
   deals: number;
+  leads?: number;
 }) {
   return () =>
     jsonResponse({
@@ -29,7 +30,7 @@ function tagRead(usage: {
       name: "Automation World 2026",
       color: "slate",
       version: 1,
-      usage,
+      usage: { leads: 0, ...usage },
     });
 }
 
@@ -84,6 +85,28 @@ describe("the tag page names what carries the word", () => {
 
   // A group the word is not on draws nothing. Three cards, two of them
   // reporting zero, is what made the page read as an inventory of absences.
+  it("lists and opens the leads that carry the word", async () => {
+    installFetchStub({
+      [`GET /tags/${TAG}`]: tagRead({
+        contacts: 0,
+        companies: 0,
+        deals: 0,
+        leads: 1,
+      }),
+      "GET /leads": () =>
+        jsonResponse({ data: [{ id: "l-1", full_name: "Jonas Weber" }] }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    expect(await screen.findByText("Leads (1)")).toBeInTheDocument();
+    await userEvent.setup().click(await screen.findByText("Jonas Weber"));
+    expect(window.location.hash).toBe("#/leads/l-1");
+  });
+
   it("draws no group for a type nothing carries", async () => {
     installFetchStub({
       [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
@@ -202,7 +225,7 @@ describe("the tag page names what carries the word", () => {
           color: "slate",
           version: 2,
           archived_at: "2026-09-01T00:00:00Z",
-          usage: { contacts: 2, companies: 2, deals: 2 },
+          usage: { contacts: 2, companies: 2, deals: 2, leads: 0 },
         }),
       "GET /contacts": () => jsonResponse({ data: [] }),
       "GET /companies": () => jsonResponse({ data: [] }),

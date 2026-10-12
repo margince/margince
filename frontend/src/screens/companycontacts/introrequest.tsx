@@ -2,13 +2,20 @@ import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Field, Modal } from "../../design-system/atoms";
+import {
+  Button,
+  Field,
+  Modal,
+  Textarea,
+  TextInput,
+} from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { ProvenanceTag } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import { throwProblem } from "../common";
+import "./companycontacts.css";
 
 // Asking a colleague for the introduction.
 //
@@ -102,7 +109,12 @@ export function IntroRequestModal({
   });
 
   return (
-    <Modal open={target !== null} onClose={onClose} labelledBy={titleId}>
+    <Modal
+      open={target !== null}
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="form"
+    >
       <Heading size="large" id={titleId} className="modal-title">
         {t("co.intro.title")}
       </Heading>
@@ -114,85 +126,89 @@ export function IntroRequestModal({
           })}
         </p>
       )}
-      {!written && (
-        <div className="cp-intro-actions">
-          <Button
-            variant="ai"
-            onClick={() => target && draft.mutate(target)}
-            pending={draft.isPending}
-            busyLabel={t("co.intro.writing")}
-          >
-            {t("co.intro.write")}
-          </Button>
-        </div>
-      )}
-      <ErrorLine error={draft.error} />
-      {written && (
-        <>
-          <p className="cp-intro-mark">
-            <ProvenanceTag
-              provenance={
-                rewritten
-                  ? { kind: "human", self: true }
-                  : { kind: "agent", agent: "draft_reply" }
-              }
-            />
-            {written.generated_by === "deterministic" && !rewritten && (
-              <span className="t-caption"> {t("co.intro.fromTemplate")}</span>
-            )}
-          </p>
-          <Field className="cp-intro-field" label={t("co.intro.subject")}>
-            {(control) => (
-              <input
-                {...control}
-                value={subject}
-                onChange={(event) =>
-                  setEdited({ subject: event.target.value, body })
-                }
-              />
-            )}
-          </Field>
-          <Field className="cp-intro-field" label={t("co.intro.body")}>
-            {(control) => (
-              <textarea
-                {...control}
-                rows={10}
-                value={body}
-                onChange={(event) =>
-                  setEdited({ subject, body: event.target.value })
-                }
-              />
-            )}
-          </Field>
-          {written.reasoning && written.reasoning.length > 0 && (
-            <>
-              <p className="cp-intro-why">{t("co.intro.basedOn")}</p>
-              <ul className="chips">
-                {written.reasoning.map((reason) => (
-                  <li key={`${reason.kind}:${reason.label}`}>{reason.label}</li>
-                ))}
-              </ul>
-            </>
-          )}
-          {copy.notice}
-          <div className="cp-intro-actions">
-            {/* Copy first, because it is the one that always works. A mailto:
-             * depends on the reader having a mail client bound to the
-             * protocol, and a button that silently does nothing is worse than
-             * one they did not press. */}
-            <Button onClick={copy.copy}>{copy.label}</Button>
+      <div className="form-stack">
+        {!written && (
+          <div>
             <Button
-              variant="ghost"
-              onClick={() => {
-                window.location.href = `mailto:?subject=${encodeURIComponent(
-                  subject,
-                )}&body=${encodeURIComponent(body)}`;
-              }}
+              variant="ai"
+              onClick={() => target && draft.mutate(target)}
+              pending={draft.isPending}
+              busyLabel={t("co.intro.writing")}
             >
-              {t("co.intro.openMail")}
+              {t("co.intro.write")}
             </Button>
           </div>
-        </>
+        )}
+        <ErrorLine error={draft.error} />
+        {written && (
+          <>
+            <p>
+              <ProvenanceTag
+                provenance={
+                  rewritten
+                    ? { kind: "human", self: true }
+                    : { kind: "agent", agent: "draft_reply" }
+                }
+              />
+              {written.generated_by === "deterministic" && !rewritten && (
+                <span className="t-caption"> {t("co.intro.fromTemplate")}</span>
+              )}
+            </p>
+            <Field label={t("co.intro.subject")}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={subject}
+                  onChange={(event) =>
+                    setEdited({ subject: event.target.value, body })
+                  }
+                />
+              )}
+            </Field>
+            <Field label={t("co.intro.body")}>
+              {(control) => (
+                <Textarea
+                  {...control}
+                  rows={10}
+                  value={body}
+                  onChange={(event) =>
+                    setEdited({ subject, body: event.target.value })
+                  }
+                />
+              )}
+            </Field>
+            {written.reasoning && written.reasoning.length > 0 && (
+              <div>
+                <p className="cp-intro-why">{t("co.intro.basedOn")}</p>
+                <ul className="chips">
+                  {written.reasoning.map((reason) => (
+                    <li key={`${reason.kind}:${reason.label}`}>
+                      {reason.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {copy.notice}
+          </>
+        )}
+      </div>
+      {written && (
+        <div className="actions">
+          {/* Copy first: it always works, where a mailto: needs a mail client
+              bound to the protocol and otherwise silently does nothing. */}
+          <Button onClick={copy.copy}>{copy.label}</Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              window.location.href = `mailto:?subject=${encodeURIComponent(
+                subject,
+              )}&body=${encodeURIComponent(body)}`;
+            }}
+          >
+            {t("co.intro.openMail")}
+          </Button>
+        </div>
       )}
     </Modal>
   );

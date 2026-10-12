@@ -37,6 +37,7 @@ import (
 // authenticates something.
 var apiPublic = map[string]bool{
 	"MARGINCE_CONFIG":            true,
+	"MARGINCE_ADDR":              true,
 	"MARGINCE_AI_ROUTING":        true,
 	"MARGINCE_LOG_LEVEL":         true,
 	"MARGINCE_LOG_FORMAT":        true,
@@ -77,27 +78,14 @@ func apiConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.Registry, erro
 
 // apiUnflaggedItems are the variables this role reads with no flag behind them.
 // They are declared here rather than in the packages that read them because
-// their owners are the composition root itself — a posture, a licence override,
-// a cap on a backfill — and a package that has no opinion about them should not
-// carry their documentation either.
+// their owner is the composition root itself, and a package that has no opinion
+// about them should not carry their documentation.
 func apiUnflaggedItems() []config.Item {
 	both := []string{config.RoleAPI, config.RoleWorker}
 	return []config.Item{
 		{
-			Name: oauthAccessTokenTTLEnv, Kind: config.KindDuration, Default: "0", Roles: []string{config.RoleAPI},
-			Doc: "lifetime of a minted OAuth access token; 0 takes the compiled default",
-		},
-		{
 			Name: compose.ProviderModeEnv, Kind: config.KindString, Default: "live", Roles: both,
 			Doc: "enrichment provider: live|offline|off; an unknown value is a boot error rather than a silently disabled feature",
 		},
-		{
-			Name: compose.AutoEnrichDailyCapEnv, Kind: config.KindInt, Default: "0", Roles: both,
-			Doc: "daily cap on automatic site deep reads (company auto-enrich and domain triage spend one budget); 0 takes the compiled default",
-		},
 	}
 }
-
-// oauthAccessTokenTTLEnv is spelled once, here and at its read.
-// #nosec G101 -- the NAME of a variable holding a duration, not a credential
-const oauthAccessTokenTTLEnv = "MARGINCE_OAUTH_ACCESS_TOKEN_TTL"

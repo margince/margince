@@ -57,6 +57,25 @@ reviews:
         the code, narrates how it got here ("used to", "was answered twice", a
         rule or ticket number), or repeats a rule a gate already holds.
         `make comment-budget` fails a change adding more comment lines than code.
+    - path: "**/*.md"
+      instructions: |
+        Documentation is held to docs/reference/docs-prose-style.md. Review
+        added or changed prose for what backend/gates/docsprose_test.go cannot
+        see:
+        - Facts: check each number, default, path, command and "only" or
+          "every" claim against the code in this pull request. A count of
+          things the code owns should link to the generated page.
+        - Self-consistency: a lead-in count against its list, a table against
+          the prose beside it, one rule stated two ways on one page.
+        - Job: a how-to gives steps, reference gives facts, explanation gives
+          specific reasons. Handbook and user-guide pages use the words on the
+          screen, not developer terms.
+        - Density: a sentence whose deletion loses no fact, a recap that
+          repeats its section, a reason that names no mechanism.
+        - Public repository: nothing a reader cannot open.
+        Do not flag what the gate already enforces (em dashes, the banned
+        words, capitals for emphasis, bold spans, sentence length, history
+        phrases, counted lead-ins).
     - path: "frontend/src/i18n/en.ts"
       instructions: |
         English is the source catalog; German and Vietnamese are translated from
@@ -77,11 +96,12 @@ reviews:
         (dashes, exclamation marks, straight quotes, ellipsis, double spaces,
         Latin abbreviations, "please", contractions, "we", "I", ampersands,
         British spelling, retired words).
-    - path: "frontend/src/i18n/de.ts"
+    - path: "{frontend/src/i18n/de.ts,extensions/**/frontend/**/de.json}"
       instructions: |
-        German is translated from frontend/src/i18n/en.ts. Read
-        docs/reference/ui-copy-style-de.md and review every added or changed
-        value against it and against the English value of the same key:
+        German is translated from the English catalog beside it (en.ts, or
+        the sibling en.json). Read docs/reference/ui-copy-style-de.md and
+        review every added or changed value against it and against the
+        English value of the same key:
         - Meaning and claim strength match the English: nothing added, no
           qualifier dropped, no claim strengthened.
         - Address: du only, never Sie/Ihr/Ihnen, except the four outsider
@@ -99,6 +119,27 @@ reviews:
         ellipsis, double spaces, exclamation marks, "bitte", abbreviations,
         contractions, percent spacing, gender marks, ich, wir, retired words,
         Sie outside the outsider families, capitalised du mid-sentence).
+    - path: "{frontend/src/i18n/vi.ts,extensions/**/frontend/**/vi.json}"
+      instructions: |
+        Vietnamese is translated from the English catalog beside it (en.ts,
+        or the sibling en.json). Read docs/reference/ui-copy-style-vi.md and
+        review every added or changed value against it and the English value:
+        - Meaning and claim strength match the English: nothing added, no
+          qualifier dropped, no superlative the English does not state.
+        - Address nobody by default; "bạn" only where the English says you or
+          your; "quý khách" in the outsider families (privacynotice., confirm.,
+          buyer., prefs., book.); no mixed address inside one surface.
+        - Natural Vietnamese, not calques: no padding "thực hiện", "việc"/"sự"
+          nominalisation, "một cách", "được ... bởi" passive, stacked "của bạn".
+        - Grammar by slot and the message shapes; end punctuation mirrors the
+          English.
+        - The Vocabulary table: the Vietnamese word for each concept.
+        - The length ceilings.
+        Do not flag what frontend/src/i18n/copy-style-vi.test.ts already
+        enforces (NFC, kiểu cũ tone marks with no kiểu-mới form, dashes,
+        quotes, ellipsis, exclamation marks, double spaces, abbreviations,
+        plural arms, tôi, chúng tôi, chúng ta, mình, quý vị, quý khách or vui
+        lòng outside the outsider families, bạn inside them, retired words).
   auto_review:
     enabled: true
     # Draft PRs get no review — matches the CI path-filter's draft skip (the

@@ -31,10 +31,9 @@ func (ForecastSnapshotSweepArgs) FleetWide() {}
 //
 // One worker where there were two (ADR-0103).
 type forecastSnapshotSweepWorker struct {
-	reportingEnabled bool
-	pool             *pgxpool.Pool
-	now              func() time.Time
-	log              *slog.Logger
+	pool *pgxpool.Pool
+	now  func() time.Time
+	log  *slog.Logger
 }
 
 func (w *forecastSnapshotSweepWorker) Work(ctx context.Context, _ *river.Job[ForecastSnapshotSweepArgs]) error {

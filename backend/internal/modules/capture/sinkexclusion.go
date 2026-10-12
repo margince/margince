@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -68,6 +69,37 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 	return "a capture exclusion rule keeps this message out (" + excluded + ")", nil
 }
 
+var _ connector.PreStoreJudge = (*Sink)(nil)
+
+// DropBeforeStore runs the gates Upsert runs first — the colleagues-only gate
+// and the exclusion lists — on a record built from a message's headers, and
+// answers true when the message is kept out. A connector asks before it
+// downloads the full message, so mail that would be dropped anyway costs one
+// small read instead of a full download.
+//
+// The verdict is Upsert's own: the same dropBeforeStoreTx, on the same
+// addresses and containers, leaving the same breadcrumb and trace. A record
+// Upsert would refuse to admit is not judged here (false, nil); the full path
+// then answers for it exactly as it always did.
+func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedRecord) (bool, error) {
+	if _, err := admitRecord(ctx, rec); err != nil {
+		return false, nil //nolint:nilerr // not judged here; the full capture path answers for an unadmitted record
+	}
+	var dropped bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty); err != nil {
+			return err
+		}
+		reason, err := s.dropBeforeStoreTx(ctx, tx, rec)
+		dropped = reason != ""
+		return err
+	})
+	if err != nil {
+		return false, err
+	}
+	return dropped, nil
+}
+
 // excludedTx reports whether any address this message names — sender,
 // recipients, copies — is kept out by a workspace exclusion, or by one the
 // mailbox owner behind this connection set for themselves. Runs on the
@@ -102,7 +134,7 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 		   AND ((e.kind = 'address' AND e.value = ANY($1::text[]))
 		     OR (e.kind = 'domain' AND EXISTS (
 		           SELECT 1 FROM unnest($2::text[]) d
-		            WHERE d = e.value OR d LIKE '%.' || e.value))
+		            WHERE d = e.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("e.value")+`))
 		     OR (e.kind = 'container' AND e.value = ANY($4::text[])))
 		 ORDER BY e.kind LIMIT 1`,
 		addresses, domains, nilToNull(actorUserID(ctx)), rec.Containers).Scan(&kind)

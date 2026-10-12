@@ -42,6 +42,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -93,8 +94,8 @@ func entityRefs(v any, path string, out map[string]string) {
 
 // refsOf decodes one proposed change and returns its entity references.
 func refsOf(raw json.RawMessage) (map[string]string, error) {
-	var decoded any
-	if err := json.Unmarshal(raw, &decoded); err != nil {
+	decoded, err := diffhash.DecodeValue(raw)
+	if err != nil {
 		return nil, fmt.Errorf("approvals: decoding a proposed change to compare its entity references: %w", err)
 	}
 	refs := map[string]string{}
@@ -263,11 +264,15 @@ func sameJSONValue(a, b json.RawMessage) (bool, error) {
 	if len(a) == 0 || len(b) == 0 {
 		return len(a) == len(b), nil
 	}
-	var left, right any
-	if err := json.Unmarshal(a, &left); err != nil {
+	// Lossless on BOTH sides, because this answers "did the edit change anything".
+	// Decoded through float64, two amounts differing only above 2^53 re-marshal
+	// identically and an edit that changed one reads as having changed nothing.
+	left, err := diffhash.DecodeValue(a)
+	if err != nil {
 		return false, fmt.Errorf("the staged change carries a member that is not JSON: %w", err)
 	}
-	if err := json.Unmarshal(b, &right); err != nil {
+	right, err := diffhash.DecodeValue(b)
+	if err != nil {
 		return false, fmt.Errorf("the edit carries a member that is not JSON: %w", err)
 	}
 	// Re-marshalled rather than reflect.DeepEqual: one encoder decides the

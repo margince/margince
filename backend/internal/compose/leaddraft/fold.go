@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -35,7 +36,7 @@ func FromLead(
 		Intent:    strings.TrimSpace(intent),
 		Envelope:  envelope,
 		Recipient: recipientOf(lead, activities),
-		Recent:    contactdraft.FoldRecent(activities),
+		Recent:    contactdraft.FoldRecent(activities, envelope.At()),
 	}
 }
 
@@ -122,13 +123,14 @@ func lastEachWay(activities []crmcontracts.Activity) (inbound, outbound time.Tim
 //
 // It reads the same lastEachWay the recipient's two stamps are formatted from,
 // so the envelope's account of the conversation and the draft's are one
-// derivation rather than two.
+// derivation rather than two. A logged note or meeting counts as contact by
+// the contact draft's rule, because the lead's draft is folded by it.
 //
 // Held by: TestTheConversationStateReadsTheSameTwoInstants
 // (backend/internal/compose/leaddraft/fold_test.go)
 func ConversationState(activities []crmcontracts.Activity, now time.Time) convstate.State {
 	inbound, outbound := lastEachWay(activities)
-	return convstate.Classify(now, inbound, outbound)
+	return draftcore.ClassifyWithLogged(now, inbound, outbound, activities)
 }
 
 func deref(s *string) string {

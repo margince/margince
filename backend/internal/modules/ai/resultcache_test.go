@@ -22,7 +22,7 @@ const sameBinding uint64 = 1
 func TestResultCacheNeverExceedsCapacity(t *testing.T) {
 	c := newResultCache(time.Minute)
 	ws := ids.New[ids.WorkspaceKind]()
-	for i := 0; i < maxResultCacheEntries+50; i++ {
+	for i := range maxResultCacheEntries + 50 {
 		c.put(fmt.Sprintf("key-%d", i), ws, sameBinding, model.Response{Text: "r"}, TierCheapCloud)
 	}
 	if len(c.entries) > maxResultCacheEntries {
@@ -39,7 +39,7 @@ func TestResultCacheEvictsExpiredBeforeLive(t *testing.T) {
 	current := time.Unix(0, 0)
 	c.now = func() time.Time { return current }
 
-	for i := 0; i < maxResultCacheEntries-1; i++ {
+	for i := range maxResultCacheEntries - 1 {
 		c.put(fmt.Sprintf("stale-%d", i), ws, sameBinding, model.Response{Text: "old"}, TierCheapCloud)
 	}
 	current = current.Add(2 * time.Minute) // everything above is now expired

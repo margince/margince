@@ -529,8 +529,7 @@ func TestAKeyIsRefusedOnASurfaceThatCannotClaimIt(t *testing.T) {
 	f.registry.Register(f.tool)
 
 	_, err := f.invoke(t, `{"idempotency_key":"k-1"}`)
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("err = %v, want a BadArgsError", err)
 	}
 	if f.tool.runs != 0 {
@@ -582,6 +581,8 @@ func (a *consumingApprovals) StageCall(context.Context, StageRequest) (ids.Appro
 func (a *consumingApprovals) StageVolumeRelease(context.Context, VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, nil
 }
+
+func (a *consumingApprovals) ReleasableByCaller(context.Context, StageRequest) bool { return false }
 
 func (a *consumingApprovals) Redeem(_ context.Context, id ids.ApprovalID, _, _ string) (int64, bool, error) {
 	a.redeems++
@@ -752,8 +753,7 @@ func TestAReadOnlyToolRefusesTheRetryKeyItNeverAdvertised(t *testing.T) {
 	})
 
 	_, err := f.registry.Invoke(ctx, "search_records", json.RawMessage(`{"idempotency_key":"k-1"}`))
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("err = %v, want a BadArgsError", err)
 	}
 	if read.runs != 0 {
@@ -788,8 +788,7 @@ func TestAnExtensionToolRefusesTheRetryKeyItNeverAdvertised(t *testing.T) {
 	f.registry.Register(ext)
 
 	_, err := f.registry.Invoke(f.ctx, "notes_create_note", json.RawMessage(`{"idempotency_key":"k-1"}`))
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("err = %v, want a BadArgsError", err)
 	}
 	if ext.runs != 0 {

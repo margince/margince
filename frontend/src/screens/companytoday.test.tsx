@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
@@ -408,31 +414,37 @@ describe("the day's call, and which record it is read from", () => {
 
   // One row shape for the moment on every record page. What the account was
   // read against is the byline's second clause, and the verb is the server's
-  // own wherever it named somewhere for the press to land.
+  // own wherever it named a record the page can open.
+  const goneQuiet = (
+    destination: NonNullable<
+      Company360["moment"]
+    >["recommended_action"]["destination"],
+  ): NonNullable<Company360["moment"]> => ({
+    claim_key: "moment:gone_quiet",
+    evidence_fingerprint: "fp-3",
+    rule: "gone_quiet",
+    headline: "Acme has not written back for 18 days",
+    why_now: "Two messages went out and nothing came back.",
+    confidence: "observed_fact",
+    evidence: [],
+    recommended_action: {
+      kind: "open_record",
+      label: "Open the record",
+      state: "available",
+      destination,
+    },
+  });
+
   it("draws the moment as a find of the agent's, read against a named rule", () => {
     const opened = vi.fn();
     show(
       {
         ...BASE,
-        moment: {
-          claim_key: "moment:gone_quiet",
-          evidence_fingerprint: "fp-3",
-          rule: "gone_quiet",
-          headline: "Acme has not written back for 18 days",
-          why_now: "Two messages went out and nothing came back.",
-          confidence: "observed_fact",
-          evidence: [],
-          recommended_action: {
-            kind: "open_record",
-            label: "Open the account",
-            state: "available",
-            destination: {
-              surface: "record",
-              entity_type: "company",
-              entity_id: "o-1",
-            },
-          },
-        },
+        moment: goneQuiet({
+          surface: "record",
+          entity_type: "deal",
+          entity_id: "d-1",
+        }),
       },
       { onOpenRecord: opened },
     );
@@ -442,9 +454,71 @@ describe("the day's call, and which record it is read from", () => {
     expect(
       screen.getByText("Acme has not written back for 18 days"),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Open the account" }));
-    expect(opened).toHaveBeenCalledWith("company", "o-1");
+    fireEvent.click(screen.getByRole("button", { name: "Open the record" }));
+    expect(opened).toHaveBeenCalledWith("deal", "d-1");
   });
+
+  it.each([
+    ["company", "o-1"],
+    ["activity", "a-1"],
+  ] as const)(
+    "offers the account's own verb when the moment names a %s, which the page cannot open",
+    (kind, id) => {
+      const opened = vi.fn();
+      const drafted = vi.fn();
+      show(
+        {
+          ...BASE,
+          moment: goneQuiet({
+            surface: "record",
+            entity_type: kind,
+            entity_id: id,
+          }),
+          state_strip: {
+            account: { lifecycle: "customer", relationship_types: [] },
+            engagement: { state: "waiting_on_us" },
+          },
+          contacts: {
+            data: [
+              {
+                contact_id: "p-1",
+                full_name: "Dana Buyer",
+                strength: {
+                  score: 71,
+                  bucket: "strong",
+                  factors: {
+                    recency: 0.9,
+                    frequency: 0.6,
+                    reciprocity: 0.8,
+                    direction: 0.8,
+                  },
+                },
+                deal_roles: [],
+                consent: {},
+              },
+            ],
+            page: { has_more: false, next_cursor: null },
+          },
+        },
+        { onOpenRecord: opened, onDraftTo: drafted },
+      );
+
+      const card = screen
+        .getByText("Acme has not written back for 18 days")
+        .closest<HTMLElement>(".co-move");
+      if (!card) {
+        throw new Error("the moment's card did not render");
+      }
+      expect(
+        within(card).queryByRole("button", { name: "Open the record" }),
+      ).toBeNull();
+      fireEvent.click(
+        within(card).getByRole("button", { name: en["today.draft.act"] }),
+      );
+      expect(drafted).toHaveBeenCalledWith("p-1");
+      expect(opened).not.toHaveBeenCalled();
+    },
+  );
 
   it("carries the account's suggestions as moves alongside the context band", () => {
     show({

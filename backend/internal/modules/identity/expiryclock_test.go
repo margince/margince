@@ -28,7 +28,8 @@ import (
 // names the day it ends, and rewriting that as an offset from now() would move
 // the date they chose.
 var callerChosenExpiry = gatekit.Waive(map[string]string{
-	"grants.go": "a record share's expiry is the granting human's own choice, arriving as an absolute instant in the request body — deriving it from now() would silently move the date they picked, and the value was never this system's clock to correct",
+	"grantmerge.go": "a merge folding two shares of one grantee keeps one of the two expiries a granting human already chose, so the value is copied, never scheduled from a clock",
+	"grants.go":     "a record share's expiry is the granting human's own choice, arriving as an absolute instant in the request body — deriving it from now() would silently move the date they picked, and the value was never this system's clock to correct",
 })
 
 func TestEveryCredentialExpiryWriteTakesTheDatabaseClock(t *testing.T) {

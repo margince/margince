@@ -5,9 +5,9 @@
 
 package gates
 
-// employment.IsCurrentSQL calls itself "the ONE spelling of 'this job is
-// still theirs', and the only definition of a current employment in this
-// product". That was a claim with nothing holding it, and it was false eleven
+// employment.IsCurrentSQL calls itself "the one spelling of 'this job is still
+// theirs'", and every statement that asks whether an employment is current goes
+// through it. That was a claim with nothing holding it, and it was false eleven
 // times over.
 //
 // Eight statements asked whether an employment was current with a bare
@@ -209,7 +209,7 @@ func employmentStatements(decl ast.Decl, contacts helperScope) []string {
 // employment kind, so the report points at the statement rather than dumping
 // it.
 func firstEmploymentLine(sql string) string {
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if employmentKind.MatchString(line) {
 			return strings.TrimSpace(line)
 		}

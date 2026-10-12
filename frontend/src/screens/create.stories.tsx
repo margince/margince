@@ -71,19 +71,33 @@ const contactFields: CreateField[] = [
   },
 ];
 
+// Past six fields the form leaves the centred box for the drawer.
+const companyFields: CreateField[] = [
+  { key: "display_name", label: "create.displayName", required: true },
+  { key: "legal_name", label: "create.legalName" },
+  { key: "industry", label: "create.industry" },
+  contactFields[2],
+  { key: "city", label: "create.city" },
+  { key: "region", label: "create.region" },
+  { key: "postal_code", label: "create.postalCode" },
+  { key: "country", label: "create.country" },
+];
+
 function OpenModal({
   error,
   existing,
+  fields = contactFields,
 }: Readonly<{
   error?: string | null;
   existing?: { id: string; code: string } | null;
+  fields?: CreateField[];
 }>) {
   return (
     <CreateRecordModal
       open
       onClose={() => undefined}
       title="New contact"
-      fields={contactFields}
+      fields={fields}
       pending={false}
       error={error ?? null}
       existing={existing ?? null}
@@ -95,6 +109,10 @@ function OpenModal({
 
 export const Open: Story = {
   render: () => <OpenModal />,
+};
+
+export const ManyFields: Story = {
+  render: () => <OpenModal fields={companyFields} />,
 };
 
 // A duplicate (409) dedupe error: the server's detail renders verbatim plus

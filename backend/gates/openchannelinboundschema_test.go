@@ -6,7 +6,7 @@
 package gates_test
 
 // The published OpenAPI body schema and the `arrival` struct it documents are
-// ONE invariant spelled on both sides of a wire.
+// one invariant spelled on both sides of a wire.
 //
 // extensions/openchannel/inbound.openapi.yaml exists because the core admits
 // these bytes on a signature and interprets nothing in them: the unit alone
@@ -165,16 +165,16 @@ func structJSONFields(t *testing.T, path, structName string) map[string]bool {
 // any comma-separated option (omitempty and friends).
 func jsonTagName(tag string) string {
 	const key = `json:"`
-	start := strings.Index(tag, key)
-	if start < 0 {
+	_, after, ok := strings.Cut(tag, key)
+	if !ok {
 		return ""
 	}
-	rest := tag[start+len(key):]
-	end := strings.Index(rest, `"`)
-	if end < 0 {
+	rest := after
+	before0, _, ok0 := strings.Cut(rest, `"`)
+	if !ok0 {
 		return ""
 	}
-	value := rest[:end]
+	value := before0
 	if comma := strings.Index(value, ","); comma >= 0 {
 		value = value[:comma]
 	}

@@ -60,7 +60,7 @@ const primaryEntityCount = 12
 
 func renderArea(schema *emSchema, area string, tables []string, contract map[string]string) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# %s — tables\n\n%s\n\n", area, generatedBy)
+	fmt.Fprintf(&b, "# %s tables\n\n%s\n\n", area, generatedBy)
 	fmt.Fprintf(&b, "The %d table%s owned by `%s`, as the migrations build them. "+
 		"[Back to the entity model](README.md).\n",
 		len(tables), plural(len(tables)), area)
@@ -73,14 +73,14 @@ func renderArea(schema *emSchema, area string, tables []string, contract map[str
 
 func renderTable(b *strings.Builder, schema *emSchema, table *emTable, contract map[string]string) {
 	fmt.Fprintf(b, "\n## %s\n\n", table.name)
-	fmt.Fprintf(b, "%d column%s · primary key `%s` · referenced by %d foreign key%s\n\n",
+	fmt.Fprintf(b, "%d column%s · %s · referenced by %d foreign key%s\n\n",
 		len(table.columns), plural(len(table.columns)),
-		orDash(table.primaryKey), schema.inbound[table.name], plural(schema.inbound[table.name]))
+		primaryKeyPhrase(table.primaryKey), schema.inbound[table.name], plural(schema.inbound[table.name]))
 
 	b.WriteString("| Column | Type | Required | What it is |\n|---|---|---|---|\n")
 	for _, column := range sortedColumns(table) {
-		fmt.Fprintf(b, "| `%s` | `%s` | %s | %s |\n",
-			column.name, column.dataType, yesOrBlank(column.notNull),
+		fmt.Fprintf(b, "| `%s` | %s | %s | %s |\n",
+			column.name, cell(typeCell(column)), yesOrBlank(column.notNull),
 			cell(columnSentence(schema, table, column, contract)))
 	}
 
@@ -116,7 +116,7 @@ func renderList(b *strings.Builder, heading string, items []emConstraint) {
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].name < sorted[j].name })
 	fmt.Fprintf(b, "\n**%s**\n\n", heading)
 	for _, item := range sorted {
-		fmt.Fprintf(b, "- `%s` — `%s`\n", item.name, collapseDefinition(item.def))
+		fmt.Fprintf(b, "- `%s`: `%s`\n", item.name, collapseDefinition(item.def))
 	}
 }
 
@@ -178,8 +178,7 @@ func renderShape(b *strings.Builder, schema *emSchema, byArea map[string][]strin
 func renderPrimary(b *strings.Builder, schema *emSchema, owners map[string]string) {
 	primary := mostReferenced(schema, primaryEntityCount)
 	fmt.Fprintf(b, "\n## The %d records everything else hangs off\n\n", len(primary))
-	b.WriteString("Ranked by how many foreign keys point at them, so this list follows the " +
-		"schema rather than anybody's idea of what matters.\n\n")
+	b.WriteString("Ranked by how many foreign keys point at them.\n\n")
 	b.WriteString("| Record | Lives in | Columns | Foreign keys pointing at it |\n|---|---|--:|--:|\n")
 	for _, name := range primary {
 		area := areaOf(owners[name])
@@ -264,9 +263,9 @@ func yesOrBlank(yes bool) string {
 	return ""
 }
 
-func orDash(s string) string {
-	if s == "" {
-		return "—"
+func primaryKeyPhrase(key string) string {
+	if key == "" {
+		return "no primary key"
 	}
-	return s
+	return "primary key `" + key + "`"
 }

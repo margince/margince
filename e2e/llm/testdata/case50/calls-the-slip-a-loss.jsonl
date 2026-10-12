@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__forecast_movement", "mcp__margince__forecast_readings"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__forecast_readings", "input": {}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__forecast_movement", "input": {"from": "00000000-0000-4000-8000-000000000001", "to": "00000000-0000-4000-8000-000000000002", "reading": "open"}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Open pipeline fell from EUR 179,000 to EUR 164,500. Vorort Systeme Ausbau was repriced down by EUR 5,000, from EUR 31,000 to EUR 26,000, and valantic Migrationsprojekt (EUR 9,500) was lost, which is why the open number dropped."}

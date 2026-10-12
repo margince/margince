@@ -119,7 +119,8 @@ func ReadQuietFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (QuietFac
 }
 
 // readQuietSide is one direction's arm, reporting whether the deal has a
-// message that way at all. The participant lookup may find nobody: a message
+// message that way at all. A side speaks only through an interaction, so a
+// canceled or no-show meeting is not its last word. The participant lookup may find nobody: a message
 // whose address never matched a contact still tells the reader WHEN the side
 // last spoke, and dropping it would report a deal as never-contacted because
 // the address is unknown.
@@ -171,9 +172,9 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 		                 WHERE every.activity_id = a.id AND every.role = $%[3]d) = 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $%[1]d
-		WHERE a.archived_at IS NULL AND %[4]s AND a.direction = $%[2]d
+		WHERE a.archived_at IS NULL AND %[4]s AND %[5]s AND a.direction = $%[2]d
 		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT 1`, dealPos, directionPos, rolePos, scope), args...).
+		LIMIT 1`, dealPos, directionPos, rolePos, scope, healthInteraction), args...).
 		Scan(&side.At, &side.Kind, &contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QuietSide{}, false, nil

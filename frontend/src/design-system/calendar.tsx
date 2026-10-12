@@ -68,6 +68,7 @@ export function Calendar({
   onSelect,
   today,
   locale,
+  refusal,
 }: Readonly<{
   month: Date;
   onMonthChange: (next: Date) => void;
@@ -75,6 +76,14 @@ export function Calendar({
   onSelect: (next: ISODay) => void;
   today: Date;
   locale: Locale;
+  /**
+   * Why a day cannot be chosen (in the past, or with nothing left to book on
+   * it), or undefined for a day that can. It stays in the grid, drawn quieter
+   * and refused, so the month keeps its shape and a reader can see WHICH days
+   * are open; the reason, translated, joins the day's accessible name, since
+   * the strike-through says it only to the eye.
+   */
+  refusal?: (day: ISODay) => string | undefined;
 }>) {
   const t = useT();
   const days = monthGrid(month);
@@ -115,6 +124,7 @@ export function Calendar({
             inMonth={day.getMonth() === month.getMonth()}
             isToday={isoDay(day) === isoDay(today)}
             isSelected={isoDay(day) === selected}
+            refusal={refusal?.(isoDay(day))}
             onSelect={onSelect}
             locale={locale}
           />
@@ -129,6 +139,7 @@ function CalendarDay({
   inMonth,
   isToday,
   isSelected,
+  refusal,
   onSelect,
   locale,
 }: Readonly<{
@@ -136,6 +147,7 @@ function CalendarDay({
   inMonth: boolean;
   isToday: boolean;
   isSelected: boolean;
+  refusal: string | undefined;
   onSelect: (next: ISODay) => void;
   locale: Locale;
 }>) {
@@ -156,7 +168,12 @@ function CalendarDay({
       // The full date as its accessible name. "25" alone tells a screen reader
       // nothing about which month it belongs to, and the grid's own heading is
       // several stops away by then.
-      aria-label={fullDayName(day, locale)}
+      aria-label={
+        refusal
+          ? `${fullDayName(day, locale)}, ${refusal}`
+          : fullDayName(day, locale)
+      }
+      disabled={refusal !== undefined}
       onClick={() => onSelect(isoDay(day))}
     >
       {formatNumber(day.getDate(), locale)}

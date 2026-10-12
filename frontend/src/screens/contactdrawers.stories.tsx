@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import { Button } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
@@ -57,8 +58,8 @@ const readyRun = {
 };
 
 // The record the drawer opens OVER, drawn behind it. Two things ride on it:
-// `placement="right"` exists so the record stays legible beside the drawer, and
-// a story with nothing behind shows the one thing the placement is for as an
+// the drawer opens at the side so the record stays legible beside it, and
+// a story with nothing behind shows the one thing the drawer is for as an
 // empty canvas — and the drawer PORTALS out of the story root, so without a
 // stage the root is empty and fe-uat reads the render as a failure.
 function ContactBehind() {
@@ -97,6 +98,20 @@ export const Ready: Story = {
       "POST /contacts/p-1/research": () => jsonResponse(readyRun),
     });
     return drawer();
+  },
+};
+
+/** A mapped claim opens its value, quote and source, prefilled from the run. */
+export const MappingAClaim: Story = {
+  render: Ready.render,
+  play: async () => {
+    const dialog = await screen.findByRole("dialog");
+    const user = userEvent.setup();
+    const [picker] = await within(dialog).findAllByRole("combobox", {
+      name: "Profile field",
+    });
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "Role" }));
   },
 };
 

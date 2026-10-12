@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { within } from "storybook/test";
 import type { components } from "../api/schema";
 import { StageRulesCard } from "./settings.stagerules";
 import {
@@ -96,9 +97,9 @@ function Served({
 }
 
 /**
- * The product stopped this rule. The reason is drawn rather than summarised —
- * it is the whole basis on which somebody decides to start the transition
- * again — and the way back is the notice's own verb.
+ * The product stopped this rule. The reason is drawn rather than summarised,
+ * because somebody decides from it whether to start the transition again.
+ * The way back sits in the row beside the switch.
  */
 export const Suspended: Story = {
   render: () => (
@@ -178,4 +179,55 @@ export const Unreadable: Story = {
       />
     </Served>
   ),
+};
+
+const second: TransitionRecord = {
+  ...transition,
+  from_stage_id: TO,
+  from_stage_name: "Proposal",
+  to_stage_id: "77777777-7777-4777-8777-777777777777",
+  to_stage_name: "Negotiation",
+};
+
+const third: TransitionRecord = {
+  ...transition,
+  from_stage_id: "77777777-7777-4777-8777-777777777777",
+  from_stage_name: "Negotiation",
+  to_stage_id: "88888888-8888-4888-8888-888888888888",
+  to_stage_name: "Closed won",
+};
+
+/** Three rows at phone width: one running, one suspended, one never decided. */
+export const SeveralPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <Served
+      answer={() =>
+        jsonResponse({
+          automation_enabled: true,
+          data: [
+            policy({}),
+            policy({
+              id: "99999999-9999-4999-8999-999999999999",
+              from_stage_id: second.from_stage_id,
+              to_stage_id: second.to_stage_id,
+              suspended_at: "2026-08-14T09:12:00Z",
+              suspended_reason:
+                "Three of the last twelve moves were undone within a day.",
+            }),
+          ],
+        })
+      }
+    >
+      <StageRulesCard
+        pipelineId={PIPELINE_ID}
+        transitions={[transition, second, third]}
+        reportWindowDays={WINDOW_DAYS}
+      />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findAllByRole("switch");
+  },
 };

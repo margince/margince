@@ -30,10 +30,10 @@ import {
   logUnexpectedError,
   problemMessageOf,
   QueryStates,
-  throwProblem,
+  unwrap,
   WriteRefused,
 } from "./common";
-import { scheduleFields } from "./compose";
+import { scheduleFields } from "./composesend";
 import "./scheduledsends.css";
 import { QueueSkewNotice } from "./scheduledsends.notices";
 import { SendPermission } from "./sendpermission";
@@ -384,11 +384,7 @@ export function useScheduledSends() {
   return useQuery({
     queryKey: ["scheduled-sends"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/scheduled-sends", {});
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(await api.GET("/scheduled-sends", {}), t);
     },
     staleTime: 60_000,
   });
@@ -406,20 +402,19 @@ export function ScheduledSendsScreen() {
 
   const move = useMutation({
     mutationFn: async ({ id, version, at }: Move) => {
-      const { error } = await api.PATCH("/scheduled-sends/{id}", {
-        // Through `ifMatch`, not a hand-written header: it is the one spelling of
-        // the precondition, and `src/api/if-match-coverage.test.ts` reads the
-        // AST for that call rather than for the header's text, so a second
-        // spelling reads to the gate as no precondition at all.
-        params: { path: { id }, ...ifMatch(version) },
-        // The zone travels as a NAME beside the instant, which is what makes a
-        // message scheduled across a DST boundary arrive at the wall time the
-        // rep meant rather than an hour either side of it.
-        body: { scheduled_at: at, scheduled_tz: readerZone },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.PATCH("/scheduled-sends/{id}", {
+          // Through `ifMatch`, not a hand-written header: it is the one spelling of
+          // the precondition. `src/api/if-match-coverage.test.ts` reads the AST for
+          // that call, so a second spelling reads to the gate as no precondition.
+          params: { path: { id }, ...ifMatch(version) },
+          // The zone travels as a name beside the instant. So a message scheduled
+          // across a DST boundary arrives at the wall time the rep meant, not an
+          // hour either side.
+          body: { scheduled_at: at, scheduled_tz: readerZone },
+        }),
+        t,
+      );
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] }),
@@ -427,12 +422,12 @@ export function ScheduledSendsScreen() {
 
   const withdraw = useMutation({
     mutationFn: async ({ id }: Withdraw) => {
-      const { error } = await api.POST("/scheduled-sends/{id}/cancel", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/scheduled-sends/{id}/cancel", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       setWithdrawing(null);

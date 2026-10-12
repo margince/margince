@@ -166,6 +166,11 @@ type Scenario struct {
 	SanitizedBy string       `yaml:"sanitized_by"`
 	Fixture     JSONValue    `yaml:"fixture"`
 	Expect      Expectations `yaml:"expect"`
+	// CommitmentBand says how firmly the fixture states a promise: firm or
+	// hedged. The certified confidence threshold for turning a promise into a
+	// task must fall between the two, so a case says which side it measures.
+	// Omitted from the stamp when empty, so a case without one keeps its stamp.
+	CommitmentBand string `yaml:"commitment_band,omitempty" json:"commitment_band,omitempty"`
 	// Path is the file LoadCorpus read this scenario from, so a reader handed a
 	// scenario can open it — a filename and a `name:` are two different things
 	// here, and nothing else in the tree maps one to the other.
@@ -258,6 +263,9 @@ func validateScenario(sc Scenario, path string, census *aitasks.Registry) error 
 	if err := validateOutcome(sc.Expect.Outcome, path); err != nil {
 		return err
 	}
+	if err := validateCommitmentBand(sc, path); err != nil {
+		return err
+	}
 	if strings.HasPrefix(sc.Source, extractedSourcePrefix) {
 		return fmt.Errorf(
 			"aicert: %s: source %q refused — extracted scenarios are not yet supported; hand-author it instead (source: %s)",
@@ -313,6 +321,31 @@ func validateOutcome(outcome, path string) error {
 	return fmt.Errorf("aicert: %s: expect.outcome is %q, want one of %s|%s|%s|%s",
 		path, outcome,
 		aitasks.OutcomeAccepted, aitasks.OutcomeWrongAnswer, aitasks.OutcomeInvalid, aitasks.OutcomeAbstained)
+}
+
+// The two values commitment_band takes.
+const (
+	CommitmentBandFirm   = "firm"
+	CommitmentBandHedged = "hedged"
+)
+
+// validateCommitmentBand refuses a band the gate cannot read, and a band on a
+// case that has no confidence to measure it by: such a case would sit in the
+// corpus claiming to bound a threshold it never reports on.
+func validateCommitmentBand(sc Scenario, path string) error {
+	switch sc.CommitmentBand {
+	case "":
+		return nil
+	case CommitmentBandFirm, CommitmentBandHedged:
+	default:
+		return fmt.Errorf("aicert: %s: commitment_band is %q, want %s or %s",
+			path, sc.CommitmentBand, CommitmentBandFirm, CommitmentBandHedged)
+	}
+	if sc.Expect.Outcome != aitasks.OutcomeAccepted || strings.TrimSpace(string(sc.Expect.Answer)) == "[]" {
+		return fmt.Errorf("aicert: %s: commitment_band needs an accepted reply that states a commitment, since an abstention carries no confidence to bound",
+			path)
+	}
+	return nil
 }
 
 // validateBands enforces the ordering Verdict (score.go) relies on:

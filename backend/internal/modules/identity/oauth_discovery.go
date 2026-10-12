@@ -36,14 +36,11 @@ func (h Handlers) OAuthServerMetadata(w http.ResponseWriter, r *http.Request) {
 		// RFC 7009: a client that cannot see this here will never call it —
 		// it hands back a credential and ends the connection on its own
 		// initiative, not on a server-side hint.
-		"revocation_endpoint":      issuer + "/oauth/revoke",
-		"response_types_supported": []string{oauthResponseTypeCode},
-		// refresh_token is advertised because a client that cannot see it
-		// here will not present one: it asks for offline_access, stores the
-		// token it gets, and never renews with it.
-		"grant_types_supported":                 []string{"authorization_code", oauthRefreshToken},
+		"revocation_endpoint":                   issuer + "/oauth/revoke",
+		"response_types_supported":              []string{oauthResponseTypeCode},
+		"grant_types_supported":                 oauthGrantTypesSupported,
 		"code_challenge_methods_supported":      []string{pkceMethodS256},
-		"token_endpoint_auth_methods_supported": []string{"none"},
+		"token_endpoint_auth_methods_supported": []string{oauthAuthMethodNone},
 		// offline_access is listed so Claude appends it when it wants a
 		// refresh token (§5.2) — it is a session-lifetime marker, never a
 		// passport scope, so the exchange records it as the grant's

@@ -107,6 +107,10 @@ export function useFolderOptions(enabled: boolean) {
     // A provider that did not answer is not a mailbox with no folders — and
     // neither is a list of connections that could not be read at all.
     isError: mailboxesFailed || containers.some((query) => query.isError),
+    // ANY mailbox stopping short makes the whole list partial: the options are
+    // pooled across accounts, so a reader cannot tell which of them the folder
+    // they are hunting for would have come from.
+    truncated: containers.some((query) => query.data?.truncated === true),
   };
 }
 

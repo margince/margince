@@ -175,6 +175,9 @@ const (
 	inboundEntity  = "ext_openchannel_inbound"
 	inboundTable   = "ext." + inboundEntity
 	outboundTable  = "ext.ext_openchannel_outbound"
+	// archivedFirstTable holds the activity ids whose archive reached this unit
+	// before the landing that named them, so the landing can answer for one.
+	archivedFirstTable = "ext.ext_openchannel_archived_before_landing"
 )
 
 // Where a received request is in the queue.

@@ -5,7 +5,7 @@
 
 package gates
 
-// The runner's own status vocabulary must be TOTAL over the column it reads.
+// The runner's own status vocabulary must be total over the column it reads.
 //
 // A status the runner cannot map emits an empty state, which the projection's
 // CHECK then refuses — and a refused write on the consumer's path is not a
@@ -74,7 +74,7 @@ func checkValues(t *testing.T, constraint string) []string {
 			continue
 		}
 		var out []string
-		for _, v := range strings.Split(m[1], ",") {
+		for v := range strings.SplitSeq(m[1], ",") {
 			out = append(out, strings.Trim(strings.TrimSpace(v), "'"))
 		}
 		slices.Sort(out)

@@ -1,0 +1,17 @@
+{
+  "target": "bench-record",
+  "measured_on": "2026-08-15",
+  "machine": {
+    "os": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memory_gib": 24,
+    "toolchain": "go1.26.6",
+    "postgres": "16.14"
+  },
+  "budgets": [
+    {"id": "PERF-1", "name": "record_open_contact", "p50_ms": 2.9, "p95_ms": 3.2, "p99_ms": 3.4, "budget_ms": 100, "samples": 30},
+    {"id": "PERF-4", "name": "record_save_contact", "p50_ms": 140, "p95_ms": 151, "p99_ms": 160, "budget_ms": 150, "samples": 30}
+  ]
+}

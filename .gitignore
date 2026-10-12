@@ -75,6 +75,10 @@ coverage-extensions.out
 /docs/explanation/company-record-page-v2-implementation-plan.md
 /docs/explanation/assets/company-record-page-v2/
 
+# A bench-daily record from a development-scale run: evidence for its author,
+# never a published number, so gen-perfdoc skips the directory too.
+/docs/reference/perfbench/dev/
+
 # Local secrets — never commit. Globbed rather than the bare name: a hand or
 # editor backup (.env.local.bak) is the same secrets file under a name the
 # exact rule never matched, and one was committed that way — where it then went
@@ -171,6 +175,8 @@ workspace/
 /backend/tools/gen-stubs/gen-stubs.exe
 /backend/tools/gen-agentpolicy/gen-agentpolicy
 /backend/tools/gen-agentpolicy/gen-agentpolicy.exe
+/backend/tools/gen-queryenums/gen-queryenums
+/backend/tools/gen-queryenums/gen-queryenums.exe
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-recordfields/gen-recordfields.exe
 /backend/tools/gen-perfdoc/gen-perfdoc
@@ -222,6 +228,7 @@ dump.rdb
 /backend/tools/gen-configschema/gen-configschema
 /backend/tools/gen-jobs/gen-jobs
 /backend/tools/gen-payloads/gen-payloads
+/backend/tools/gen-queryenums/gen-queryenums
 /backend/tools/gen-perfdoc/gen-perfdoc
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-stubs/gen-stubs

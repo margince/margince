@@ -105,7 +105,7 @@ func TestTickPrincipalLeavesARowOwnerless(t *testing.T) {
 	if actor.ID != p.ID {
 		t.Errorf("audited actor id = %q, want %q", actor.ID, p.ID)
 	}
-	if owner := storekit.OwnerOrActor(ctx, nil); owner != nil {
+	if owner := storekit.OwnerOrActor(ctx); owner != nil {
 		t.Errorf("owner = %v, want nil: no contact is behind a tick", *owner)
 	}
 }

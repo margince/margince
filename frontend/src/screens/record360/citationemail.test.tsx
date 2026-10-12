@@ -179,7 +179,7 @@ describe("a citation that is not a message", () => {
       screen.getByRole("button", { name: /Translation pilot/ }),
     );
 
-    expect(onOpenRecord).toHaveBeenCalledWith("deal", "deal-1", []);
+    expect(onOpenRecord).toHaveBeenCalledWith("deal", "deal-1");
   });
 
   it("leaves a company flat, as the page the reader is already on", () => {

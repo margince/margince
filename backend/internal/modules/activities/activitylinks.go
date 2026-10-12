@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -94,8 +95,8 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 //
 // A PROJECT link additionally requires activity.UPDATE, which the create grant
 // alone does not confer. Filing under a project classifies the correspondence
-// as commercial (D5), and that classification is write-once in the database and
-// is not lifted by unfiling — so it is a heavier act than creating a row, and
+// as commercial (D5), and relinking away does not lift that classification —
+// only the undo of a project filing does — so it is a heavier act than creating a row, and
 // the capture ladder already refuses it on exactly these terms
 // (capture/sinkproject.go: "a principal that may create captured mail but not
 // change it attributes nothing"). Two doors onto one act must not disagree
@@ -103,6 +104,12 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, links []ActivityLinkInput) error {
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
+	}
+	// The whole reach locked once, before the first probe: sorting the links
+	// below orders the firings, but not what each firing reaches through a
+	// contact or a deal, nor the probe's share the trigger then upgrades.
+	if err := storekit.LockLastActivityTargets(ctx, tx, lastActivityTargets(links)); err != nil {
+		return err
 	}
 	// SORTED, and the order is the one the last-activity trigger locks in.
 	//
@@ -128,29 +135,10 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 			continue
 		}
 		seen[link] = struct{}{}
-		column := linkColumn(link.EntityType)
-		if column == "" {
-			return &InvalidLinkTypeError{EntityType: link.EntityType}
-		}
-		// The project grant is checked BEFORE the insert it gates, not after.
-		// A refusal returned later is undone only because every caller runs
-		// this inside a transaction it aborts — correct today, and the wrong
-		// thing to hang an authorization check on. The sibling writer asks
-		// first (capture/sinkproject.go), and two doors onto one act must not
-		// disagree about WHEN they ask either.
-		if link.EntityType == linkEntityProject {
-			if err := refuseAnUnattendedFiling(ctx); err != nil {
-				return err
-			}
-			if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-				return err
-			}
-		}
-		// ATTACH: the named record gains an activity that every reader of it
-		// will see, so a share marked read-only does not confer this.
-		if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+		if err := mayAttach(ctx, tx, link); err != nil {
 			return err
 		}
+		column := linkColumn(link.EntityType)
 		// AFTER the target probe, not before it. A caller naming a company they
 		// cannot see must get the answer their row scope gives — the same
 		// not-found every other unreachable target gets — rather than a
@@ -170,6 +158,62 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		}
 	}
 	return nil
+}
+
+// mayAttach asks everything the caller must be allowed before one link is
+// inserted. It runs ahead of the insert it gates, so no refusal depends on the
+// caller aborting its transaction.
+func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
+	if linkColumn(link.EntityType) == "" {
+		return &InvalidLinkTypeError{EntityType: link.EntityType}
+	}
+	if link.EntityType == linkEntityProject {
+		if err := refuseAnUnattendedFiling(ctx); err != nil {
+			return err
+		}
+		if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+			return err
+		}
+	}
+	// ATTACH: the named record gains an activity that every reader of it
+	// will see, so a share marked read-only does not confer this.
+	return auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID)
+}
+
+// ProbeLinkWrites asks every question a write's link inserts will ask of the
+// caller. Asked ahead, a refusal arrives before work that cannot be undone.
+func (s *Store) ProbeLinkWrites(ctx context.Context, links []ActivityLinkInput) error {
+	if len(links) > maxActivityLinks {
+		return &TooManyLinksError{Count: len(links)}
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		for _, link := range links {
+			if err := mayAttach(ctx, tx, link); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// lastActivityTargets groups the links by the record types a last-activity
+// trigger moves. A type outside them reaches no clock, and an unknown one is
+// refused by the insert loop.
+func lastActivityTargets(links []ActivityLinkInput) storekit.LastActivityTargets {
+	var targets storekit.LastActivityTargets
+	for _, link := range links {
+		switch link.EntityType {
+		case linkEntityContact:
+			targets.Contacts = append(targets.Contacts, link.EntityID)
+		case linkEntityDeal:
+			targets.Deals = append(targets.Deals, link.EntityID)
+		case linkEntityCompany:
+			targets.Companies = append(targets.Companies, link.EntityID)
+		case linkEntityProject:
+			targets.Projects = append(targets.Projects, link.EntityID)
+		}
+	}
+	return targets
 }
 
 // refuseACompanyMeeting answers the company link on a meeting or a call the way
@@ -236,9 +280,9 @@ func (e *InvalidLinkTypeError) FieldFault() (field, code, message string) {
 // an EXISTING activity — reaches its own writer rather than this one.
 //
 // Filing under a project classifies an activity as commercial correspondence:
-// write-once in the database, monotonic, and removable only by a named contact
-// giving a written reason. relink_activity was raised to confirm-first for a
-// project destination for exactly that reason. The create path reaches the same
+// removable only by a named member giving a written reason (UndoProjectFiling).
+// relink_activity was raised to confirm-first for a project destination for
+// exactly that reason. The create path reaches the same
 // write and five tools ride it — log_activity, create_task, book_meeting,
 // draft_email, send_company_email — every one of them auto-execute. A passport
 // holding activity:update could call any of them in a loop and mint one mark
@@ -271,9 +315,8 @@ func refuseAnUnattendedFiling(ctx context.Context) error {
 type UnattendedProjectFilingError struct{}
 
 func (e *UnattendedProjectFilingError) Error() string {
-	return "filing an activity under a project marks it as commercial correspondence, which is " +
-		"write-once and removable only by a named contact giving a written reason — not a mark this " +
-		"call may write unattended"
+	return "filing an activity under a project marks it as commercial correspondence, which only a " +
+		"named member can take back, with a written reason — not a mark this call may write unattended"
 }
 
 // FieldFault names the array to change and the verb that files under a project

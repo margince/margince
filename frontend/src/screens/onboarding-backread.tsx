@@ -171,7 +171,7 @@ export function OnboardingBackread({
         starting={start.isPending}
         held={disabled}
         startProblem={safeDetail(start.isError, start.error, t)}
-        onStart={() => start.mutate(selected)}
+        onStart={() => importRun.begin(selected)}
         onDone={onDone}
       />
     );

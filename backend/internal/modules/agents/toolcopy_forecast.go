@@ -42,7 +42,9 @@ var forecastReadingsCopy = toolCopy{
 		"currency conversion and the weighting. These figures also cannot be cited in a " +
 		"composed document — for a board-pack section or anything a reader keeps, " +
 		"run_analytics_query with save and compose_analytics_report from the run id. Ask " +
-		"forecast_input_checks whether the inputs behind these numbers were read.",
+		"forecast_input_checks whether the inputs behind these numbers were read. `snapshots` " +
+		"lists this period's frozen states, newest first: the ids forecast_movement takes. " +
+		"Empty means nothing was frozen for this population, which includes managed teams.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number — a total placed " +
 		"in the reader's own zone is a different total — and `eligible_count`, `priced_count` " +
 		"and `fx_missing_count` are the counts `coverage_note` is written from.",
@@ -59,11 +61,11 @@ var forecastMovementCopy = toolCopy{
 		"classification exists to prevent: `definition` means the two snapshots were computed " +
 		"under different rules, and then the WHOLE difference is in that bucket; `model` means " +
 		"a probability the product re-scored.",
-	Instead: "IT NEEDS TWO SNAPSHOT IDS, and nothing on this surface hands one out — no tool " +
-		"lists snapshots and no resource publishes them, so a caller that has not been given " +
-		"ids from elsewhere cannot call this. Reading forecast_readings twice and subtracting " +
-		"is NOT the same answer and must not be reported as one: the difference between two " +
-		"reads is a number with no account of where it went.",
+	Instead: "IT NEEDS TWO SNAPSHOT IDS, `from` then `to`, both from ONE forecast_readings " +
+		"read's `snapshots` so they share a period; none listed means nothing was frozen yet. " +
+		"Reading forecast_readings twice and subtracting is NOT the same answer and must not " +
+		"be reported as one: the difference between two reads is a number with no account of " +
+		"where it went.",
 	Retain: "`reopened_or_archived` carries a deal that left the population entirely — " +
 		"archived, or no longer visible to this caller — with its whole prior contribution, so " +
 		"no money disappears without a row that says where it went.",

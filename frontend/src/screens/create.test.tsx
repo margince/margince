@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -13,14 +15,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption, toggleOptions } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { CompaniesScreen } from "./companies";
 import { ContactsScreen } from "./contacts";
 import {
+  CreateAction,
   type CreateField,
   CreateRecordModal,
   splitMultiselectValue,
   submittedValues,
   visibleFields,
 } from "./create";
+import { CATALOG_WAIT_MS } from "./create.dialog";
+import { type CustomField, useObjectCustomFields } from "./customfields.form";
 import { DealsScreen } from "./deals";
 
 // Create flows (the "you can actually add a record" acceptance): the list
@@ -31,6 +37,7 @@ import { DealsScreen } from "./deals";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });
@@ -42,9 +49,9 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function render(ui: ReactNode) {
+function render(ui: ReactNode, retries = 0) {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: retries, retryDelay: 50 } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
@@ -70,7 +77,7 @@ const emptyPage = { data: [], page: { next_cursor: null } };
 type Captured = { key: string; body: unknown };
 
 function stubApi(
-  routes: Record<string, (body: unknown) => Response>,
+  routes: Record<string, (body: unknown) => Response | Promise<Response>>,
   captured?: Captured[],
 ) {
   vi.stubGlobal(
@@ -146,7 +153,10 @@ describe("contact create flow", () => {
     );
     render(<ContactsScreen />);
     await userEvent.click(screen.getByText(en["create.contact"]));
-    await userEvent.type(screen.getByLabelText("Full name *"), "Peter Neu");
+    await userEvent.type(
+      await screen.findByLabelText("Full name *"),
+      "Peter Neu",
+    );
     await userEvent.click(screen.getByText("Add email"));
     await userEvent.type(screen.getByLabelText("Email *"), "peter@neu.example");
     await userEvent.click(screen.getByRole("radio", { name: "Primary" }));
@@ -186,7 +196,7 @@ describe("contact create flow", () => {
     const user = userEvent.setup();
     render(<ContactsScreen />);
     await user.click(screen.getByText(en["create.contact"]));
-    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+    await user.type(await screen.findByLabelText("Full name *"), "Peter Neu");
 
     await user.click(screen.getByText("Add email"));
     await user.click(screen.getByText("Add email"));
@@ -237,7 +247,7 @@ describe("contact create flow", () => {
     const user = userEvent.setup();
     render(<ContactsScreen />);
     await user.click(screen.getByText(en["create.contact"]));
-    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+    await user.type(await screen.findByLabelText("Full name *"), "Peter Neu");
 
     await user.click(screen.getByText("Add email"));
     await user.click(screen.getByText("Add email"));
@@ -262,7 +272,7 @@ describe("contact create flow", () => {
     const user = userEvent.setup();
     render(<ContactsScreen />);
     await user.click(screen.getByText(en["create.contact"]));
-    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+    await user.type(await screen.findByLabelText("Full name *"), "Peter Neu");
 
     await user.click(screen.getByText("Add email"));
     await user.click(screen.getByText("Add email"));
@@ -298,7 +308,7 @@ describe("contact create flow", () => {
     });
     render(<ContactsScreen />);
     await userEvent.click(screen.getByText(en["create.contact"]));
-    await userEvent.type(screen.getByLabelText("Full name *"), "x");
+    await userEvent.type(await screen.findByLabelText("Full name *"), "x");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>
       expect(screen.getByText("full_name must not be blank")).toBeTruthy(),
@@ -704,5 +714,179 @@ describe("the deal form's partner fields", () => {
       .map((option) => option.textContent);
     expect(offered).toContain("VietnamPartner JSC");
     expect(offered).not.toContain("Just A Customer");
+  });
+});
+
+// Six fields or fewer open as a form dialog, more as a drawer: every field the
+// form can render counts, a divider does not.
+describe("the record dialog's shape", () => {
+  const text = (key: string, extra?: Partial<CreateField>): CreateField => ({
+    key,
+    labelText: key,
+    ...extra,
+  });
+  const six = ["a", "b", "c", "d", "e", "f"].map((key) => text(key));
+  const controls: {
+    setFields?: (fields: CreateField[]) => void;
+    setError?: (error: string) => void;
+  } = {};
+  function Harness({ start }: Readonly<{ start: CreateField[] }>) {
+    const [fields, setFields] = useState(start);
+    const [error, setError] = useState<string | null>(null);
+    controls.setFields = setFields;
+    controls.setError = setError;
+    return (
+      <CreateRecordModal
+        open
+        onClose={vi.fn()}
+        title="New record"
+        fields={fields}
+        pending={false}
+        error={error}
+        onSubmit={vi.fn()}
+      />
+    );
+  }
+  const shapeOf = (fields: CreateField[]) => {
+    render(<Harness start={fields} />);
+    return screen.getByRole("dialog").className;
+  };
+
+  it("is a form at six fields, a divider not counting", () => {
+    const divider = text("more", { divider: true });
+    expect(shapeOf([...six, divider])).toContain("modal-form");
+  });
+
+  it("is a drawer at seven", () => {
+    expect(shapeOf([...six, text("g")])).toContain("modal-drawer");
+  });
+
+  it("counts a field its showWhen hides", () => {
+    const shape = shapeOf([...six, text("g", { showWhen: () => false })]);
+    expect(screen.queryByLabelText("g")).toBeNull();
+    expect(shape).toContain("modal-drawer");
+  });
+
+  it("keeps its shape and the reader's focus when fields arrive while open", async () => {
+    const user = userEvent.setup();
+    render(<Harness start={six} />);
+    const first = screen.getByLabelText("a");
+    await user.type(first, "Acme");
+    act(() => controls.setFields?.([...six, text("g"), text("h")]));
+    expect(screen.getByLabelText("g")).toBeTruthy();
+    expect(screen.getByRole("dialog").className).toContain("modal-form");
+    expect(document.activeElement).toBe(first);
+    expect(first).toHaveProperty("value", "Acme");
+  });
+
+  it("brings a refusal into view at the foot of a long form", () => {
+    const scroll = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => undefined);
+    render(<Harness start={[...six, text("g"), text("h")]} />);
+    act(() => controls.setError?.("A company with this name exists."));
+    expect(scroll.mock.contexts.at(-1)).toBe(screen.getByRole("alert"));
+    scroll.mockRestore();
+  });
+
+  const customField = (slug: string): CustomField => ({
+    id: `cf-${slug}`,
+    object: "company",
+    label: slug,
+    slug,
+    type: "text",
+    status: "active",
+    column_name: `cf_${slug}`,
+    created_by: "u1",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  });
+
+  it("waits for the custom fields and counts them", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => undefined;
+    stubApi({
+      "GET /custom-fields": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    render(<CompaniesScreen />);
+    const trigger = await screen.findByText(en["create.company"]);
+    await user.click(trigger);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(trigger.closest("button")?.getAttribute("aria-busy")).toBe("true");
+    answer(
+      jsonResponse({ data: [customField("tier"), customField("region")] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("tier")).toBeTruthy();
+    expect(dialog.className).toContain("modal-drawer");
+  });
+
+  it("opens with the core fields when the custom-field read fails", async () => {
+    const user = userEvent.setup();
+    stubApi({
+      "GET /custom-fields": () => jsonResponse({ title: "Unavailable" }, 503),
+    });
+    render(<CompaniesScreen />);
+    await user.click(await screen.findByText(en["create.company"]));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("Company name *")).toBeTruthy();
+  });
+
+  it("waits out a retried read and counts what the retry brings", async () => {
+    const user = userEvent.setup();
+    let fail: () => void = () => undefined;
+    let reads = 0;
+    stubApi({
+      "GET /custom-fields": () =>
+        reads++ === 0
+          ? new Promise<Response>((resolve) => {
+              fail = () => resolve(jsonResponse({ title: "Busy" }, 503));
+            })
+          : jsonResponse({
+              data: [customField("tier"), customField("region")],
+            }),
+    });
+    render(<CompaniesScreen />, 1);
+    await user.click(await screen.findByText(en["create.company"]));
+    act(() => fail());
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.className).toContain("modal-drawer");
+    expect(within(dialog).getByLabelText("tier")).toBeTruthy();
+  });
+
+  it("opens with the core fields once a read that never answers has had its time", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    stubApi({ "GET /custom-fields": () => new Promise<Response>(() => {}) });
+    render(<CompaniesScreen />);
+    fireEvent.click(await screen.findByText(en["create.company"]));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    act(() => vi.advanceTimersByTime(CATALOG_WAIT_MS));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("is not held by another object's catalog", async () => {
+    const user = userEvent.setup();
+    stubApi({ "GET /custom-fields": () => new Promise<Response>(() => {}) });
+    function DealCatalog() {
+      useObjectCustomFields("deal");
+      return null;
+    }
+    render(
+      <>
+        <DealCatalog />
+        <CreateAction
+          label="New company"
+          create={vi.fn()}
+          invalidate="companies"
+          screen="companies"
+          fields={six}
+        />
+      </>,
+    );
+    await user.click(screen.getByText("New company"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });

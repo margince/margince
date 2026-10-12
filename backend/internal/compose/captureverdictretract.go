@@ -69,7 +69,7 @@ func (e *CounterpartyVerdictEngine) retractSendersContacts(
 		if ownersOnly && h.OwnerID != row.OwnerID {
 			continue
 		}
-		retracted, err := e.contacts.RetractCaptureOnlyContactTx(ctx, tx, h.ContactID, h.OwnerID)
+		retracted, err := retractCapturedContactTx(ctx, tx, e.contacts, h.ContactID, h.OwnerID)
 		if err != nil {
 			return err
 		}
@@ -127,7 +127,7 @@ func (w *linkReconcileWorker) retractNoiseJudgedContacts(ctx context.Context) (i
 					return err
 				}
 			}
-			done, err := w.store.RetractCaptureOnlyContactTx(ctx, tx, c.ContactID, c.OwnerID)
+			done, err := retractCapturedContactTx(ctx, tx, w.store, c.ContactID, c.OwnerID)
 			if err != nil {
 				return err
 			}
@@ -183,7 +183,7 @@ func (w *linkReconcileWorker) retractPrivateThreadContacts(ctx context.Context) 
 				return err
 			}
 			for _, contact := range orphaned {
-				done, err := w.store.RetractCaptureOnlyContactTx(ctx, tx, contact.ContactID, contact.OwnerID)
+				done, err := retractCapturedContactTx(ctx, tx, w.store, contact.ContactID, contact.OwnerID)
 				if err != nil {
 					return err
 				}

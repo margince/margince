@@ -20,7 +20,6 @@ package search
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -66,8 +65,7 @@ func TestACancelledRequestIsNotATooBroadQuery(t *testing.T) {
 
 	err := rankingFault(ctx, queryCanceled())
 
-	var tooBroad *QueryTooBroadError
-	if errors.As(err, &tooBroad) {
+	if _, ok := errors.AsType[*QueryTooBroadError](err); ok {
 		t.Error("a cancelled request was reported as a too-broad query — the reader would be sent " +
 			"to rewrite a query that was fine, and there is nobody left to read the answer")
 	}
@@ -77,10 +75,9 @@ func TestACancelledRequestIsNotATooBroadQuery(t *testing.T) {
 // database faults into "narrow your search" would hide them behind advice that
 // cannot work.
 func TestAnUnrelatedDatabaseFaultIsNotRewritten(t *testing.T) {
-	err := rankingFault(context.Background(), fmt.Errorf("connection refused"))
+	err := rankingFault(context.Background(), errors.New("connection refused"))
 
-	var tooBroad *QueryTooBroadError
-	if errors.As(err, &tooBroad) {
+	if _, ok := errors.AsType[*QueryTooBroadError](err); ok {
 		t.Error("an unrelated fault was reported as a too-broad query")
 	}
 	if err == nil {

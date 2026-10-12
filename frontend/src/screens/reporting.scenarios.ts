@@ -22,7 +22,7 @@ export const sdrEvaluation: ReportingEvaluation = {
   metrics: [
     {
       id: "meetings_held",
-      version: "1",
+      version: "2",
       unit: "count",
       value: 34,
       target: 40,
@@ -197,8 +197,8 @@ export const reportingEditions: ReportingEdition[] = [
       context: {
         ...reportingStoryEvaluation.context,
         interval: {
-          start_at: "2026-09-01T00:00:00Z",
-          end_at: "2026-10-01T00:00:00Z",
+          start_at: "2026-08-31T22:00:00Z",
+          end_at: "2026-09-30T22:00:00Z",
         },
       },
     },
@@ -217,8 +217,8 @@ export const reportingEditions: ReportingEdition[] = [
       context: {
         ...reportingStoryEvaluation.context,
         interval: {
-          start_at: "2026-08-01T00:00:00Z",
-          end_at: "2026-09-01T00:00:00Z",
+          start_at: "2026-07-31T22:00:00Z",
+          end_at: "2026-08-31T22:00:00Z",
         },
       },
       metrics: reportingStoryEvaluation.metrics.map((metric) => ({
@@ -244,7 +244,7 @@ export const reportingTargets: components["schemas"]["ReportingTarget"][] =
     id: `target-${index}`,
     revision: 2,
     version: 2,
-    created_at: "2026-09-01T00:00:00Z",
+    created_at: "2026-08-31T22:00:00Z",
     unit: input.unit,
     definition: {
       metric: input.metric,
@@ -255,8 +255,8 @@ export const reportingTargets: components["schemas"]["ReportingTarget"][] =
       reason: "Agreed monthly commitment",
     },
     interval: {
-      start_at: "2026-09-01T00:00:00Z",
-      end_at: "2026-10-01T00:00:00Z",
+      start_at: "2026-08-31T22:00:00Z",
+      end_at: "2026-09-30T22:00:00Z",
     },
     allocated_value: Math.floor(input.value * 0.8),
     allocation_difference: input.value - Math.floor(input.value * 0.8),

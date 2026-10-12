@@ -43,6 +43,7 @@ func (t composeAnalyticsReport) Spec() mcp.ToolSpec {
 		// exist. Nothing is stored and no record moves, so a write scope would
 		// claim an authority this never uses.
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "renderAnalyticsReport",
 		// The block vocabulary is NOT restated here. `kind` is left an open
 		// string in the schema and closed by the validator, which refuses an
 		// unknown kind BY NAME with the set — the same trade run_report makes

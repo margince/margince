@@ -5,7 +5,7 @@
 
 package gates
 
-// The screens ask what a seat MAY DO, not which role it holds.
+// The screens ask what a seat may do rather than which role it holds.
 //
 // /me carries the server's own answer — the object grants and the row scope it
 // computed from the stored policy — precisely so a screen never re-derives one

@@ -5,7 +5,7 @@
 
 package gates
 
-// What belongs to the REPOSITORY, as against what happens to be in a working
+// What belongs to the repository, as against what happens to be in a working
 // tree.
 //
 // A gate that walks the filesystem judges whatever a checkout carries: a build
@@ -106,7 +106,7 @@ func gitPaths(t testing.TB, root string, args ...string) []string {
 			"cannot tell a clean tree from an unreadable one", strings.Join(args, " "), root, err)
 	}
 	var paths []string
-	for _, entry := range strings.Split(string(out), "\x00") {
+	for entry := range strings.SplitSeq(string(out), "\x00") {
 		if entry != "" {
 			paths = append(paths, entry)
 		}

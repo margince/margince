@@ -5,7 +5,7 @@
 
 package gates
 
-// The address a buyer invitation MAILS is an address this app serves.
+// The address a buyer invitation mails is an address this app serves.
 //
 // The link is minted by the server and opened by a browser, so the route and
 // its query parameter are one invariant spelled on both sides of a wire. Left

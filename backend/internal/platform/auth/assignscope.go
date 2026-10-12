@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // AssigneeNotAllowedError refuses a proposed owner: 422, one code for every
@@ -52,10 +53,10 @@ func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
 // the assigner's whole destination pool.
 func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int) string {
 	return fmt.Sprintf(
-		`%[1]s.status = 'active' AND %[1]s.archived_at IS NULL
-		   AND NOT %[1]s.is_agent AND %[1]s.seat_type <> 'read'
-		   AND %[2]s`,
-		alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
+		`%[1]s
+		   AND NOT %[2]s.is_agent AND %[2]s.seat_type <> 'read'
+		   AND %[3]s`,
+		workforce.LiveMemberSQL(alias), alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
 }
 
 // newRecordOwnerSQL is AssigneeEligibleSQL for a NEW record's named owner,
@@ -71,7 +72,7 @@ func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int)
 // swap.
 func newRecordOwnerSQL(p principal.Principal, alias string, arg func(any) int) string {
 	return strings.Replace(AssigneeEligibleSQL(p, alias, arg),
-		alias+".status = 'active'", alias+".status IN ('active', 'invited')", 1)
+		workforce.LiveMemberSQL(alias), workforce.ActivatableMemberSQL(alias), 1)
 }
 
 // EnsureAssignee answers whether the caller may hand work to dest.
@@ -89,7 +90,7 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 }
 
 // EnsureNewRecordOwner is EnsureAssignee for the owner named on a record's
-// create, where an invited colleague is also eligible (newOwnerStatus).
+// create, where an invited colleague is also eligible (newRecordOwnerSQL).
 func EnsureNewRecordOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 	return ensureAssigneeWith(ctx, tx, dest, newRecordOwnerSQL)
 }
@@ -196,4 +197,22 @@ func ensureAssignableSource(ctx context.Context, tx pgx.Tx, table string, id ids
 	// principal, which is a seat the raw check would have admitted onto the
 	// ownerless arm.
 	return RequireHuman(ctx)
+}
+
+// EnsureOwnerHandOn is EnsureAssignee for an EDIT that names an owner, where
+// only a CHANGE of owner is an assignment.
+//
+// An edit form sends the whole record back, owner included, so the ordinary
+// save of a record whose owner has since been suspended re-states an owner it
+// is not handing on. Asking EnsureAssignee of that would make such a record
+// uneditable by anyone until somebody first handed it elsewhere — the record a
+// departed colleague leaves behind, frozen exactly when it needs picking up.
+func EnsureOwnerHandOn(ctx context.Context, tx pgx.Tx, current *ids.UUID, next *ids.UserID) error {
+	if next == nil {
+		return nil
+	}
+	if current != nil && *current == next.UUID {
+		return nil
+	}
+	return EnsureAssignee(ctx, tx, next.UUID)
 }

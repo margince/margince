@@ -137,7 +137,11 @@ export function SufficiencyCard({
   return (
     <StatCard
       narrow="row"
-      label={t("forecast.pipelineNeeded")}
+      label={
+        sufficiency.basis === "historical_median"
+          ? t("reporting.historicalBenchmark")
+          : t("forecast.pipelineNeeded")
+      }
       value={money(needed)}
       // TWO lines and no more: the share, then the two figures it was drawn
       // from. The need itself is already the value above, and WHICH measure the

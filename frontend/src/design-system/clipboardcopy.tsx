@@ -104,3 +104,32 @@ export function useClipboardCopy(
     ) : null,
   };
 }
+
+/**
+ * The text a copy control copies, drawn so a reader can still take it by hand
+ * when the clipboard refuses: it wraps in full, takes keyboard focus, and
+ * focus selects all of it, so Tab then the platform's copy keys is the way out.
+ */
+export function CopyableText({
+  text,
+  label,
+  testId,
+}: Readonly<{ text: string; label: string; testId?: string }>) {
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: a textarea does not grow to its text, and the value must show whole at any width
+    <div
+      className="code-block"
+      role="textbox"
+      aria-readonly="true"
+      aria-multiline="true"
+      aria-label={label}
+      tabIndex={0}
+      data-testid={testId}
+      onFocus={(event) =>
+        document.getSelection()?.selectAllChildren(event.currentTarget)
+      }
+    >
+      {text}
+    </div>
+  );
+}

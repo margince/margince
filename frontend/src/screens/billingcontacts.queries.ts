@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 
 // The three writes the billing-contacts panel makes, sharing one invalidation.
 // The same panel is read from two projections — the finance summary the
@@ -44,19 +44,18 @@ async function billingEdgeVersion(
 ): Promise<number | undefined> {
   let cursor: string | undefined;
   do {
-    const { data, error } = await api.GET("/relationships", {
-      params: {
-        query: {
-          company_id: companyId,
-          contact_id: contact.contact_id,
-          kind: "billing_contact",
-          cursor,
+    const data = unwrap(
+      await api.GET("/relationships", {
+        params: {
+          query: {
+            company_id: companyId,
+            contact_id: contact.contact_id,
+            kind: "billing_contact",
+            cursor,
+          },
         },
-      },
-    });
-    if (error) {
-      throwProblem(error);
-    }
+      }),
+    );
     const found = data.data.find((rel) => rel.id === contact.relationship_id);
     if (found) {
       return found.version;
@@ -92,16 +91,15 @@ export function useBillingContactActions(
     if (version === undefined) {
       throwProblem({ detail: unresolvedVersion });
     }
-    const { error } = await api.PATCH("/relationships/{id}", {
-      params: {
-        path: { id: contact.relationship_id },
-        ...ifMatch(version),
-      },
-      body: { role },
-    });
-    if (error) {
-      throwProblem(error);
-    }
+    unwrap(
+      await api.PATCH("/relationships/{id}", {
+        params: {
+          path: { id: contact.relationship_id },
+          ...ifMatch(version),
+        },
+        body: { role },
+      }),
+    );
   };
 
   const add = useMutation({
@@ -121,11 +119,7 @@ export function useBillingContactActions(
         // other would make a machine's guess read as somebody's decision.
         source: "manual",
       };
-      const { data, error } = await api.POST("/relationships", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/relationships", { body }));
     },
     onSuccess: invalidate,
   });
@@ -150,15 +144,14 @@ export function useBillingContactActions(
       if (version === undefined) {
         throwProblem({ detail: unresolvedVersion });
       }
-      const { error } = await api.DELETE("/relationships/{id}", {
-        params: {
-          path: { id: contact.relationship_id },
-          ...ifMatch(version),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/relationships/{id}", {
+          params: {
+            path: { id: contact.relationship_id },
+            ...ifMatch(version),
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });

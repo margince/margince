@@ -1,0 +1,41 @@
+name: nl_search_reads_a_list_of_countries_as_membership
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: contact
+  text: contacts in Germany, Austria or Switzerland whose title contains CEO
+  today: '2026-09-30'
+  lang: en
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: email, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: title, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: country, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: city, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: last_activity_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: owner_id, type: id, operators: [eq, neq, in, exists]}
+  - {name: tag, type: id, operators: [eq, neq, in, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      and:
+      - field: country
+        op: in
+        value:
+        - DE
+        - AT
+        - CH
+      - field: title
+        op: contains
+        value: CEO
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: The passing filter is country in DE, AT, CH (or the same three as an or-group of equalities) AND title
+    containing CEO. Requiring all three countries at once, or matching the title exactly, fails.

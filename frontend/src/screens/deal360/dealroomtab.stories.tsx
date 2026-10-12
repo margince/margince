@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -9,7 +10,12 @@ import {
   meRoute,
   StoryProviders,
 } from "../story-utils";
-import { RoomFacts, RoomText, ViewAsBuyerButton } from "./dealroomtab";
+import {
+  DealRoomTab,
+  RoomFacts,
+  RoomText,
+  ViewAsBuyerButton,
+} from "./dealroomtab";
 
 // The deal's own door into its room: who has been in, the one way to see what
 // they see, and the text the buyer reads when they arrive.
@@ -140,5 +146,29 @@ export const TextDark: Story = {
         <RoomText room={room()} refusal={undefined} />
       </StoryProviders>
     );
+  },
+};
+
+/** A deal with no room: the verb opens the form that names the room. */
+export const OpeningARoom: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ deal_room: ["read", "create", "update"] }),
+      "GET /deal-rooms": () =>
+        jsonResponse({ data: [], page: { next_cursor: null } }),
+    });
+    return (
+      <StoryProviders>
+        <DealRoomTab dealId="deal-1" dealName="Fleet telematics" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Open a Deal Room",
+      }),
+    );
+    await screen.findByRole("dialog");
   },
 };

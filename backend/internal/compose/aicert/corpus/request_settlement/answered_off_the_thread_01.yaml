@@ -1,0 +1,56 @@
+name: an_answer_off_the_thread_settles_a_request
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Requests are often answered somewhere other than the thread they arrived on:
+# a meeting that took place, or a new mail of ours with the same subject. The
+# evidence read hands these to the model as answers from outside the thread.
+#
+# The first is the shape that kept requests owed for days: a customer asked to
+# talk, the meeting happened, and nobody wrote back on the thread because there
+# was nothing left to write. The second delivers what was asked in a fresh mail
+# rather than a reply.
+fixture:
+  - messages:
+      - direction: inbound
+        subject: 'Rollout next quarter'
+        body: |
+          Hi, could we find thirty minutes next week to talk through the
+          rollout plan? Any afternoon works for me.
+      - direction: outbound
+        off_thread: meeting
+        subject: 'Rollout planning'
+        body: |
+          Walked through the rollout with Anna. Agreed a phased start in
+          November, beginning with the Hamburg team.
+  - messages:
+      - direction: inbound
+        subject: 'Unterschriebene NDA'
+        body: |
+          Hallo, könnt ihr uns die unterschriebene NDA zurückschicken? Unsere
+          Rechtsabteilung wartet darauf.
+      - direction: outbound
+        off_thread: email
+        subject: 'Unterschriebene NDA'
+        body: |
+          Hallo Frau Weber, anbei die unterschriebene NDA als PDF.
+expect:
+  outcome: accepted
+  answer:
+    - verdict: settled
+    - verdict: settled
+  rubric: >
+    Both are settled. In the first, they asked to talk and the meeting took
+    place: a held meeting is the answer to a request to meet, whatever was
+    decided in it. In the second, our own mail with the same subject delivers
+    the signed NDA they asked for; that it is a new mail and not a reply does
+    not change what it did.
+    Score high only if both are settled. A model that answers still_owed or
+    unsure because no reply was written on the thread is reading the thread's
+    shape rather than what we did, which is the defect this evidence exists to
+    fix, and should score at the floor for that conversation.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

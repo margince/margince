@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -17,11 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
-	targetColumns = "t.id,r.definition,t.period_start,t.period_end,t.unit,t.revision,t.version,t.created_at"
-	targetFrom    = " FROM sales_target t JOIN sales_target_revision r ON r.target_id=t.id AND r.revision=t.revision"
+	targetRetiredSQL = "COALESCE((r.definition->>'retired')::boolean,false)"
+	activeTarget     = targetRetiredSQL + "=false"
+	targetColumns    = "t.id,r.definition,t.period_start,t.period_end,t.unit,t.revision,t.version,t.created_at"
+	targetFrom       = " FROM sales_target t JOIN sales_target_revision r ON r.target_id=t.id AND r.revision=t.revision"
 )
 
 func scanTarget(row pgx.Row) (crmcontracts.ReportingTarget, error) {
@@ -56,6 +60,9 @@ func (s *Service) GetTarget(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 		if err != nil {
 			return err
 		}
+		if err := s.targetHistory(ctx, tx, &out); err != nil {
+			return err
+		}
 		return s.targetAllocation(ctx, tx, &out)
 	})
 	return out, err
@@ -76,8 +83,14 @@ func (s *Service) targetClause(ctx context.Context, tx pgx.Tx, b *bindings) (str
 	return "((t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(actor.TeamIDs) + ")))", nil
 }
 
+// TargetFilter selects current target definitions before pagination.
+type TargetFilter struct {
+	Retired     *bool
+	PeriodStart *openapi_types.Date
+}
+
 // ListTargets exposes only targets within the reader’s live scope.
-func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int) (crmcontracts.ReportingTargetList, error) {
+func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, filter TargetFilter) (crmcontracts.ReportingTargetList, error) {
 	if err := auth.Require(ctx, "sales_target", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingTargetList{}, err
 	}
@@ -91,6 +104,13 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int) (
 		}
 		if after != nil {
 			where += " AND t.id>" + b.add(*after)
+		}
+		if filter.Retired != nil {
+			where += " AND " + targetRetiredSQL + "=" + b.add(*filter.Retired)
+		}
+		if filter.PeriodStart != nil {
+			// The filter is a local calendar date; t.period_start is its zoned instant.
+			where += " AND r.definition->>'period_start'=" + b.add(filter.PeriodStart.Format("2006-01-02"))
 		}
 		rows, err := tx.Query(ctx, "SELECT "+targetColumns+targetFrom+" WHERE "+where+" ORDER BY t.id LIMIT "+b.add(limit+1), b.values...)
 		if err != nil {
@@ -117,7 +137,7 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int) (
 
 func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (crmcontracts.ReportingWindow, string, error) {
 	empty := crmcontracts.ReportingWindow{}
-	if in.Value < 0 || in.Value > 9007199254740991 || strings.TrimSpace(in.Reason) == "" || len(in.Reason) > 1000 {
+	if in.Value < 0 || in.Value > values.MaxExactInteger || !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
 		return empty, "", invalid("enter a non-negative target and a revision reason")
 	}
 	catalog, err := s.evaluator.Catalog(ctx)

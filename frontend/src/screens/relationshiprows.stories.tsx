@@ -66,7 +66,9 @@ export const RemoveRefused: Story = {
       await within(canvasElement).findByTestId("remove-relationship"),
     );
     await userEvent.click(
-      await screen.findByTestId("remove-relationship-confirm"),
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Remove",
+      }),
     );
     await expect(await screen.findByRole("alert")).toHaveTextContent(
       "This edge is the contact's current primary employment.",

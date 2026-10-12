@@ -333,8 +333,8 @@ func bootstrapWithRetentionPosture(t *testing.T, retention *deployconfig.Retenti
 		},
 		Seeds: deployconfig.Seeds{
 			Retention:          retention,
-			StarterAutomations: BoolPtr(false),
-			BookingPage:        BoolPtr(false),
+			StarterAutomations: new(false),
+			BookingPage:        new(false),
 		},
 	}
 	if err := compose.EnsureInstallation(context.Background(),

@@ -6,7 +6,7 @@
 package gates
 
 // A rule waiver in sonar-project.properties has to keep pointing at something,
-// and there are two ways one stops — NEITHER of which announces itself.
+// and there are two ways one stops, neither of which announces itself.
 //
 // A waiver whose id is missing from `sonar.issue.ignore.multicriteria` is not
 // applied at all: the scanner reads that list and nothing else. The entry sits
@@ -71,10 +71,10 @@ func parseSonarWaivers(text string) (map[string]*sonarWaiver, []string) {
 	// multicriteria list is one line today, and a reformat onto several would
 	// otherwise leave `\` parsing as a waiver id.
 	joined := strings.ReplaceAll(text, "\\\n", "")
-	for _, line := range strings.Split(joined, "\n") {
+	for line := range strings.SplitSeq(joined, "\n") {
 		line = strings.TrimSpace(line)
 		if after, ok := strings.CutPrefix(line, "sonar.issue.ignore.multicriteria="); ok {
-			for _, id := range strings.Split(after, ",") {
+			for id := range strings.SplitSeq(after, ",") {
 				if trimmed := strings.TrimSpace(id); trimmed != "" {
 					enrolled = append(enrolled, trimmed)
 				}

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { RecordCustomFields } from "./recordcustomfields";
 import {
@@ -33,6 +34,31 @@ const meta: Meta<typeof RecordCustomFields> = {
 };
 export default meta;
 type Story = StoryObj<typeof RecordCustomFields>;
+const FIELDS: components["schemas"]["CustomField"][] = [
+  customFieldFixture,
+  {
+    ...customFieldFixture,
+    id: "field2",
+    label: "Annual budget",
+    slug: "budget",
+    type: "currency",
+    currency: "EUR",
+    column_name: "cf_budget",
+  },
+  {
+    ...customFieldFixture,
+    id: "field3",
+    label: "Account wiki",
+    slug: "wiki",
+    column_name: "cf_wiki",
+  },
+];
+// Wire-shaped values: a currency column travels as integer minor units.
+const VALUES = {
+  cf_tier: "Strategic",
+  cf_budget: 4_800_000,
+  cf_wiki: "https://wiki.example.com/globex",
+};
 function routes(failed = false) {
   installFetchStub({
     "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
@@ -40,7 +66,7 @@ function routes(failed = false) {
       failed
         ? jsonResponse({ title: "Unavailable" }, 503)
         : jsonResponse({
-            data: [customFieldFixture],
+            data: FIELDS,
             page: { has_more: false },
           }),
     "PATCH /contacts/c1": (body) =>
@@ -55,11 +81,27 @@ export const Unset: Story = {
   beforeEach: () => routes(),
   args: { kind: "contact", record: { id: "c1", version: 1, writable: true } },
 };
+export const Filled: Story = {
+  beforeEach: () => routes(),
+  args: {
+    kind: "contact",
+    record: { id: "c1", version: 1, writable: true, ...VALUES },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("link", { name: VALUES.cf_wiki }),
+    ).toHaveAttribute("href", VALUES.cf_wiki);
+    await expect(
+      canvas.getByRole("button", { name: "Change Annual budget" }),
+    ).toHaveTextContent("€48,000.00");
+  },
+};
 export const ReadOnly: Story = {
   beforeEach: () => routes(),
   args: {
     kind: "contact",
-    record: { id: "c1", version: 1, writable: false, cf_tier: "Strategic" },
+    record: { id: "c1", version: 1, writable: false, ...VALUES },
   },
 };
 export const Failed: Story = {

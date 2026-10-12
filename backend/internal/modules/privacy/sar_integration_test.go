@@ -176,10 +176,13 @@ func exportContext(ws, user ids.UUID) context.Context {
 // The subject's identifiers, one live and one retired per kind. These are the
 // SHAPES; ident() below binds each to a particular subject.
 const (
-	liveEmail      = "sara.live@sar.test"
-	retiredEmail   = "sara.retired@sar.test"
-	livePhone      = "+493011111111"
-	retiredPhone   = "+493022222222"
+	liveEmail    = "sara.live@sar.test"
+	retiredEmail = "sara.retired@sar.test"
+	// Seven digits, not twelve: ident splices the subject's eight digits in, and
+	// E.164 — which contact_phone_e164 now holds — caps a number at fifteen. The
+	// last four are what tell live from retired, so they survive the splice.
+	livePhone      = "+4930111"
+	retiredPhone   = "+4930222"
 	liveAccount    = "770000001"
 	retiredAccount = "770000002"
 )

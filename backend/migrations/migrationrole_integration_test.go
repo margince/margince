@@ -123,7 +123,8 @@ func asMigrator(t *testing.T, admin *pgx.Conn) *pgx.Conn {
 func assertNoRLSExemption(ctx context.Context, t *testing.T, conn *pgx.Conn) {
 	t.Helper()
 	var super, bypass bool
-	if err := conn.QueryRow(ctx,
+	if err := conn.QueryRow(
+		ctx,
 		`SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user`,
 	).Scan(&super, &bypass); err != nil {
 		t.Fatalf("reading the migration role's attributes: %v", err)

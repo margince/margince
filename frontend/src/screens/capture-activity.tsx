@@ -140,33 +140,30 @@ export function CaptureActivityTab() {
               settings cards put theirs — Panel's header band holds the title
               alone, by design. */}
           <PanelIntro>{t("captureActivity.sub")}</PanelIntro>
-          <SettingList>
-            {/* Whose activity is a one-of-two ANSWER, so it sits beside its
-                naming in the right column like every other answer on the page.
-                The control keeps the same words as its own accessible name —
-                the row draws them, the fieldset announces them. */}
-            {canReadWorkspace && (
-              <SettingRow
-                label={t("captureActivity.scope.label")}
-                control={
-                  <SegmentedControl<Scope>
-                    label={t("captureActivity.scope.label")}
-                    value={scope}
-                    onChange={setScope}
-                    options={SCOPES}
-                    labels={{
-                      mine: t("captureActivity.scope.mine"),
-                      workspace: t("captureActivity.scope.workspace"),
-                    }}
-                  />
-                }
-              />
-            )}
-            {/* The window contributes the card's remaining children itself:
-                the funnel row and the log's disclosure, both fed by one read. */}
-            <CaptureActivityWindow scope={canReadWorkspace ? scope : "mine"} />
-          </SettingList>
         </PanelBody>
+        <SettingList bleed="settings">
+          {/* The control repeats the row's label: its fieldset announces it. */}
+          {canReadWorkspace && (
+            <SettingRow
+              label={t("captureActivity.scope.label")}
+              control={
+                <SegmentedControl<Scope>
+                  label={t("captureActivity.scope.label")}
+                  value={scope}
+                  onChange={setScope}
+                  options={SCOPES}
+                  labels={{
+                    mine: t("captureActivity.scope.mine"),
+                    workspace: t("captureActivity.scope.workspace"),
+                  }}
+                />
+              }
+            />
+          )}
+          {/* The window contributes the card's remaining children itself:
+              the funnel row and the log's disclosure, both fed by one read. */}
+          <CaptureActivityWindow scope={canReadWorkspace ? scope : "mine"} />
+        </SettingList>
       </Panel>
     </>
   );

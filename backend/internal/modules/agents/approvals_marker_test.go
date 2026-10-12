@@ -28,6 +28,8 @@ func (refusingApprovals) StageVolumeRelease(context.Context, VolumeReleaseReques
 	return ids.ApprovalID{}, false, nil
 }
 
+func (refusingApprovals) ReleasableByCaller(context.Context, StageRequest) bool { return false }
+
 func (refusingApprovals) StageCall(context.Context, StageRequest) (ids.ApprovalID, bool, error) {
 	return ids.ApprovalID{}, false, errRedeemRefused
 }

@@ -5,7 +5,7 @@
 
 package gates
 
-// Every send says WHY it is being sent.
+// Every send says why it is being sent.
 //
 // The engine resolves what a message is from the record, and a caller's claim
 // is one of the four things it reads (authorizeresolve.go, arm 3). A send input

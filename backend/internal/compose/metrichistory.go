@@ -22,13 +22,10 @@ func reportingHistoryCoverage(ctx context.Context, tx pgx.Tx, frame crmcontracts
 		return coverage, err
 	}
 	var b reportingBindings
-	object, alias, from, owner, missing := string(recordTypeDeal), "t", "deal t", "t.owner_id", ""
+	object, alias, from, owner, missing := string(recordTypeDeal), "t", "deal t", colOwnerID, ""
 	switch metric {
-	case reportingBookingsWon, reportingClosedWinRate, reportingQualifiedPipelineCreated:
+	case reportingQualifiedPipelineCreated:
 		missing = "EXISTS(SELECT 1 FROM deal_stage_history h WHERE h.deal_id=t.id AND h.changed_at>=" + b.add(reportingEarliest(frame)) + " AND h.changed_at<" + b.add(frame.EvaluatedAt) + " AND (h.owner_id_at_change IS NULL OR h.pipeline_id_at_change IS NULL))"
-	case reportingMeetingsHeld:
-		object, alias, from, owner = string(recordTypeActivity), "t", "activity t", "t.host_user_id"
-		missing = "t.kind='meeting' AND EXISTS(SELECT 1 FROM activity_meeting_history h WHERE h.activity_id=t.id AND h.scheduled_start>=" + b.add(reportingEarliest(frame)) + " AND h.scheduled_start<" + b.add(frame.EvaluatedAt) + " AND (h.host_id_at_change IS NULL OR h.customer_eligible_at_change IS NULL OR h.partial_pre_history))"
 	case reportingAcceptedOpportunities:
 		object, alias, from, owner = reportingCreditObject, "t", "sdr_handoff t", "t.submitted_by"
 		missing = "EXISTS(SELECT 1 FROM sdr_handoff_event h WHERE h.handoff_id=t.id AND h.to_status='accepted' AND h.occurred_at>=" + b.add(reportingEarliest(frame)) + " AND h.occurred_at<" + b.add(frame.EvaluatedAt) + " AND (h.submitter_id_at_change IS NULL OR h.deal_id_at_change IS NULL))"

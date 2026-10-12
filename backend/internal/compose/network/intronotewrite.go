@@ -98,13 +98,24 @@ Rules you must not break:
 //promptvoice:exempt the note is forwarded under the sender's own name to a customer; Margince's register ("no greetings", "say I for what you did") would contradict the greeting it opens with.
 func noteRequest(facts noteFacts) model.Request {
 	fence := promptfence.New()
+	// Withheld from the model's input on an indirect route, not only from the
+	// template. The band and date describe the intermediary's edge rather than
+	// the sender's, so a note written from them tells the customer the sender
+	// knows them when no record says so, and a prompt handed the wrong fact can
+	// state it. The name goes for a second reason: naming the intermediary tells
+	// the customer who talked about them, which the route's evidence does not
+	// authorise.
+	relationship, lastSpoke, through := facts.band, noteLastSpoke(facts), facts.through
+	if facts.through != "" {
+		relationship, lastSpoke, through = "", "", ""
+	}
 	payload, err := json.Marshal(map[string]string{
 		"sender":          facts.colleague,
 		"recipient":       facts.contact,
 		"introducing":     facts.requester,
-		"through_contact": facts.through,
-		"relationship":    facts.band,
-		"last_spoke":      noteLastSpoke(facts),
+		"through_contact": through,
+		"relationship":    relationship,
+		"last_spoke":      lastSpoke,
 		"why_it_matters":  facts.value,
 		"output_language": string(noteLang(facts.lang)),
 	})
@@ -187,7 +198,6 @@ type noteWording struct {
 	intro     string
 	viaKnown  string
 	viaUntold string
-	through   string
 	why       string
 	ask       string
 	sign      string
@@ -200,7 +210,6 @@ var noteTable = map[textlang.Lang]noteWording{
 		intro:     "I wanted to put you in touch with %s.",
 		viaKnown:  "We have been in touch (%s, last around %s), so I thought the introduction was worth making.",
 		viaUntold: "I thought the introduction was worth making.",
-		through:   "%s suggested you would be the right contact.",
 		why:       "%s",
 		ask:       "Happy to step out of the way if it is useful — I will leave the two of you to it.",
 		sign:      "Best,",
@@ -211,7 +220,6 @@ var noteTable = map[textlang.Lang]noteWording{
 		intro:     "ich wollte Sie mit %s bekannt machen.",
 		viaKnown:  "Wir stehen in Kontakt (%s, zuletzt etwa %s), deshalb hielt ich die Vorstellung für sinnvoll.",
 		viaUntold: "Ich hielt die Vorstellung für sinnvoll.",
-		through:   "%s meinte, Sie wären dafür genau richtig.",
 		why:       "%s",
 		ask:       "Ich halte mich gerne raus und überlasse das Weitere Ihnen beiden.",
 		sign:      "Viele Grüße",
@@ -222,7 +230,6 @@ var noteTable = map[textlang.Lang]noteWording{
 		intro:     "mình muốn giới thiệu %s với bạn.",
 		viaKnown:  "Chúng ta vẫn liên hệ (%s, lần gần nhất khoảng %s), nên mình nghĩ nên giới thiệu.",
 		viaUntold: "Mình nghĩ nên giới thiệu hai bên.",
-		through:   "%s cho rằng bạn là người phù hợp.",
 		why:       "%s",
 		ask:       "Mình xin phép để hai bạn trao đổi tiếp nhé.",
 		sign:      "Thân mến,",
@@ -257,9 +264,6 @@ func noteFloor(facts noteFacts) introNote {
 		draftfloor.Fill(wording.intro, facts.requester),
 		"",
 		noteRelationship(wording, facts),
-	}
-	if facts.through != "" {
-		lines = append(lines, "", draftfloor.Fill(wording.through, facts.through))
 	}
 	if facts.value != "" {
 		lines = append(lines, "", draftfloor.Fill(wording.why, facts.value))
@@ -315,6 +319,14 @@ func wireIntroNote(
 		Reasoning:   noteReasons(facts),
 	}
 	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, noteLang(facts.lang))
+	// Said on the wire, because the text cannot say it. A note that fell back to
+	// the default language reads like one written in a language somebody chose,
+	// so a reader fluent only in the default would forward it to a customer who
+	// writes in another, believing the product had checked.
+	if facts.lang == textlang.Unknown {
+		undetermined := true
+		out.LanguageUndetermined = &undetermined
+	}
 	return out
 }
 
@@ -340,6 +352,11 @@ func noteReasons(facts noteFacts) []crmcontracts.AccountDraftReason {
 			Label: noteRelationshipLabel(facts),
 		})
 	}
+	// The intermediary is named here, for a reader the note does not have. A
+	// reason is read by the colleague deciding whether to send, who needs to
+	// know whose route this is. The forwardable note withholds the name because
+	// the customer reads that one, and who talked about them is not the note's
+	// to disclose.
 	if facts.through != "" {
 		out = append(out, crmcontracts.AccountDraftReason{
 			Kind:  crmcontracts.AccountDraftReasonKindRecipient,
@@ -392,6 +409,11 @@ type IntroNoteFixture struct {
 	// Through names the intermediary on an indirect route, and is empty on a
 	// direct one.
 	Through string `json:"through"`
+	// Correspondence is what the contact has written, which is the signal the
+	// endpoint detects the language from. Record names are not prose, so a
+	// scenario carrying only them certifies an English note for a German
+	// customer.
+	Correspondence string `json:"correspondence"`
 	// Band is the route's strength bucket, and its vocabulary is the ROUTE's —
 	// none, weak, moderate, strong — not the company page's cold/developing/
 	// strong. They are different enums on different contracts, and a scenario
@@ -410,13 +432,14 @@ type IntroNoteFixture struct {
 // IntroNoteFactsFor turns a scenario into this site's input THROUGH the
 // endpoint's own assembler.
 //
-// It builds the route and calls factsFromRoute rather than restating what that
-// function does. The first version of this seam restated it, and drifted
-// immediately: it detected the output language from the contact's
-// correspondence the way company360's sibling does, while this endpoint sets
-// textlang.Unknown and lets the writer default. A German scenario would have
-// certified a prompt the product cannot send. Going through the assembler makes
-// that class of divergence unrepresentable rather than merely absent today.
+// It calls factsFromRoute rather than restating it, then detects the language
+// the way the endpoint does: the same textlang.Detect over the same signal, read
+// from the database there and carried as text here.
+//
+// An earlier version restated the assembler instead and drifted at once. It
+// detected a language the endpoint did not, so a German scenario certified a
+// prompt the product could not send. Going through the assembler keeps that
+// divergence unrepresentable rather than absent by luck.
 func IntroNoteFactsFor(fixture IntroNoteFixture) (noteFacts, error) {
 	bucket := crmcontracts.ContactGraphRouteCandidateStrengthBucket(fixture.Band)
 	if fixture.Band != "" && !bucket.Valid() {
@@ -448,7 +471,13 @@ func IntroNoteFactsFor(fixture IntroNoteFixture) (noteFacts, error) {
 	if fixture.Value != "" {
 		body.ValueForTarget = &fixture.Value
 	}
-	return factsFromRoute(graph, route, fixture.Requester, body), nil
+	facts := factsFromRoute(graph, route, fixture.Requester, body)
+	// Detected here the way the endpoint detects it, through the same
+	// textlang.Detect over the same signal, so a scenario cannot certify a
+	// prompt in a language the product would not have chosen. The endpoint reads
+	// the correspondence from the database; a fixture carries it as text.
+	facts.lang = textlang.Detect(fixture.Correspondence)
+	return facts, nil
 }
 
 // IntroNoteRequestFor builds the model call this site sends, from a fixture.

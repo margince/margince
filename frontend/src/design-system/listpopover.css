@@ -1,0 +1,50 @@
+/* A menu surface, so the menu anatomy's inset rather than an aside's. Both
+   classes, to outrank .popover-panel whatever order the sheets load in. */
+.popover-panel.listpopover-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--controlGap);
+  /* Fixed rather than sized by its rows, so the panel holds still while an
+     answer arrives. */
+  inline-size: 20rem;
+  max-inline-size: calc(100vw - var(--space-4));
+  padding: var(--controlGap);
+  /* The list scrolls and the search box stays put above it. */
+  overflow: hidden;
+}
+
+.listpopover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--controlGap);
+  min-block-size: 0;
+}
+.listpopover > .input-icon {
+  display: flex;
+  width: 100%;
+}
+
+.listpopover-list {
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.listpopover-panel .listpopover-list {
+  max-block-size: var(--menuMaxBlockSize, 400px);
+}
+
+.listpopover-status {
+  padding: var(--controlGap) var(--space-2);
+  color: var(--textSecondary);
+}
+
+/* The phone sheet holds still and only the list scrolls, so the search stays
+   in reach however long the list runs. */
+.modal-drawer:has(> .listpopover) {
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+}
+.modal-drawer > .listpopover {
+  flex: 1;
+}

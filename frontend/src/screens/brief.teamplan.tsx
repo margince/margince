@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { PanelRow } from "../design-system/panel";
@@ -59,47 +60,51 @@ function TeamPlanDialog({
   const zone = useRecordZone();
   const headingId = useId();
   return (
-    <Modal open labelledBy={headingId} onClose={onClose}>
-      <Heading size="large" id={headingId} className="modal-title">
-        {t("brief.team.planFor", { name })}
-      </Heading>
-      {plan.data && (
-        <p>
-          {t("brief.plan.period", {
-            date: formatDate(
-              middayInstant(plan.data.local_week_start, zone),
-              locale,
-              zone,
-            ),
-          })}
-        </p>
-      )}
-      <SurfaceState
-        state={
-          plan.isPending
-            ? "loading"
-            : plan.isError
-              ? "failed"
-              : !plan.data
-                ? "empty"
-                : "ready"
-        }
-        loadingLabel={t("plan.loading")}
-        emptyLabel={t("brief.team.planUnavailable", { name })}
-        detail={{ onRetry: () => void plan.refetch() }}
-      >
-        {plan.data?.commitments.length === 0 && (
-          <p>{t("brief.team.noCommitments", { name })}</p>
+    <Modal open labelledBy={headingId} onClose={onClose} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
+          {t("brief.team.planFor", { name })}
+        </Heading>
+        {plan.data && (
+          <p className="t-caption">
+            {t("brief.plan.period", {
+              date: formatDate(
+                middayInstant(plan.data.local_week_start, zone),
+                locale,
+                zone,
+              ),
+            })}
+          </p>
         )}
-        {plan.data?.commitments.map((commitment) => (
-          <TeamCommitment
-            key={commitment.id}
-            owner={owner}
-            commitment={commitment}
-            editable={canAnswer && plan.data?.status === "open"}
-          />
-        ))}
-      </SurfaceState>
+      </DrawerHead>
+      <DrawerBody>
+        <SurfaceState
+          state={
+            plan.isPending
+              ? "loading"
+              : plan.isError
+                ? "failed"
+                : !plan.data
+                  ? "empty"
+                  : "ready"
+          }
+          loadingLabel={t("plan.loading")}
+          emptyLabel={t("brief.team.planUnavailable", { name })}
+          detail={{ onRetry: () => void plan.refetch() }}
+        >
+          {plan.data?.commitments.length === 0 && (
+            <p>{t("brief.team.noCommitments", { name })}</p>
+          )}
+          {plan.data?.commitments.map((commitment) => (
+            <TeamCommitment
+              key={commitment.id}
+              owner={owner}
+              commitment={commitment}
+              editable={canAnswer && plan.data?.status === "open"}
+            />
+          ))}
+        </SurfaceState>
+      </DrawerBody>
     </Modal>
   );
 }
@@ -120,30 +125,35 @@ function TeamCommitment({
   const [response, setResponse] = useState(commitment.manager_response ?? "");
   return (
     <PanelRow>
-      <div>
-        <p>{commitment.label}</p>
-        <p>{t(`plan.state.${commitment.state}`)}</p>
-        {commitment.due_on && (
-          <p>
-            {t("plan.due", {
-              day: formatDate(
-                middayInstant(commitment.due_on, zone),
-                locale,
-                zone,
-              ),
-            })}
-          </p>
-        )}
-        {commitment.linked_record && (
-          <EntityRef
-            kind={commitment.linked_record.type}
-            id={commitment.linked_record.id}
-          />
-        )}
+      <div className="form-stack">
+        <div>
+          <p>{commitment.label}</p>
+          <p>{t(`plan.state.${commitment.state}`)}</p>
+          {commitment.due_on && (
+            <p>
+              {t("plan.due", {
+                day: formatDate(
+                  middayInstant(commitment.due_on, zone),
+                  locale,
+                  zone,
+                ),
+              })}
+            </p>
+          )}
+          {commitment.linked_record && (
+            <EntityRef
+              kind={commitment.linked_record.type}
+              id={commitment.linked_record.id}
+            />
+          )}
+        </div>
         {commitment.help_requested && (
           <>
-            <p>{commitment.help_requested}</p>
-            {editable ? (
+            <div>
+              <p>{commitment.help_requested}</p>
+              {!editable && <p>{commitment.manager_response}</p>}
+            </div>
+            {editable && (
               <>
                 <Field label={t("brief.team.response")}>
                   {(control) => (
@@ -155,24 +165,24 @@ function TeamCommitment({
                     />
                   )}
                 </Field>
-                <Button
-                  pending={answer.isPending}
-                  disabled={
-                    response.trim() === "" ||
-                    response === commitment.manager_response
-                  }
-                  onClick={() =>
-                    answer.mutate({
-                      id: commitment.id,
-                      managerResponse: response,
-                    })
-                  }
-                >
-                  {t("brief.team.saveResponse")}
-                </Button>
+                <div className="form-actions">
+                  <Button
+                    pending={answer.isPending}
+                    disabled={
+                      response.trim() === "" ||
+                      response === commitment.manager_response
+                    }
+                    onClick={() =>
+                      answer.mutate({
+                        id: commitment.id,
+                        managerResponse: response,
+                      })
+                    }
+                  >
+                    {t("brief.team.saveResponse")}
+                  </Button>
+                </div>
               </>
-            ) : (
-              <p>{commitment.manager_response}</p>
             )}
             <ErrorLine error={answer.error} />
           </>

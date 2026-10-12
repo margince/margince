@@ -61,7 +61,7 @@ func TestRequestFencesEveryUntrustedFieldUnderTheMarkerItDeclares(t *testing.T) 
 // between two markers.
 func outsideEverySpan(content, marker, needle string) bool {
 	inside := false
-	for _, part := range strings.Split(content, marker) {
+	for part := range strings.SplitSeq(content, marker) {
 		if !inside && strings.Contains(part, needle) {
 			return true
 		}

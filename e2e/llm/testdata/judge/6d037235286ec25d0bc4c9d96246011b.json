@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names only Emsland Ventilbau as the company whose change needed the user's sign-off, and explains why (a person had already set its lifecycle).",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer names Emsland Ventilbau, and only Emsland Ventilbau, as the company whose change needed the user's sign-off. Saying why — a person had already set its lifecycle — is welcome and not required. Answer no if the answer names a different company as the one that needed sign-off, says none of them needed it, or says all four did.",
+  "answer": "Kieler Pumpenwerk, Rhön Hydraulik and Altmark Fördertechnik are now set to prospect.\n\nEmsland Ventilbau needs your sign-off: its lifecycle was set to target by a person, so Margince staged the change for approval. You will need to approve it in the web app under Approvals — once you do, it will move to prospect."
+}

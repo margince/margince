@@ -84,6 +84,8 @@ func TestParseValidatesFailClosed(t *testing.T) {
 		"unsupported version":     "version: 2\n",
 		"bad timezone":            "version: 1\nworkspace: { name: X, timezone: Mars/Olympus }\n",
 		"bad currency":            "version: 1\nworkspace: { name: X, base_currency: euros }\n",
+		"upper-case country":      "version: 1\nworkspace: { name: X, country: DE }\n",
+		"three-letter country":    "version: 1\nworkspace: { name: X, country: deu }\n",
 		"admin without password":  "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A }\n",
 		"inline secret refused":   "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: hunter2hunter2 }\n",
 		"empty pipeline":          "version: 1\nseeds: { pipeline: { name: Sales, stages: [] } }\n",
@@ -240,6 +242,29 @@ func TestAllowTestMailboxGateDefaultsOff(t *testing.T) {
 	}
 	if !on.Operations.AllowTestMailbox {
 		t.Fatal("operations.allow_test_mailbox: true must parse")
+	}
+}
+
+// Lists ship on: an installation whose files never mention them has them, and
+// an operator who writes `enabled: false` in either file switches them off.
+func TestListsAreOnUnlessAFileSwitchesThemOff(t *testing.T) {
+	absent, err := Load(filepath.Join(t.TempDir(), "absent.yaml"), runtimeenv.Production)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := Parse([]byte("version: 1\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !absent.Lists.Enabled || !parsed.Lists.Enabled {
+		t.Fatalf("lists.enabled unset: Load=%v Parse=%v, want both on", absent.Lists.Enabled, parsed.Lists.Enabled)
+	}
+	off, err := Load(writeTemp(t, "version: 1\nlists:\n  enabled: false\n"), runtimeenv.Production)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if off.Lists.Enabled {
+		t.Fatal("lists.enabled: false must switch lists off")
 	}
 }
 
@@ -488,5 +513,15 @@ func TestParseAcceptsEitherSpellingOfTheAdminPassword(t *testing.T) {
 		if _, err := Parse([]byte(doc)); err == nil {
 			t.Errorf("%s parsed without error", name)
 		}
+	}
+}
+
+func TestAValidCountryParsesAsWritten(t *testing.T) {
+	cfg, err := Parse([]byte("version: 1\nworkspace: { name: X, country: de }\n"))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if cfg.Workspace.Country != "de" {
+		t.Fatalf("workspace.country = %q, want de", cfg.Workspace.Country)
 	}
 }

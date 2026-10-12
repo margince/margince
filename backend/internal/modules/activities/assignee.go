@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ensureAssigneeCanHoldWork checks a client-supplied user reference before it
@@ -36,7 +37,7 @@ import (
 // afterwards.
 func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
 	return ensureSeatHoldsWork(ctx, tx, assigneeID,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND status = 'active' AND archived_at IS NULL`)
+		`SELECT is_agent FROM app_user WHERE id = $1 AND `+workforce.LiveMemberSQL(""))
 }
 
 // ensureNewTaskAssignee is ensureAssigneeCanHoldWork for a task being CREATED,
@@ -47,11 +48,10 @@ func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.U
 // ensureAssigneeCanHoldWork, so nothing is re-routed to a seat nobody answers.
 func ensureNewTaskAssignee(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
 	return ensureSeatHoldsWork(ctx, tx, assigneeID,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND status IN ('active', 'invited') AND archived_at IS NULL`)
+		`SELECT is_agent FROM app_user WHERE id = $1 AND `+workforce.ActivatableMemberSQL(""))
 }
 
-// ensureSeatHoldsWork runs one of the two seat questions above. Each is spelled
-// out whole, so the liveness gate reads both halves of every statement.
+// ensureSeatHoldsWork runs one of the two seat questions above.
 func ensureSeatHoldsWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID, seatSQL string) error {
 	if assigneeID == nil {
 		return nil
@@ -70,6 +70,33 @@ func ensureSeatHoldsWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID,
 		return &AgentAssigneeError{}
 	}
 	return nil
+}
+
+// SeatCanHoldAutomaticWork reports whether an automatic writer may give this seat a
+// task, by ASKING the check the writer itself applies.
+//
+// Asking rather than writing and recovering: a refused write aborts the caller's
+// transaction, so a writer that tried and fell back would be continuing inside a
+// transaction Postgres has already given up on. A caller that must choose between
+// writing a task and proposing one has to know before it writes.
+//
+// The same call the writer makes, not a second query agreeing with it — a copy here
+// would answer "yes" to a seat the write then refuses, which is the failure this
+// exists to prevent.
+func SeatCanHoldAutomaticWork(ctx context.Context, tx pgx.Tx, seat ids.UserID) (bool, error) {
+	err := ensureAssigneeCanHoldWork(ctx, tx, &seat)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, apperrors.ErrNotFound):
+		// Not there, not active, or archived — the writer's own answer, and not an
+		// error for a caller who is deciding rather than asserting.
+		return false, nil
+	}
+	if _, ok := errors.AsType[*AgentAssigneeError](err); ok {
+		return false, nil
+	}
+	return false, err
 }
 
 // AgentAssigneeError refuses work aimed at an agent seat.

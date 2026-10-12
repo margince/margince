@@ -45,10 +45,6 @@ func reportingPrevious(frame crmcontracts.ReportingContext) crmcontracts.Reporti
 
 func reportingEarliest(frame crmcontracts.ReportingContext) time.Time {
 	earliest := frame.Interval.StartAt
-	monthly := reportingMonth(frame)
-	if monthly.StartAt.Before(earliest) {
-		earliest = monthly.StartAt
-	}
 	previous := reportingPrevious(frame)
 	if !previous.StartAt.IsZero() && previous.StartAt.Before(earliest) {
 		earliest = previous.StartAt
@@ -69,10 +65,6 @@ func reportingCohorts(frame crmcontracts.ReportingContext, facts []reporting.Fac
 			continue
 		}
 		at := *fact.Row.OccurredAt
-		if reportingInWindow(at, reportingMonth(frame)) {
-			fact.ContextID = reportingMonthContext
-			out = append(out, fact)
-		}
 		if reportingInWindow(at, frame.Interval) {
 			fact.ContextID = reportingInterval
 			out = append(out, fact)
@@ -91,14 +83,4 @@ func reportingCohorts(frame crmcontracts.ReportingContext, facts []reporting.Fac
 
 func reportingInWindow(at time.Time, window crmcontracts.ReportingWindow) bool {
 	return !at.Before(window.StartAt) && at.Before(window.EndAt)
-}
-
-func reportingMonth(frame crmcontracts.ReportingContext) crmcontracts.ReportingWindow {
-	day := frame.Interval.EndAt.Add(-time.Nanosecond)
-	start := time.Date(day.Year(), day.Month(), 1, 0, 0, 0, 0, day.Location())
-	end := start.AddDate(0, 1, 0)
-	if frame.EvaluatedAt.Before(end) {
-		end = frame.EvaluatedAt
-	}
-	return crmcontracts.ReportingWindow{StartAt: start, EndAt: end}
 }

@@ -47,6 +47,11 @@ const draftInputClaims = 6
 // rather than repeats, and every rune of it is prompt cost on every draft.
 const draftInputSnippetRunes = 400
 
+// draftInputRecordRunes bounds the text of one logged note or meeting. Longer
+// than a snippet: a note is written for the rep, and the slots or the ask it
+// records sit anywhere in it rather than in an opening.
+const draftInputRecordRunes = 800
+
 // Input is the contact, narrowed to what an outbound message can honestly stand
 // on. It is a projection of the caller's own 360 — nothing here re-queries, so
 // anything absent is absent because that caller may not see it.
@@ -133,10 +138,11 @@ type DealIn struct {
 	CloseDate   string `json:"close_date,omitempty"`
 }
 
-// ProjectIn is the body of work the message is about. It carries no id: a
-// project is not a record a reason may cite, and an id the grounding filter
-// refuses only invites a citation it drops.
+// ProjectIn is the body of work the message is about. Its id never reaches the
+// model: a project is not a record a reason may cite, and an id the grounding
+// filter refuses only invites a citation it drops.
 type ProjectIn struct {
+	ID   string `json:"-"`
 	Name string `json:"name"`
 	// Key is the handle a human writes in a subject line, when the project
 	// has one.
@@ -199,6 +205,8 @@ type ClaimIn struct {
 // a draft naming the other attendees to the recipient tells them who we are
 // also talking to.
 type MeetingIn struct {
+	// ActivityID never reaches the model; it names the meeting for Grounding.
+	ActivityID string `json:"-"`
 	// Subject as scheduled, empty when the meeting has none.
 	Subject string `json:"subject,omitempty"`
 	// StartsAt is RFC3339 UTC. The drafter is told WHEN so it can write "next
@@ -234,7 +242,17 @@ type ActIn struct {
 	// in its first lines and spends the rest on detail, and the detail is what
 	// a reply should ask about rather than repeat back.
 	Snippet string `json:"snippet,omitempty"`
+	// Record is what the rep logged on a note or meeting: our side's own
+	// account of contact that happened outside the mailbox, such as where they
+	// met and the slots offered. Fenced with the rest of the input.
+	Record string `json:"record,omitempty"`
 }
+
+// ActivityKind lets draftcore.ThreadMail tell an email from a task or a call.
+func (a ActIn) ActivityKind() string { return a.Kind }
+
+// ActivitySubject is the subject draftcore.ThreadMail answers.
+func (a ActIn) ActivitySubject() string { return a.Subject }
 
 // String is the debug rendering, never the prompt payload — the prompt sends
 // JSON so the model reads a structure rather than prose it might imitate.

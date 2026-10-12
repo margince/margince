@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  moduleSpecifiers,
-  resolveRelative,
-  sourceFileAt,
-} from "../../scripts/lib/source-tree";
+  importPathTo,
+  productionModulesUnder,
+} from "../../scripts/lib/import-reach";
 
 // The settings catalog is split in two so the shell can ask where a settings
 // entry lives without paying to draw it. `settingsnav.tsx` answers the address
@@ -35,57 +33,10 @@ const srcRoot = resolve(screensDir, "..");
 const settingsScreen = join(screensDir, "settings.tsx");
 const settingsNav = join(screensDir, "settingsnav.tsx");
 
-/**
- * The source files `file` imports, parsed ONCE per file and kept for the run.
- *
- * Every entry point below walks the same shared subgraph — the design system,
- * the api client, i18n — so a module's parse is paid once for the run, not once
- * per entry that reaches it. Per entry, the walks re-parse that subgraph as many
- * times as there are entries, and the file's cost grows with the product of the
- * two rather than their sum.
- *
- * The tree does not change while the suite runs, so a parsed edge list is as
- * true on the last walk as on the first.
- */
-const resolvedImports = new Map<string, string[]>();
-
-function edgesOf(file: string): string[] {
-  const known = resolvedImports.get(file);
-  if (known) {
-    return known;
-  }
-  // Type-only edges count: a type import naming a card module still couples the
-  // halves, and a later value import across it would not show up in review.
-  const edges = moduleSpecifiers(sourceFileAt(file), "all")
-    .map((specifier) => resolveRelative(file, specifier))
-    .filter((next): next is string => next !== null);
-  resolvedImports.set(file, edges);
-  return edges;
-}
-
-/**
- * The shortest import path from `entry` to `target`, or null when unreachable.
- * Returning the path rather than a boolean is what makes a failure actionable:
- * the offending edge is usually three hops in and invisible from the entry.
- */
+/** The shortest import path from `entry` to `target`, or null. */
 function pathTo(entry: string, target: string): string[] | null {
-  const seen = new Set([entry]);
-  const queue: string[][] = [[entry]];
-  while (queue.length > 0) {
-    const trail = queue.shift() as string[];
-    const head = trail[trail.length - 1];
-    for (const next of edgesOf(head)) {
-      if (seen.has(next)) {
-        continue;
-      }
-      if (next === target) {
-        return [...trail, next].map((file) => relative(srcRoot, file));
-      }
-      seen.add(next);
-      queue.push([...trail, next]);
-    }
-  }
-  return null;
+  const trail = importPathTo(entry, new Set([target]));
+  return trail === null ? null : trail.map((file) => relative(srcRoot, file));
 }
 
 /**
@@ -98,25 +49,7 @@ function pathTo(entry: string, target: string): string[] | null {
  * is every other screen: a screen that only wants an ADDRESS must not drag the
  * settings cards into its own chunk, which is what `worklist.copy.ts` did —
  * putting the whole settings screen behind Brief, the default landing page.
- *
- * Tests, stories and the testkit are excluded on purpose: they ask this module
- * for both halves, that is what they are for, and they ship in no chunk.
  */
-function productionModulesUnder(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return productionModulesUnder(path);
-    }
-    if (!/\.tsx?$/.test(entry.name)) {
-      return [];
-    }
-    return /\.(test|stories)\.tsx?$|\.testkit\.tsx$/.test(entry.name)
-      ? []
-      : [path];
-  });
-}
-
 const settingsOwnModules = new Set([settingsScreen, settingsNav]);
 const shellEntryPoints = [
   ...productionModulesUnder(join(srcRoot, "app")),

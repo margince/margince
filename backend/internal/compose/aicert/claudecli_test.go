@@ -252,14 +252,14 @@ func TestThePreflightProbesTheCLIJudge(t *testing.T) {
 	}
 	withCredential(t)
 	record := stubClaude(t, printing(cliSuccess, "0"))
-	if err := preflight(wsContext(t), cfg, []ai.Task{ai.TaskSummarize}, nil, quietLogger()); err != nil {
+	if _, err := preflight(wsContext(t), cfg, []ai.Task{ai.TaskSummarize}, nil, quietLogger()); err != nil {
 		t.Fatalf("a servable CLI judge failed its pre-flight: %v", err)
 	}
 	if !strings.Contains(recorded(t, record, "stdin"), preflightPrompt) {
 		t.Error("the pre-flight never reached the CLI")
 	}
 	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "")
-	err := preflight(wsContext(t), cfg, []ai.Task{ai.TaskSummarize}, nil, quietLogger())
+	_, err := preflight(wsContext(t), cfg, []ai.Task{ai.TaskSummarize}, nil, quietLogger())
 	if err == nil || !strings.Contains(err.Error(), "judge") || !strings.Contains(err.Error(), "CLAUDE_CODE_OAUTH_TOKEN") {
 		t.Fatalf("err = %v, want the judge's pre-flight to name the missing credential", err)
 	}

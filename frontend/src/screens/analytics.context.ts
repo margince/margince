@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { replaceDial, useUrlParams } from "../app/urlstate";
+import { unwrap } from "./common";
 
 export type AnalyticsContext = components["schemas"]["AnalyticsContext"];
 export type AnalyticsScope = components["schemas"]["AnalyticsScope"];
@@ -33,11 +34,7 @@ export function useAnalyticsContext() {
   return useQuery({
     queryKey: CONTEXT_KEY,
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/context", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/analytics/context", {}));
     },
   });
 }
@@ -49,7 +46,10 @@ export function useAnalyticsContext() {
  * showing the previous population's numbers under the new label.
  */
 export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
-  const [chosen, setChosen] = useState<AnalyticsScope | null>(null);
+  const [params] = useUrlParams();
+  const chosen = context?.allowed_scopes.find(
+    (scope) => scopeKey(scope) === params.get("scope"),
+  );
 
   const selection = useMemo<AnalyticsSelection | null>(() => {
     if (!context) {
@@ -59,7 +59,7 @@ export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
   }, [context, chosen]);
 
   const selectScope = useCallback((scope: AnalyticsScope) => {
-    setChosen(scope);
+    replaceDial("scope", scopeKey(scope));
   }, []);
 
   return { selection, selectScope };

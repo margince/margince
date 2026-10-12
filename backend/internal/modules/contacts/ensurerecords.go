@@ -177,11 +177,11 @@ func quarantineSuspect(displayName, domain string) bool {
 		return true
 	}
 	name := strings.ToLower(displayName)
-	at := strings.Index(name, "@")
-	if at < 0 {
+	_, after, ok := strings.Cut(name, "@")
+	if !ok {
 		return false
 	}
-	embedded := name[at+1:]
+	embedded := after
 	if end := strings.IndexAny(embedded, " >,;"); end >= 0 {
 		embedded = embedded[:end]
 	}
@@ -209,7 +209,10 @@ func acquiredFromCapture(replied bool) string {
 // reply (capture's wroteBackTx): a newsletter is a list writing to everyone,
 // not the sender writing to us. A first mail from a stranger is them contacting
 // us, and a disclosure duty for it would be owed to nobody. Only the reverse —
-// an address we wrote to, or saw on a Cc, that never wrote — stays unknown.
+// an address we wrote to, or saw on a Cc, that never wrote — stays unknown,
+// unless a seat's mailbox already held mail with it before that seat connected
+// the mailbox (mailbox_history): mail the seat sent to it, or received mail
+// that named it on To or Cc.
 func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email string) (string, error) {
 	if kind := acquiredFromCapture(replied); kind == AcquiredSubjectInitiated {
 		return kind, nil
@@ -233,6 +236,18 @@ func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email s
 	}
 	if migrated {
 		return AcquiredCRMMigration, nil
+	}
+	history, err := writtenToBeforeConnectedTx(ctx, tx, email)
+	if err != nil {
+		return "", err
+	}
+	if !history {
+		if history, err = receivedBeforeConnectedTx(ctx, tx, email); err != nil {
+			return "", err
+		}
+	}
+	if history {
+		return AcquiredMailboxHistory, nil
 	}
 	return AcquiredUnknownLegacy, nil
 }

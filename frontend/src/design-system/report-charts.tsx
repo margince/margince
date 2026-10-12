@@ -5,26 +5,9 @@ import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { Button, Disclosure, TableScroll } from "./atoms";
 import "./report-charts.css";
 
-export type ChartReading = Readonly<{
-  key: string;
-  label: string;
-  value: number | null;
-  amount: string;
-  comparison?: number | null;
-  comparisonAmount?: string;
-  target?: number | null;
-  targetAmount?: string;
-  upper?: number | null;
-  upperAmount?: string;
-}>;
+import type { ChartProps, ChartReading } from "./report-charts.model";
 
-type ChartProps = Readonly<{
-  readings: readonly ChartReading[];
-  label: string;
-  dataLabel: string;
-  valueLabel: string;
-  onSelect?: (key: string) => void;
-}>;
+export type { ChartReading } from "./report-charts.model";
 
 function readingScale(readings: readonly ChartReading[], reference = 0) {
   return Math.max(
@@ -132,7 +115,7 @@ export function CumulativeChart({
   onSelect,
 }: ChartProps &
   Readonly<{
-    comparisonLabel: string;
+    comparisonLabel?: string;
     reference?: Readonly<{ value: number; label: string; amount: string }>;
     axisLabel: (value: number) => string;
   }>) {
@@ -164,9 +147,11 @@ export function CumulativeChart({
       </figcaption>
       <div className="report-chart-legend">
         <span className="report-chart-key">{valueLabel}</span>
-        <span className="report-chart-key report-chart-key-comparison">
-          {comparisonLabel}
-        </span>
+        {comparisonLabel && (
+          <span className="report-chart-key report-chart-key-comparison">
+            {comparisonLabel}
+          </span>
+        )}
         {reference && (
           <span className="report-chart-key report-chart-key-target">
             {reference.label} · {reference.amount}
@@ -283,14 +268,17 @@ export function BulletChart({
   onSelect,
 }: ChartProps & Readonly<{ targetLabel: string }>) {
   const scale = readingScale(readings) * 1.08;
+  const hasTargets = readings.some((reading) => reading.target != null);
   return (
     <figure className="report-chart">
       <figcaption className="sr-only">{label}</figcaption>
       <div className="report-chart-legend">
         <span className="report-chart-key">{valueLabel}</span>
-        <span className="report-chart-key report-chart-key-target">
-          {targetLabel}
-        </span>
+        {hasTargets && (
+          <span className="report-chart-key report-chart-key-target">
+            {targetLabel}
+          </span>
+        )}
       </div>
       <ul className="report-chart-rows">
         {readings.map((reading) => (
@@ -303,7 +291,11 @@ export function BulletChart({
               style={markGeometry(
                 (Math.max(0, reading.value ?? 0) / scale) * 100,
               )}
-              aria-label={`${reading.label}: ${reading.amount}; ${targetLabel}: ${reading.targetAmount ?? "—"}`}
+              aria-label={
+                reading.target != null
+                  ? `${reading.label}: ${reading.amount}; ${targetLabel}: ${reading.targetAmount ?? "—"}`
+                  : `${reading.label}: ${reading.amount}`
+              }
             >
               <span className="report-chart-row-name">{reading.label}</span>
               <span className="report-chart-bullet" aria-hidden="true">
@@ -319,7 +311,9 @@ export function BulletChart({
               </span>
               <span className="report-chart-row-amount">
                 {reading.amount}
-                <small>{reading.targetAmount}</small>
+                {reading.target != null && (
+                  <small>{reading.targetAmount}</small>
+                )}
               </span>
             </Button>
           </li>
@@ -330,7 +324,7 @@ export function BulletChart({
         label={label}
         dataLabel={dataLabel}
         valueLabel={valueLabel}
-        secondaryLabel={targetLabel}
+        secondaryLabel={hasTargets ? targetLabel : undefined}
         secondary="targetAmount"
         onSelect={onSelect}
       />
@@ -418,16 +412,18 @@ export function GroupedBars({
   valueLabel,
   comparisonLabel,
   onSelect,
-}: ChartProps & Readonly<{ comparisonLabel: string }>) {
+}: ChartProps & Readonly<{ comparisonLabel?: string }>) {
   const scale = readingScale(readings) * 1.15;
   return (
     <figure className="report-chart">
       <figcaption className="sr-only">{label}</figcaption>
       <div className="report-chart-legend">
         <span className="report-chart-key">{valueLabel}</span>
-        <span className="report-chart-key report-chart-key-comparison">
-          {comparisonLabel}
-        </span>
+        {comparisonLabel && (
+          <span className="report-chart-key report-chart-key-comparison">
+            {comparisonLabel}
+          </span>
+        )}
       </div>
       <div className="report-chart-columns">
         {readings.map((reading) => (
@@ -448,21 +444,23 @@ export function GroupedBars({
                   {reading.amount}
                 </span>
               </Button>
-              <Button
-                variant="link"
-                className="report-chart-column report-chart-column-secondary"
-                style={{
-                  height: `${(Math.max(0, reading.comparison ?? 0) / scale) * 100}%`,
-                }}
-                aria-label={`${reading.label}, ${comparisonLabel}: ${reading.comparisonAmount ?? "—"}`}
-                onClick={() => onSelect?.(`${reading.key}:comparison`)}
-                disabled={!onSelect}
-              >
-                <span className="report-chart-column-fill" />
-                <span className="report-chart-column-amount">
-                  {reading.comparisonAmount}
-                </span>
-              </Button>
+              {comparisonLabel && (
+                <Button
+                  variant="link"
+                  className="report-chart-column report-chart-column-secondary"
+                  style={{
+                    height: `${(Math.max(0, reading.comparison ?? 0) / scale) * 100}%`,
+                  }}
+                  aria-label={`${reading.label}, ${comparisonLabel}: ${reading.comparisonAmount ?? "—"}`}
+                  onClick={() => onSelect?.(`${reading.key}:comparison`)}
+                  disabled={!onSelect}
+                >
+                  <span className="report-chart-column-fill" />
+                  <span className="report-chart-column-amount">
+                    {reading.comparisonAmount}
+                  </span>
+                </Button>
+              )}
             </div>
             <span className="report-chart-column-label">{reading.label}</span>
           </div>

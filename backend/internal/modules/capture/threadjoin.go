@@ -19,6 +19,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -38,7 +39,8 @@ type ThreadJoiner struct {
 	// Neighbours answers the live messages a reply links to this one, in
 	// either direction.
 	Neighbours func(ctx context.Context, tx pgx.Tx, self ids.ActivityID, messageID string, referenced []string) ([]ids.ActivityID, error)
-	// Earliest chooses the key the others merge into.
+	// Earliest chooses the key the others merge into, or "" when no live
+	// message holds any of them any more.
 	Earliest func(ctx context.Context, tx pgx.Tx, keys []string) (string, error)
 	// Merge moves thread `from` into thread `to` everywhere a row carries one.
 	Merge func(ctx context.Context, tx pgx.Tx, from, to string) error
@@ -97,8 +99,21 @@ func (s *Sink) joinThread(
 	if err != nil || len(neighbours) == 0 {
 		return err
 	}
-	return s.mergeLinkedThreads(ctx, tx, seat, id, neighbours, created)
+	if err := s.mergeLinkedThreads(ctx, tx, seat, id, neighbours, created); err != nil {
+		return err
+	}
+	// Last, because it asks what thread this message is in and only the merge
+	// above knows the answer.
+	return s.holdFromJoinedThreadTx(ctx, tx, id)
 }
+
+// mergeLockStatement is ONE workspace-wide lock for every thread merge, spelled
+// once because two callers take it: takeMergeLockFirst before a row is written,
+// and mergeLinkedThreads where the merge happens. Two spellings of one lock name
+// are two locks, and the ordering that stops the deadlock would be silently gone.
+//
+// Held by: TestTheMergeLockHasOneSpelling (backend/gates/mergelockordering_test.go)
+const mergeLockStatement = `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`
 
 // mergeLinkedThreads merges the thread keys a held email's reply links reach,
 // under the rules joinThread states.
@@ -115,14 +130,18 @@ func (s *Sink) mergeLinkedThreads(
 	// One lock for every merge in the workspace, and the keys read again under
 	// it, so a concurrent merge cannot retire a key between the read and the
 	// rewrite.
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`); err != nil {
+	// Usually already held: takeMergeLockFirst takes it before the row write, and
+	// an advisory xact lock is re-entrant within one transaction. Taken again here
+	// because THIS is the call correctness rests on — the probe only decides
+	// whether the cost is paid early.
+	if _, err := tx.Exec(ctx, mergeLockStatement); err != nil {
 		return fmt.Errorf("capture: locking the thread merge: %w", err)
 	}
 	if keys, err = s.keysToMerge(ctx, tx, seat, id, neighbours, created); err != nil || len(keys) < 2 {
 		return err
 	}
 	into, err := s.threadJoin.Earliest(ctx, tx, keys)
-	if err != nil {
+	if err != nil || into == "" {
 		return err
 	}
 	for _, key := range keys {
@@ -142,11 +161,19 @@ func (s *Sink) mergeLinkedThreads(
 func (s *Sink) keysToMerge(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
 ) ([]string, error) {
-	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours)
+	own, sole, live, err := ownThreadKeyTx(ctx, tx, id)
 	if err != nil {
 		return nil, err
 	}
-	own, sole, err := ownThreadKeyTx(ctx, tx, id)
+	// An archived message joins nothing. Capture itself archives mail (the
+	// counterparty verdict does), and a later backfill or sync that meets the
+	// same message again resolves onto that archived row. The archive stands:
+	// the row is neither revived nor duplicated, and it does not bridge the
+	// threads of the live messages it links.
+	if !live {
+		return nil, nil
+	}
+	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours)
 	if err != nil {
 		return nil, err
 	}
@@ -169,17 +196,22 @@ func seatHoldsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityI
 	return held, nil
 }
 
-// ownThreadKeyTx answers the message's current thread key and whether it is
-// the only message carrying it.
-func ownThreadKeyTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (key string, sole bool, err error) {
-	if err := tx.QueryRow(ctx, `
+// ownThreadKeyTx answers the message's current thread key, whether it is the
+// only message carrying it, and whether the message is live. An archived row is
+// not an error: live is false and the key is empty.
+func ownThreadKeyTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (key string, sole, live bool, err error) {
+	err = tx.QueryRow(ctx, `
 		SELECT coalesce(a.thread_key, ''),
 		       NOT EXISTS (SELECT 1 FROM activity o WHERE o.thread_key = a.thread_key AND o.id <> a.id)
 		  FROM activity a
-		 WHERE a.id = $1 AND a.archived_at IS NULL`, id).Scan(&key, &sole); err != nil {
-		return "", false, fmt.Errorf("capture: reading the message's thread: %w", err)
+		 WHERE a.id = $1 AND a.archived_at IS NULL`, id).Scan(&key, &sole)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, false, nil
 	}
-	return key, sole, nil
+	if err != nil {
+		return "", false, false, fmt.Errorf("capture: reading the message's thread: %w", err)
+	}
+	return key, sole, true, nil
 }
 
 // heldNeighbourKeysTx answers the distinct thread keys of the neighbours this

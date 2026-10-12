@@ -44,8 +44,7 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 	case errors.Is(cause, webread.ErrRobotsDisallowed):
 		return contacts.SiteReadFailureRobots, "The site's robots.txt asks this crawler not to read the page."
 	}
-	var status *webread.StatusError
-	if errors.As(cause, &status) {
+	if status, ok := errors.AsType[*webread.StatusError](cause); ok {
 		if status.Retryable() {
 			if status.Status == http.StatusForbidden || status.Status == http.StatusTooManyRequests {
 				return contacts.SiteReadFailureBotBlocked, fmt.Sprintf(
@@ -67,8 +66,7 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 	if errors.As(cause, &certErr) || errors.As(cause, &hostErr) || errors.As(cause, &authErr) {
 		return contacts.SiteReadFailureTLS, "The site's HTTPS certificate could not be verified, so it was not read."
 	}
-	var dnsErr *net.DNSError
-	if errors.As(cause, &dnsErr) {
+	if _, ok := errors.AsType[*net.DNSError](cause); ok {
 		return contacts.SiteReadFailureDNS, "The domain name does not resolve to a server."
 	}
 	// Nothing recognized it, so it is not evidence about the SITE. Most callers
@@ -81,9 +79,8 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 // autoEnrichMaxPages is the page ceiling every AUTOMATIC read runs under
 // (ADR-0072 §9). A read nobody asked for should cost a fraction of one somebody
 // did: the setting is on by default and sweeps up to the auto-enrich daily cap
-// (defaultAutoEnrichDailyCap, or AutoEnrichDailyCapEnv where set)
-// companies a day per workspace, so the deployment-wide crawler budget is
-// the wrong unit here.
+// (capture.AutoEnrichDailyCap) companies a day, so the page limit an admin
+// sets for a read somebody asked for is the wrong unit here.
 const autoEnrichMaxPages = 12
 
 // pageCeiling is the page cap for one run: the automatic lane's own ceiling,
@@ -104,11 +101,7 @@ func (w *siteDeepReadWorker) pageCeiling(requestedBy string, askedFor int) int {
 
 // autoEnrichEnabled re-reads the workspace's auto-enrich setting.
 func (w *siteDeepReadWorker) autoEnrichEnabled(ctx context.Context) (bool, error) {
-	settings, err := w.settings.Get(ctx)
-	if err != nil {
-		return false, err
-	}
-	return settings.AutoEnrich, nil
+	return w.settings.AutoEnrichOn(ctx)
 }
 
 // abandon closes a read nobody wants any more. Distinct from fail: nothing went

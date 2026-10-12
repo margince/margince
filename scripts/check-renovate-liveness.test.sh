@@ -49,6 +49,10 @@ iso_seconds_ago() {
 
 dashboard_secs_at() { printf '[{"number":52,"title":"Dependency Dashboard","updated_at":"%s"}]' "$(iso_seconds_ago "$1")"; }
 dashboard_at() { printf '[{"number":52,"title":"Dependency Dashboard","updated_at":"%s"}]' "$(iso_days_ago "$1")"; }
+backlog_dashboard_at() {
+  printf '[{"number":52,"title":"Dependency Dashboard","updated_at":"%s","body":"%s"}]' "$(iso_days_ago "$1")" \
+    '## Rate-Limited\n - [ ] <!-- unlimit-branch=renovate/lock-file-maintenance -->Lock file maintenance'
+}
 comment_at() { printf '[{"created_at":"%s"}]' "$(iso_days_ago "$1")"; }
 pr_at() { printf '{"items":[{"created_at":"%s"}]}' "$(iso_days_ago "$1")"; }
 
@@ -147,6 +151,23 @@ DASHBOARD_JSON='[{"number":9,"title":"Action Required: Fix Renovate Configuratio
 DASHBOARD_JSON='[{"number":9,"title":"Dependency Dashboard","pull_request":{},"updated_at":"2026-09-21T00:00:00Z"}]' \
   COMMENTS_JSON='[]' SEARCH_JSON="$(pr_at 1)" \
   expect "a pull request never answers for the dashboard" 1 NO_DASHBOARD
+
+# Running is not progressing. A bot whose open PRs fill prConcurrentLimit and
+# never merge rewrites the dashboard every run and opens nothing, with the
+# backlog listed under Rate-Limited: the dashboard signal above reads that LIVE.
+DASHBOARD_JSON="$(backlog_dashboard_at 0)" COMMENTS_JSON='[]' SEARCH_JSON="$(pr_at 13)" \
+  expect "a rate-limited backlog with no pull request for a week is stalled" 1 STALLED
+DASHBOARD_JSON="$(backlog_dashboard_at 0)" COMMENTS_JSON='[]' SEARCH_JSON='{"items":[]}' \
+  expect "a rate-limited backlog with no pull request ever is stalled" 1 STALLED
+
+# The same backlog is healthy while PRs still open: the hourly limit parks
+# updates under Rate-Limited on an ordinary busy night.
+DASHBOARD_JSON="$(backlog_dashboard_at 0)" COMMENTS_JSON='[]' SEARCH_JSON="$(pr_at 1)" \
+  expect "a backlog behind a pull request opened yesterday is live" 0 LIVE
+
+# And a week without PRs and without a backlog is a quiet week, not a stall.
+DASHBOARD_JSON="$(dashboard_at 0)" COMMENTS_JSON='[]' SEARCH_JSON="$(pr_at 13)" \
+  expect "no pull request for a week with nothing waiting is live" 0 LIVE
 
 if ((failures > 0)); then
   echo "$failures case(s) failed"

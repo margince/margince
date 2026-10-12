@@ -112,16 +112,21 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 	// A Google token typically carries NO groups claim: the adapter must
 	// surface the empty list, never an error — a groupless token simply
 	// grants nothing.
-	tok := rig.mint(t, testKID, "RS256", map[string]any{"sub": "sub-1", "email": "carol@example.com"})
-	email, sub, verified, groups, err := adapter.Verify(context.Background(), tok)
+	tok := rig.mint(t, testKID, "RS256", map[string]any{
+		"sub": "sub-1", "email": "carol@example.com", "given_name": "Carol",
+	})
+	claims, err := adapter.Verify(context.Background(), tok)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if email != "carol@example.com" || sub != "sub-1" || !verified {
-		t.Fatalf("email=%q sub=%q verified=%v", email, sub, verified)
+	if claims.Email != "carol@example.com" || claims.Subject != "sub-1" || !claims.EmailVerified {
+		t.Fatalf("email=%q sub=%q verified=%v", claims.Email, claims.Subject, claims.EmailVerified)
 	}
-	if len(groups) != 0 {
-		t.Fatalf("groups = %v for a token carrying no groups claim, want none", groups)
+	if claims.GivenName != "Carol" {
+		t.Fatalf("given name = %q, want the token's given_name claim", claims.GivenName)
+	}
+	if len(claims.Groups) != 0 {
+		t.Fatalf("groups = %v for a token carrying no groups claim, want none", claims.Groups)
 	}
 
 	// And a token that DOES carry one surfaces it verbatim, for the
@@ -129,15 +134,15 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 	grouped := rig.mint(t, testKID, "RS256", map[string]any{
 		"sub": "sub-1", "email": "carol@example.com", "groups": []string{"sales", "leads"},
 	})
-	_, _, _, groups, err = adapter.Verify(context.Background(), grouped)
+	claims, err = adapter.Verify(context.Background(), grouped)
 	if err != nil {
 		t.Fatalf("Verify(grouped): %v", err)
 	}
-	if len(groups) != 2 || groups[0] != "sales" || groups[1] != "leads" {
+	if groups := claims.Groups; len(groups) != 2 || groups[0] != "sales" || groups[1] != "leads" {
 		t.Fatalf("groups = %v, want the token's groups claim passed through", groups)
 	}
 
-	if _, _, _, _, err := adapter.Verify(context.Background(), "not-a-jwt"); err == nil {
+	if _, err := adapter.Verify(context.Background(), "not-a-jwt"); err == nil {
 		t.Fatal("expected an error to pass through for a malformed token")
 	}
 }

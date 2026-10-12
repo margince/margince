@@ -90,7 +90,7 @@ func TestEveryRedemptionRefusalOtherThanUndecidedReadsAsAnInvalidToken(t *testin
 	withPassport := principal.Principal{PassportID: passport}
 
 	staleDecision := approved
-	staleDecision.DecidedAt = ptr(now.Add(-RedemptionWindow - time.Minute))
+	staleDecision.DecidedAt = new(now.Add(-RedemptionWindow - time.Minute))
 	spent := approved
 	spent.ConsumedAt = &consumed
 	rejected := approved

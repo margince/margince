@@ -92,7 +92,7 @@ func (e *DealContractsCrossCompanyError) Error() string {
 	// "do not" rather than "still name the old one": a deal may have named
 	// nobody when the agreement was filed, and there is no old one to point at.
 	return "a deal and its agreements must name the same company, and these do not: " + named +
-		" — detach them from this deal, or record them against the new company, before moving it"
+		"; detach them from this deal before moving it"
 }
 
 // FieldFault names the field the caller sent, so the refusal classifies as a

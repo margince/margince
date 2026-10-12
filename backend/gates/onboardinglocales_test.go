@@ -88,7 +88,7 @@ func TestTheOnboardingConversationSpeaksEveryShippedLanguage(t *testing.T) {
 // splitEnum reads a YAML flow sequence's members.
 func splitEnum(raw string) []string {
 	out := []string{}
-	for _, part := range strings.Split(raw, ",") {
+	for part := range strings.SplitSeq(raw, ",") {
 		if trimmed := strings.TrimSpace(part); trimmed != "" {
 			out = append(out, trimmed)
 		}

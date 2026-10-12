@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   ApprovalDetailModal,
@@ -59,6 +60,10 @@ export const DetailModal: Story = {
         <ApprovalDetailModal approvalId="ap-1" open onClose={() => {}} />
       </StoryProviders>
     );
+  },
+  play: async () => {
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Send the follow-up to Anna Weber");
   },
 };
 
@@ -150,7 +155,21 @@ export const OutcomeVersionSkew: Story = {
     <StoryProviders>
       <DecideOutcome
         decide={{ isError: true, error: new Error("stale") }}
-        skew
+        skewKey="decision.versionSkew"
+        alreadyDecided={false}
+        onReRead={() => {}}
+      />
+    </StoryProviders>
+  ),
+};
+
+// A rate proposal's lost race points at the refresh rather than a re-stage.
+export const OutcomeRateMoved: Story = {
+  render: () => (
+    <StoryProviders>
+      <DecideOutcome
+        decide={{ isError: true, error: new Error("stale") }}
+        skewKey="decision.fxRateMoved"
         alreadyDecided={false}
         onReRead={() => {}}
       />
@@ -163,7 +182,7 @@ export const OutcomeGenericFailure: Story = {
     <StoryProviders>
       <DecideOutcome
         decide={{ isError: true, error: new Error("network unreachable") }}
-        skew={false}
+        skewKey={null}
         alreadyDecided={false}
         onReRead={() => {}}
       />

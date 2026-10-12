@@ -211,8 +211,7 @@ func TestActivationRefusesWhenNoRateIsPublished(t *testing.T) {
 	id := draftInCurrency(t, e, company, "JPY")
 	_, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil)
 
-	var missing *deals.MissingFxRateError
-	if !errors.As(err, &missing) {
+	if _, ok := errors.AsType[*deals.MissingFxRateError](err); !ok {
 		t.Fatalf("activating with no published rate answered %v, want the missing-rate refusal", err)
 	}
 

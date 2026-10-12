@@ -254,9 +254,8 @@ func TestAnUnknownKindIsRefusedAsAnArgument(t *testing.T) {
 		`{"candidates":[{"kind":"lead","name":"Anna"}]}`,
 		`{"candidates":[{"name":"Anna"}]}`,
 	} {
-		var bad *BadArgsError
 		_, err := tool.Handle(t.Context(), json.RawMessage(args))
-		if !errors.As(err, &bad) {
+		if _, ok := errors.AsType[*BadArgsError](err); !ok {
 			t.Errorf("%s answered %v, want an argument refusal", args, err)
 		}
 	}
@@ -344,9 +343,8 @@ func TestTheKeysOnOneCandidateAreBounded(t *testing.T) {
 			args := fmt.Sprintf(`{"candidates":[{"kind":"contact","%s":[%s]}]}`, field, strings.Join(keys, ","))
 			tool := resolveEntities{p: &queryProbeProvider{}, resolve: unreachedResolver(t)}
 
-			var bad *BadArgsError
 			_, err := tool.Handle(t.Context(), json.RawMessage(args))
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("an oversized `%s` answered %v, want an argument refusal", field, err)
 			}
 			if !strings.Contains(err.Error(), field) {

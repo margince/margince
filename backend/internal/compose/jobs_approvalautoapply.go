@@ -43,11 +43,10 @@ func (ApprovalAutoApplyArgs) Kind() string { return "approval_auto_apply" }
 // did not apply is still pending then. A row that did not apply because its
 // owner has gone is not a fault to retry at all.
 func (ApprovalAutoApplyArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       river.QueueDefault,
+	return *jobs.QueuedAs[ApprovalAutoApplyArgs](&river.InsertOpts{
 		MaxAttempts: 1,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 type approvalAutoApplyWorker struct {

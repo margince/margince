@@ -44,6 +44,7 @@ components:
         - list.restored
         - list.member_added
         - list.member_removed
+        - list.evaluated
         - commission.accrued
         - commission.decided
         - contract.created
@@ -97,6 +98,9 @@ components:
         - activity.captured
         - activity.archived
         - activity.updated
+        - attachment.created
+        - attachment.updated
+        - attachment.archived
         - engagement.reply
         - comms.delivery_bounced
         - notice.created
@@ -121,9 +125,12 @@ components:
         - consent.changed
         - consent.suppressed
         - consent.suppression_lifted
+        - consent.override_recorded
+        - consent.override_lifted
         - email_signature.changed
         - user_locale.changed
         - user_display_name.changed
+        - user_greeting_name.changed
         - linkedin_account.changed
         - linkedin_network.imported
         - linkedin_match.decided
@@ -840,14 +847,14 @@ components:
       x-entity-type: dynamic
       x-version: 1
       description: >-
-        Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk
-        change. The subject is the RECORD (contact, company, deal, lead or project), so the event
-        reaches only a subscriber who may see that record. It names no list: delivery is decided
+        Payload for list.member_added — a record was added to a Shortlist by hand, in a bulk change
+        or by an automation rule. The subject is the RECORD (contact, company, deal, lead or
+        project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided
         by the record, and a list its subscriber cannot find must not be named to them. Which list,
         and the note, stay on the list's history, which is read under the list's own sharing.
       required: [reason]
       properties:
-        reason: { type: string, description: 'chosen or bulk.' }
+        reason: { type: string, description: 'chosen, bulk or automation.' }
       additionalProperties: false
 
     PublicEventListMemberRemoved:
@@ -861,6 +868,23 @@ components:
       required: [reason]
       properties:
         reason: { type: string, description: 'chosen or bulk.' }
+      additionalProperties: false
+
+    PublicEventListEvaluated:
+      type: object
+      x-event-type: list.evaluated
+      x-entity-type: list
+      x-version: 1
+      description: >-
+        Payload for list.evaluated — a check of a Live List saw records join or leave it. Emitted
+        once per check that saw a change, never per record. It carries no counts: the check sees
+        every record, and a count would tell a subscriber how many records they cannot see. Who
+        joined and left is on the list's history, read under the reader's own row scope.
+      required: [definition_version, evaluated_at, filter_changed]
+      properties:
+        definition_version: { type: integer, format: int64, description: 'The list version the check ran under.' }
+        evaluated_at: { type: string, format: date-time }
+        filter_changed: { type: boolean, description: 'This was the first check after the filter changed.' }
       additionalProperties: false
 
     PublicEventDealOwnerChanged:
@@ -1888,6 +1912,114 @@ components:
             absent on a direct log).
       additionalProperties: false
 
+    PublicEventAttachmentCreated:
+      type: object
+      x-event-type: attachment.created
+      x-entity-type: attachment
+      x-version: 1
+      description: >-
+        Payload for attachment.created. A file was uploaded against a record.
+
+        The attachment's own id is the envelope's `entity.id` and the uploader is
+        its `actor`, so neither is repeated here.
+
+        No filename, and no content. A filename is text a stranger or a rep
+        typed, and it can be the sensitive part by itself: "redundancy letter
+        Weber.pdf" states a fact about a named human to every subscriber of the
+        workspace. A subscriber that needs the name reads the attachment back
+        through the API under its own reader's permissions, which is the rule the
+        envelope follows for every record body.
+
+        An attachment that arrives with captured mail emits no event of its own.
+        The mail's own activity.captured covers it, and a second event for one
+        arrival would make one delivery look like two.
+      required:
+        - parent_type
+        - parent_id
+      additionalProperties: false
+      properties:
+        parent_type:
+          type: string
+          description: The kind of record the file hangs off. That record is also where the authority to change the file comes from (activity | contact | company | deal | lead | contract).
+        parent_id:
+          type: string
+          format: uuid
+          description: The record the file hangs off. A subscriber routes on this rather than on the attachment.
+        content_type:
+          type: [string, 'null']
+          description: The MIME type as stored, or null where the upload declared none.
+        byte_size:
+          type: [integer, 'null']
+          format: int64
+          description: The size counted while storing the bytes, not the length the upload declared. Null on a row stored before the column was counted, because the column is nullable and this mirrors it rather than inventing a zero.
+
+    PublicEventAttachmentUpdated:
+      type: object
+      x-event-type: attachment.updated
+      x-entity-type: attachment
+      x-version: 1
+      description: >-
+        Payload for attachment.updated. A file's metadata was edited: its
+        category, title, document state, pinning, or which document it
+        supersedes.
+
+        It carries which file changed and not what it now says. The omission is
+        the one attachment.created makes: a title is typed text just as a
+        filename is, so a delta carrying the new title would publish what the
+        filename rule withholds. A subscriber that needs the current metadata
+        reads the attachment back under its own permissions.
+      required:
+        - parent_type
+        - parent_id
+      additionalProperties: false
+      properties:
+        parent_type:
+          type: string
+          description: The kind of record the file hangs off.
+        parent_id:
+          type: string
+          format: uuid
+          description: The record the file hangs off.
+        content_type:
+          type: [string, 'null']
+          description: The MIME type as stored, or null where the upload declared none. A metadata edit does not change it.
+        byte_size:
+          type: [integer, 'null']
+          format: int64
+          description: The stored size. A metadata edit does not change it.
+
+    PublicEventAttachmentArchived:
+      type: object
+      x-event-type: attachment.archived
+      x-entity-type: attachment
+      x-version: 1
+      description: >-
+        Payload for attachment.archived. A file was archived off a record.
+
+        Archiving is this subsystem's delete: the row and the stored bytes stay,
+        and the file leaves every live listing. It carries the same shape as the
+        other two so a subscriber routes all three the same way, and the same
+        omissions for the same reasons.
+      required:
+        - parent_type
+        - parent_id
+      additionalProperties: false
+      properties:
+        parent_type:
+          type: string
+          description: The kind of record the file hung off.
+        parent_id:
+          type: string
+          format: uuid
+          description: The record the file hung off.
+        content_type:
+          type: [string, 'null']
+          description: The MIME type as stored, or null where the upload declared none.
+        byte_size:
+          type: [integer, 'null']
+          format: int64
+          description: The stored size.
+
     PublicEventActivityArchived:
       type: object
       x-event-type: activity.archived
@@ -1922,7 +2054,8 @@ components:
         fields (subject, body, occurred_at, due_at, remind_at,
         assignee_id, is_done, meeting_status) each carried only when this update touched
         them, plus RelinkActivity's relinked target and SetActivityAudience's
-        audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key
+        audience, plus the undo of a project filing, explicit request-reminder restoration's restored flag and
+        capture's own-sent-mail direction correction — a fixed, KNOWN key
         set (unlike contact/company/deal/lead.updated's genuinely
         open patch), so it is typed rather than an open map.
       properties:
@@ -1975,6 +2108,27 @@ components:
             field on any other kind.
         relinked:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
+        direction:
+          type: string
+          enum: [outbound]
+          x-enum-varnames:
+            - DirectionBecameOutbound
+          description: >-
+            Set when capture learned that a message stored as received was the
+            seat's own sent mail (absent otherwise). The counterparty changes
+            with it; a subscriber that must know re-reads the row.
+        project_filing_undone:
+          type: boolean
+          description: >-
+            True when a member undid the activity's filing under a project: the project link and
+            the retention class that filing gave it are gone (absent otherwise). Who decided and
+            why is audit-log material, not published.
+        outbound_attested:
+          type: boolean
+          description: >-
+            True when the sender's own provider filing attested the message as
+            their outbound mail, whether it was stored as received or as
+            unattested outbound (absent otherwise).
         audience:
           type: string
           enum: [workspace, participants, selected]
@@ -2733,6 +2887,116 @@ components:
             (machine | user | admin | subject).
       additionalProperties: false
 
+    PublicEventConsentOverrideRecorded:
+      type: object
+      x-event-type: consent.override_recorded
+      x-entity-type: contact
+      x-version: 1
+      description: >-
+        Payload for consent.override_recorded — a rep recorded a standing vouch that a
+        machine-level refusal for one category may be overruled for this contact
+        (consent/override.go's Allow). Its own event rather than a consent.changed: an
+        override is not consent and not a lawful basis, it outranks only a
+        machine-level, non-absolute refusal, and a subject-level stop still wins
+        at the gate regardless of this row.
+
+        The subject is a contact and only a contact: the write door names that
+        object as a literal, so this is a static entity whose delivery scope
+        the fan-out gate proves mechanically rather than by hand-ratification.
+
+        It names WHAT category was vouched for and at WHICH authority, never
+        the reason the rep gave: that explanation belongs to the audit trail a
+        rep reviewing the contact reads, not to every subscriber the event
+        reaches.
+      required:
+        - override_id
+        - category
+        - decided_by_level
+      properties:
+        override_id:
+          type: string
+          format: uuid
+          description: >-
+            Which row was recorded. It is the handle the revoke door takes
+            (POST /contacts/{id}/consent/allow/{overrideId}/revoke), and a
+            contact can hold several live vouches at once — one per category,
+            and after a merge more than one for a single category — so a
+            consumer with no id cannot say which of them any later
+            consent.override_lifted describes.
+        category:
+          type: string
+          description: >-
+            Which category of send this vouch covers. The engine resolves every
+            send to exactly one category, and the override applies to that one
+            only.
+        decided_by_level:
+          type: string
+          description: >-
+            Whose decision it is (user | admin) — always the recording seat's
+            own authority, never a value the request body could name.
+      additionalProperties: false
+
+    PublicEventConsentOverrideLifted:
+      type: object
+      x-event-type: consent.override_lifted
+      x-entity-type: contact
+      x-version: 1
+      description: >-
+        Payload for consent.override_lifted — somebody with the authority to
+        do so took back ONE standing override (consent/override.go's
+        RevokeOverride).
+
+        That is not the same as "the refusal now applies again for every
+        category" — a contact can carry more than one override, one per
+        category, and revoking one says nothing about the others. A consumer
+        wanting the categories still vouched for reads the contact's live
+        overrides rather than inferring them from this event.
+
+        ONE PER ROW TAKEN BACK, and the entity says which. A merge COPIES a
+        vouch onto the survivor under a new id and announces the copy with its
+        own consent.override_recorded on the survivor's stream; revoking the
+        original takes back every copy, and each gets its own lifted event on
+        the stream that heard it recorded. A consumer is told about the id it
+        is holding rather than about one it was never given.
+
+        It carries BOTH levels: the one the override was recorded at and the
+        one that revoked it, the same pairing consent.suppression_lifted
+        carries and for the same reason — an auditor needs to see that the
+        second was allowed to take back the first without joining a row that no
+        longer says so. Allowed, not outranked: a vouch is the one decision an
+        admin may take back from a peer admin, because admin is the top human
+        authority and nothing higher exists to reach an admin-recorded
+        override.
+
+        It never carries the category the override covered or the reason
+        either party gave. The category is what `override_id` lets a reader
+        look up on the still-standing audit trail; the reason belongs to the
+        seats who wrote it, and an event reaches readers neither explanation
+        was given to.
+      required:
+        - override_id
+        - recorded_at_level
+        - revoked_by_level
+      properties:
+        override_id:
+          type: string
+          format: uuid
+          description: >-
+            Which override was revoked. Without it a consumer holding several
+            overrides for one contact cannot tell which one this event
+            describes.
+        recorded_at_level:
+          type: string
+          description: >-
+            The authority the override was originally recorded at (user |
+            admin). Paired with revoked_by_level so an auditor can see the
+            second was allowed to take back the first without joining a row
+            that no longer says so.
+        revoked_by_level:
+          type: string
+          description: The authority that revoked it (user | admin).
+      additionalProperties: false
+
     PublicEventConsentChanged:
       type: object
       x-event-type: consent.changed
@@ -2858,6 +3122,28 @@ components:
             The name now in force, trimmed. Never empty: a name of only
             whitespace is refused, and a save that moved nothing writes nothing
             and publishes nothing.
+      additionalProperties: false
+
+    PublicEventUserGreetingNameChanged:
+      type: object
+      x-event-type: user_greeting_name.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_greeting_name.changed — the name a member's colleagues
+        greet them by changed (identity/greetingname.go). The member saved it
+        themselves, or their first sign-in through a login provider filled an
+        empty one from the provider's given name. A subscriber that drafts a
+        greeting to this member reads it, because the first word of the display
+        name is not always the name somebody is greeted by.
+      required:
+        - greeting_name
+      properties:
+        greeting_name:
+          type: [string, 'null']
+          description: >-
+            The greeting name now in force, trimmed. Null when it was cleared,
+            and greetings fall back to the first word of the display name.
       additionalProperties: false
 
     PublicEventLinkedinAccountChanged:

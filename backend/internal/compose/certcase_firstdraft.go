@@ -84,8 +84,8 @@ func (firstDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 // firstDraftCase is one first-message request ready to be answered.
 type firstDraftCase struct{ data replyActivityData }
 
-// Run drives the production lane — the same completeFirstVoiced, correction loop
-// and validators DraftFirstEmail drives — and records every request it issued.
+// Run drives the site's lane — completeFirstVoiced, its correction loop and its
+// validators — and records every request it issued.
 //
 // The drafter is built with a brain and nothing else because this path does no
 // I/O at all: unlike the reply, there is no activity to read and no voice signal
@@ -127,7 +127,8 @@ func (c *firstDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
-	if err := validateReplyDraft(draft); err != nil {
+	// Judged as served: the floor's greeting counts against the bounds.
+	if _, err := c.data.greeted(draft); err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}

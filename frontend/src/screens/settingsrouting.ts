@@ -75,6 +75,23 @@ const LEGACY_ADMIN_IDS: readonly string[] = [
   "maintenance",
 ];
 
+export const IMPORT_RUN_SUBPAGE = "run";
+
+// A page listed here answers only these segments under it, one level deep; any
+// other is unknown. An unlisted page ignores the segments, which the connections
+// callback rides on.
+const SUBPAGES: Readonly<Partial<Record<SettingsPageId, readonly string[]>>> = {
+  import: [IMPORT_RUN_SUBPAGE],
+};
+
+function answersSubpage(page: SettingsPageId, route: Route) {
+  const subpages = SUBPAGES[page];
+  if (subpages === undefined || route.id2 === undefined) {
+    return true;
+  }
+  return route.id3 === undefined && subpages.includes(route.id2);
+}
+
 /** What an address resolves to. */
 export type SettingsTarget =
   | { readonly kind: "home" }
@@ -126,7 +143,7 @@ export function settingsRouteTarget(route: Route): SettingsTarget {
   }
 
   const current = pageFor(route.id);
-  return current === undefined
+  return current === undefined || !answersSubpage(current, route)
     ? { kind: "unknown" }
     : { kind: "page", page: current, legacy: false };
 }

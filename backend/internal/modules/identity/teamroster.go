@@ -33,6 +33,8 @@ type TeamMember struct {
 	UserID      ids.UUID
 	DisplayName string
 	Email       string
+	// Invited is a seat that has not signed in yet; only MembersOfTeam lists one.
+	Invited bool
 }
 
 // LiveTeammatesOfCaller lists the live human seats sharing a live team with the

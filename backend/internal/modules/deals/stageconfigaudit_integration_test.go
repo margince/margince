@@ -79,7 +79,12 @@ func setupConfigEnv(t *testing.T) *configEnv {
 	}
 	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
-	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{})
+	// The contract row rule is the contracts module's, which this package may
+	// not import. These suites cite activities only, so no contract opens;
+	// the real rule is proven through installseam in compose/integration.
+	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
+		ContractVisible: func(context.Context, string, func(any) int) (string, error) { return "FALSE", nil },
+	})
 	return e
 }
 

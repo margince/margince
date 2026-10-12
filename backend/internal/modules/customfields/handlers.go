@@ -74,12 +74,17 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	spec := FieldSpec{
 		Object:   string(req.Object),
 		Label:    req.Label,
 		Type:     string(req.Type),
 		Currency: req.Currency,
-		Source:   req.Source,
+		Source:   source,
 	}
 	if req.Options != nil {
 		spec.Options = *req.Options
@@ -119,7 +124,10 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 
 // RetireCustomField soft-retires the field (CUSTOM-FIELDS-WIRE-4):
 // status flips to retired, archived_at stays null, the physical column
-// and every value in it are preserved.
+// and every value in it are preserved. The Live Lists still filtering on
+// it are read through ListCustomFieldLiveLists, never carried here: the
+// idempotency replay stores this answer as catalog data and would repeat
+// list names without asking whether the caller may still find them.
 func (h Handlers) RetireCustomField(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RetireCustomFieldParams) {
 	field, err := h.svc.Retire(r.Context(), ids.UUID(id))
 	if err != nil {

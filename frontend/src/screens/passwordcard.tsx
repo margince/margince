@@ -4,11 +4,11 @@ import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { isTooShort } from "./passwordrule";
 
 // Changing your own password, from the account settings page.
@@ -51,6 +51,7 @@ export function PasswordSettingRow({
 }> = {}) {
   const t = useT();
   const titleId = useId();
+  const formId = useId();
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState<ChangeFields>(EMPTY);
   const [done, setDone] = useState(false);
@@ -65,18 +66,17 @@ export function PasswordSettingRow({
     // the click belongs to the committed render, so a variable it passes cannot
     // be older than the control that carried it.
     mutationFn: async (values: ChangeFields) => {
-      const { error } = await api.POST("/auth/change-password", {
-        body: {
-          current_password: values.current,
-          new_password: values.next,
-        },
-      });
-      if (error) {
-        // The house error path: the server's problem detail is what says
-        // whether the current password was wrong or the new one was refused,
-        // and a generic message here would throw that away.
-        throwProblem(error, t);
-      }
+      // The server's problem says whether the current password was wrong or the
+      // new one was refused; a generic message would throw that away.
+      unwrap(
+        await api.POST("/auth/change-password", {
+          body: {
+            current_password: values.current,
+            new_password: values.next,
+          },
+        }),
+        t,
+      );
     },
     onSuccess: async () => {
       setFields(EMPTY);
@@ -148,22 +148,19 @@ export function PasswordSettingRow({
           {t("password.done")}
         </Callout>
       )}
-      <Modal open={open} onClose={close} labelledBy={titleId}>
-        {/* A real form, so Enter submits it. Three password fields that could
-              only be committed by reaching for the button is not how anyone
-              types a credential, and the button carried no `type` at all —
-              Button defaults to `type="button"`, so even inside a form it would
-              not have. */}
+      <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          {t("password.title")}
+        </Heading>
+        {/* A real form, so Enter in any of the three fields submits it. */}
         <form
+          id={formId}
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             if (ready && !change.isPending) change.mutate(fields);
           }}
         >
-          <Heading size="large" className="t-h3" id={titleId}>
-            {t("password.title")}
-          </Heading>
           {change.isError && (
             <Callout
               kind="outcome"
@@ -236,33 +233,34 @@ export function PasswordSettingRow({
               />
             )}
           </Field>
-          <div className="form-actions">
-            <Button variant="ghost" onClick={close}>
-              {t("password.cancel")}
-            </Button>
-            {/* Two facts, two props. `!ready` is a form that is not filled in
-                  yet and `change.isPending` is a write already on its way, and
-                  folding them into one `disabled` drew them the same: the reader
-                  could not tell "I still have to type something" from "it is
-                  going".
-
-                  The precondition stops applying once the write is out, and that
-                  guard is load bearing rather than tidy: these fields stay
-                  editable during the request, so clearing one mid-flight would
-                  otherwise flip `ready` false, hand the button `disabled` on top
-                  of `pending`, and — since refusal outranks busy — drop both the
-                  focus and the busy state in the middle of the change. */}
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!change.isPending && !ready}
-              pending={change.isPending}
-              busyLabel={t("password.changing")}
-            >
-              {t("password.submit")}
-            </Button>
-          </div>
         </form>
+        <div className="actions">
+          <Button variant="ghost" onClick={close}>
+            {t("password.cancel")}
+          </Button>
+          {/* Two facts, two props. `!ready` is a form that is not filled in
+                yet and `change.isPending` is a write already on its way, and
+                folding them into one `disabled` drew them the same: the reader
+                could not tell "I still have to type something" from "it is
+                going".
+
+                The precondition stops applying once the write is out, and that
+                guard is load bearing rather than tidy: these fields stay
+                editable during the request, so clearing one mid-flight would
+                otherwise flip `ready` false, hand the button `disabled` on top
+                of `pending`, and — since refusal outranks busy — drop both the
+                focus and the busy state in the middle of the change. */}
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            disabled={!change.isPending && !ready}
+            pending={change.isPending}
+            busyLabel={t("password.changing")}
+          >
+            {t("password.submit")}
+          </Button>
+        </div>
       </Modal>
     </>
   );
@@ -278,11 +276,9 @@ export function ChangePasswordCard({
   const t = useT();
   return (
     <Panel title={t("password.title")}>
-      <PanelBody>
-        <SettingList>
-          <PasswordSettingRow onChanged={onChanged} />
-        </SettingList>
-      </PanelBody>
+      <SettingList bleed="settings">
+        <PasswordSettingRow onChanged={onChanged} />
+      </SettingList>
     </Panel>
   );
 }

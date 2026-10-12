@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -85,8 +86,8 @@ func buildSchema(root reflect.Type, docs docIndex) (object, error) {
 // until the server refuses to start.
 func structNode(t reflect.Type, docs docIndex) (object, error) {
 	props := &object{}
-	for i := range t.NumField() {
-		f := t.Field(i)
+	var required []string
+	for f := range t.Fields() {
 		if inlined(f) {
 			// Refused rather than skipped. An inline embed's fields are decoded
 			// at THIS level, so skipping it emits a schema missing keys the
@@ -104,13 +105,50 @@ func structNode(t reflect.Type, docs docIndex) (object, error) {
 		if err != nil {
 			return object{}, err
 		}
+		node, mandatory, err := constrain(node, f)
+		if err != nil {
+			return object{}, fmt.Errorf("%s.%s: %w", t.Name(), f.Name, err)
+		}
+		if mandatory {
+			required = append(required, name)
+		}
 		props.set(name, node)
 	}
 	var out object
 	out.set("type", "object")
 	out.set("additionalProperties", false)
+	if len(required) > 0 {
+		out.set("required", required)
+	}
 	out.set("properties", props)
 	return out, nil
+}
+
+// constrain applies a field's `schema:` tag: the checks the loader makes that
+// a shape alone cannot say. "required" makes the key mandatory and, on a list,
+// non-empty; "date-time" asks for an RFC 3339 instant. The tag restates what
+// validate() refuses, so the editor flags it before a boot does — and only
+// that: a tag the loader does not enforce would flag valid config.
+func constrain(node object, f reflect.StructField) (object, bool, error) {
+	tag, ok := f.Tag.Lookup("schema")
+	if !ok {
+		return node, false, nil
+	}
+	mandatory := false
+	for opt := range strings.SplitSeq(tag, ",") {
+		switch opt {
+		case "required":
+			mandatory = true
+			if f.Type.Kind() == reflect.Slice {
+				node.set("minItems", 1)
+			}
+		case "date-time":
+			node.set("format", "date-time")
+		default:
+			return object{}, false, fmt.Errorf("unknown schema tag option %q — teach constrain, do not guess", opt)
+		}
+	}
+	return node, mandatory, nil
 }
 
 // fieldNode renders one field, documented from the Go source above it.
@@ -141,12 +179,7 @@ func inlined(f reflect.StructField) bool {
 	if !ok {
 		return false
 	}
-	for _, opt := range strings.Split(tag, ",")[1:] {
-		if opt == "inline" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(strings.Split(tag, ",")[1:], "inline")
 }
 
 // yamlName reads the field's yaml key, or reports that it has none.
@@ -215,7 +248,7 @@ func typeNode(t reflect.Type, docs docIndex) (object, error) {
 // specialNode covers the types whose YAML form is not their Go shape.
 func specialNode(t reflect.Type) (object, bool) {
 	switch t {
-	case reflect.TypeOf(deployconfig.Secret{}):
+	case reflect.TypeFor[deployconfig.Secret]():
 		// A reference, never a literal: the loader refuses anything else, and
 		// the pattern comes from the loader rather than being written twice.
 		var out object
@@ -227,7 +260,15 @@ func specialNode(t reflect.Type) (object, bool) {
 		// variable is worse than no example at all.
 		out.set("examples", []string{"${env:VARIABLE_NAME}", "${file:/run/secrets/name}"})
 		return out, true
-	case reflect.TypeOf(yaml.Node{}):
+	case reflect.TypeFor[deployconfig.RemovableSecret]():
+		// A Secret that may also be declared removed; the pattern and the
+		// sentinel come from the loader for the same reason.
+		var out object
+		out.set("type", "string")
+		out.set("pattern", deployconfig.RemovableSecretPattern)
+		out.set("examples", []string{"${env:VARIABLE_NAME}", "${file:/run/secrets/name}", deployconfig.SecretRemoved})
+		return out, true
+	case reflect.TypeFor[yaml.Node]():
 		// The one free-form subtree: seeds.ai_routing is decoded later, by the
 		// ai package, against the shape under $defs.
 		var out object

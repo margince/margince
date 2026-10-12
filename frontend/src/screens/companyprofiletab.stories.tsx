@@ -59,7 +59,11 @@ function frame(company: Company, allow: Parameters<typeof meRoute>[0]) {
   installFetchStub(routes);
   return (
     <StoryProviders>
-      <CompanyProfileForm company={company} tools={null} />
+      <CompanyProfileForm
+        company={company}
+        onOpenReceipt={() => undefined}
+        tools={null}
+      />
     </StoryProviders>
   );
 }

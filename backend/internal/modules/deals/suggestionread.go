@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -75,7 +76,7 @@ func suggestionVisibleClause(ctx context.Context, arg func(any) int) (string, er
 	        WHERE es.id = e.signal_id AND es.archived_at IS NULL AND %[4]s
 	          AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(es.evidence) cite
 	            WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-	              WHERE ca.id::text = cite->>'source_id' AND ca.archived_at IS NULL AND %[5]s))))
+	              WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND ca.archived_at IS NULL AND %[5]s))))
 	  OR (e.kind = 'attachment' AND %[7]s AND EXISTS (SELECT 1 FROM attachment eat
 	        JOIN activity aa ON aa.id = eat.activity_id
 	        WHERE eat.id = e.attachment_id AND eat.archived_at IS NULL
@@ -186,14 +187,16 @@ func (s *Store) ListSuggestions(ctx context.Context, in SuggestionQuery) ([]Sugg
 	}
 	query := `SELECT ` + suggestionColumns + ` FROM deal_suggestion s JOIN company c ON c.id = s.company_id
 	 WHERE s.state = 'open' AND ` + visible
+	var querySb189 strings.Builder
 	for _, filter := range []struct {
 		column string
 		value  *ids.UUID
 	}{{"s.company_id", in.CompanyID}, {"s.pipeline_id", in.PipelineID}, {"s.proposed_stage_id", in.StageID}} {
 		if filter.value != nil {
-			query += fmt.Sprintf(" AND %s = $%d", filter.column, arg(*filter.value))
+			fmt.Fprintf(&querySb189, " AND %s = $%d", filter.column, arg(*filter.value))
 		}
 	}
+	query += querySb189.String()
 	if in.Cursor != "" {
 		cur, err := storekit.DecodeOpaque[suggestionCursor](in.Cursor)
 		if err != nil || cur.ID.IsZero() {

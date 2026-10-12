@@ -27,7 +27,17 @@ func (s *Service) Catalog(ctx context.Context) (crmcontracts.ReportingCatalog, e
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingCatalog{}, err
 	}
-	return s.evaluator.Catalog(ctx)
+	out, err := s.evaluator.Catalog(ctx)
+	canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
+	if err != nil || !canSchedule {
+		return out, err
+	}
+	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		ready, err := scheduleReady(ctx, tx)
+		out.ScheduleReady = &ready
+		return err
+	})
+	return out, err
 }
 
 // Evaluate uses a repeatable-read snapshot for values and their evidence.
@@ -55,6 +65,16 @@ func (s *Service) evaluateSelection(ctx context.Context, tx pgx.Tx, selection cr
 }
 
 func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (Evaluation, error) {
+	// A selection with no charts serialises the same whichever door built it,
+	// so the evaluation key does not depend on nil versus empty.
+	if selection.Blocks == nil {
+		selection.Blocks = []crmcontracts.ReportingBlockKind{}
+	}
+	// A selection with no charts serialises the same whichever door built it,
+	// so the evaluation key does not depend on nil versus empty.
+	if selection.Blocks == nil {
+		selection.Blocks = []crmcontracts.ReportingBlockKind{}
+	}
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}
@@ -178,11 +198,11 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 	if group == "" {
 		return true
 	}
-	if strings.HasPrefix(group, "owner:") {
-		return fact.OwnerID.String() == strings.TrimPrefix(group, "owner:")
+	if after, ok := strings.CutPrefix(group, "owner:"); ok {
+		return fact.OwnerID.String() == after
 	}
-	if strings.HasPrefix(group, "stage:") {
-		return fact.StageID == strings.TrimPrefix(group, "stage:")
+	if after, ok := strings.CutPrefix(group, "stage:"); ok {
+		return fact.StageID == after
 	}
 	if strings.HasPrefix(group, "week:") && fact.Row.OccurredAt != nil {
 		zone, err := time.LoadLocation(frame.Timezone)
@@ -212,9 +232,15 @@ func (s *Service) checkedEvaluation(ctx context.Context, tx pgx.Tx, selection cr
 		return Evaluation{}, err
 	}
 	if subtle.ConstantTimeCompare([]byte(expectation.Key), []byte(evaluation.Result.EvaluationKey)) != 1 {
-		return Evaluation{}, apperrors.ErrVersionSkew
+		return Evaluation{}, errEvidenceStale
 	}
 	return evaluation, nil
+}
+
+// errEvidenceStale refuses evidence or an export asked of figures that changed since
+// the report was read. The generic skew sentence speaks of a lost write, and this is a read.
+var errEvidenceStale = &apperrors.VersionSkewError{
+	Message: "The figures changed after this report was read. Reload the report, then try again.",
 }
 
 // EvaluatedReceipt binds an evaluation to its context and captured source values.

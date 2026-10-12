@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, type ReactNode, useState } from "react";
+import { expect, within } from "storybook/test";
 import { identifierNumber } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import {
@@ -149,6 +150,28 @@ function EvidenceDemo() {
     </div>
   );
 }
+
+// The tier as a settings row's whole answer: the dot and its word, which stay
+// on one line however narrow the column holding them gets.
+export const AutonomyWithLabel: Story = {
+  tags: ["uat-phone"],
+  render: () => (
+    <div style={{ ...stack, inlineSize: "6rem" }}>
+      <AutonomyDot tier="auto" withLabel />
+      <AutonomyDot tier="confirm" withLabel />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const word = await within(canvasElement).findByText("Approval first");
+    const dot = word.querySelector(".dot");
+    if (!dot) throw new Error("the tier's word drew without its dot");
+    const line = word.getBoundingClientRect();
+    const mark = dot.getBoundingClientRect();
+    await expect(mark.top).toBeGreaterThanOrEqual(line.top);
+    await expect(mark.bottom).toBeLessThanOrEqual(line.bottom);
+    await expect(word.getClientRects()).toHaveLength(1);
+  },
+};
 
 export const Evidence: Story = {
   render: () => <EvidenceDemo />,

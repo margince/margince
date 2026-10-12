@@ -1,16 +1,23 @@
+import type { ReactNode } from "react";
 import { Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
+import { Popover } from "../design-system/popover";
 import { BarList, SegmentBar } from "../design-system/readings";
 import {
   BulletChart,
   CumulativeChart,
-  GroupedBars,
   RangeChart,
 } from "../design-system/report-charts";
 import { Waterfall } from "../design-system/waterfall";
-import { formatDateTime, formatMoneyCompact } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import {
+  formatDateTime,
+  formatMoneyCompact,
+  formatNumber,
+} from "../format/format";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
+import { ChartContext } from "./reporting.chartcontext";
+import { MetricsTable } from "./reporting.metricstable";
 import {
   blockLabel,
   metricLabel,
@@ -18,10 +25,12 @@ import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
+  reportingCompactAmount,
   reportingMoneyUnit,
 } from "./reporting.model";
-import { ReportingScorecard } from "./reporting.scorecard";
-import { worklistLaneHref } from "./worklist.header";
+import { movementLabel } from "./reporting.movement";
+import { SdrOutcomes } from "./reporting.sdroutcomes";
+import { ResultsSummary, TargetProgress } from "./reporting.summary";
 import "./reporting.css";
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
@@ -29,100 +38,86 @@ type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 export function ReportingCharts({
   evaluation,
   editionId,
+  afterSummary,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   editionId?: string;
+  // Drawn between the headline readings and the charts: what a reader should
+  // act on before reading further.
+  afterSummary?: ReactNode;
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const amount = (value: number | null | undefined, unit: string) =>
-    reportingAmount(value, unit, evaluation.context.currency, locale);
   const charts = evaluation.charts.filter(
     (chart) =>
       chart.kind !== "metric_reading" &&
+      (chart.kind !== "target_progress" ||
+        chart.points.some((point) => point.target != null)) &&
       !(
         chart.kind === "sdr_outcomes" &&
-        chart.metric === "accepted_opportunities"
+        chart.metric === "accepted_opportunities" &&
+        evaluation.charts.some(
+          (other) =>
+            other.kind === "sdr_outcomes" && other.metric === "meetings_held",
+        )
       ),
   );
   return (
-    <>
+    <div className="reporting-results">
+      <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+      {afterSummary}
       <div className="reporting-grid">
-        {charts.map((chart) => (
-          <Panel
-            key={`${chart.kind}:${chart.metric}`}
-            className={`reporting-panel reporting-panel-${chart.kind}`}
-            title={blockLabel(chart.kind, t)}
-          >
-            <PanelBody>
-              <ChartContext
-                chart={chart}
-                evaluation={evaluation}
-                editionId={editionId}
-              />
-              {chart.points.length ? (
-                <ChartBody
+        {charts.map((chart) => {
+          const drawn =
+            chart.points.length > 0 && chart.coverage.status !== "no_data";
+          return (
+            <Panel
+              key={`${chart.kind}:${chart.metric}`}
+              className={`reporting-panel reporting-panel-${chart.kind}`}
+              title={chartTitle(chart, evaluation, t)}
+              // The one door from a chart to the records behind it, in the head
+              // beside the title it opens, rather than trailing the figure.
+              titleAction={
+                drawn ? (
+                  <Button
+                    variant="link"
+                    onClick={() =>
+                      onEvidence({
+                        metric: chart.metric,
+                        context_id: chart.context_id,
+                      })
+                    }
+                  >
+                    {t("reporting.viewRecords")}
+                  </Button>
+                ) : undefined
+              }
+            >
+              <PanelBody>
+                <ChartContext
                   chart={chart}
                   evaluation={evaluation}
-                  onEvidence={onEvidence}
+                  editionId={editionId}
                 />
-              ) : (
-                <EmptyState>
-                  {chart.coverage.reason ?? t("common.empty")}
-                </EmptyState>
-              )}
-            </PanelBody>
-          </Panel>
-        ))}
+                {drawn ? (
+                  <ChartBody
+                    chart={chart}
+                    evaluation={evaluation}
+                    onEvidence={onEvidence}
+                  />
+                ) : (
+                  <EmptyState>
+                    {chart.coverage.reason ?? t("common.empty")}
+                  </EmptyState>
+                )}
+              </PanelBody>
+            </Panel>
+          );
+        })}
       </div>
-      <ReportingScorecard
-        evaluation={evaluation}
-        editionId={editionId}
-        onEvidence={onEvidence}
-      />
-      <Disclosure summary={t("reporting.details")}>
-        <DataTable
-          label={t("reporting.metrics")}
-          rows={evaluation.metrics}
-          rowKey={(metric) => metric.id}
-          columns={[
-            {
-              key: "metric",
-              header: t("reporting.metrics"),
-              render: (metric) => (
-                <Button
-                  variant="link"
-                  onClick={() => onEvidence(metric.evidence)}
-                >
-                  {metricLabel(metric.id, t)}
-                </Button>
-              ),
-            },
-            {
-              key: "actual",
-              header: t("reporting.actual"),
-              render: (metric) => amount(metric.value, metric.unit),
-            },
-            {
-              key: "target",
-              header: t("reporting.target"),
-              render: (metric) =>
-                metric.target == null
-                  ? t("reporting.noTarget")
-                  : amount(metric.target, metric.unit),
-            },
-            {
-              key: "status",
-              header: t("reporting.evidence"),
-              render: (metric) =>
-                metric.coverage.reason ?? metric.coverage.status,
-            },
-          ]}
-        />
-      </Disclosure>
-    </>
+      <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
+    </div>
   );
 }
 
@@ -136,6 +131,7 @@ function ChartBody({
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const format = (value: number | null | undefined) =>
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
@@ -145,10 +141,21 @@ function ChartBody({
       : format(value);
   const readings = chart.points.map((point) => ({
     ...point,
-    amount: format(point.value),
-    comparisonAmount: format(point.comparison),
-    targetAmount:
-      point.target == null ? t("reporting.noTarget") : format(point.target),
+    label:
+      chart.kind === "target_progress"
+        ? metricLabel(chart.metric, t)
+        : point.label,
+    amount: reportingCompactAmount(
+      point.value,
+      chart.unit,
+      evaluation.context.currency,
+      locale,
+    ),
+    comparison: chart.comparison_interval ? point.comparison : undefined,
+    comparisonAmount: chart.comparison_interval
+      ? format(point.comparison)
+      : undefined,
+    targetAmount: point.target == null ? undefined : compact(point.target),
     upperAmount: format(point.upper),
   }));
   const onSelect = (key: string) => {
@@ -164,7 +171,7 @@ function ChartBody({
   };
   const shared = {
     readings,
-    label: blockLabel(chart.kind, t),
+    label: chartTitle(chart, evaluation, t),
     dataLabel: t("reporting.data"),
     valueLabel: t("reporting.actual"),
     onSelect,
@@ -172,55 +179,84 @@ function ChartBody({
   switch (chart.kind) {
     case "bookings_trend": {
       const target = chart.points.find((point) => point.target != null)?.target;
-      const metric = evaluation.metrics.find(
-        (metric) => metric.id === chart.metric,
-      );
       return (
-        <>
-          <p className="reporting-headline t-num">{format(metric?.value)}</p>
-          <CumulativeChart
-            {...shared}
-            comparisonLabel={t("reporting.previous")}
-            axisLabel={(value) =>
-              reportingMoneyUnit(chart.unit, evaluation.context.currency)
-                ? formatMoneyCompact(value, evaluation.context.currency, locale)
-                : format(value)
-            }
-            reference={
-              target == null
-                ? undefined
-                : {
-                    value: target,
-                    amount: format(target),
-                    label: t("reporting.target"),
-                  }
-            }
-          />
-        </>
+        <CumulativeChart
+          {...shared}
+          comparisonLabel={
+            chart.comparison_interval
+              ? `${t("reporting.previous")}: ${formatDateTime(chart.comparison_interval.start_at, locale, evaluation.context.timezone)} – ${formatDateTime(new Date(Date.parse(chart.comparison_interval.end_at) - 1).toISOString(), locale, evaluation.context.timezone)}`
+              : undefined
+          }
+          axisLabel={(value) =>
+            reportingMoneyUnit(chart.unit, evaluation.context.currency)
+              ? formatMoneyCompact(value, evaluation.context.currency, locale)
+              : format(value)
+          }
+          reference={
+            target == null
+              ? undefined
+              : {
+                  value: target,
+                  amount: compact(target),
+                  label: t("reporting.target"),
+                }
+          }
+        />
       );
     }
     case "owner_attainment":
       return <BulletChart {...shared} targetLabel={t("reporting.target")} />;
     case "stage_age":
       return (
-        <RangeChart
-          {...shared}
-          valueLabel={t("reporting.median")}
-          upperLabel={t("reporting.upper")}
-        />
+        <>
+          <RangeChart
+            {...shared}
+            valueLabel={t("reporting.median")}
+            upperLabel={t("reporting.upper")}
+          />
+          <Popover onHover label={t("reporting.sampleDetails")}>
+            {chart.points.map((point) => (
+              <p key={point.key} className="t-caption">
+                {point.label} ·{" "}
+                {point.observations == null
+                  ? t("reporting.observationsUnavailable")
+                  : plural("reporting.observations", point.observations, {
+                      count: formatNumber(point.observations, locale),
+                    })}
+                {point.value == null
+                  ? ` · ${t("reporting.status.insufficient_sample")}`
+                  : ""}
+              </p>
+            ))}
+          </Popover>
+        </>
       );
-    case "stage_distribution":
     case "target_progress":
       return (
         <>
-          {chart.kind === "stage_distribution" && (
-            <p className="reporting-headline t-num">
-              {format(
-                evaluation.metrics.find((metric) => metric.id === chart.metric)
-                  ?.value,
-              )}
-            </p>
-          )}
+          <BulletChart {...shared} targetLabel={t("reporting.target")} />
+          {chart.points.map((point) => (
+            <TargetProgress
+              key={point.key}
+              value={point.value}
+              target={point.target}
+              format={format}
+            />
+          ))}
+        </>
+      );
+    case "stage_distribution":
+      return (
+        <>
+          <p className="reporting-headline t-num">
+            {reportingCompactAmount(
+              evaluation.metrics.find((metric) => metric.id === chart.metric)
+                ?.value,
+              chart.unit,
+              evaluation.context.currency,
+              locale,
+            )}
+          </p>
           <BarList
             label={shared.label}
             rows={readings.flatMap((point) =>
@@ -255,7 +291,11 @@ function ChartBody({
                 {
                   key: "label",
                   header: shared.label,
-                  render: (point) => point.label,
+                  render: (point) => (
+                    <Button variant="link" onClick={() => onSelect(point.key)}>
+                      {point.label}
+                    </Button>
+                  ),
                 },
                 {
                   key: "value",
@@ -267,38 +307,14 @@ function ChartBody({
           </Disclosure>
         </>
       );
-    case "sdr_outcomes": {
-      const accepted = evaluation.charts.find(
-        (other) =>
-          other.kind === "sdr_outcomes" &&
-          other.metric === "accepted_opportunities",
-      );
-      const combined = readings.map((reading) => {
-        const comparison = accepted?.points.find(
-          (point) => point.key === reading.key,
-        )?.value;
-        return { ...reading, comparison, comparisonAmount: format(comparison) };
-      });
+    case "sdr_outcomes":
       return (
-        <>
-          <p className="t-caption">{t("reporting.independent")}</p>
-          <GroupedBars
-            {...shared}
-            readings={combined}
-            valueLabel={t("reporting.meetings_held")}
-            comparisonLabel={t("reporting.accepted_opportunities")}
-            onSelect={(key) => {
-              if (key.endsWith(":comparison")) {
-                const reference = accepted?.points.find(
-                  (point) => `${point.key}:comparison` === key,
-                )?.evidence;
-                if (reference) onEvidence(reference);
-              } else onSelect(key);
-            }}
-          />
-        </>
+        <SdrOutcomes
+          chart={chart}
+          evaluation={evaluation}
+          onEvidence={onEvidence}
+        />
       );
-    }
     case "forecast_support": {
       const [won, supported, upside] = readings;
       if (
@@ -337,6 +353,11 @@ function ChartBody({
         return <EmptyState>{t("reporting.unavailable")}</EmptyState>;
       return (
         <>
+          <p className="t-num">
+            {t("reporting.netChange", {
+              amount: `${chart.closing - chart.opening > 0 ? "+" : ""}${compact(chart.closing - chart.opening)}`,
+            })}
+          </p>
           <Waterfall
             label={shared.label}
             opening={{
@@ -355,6 +376,7 @@ function ChartBody({
                 : [
                     {
                       ...point,
+                      label: movementLabel(point.key, point.label, t),
                       value: point.value,
                       amount: compact(point.value),
                     },
@@ -372,7 +394,10 @@ function ChartBody({
                   label: t("reporting.opening"),
                   value: chart.opening,
                 },
-                ...chart.points,
+                ...chart.points.map((point) => ({
+                  ...point,
+                  label: movementLabel(point.key, point.label, t),
+                })),
                 {
                   key: "closing",
                   label: t("reporting.closing"),
@@ -384,7 +409,11 @@ function ChartBody({
                 {
                   key: "label",
                   header: t("reporting.metrics"),
-                  render: (point) => point.label,
+                  render: (point) => (
+                    <Button variant="link" onClick={() => onSelect(point.key)}>
+                      {point.label}
+                    </Button>
+                  ),
                 },
                 {
                   key: "value",
@@ -401,92 +430,20 @@ function ChartBody({
   }
 }
 
-function ChartContext({
-  chart,
-  evaluation,
-  editionId,
-}: Readonly<{
-  chart: ReportingChart;
-  evaluation: ReportingEvaluation;
-  editionId?: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const amount = (value: number | null | undefined, unit: string) =>
-    reportingAmount(value, unit, evaluation.context.currency, locale);
-  return (
-    <>
-      <PanelIntro>
-        {chart.state_at
-          ? t("reporting.stateAt", {
-              at: formatDateTime(
-                chart.state_at,
-                locale,
-                evaluation.context.timezone,
-              ),
-            })
-          : chart.interval
-            ? t("reporting.interval", {
-                start: formatDateTime(
-                  chart.interval.start_at,
-                  locale,
-                  evaluation.context.timezone,
-                ),
-                end: formatDateTime(
-                  chart.interval.end_at,
-                  locale,
-                  evaluation.context.timezone,
-                ),
-                zone: evaluation.context.timezone,
-              })
-            : evaluation.context.scope.label}
-      </PanelIntro>
-      {chart.kind === "stage_age" && !editionId && (
-        <Button
-          variant="link"
-          onClick={() => {
-            window.location.hash = worklistLaneHref("deals_at_risk");
-          }}
-        >
-          {t("reporting.reviewQueue")}
-        </Button>
-      )}
-      {chart.capture_status && (
-        <p className="t-caption" role="status">
-          {chart.capture_status.failure ??
-            (chart.capture_status.last_success_at
-              ? t("reporting.lastCapture", {
-                  at: formatDateTime(
-                    chart.capture_status.last_success_at,
-                    locale,
-                    evaluation.context.timezone,
-                  ),
-                })
-              : t("reporting.unavailable"))}{" "}
-          ·{" "}
-          {t("reporting.nextRun", {
-            at: formatDateTime(
-              chart.capture_status.next_capture_at,
-              locale,
-              evaluation.context.timezone,
-            ),
-          })}
-        </p>
-      )}
-      {chart.allocation_difference != null && (
-        <p className="t-caption">
-          {t("reporting.allocationDifference")}:{" "}
-          {amount(chart.allocation_difference, chart.unit)} ·{" "}
-          {t("reporting.allocatedTarget")}:{" "}
-          {amount(chart.allocated_target, chart.unit)}
-        </p>
-      )}
-      {chart.coverage.status !== "ok" && (
-        <p className="t-caption" role="status">
-          {chart.coverage.reason ??
-            t("reporting.coverage", { status: chart.coverage.status })}
-        </p>
-      )}
-    </>
-  );
+function chartTitle(
+  chart: ReportingChart,
+  evaluation: ReportingEvaluation,
+  t: Translator,
+): string {
+  if (chart.kind === "owner_attainment")
+    return t("reporting.ownerMetric", { metric: metricLabel(chart.metric, t) });
+  if (chart.kind === "target_progress") return metricLabel(chart.metric, t);
+  if (
+    chart.kind === "sdr_outcomes" &&
+    !evaluation.charts.some(
+      (other) => other.kind === "sdr_outcomes" && other.metric !== chart.metric,
+    )
+  )
+    return metricLabel(chart.metric, t);
+  return blockLabel(chart.kind, t);
 }

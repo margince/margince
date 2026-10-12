@@ -10,9 +10,12 @@ package ai
 // visibleProfile gate.
 
 import (
+	"context"
+	"fmt"
 	"math"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,6 +26,15 @@ import (
 // text) — the corpus target is 30k words total, so anything larger is a
 // wrong upload, not a bigger voice.
 const maxCorpusSourceBytes = 1 << 20
+
+// The contract's character limits on a source's label and reference.
+const (
+	maxSourceLabelChars = 255
+	maxSourceRefChars   = 512
+)
+
+// defaultVoiceWeight is the weight of a source whose request named none.
+const defaultVoiceWeight = 1.0
 
 // VoiceCorpusSource is one manifest row; the ingested text stays
 // store-internal (the builder reads it, the API never echoes it).
@@ -66,8 +78,8 @@ type CorpusSummary struct {
 // IngestSourceInput is one corpus source in its raw declared format.
 type IngestSourceInput struct {
 	Kind         string
-	Register     string // empty → DefaultRegister(kind)
-	Weight       float64
+	Register     string   // empty → DefaultRegister(kind)
+	Weight       *float64 // nil → defaultVoiceWeight; an explicit 0 is kept
 	SourceLabel  string
 	SourceRef    string // empty → SourceRefForContent
 	Format       string // empty → txt
@@ -109,6 +121,27 @@ type preparedSource struct {
 	Stats      CorpusIngestStats
 }
 
+// concreteFormat resolves a wire format to the one the source is parsed as.
+func concreteFormat(wire, content string) string {
+	switch wire {
+	case "", corpusWireFormatText:
+		return corpusFormatTxt
+	case voiceSourceKindTranscript:
+		return transcriptCorpusFormat(content)
+	}
+	return wire
+}
+
+// ownText is the part of a source that is the owner's own writing: prose
+// without the turns it quotes, or a transcript filtered to the owner's label.
+func ownText(ctx context.Context, in IngestSourceInput, turns []speakerTurn, plain bool, known KnownSpeakers) (text string, removedTurns int, err error) {
+	if plain {
+		return withoutKnownSpeakers(ctx, in.Content, known)
+	}
+	text, err = filterOwnTurns(turns, in.SpeakerLabel, in.Kind == voiceSourceKindTranscript)
+	return text, 0, err
+}
+
 // IsVoiceRegister reports whether a register is one a stored corpus source can
 // carry — the closed vocabulary ingest enforces.
 func IsVoiceRegister(register string) bool {
@@ -139,15 +172,21 @@ func validateDeclaredSource(in IngestSourceInput) (register string, weight float
 	if !IsVoiceRegister(register) {
 		return "", 0, &CorpusIngestError{Field: voiceKeyRegister, Reason: "must be one of email, social, long_form, spoken, general"}
 	}
-	weight = in.Weight
-	if weight == 0 {
-		weight = 1.0
+	weight = defaultVoiceWeight
+	if in.Weight != nil {
+		weight = *in.Weight
 	}
 	if voiceWeightRefused(weight) {
 		return "", 0, &CorpusIngestError{Field: voiceKeyWeight, Reason: voiceWeightRange}
 	}
 	if strings.TrimSpace(in.SourceLabel) == "" {
 		return "", 0, &CorpusIngestError{Field: voiceKeySourceLabel, Reason: voiceValidationNotEmpty}
+	}
+	if utf8.RuneCountInString(in.SourceLabel) > maxSourceLabelChars {
+		return "", 0, &CorpusIngestError{Field: voiceKeySourceLabel, Reason: fmt.Sprintf("must be at most %d characters", maxSourceLabelChars)}
+	}
+	if utf8.RuneCountInString(strings.TrimSpace(in.SourceRef)) > maxSourceRefChars {
+		return "", 0, &CorpusIngestError{Field: voiceKeySourceRef, Reason: fmt.Sprintf("must be at most %d characters", maxSourceRefChars)}
 	}
 	if strings.TrimSpace(in.Content) == "" {
 		return "", 0, &CorpusIngestError{Field: voiceKeyContent, Reason: voiceValidationNotEmpty}
@@ -158,21 +197,16 @@ func validateDeclaredSource(in IngestSourceInput) (register string, weight float
 	return register, weight, nil
 }
 
-// prepareSource runs the pure half of the §B1 pipeline: field
+// prepareSource runs the pre-write half of the §B1 pipeline: field
 // validation, per-kind register defaulting, format normalization with
 // the speaker filter, word counting, and the content-hash fallback ref.
-func prepareSource(in IngestSourceInput) (preparedSource, error) {
+// known names the labels in prose that quote somebody else; nil knows no one.
+func prepareSource(ctx context.Context, in IngestSourceInput, known KnownSpeakers) (preparedSource, error) {
 	register, weight, err := validateDeclaredSource(in)
 	if err != nil {
 		return preparedSource{}, err
 	}
-	format := in.Format
-	switch format {
-	case "", corpusWireFormatText:
-		format = corpusFormatTxt
-	case voiceSourceKindTranscript:
-		format = transcriptCorpusFormat(in.Content)
-	}
+	format := concreteFormat(in.Format, in.Content)
 	// Conversational kinds MUST arrive in a speaker-attributed format:
 	// the §B1.2 filter is what keeps a counterparty's words out of the
 	// corpus, and a plain-text conversation would walk straight past it —
@@ -199,12 +233,9 @@ func prepareSource(in IngestSourceInput) (preparedSource, error) {
 			Reason: "fewer than half of this source's words are attributed to a speaker, so it cannot be filtered to one; send it as text if it is your own writing",
 		}
 	}
-	text := in.Content
-	if !plain {
-		text, err = filterOwnTurns(turns, in.SpeakerLabel, in.Kind == voiceSourceKindTranscript)
-		if err != nil {
-			return preparedSource{}, err
-		}
+	text, removedTurns, err := ownText(ctx, in, turns, plain, known)
+	if err != nil {
+		return preparedSource{}, err
 	}
 	if in.Kind == voiceSourceKindTranscript && strings.TrimSpace(text) == "" {
 		return preparedSource{}, &CorpusIngestError{
@@ -213,7 +244,7 @@ func prepareSource(in IngestSourceInput) (preparedSource, error) {
 			Reason: "no turns belong to this speaker label — nothing of the owner's own words to ingest",
 		}
 	}
-	sourceRef := in.SourceRef
+	sourceRef := strings.TrimSpace(in.SourceRef)
 	if sourceRef == "" {
 		sourceRef = SourceRefForContent(in.Content)
 	}
@@ -221,11 +252,13 @@ func prepareSource(in IngestSourceInput) (preparedSource, error) {
 	if in.OccurredAt != nil {
 		occurredAt = in.OccurredAt.UTC()
 	}
+	stats := ingestStats(in.Content, turns, plain, text, in.SpeakerLabel)
+	stats.DiscardedTurns += removedTurns
 	return preparedSource{
 		Kind: in.Kind, Register: register, Weight: weight,
 		Label: in.SourceLabel, SourceRef: sourceRef,
 		Text: text, Words: WordCount(text), OccurredAt: occurredAt,
-		Stats: ingestStats(in.Content, turns, plain, text, in.SpeakerLabel),
+		Stats: stats,
 	}, nil
 }
 

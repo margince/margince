@@ -47,8 +47,8 @@ func TestEachAnchorRefusalNamesItsFieldAndAWorkingMove(t *testing.T) {
 	other := env.newCompany(t)
 
 	_, archiveErr := env.store.ArchiveCompany(env.ctx, env.anchorID, nil)
-	_, sourceErr := env.store.MergeCompany(env.ctx, env.anchorID, other)
-	_, targetErr := env.store.MergeCompany(env.ctx, other, env.anchorID)
+	_, sourceErr := env.store.MergeCompany(env.ctx, env.anchorID, other, nil)
+	_, targetErr := env.store.MergeCompany(env.ctx, other, env.anchorID, nil)
 	// The rejection reaches this guard BEFORE it reads a domain, which is why
 	// the anchor — which carries none — is refused as the anchor here rather
 	// than for having nothing to refuse.
@@ -155,7 +155,7 @@ func TestTheAnchorCannotBeMergedAway(t *testing.T) {
 	env := newAnchorEnv(t)
 	other := env.newCompany(t)
 
-	_, err := env.store.MergeCompany(env.ctx, env.anchorID, other)
+	_, err := env.store.MergeCompany(env.ctx, env.anchorID, other, nil)
 	if !anchorProtected(err) {
 		t.Fatalf("merging the anchor away: got %v, want the anchor refusal", err)
 	}
@@ -170,7 +170,7 @@ func TestNothingCanBeMergedIntoTheAnchor(t *testing.T) {
 	env := newAnchorEnv(t)
 	other := env.newCompany(t)
 
-	_, err := env.store.MergeCompany(env.ctx, other, env.anchorID)
+	_, err := env.store.MergeCompany(env.ctx, other, env.anchorID, nil)
 	if !anchorProtected(err) {
 		t.Fatalf("merging a company into the anchor: got %v, want the anchor refusal", err)
 	}

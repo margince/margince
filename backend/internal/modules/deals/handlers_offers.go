@@ -11,6 +11,7 @@ package deals
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -36,7 +37,7 @@ var clientTotalKeys = []string{
 
 // rejectClientTotals answers 422 when an extension-carrying request body
 // smuggles a total; returns false when the response has been written.
-func rejectClientTotals(w http.ResponseWriter, r *http.Request, extra map[string]interface{}) bool {
+func rejectClientTotals(w http.ResponseWriter, r *http.Request, extra map[string]any) bool {
 	for _, key := range clientTotalKeys {
 		if _, found := extra[key]; found {
 			httperr.Write(w, r, httperr.Validation(key, "totals_derived",
@@ -86,15 +87,15 @@ func lineInputRow(in crmcontracts.OfferLineItemInput) OfferLineInputRow {
 		ProductID:      idArg[ids.ProductKind](in.ProductId),
 		Description:    in.Description,
 		Unit:           in.Unit,
-		Quantity:       formatQuantity(in.Quantity),
+		Quantity:       wireDecimal(in.Quantity),
 		UnitPriceMinor: in.UnitPriceMinor,
 	}
 	if in.DiscountPct != nil {
-		v := formatPct(*in.DiscountPct)
+		v := wireDecimal(*in.DiscountPct)
 		row.DiscountPct = &v
 	}
 	if in.TaxRate != nil {
-		v := formatPct(*in.TaxRate)
+		v := wireDecimal(*in.TaxRate)
 		row.TaxRate = &v
 	}
 	model, months := billingClassificationOf(in.BillingModel, in.BillingIntervalMonths)
@@ -148,13 +149,18 @@ func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 			return
 		}
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	in := CreateOfferInput{
 		Currency:       req.Currency,
 		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
 		IntroText:      req.IntroText,
 		TermsText:      req.TermsText,
 		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
-		Source:         req.Source,
+		Source:         source,
 	}
 	if req.ValidUntil != nil {
 		v := req.ValidUntil.Format("2006-01-02")
@@ -203,16 +209,27 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		TermsText:      req.TermsText,
 		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
 		IfVersion:      ifVersion,
+		Clear:          httperr.ClearedFields(r),
 	}
 	if req.ValidUntil != nil {
 		v := req.ValidUntil.Format("2006-01-02")
 		in.ValidUntil = &v
 	}
 
-	offer, err := h.store.UpdateOffer(r.Context(), pathID[ids.OfferKind](id), in)
+	offerID := pathID[ids.OfferKind](id)
+	offer, retired, err := h.store.UpdateOffer(r.Context(), offerID, in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
+	}
+	// The row is already committed without the retired rendering, so a failed
+	// delete leaves an inert orphan, never a dangling reference — logged, as the
+	// render's reclamation of a superseded PDF is, rather than failing the edit.
+	if retired != nil && h.blob != nil {
+		if delErr := h.blob.Delete(r.Context(), *retired); delErr != nil {
+			slog.WarnContext(r.Context(), "reclaiming the rendering a buyer change retired",
+				"offer", offerID.String(), "ref", *retired, "err", delErr)
+		}
 	}
 	httperr.WriteJSON(w, http.StatusOK, offer)
 }
@@ -263,15 +280,15 @@ func (h Handlers) UpdateOfferLineItem(w http.ResponseWriter, r *http.Request, id
 		UnitPriceMinor: req.UnitPriceMinor,
 	}
 	if req.Quantity != nil {
-		v := formatQuantity(*req.Quantity)
+		v := wireDecimal(*req.Quantity)
 		in.Quantity = &v
 	}
 	if req.DiscountPct != nil {
-		v := formatPct(*req.DiscountPct)
+		v := wireDecimal(*req.DiscountPct)
 		in.DiscountPct = &v
 	}
 	if req.TaxRate != nil {
-		v := formatPct(*req.TaxRate)
+		v := wireDecimal(*req.TaxRate)
 		in.TaxRate = &v
 	}
 	// The classification is written whenever the caller names EITHER half, so

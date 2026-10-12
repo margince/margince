@@ -1,0 +1,24 @@
+{
+  "scenario": "case48_that_whole_thread_is_filed_wrong",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 48,
+    "output_tokens": 6703,
+    "cache_creation_input_tokens": 93910,
+    "cache_read_input_tokens": 1533048,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.7494
+  }
+}

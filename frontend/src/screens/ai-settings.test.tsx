@@ -79,10 +79,20 @@ const USAGE = {
 
 const KEYS = {
   providers: [
-    { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
+    {
+      provider: "gemini",
+      configured: true,
+      env_var: "GEMINI_API_KEY",
+      usable: true,
+    },
     // Bound by the premium lane above and holding nothing — the join the
     // second reading reports.
-    { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
+    {
+      provider: "anthropic",
+      configured: false,
+      env_var: "ANTHROPIC_API_KEY",
+      usable: false,
+    },
   ],
 };
 
@@ -151,6 +161,7 @@ function backendFor(
         data: reads.calls ?? [],
         page: { next_cursor: null, has_more: false },
         tasks: [],
+        task_options: [],
         payload_capture_enabled: false,
       });
     }
@@ -234,7 +245,13 @@ describe("the AI readings", () => {
     const keys = (optional: boolean, provider: string) => ({
       providers: [
         ...KEYS.providers,
-        { provider, configured: false, env_var: "K", optional },
+        {
+          provider,
+          configured: false,
+          env_var: "K",
+          usable: optional,
+          optional,
+        },
       ],
     });
     const routing = (provider: string) => ({

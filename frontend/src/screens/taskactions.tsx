@@ -1,7 +1,6 @@
 import {
   type QueryKey,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -18,15 +17,21 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
+import { Markdown } from "../design-system/markdown";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { CLAIM_SETTLED_KEYS } from "./activitykeys";
+import { problemCodeOf, provenanceOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
+import { useActivity } from "./activityread";
+import { useCompleteTask } from "./taskcomplete";
+import { refetchAfterWrite } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -51,29 +56,33 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: TaskPatch) => {
-      const { data, error } = await api.PATCH("/activities/{id}", {
-        params: {
-          path: { id: input.id },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: input.body,
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      const data = unwrap(
+        await api.PATCH("/activities/{id}", {
+          params: {
+            path: { id: input.id },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: input.body,
+        }),
+        t,
+      );
       // The version the write PRODUCED, answered so a follow-on press has one.
       // An undo re-sending the version the row was drawn at would be refused as
       // skew by the very write it is undoing.
       return data?.version;
     },
-    onSuccess: (_data, input) => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
+    // Returned, so the mutation stays pending until the reads have landed. The
+    // row the press came from stays drawn at the version it was fetched at
+    // until then, and a second press in that window re-sends it and is
+    // refused as skew by the write that has just succeeded.
+    onSuccess: (_data, input) =>
+      refetchAfterWrite(queryClient, invalidateKeys, input.id),
+    // A stale press is not a failed one: the task moved on under it, so the
+    // reads are refreshed to show where it is now.
+    onError: (error, input) => {
+      if (problemCodeOf(error) === "version_skew") {
+        return refetchAfterWrite(queryClient, invalidateKeys, input.id);
       }
-      // The task's own detail read too, always: a modal open on the task that
-      // was just completed would otherwise keep showing the old due date and
-      // offering the verbs that no longer apply.
-      queryClient.invalidateQueries({ queryKey: ["activity", input.id] });
     },
   });
 }
@@ -110,13 +119,10 @@ export function snoozedDueAt(
 }
 
 /**
- * TaskCompleteCheck is the tick affordance itself — a checkbox rather than a
- * labelled button, for a row that names its own verb (ticking IS completing)
- * rather than one that reads as a menu of actions. Every caller lists OPEN
- * tasks only, so the box always starts unchecked; ticking it fires the
- * completion and the row leaves the list on the invalidated re-read, rather
- * than the checkbox itself flipping to a done state it would then have to
- * keep showing.
+ * TaskCompleteCheck is the tick itself: a checkbox for a row that names its
+ * own verb, since ticking is completing. Every caller lists open tasks only,
+ * so the box starts unchecked. The row leaves on the invalidated re-read,
+ * with the confirmation and its Undo raised meanwhile.
  */
 export function TaskCompleteCheck({
   activityId,
@@ -128,11 +134,11 @@ export function TaskCompleteCheck({
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
+  const complete = useCompleteTask(update);
   const isThisTask = update.variables?.id === activityId;
   const pending = update.isPending && isThisTask;
-  // A rejected PATCH re-enables the box and leaves it unchecked — the same
-  // rendering a click that did nothing would leave. Without this, the two are
-  // indistinguishable and the reader has no reason to try again.
+  // A rejected PATCH re-enables the box, unchecked, like a click that did
+  // nothing; this line is what tells the two apart.
   const failed = update.isError && isThisTask;
   return (
     <>
@@ -143,9 +149,7 @@ export function TaskCompleteCheck({
         label={<span className="sr-only">{t("tasks.complete")}</span>}
         checked={false}
         disabled={pending}
-        onChange={() =>
-          update.mutate({ id: activityId, version, body: { is_done: true } })
-        }
+        onChange={() => complete(activityId, version)}
       />
       {failed && <ErrorLine error={update.error} inline />}
     </>
@@ -177,15 +181,14 @@ export function TaskQuickActions({
   const recordZone = useRecordZone();
   const nextDue = snoozedDueAt(dueAt, recordZone);
   const pending = update.isPending && update.variables?.id === activityId;
+  const complete = useCompleteTask(update);
   return (
     <>
       {showComplete && (
         <Button
           variant="primary"
           disabled={pending}
-          onClick={() =>
-            update.mutate({ id: activityId, version, body: { is_done: true } })
-          }
+          onClick={() => complete(activityId, version)}
         >
           {t("tasks.complete")}
         </Button>
@@ -315,34 +318,26 @@ export function TaskDetailModal({
   const titleId = useId();
   // Keep the task open while reading its original evidence.
   const [openSource, setOpenSource] = useState<string | null>(null);
-  const query = useQuery({
-    queryKey: ["activity", activityId],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
+  const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} placement="right">
-      <div className="drawer-head task-detail-head">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+      <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
         </Heading>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
         <ErrorLine error={query.error} />
         {task && (
           <div className="form-stack">
-            {task.body && <p className="t-body">{task.body}</p>}
+            {/* Markdown, as the timeline draws the same body. */}
+            {task.body && (
+              <div className="t-body task-detail-body">
+                <Markdown source={task.body} autolink />
+              </div>
+            )}
             <div className="t-caption task-detail-meta">
               {task.due_at ? (
                 <span>
@@ -369,6 +364,11 @@ export function TaskDetailModal({
               {task.assignee_id && (
                 <EntityRef kind="user" id={task.assignee_id} />
               )}
+              {/* A task an agent wrote says so, so a reader knows it was
+                  read out of a conversation rather than typed by a colleague. */}
+              {provenanceOf(task.captured_by).kind === "agent" && (
+                <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+              )}
             </div>
             {!task.is_done && !readOnly && (
               <div className="form-actions task-detail-actions">
@@ -392,7 +392,7 @@ export function TaskDetailModal({
             )}
           </div>
         )}
-      </div>
+      </DrawerBody>
       {openSource && (
         <SourceActivity
           activityId={openSource}
@@ -418,49 +418,32 @@ function SourceActivity({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
-  const query = useQuery({
-    queryKey: ["activity", activityId],
-    staleTime: 0,
-    gcTime: 0,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}", {
-        params: { path: { id: activityId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-  });
-  // The CURRENT read decides what is shown, never the cache alone. A refused
-  // read leaves the last answer in `data`: this reader shares its query key
-  // with `SourceEvidence`, whose observer outlives the drawer, so an eviction
-  // that `gcTime: 0` would otherwise perform does not happen while a task is
-  // open. Rendering `data` beside the error paragraph would then show a
-  // transcript whose access had just been revoked.
-  const meeting: Activity | undefined = query.isError ? undefined : query.data;
+  const query = useActivity(activityId);
+  const meeting: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {meeting?.subject ?? t("tasks.source")}
-      </Heading>
-      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-      <ErrorLine error={query.error} />
-      {meeting && (
-        <div className="form-stack">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {meeting?.subject ?? t("tasks.source")}
+        </Heading>
+        {meeting && (
           <p className="t-caption">
             {formatDateTime(meeting.occurred_at, locale, recordZone)}
           </p>
-          {/* The transcript, as it was captured. `pre-wrap` because a
-              transcript is line-per-turn and reflowing it into a paragraph
-              takes away the one structure it has. */}
-          {meeting.body && (
-            <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-              {meeting.body}
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </DrawerHead>
+      <DrawerBody>
+        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+        <ErrorLine error={query.error} />
+        {/* The transcript, as it was captured. `pre-wrap` because a
+            transcript is line-per-turn and reflowing it into a paragraph
+            takes away the one structure it has. */}
+        {meeting?.body && (
+          <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
+            {meeting.body}
+          </p>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }
@@ -474,12 +457,12 @@ export function useNoticeRead(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.POST("/notices/{id}/read", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/notices/{id}/read", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
@@ -503,13 +486,12 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await api.POST("/automations/runs/{id}/retry", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/automations/runs/{id}/retry", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
@@ -540,16 +522,16 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
       version: number | undefined;
       status: "held" | "no_show" | "canceled";
     }) => {
-      const { error } = await api.PATCH("/activities/{id}", {
-        params: {
-          path: { id: input.id },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: { meeting_status: input.status },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.PATCH("/activities/{id}", {
+          params: {
+            path: { id: input.id },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: { meeting_status: input.status },
+        }),
+        t,
+      );
     },
     onSuccess: (_data, input) => {
       for (const queryKey of invalidateKeys) {
@@ -579,21 +561,21 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       id: string;
       outcome: "done" | "dismissed";
     }) => {
-      const { error } = await api.POST("/claims/{id}/settle", {
-        params: { path: { id: input.id } },
-        body: { outcome: input.outcome },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/claims/{id}/settle", {
+          params: { path: { id: input.id } },
+          body: { outcome: input.outcome },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The contact's own card lists the same open claims, so a drawer standing
-      // on them would keep showing a promise that has just been settled.
-      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      for (const queryKey of CLAIM_SETTLED_KEYS) {
+        queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }

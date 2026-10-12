@@ -1,0 +1,14 @@
+-- Intentionally empty (margince#6692).
+--
+-- This version first shipped a backfill: it parsed the stored original of every
+-- captured inbound email to stamp capture_import.provider_received_at, then
+-- re-labelled contact_acquisition_evidence from those stamps. Its run time grew
+-- with an installation's mailbox, not with the change, and migrations run at api
+-- boot: on a large mailbox it outlasted the liveness probe, every pod was
+-- killed and rolled back, and the upgrade never completed.
+--
+-- The backfill is a one-time data fix for mail captured before 1790871110 added
+-- the column. It now lives in ../datafix/ with the same name and is run by an
+-- operator, batched, after the release is live. The version stays so databases
+-- that already applied the old body keep a consistent history.
+SELECT 1;

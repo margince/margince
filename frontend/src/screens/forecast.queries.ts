@@ -12,7 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
 import { type AnalyticsScope, scopeKey, scopeQuery } from "./analytics.context";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export type ForecastReadings = components["schemas"]["ForecastReadings"];
 
@@ -72,13 +72,11 @@ export function useForecastReadings(
         // later read would hit.
         throw new Error("the forecast scope is not resolved yet");
       }
-      const { data, error } = await api.GET("/forecast", {
-        params: { query: { ...scopeQuery(scope), period } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/forecast", {
+          params: { query: { ...scopeQuery(scope), period } },
+        }),
+      );
     },
     enabled: scope !== undefined,
   });

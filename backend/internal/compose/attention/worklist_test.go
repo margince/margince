@@ -394,7 +394,7 @@ func TestTheOvernightBriefingReachesTheQueue(t *testing.T) {
 // against a row nobody got.
 func TestThePagesLastRowIsExplainedAgainstThePageItIsOn(t *testing.T) {
 	out := (&Service{}).worklistFrom(context.Background(), summaryScopeDay(5), scopeAll, "", 3,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		waitingRead{}, worklistCursor{}, nil)
 
 	if len(out.Queue) != 3 {
 		t.Fatalf("the page holds %d rows, and this test needs the cut to have happened", len(out.Queue))
@@ -420,9 +420,9 @@ func TestTheSummaryCountsTheDayAndNotThePage(t *testing.T) {
 	day := summaryScopeDay(5)
 
 	page := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 3,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		waitingRead{}, worklistCursor{}, nil)
 	whole := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 50,
-		waitingRead{}, leadRead{}, worklistCursor{}, nil)
+		waitingRead{}, worklistCursor{}, nil)
 
 	if len(page.Queue) != 3 || len(whole.Queue) != 5 {
 		t.Fatalf("the fixture paged %d of %d rows, and this test needs a cut to compare across",
@@ -455,7 +455,7 @@ func TestTheSummaryCountsTheDayAndNotThePage(t *testing.T) {
 // has something to order by. Enough rows that a page can cut it.
 func summaryScopeDay(n int) crmcontracts.Attention {
 	tasks := make([]crmcontracts.AttentionItem, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		tasks = append(tasks, item(string(rune('a'+i)), "task", withDue(rankInstant.Add(time.Duration(i)*time.Hour))))
 	}
 	return crmcontracts.Attention{AsOf: rankInstant, Planned: tasks}
@@ -540,7 +540,7 @@ func TestAWaitingCustomerLeadsTheDay(t *testing.T) {
 		Engaged: true,
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
 
 	if out.Queue[0].Source != "customer_waiting" {
 		t.Fatalf("the day led with %q, not the customer who is waiting", out.Queue[0].Source)
@@ -564,7 +564,7 @@ func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
 		DealID:     deal,
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
 
 	if len(out.Queue) != 1 {
 		t.Fatalf("one unanswered message produced %d rows", len(out.Queue))
@@ -586,7 +586,7 @@ func TestTheLongestWaitLeadsAmongWaitingCustomers(t *testing.T) {
 		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-00000000000b"), Since: rankInstant.Add(-9 * 24 * time.Hour)},
 	}
 
-	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
 
 	if out.Queue[0].Id != "01a05500-0000-7000-8000-00000000000b" {
 		t.Fatal("the two-day wait outranked the eighty-three-day one")
@@ -608,7 +608,7 @@ func TestEveryWaitingRowMayStateItsSubject(t *testing.T) {
 		Since:      rankInstant.Add(-24 * time.Hour),
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(context.Background(), crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
 
 	if out.Queue[0].Title == nil || *out.Queue[0].Title != "Re: pricing" {
 		t.Fatal("a waiting row the content gate admitted lost its subject line")
@@ -633,7 +633,7 @@ func TestAColleaguesWaitingCustomerLeavesTheReadersOwnQueue(t *testing.T) {
 		{ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000a2"), Since: rankInstant.Add(-time.Hour)},
 	}
 
-	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(ctx, day, scopeMine, "", 25, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
 
 	for _, row := range out.Queue {
 		if row.Id == "01a05500-0000-7000-8000-0000000000a1" {
@@ -662,7 +662,7 @@ func dealItemOwned(deal, owner ids.UUID) crmcontracts.AttentionItem {
 // scroll past them to reach the next thing.
 func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
 	staged := []crmcontracts.AttentionItem{}
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		staged = append(staged, item(
 			"c"+string(rune('a'+i%26))+string(rune('0'+i/26)),
 			"approval", withKind("capture_counterparty")))
@@ -684,7 +684,7 @@ func TestAPileOfAlikeDecisionsBecomesOneRow(t *testing.T) {
 // marker itself proves nothing about the code that writes it in production.
 func TestContactDecisionsSplitByWhatTheyAreAbout(t *testing.T) {
 	staged := []crmcontracts.Approval{}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		staged = append(staged,
 			captureApproval("noreply@vendor.example"),
 			captureApproval("anna.weber@customer.example"))
@@ -744,7 +744,7 @@ func captureApproval(email string) crmcontracts.Approval {
 // are: each holds up somebody different, and the reader has to see each one.
 func TestADecisionThatBlocksACustomerIsNeverFolded(t *testing.T) {
 	staged := []crmcontracts.AttentionItem{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		staged = append(staged, item("s"+string(rune('a'+i)), "approval", withKind("send_email")))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: staged}
@@ -777,7 +777,7 @@ func TestTwoAlikeDecisionsStayThemselves(t *testing.T) {
 // The group names a few members, so a reader can check it before answering it.
 func TestABatchNamesSomeOfWhatItHolds(t *testing.T) {
 	staged := []crmcontracts.AttentionItem{}
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		row := item("d"+string(rune('a'+i)), "approval", withKind("capture_counterparty"))
 		title := "Is address " + string(rune('a'+i)) + " a contact?"
 		row.Title = &title
@@ -802,7 +802,7 @@ func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 	// this page: crowding, staleness and unproven engagement. A fixture that
 	// left any of the other two firing would pass this test while proving one
 	// of them instead.
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		waiting = append(waiting, WaitingCustomer{
 			ActivityID: ids.NewV7(),
 			Subject:    "Thread " + string(rune('a'+i%26)) + string(rune('0'+i/26)),
@@ -815,7 +815,7 @@ func TestOneKindOfWorkCannotTakeTheWholePage(t *testing.T) {
 		Planned: []crmcontracts.AttentionItem{item("task", "task", withDue(rankInstant.Add(-time.Hour)))},
 	}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 100, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 100, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
 
 	// Every wait is still on the page, and every one still SAYS it is a wait.
 	// Rewriting the level of the ninth would tell the reader it was agreed work
@@ -854,7 +854,7 @@ func TestAWaitingRowNamesTheMessageAReplyWouldAnswer(t *testing.T) {
 
 	out := (&Service{}).worklistFrom(context.Background(),
 		crmcontracts.Attention{AsOf: rankInstant}, scopeAll, "", 25, waitingRead{rows: waiting, read: true},
-		leadRead{}, worklistCursor{}, nil)
+		worklistCursor{}, nil)
 
 	move := out.Queue[0].Move
 	if move == nil {
@@ -888,7 +888,7 @@ func TestAnAbsorbedDealKeepsItsMoneyOnTheWaitingRow(t *testing.T) {
 		DealID:     deal,
 	}}
 
-	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
 
 	if len(out.Queue) != 1 {
 		t.Fatalf("one message about one deal produced %d rows", len(out.Queue))

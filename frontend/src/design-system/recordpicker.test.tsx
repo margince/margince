@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../screens/common";
+import { Field } from "./atoms";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // RecordPicker is the extracted debounced search→candidate-list→pick pattern
@@ -270,6 +271,47 @@ describe("RecordPicker", () => {
     expect(screen.queryByText("Anna Weber")).toBeNull();
   });
 
+  it("offers no candidate of an earlier term once the term moves on", async () => {
+    const searchTargets = vi.fn((term: string) =>
+      Promise.resolve([{ id: `c-${term}`, name: `Answer to ${term}` }]),
+    );
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchTargets={searchTargets}
+        onPick={vi.fn()}
+      />,
+    );
+    const type = (term: string) =>
+      fireEvent.change(screen.getByRole("searchbox"), {
+        target: { value: term },
+      });
+
+    vi.useFakeTimers();
+    try {
+      type("ann");
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(250);
+      });
+      expect(
+        screen.getByRole("button", { name: "Answer to ann" }),
+      ).toBeTruthy();
+
+      type("anna");
+      expect(
+        screen.queryByRole("button", { name: "Answer to ann" }),
+      ).toBeNull();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(250);
+      });
+      expect(
+        screen.getByRole("button", { name: "Answer to anna" }),
+      ).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // A NEW searchTargets is a new search SPACE, and the candidates on screen
   // answered the old one. Discarding the in-flight search is not enough: the
   // rows already rendered stay clickable through the next debounce and its
@@ -337,5 +379,77 @@ describe("RecordPicker", () => {
     expect(
       screen.queryByText("The request failed. No cause reported."),
     ).toBeNull();
+  });
+
+  it("never submits an enclosing form when Enter is pressed in its search box", async () => {
+    const submit = vi.fn();
+    rtlRender(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <RecordPicker
+          label="Search…"
+          searchTargets={vi.fn().mockResolvedValue(candidates)}
+          onPick={vi.fn()}
+        />
+        <button type="submit">Open request</button>
+      </form>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("searchbox"), "anna{Enter}");
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("leaves an IME's Enter alone, so the composed candidate still commits", () => {
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchTargets={vi.fn().mockResolvedValue(candidates)}
+        onPick={vi.fn()}
+      />,
+    );
+    const search = screen.getByRole("searchbox");
+
+    // fireEvent answers false when the handler cancelled the key.
+    expect(fireEvent.keyDown(search, { key: "Enter" })).toBe(false);
+    expect(fireEvent.keyDown(search, { key: "Enter", isComposing: true })).toBe(
+      true,
+    );
+    expect(fireEvent.keyDown(search, { key: "Enter", keyCode: 229 })).toBe(
+      true,
+    );
+  });
+
+  it("takes its name from a Field's label, once, and from its own label standing alone", () => {
+    rtlRender(
+      <>
+        <Field label="Employer">
+          {(control) => (
+            <RecordPicker
+              {...control}
+              searchTargets={vi.fn()}
+              onPick={vi.fn()}
+            />
+          )}
+        </Field>
+        <RecordPicker
+          label="Find a colleague"
+          searchTargets={vi.fn()}
+          onPick={vi.fn()}
+        />
+      </>,
+    );
+
+    const employer = screen.getByRole("searchbox", { name: "Employer" });
+    expect(employer.getAttribute("aria-label")).toBeNull();
+    expect(employer.getAttribute("placeholder")).toBeNull();
+    const colleague = screen.getByRole("searchbox", {
+      name: "Find a colleague",
+    });
+    expect(colleague.getAttribute("placeholder")).toBe("Find a colleague");
   });
 });

@@ -39,8 +39,6 @@ type relinkThreadArgs struct {
 
 type relinkThread struct {
 	relinker ActivityRelinker
-	p        datasource.SystemOfRecordProvider
-	language baselanguage.Resolver
 }
 
 func (t relinkThread) Spec() mcp.ToolSpec {
@@ -49,8 +47,8 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 		Description: relinkThreadCopy.render(),
 		Instead:     relinkThreadCopy.Instead,
 		// Dynamic for the reason relink_activity is: a PROJECT destination is
-		// a write-once retention classification, here over every message in
-		// the thread. relinkActivityTier reads `entity_type` off these
+		// a retention classification a human confirms, here over every
+		// message in the thread. relinkActivityTier reads `entity_type` off these
 		// arguments exactly as it does off the single form's.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
 		TierResolver: relinkActivityTier,
@@ -60,7 +58,7 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 			"entity_type":{"type":"string","enum":["contact","company","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid"},
 			"replace_existing_of_type":{"type":"boolean","default":false,"description":"Move rather than associate"},
-			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
+			"approval_id":{"type":"string","format":"uuid","description":"Cannot authorize a thread move; use relink_activities"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[RelinkBatchResult](),
 	}
@@ -74,7 +72,7 @@ func (t relinkThread) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewRelinkThreadCall(t.p, t.language, RelinkThreadCommand{
+	return StageSubject(ctx, NewRelinkThreadCall(RelinkThreadCommand{
 		ThreadKey: args.ThreadKey, EntityType: args.EntityType, EntityID: args.EntityID,
 	}))
 }
@@ -87,8 +85,11 @@ func (t relinkThread) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err := requireLinkTarget(args.EntityType); err != nil {
 		return nil, err
 	}
-	noteEvidence(ctx, datasource.EntityType(args.EntityType), args.EntityID)
-	return t.relinker.RelinkThread(ctx, args.ThreadKey, args.EntityType, args.EntityID, args.ReplaceExistingOfType)
+	// Refused on the execution path itself, for every destination and whether or
+	// not an approval was supplied: a company, contact, deal or lead move resolves
+	// to the auto-execute tier, so nothing before this point is guaranteed to have
+	// run the resolver's refusal, and a key names a conversation that may grow.
+	return nil, threadKeyRefusal(args.EntityType)
 }
 
 // --- relink_activities (dynamic write) ---

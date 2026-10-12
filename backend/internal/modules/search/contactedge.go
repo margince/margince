@@ -89,7 +89,8 @@ func scanContactPairs(rows pgx.Rows) ([]contactPair, error) {
 
 // recomputeContactPairs re-folds the named pairs from the base tables in one
 // statement and deletes the ones that no longer qualify — the same
-// atomic-with-capture shape recomputePairs keeps, for the same reason.
+// atomic-with-capture shape recomputePairs keeps, for the same reason, and
+// in the same key order, so concurrent batches lock rows in one order.
 //
 // The audience rule and the role set are graph_interaction_edge's own, applied unchanged:
 // a limited-audience activity contributes NOTHING here, exactly as it
@@ -125,12 +126,14 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		       AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`
 		      JOIN activity a
 		        ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
 		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at)
 		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, now()
 		  FROM folded f
+		 ORDER BY f.contact_a, f.contact_b
 		ON CONFLICT (contact_a, contact_b) DO UPDATE SET
 		    last_at     = EXCLUDED.last_at,
 		    count_90d   = EXCLUDED.count_90d,
@@ -152,6 +155,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		         FROM activity_participant pa
 		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
 		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
 		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`)`,
 		first, second); err != nil {

@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { ContactCommitmentsCard } from "./contactcards";
@@ -253,5 +253,135 @@ describe("open tasks are commitments too", () => {
     );
 
     expect(screen.getByText(/No commitments or questions/)).toBeDefined();
+  });
+});
+
+// A commitment read from a conversation carries the words it was read from, so
+// the reader can check it, and a way to dismiss a reading that got it wrong.
+describe("a commitment read from a conversation", () => {
+  it("shows its words and offers to dismiss it", async () => {
+    const settled: unknown[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"], contact: ["read", "update"] }),
+      "POST /claims/c-1/settle": (body) => {
+        settled.push(body);
+        return new Response(null, { status: 204 });
+      },
+    });
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={viewWithDue(null)} firstName="Dana" />
+      </StoryProviders>,
+    );
+    expect(screen.getByText("“I'll send the quote on Monday.”")).toBeTruthy();
+    (await screen.findByRole("button", { name: "Dismiss" })).click();
+    await waitFor(() => expect(settled).toEqual([{ outcome: "dismissed" }]));
+  });
+
+  it("offers no dismissal to a reader who may not update the contact", async () => {
+    let meServed = false;
+    installFetchStub({
+      "GET /me": () => {
+        meServed = true;
+        return meRoute({ activity: ["read"], contact: ["read"] })();
+      },
+    });
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={viewWithDue(null)} firstName="Dana" />
+      </StoryProviders>,
+    );
+    await screen.findByText("“I'll send the quote on Monday.”");
+    // The answer is only meaningful once the grants have arrived: before
+    // that, the button is withheld for not knowing, not for the grant.
+    await waitFor(() => expect(meServed).toBe(true));
+    await act(async () => {});
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+  });
+
+  it("stays as a kept commitment once its task is done", () => {
+    const view = viewWithDue(null);
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    const kept = view.claims![0];
+    kept.task_activity_id = "t-1";
+    kept.status = "done";
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+    const box = screen.getByRole("checkbox", { name: /Send the pilot quote/ });
+    expect(box).toHaveProperty("checked", true);
+  });
+
+  it("names no deadline once kept", () => {
+    vi.setSystemTime(new Date(Date.parse(NOW)));
+    const view = viewWithDue(at(-25 * HOUR));
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    view.claims![0].status = "done";
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+    expect(
+      screen.getByRole("checkbox", { name: /Send the pilot quote/ }),
+    ).toHaveProperty("checked", true);
+    expect(screen.queryByText(/overdue/)).toBeNull();
+  });
+
+  it("is drawn once, as the open task, when its task was reopened", () => {
+    const view = viewWithDue(null);
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    const kept = view.claims![0];
+    kept.task_activity_id = "t-1";
+    kept.status = "done";
+    view.next_steps = {
+      data: [
+        {
+          id: "t-1",
+          kind: "task",
+          subject: "Send the pilot quote",
+          occurred_at: NOW,
+          is_done: false,
+          ...CAPTURED,
+        },
+      ],
+      page: { has_more: false },
+    };
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+    // One row: its visible text and its checkbox's hidden label.
+    expect(screen.getAllByText(/Send the pilot quote/)).toHaveLength(2);
+  });
+
+  it("is drawn once, as its task, when it became one", () => {
+    const view = viewWithDue(null);
+    // biome-ignore lint/style/noNonNullAssertion: the fixture above builds it.
+    view.claims![0].task_activity_id = "t-1";
+    view.next_steps = {
+      data: [
+        {
+          id: "t-1",
+          kind: "task",
+          subject: "Send the pilot quote",
+          occurred_at: NOW,
+          is_done: false,
+          ...CAPTURED,
+        },
+      ],
+      page: { has_more: false },
+    };
+    render(
+      <StoryProviders>
+        <ContactCommitmentsCard view={view} firstName="Dana" />
+      </StoryProviders>,
+    );
+    // One row: its visible text and its checkbox's hidden label.
+    expect(screen.getAllByText(/Send the pilot quote/)).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
   });
 });

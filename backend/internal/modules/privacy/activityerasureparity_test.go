@@ -48,7 +48,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -87,28 +86,6 @@ var finishedAnotherWay = gatekit.Waive(map[string]string{
 // Held by: TestEveryContentDestroyerFinishesTheErasure
 // (backend/internal/modules/privacy/activityerasureparity_test.go)
 const contentPurger = "purgeContentDerivedFrom"
-
-// updatesActivity and nullsBody read the two halves of the act, normalised.
-//
-// Substring matching on `update activity` and `body = null` was the first
-// spelling of this and it was too literal to be a census: `UPDATE "activity"`,
-// `UPDATE public.activity`, `UPDATE ONLY activity`, an alias after the target,
-// or `body=NULL` with no spaces all destroy the same text and all read as a
-// clean tree. Under-recognition is the one direction this file must not fail
-// in — a second content-destroying list that spells its UPDATE differently is
-// exactly the defect it exists to catch.
-var (
-	updatesActivity = regexp.MustCompile(`(?s)\bupdate\s+(?:only\s+)?(?:"?[a-z_][a-z_0-9]*"?\s*\.\s*)?"?activity"?(?:\s|$)`)
-	nullsBody       = regexp.MustCompile(`(?s)\b(?:"?[a-z_][a-z_0-9]*"?\s*\.\s*)?"?body"?\s*=\s*null\b`)
-)
-
-// destroysActivityBody reports whether a statement clears an activity's text.
-// `body = NULL` on the activity relation is the act every arm here performs and
-// the one that leaves the derived copies behind.
-func destroysActivityBody(statement string) bool {
-	low := strings.ToLower(statement)
-	return updatesActivity.MatchString(low) && nullsBody.MatchString(low)
-}
 
 // TestEveryContentDestroyerFinishesTheErasure is the census.
 func TestEveryContentDestroyerFinishesTheErasure(t *testing.T) {
@@ -169,7 +146,7 @@ func readActivityErasureShape(t *testing.T) (destroyers, purgers map[string]bool
 			}
 			declared := declarationKey(fn)
 			for _, statement := range gatekit.SQLStatementsOf(fn) {
-				if destroysActivityBody(statement) {
+				if gatekit.DestroysActivityBody(statement) {
 					destroyers[declared] = true
 				}
 			}

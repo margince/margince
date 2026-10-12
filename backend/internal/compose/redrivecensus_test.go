@@ -51,7 +51,13 @@ var judged = map[string]struct {
 
 	// These two plan a side effect nothing folds.
 	"stage_change_notify": {false, "plans notify; applyNotify calls the transport unconditionally, so a repeat tells somebody twice"},
-	"post_meeting_recap":  {false, "plans draft_email; a repeat composes a second draft and stages a second send behind it"},
+
+	// A retry re-reads the list check's event, which names the list rather than
+	// the record the failed firing was about, so the list rules decline one.
+	"list_membership_task":      {false, "a retry would replay the list check, not the one record that failed"},
+	"list_membership_notify":    {false, "a retry would replay the list check, not the one record that failed"},
+	"list_membership_shortlist": {false, "a retry would replay the list check, not the one record that failed"},
+	"post_meeting_recap":        {false, "plans draft_email; a repeat composes a second draft and stages a second send behind it"},
 
 	// The contacts and activities handlers bypass ApplyActions entirely and write
 	// through their own stores, so the engine's effect claim does not reach

@@ -183,7 +183,7 @@ func TestOpenMatchesTheDuplicateGuardIndex(t *testing.T) {
 		clause = clause[:end]
 	}
 
-	for _, s := range everyStatus() {
+	for _, s := range EveryStatus() {
 		named := strings.Contains(clause, "'"+string(s)+"'")
 		if named != Open(s) {
 			t.Errorf("%q: Open()=%v but the guard index names it=%v — the two have drifted",
@@ -312,7 +312,7 @@ func TestTheSweepReachesEveryOpenStatus(t *testing.T) {
 
 // The census names every status the type declares.
 //
-// everyStatus() is what the exhaustive checks iterate — the duplicate-guard
+// EveryStatus() is what the exhaustive checks iterate — the duplicate-guard
 // parity above, and the set RouteStates reports on. A status added to the
 // const block and forgotten here does not fail anything by itself: the checks
 // simply stop covering it, report PASS, and the gap is invisible. So this
@@ -341,11 +341,11 @@ func TestEveryStatusIsCensused(t *testing.T) {
 	}
 
 	censused := map[Status]bool{}
-	for _, s := range everyStatus() {
+	for _, s := range EveryStatus() {
 		censused[s] = true
 	}
 	if !reflect.DeepEqual(censused, declared) {
-		t.Errorf("everyStatus() lists %v; the type declares %v — "+
+		t.Errorf("EveryStatus() lists %v; the type declares %v — "+
 			"a status missing from the census is one every exhaustive check "+
 			"silently stops covering", censused, declared)
 	}

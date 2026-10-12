@@ -34,6 +34,8 @@ type scenarioForRender struct {
 	SanitizedBy string          `yaml:"sanitized_by"`
 	Fixture     any             `yaml:"fixture"`
 	Expect      expectForRender `yaml:"expect"`
+	// CommitmentBand mirrors Scenario.CommitmentBand.
+	CommitmentBand string `yaml:"commitment_band,omitempty"`
 }
 
 type expectForRender struct {
@@ -54,7 +56,7 @@ type expectForRender struct {
 func RenderScenario(sc Scenario) ([]byte, error) {
 	out := scenarioForRender{
 		Name: sc.Name, Task: sc.Task, Site: sc.Site,
-		Source: sc.Source, SanitizedBy: sc.SanitizedBy,
+		Source: sc.Source, SanitizedBy: sc.SanitizedBy, CommitmentBand: sc.CommitmentBand,
 		Expect: expectForRender{
 			Outcome: sc.Expect.Outcome, Rubric: sc.Expect.Rubric,
 			NearMisses: sc.Expect.NearMisses,

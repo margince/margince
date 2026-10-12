@@ -104,6 +104,9 @@ func (s *Service) mintConsentedAuthorizationCode(
 		// the scopes, client, and user, the redemption has no authority to mint
 		// from (oauth_token.go deletes the code on a successful redeem).
 		codeHash := hashOAuthCode(code)
+		if err := reapDeadCredentials(ctx, tx, "oauth_authorization_code"); err != nil {
+			return err
+		}
 		var codeID ids.UUID
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO oauth_authorization_code

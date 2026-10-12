@@ -103,7 +103,7 @@ const notificationMailBudget = 45 * time.Second
 // add a second, weaker guard in front of the one that actually holds, in the
 // place a reader would then look for the guarantee.
 func notificationMailOpts() *river.InsertOpts {
-	return &river.InsertOpts{Queue: river.QueueDefault, MaxAttempts: notificationMailJobAttempts}
+	return jobs.QueuedAs[SendNotificationEmailArgs](&river.InsertOpts{MaxAttempts: notificationMailJobAttempts})
 }
 
 // notificationMailWorker mails one claimed notice.

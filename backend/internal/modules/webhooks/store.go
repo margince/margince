@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -125,7 +124,12 @@ func validateEventTypes(types []string) error {
 		return &BadInputError{Field: fieldEventTypes, Reason: "must name at least one event type"}
 	}
 	catalog := kevents.Types()
+	seen := make(map[string]struct{}, len(types))
 	for _, t := range types {
+		if _, dup := seen[t]; dup {
+			return &BadInputError{Field: fieldEventTypes, Reason: fmt.Sprintf("%q is listed more than once", t)}
+		}
+		seen[t] = struct{}{}
 		if !slices.Contains(catalog, t) {
 			return &BadInputError{Field: fieldEventTypes, Reason: fmt.Sprintf("%q is not a published event type", t)}
 		}
@@ -157,8 +161,8 @@ func (s *Store) CreateSubscription(ctx context.Context, in CreateSubscriptionInp
 	if s.cipher == nil {
 		return Subscription{}, "", ErrNotConfigured
 	}
-	if !strings.HasPrefix(in.TargetURL, "https://") {
-		return Subscription{}, "", &BadInputError{Field: "target_url", Reason: "must be an https:// URL"}
+	if err := checkTargetURL(in.TargetURL); err != nil {
+		return Subscription{}, "", err
 	}
 	if err := validateEventTypes(in.EventTypes); err != nil {
 		return Subscription{}, "", err
@@ -301,6 +305,9 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 			p.Set(fieldEventTypes, current.EventTypes, *in.EventTypes)
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "webhook_subscription", id, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

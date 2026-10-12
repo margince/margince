@@ -112,7 +112,7 @@ func TestTheConfirmMailIsWrittenInTheInstallationsLanguage(t *testing.T) {
 	c := setupConsent(t)
 
 	english := stagedConfirmSubject(t, c)
-	setBaseLanguage(installationContext(t, c), t, c.Pool, "de")
+	SetBaseLanguage(installationContext(t, c), t, c.Pool, "de")
 	german := stagedConfirmSubject(t, c)
 
 	if english == german {

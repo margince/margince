@@ -43,6 +43,17 @@ const (
 	CheckInCadenceSource     = "check_in_cadence"
 )
 
+// CommitmentTaskSource names a task written for a commitment one of our users
+// made in a captured conversation. Its source_id is the commitment's evidence
+// locator, so a task a rep dismissed is found again instead of being
+// written anew.
+const CommitmentTaskSource = "commitment"
+
+// WebsiteLeadSource names a lead read off a company's website and accepted by
+// a human. Only that accept writes it. A lead under it is sent an Art. 14
+// notice, held until the notice is through, and deleted when it fails.
+const WebsiteLeadSource = "siteread"
+
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
 // into rows, and renaming them to fit a namespace would strand every row that
@@ -51,6 +62,8 @@ var internalSourceSystems = map[string]bool{
 	EmailRequestSource:       true,
 	NoActivityReminderSource: true,
 	CheckInCadenceSource:     true,
+	CommitmentTaskSource:     true,
+	WebsiteLeadSource:        true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system
@@ -127,10 +140,10 @@ func (e *ReservedError) FieldFault() (field, code, message string) {
 // ImporterNamespace reports whether a source system sits in the importer's
 // prefix, and nothing else.
 //
-// Narrower than ReservedSourceSystem on purpose: that one also holds the three
-// exact internal identities, which no import may spell. The door that admits a
-// declared importer asks this, so admitting an importer never admits
-// email_request, no_activity_reminder or check_in_cadence.
+// Narrower than ReservedSourceSystem on purpose: that one also holds the exact
+// internal identities (internalSourceSystems), which no import may spell. The
+// door that admits a declared importer asks this, so admitting an importer
+// never admits one of them.
 func ImporterNamespace(sourceSystem string) bool {
 	return strings.HasPrefix(sourceSystem, ReservedSourceSystemPrefix)
 }
@@ -170,7 +183,7 @@ func RefuseWire(source string, sourceSystem *string) error {
 
 // RefuseWireAdmitting is RefuseWire with the declared importer's door: when
 // importer is true, a source_system inside the mirror: namespace passes. The
-// three exact internal identities stay refused for the importer too, and
+// exact internal identities stay refused for the importer too, and
 // `source` is nobody's to forge. Whether the caller IS a declared importer is
 // decided at the HTTP handler (auth.DeclaredImporter) and nowhere else.
 func RefuseWireAdmitting(source string, sourceSystem *string, importer bool) error {

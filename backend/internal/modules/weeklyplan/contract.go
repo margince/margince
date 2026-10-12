@@ -93,26 +93,19 @@ func (s *Store) SetContract(ctx context.Context, now time.Time, in ContractEdit)
 		patch := storekit.NewPatch()
 		// An UNSENT half keeps what is stored, resolved from the row this
 		// transaction holds rather than from one read before the lock.
-		if in.SetRisks {
+		if in.SetRisks && !sameOptionalText(storedRisks, risks) {
 			patch.Set(fieldRisks, storedRisks, risks)
 		}
-		if in.SetCapacityNote {
+		if in.SetCapacityNote && !sameOptionalText(storedNote, capacityNote) {
 			patch.Set(fieldCapacityNote, storedNote, capacityNote)
 		}
-		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-			return err
-		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "weekly_plan", plan.ID,
-			patch.Before(), patch.After())
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, owner,
-			crmcontracts.PublicEventWeeklyPlanUpdated{
-				PlanId: openapi_types.UUID(plan.ID), OwnerUserId: openapi_types.UUID(owner),
-				ChangedFields: []string{changedContract},
-			}); err != nil {
-			return err
+		// Nothing sent, or nothing that differs, writes no row: an UPDATE with
+		// no SET is a syntax error, and an audit entry for a save that changed
+		// nothing would say a rep restated their week.
+		if !patch.Empty() {
+			if err := writeContractPatch(ctx, tx, lock, plan, owner, patch); err != nil {
+				return err
+			}
 		}
 		out, err = readPlan(ctx, tx, owner, plan.LocalWeekStart)
 		return err
@@ -253,4 +246,33 @@ func (s *Store) capacityFor(ctx context.Context, owner ids.UUID, weekStart time.
 		return nil, fmt.Errorf("weeklyplan: reading the planned week's capacity: %w", err)
 	}
 	return &committed, nil
+}
+
+// sameOptionalText compares two nullable texts, where NULL (never written) and
+// "" (looked, nothing to name) are different statements.
+func sameOptionalText(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
+// writeContractPatch commits a non-empty contract patch with its audit row and
+// event, in the caller's transaction.
+func writeContractPatch(
+	ctx context.Context, tx pgx.Tx, lock storekit.RowLock, plan Plan, owner ids.UUID, patch *storekit.Patch,
+) error {
+	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
+		return err
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "weekly_plan", plan.ID,
+		patch.Before(), patch.After())
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, owner,
+		crmcontracts.PublicEventWeeklyPlanUpdated{
+			PlanId: openapi_types.UUID(plan.ID), OwnerUserId: openapi_types.UUID(owner),
+			ChangedFields: []string{changedContract},
+		})
 }

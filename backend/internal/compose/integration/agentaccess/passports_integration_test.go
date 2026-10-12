@@ -85,13 +85,9 @@ func setupPassports(t *testing.T) *passportsEnv {
 	return e
 }
 
-// identityFor builds the identity ListPassports actually reads. Since
-// 8996cef8e ("A settings surface is gated on the grant it named, not on
-// being an admin") the admin widening asks auth.Require(ctx, "user_admin",
-// ActionRead) against id.Permissions, not id.hasRole("admin") against
-// id.Roles — Roles still rides along (other identity verbs' escalation
-// ceiling reads it), but a caller here meaning "admin" has to grant the
-// object too, or the check the production code runs sees nobody.
+// identityFor builds the identity ListPassports reads. A caller meaning
+// "admin" is granted user_admin as well as the role, so a test that an admin
+// still sees only their own passports holds against the real grant.
 func (e *passportsEnv) identityFor(user ids.UUID, roles []string) identity.Identity {
 	perms := principal.Permissions{RowScope: principal.RowScopeAll}
 	for _, r := range roles {
@@ -107,12 +103,13 @@ func (e *passportsEnv) identityFor(user ids.UUID, roles []string) identity.Ident
 
 func (e *passportsEnv) ctx() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:passports"})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 
-// A user lists exactly their own passports; the admin role sees the
-// workspace's; the rows are metadata only.
-func TestListPassportsScopesToOwnerUnlessAdmin(t *testing.T) {
+// A user lists exactly their own passports, an administrator included: which
+// agents act for a human is that human's own business; the rows are metadata only.
+func TestListPassportsScopesToOwnerEvenForAdmin(t *testing.T) {
 	e := setupPassports(t)
 	ctx := e.ctx()
 
@@ -145,8 +142,8 @@ func TestListPassportsScopesToOwnerUnlessAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("admin list: %v", err)
 	}
-	if len(adminRows) != 2 {
-		t.Fatalf("admin sees %d passports, want the workspace's 2", len(adminRows))
+	if len(adminRows) != 1 || adminRows[0].ID != aliceIssued.ID {
+		t.Fatalf("alice as admin sees %d passports, want only her own", len(adminRows))
 	}
 }
 

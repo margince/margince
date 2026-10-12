@@ -60,9 +60,9 @@ func newLeadScoreEnvWithBase(t *testing.T) (context.Context, *Store, *privacyEnv
 func seedScoredLead(ctx context.Context, t *testing.T, store *Store) ids.LeadID {
 	t.Helper()
 	lead, _, err := store.CreateLead(ctx, CreateLeadInput{
-		FullName: ptr("Jonas Petersen"),
-		Email:    ptr("jonas@nordwind.example"),
-		Title:    ptr("VP Sales"),
+		FullName: new("Jonas Petersen"),
+		Email:    new("jonas@nordwind.example"),
+		Title:    new("VP Sales"),
 		Source:   "webform",
 		Status:   "new",
 	})
@@ -381,9 +381,9 @@ func TestARepCannotScoreALeadTheyDoNotOwn(t *testing.T) {
 	// with no owner would pass the probe honestly and prove nothing.
 	teammate := ids.From[ids.UserKind](base.teammate)
 	lead, _, err := store.CreateLead(ctx, CreateLeadInput{
-		FullName: ptr("Annika Vogel"),
-		Email:    ptr("annika@sudwind.example"),
-		Title:    ptr("VP Sales"),
+		FullName: new("Annika Vogel"),
+		Email:    new("annika@sudwind.example"),
+		Title:    new("VP Sales"),
 		Source:   "webform",
 		Status:   "new",
 		OwnerID:  &teammate,
@@ -482,7 +482,7 @@ func TestAnonymizingALeadRemovesItsScoreExplanation(t *testing.T) {
 	// module issued the DELETE.
 	if _, err := pool.Exec(ctx, `
 		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
-		  company_name = NULL, candidate_company_key = NULL, raw = NULL,
+		  company_name = NULL, candidate_company_key = NULL,
 		  archived_at = coalesce(archived_at, now())
 		WHERE id = $1`, leadID); err != nil {
 		t.Fatalf("anonymizing the lead: %v", err)

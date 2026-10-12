@@ -91,7 +91,7 @@ func TestTheContactsListSortsByTheEmployerItDraws(t *testing.T) {
 	// A contact with no employer at all shows nothing and orders by nothing.
 	unattached := e.SeedContact(t, "Nobody's Contact", &e.Rep1)
 
-	rows, _, err := e.Contacts.ListContacts(ctx, contacts.ListContactsInput{Sort: StrPtr("employer")})
+	rows, _, err := e.Contacts.ListContacts(ctx, contacts.ListContactsInput{Sort: new("employer")})
 	if err != nil {
 		t.Fatalf("listing contacts by employer: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
 		},
 		RowScope: principal.RowScopeTeam,
 	})
-	rows, _, err := e.Contacts.ListContacts(blind, contacts.ListContactsInput{Sort: StrPtr("employer")})
+	rows, _, err := e.Contacts.ListContacts(blind, contacts.ListContactsInput{Sort: new("employer")})
 	if err != nil {
 		t.Fatalf("listing contacts by employer without the edge grant: %v", err)
 	}
@@ -256,7 +256,7 @@ func replyTo(t *testing.T, e *Env, lead ids.UUID, at time.Time) {
 	subject, body := "Re: your note", "Sounds good."
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body,
-		Direction: StrPtr("inbound"), OccurredAt: &at,
+		Direction: new("inbound"), OccurredAt: &at,
 		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
 	}); err != nil {
 		t.Fatalf("filing the reply: %v", err)
@@ -325,7 +325,7 @@ func seedProjectInPhase(t *testing.T, e *Env, company ids.UUID, name, phase stri
 	// in.
 	for _, rung := range []string{"pursuing", "delivering", "closed"} {
 		if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), ids.From[ids.ProjectKind](ids.UUID(p.Id)),
-			projects.AdvanceProjectPhaseInput{ToPhase: rung, Reason: StrPtr("the fixture is done with it")}); err != nil {
+			projects.AdvanceProjectPhaseInput{ToPhase: rung, Reason: new("the fixture is done with it")}); err != nil {
 			t.Fatalf("advancing %q to %s: %v", name, rung, err)
 		}
 		if rung == phase {
@@ -364,6 +364,8 @@ func leadIDsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.UUI
 func seedLeadSource(t *testing.T, e *Env, key, label string) {
 	t.Helper()
 	e.WsExec(t, `INSERT INTO lead_source (key, label) VALUES ($1, $2)`, key, label)
+	// Reset keeps the source table, so the seeded row would outlive this test.
+	t.Cleanup(func() { e.WsExec(t, `DELETE FROM lead_source WHERE key = $1`, key) })
 }
 
 // seedLeadFromSource creates a lead filed under one catalog source.

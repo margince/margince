@@ -18,7 +18,7 @@ import {
 } from "../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { COMPANY_ROLES, roleKey } from "./companyprojects";
 
 type ProjectCompany = components["schemas"]["ProjectCompany"];
@@ -50,28 +50,23 @@ export function ProjectCompanies({
       companyId: string;
       role: string;
     }) => {
-      const { error } = await api.PUT("/projects/{id}/companies", {
-        params: { path: { id: projectId } },
-        body: { company_id: companyId, role },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/projects/{id}/companies", {
+          params: { path: { id: projectId } },
+          body: { company_id: companyId, role },
+        }),
+      );
     },
     onSuccess: settled,
   });
 
   const detach = useMutation({
     mutationFn: async (companyId: string) => {
-      const { error } = await api.DELETE(
-        "/projects/{id}/companies/{company_id}",
-        {
+      unwrap(
+        await api.DELETE("/projects/{id}/companies/{company_id}", {
           params: { path: { id: projectId, company_id: companyId } },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: settled,
   });
@@ -119,12 +114,11 @@ export function ProjectCompanies({
 async function searchCompanies(
   query: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q: query, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: { query: { q: query, limit: 10 } },
+    }),
+  );
   return (data?.data ?? []).map((company) => ({
     id: company.id,
     name: company.display_name,

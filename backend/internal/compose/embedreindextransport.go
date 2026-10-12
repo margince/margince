@@ -327,10 +327,6 @@ func (e *embedReindexEngine) statusBody(ctx context.Context) (crmcontracts.Embed
 	if err != nil {
 		return crmcontracts.EmbedReindexStatus{}, err
 	}
-	needed, err := e.store.ReindexNeeded(ctx, configured)
-	if err != nil {
-		return crmcontracts.EmbedReindexStatus{}, err
-	}
 	// The store's own total, NOT the sum of PendingByWorkspace. Since ADR-0091
 	// §8 phase D no embeddable entity carries a tenant, so that rollup holds the
 	// same rows under every workspace it enumerates — summing it reported an
@@ -341,6 +337,8 @@ func (e *embedReindexEngine) statusBody(ctx context.Context) (crmcontracts.Embed
 	if err != nil {
 		return crmcontracts.EmbedReindexStatus{}, err
 	}
+	// Derived from the backlog just counted: ReindexNeeded would scan for it again.
+	needed := search.ReindexRequired(configured, populated, total)
 
 	return crmcontracts.EmbedReindexStatus{
 		ConfiguredIdentity: configured,

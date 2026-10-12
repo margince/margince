@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { RecordHistory } from "./historyentries";
 import {
   emptyPage,
+  expectNameAndValueApart,
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -77,6 +79,7 @@ export const Entries: Story = {
     });
     return <Panel />;
   },
+  play: ({ canvasElement }) => expectNameAndValueApart(canvasElement),
 };
 
 // The same change list in dark: the agent-actor line reads "on behalf of"
@@ -85,6 +88,45 @@ export const Entries: Story = {
 export const EntriesDark: Story = {
   ...Entries,
   globals: { theme: "dark" },
+};
+
+// The sentence and the fields it puts back read as one block.
+export const UndoConfirm: Story = {
+  render: () => {
+    seedWorkspace();
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /records/deal/d1/history": () =>
+        jsonResponse({
+          data: [
+            {
+              ...updated,
+              before: { amount_minor: 2500000, name: "Globex" },
+              after: { amount_minor: 4150000, name: "Globex Renewal" },
+              undoable: { undoable: true },
+            },
+            created,
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <RecordHistory
+          kind="deal"
+          id="d1"
+          currency="EUR"
+          restore={{ version: 7, onRestored: () => {} }}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Undo" }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("dialog");
+  },
 };
 
 // Nothing recorded for this record yet: the honest empty state, not a list

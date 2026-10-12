@@ -61,10 +61,12 @@ function templatesStub({
   allow,
   seat = "full",
   onPost,
+  rows = [template],
 }: {
   allow: GrantSpec;
   seat?: "full" | "read";
   onPost?: () => Response;
+  rows?: readonly object[];
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -77,7 +79,7 @@ function templatesStub({
       return onPost();
     }
     return jsonResponse({
-      data: [template],
+      data: rows,
       page: { next_cursor: null, has_more: false },
     });
   });
@@ -92,6 +94,14 @@ function editButton() {
 function archiveButton() {
   return screen.queryByRole("button", { name: "Archive template" });
 }
+function rowMenu() {
+  return screen.queryByRole("button", { name: "Actions for Standard DE" });
+}
+async function openRowMenu() {
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Actions for Standard DE" }),
+  );
+}
 function postureLine() {
   return screen.queryByText(
     "Read-only. Your role cannot change offer templates.",
@@ -99,18 +109,50 @@ function postureLine() {
 }
 
 describe("OfferTemplatesAdmin", () => {
-  it("renders a template row with its locale and a default badge", async () => {
+  it("names a template's language in words and badges only the default", async () => {
+    vi.stubGlobal(
+      "fetch",
+      templatesStub({
+        allow: TEMPLATE_MANAGER,
+        rows: [
+          template,
+          {
+            ...template,
+            id: "t-2",
+            name: "Plain EN",
+            locale: "en-US",
+            is_default: false,
+          },
+        ],
+      }),
+    );
+    render(<OfferTemplatesAdmin />);
+    const standard = within(
+      await screen.findByRole("row", { name: /Standard DE/ }),
+    );
+    expect(standard.getByText("German (DE)")).toBeTruthy();
+    expect(standard.getByText("Default")).toBeTruthy();
+    const plain = within(screen.getByRole("row", { name: /Plain EN/ }));
+    expect(plain.getByText("English (US)")).toBeTruthy();
+    expect(plain.queryByText("Default")).toBeNull();
+    expect(screen.queryByText("de-DE")).toBeNull();
+  });
+
+  it("offers the language and the default in words on the New template form", async () => {
     vi.stubGlobal("fetch", templatesStub({ allow: TEMPLATE_MANAGER }));
     render(<OfferTemplatesAdmin />);
-    expect(await screen.findByText("Standard DE")).toBeTruthy();
-    expect(screen.getByText("de-DE")).toBeTruthy();
-    // Scoped to the row: the column picker offers a tick with the same header
-    // text, and the badge is what this is about.
-    expect(
-      within(screen.getByRole("row", { name: /Standard DE/ })).getByText(
-        "Default for locale",
-      ),
-    ).toBeTruthy();
+    await userEvent.click(await screen.findByTestId("new-record"));
+    const form = within(await screen.findByRole("dialog"));
+    const offered = async (field: RegExp) => {
+      await userEvent.click(form.getByRole("combobox", { name: field }));
+      const labels = within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+      await userEvent.keyboard("{Escape}");
+      return labels;
+    };
+    expect(await offered(/^Language/)).toEqual(["German (DE)", "English (US)"]);
+    expect(await offered(/^Default for this language/)).toEqual(["No", "Yes"]);
   });
 
   it("surfaces a 409 offer_template_default_conflict detail verbatim on create", async () => {
@@ -150,8 +192,7 @@ describe("OfferTemplatesAdmin", () => {
     expect(await screen.findByText("Standard DE")).toBeTruthy();
     expect(postureLine()).toBeTruthy();
     expect(newButton()).toBeNull();
-    expect(editButton()).toBeNull();
-    expect(archiveButton()).toBeNull();
+    expect(rowMenu()).toBeNull();
     // With both row verbs withheld the column goes too, rather than standing
     // there headed and empty.
     expect(screen.queryByRole("columnheader", { name: "Actions" })).toBeNull();
@@ -166,8 +207,8 @@ describe("OfferTemplatesAdmin", () => {
     expect(
       await screen.findByRole("button", { name: "New template" }),
     ).toBeTruthy();
-    expect(editButton()).toBeNull();
-    expect(archiveButton()).toBeNull();
+    expect(await screen.findByText("Standard DE")).toBeTruthy();
+    expect(rowMenu()).toBeNull();
     expect(postureLine()).toBeNull();
   });
 
@@ -177,6 +218,7 @@ describe("OfferTemplatesAdmin", () => {
       templatesStub({ allow: { offer_template: ["update"] } }),
     );
     render(<OfferTemplatesAdmin />);
+    await openRowMenu();
     expect(
       await screen.findByRole("button", { name: "Edit template" }),
     ).toBeTruthy();
@@ -192,6 +234,7 @@ describe("OfferTemplatesAdmin", () => {
       templatesStub({ allow: { offer_template: ["delete"] } }),
     );
     render(<OfferTemplatesAdmin />);
+    await openRowMenu();
     expect(
       await screen.findByRole("button", { name: "Archive template" }),
     ).toBeTruthy();
@@ -211,7 +254,6 @@ describe("OfferTemplatesAdmin", () => {
     expect(await screen.findByText("Standard DE")).toBeTruthy();
     expect(postureLine()).toBeTruthy();
     expect(newButton()).toBeNull();
-    expect(editButton()).toBeNull();
-    expect(archiveButton()).toBeNull();
+    expect(rowMenu()).toBeNull();
   });
 });

@@ -72,25 +72,6 @@ export function namesOf(contacts: readonly ContactOn[]): string[] {
 export type RecordContact = Readonly<{ id: string; full_name: string }>;
 
 /**
- * The contact's id when the server's phrase for a message names it and the
- * message is filed against it. The phrase names whoever came first on the far
- * side, a colleague or a bare address as readily as a contact, so the record
- * is claimed only when its name is the phrase's lead (before the " +N" count
- * of the rest), never merely because it is the one link.
- */
-export function contactNamedBy(
-  phrase: string,
-  links: readonly ActivityLinkRef[] | undefined,
-  contact: RecordContact | undefined,
-): string | undefined {
-  const filed = links?.some(
-    (link) => link.entity_type === "contact" && link.entity_id === contact?.id,
-  );
-  const lead = phrase.replace(/ \+\d+$/, "").trim();
-  return filed && contact?.full_name === lead ? contact.id : undefined;
-}
-
-/**
  * Two lists of contacts as one, first-seen order kept.
  *
  * A conversation is folded newest message first, so the contacts on its latest

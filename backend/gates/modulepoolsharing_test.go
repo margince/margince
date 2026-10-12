@@ -5,7 +5,8 @@
 
 package gates
 
-// Pool-sharing discipline for the module suites, as a fitness function.
+// Module suites share the test process's pool per DSN rather than opening a
+// pool per test.
 //
 // internal/platform/testdb.Pool hands a test PROCESS one pool per DSN, and the
 // connections are the cost: a package's tests run sequentially against one clone
@@ -91,6 +92,9 @@ var ownPools = gatekit.Waive(map[string]string{
 		"over, built through pgxpool directly because the bound rides ConnConfig rather than the DSN: a " +
 		"lock_timeout of 250ms so that a contended account lock decides the outcome instead of the clock. " +
 		"Per-test and closed with the test, and it re-registers the typed ids the product pool would have.",
+	"internal/modules/activities/waitingownerplan_integration_test.go": "its subject is the statement the " +
+		"store sends, which only a tracer on ConnConfig can capture, and the shared pool must not carry one. " +
+		"Bounded by testdb.OwnPoolFromConfig, per-test and closed with the test.",
 })
 
 // TestModuleSuitesTakeTheProcessSharedPool fails when a module integration test

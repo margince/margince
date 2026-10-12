@@ -184,6 +184,9 @@ const envTemplate = `# Margince settings.
 # ANTHROPIC_API_KEY=
 # OPENAI_API_KEY=
 # GEMINI_API_KEY=
+# The service-account key file's contents, on ONE line: this file is read a
+# line at a time. Settings -> AI takes the file as downloaded.
+# GEMINI_VERTEX_SA_JSON=
 # OPENAI_COMPATIBLE_API_KEY=
 
 # ---------------------------------------------------------------------------
@@ -257,9 +260,4 @@ const envTemplate = `# Margince settings.
 # ---------------------------------------------------------------------------
 # MARGINCE_LOG_LEVEL=info
 # MARGINCE_LOG_FORMAT=text
-
-# ---------------------------------------------------------------------------
-# Agent access tokens (MCP). 0 = the 30-day default, maximum 2160h (90 days).
-# ---------------------------------------------------------------------------
-# MARGINCE_OAUTH_ACCESS_TOKEN_TTL=720h
 `

@@ -46,7 +46,7 @@ const (
 	// avatar size.
 	logoMaxAspect = 2.5
 	// logoMaxCandidates bounds how many assets one resolve will ask for. The
-	// chain is fetched serially and the deep-read queue is two workers wide, so
+	// chain is fetched serially and the deep-read queue is a small pool, so
 	// a page declaring a thousand icon links would otherwise let one site hold
 	// a worker until its deadline. A site that has not shown its mark in the
 	// first few declarations is not hiding it in the thousandth, and everything
@@ -313,6 +313,13 @@ func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDee
 	base := siteReadLogoKey(wsID, args.SiteReadID)
 	if claim.CompanyID != nil {
 		base = companyLogoKey(wsID, ids.From[ids.CompanyKind](*claim.CompanyID))
+	}
+	// Declared before the bytes exist: a read that has already answered for its
+	// marks leaves this key named by nothing, and the ledger is what collects it.
+	if err := w.contacts.RecordLogoIntent(ctx, base); err != nil {
+		w.log.WarnContext(ctx, "declaring the resolved logo provisional failed",
+			"read", args.SiteReadID.String(), "err", err)
+		return ""
 	}
 	key, err := contacts.PutLogo(ctx, w.blob, base, logo.PNG)
 	if err != nil {

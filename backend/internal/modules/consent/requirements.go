@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -192,9 +193,6 @@ func everyRecipientIsAdvertisedToTx(
 // reads. Quoting a whole subject line would put the message's own words into a
 // field meant to say what is wrong with it.
 func firstRunes(s string, n int) string {
-	r := []rune(strings.TrimSpace(s))
-	if len(r) <= n {
-		return string(r)
-	}
-	return string(r[:n]) + "…"
+	// The conversion re-encodes a broken byte as U+FFFD whether or not the cut happens.
+	return textcut.RunesMarked(string([]rune(strings.TrimSpace(s))), n, "…")
 }

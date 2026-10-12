@@ -176,8 +176,7 @@ func run(ctx context.Context, module []byte, issuer, product string, generation 
 	if err == nil {
 		return stdout.Bytes(), nil
 	}
-	var exit *sys.ExitError
-	if errors.As(err, &exit) {
+	if _, ok := errors.AsType[*sys.ExitError](err); ok {
 		return nil, fmt.Errorf("%w: %s", ErrVerdict, strings.TrimSpace(stderr.String()))
 	}
 	return nil, fmt.Errorf("run module: %w", err)

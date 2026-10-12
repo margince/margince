@@ -9,6 +9,8 @@ package compose
 // channel connections — two different things called "a connection".
 
 import (
+	"maps"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -275,9 +277,7 @@ func catalogWire(catalog []integrations.CategoryCost) *[]crmcontracts.ProviderCa
 	out := make([]crmcontracts.ProviderCategoryCost, 0, len(catalog))
 	for _, entry := range catalog {
 		cost := map[string]int{}
-		for pool, n := range entry.Cost {
-			cost[pool] = n
-		}
+		maps.Copy(cost, entry.Cost)
 		wire := crmcontracts.ProviderCategoryCost{
 			Category: entry.Category,
 			Free:     entry.Free,

@@ -29,6 +29,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -73,11 +74,18 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 		// A deployment with no object store has nowhere to put the list, and
 		// saying so is better than reporting an export that did not happen:
 		// the whole value of this is that somebody can rely on it having run.
-		return 0, fmt.Errorf("privacy: exporting the suppression list needs an object store")
+		return 0, errors.New("privacy: exporting the suppression list needs an object store")
 	}
 	type entry struct{ kind, hash, when string }
 	var entries []entry
+	var newest *time.Time
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The newest erasure the list knows, not the clock: a list read from a
+		// restored database is older than the moment it is exported.
+		if err := tx.QueryRow(ctx,
+			`SELECT max(created_at) FROM erasure_suppression`).Scan(&newest); err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
 			`SELECT kind, value_hash, created_at::date::text FROM erasure_suppression`)
 		if err != nil {
@@ -101,6 +109,14 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 			bytes.NewReader(body), int64(len(body)), "text/plain"); err != nil {
 			return 0, fmt.Errorf("privacy: exporting suppression %s: %w", row.hash, err)
 		}
+	}
+	// Written last, so a manifest names only an export whose every entry landed.
+	export := JournalManifest{Entries: len(entries)}
+	if newest != nil {
+		export.NewestErasure = newest.UTC()
+	}
+	if err := e.advanceJournalManifest(ctx, export); err != nil {
+		return 0, err
 	}
 	return len(entries), nil
 }

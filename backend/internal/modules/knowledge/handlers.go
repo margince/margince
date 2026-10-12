@@ -72,6 +72,15 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 	return h
 }
 
+// WithEmbedIdentity binds the embedding identity corpus floors resolve against.
+func (h Handlers) WithEmbedIdentity(identity func() string) Handlers {
+	if h.store == nil {
+		return h
+	}
+	h.store = h.store.WithEmbedIdentity(identity)
+	return h
+}
+
 // ListCorpora serves listCorpora.
 func (h Handlers) ListCorpora(w http.ResponseWriter, r *http.Request) {
 	items, err := h.store.ListCorpora(r.Context())
@@ -204,8 +213,7 @@ func (h Handlers) ListCorpusDocuments(w http.ResponseWriter, r *http.Request, id
 // contract names, then falls through to httperr.Write's sentinel registry —
 // which already resolves ErrNotFound, ErrPermissionDenied and the rest.
 func writeKnowledgeErr(w http.ResponseWriter, r *http.Request, err error) {
-	var unsupported *UnsupportedTypeError
-	if errors.As(err, &unsupported) {
+	if unsupported, ok := errors.AsType[*UnsupportedTypeError](err); ok {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnsupportedMediaType,
 			Code:   "unsupported_media_type",
@@ -217,13 +225,11 @@ func writeKnowledgeErr(w http.ResponseWriter, r *http.Request, err error) {
 		})
 		return
 	}
-	var filed *AlreadyFiledError
-	if errors.As(err, &filed) {
+	if filed, ok := errors.AsType[*AlreadyFiledError](err); ok {
 		httperr.Write(w, r, httperr.Validation("file", "already_filed", filed.Error()))
 		return
 	}
-	var full *CorpusFullError
-	if errors.As(err, &full) {
+	if full, ok := errors.AsType[*CorpusFullError](err); ok {
 		httperr.Write(w, r, httperr.Validation("file", "corpus_full", full.Error()))
 		return
 	}
@@ -239,12 +245,10 @@ func (h Handlers) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{
-			ContentType: doc.ContentType,
-			Filename:    doc.Filename,
-			Size:        doc.ByteSize,
-		},
-		Body: body,
+		ContentType: doc.ContentType,
+		Filename:    doc.Filename,
+		Size:        doc.ByteSize,
+		Body:        body,
 	}, "corpus document "+id.String())
 }
 

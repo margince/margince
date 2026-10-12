@@ -5,10 +5,9 @@
 
 package gates
 
-// Structural fitness functions (architecture/03 §1): these tests make the
-// boundary rules mechanical, and they derive the package list from the
-// tree instead of maintaining it by hand — a new package is enrolled the
-// moment it exists (fitness function over point fix). depguard and
+// The boundary rules between packages hold as a plain `go test`, with the
+// package list derived from the tree so a new package is enrolled the moment it
+// exists. depguard and
 // go-arch-lint cover the same rules as lint gates; this covers them as a
 // plain `go test` no contributor can skip.
 

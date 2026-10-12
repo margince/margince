@@ -2,7 +2,7 @@ import { useCallback, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -115,10 +115,7 @@ export function PasswordLinkModal({
   const t = useT();
   const headingId = useId();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId} size="wide">
-      {/* `modal-title` is the dialog heading's own interval, spelled once in
-          atoms.css. It was an inline style here, which is a second author for a
-          rhythm the design system already owns. */}
+    <Modal open onClose={onClose} labelledBy={headingId} intent="confirm">
       <Heading size="large" id={headingId} className="t-h3 modal-title">
         {t("users.link.title", { name: memberName })}
       </Heading>
@@ -183,21 +180,13 @@ function CopyableLink({ url }: Readonly<{ url: string }>) {
   });
   return (
     <div className="users-link-row">
-      {/* Read-only rather than plain text so the admin can still select and
-          copy by hand when the clipboard API is unavailable (an insecure
-          origin, or a browser that refuses the permission). */}
-      <input
-        className="input"
-        readOnly
-        value={url}
-        aria-label={t("users.link.urlLabel")}
-        onFocus={(e) => e.currentTarget.select()}
+      <CopyableText
+        text={url}
+        label={t("users.link.urlLabel")}
+        testId="password-link-url"
       />
       <Button onClick={copy.copy}>{copy.label}</Button>
-      {/* The link itself is fine and on screen in the field beside this, which
-          is exactly why it is a read-only input: selecting it by hand is the
-          way out. The BOX takes the whole line; a notice owns no layout of its
-          own. */}
+      {/* The BOX takes the whole line; a notice owns no layout of its own. */}
       {copy.notice !== null && (
         <div className="users-formerror">{copy.notice}</div>
       )}

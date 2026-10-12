@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isImportWindow } from "../mail-history/window-picker";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 // The connect-time import, as both of its surfaces need it: the run row, the
 // four operations on it, and the window pick that ties them together.
@@ -41,51 +41,46 @@ const POLL_MS = 2500;
 const statusQueryKey = (provider: Provider) => ["backfill-status", provider];
 
 async function readRun(provider: Provider): Promise<BackfillStatus> {
-  const { data, error } = await api.GET("/connectors/{provider}/backfill", {
-    params: { path: { provider } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.GET("/connectors/{provider}/backfill", {
+      params: { path: { provider } },
+    }),
+  );
 }
 
 async function previewRun(
   provider: Provider,
   window: ImportWindow,
 ): Promise<BackfillPreview> {
-  const { data, error } = await api.POST(
-    "/connectors/{provider}/backfill/preview",
-    { params: { path: { provider } }, body: { window } },
+  return unwrap(
+    await api.POST("/connectors/{provider}/backfill/preview", {
+      params: { path: { provider } },
+      body: { window },
+    }),
   );
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
 }
 
 async function startRun(
   provider: Provider,
   window: ImportWindow,
+  startOver: boolean,
 ): Promise<BackfillStatus> {
-  const { data, error } = await api.POST("/connectors/{provider}/backfill", {
-    params: { path: { provider } },
-    body: { window },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/connectors/{provider}/backfill", {
+      params: { path: { provider } },
+      // Without start_over the server continues a run that stopped on an error
+      // whose window covers this one, so only an explicit "start over" sends it.
+      body: startOver ? { window, start_over: true } : { window },
+    }),
+  );
 }
 
 async function cancelRun(provider: Provider): Promise<BackfillStatus> {
-  const { data, error } = await api.DELETE("/connectors/{provider}/backfill", {
-    params: { path: { provider } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.DELETE("/connectors/{provider}/backfill", {
+      params: { path: { provider } },
+    }),
+  );
 }
 
 /**
@@ -127,6 +122,9 @@ export function useBackfillRun({
   // back in front of the reader; the server still decides whether the pick is
   // allowed (widen-only), exactly as it does the first time.
   const [restarting, setRestarting] = useState(false);
+  // The reader chose "start over" on a run that could have been continued, so
+  // the start this pick leads to reads the window again from the top.
+  const [startOver, setStartOver] = useState(false);
   const [previewedWindow, setPreviewedWindow] = useState<ImportWindow | null>(
     null,
   );
@@ -149,11 +147,16 @@ export function useBackfillRun({
   });
 
   const start = useMutation({
-    mutationFn: (pick: ImportWindow) => startRun(provider, pick),
+    // The start-over choice travels with the call rather than being read from
+    // state inside the function, so a press always sends the choice that was
+    // on screen when it was made.
+    mutationFn: (pick: { window: ImportWindow; startOver: boolean }) =>
+      startRun(provider, pick.window, pick.startOver),
     onSuccess: () => {
       // The new run is what the reader watches now, so the pick they started it
       // from stands down with it.
       setRestarting(false);
+      setStartOver(false);
       return qc.invalidateQueries({ queryKey: statusQueryKey(provider) });
     },
   });
@@ -183,6 +186,9 @@ export function useBackfillRun({
     preview,
     start,
     cancel,
+    /** Start the import on the picked window, from the top when the reader
+     *  chose "start over", otherwise continuing a run that can be continued. */
+    begin: (pick: ImportWindow) => start.mutate({ window: pick, startOver }),
     /** The window the picker is on. */
     window,
     setWindow,
@@ -203,7 +209,18 @@ export function useBackfillRun({
         isImportWindow(run.window) ? run.window : DEFAULT_IMPORT_WINDOW,
       );
       setPreviewedWindow(null);
+      setStartOver(run.resumable === true);
       setRestarting(true);
+    },
+    /**
+     * Continue a run that stopped on an error, from the page it stopped at.
+     * No pick and no new estimate: the window and the consent are the run's
+     * own, and the server keeps its counts.
+     */
+    resume: (run: BackfillStatus) => {
+      if (isImportWindow(run.window)) {
+        start.mutate({ window: run.window, startOver: false });
+      }
     },
   };
 }

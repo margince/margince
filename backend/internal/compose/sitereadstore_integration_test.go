@@ -181,7 +181,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 		t.Fatal(err)
 	}
 	next := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
-	if err := store.DeferSiteRead(worker, read.ID, next); err != nil {
+	if err := store.DeferSiteRead(worker, read.ID, next, contacts.SiteReadBudgetDetail); err != nil {
 		t.Fatal(err)
 	}
 

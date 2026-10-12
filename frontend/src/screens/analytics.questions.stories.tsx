@@ -85,7 +85,7 @@ async function askFixture({
     within(second).getByRole("combobox", { name: "Field, measure 2" }),
     "Amount",
   );
-  await user.click(canvas.getByRole("button", { name: "Ask" }));
+  await user.click(canvas.getByRole("button", { name: "Run report" }));
 }
 
 export const Loading: Story = {
@@ -211,7 +211,7 @@ export const Stale: Story = {
     await userEvent.click(
       within(context.canvasElement).getByRole("button", { name: "Add filter" }),
     );
-    await screen.findByText("Answer is out of date");
+    await screen.findByText("Report is out of date");
   },
 };
 

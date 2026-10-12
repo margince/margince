@@ -5,7 +5,7 @@
 
 package gates
 
-// The technical lookup reads the domain the RECORD holds, and nothing else.
+// The technical lookup reads the domain the record holds, and nothing else.
 //
 // That is the guardrail the whole feature's legal position rests on: the
 // lookup touches one domain a workspace already recorded, so this path cannot

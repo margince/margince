@@ -39,7 +39,7 @@ func TestConfiguringTheWorkerFailsBeforeAnythingIsOpened(t *testing.T) {
 		args         []string
 	}{
 		{"a missing dsn", "dsn", []string{}},
-		{"an interval no schedule can use", "runner-interval", []string{"--dsn", "postgres://localhost/x", "--runner-interval=0"}},
+		{"a drain window that would make the stop hard", "job-drain-window", []string{"--dsn", "postgres://localhost/x", "--job-drain-window=0"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// --dsn backs its default with MARGINCE_DSN, so a CI that exports

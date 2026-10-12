@@ -32,14 +32,10 @@ const BASE: Lead = {
 
 function Rows({
   lead,
-  onReply = () => {},
   onOpenTasks = () => {},
-  replyReasonId,
 }: Readonly<{
   lead: Lead;
-  onReply?: () => void;
   onOpenTasks?: () => void;
-  replyReasonId?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -53,9 +49,7 @@ function Rows({
         // case is about what the rows SAY, and a hand-picked zone here would
         // be a second answer to a question the one module already answers.
         viewerZone(),
-        onReply,
         onOpenTasks,
-        replyReasonId,
       )}
     </TodayPanel>
   );
@@ -87,42 +81,26 @@ describe("what needs a contact on a lead, and the verb that resolves it", () => 
         // be a second answer to a question the one module already answers.
         viewerZone(),
         vi.fn(),
-        vi.fn(),
-        undefined,
       ),
     ).toEqual([]);
   });
 
-  it("the Answer row's Reply verb brings the composer into view", async () => {
-    const onReply = vi.fn();
-    show({
-      lead: { ...BASE, first_response_at: null },
-      onReply,
-    });
-    const reply = await screen.findByRole("button", { name: "Reply" });
-    expect(reply.hasAttribute("disabled")).toBe(false);
-    fireEvent.click(reply);
-    expect(onReply).toHaveBeenCalledTimes(1);
-  });
-
-  it("says nothing is owed once the lead answered", () => {
-    show({ lead: { ...BASE, first_response_at: "2026-06-02T08:00:00Z" } });
-    expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
-  });
-
-  it("refuses the Reply verb with the header's own reason rather than hiding it", async () => {
-    const onReply = vi.fn();
-    show({
-      lead: { ...BASE, first_response_at: null },
-      onReply,
-      replyReasonId: "lead-terminal-reason",
-    });
-    const reply = await screen.findByRole("button", { name: "Reply" });
-    expect(reply.hasAttribute("disabled")).toBe(true);
-    expect(reply.getAttribute("aria-describedby")).toBe("lead-terminal-reason");
-    fireEvent.click(reply);
-    expect(onReply).not.toHaveBeenCalled();
-  });
+  it.each(["manual", "import", "webform"])(
+    "a %s lead with no first response creates no task",
+    (source) => {
+      show({
+        lead: {
+          ...BASE,
+          source,
+          first_response_at: null,
+          sla_state: "breached",
+          sla_deadline_at: "2026-06-02T08:00:00Z",
+        },
+      });
+      expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
+      expect(screen.queryByText("First response due")).toBeNull();
+    },
+  );
 
   it("the Next task row's verb opens the same queue the panel head does", async () => {
     const onOpenTasks = vi.fn();

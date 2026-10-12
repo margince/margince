@@ -23,10 +23,10 @@ import { CaptureChip } from "./capture-chip";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { LicenseBanner } from "./licensebanner";
 import {
+  currentClaim,
   entryLabel,
   MOBILE_PRIMARY,
   NAV,
@@ -36,6 +36,7 @@ import {
   type NavSection,
   navEntryHref,
   RAIL_LESS_SCREENS,
+  recordKindOf,
 } from "./nav";
 import {
   NavLevelView,
@@ -45,9 +46,9 @@ import {
 } from "./navlevel";
 import { PageAsideProvider } from "./pageaside";
 import {
+  headsItself,
   PAGE_SUB_KEYS,
   resolveTitle,
-  SELF_HEADED_SCREENS,
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
@@ -373,11 +374,11 @@ export function WorkspaceRail({
     };
   }, [sheetOpen]);
 
-  // A nav destination that the phone bar hides behind More: on those routes More
-  // is the current tab, since the row that would carry the state is not rendered.
-  const inSheet = NAV.some(
-    (item) => item.screen === route.screen && !MOBILE_PRIMARY.has(item.screen),
-  );
+  // A destination the phone bar hides behind More: there More is the current
+  // tab, and claims what the row it stands in for would (`currentClaim`).
+  const sheetRow = NAV.find((item) => item.screen === level.shown.activeId);
+  const inSheet = sheetRow ? !MOBILE_PRIMARY.has(sheetRow.screen) : false;
+  const moreClaim = inSheet ? currentClaim(level.shown) : undefined;
 
   // The agent is APP-level chrome: there is one of it, and it belongs to the
   // whole session rather than to any destination. A drilled-in level is
@@ -433,11 +434,10 @@ export function WorkspaceRail({
           aria-label={sheetOpen ? t("shell.closeMenu") : t("shell.more")}
           aria-expanded={sheetOpen}
           // The state has to reach a screen reader, not just the eye: the hidden
-          // route's own link is out of the accessibility tree at this width, so
-          // without this nothing in the bar reports the current page. Dropped once
-          // the sheet is open, because the real row is then visible and carrying
-          // it — two elements claiming the current page is worse than none.
-          aria-current={inSheet && !sheetOpen ? "page" : undefined}
+          // row is out of the accessibility tree at this width. Dropped once the
+          // sheet is open, because the real row is then visible and carrying it
+          // — two elements claiming the current page is worse than none.
+          aria-current={sheetOpen ? undefined : moreClaim}
           onClick={() => setSheetOpen((open) => !open)}
         >
           {sheetOpen ? <X aria-hidden /> : <Menu aria-hidden />}
@@ -606,7 +606,7 @@ function SectionSwitcher({
         <span>{label}</span>
         <ChevronDown size={16} aria-hidden />
       </button>
-      <Modal open={open} onClose={close} labelledBy={titleId}>
+      <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
         {/* Named by the SECTION: the list is everything Settings holds, and the
             entry the reader came from is marked inside it. */}
         <Heading size="large" id={titleId} className="t-h2 modal-title">
@@ -675,8 +675,7 @@ export function PageTitle({
   // screen's own state — the settings tab, for one — and the page is still the
   // screen. Printing that slug as the page's name gave Settings an h1 reading
   // "privacy".
-  const recordNamesPage =
-    route.id !== undefined && SCREEN_ENTITY[route.screen] !== undefined;
+  const recordNamesPage = recordKindOf(route) !== undefined;
   // Conditioned on the DESCRIPTOR resolving, not on the screen slug alone. A
   // unit route is deliberately absent from both the NAV rail and
   // OFF_RAIL_TITLE_KEYS, so resolveTitle falls through to shell.unknownPage —
@@ -685,15 +684,15 @@ export function PageTitle({
   // yielding to a surface that will not name itself either.
   const unitNamesPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
-  // A screen that heads ITSELF. Brief greets the reader by name in its own h1,
+  // A page that heads ITSELF. Brief greets the reader by name in its own h1,
   // so the shell printing the nav label above it named the page twice at heading
   // level — a document outline with two top-level headings, which is exactly
   // what the branches above exist to prevent for records and units.
   //
-  // A set rather than a second boolean: the next screen that grows its own
-  // heading joins a list instead of adding a clause, and the list is the one
-  // place to read which screens do this.
-  const selfHeaded = SELF_HEADED_SCREENS.has(route.screen);
+  // Asked of the route, through pagemeta's one predicate: a focused filter
+  // page heads itself where the library under the same screen does not, and
+  // the predicate is the one place to read which pages do this.
+  const selfHeaded = headsItself(route);
   // Read only on the branch that prints an h1: a surface naming itself gets no
   // subtitle from here either, or the page would carry a description of a
   // heading it is not showing. The ENTRY's own line first: a section is many

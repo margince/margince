@@ -1,0 +1,35 @@
+name: nl_search_bounds_a_score_and_a_start_date
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: lead
+  text: leads with a score of 20 or lower created since 1 September 2026
+  today: '2026-09-30'
+  lang: en
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: email, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: source, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: score, type: number, operators: [eq, neq, gt, gte, lt, lte, in, exists]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      and:
+      - field: score
+        op: lte
+        value: 20
+      - field: created_at
+        op: gte
+        value: '2026-09-01'
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: The passing filter is score at most 20 (lte 20) AND created_at on or after 2026-09-01 (gte, a fixed date
+    because the sentence names one). lt 20 leaves out a score of exactly 20 and fails; a relative days_ago for a
+    named calendar date fails.

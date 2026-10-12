@@ -32,7 +32,7 @@ func TestTheMeetingBriefServesItsPlanOverHTTP(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Ana Roth"}, nil, &contact); status != http.StatusCreated {
+		AnyMap{"source": "manual", "full_name": "Ana Roth"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	// Logged through the product's own writer rather than inserted: a fixture

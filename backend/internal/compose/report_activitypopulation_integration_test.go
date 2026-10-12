@@ -48,7 +48,7 @@ func TestActivitiesByKindAnalyticsQueryDoesNotCrashForATeamScopedReader(t *testi
 	// Above analyticsquery.DefaultFloor (5): a count at or below the floor is
 	// WITHHELD by design (a separate mechanism from the population crash this
 	// test is about), and a withheld answer would read like this one too.
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		e.seedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 			VALUES ($1, 'call', 'checking in', now() - interval '1 hour', 'manual', 'human:x')`)
 	}

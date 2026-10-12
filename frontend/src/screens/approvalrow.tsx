@@ -30,7 +30,7 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import { approvalKindLabel } from "./approvalkind";
+import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import {
@@ -38,7 +38,7 @@ import {
   isVersionSkew,
   ProblemError,
   provenanceOf,
-  throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import { SendPermission } from "./sendpermission";
@@ -205,9 +205,8 @@ export function ApprovalRow({
     approval.target_entity_id,
   );
 
-  // Sticky, because this confirmation carries a verb and a reader reaching for
-  // it must not lose it mid-reach. Only on approve: a rejection changed
-  // nothing, so there is nothing to put back.
+  // An undo like any other: it lives ACTION_TOAST_MS, held while hovered or
+  // focused. Only on approve: a rejection changed nothing to put back.
   const showUndoOffer = (verdict: "approve" | "reject") => {
     if (verdict !== "approve" || !undoTarget) {
       return;
@@ -216,6 +215,7 @@ export function ApprovalRow({
     // and withdraws the message once it has been pressed.
     toast.show(t("decision.applied"), {
       action: {
+        kind: "undo",
         label: t("decision.undoOnRecord"),
         onAct: () => navigate(undoTarget),
       },
@@ -231,16 +231,14 @@ export function ApprovalRow({
         input.verdict === "approve"
           ? "/approvals/{id}/approve"
           : "/approvals/{id}/reject";
-      const { data, error } = await api.POST(path, {
-        params: { path: { id: approval.id } },
-        ...(input.verdict === "approve" && input.editedPayload
-          ? { body: { edited_payload: input.editedPayload } }
-          : {}),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST(path, {
+          params: { path: { id: approval.id } },
+          ...(input.verdict === "approve" && input.editedPayload
+            ? { body: { edited_payload: input.editedPayload } }
+            : {}),
+        }),
+      );
     },
     onSuccess: (_data, input) => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
@@ -278,7 +276,8 @@ export function ApprovalRow({
 
   const problem =
     decide.error instanceof ProblemError ? decide.error.problem : null;
-  const skew = problem ? isVersionSkew(problem) : false;
+  const skewKey =
+    problem && isVersionSkew(problem) ? decisionSkewKey(approval.kind) : null;
   const alreadyDecided = problem ? isAlreadyDecided(problem) : false;
 
   // The draft is seeded with what the CONTROL will show, not with what the
@@ -398,7 +397,7 @@ export function ApprovalRow({
           )}
           <DecideOutcome
             decide={decide}
-            skew={skew}
+            skewKey={skewKey}
             alreadyDecided={alreadyDecided}
             onReRead={reRead}
           />

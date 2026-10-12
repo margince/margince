@@ -50,10 +50,8 @@ func newPostgres(l layout) (*postgres, error) {
 		// single-user Mac is strictly stronger than a password stored next to
 		// the data it protects. That is why connEnv and appRoleOptions are
 		// both empty here and both filled in on Windows.
-		cluster: cluster{
-			layout:   l,
-			connArgs: []string{"-h", socketDir, "-U", ownerRole},
-		},
+		layout:    l,
+		connArgs:  []string{"-h", socketDir, "-U", ownerRole},
 		socketDir: socketDir,
 	}, nil
 }

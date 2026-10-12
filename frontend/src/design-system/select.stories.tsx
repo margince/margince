@@ -103,6 +103,7 @@ function Demo({
   disabled,
   required,
   hint,
+  appearance,
 }: Readonly<{
   options: readonly SelectOption[];
   start?: string;
@@ -111,13 +112,20 @@ function Demo({
   disabled?: boolean;
   required?: boolean;
   hint?: string;
+  appearance?: "field" | "button";
 }>) {
   const [value, setValue] = useState(start);
   return (
-    <Field label={label} hint={hint} required={required}>
+    <Field
+      label={label}
+      labelHidden={appearance === "button"}
+      hint={hint}
+      required={required}
+    >
       {(control) => (
         <Select
           {...control}
+          appearance={appearance}
           options={options}
           value={value}
           onChange={setValue}
@@ -315,6 +323,40 @@ export const Dark: Story = {
     <div style={column}>
       <Demo label="Stage" options={STAGES} start="proposal" />
       <Demo label="Time zone" options={ZONES} placeholder="Pick a zone" />
+    </div>
+  ),
+};
+
+/**
+ * The same control worn as a filled button: the record header's lifecycle
+ * stage, the one value a reader sets on an account, beside its name. The box is
+ * the Button's own (`--controlHeight`), the list and the keyboard are the
+ * Select's. Its face is the value, so the field's label is for assistive tech.
+ */
+export const AsAButton: Story = {
+  render: () => (
+    <div style={column}>
+      <Demo
+        label="Lifecycle"
+        options={STAGES}
+        start="proposal"
+        appearance="button"
+      />
+    </div>
+  ),
+};
+
+/** The button appearance in the dark theme, where the accent fill lifts. */
+export const AsAButtonDark: Story = {
+  globals: { theme: "dark" },
+  render: () => (
+    <div style={column}>
+      <Demo
+        label="Lifecycle"
+        options={STAGES}
+        start="proposal"
+        appearance="button"
+      />
     </div>
   ),
 };

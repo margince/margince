@@ -1,0 +1,25 @@
+{
+  "scenario": "case50_what_moved_my_quarter",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 24,
+    "output_tokens": 3413,
+    "cache_creation_input_tokens": 134476,
+    "cache_read_input_tokens": 632917,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.6987
+  }
+}

@@ -1,0 +1,6 @@
+.signature-html {
+  inline-size: 100%;
+  block-size: 8rem;
+  border: 0;
+  background: var(--pane);
+}

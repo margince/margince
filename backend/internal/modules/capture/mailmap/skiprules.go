@@ -17,6 +17,7 @@ package mailmap
 // One answer cannot serve both, and the headers they read are the same ones.
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/emersion/go-message/mail"
@@ -38,6 +39,13 @@ func (m Message) SkipReason() (string, bool) {
 	}
 	if isDeliverySystemSender(m.from) {
 		return "delivery-system sender", true
+	}
+	// A report is known by its SHAPE, whoever sent it. Dropped for the same
+	// reason a recognised bounce is — there is no correspondent behind a
+	// delivery outcome — and dropping it here is also what carries it to the
+	// bounce recorder, which every connector reaches from this branch.
+	if m.deliveryReport {
+		return "delivery report", true
 	}
 	return "", false
 }
@@ -243,12 +251,7 @@ func isAutoReply(autoSubmitted, precedence []string) bool {
 			return true
 		}
 	}
-	for _, v := range precedence {
-		if isAutoReplyPrecedence(v) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(precedence, isAutoReplyPrecedence)
 }
 
 // isMachineTouched reports whether ANY machine hand shows on this message —
@@ -351,12 +354,7 @@ func commentDepthDelta(c byte) int {
 }
 
 func hasMachineHandledHeader(header mail.Header) bool {
-	for _, name := range machineHandledHeaders {
-		if header.Has(name) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(machineHandledHeaders, header.Has)
 }
 
 // machineHandledHeaders are the markers that say a machine handled or authored

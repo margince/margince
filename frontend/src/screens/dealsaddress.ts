@@ -6,10 +6,8 @@ import { routeHash } from "../app/router";
 /**
  * The deals list, narrowed to one value of one dial.
  *
- * A figure that counts deals names a set, and the deals list can already be
- * narrowed to exactly that set — a filter chip's key IS its wire parameter
- * (`screens/deals.tsx`'s `dealFilterChips`), so `stage_id` and
- * `company_id` are addresses rather than something to add.
+ * A filter chip's key is its wire parameter, so each dial named in
+ * `ADDRESSABLE_DEAL_DIALS` is an address. A new caller widens that list first.
  *
  * Spelled once, here, because three surfaces ask for it: the pipeline report's
  * stage table, its open-deals-per-company table, and the company record's own
@@ -28,10 +26,18 @@ import { routeHash } from "../app/router";
  * moves an existing caller: a signature every call site has to follow is one
  * that breaks in the merge when a branch adds the fourth.
  */
+export const ADDRESSABLE_DEAL_DIALS = [
+  "stage_id",
+  "company_id",
+  "status",
+] as const;
+
+export type DealDial = (typeof ADDRESSABLE_DEAL_DIALS)[number];
+
 export function dealsFilteredBy(
-  param: string,
+  param: DealDial,
   value: string,
-  extra: Readonly<Record<string, string>> = {},
+  extra: Readonly<Partial<Record<DealDial, string>>> = {},
 ): string {
   const dials = new URLSearchParams({ [param]: value, ...extra });
   return `${routeHash({ screen: "deals" })}?${dials.toString()}`;

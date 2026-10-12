@@ -27,7 +27,7 @@ func (s *Service) matchingTarget(ctx context.Context, tx pgx.Tx, frame crmcontra
 		return nil, err
 	}
 	var b bindings
-	where := "t.metric=" + b.add(metric) + " AND t.scope_kind=" + b.add(scope.Kind) + " AND t.scope_id IS NOT DISTINCT FROM " + b.add(scope.Id) + "::uuid AND t.pipeline_id IS NOT DISTINCT FROM " + b.add(frame.PipelineId) + "::uuid AND t.period_start=" + b.add(frame.TargetInterval.StartAt) + " AND t.period_end=" + b.add(frame.TargetInterval.EndAt)
+	where := activeTarget + " AND t.metric=" + b.add(metric) + " AND t.scope_kind=" + b.add(scope.Kind) + " AND t.scope_id IS NOT DISTINCT FROM " + b.add(scope.Id) + "::uuid AND t.pipeline_id IS NOT DISTINCT FROM " + b.add(frame.PipelineId) + "::uuid AND t.period_start=" + b.add(frame.TargetInterval.StartAt) + " AND t.period_end=" + b.add(frame.TargetInterval.EndAt)
 	out, err := scanTarget(tx.QueryRow(ctx, "SELECT "+targetColumns+targetFrom+" WHERE "+where, b.values...))
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, nil
@@ -102,7 +102,11 @@ func (s *Service) ownerTargets(ctx context.Context, tx pgx.Tx, frame crmcontract
 		}
 		zero := float64(0)
 		group := "owner:" + m.id.String()
-		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: m.id.String(), Label: m.label, Value: &zero, Status: "ok", Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: "target", GroupKey: &group}})
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: m.id.String(), Label: m.label, Value: &zero, Status: "ok", Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &group}})
+	}
+
+	if !targetAppliesToInterval(frame, chart.Interval) {
+		return nil
 	}
 
 	for index := range chart.Points {
@@ -130,7 +134,7 @@ func (s *Service) ownerTargets(ctx context.Context, tx pgx.Tx, frame crmcontract
 func applyChartTarget(frame crmcontracts.ReportingContext, metrics []crmcontracts.ReportingMetric, chart *crmcontracts.ReportingChart) {
 	if chart.Kind == "bookings_trend" || chart.Kind == "target_progress" {
 		for _, metric := range metrics {
-			if metric.Id == chart.Metric && metric.Target != nil && chart.Interval != nil && frame.TargetInterval != nil && chart.Interval.StartAt.Equal(frame.TargetInterval.StartAt) {
+			if metric.Id == chart.Metric && metric.Target != nil && targetAppliesToInterval(frame, chart.Interval) {
 				for point := range chart.Points {
 					chart.Points[point].Target = metric.Target
 				}
@@ -161,4 +165,27 @@ func (s *Service) ownerTargetAllocation(ctx context.Context, tx pgx.Tx, frame cr
 		}
 	}
 	return nil
+}
+
+func targetAppliesToInterval(frame crmcontracts.ReportingContext, interval *crmcontracts.ReportingWindow) bool {
+	target := frame.TargetInterval
+	if interval == nil || target == nil || !interval.StartAt.Equal(target.StartAt) {
+		return false
+	}
+	if interval.EndAt.Equal(target.EndAt) {
+		return true
+	}
+	if !interval.EndAt.Equal(frame.EvaluatedAt) || !interval.EndAt.Before(target.EndAt) {
+		return false
+	}
+	months := 0
+	switch frame.PeriodKind {
+	case reportingThisMonth:
+		months = 1
+	case "this_quarter":
+		months = 3
+	default:
+		return false
+	}
+	return target.EndAt.Equal(target.StartAt.AddDate(0, months, 0))
 }

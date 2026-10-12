@@ -20,7 +20,9 @@ import (
 
 func reminderCreate(system string) crmcontracts.CreateActivityRequest {
 	return crmcontracts.CreateActivityRequest{
-		Kind: "task", SourceSystem: &system, SourceId: strPtr("no_activity_reminder:company:c-1:anchor:2026-09-05T00:00:00Z"),
+		Source: "manual",
+		Kind:   "task", Subject: new("Check in — no activity since 2026-09-05"),
+		SourceSystem: &system, SourceId: new("no_activity_reminder:company:c-1:anchor:2026-09-05T00:00:00Z"),
 	}
 }
 
@@ -50,14 +52,14 @@ func TestTheProviderRefusesAReminderIdentityFromAnOrdinaryCaller(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "a-1"})
 	for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
 		_, err := provider.Create(ctx, datasource.CreateInput{
+			Source:     "manual",
 			EntityType: datasource.EntityActivity,
 			Fields: map[string]any{
 				"kind": "task", "subject": "planted",
 				"source_system": source, "source_id": "planted-key",
 			},
 		})
-		var refused *provenance.ReservedError
-		if !errors.As(err, &refused) {
+		if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 			t.Fatalf("[%s] Provider.Create err = %v, want ReservedError — the seam must reach the guard", source, err)
 		}
 	}
@@ -93,8 +95,7 @@ func TestAnOrdinaryCallerMayNotStampAReminderIdentity(t *testing.T) {
 	} {
 		for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
 			_, err := logInputForPrincipal(ctx, reminderCreate(source))
-			var refused *provenance.ReservedError
-			if !errors.As(err, &refused) {
+			if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 				t.Fatalf("[%s] err = %v, want ReservedError — a caller able to write this identity can suppress the reminder", source, err)
 			}
 		}
@@ -106,8 +107,7 @@ func TestAnOrdinaryCallerMayNotStampAReminderIdentity(t *testing.T) {
 func TestTheSystemPrincipalDoesNotUnlockTheImporterNamespace(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
 	_, err := logInputForPrincipal(ctx, reminderCreate(provenance.ReservedSourceSystemPrefix+"legacy_crm"))
-	var refused *provenance.ReservedError
-	if !errors.As(err, &refused) {
+	if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 		t.Fatalf("err = %v, want ReservedError — the import namespace is not the engine's to write", err)
 	}
 }

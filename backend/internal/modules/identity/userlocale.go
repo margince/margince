@@ -63,9 +63,9 @@ func (s *Service) SaveMyLocale(ctx context.Context, locale string) (Seat, error)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var before *string
 		if err := tx.QueryRow(ctx,
-			`SELECT email, display_name, locale
+			`SELECT email, display_name, locale, greeting_name
 			   FROM app_user WHERE id = $1 AND archived_at IS NULL`,
-			human).Scan(&seat.Email, &seat.DisplayName, &before); err != nil {
+			human).Scan(&seat.Email, &seat.DisplayName, &before, &seat.GreetingName); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
@@ -107,6 +107,9 @@ type Seat struct {
 	Email       string
 	DisplayName string
 	Locale      string
+	// GreetingName is nil when the member never said which name to greet
+	// them by.
+	GreetingName *string
 }
 
 // localeImage renders one side of the audit's before/after pair.

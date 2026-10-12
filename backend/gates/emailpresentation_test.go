@@ -122,6 +122,7 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"screens/emailaccesseditor.tsx":      "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
 	"screens/emailrecords.tsx":           "draws WHICH RECORDS the message is filed against and no part of the message: each link is an EntityRef naming a contact, an account or a deal. No subject, no body, no party, no attachment. It takes the whole presentation because the drawer hands it one",
 	"screens/emailreply.tsx":             "draws no part of the message at all: it reads can_reply and links to decide whether the drawer may offer the verb and which record a reply files under, and mounts ChannelReplyAction, which is the product's one reply affordance",
+	"app/palettesearch.ts":               "builds the palette's rows from search hits. For a message it carries the subject and the formatted date onto the row's `cite`, which paletterow.tsx draws through EmailReference; it renders nothing itself",
 	"app/searchkinds.ts":                 "answers WHERE a search hit goes. It reads email_summary for one thing — an activity carrying one is a message, and a message has a destination — and returns a Route. No markup at all: the file is .ts and holds no component",
 })
 
@@ -141,7 +142,7 @@ func entrySchemas(t *testing.T) []string {
 	var names []string
 	var current string
 	schemaLine := regexp.MustCompile(`^    ([A-Za-z][A-Za-z0-9]*):\s*$`)
-	for _, line := range strings.Split(string(source), "\n") {
+	for line := range strings.SplitSeq(string(source), "\n") {
 		if match := schemaLine.FindStringSubmatch(line); match != nil {
 			current = match[1]
 			continue
@@ -188,7 +189,7 @@ func carrierFields(t *testing.T, schemas []string) []string {
 	var fields []string
 	var current string
 	judged := false
-	for _, line := range strings.Split(string(source), "\n") {
+	for line := range strings.SplitSeq(string(source), "\n") {
 		if schemaLine.MatchString(line) {
 			current, judged = "", false
 			continue
@@ -422,7 +423,7 @@ func topLevelFunctions(source string) []string {
 		}
 		current, started = nil, false
 	}
-	for _, line := range strings.Split(source, "\n") {
+	for line := range strings.SplitSeq(source, "\n") {
 		if topLevelDeclaration.MatchString(line) {
 			// A body ends at the next top-level declaration of ANY kind, not
 			// only the next function. Ending it only at the next `function` let

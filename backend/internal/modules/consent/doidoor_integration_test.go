@@ -169,6 +169,12 @@ func TestTheDoubleOptInMailAsksTheConsentQuestion(t *testing.T) {
 // it could only ever arrive dead: consentCardFor resolves the card only for a
 // live purpose, and the subject would open a 404 sent in the installation's own
 // name. The foreign key does not catch this — an archived row still exists.
+//
+// 422 and not the 404 an absent purpose gets, and the difference is not a
+// disclosure: consent_purpose is installation configuration with no scope a
+// caller could be outside, which TestAConsentPurposeIsNotARowScopedRecord
+// holds. An operator told only "not found" would hunt for a purpose to
+// unarchive that they cannot see in the list either.
 func TestTheDoubleOptInDoorRefusesAnArchivedPurpose(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)

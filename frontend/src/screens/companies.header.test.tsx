@@ -13,7 +13,8 @@ import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
-import { company, jsonResponse, stubFetch } from "./company.fixtures";
+import { company, jsonResponse } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 
 // The account header's `archivedReasonId` wiring specifically: split out of
 // companies.test.tsx (already past the 1000-line ceiling frontend/AGENTS.md

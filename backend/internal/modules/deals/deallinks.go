@@ -38,11 +38,12 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 		}
 	}
 	if in.OwnerID != nil {
-		// A named owner is an assignment, and the destination is checked the
-		// same way a lead's is: an active human seat inside the caller's own
-		// write scope. Without it a deal could be handed to a suspended seat
-		// or out of the assigner's reach, which the FK alone does not refuse.
-		if err := auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID); err != nil {
+		// Handing the deal on is an assignment, and the destination is checked
+		// the same way a lead's is: an active human seat inside the caller's
+		// own write scope. Without it a deal could be handed to a suspended
+		// seat or out of the assigner's reach, which the FK alone does not
+		// refuse.
+		if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 			return err
 		}
 		p.Set(ownerColumn, current.OwnerId, *in.OwnerID)

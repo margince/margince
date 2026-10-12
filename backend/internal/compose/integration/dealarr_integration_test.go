@@ -117,8 +117,7 @@ func TestTheUpdatePathAgreesWithCreateAboutRecurringRevenue(t *testing.T) {
 	// if it ever were not.
 	negative := int64(-1)
 	_, err = e.Deals.UpdateDeal(admin, id, deals.UpdateDealInput{ExpectedArrMinor: &negative})
-	var negErr *deals.NegativeArrError
-	if !errors.As(err, &negErr) {
+	if _, ok := errors.AsType[*deals.NegativeArrError](err); !ok {
 		t.Fatalf("negative ARR → %v, want deals.NegativeArrError", err)
 	}
 }

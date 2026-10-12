@@ -111,7 +111,7 @@ export function viewerZone(): string {
 // instant's wall clock through the zone and comparing it back against UTC,
 // the standard technique for converting a zoned wall clock to an instant
 // without a timezone-database library.
-function zoneOffsetMs(utcMs: number, zone: string): number {
+export function zoneOffsetMs(utcMs: number, zone: string): number {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       timeZone: zone,
@@ -134,7 +134,9 @@ function zoneOffsetMs(utcMs: number, zone: string): number {
     Number(parts.minute),
     Number(parts.second),
   );
-  return asIfUtc - utcMs;
+  // The wall clock is read to the second, so the instant is too: compared
+  // with its milliseconds, an instant 1ms past a second read 1ms off UTC.
+  return asIfUtc - Math.floor(utcMs / 1000) * 1000;
 }
 
 // instantInZone resolves the UTC instant at which `zone`'s wall clock reads

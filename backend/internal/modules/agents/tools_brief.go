@@ -30,7 +30,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -208,11 +207,6 @@ func (t readBrief) Spec() mcp.ToolSpec {
 		// invitation to ask for someone else's.
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ReadBriefResult](),
-		// The view renders the SAME answer this tool already gives in text: the
-		// queue, and the factor decomposition each item ranked on. It exists
-		// because five factors per item is a table rather than a sentence — not
-		// because anything here is reachable only through it.
-		UI: &mcp.ToolUI{ResourceURI: apps.CompanyBriefURI},
 	}
 }
 

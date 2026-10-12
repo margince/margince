@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // LinkedInImportResult reports what one import did, in the terms a human
@@ -277,11 +278,13 @@ func linkedInRowFrom(record []string, index map[string]int) (linkedInRow, bool) 
 		profileURL:  at(csvURL),
 	}
 	// LinkedIn has shipped at least three date formats across locales and
-	// years. An unparseable date is not a reason to lose the connection — it
-	// only weakens the fallback dedupe key.
+	// years. An unparseable date, or one outside the storable range, is not a
+	// reason to lose the connection. It only weakens the fallback dedupe key.
 	for _, layout := range []string{"02 Jan 2006", "2 Jan 2006", "2006-01-02", "01/02/2006"} {
 		if when, err := time.Parse(layout, at(csvConnected)); err == nil {
-			row.connectedOn = &when
+			if datasource.InstantInRange(when) {
+				row.connectedOn = &when
+			}
 			break
 		}
 	}
@@ -325,8 +328,7 @@ func upsertGhost(ctx context.Context, tx pgx.Tx, owner ids.UUID, row linkedInRow
 		     source, synced_at)
 		VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), $7, NULLIF($8, ''),
 	        NULLIF($9, ''), 'csv_export', now())
-		ON CONFLICT (owner_user_id, normalized_name,
-		             coalesce(normalized_company, ''), coalesce(connected_on, 'epoch'::date))
+		ON CONFLICT (owner_user_id, normalized_name, normalized_company, connected_on)
 		  WHERE provider_member_ref IS NULL
 		DO UPDATE SET
 		    full_name  = EXCLUDED.full_name,
@@ -406,7 +408,7 @@ func companyMatchKeys(company string) []string {
 	fields := strings.Fields(exact)
 	if len(fields) == 1 {
 		for _, tld := range webTLDs {
-			if trimmed := strings.TrimSuffix(exact, tld); trimmed != exact {
+			if trimmed, ok := strings.CutSuffix(exact, tld); ok {
 				add(trimmed)
 				break
 			}

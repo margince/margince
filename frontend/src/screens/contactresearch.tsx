@@ -6,6 +6,7 @@ import { omitted } from "./contact360";
 import { EnrichedFields } from "./contactcorrections";
 import { ContactProviderSection } from "./contactprovider";
 import { ContactHoldSection } from "./contactrail";
+import { RecordListsPanel } from "./recordlists";
 import "./contact360.css";
 
 // The Data & tools tab: what a machine read about this contact, kept beside
@@ -103,6 +104,9 @@ export function ContactResearchTab({
         </Panel>
       )}
       {view && <ContactHoldSection view={view} />}
+      {view && (
+        <RecordListsPanel entityType="contact" entityId={view.contact.id} />
+      )}
     </div>
   );
 }

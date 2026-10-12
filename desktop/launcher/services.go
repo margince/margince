@@ -231,7 +231,6 @@ func (b *backend) start(ctx context.Context) error {
 	workerArgs := append([]string{
 		"--config", b.layout.configPath(),
 		"--redis", b.bus.addr(),
-		"--retention-interval", "24h",
 	}, b.aiFlags()...)
 
 	workerEnv := b.childEnv(

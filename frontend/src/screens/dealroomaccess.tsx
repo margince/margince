@@ -18,7 +18,7 @@ import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { problemMessageOf, QueryStates, unwrap } from "./common";
 import { IssuedNotice } from "./dealroomaccess.notices";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -70,13 +70,11 @@ export function useParticipants(roomId: string) {
   return useQuery({
     queryKey: participantsKey(roomId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms/{id}/participants", {
-        params: { path: { id: roomId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deal-rooms/{id}/participants", {
+          params: { path: { id: roomId } },
+        }),
+      );
     },
   });
 }
@@ -244,7 +242,7 @@ function ParticipantRow({
         {revoked ? <Badge>{t("access.state.revokedBadge")}</Badge> : null}
         {mayManage && !revoked ? (
           <OverflowMenu
-            label={t("access.rowActions", { name: participant.full_name })}
+            label={t("table.rowActions", { name: participant.full_name })}
           >
             <Button variant="ghost" onClick={() => setConfirming("reissue")}>
               {t("access.issueLink")}
@@ -291,7 +289,7 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
     remedy: t("access.issued.copyFailed"),
   });
   return (
-    <div className="access-issued">
+    <div className="form-stack">
       <IssuedNotice queued={issued.queued} email={issued.participant.email} />
       <Field label={t("access.issued.linkLabel")}>
         {(control) => <TextInput {...control} readOnly value={link} />}
@@ -302,9 +300,8 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
           {copy.label}
         </Button>
       </div>
-      {/* Below the row rather than inside it: the actions band lays controls
-          out side by side, and a notice squeezed in beside the button it is
-          about loses the line it needs to say what to do instead. */}
+      {/* Below the row, not in it: beside its button the notice loses the
+          line it needs to say what to do instead. */}
       {copy.notice}
       <p className="t-caption">{t("access.issued.oneTime")}</p>
     </div>
@@ -328,22 +325,21 @@ function InviteDialog({
       email: string;
       capability: Capability;
     }) => {
-      const { data, error } = await api.POST("/deal-rooms/{id}/participants", {
-        params: { path: { id: room.id } },
-        body: {
-          full_name: input.name,
-          email: input.email,
-          capability: input.capability,
-          source: "manual",
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/participants", {
+          params: { path: { id: room.id } },
+          body: {
+            full_name: input.name,
+            email: input.email,
+            capability: input.capability,
+            source: "manual",
+          },
+        }),
+        t,
+      );
     },
     onSuccess: (data) => {
-      refreshSeats(queryClient, room.id);
+      void refreshSeats(queryClient, room.id);
       if (data) {
         setIssued(data);
       }
@@ -379,12 +375,12 @@ function InviteDialog({
               capability,
             })
       }
-      placement="right"
+      intent="form"
     >
       {issued ? (
         <IssuedLink issued={issued} />
       ) : (
-        <div className="form-stack">
+        <>
           <Field label={t("access.nameLabel")} required>
             {(control) => (
               <TextInput
@@ -415,7 +411,7 @@ function InviteDialog({
             }))}
           />
           <p>{t("access.inviteNote")}</p>
-        </div>
+        </>
       )}
     </ConfirmModal>
   );
@@ -437,17 +433,15 @@ function ReissueDialog({
   const [issued, setIssued] = useState<Issued | null>(null);
   const reissue = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST(
-        "/deal-rooms/{id}/participants/{participantId}/resend",
-        { params: { path: { id: room.id, participantId: participant.id } } },
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/participants/{participantId}/resend", {
+          params: { path: { id: room.id, participantId: participant.id } },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
     },
     onSuccess: (data) => {
-      refreshSeats(queryClient, room.id);
+      void refreshSeats(queryClient, room.id);
       if (data) {
         setIssued(data);
       }
@@ -494,18 +488,15 @@ function RevokeDialog({
   const queryClient = useQueryClient();
   const revoke = useMutation({
     mutationFn: async () => {
-      const { error } = await api.POST(
-        "/deal-rooms/{id}/participants/{participantId}/revoke",
-        {
+      unwrap(
+        await api.POST("/deal-rooms/{id}/participants/{participantId}/revoke", {
           params: { path: { id: room.id, participantId: participant.id } },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onSuccess: () => {
-      refreshSeats(queryClient, room.id);
+      void refreshSeats(queryClient, room.id);
       onClose();
     },
   });
@@ -549,19 +540,16 @@ function CapabilityDialog({
   );
   const change = useMutation({
     mutationFn: async (next: Capability) => {
-      const { error } = await api.PATCH(
-        "/deal-rooms/{id}/participants/{participantId}",
-        {
+      unwrap(
+        await api.PATCH("/deal-rooms/{id}/participants/{participantId}", {
           params: { path: { id: room.id, participantId: participant.id } },
           body: { capability: next },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onSuccess: () => {
-      refreshSeats(queryClient, room.id);
+      void refreshSeats(queryClient, room.id);
       onClose();
     },
   });
@@ -570,6 +558,7 @@ function CapabilityDialog({
       open={open}
       onClose={onClose}
       title={t("access.changeCapabilityTitle", { name: participant.full_name })}
+      intent="form"
       confirmLabel={t("access.save")}
       confirmDisabled={capability === participant.capability}
       pending={change.isPending}

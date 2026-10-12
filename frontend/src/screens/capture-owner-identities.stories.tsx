@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import {
   installFetchStub,
@@ -60,3 +61,14 @@ export const Populated: Story = { render: story([ALIAS, OWN_DOMAIN]) };
 // than as a list that failed to draw — "I have told it about no other addresses"
 // is what a reader opens this card to confirm.
 export const Empty: Story = { render: story([]) };
+
+export const Declaring: Story = {
+  render: story([ALIAS]),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Add address" }),
+    );
+    await body.findByRole("dialog");
+  },
+};

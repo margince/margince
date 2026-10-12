@@ -71,15 +71,23 @@ const kindLinkedInMatch = "linkedin_match"
 const kindHeldDraft = "held_draft"
 
 // kindDealFollowUp is the nightly reconciliation's "this conversation left no
-// next step" card, and kindTranscriptProposal the next step a transcript
-// recorded somebody committing to. Named rather than spelled: this module makes
+// next step" card, and kindCommitmentTask a promise one of our users made in a
+// captured conversation. Named rather than spelled: this module makes
 // three separate statements about each — the grants deciding it needs, that the
 // rep it was staged for decides it alone, and what filing it means — and a typo
 // across them would leave the kind half-governed with nothing saying so.
 const (
-	kindDealFollowUp       = "deal_follow_up"
+	kindDealFollowUp   = "deal_follow_up"
+	kindCommitmentTask = "commitment_task"
+	// kindTranscriptProposal is retired: nothing stages it and no effect
+	// applies it. It stays governed so the cards already decided under it stay
+	// readable to whoever decided them.
 	kindTranscriptProposal = "transcript_proposal"
 )
+
+// retiredKinds are governed for reading and refused for approving: see
+// kindTranscriptProposal.
+var retiredKinds = map[string]bool{kindTranscriptProposal: true}
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
@@ -192,10 +200,10 @@ var decisionGrants = map[string][]grantRequirement{
 	// A relink moves an activity onto another record, which the store gates on
 	// activity.UPDATE — an association change, not a re-capture. It reaches a
 	// human at all only for one destination: filing under a PROJECT classifies
-	// the correspondence as a Handelsbrief, and that classification is
-	// write-once in the database and is not lifted by relinking away. Every
-	// other destination auto-executes, so a card here is always the six-year
-	// decision rather than an ordinary move.
+	// the correspondence as a Handelsbrief, and only the undo of a project
+	// filing lifts that classification — relinking away does not. A card for a
+	// single relink is therefore the six-year decision rather than an ordinary
+	// move.
 	//
 	// The grant is the one PERFORMING it takes, for the reason disqualify_lead
 	// states: anything less puts the control point with somebody who could not
@@ -281,12 +289,11 @@ var decisionGrants = map[string][]grantRequirement{
 	// may see and decide it (targetVisible), the create grant gates the
 	// write the confirm performs.
 	kindDealFollowUp: {{objectActivity, principal.ActionCreate}},
-	// Confirming a next step read out of a meeting transcript (S-E04.3)
-	// creates the task activity it proposed. The transcript activity it is
-	// filed against gates who may see and decide it (targetVisible); the
-	// create grant gates the write the confirm performs. Read is not enough:
-	// somebody who may read the transcript but not add to the timeline could
-	// otherwise release a task they could not have logged themselves.
+	// Confirming a promise read out of a conversation creates the task it
+	// proposed, and points the claim on the customer's record at that task —
+	// so the decider must be able to do both by hand.
+	kindCommitmentTask: {{objectActivity, principal.ActionCreate}, {tableContact, principal.ActionUpdate}},
+	// Retired; read only, see kindTranscriptProposal.
 	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a

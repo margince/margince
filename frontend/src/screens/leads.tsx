@@ -8,7 +8,7 @@ import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
-import { navigate, useRoute } from "../app/router";
+import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import {
   Badge,
@@ -40,8 +40,13 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useClaimRecord } from "./claimrecord";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
-import type { CreateField } from "./create";
+import {
+  problemMessageOf,
+  QueryGate,
+  throwProblem,
+  unwrap,
+  useMe,
+} from "./common";
 import { EntityRef, useEntityName } from "./entityref";
 import { useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
@@ -59,6 +64,7 @@ import { LeadDealsProjectsTab, LeadRail } from "./leadraillinks";
 import { LeadReadings } from "./leadreadings";
 import { ACTION_PARAM, CALL_ACTION } from "./leads.address";
 import { DisqualifyDialog } from "./leads.disqualify";
+import { leadEditFields, mapLeadUpdate } from "./leads.form";
 import { QualifyDialog } from "./leads.qualify";
 import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
@@ -95,6 +101,9 @@ export { terminalBadge } from "./leadstanding";
 
 import { AddToShortlistAction } from "./addtoshortlist";
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
+import { RecordListsPanel } from "./recordlists";
+import { useAddressedTab } from "./recordtab";
+import { WorklistReturnLink } from "./worklist.return";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -116,37 +125,6 @@ function promotionTriggerLabel(
       return null;
   }
 }
-
-function stringField(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-// Status and score use their domain actions; Details sends only submitted identity fields.
-export function mapLeadUpdate(
-  values: Record<string, unknown>,
-): UpdateLeadRequest {
-  const field = (key: string) =>
-    Object.hasOwn(values, key)
-      ? stringField(values[key]).trim() || null
-      : undefined;
-  return {
-    full_name: field("full_name"),
-    email: field("email"),
-    title: field("title"),
-    company_name: field("company_name"),
-    source: stringField(values.source).trim() || undefined,
-    candidate_company_key: field("candidate_company_key"),
-    project_id: field("project_id"),
-    owner_id: stringField(values.owner_id).trim() || undefined,
-  };
-}
-
-const leadEditFields: CreateField[] = [
-  { key: "full_name", label: "create.fullName", required: true },
-  { key: "email", label: "create.email", type: "email" },
-  { key: "title", label: "create.contactTitle" },
-  { key: "company_name", label: "create.companyName" },
-];
 
 // The decision-maker title pattern the score uses (formulas §3.1). Mirrored
 // here ONLY to say why a title earned nothing; the score itself is computed
@@ -210,13 +188,11 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   const explain = useQuery({
     queryKey: leadScoreKey(id),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}/score", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}/score", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 
@@ -583,14 +559,12 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
         // sentence for whoever reads this file, not for whoever is refused.
         throwProblem({ detail: t("lead.terminalReadOnly") });
       }
-      const { data, error } = await api.PATCH("/leads/{id}", {
-        params: { path: { id }, ...ifMatch(requireVersion(version)) },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/leads/{id}", {
+          params: { path: { id }, ...ifMatch(requireVersion(version)) },
+          body,
+        }),
+      );
     },
     onSuccess: onChanged,
   });
@@ -763,19 +737,9 @@ type PromotionRecord = {
  * every other one rather than fetching a history nothing renders.
  */
 function usePromotionRecord(id: string, promoted: boolean): PromotionRecord {
-  // ONE row, asked for by verb. The history endpoint takes an `action` filter
-  // now (#1611), so the promotion is the answer to the read rather than
-  // something found by walking towards it.
-  //
-  // What that replaced is worth remembering, because it was a real wrong
-  // answer and not merely a slow one: the trail is 20 rows to a page, so a lead
-  // worked long enough to collect other audit rows carried its promotion on a
-  // later page, and a reader that took the first page reported the outcome as
-  // unknowable on exactly the leads somebody had worked hardest. Paging on
-  // until it turned up fixed the answer and cost a round trip per page.
-  //
-  // A filtered read has at most one promote row — a lead is promoted once —
-  // so there is no page after the first and nothing to walk.
+  // ONE row, asked for by verb: the history read filtered by `action` answers
+  // with the promotion itself, wherever in a long trail it sits. A lead is
+  // promoted once, so there is no page after the first and nothing to walk.
   const history = useRecordHistory("lead", id, promoted, "promote");
   // `page?.data` for the same reason getNextPageParam needs it: a 200 with no
   // body is a shape the contract permits, and this read runs on every promoted
@@ -823,14 +787,13 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
   const [reason, setReason] = useState("");
   const demote = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/leads/{id}/demote", {
-        params: { path: { id } },
-        body: { reason: reason.trim() },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/leads/{id}/demote", {
+          params: { path: { id } },
+          body: { reason: reason.trim() },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const key of leadWriteKeys(id)) {
@@ -859,18 +822,16 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
         pending={demote.isPending}
         error={demote.isError ? problemMessageOf(demote.error, t) : undefined}
       >
-        <div className="lead-stack">
-          <p className="t-body">{t("lead.demoteExplain")}</p>
-          <Field label={t("lead.demoteReason")} required>
-            {(control) => (
-              <Textarea
-                {...control}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            )}
-          </Field>
-        </div>
+        <p className="t-body">{t("lead.demoteExplain")}</p>
+        <Field label={t("lead.demoteReason")} required>
+          {(control) => (
+            <Textarea
+              {...control}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          )}
+        </Field>
       </ConfirmModal>
     </>
   );
@@ -956,26 +917,6 @@ function PromotedLeadPanel({
 }
 
 const LEAD_TABS = ["overview", "deals", "history"] as const;
-type LeadTab = (typeof LEAD_TABS)[number];
-
-/** isLeadTab narrows a URL segment, which is any string a reader can type. */
-function isLeadTab(value: string | undefined): value is LeadTab {
-  return LEAD_TABS.some((tab) => tab === value);
-}
-
-// The lead's tab, addressed rather than held beside the address: a tab that
-// survives a reload and can be linked to, and Back that steps between the tabs
-// a reader opened instead of leaving the lead altogether. Same shape as the
-// account's (screens/companies.tsx) and the contact's.
-function useLeadTab(recordId: string): [LeadTab, (next: LeadTab) => void] {
-  const route = useRoute();
-  const addressed =
-    route.screen === "leads" && route.id === recordId ? route.id2 : undefined;
-  return [
-    isLeadTab(addressed) ? addressed : "overview",
-    (next: LeadTab) => navigate({ screen: "leads", id: recordId, id2: next }),
-  ];
-}
 
 // The lead-360's "overview" pane, split out of LeadScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
@@ -1019,7 +960,6 @@ function LeadOverviewPane({
   promotion,
   terminalReasonId,
   thread,
-  onReply,
   onOpenEmail,
 }: Readonly<{
   lead: Lead;
@@ -1030,10 +970,6 @@ function LeadOverviewPane({
   // The lead's unfiltered timeline read, which the thread under the call is
   // drawn from — the whole read, so its failure reaches the call too.
   thread: RecordTimeline;
-  // The "Answer" row's own verb: opens the SAME composer the header's Email
-  // verb opens, owned by LeadRecord so both controls answer to one open
-  // state rather than each mounting its own copy of it.
-  onReply: () => void;
   // The page's one email drawer, for the thread under the call.
   onOpenEmail: (activityId: string) => void;
 }>) {
@@ -1064,15 +1000,7 @@ function LeadOverviewPane({
       <RecordReading>
         <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
         <TodayPanel onOpenTasks={onOpenTasks} tasksLabel={t("today.workQueue")}>
-          {leadTodoRows(
-            lead,
-            t,
-            locale,
-            recordZone,
-            onReply,
-            onOpenTasks,
-            writer.readOnly ? terminalReasonId : undefined,
-          )}
+          {leadTodoRows(lead, t, locale, recordZone, onOpenTasks)}
         </TodayPanel>
         {/* Full width, in sequence, rather than side by side (RecordReadingPair):
             the score card is one line and the signals form is tall, and a
@@ -1095,6 +1023,7 @@ function LeadOverviewPane({
             />
           </PanelBody>
         </Panel>
+        <RecordListsPanel entityType="lead" entityId={id} />
       </RecordReading>
     </div>
   );
@@ -1353,7 +1282,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // ONE sentence about this lead being closed, minted here and pointed at by
   // every control the closure refuses (ADR-0108 §6).
   const terminalReasonId = useId();
-  const [tab, setTab] = useLeadTab(id);
+  const [tab, setTab] = useAddressedTab("leads", id, LEAD_TABS);
   // The thread under the call reads the WHOLE history, not whatever the
   // History tab's own filter has narrowed. A filter is a view of that tab; a
   // call that said "no reply since" because the reader had hidden emails
@@ -1386,6 +1315,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   return (
     <div className="record-sheet">
       <RecordView
+        back={<WorklistReturnLink />}
         // One rung under the record scale: the name is still the largest thing
         // on the page, but beside a work column that opens on the agent's ask
         // it no longer needs to be the size of a masthead, the same rung the
@@ -1517,7 +1447,6 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             terminalReasonId={terminalReasonId}
             thread={threadQuery}
             onOpenEmail={setOpenEmail}
-            onReply={() => setComposing(true)}
           />
         )}
         {tab === "deals" && (
@@ -1557,13 +1486,11 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const leadQuery = useQuery({
     queryKey: leadKey(id),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 

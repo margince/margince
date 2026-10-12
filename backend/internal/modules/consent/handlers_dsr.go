@@ -31,9 +31,10 @@ func (h Handlers) ListDataSubjectRequests(w http.ResponseWriter, r *http.Request
 		writeConsentErr(w, r, err)
 		return
 	}
+	subjects := h.dsrSubjectLabels(r.Context(), requests...)
 	data := make([]crmcontracts.DataSubjectRequest, 0, len(requests))
 	for _, d := range requests {
-		data = append(data, wireDSR(d))
+		data = append(data, wireDSR(d, subjects))
 	}
 	info := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
@@ -50,6 +51,7 @@ func (h Handlers) CreateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 	in := CreateDSRInput{
 		Kind:       string(req.Kind),
 		SubjectRef: req.SubjectRef,
+		ReceivedAt: req.ReceivedAt,
 		DueAt:      req.DueAt,
 		AssigneeID: idArg[ids.UserKind](req.AssigneeId),
 	}
@@ -58,7 +60,23 @@ func (h Handlers) CreateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusCreated, wireDSR(created))
+	h.writeDSR(w, r, http.StatusCreated, created)
+}
+
+// GetDataSubjectRequestDeadline answers the deadline the request form shows
+// before filing, from the resolver the filing itself uses.
+func (h Handlers) GetDataSubjectRequestDeadline(w http.ResponseWriter, r *http.Request, params crmcontracts.GetDataSubjectRequestDeadlineParams) {
+	due, rule, err := h.store.RequestDeadline(r.Context(), string(params.Kind), params.ReceivedAt)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RequestDeadline{DueAt: due, Rule: rule})
+}
+
+// writeDSR answers one request, its subject named under the queue's own rule.
+func (h Handlers) writeDSR(w http.ResponseWriter, r *http.Request, status int, d dsrRow) {
+	httperr.WriteJSON(w, status, wireDSR(d, h.dsrSubjectLabels(r.Context(), d)))
 }
 
 func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -66,7 +84,20 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// status is not nullable, so a null there is refused rather than read as absent.
+	if err := httperr.RefuseNull(r, fieldStatus); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
 	in := UpdateDSRInput{Resolution: req.Resolution, AssigneeID: idArg[ids.UserKind](req.AssigneeId)}
+	for _, cleared := range httperr.ClearedFields(r) {
+		switch cleared {
+		case fieldAssigneeID:
+			in.ClearAssignee = true
+		case fieldResolution:
+			in.ClearResolution = true
+		}
+	}
 	if req.Status != nil {
 		status := string(*req.Status)
 		in.Status = &status
@@ -97,7 +128,7 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 				writeConsentErr(w, r, err)
 				return
 			}
-			httperr.WriteJSON(w, http.StatusOK, wireDSR(updated))
+			h.writeDSR(w, r, http.StatusOK, updated)
 			return
 		}
 	}
@@ -106,7 +137,7 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireDSR(updated))
+	h.writeDSR(w, r, http.StatusOK, updated)
 }
 
 // DownloadDataSubjectPackage answers an Art. 15 access request with the package

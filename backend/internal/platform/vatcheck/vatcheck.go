@@ -111,8 +111,14 @@ func Configured(baseURL string) bool {
 // "no such number", which is a fact about the company's page and must be
 // recorded as one rather than retried forever. err is reserved for a
 // consultation that did not complete.
+//
+// requesterVAT is this installation's OWN VAT number, or empty. Supplying it is
+// what makes VIES issue a consultation number, so a check made under one gets
+// evidence and one made without gets a bare answer. It is an argument rather
+// than client state because it is the installation's company profile, which
+// an admin edits while the worker runs.
 type Checker interface {
-	Check(ctx context.Context, vatNumber string) (Result, error)
+	Check(ctx context.Context, vatNumber, requesterVAT string) (Result, error)
 }
 
 // ProviderRefusedError is the service turning this installation away — a 429
@@ -131,11 +137,6 @@ type VIES struct {
 	baseURL string
 	http    *http.Client
 	pacer   *Pacer
-	// requester is this installation's OWN VAT number, in two parts. Supplying
-	// it is what makes VIES issue a consultation number, so an installation
-	// that states it gets evidence and one that does not gets a bare answer.
-	requesterCountry string
-	requesterNumber  string
 }
 
 // NewVIES builds the client. An empty baseURL means the public service.
@@ -143,20 +144,17 @@ type VIES struct {
 // The pacer is created here and held by the client, so ONE client is one
 // requester against the one service every request goes to. The composition
 // root builds exactly one.
-func NewVIES(baseURL, requesterVAT string, httpClient *http.Client) *VIES {
+func NewVIES(baseURL string, httpClient *http.Client) *VIES {
 	if baseURL == "" {
 		baseURL = PublicBaseURL
 	}
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 20 * time.Second}
 	}
-	country, number := splitVAT(requesterVAT)
 	return &VIES{
-		baseURL:          strings.TrimSuffix(baseURL, "/"),
-		http:             httpClient,
-		pacer:            NewPacer(RecurringInterval),
-		requesterCountry: country,
-		requesterNumber:  number,
+		baseURL: strings.TrimSuffix(baseURL, "/"),
+		http:    httpClient,
+		pacer:   NewPacer(RecurringInterval),
 	}
 }
 
@@ -192,7 +190,7 @@ type checkResponse struct {
 // that declined (StatusUnavailable — a fact about the lookup), and a
 // consultation that did not complete (an error — retried, and after a refusal
 // on the service's own schedule).
-func (v *VIES) Check(ctx context.Context, vatNumber string) (Result, error) {
+func (v *VIES) Check(ctx context.Context, vatNumber, requesterVAT string) (Result, error) {
 	country, number := splitVAT(vatNumber)
 	if country == "" || number == "" {
 		return Result{}, ErrMalformedNumber
@@ -203,11 +201,12 @@ func (v *VIES) Check(ctx context.Context, vatNumber string) (Result, error) {
 		return Result{}, err
 	}
 
+	requesterCountry, requesterNumber := splitVAT(requesterVAT)
 	body, err := json.Marshal(checkRequest{
 		CountryCode:          country,
 		VatNumber:            number,
-		RequesterMemberState: v.requesterCountry,
-		RequesterNumber:      v.requesterNumber,
+		RequesterMemberState: requesterCountry,
+		RequesterNumber:      requesterNumber,
 	})
 	if err != nil {
 		return Result{}, fmt.Errorf("vatcheck: building the consultation: %w", err)

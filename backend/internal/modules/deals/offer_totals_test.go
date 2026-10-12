@@ -233,7 +233,7 @@ func assertStatesTheLimitWithoutBlamingTheCaller(t *testing.T, message string) {
 // formulation than the engine's rational path.
 func TestOfferTotalsReconcileToGroundTruth(t *testing.T) {
 	rng := &splitMix{state: 42} // deterministic: a failure names its offer
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		lineCount := 1 + rng.intn(12)
 		lines := make([]OfferLineInput, lineCount)
 		var wantNet, wantTax, wantGross int64

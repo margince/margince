@@ -5,23 +5,16 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import type { ListQuery } from "./listquery";
-import {
-  LoadFilterViewMenu,
-  SaveFilterViewAction,
-  SaveViewAction,
-} from "./savedviews";
-import { newGroup, newLeaf } from "./segmentpredicate";
+import { SaveViewAction } from "./savedviews";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// A saved view is per-user list or filter state, by name. This module has three
-// visible surfaces and they are documented together because what they share is
-// the thing worth seeing: ONE naming dialog, so a list and the segment builder
-// ask the same question the same way.
+// A saved view is per-user list state, by name: saved beside a list's own
+// tools through the catalog's one naming dialog, and managed from the same
+// place.
 //
-// The offering rules are the other half. Both save actions render NOTHING until
-// there is something worth saving — an unnarrowed list, or an incomplete filter,
-// gets no button — so the stories that show the withheld state carry as much as
-// the ones that show the button.
+// The offering rule is the other half. Save renders NOTHING until there is
+// something worth saving — an unnarrowed list gets no button — so the story
+// that shows the withheld state carries as much as the one that shows it.
 const meta: Meta = {
   title: "Patterns/Saved views",
   parameters: { layout: "padded" },
@@ -48,9 +41,8 @@ const VIEWS = {
       version: 1,
     },
     {
-      // Not offered: `like` is not an operator this engine has, so the stored
-      // tree cannot be read, and an entry that restores nothing is worse than no
-      // entry at all.
+      // `like` is not an operator this engine has, so this build cannot read
+      // the stored tree; the view is still the reader's to rename or delete.
       id: "v-2",
       owner_id: "u-1",
       resource: "contacts",
@@ -99,7 +91,7 @@ const UNNARROWED: ListQuery = {
 type Story = StoryObj;
 
 export const NamingAView: Story = {
-  // The one dialog both surfaces share, opened.
+  // The naming dialog, opened.
   render: () => {
     routes();
     return <SaveViewAction resource="contacts" query={NARROWED} />;
@@ -143,35 +135,6 @@ export const ManagingViews: Story = {
   },
 };
 
-export const SavingAFilter: Story = {
-  // The segment builder's side of the same dialog. Offered because the tree is
-  // complete; an incomplete one is refused by the engine, so saving it would
-  // store a view that fails the moment anybody opens it.
-  render: () => {
-    routes();
-    return (
-      <SaveFilterViewAction
-        resource="contacts"
-        tree={newGroup("and", [newLeaf("city", "eq", "Berlin")])}
-      />
-    );
-  },
-};
-
-export const NoSaveForAnIncompleteFilter: Story = {
-  // A clause with nothing typed in it. Also an empty capture, for the same
-  // reason as NothingWorthSaving.
-  render: () => {
-    routes();
-    return (
-      <SaveFilterViewAction
-        resource="contacts"
-        tree={newGroup("and", [newLeaf("city", "eq", "")])}
-      />
-    );
-  },
-};
-
 export const TheRailFailedToLoad: Story = {
   // The one place that says the saved-view rail did not load, and it says WHICH
   // surface: the notice lands beside a list's Columns and Compact buttons, where
@@ -181,19 +144,5 @@ export const TheRailFailedToLoad: Story = {
       "GET /views": () => jsonResponse({ title: "Server error" }, 500),
     });
     return <SaveViewAction resource="contacts" query={NARROWED} />;
-  },
-};
-
-export const LoadingASavedFilter: Story = {
-  // Two stored views, one offered: the menu leaves out what it cannot read.
-  render: () => {
-    routes();
-    return <LoadFilterViewMenu resource="contacts" onLoad={() => undefined} />;
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Load saved filter" }),
-    );
   },
 };

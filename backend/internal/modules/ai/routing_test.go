@@ -161,13 +161,14 @@ func TestLocalOnlyMatchesLocalProvidersForEveryProvider(t *testing.T) {
 		"openai_compatible": {Provider: "openai_compatible", BaseURL: "https://x", Model: "m"},
 		"openai":            {Provider: "openai", Model: "m"},
 		"gemini":            {Provider: "gemini", Model: "m"},
+		"gemini_vertex":     {Provider: "gemini_vertex", Location: "eu", Model: "m"},
 	}
 	for _, name := range knownProviders {
 		cfg, ok := built[name]
 		if !ok {
 			t.Fatalf("knownProviders has %q with no build recipe in this test — add one", name)
 		}
-		client, err := SelectBrain(cfg, allCloudKeys())
+		client, err := SelectBrain(cfg, allCloudKeys(t))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -269,7 +270,7 @@ profile: sovereign
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg = cfg.WithKeys(allCloudKeys())
+	cfg = cfg.WithKeys(allCloudKeys(t))
 	if cfg.Profile != ProfileSovereign || len(cfg.Tiers) != 2 {
 		t.Fatalf("unexpected parse: %+v", cfg)
 	}

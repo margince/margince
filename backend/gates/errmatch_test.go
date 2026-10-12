@@ -5,12 +5,10 @@
 
 package gates
 
-// Postgres failures are classified by SQLSTATE/constraint name (the
-// storekit.UniqueViolation / CheckViolation helpers), never by message
-// text: an error-string substring match silently breaks on a locale
-// change, a driver upgrade, or an unrelated error that happens to
-// mention the same identifier — and it misclassifies infrastructure
-// faults as client faults. This gate fails any hand-written non-test
+// Postgres failures are classified by SQLSTATE or constraint name (the
+// storekit.UniqueViolation / CheckViolation helpers), never by message text,
+// which breaks on a locale change, a driver upgrade, or an unrelated error that
+// mentions the same identifier. This gate fails any hand-written non-test
 // file under internal/ that string-matches an error's Error() text.
 // Waivers are explicit, keyed by file:function, and each carries a
 // self-contained rationale; an unused waiver is itself a failure.
@@ -20,6 +18,7 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -61,10 +60,8 @@ func matchesErrorText(n ast.Node) (verb string, found bool) {
 		}
 		switch sel.Sel.Name {
 		case "Contains", "HasPrefix", "HasSuffix", "EqualFold":
-			for _, arg := range node.Args {
-				if errorTextCall(arg) {
-					return "strings." + sel.Sel.Name, true
-				}
+			if slices.ContainsFunc(node.Args, errorTextCall) {
+				return "strings." + sel.Sel.Name, true
 			}
 		}
 	case *ast.BinaryExpr:

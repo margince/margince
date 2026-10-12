@@ -5,9 +5,9 @@
 
 package gates
 
-// A record held under a statutory retention obligation is unavailable in
-// EVERY ordinary read path (A165/ADR-0114 §2): lists, timelines, search,
-// exports, embeddings, agent grounding. This gate derives the readers of the
+// A record held under a statutory retention obligation is unavailable in every
+// ordinary read path: lists, timelines, search, exports, embeddings, agent
+// grounding. This gate derives the readers of the
 // activity table from the tree and asks each how it excludes a held row,
 // because a reader that forgets is indistinguishable from one that never
 // existed — until a supervisory authority asks why an erased subject's
@@ -41,8 +41,11 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -268,6 +271,10 @@ var heldDimension = activityDimension{scopeMarkers: heldScopeMarkers, literalMar
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/captureorigin.go:writtenAboutByAnybodySQL":       "the mailbox purge asks whether anybody but capture wrote an activity linked to a candidate contact, and if so keeps the contact. Its whole output is that refusal; no activity column reaches the caller. It must see a held or archived activity: a note under a hold is still somebody's work on the contact, and reading it as absent would let a mail cleanup erase that contact. Cost: a held activity's author stamp decides whether its contact survives a purge",
+	"internal/modules/activities/committask.go:Store.CommitmentTaskWritten":     "asks whether a task was ever written under one commitment's evidence locator, and projects EXISTS. No activity column reaches the caller. It must see a held or archived task: an archived one is how a rep said the promise is not theirs, and reading a held one as absent would write the same promise again beside it. Cost: a held task's existence decides whether the extractor writes that promise again",
+	"internal/modules/contacts/untouchedguard.go:ColleagueWorkedOnSince":        "the undo's colleague-work test reads two keys of audit images — merged_into_id, and the subject an ai_feedback verdict names — only to compare them with the record being undone, and its whole output is one boolean that can only REFUSE the undo. No activity column or image value reaches the caller. It must see a held activity's rows: excluding them would read a colleague's work on a held message as absent and let the undo archive it. The cost is that a held activity's merge or correction trail decides whether its own undo is refused",
+	"internal/modules/capture/importrow.go:replayClaimIsProvenTx":               "the replay proof asks ONE question about the ARRIVING seat — can they prove anything about the row already holding this natural key — and its whole output is a boolean. No activity column reaches the caller or the connector: the statement is an EXISTS whose arms compare the incumbent against provenance the arriving seat supplied, so a held row is no more readable through it than without it. It MUST see a held or archived incumbent, and this is the direction that matters: reading a restricted row as absent would make the collision look unprovable, and the arriving mailbox would then file its own copy of a message the restriction or the erasure had just withheld — putting the content back under a second key. Excluding held rows here would therefore defeat a hold rather than honour one. The cost is that the subject, body and attachment digests of a held activity decide whether the seat presenting the same natural key is admitted as an importer of it, which is the comparison the proof exists to make and is spent only on a row that seat already named",
 	"internal/modules/privacy/erasure_selectors.go:deleteRequestSettlementsFor": "the erasure and anonymization writer selects activity IDs only to delete the subject's derived request settlements; it returns no activity content. A statutory correspondence floor preserves the message, not a model's conclusion about it, so excluding restricted rows would leave that conclusion behind. Both selectors exclude shared contacts and compose notTransitivelyHeld, preserving evidence under an explicit legal hold. Cost: a restricted activity's counterparty address and outbound recipient membership decide whether its derived settlement is erased",
 	"internal/compose/audiencerescope.go:AudienceRescopeGen.rescope":            "the audience-change consumer reads the thread key (content by the activity policy) and the capture owner of the ONE activity whose audience just moved — deliberately, as a system principal, because both are exactly what narrowing the derived models needs, to NARROW what other readers may see — excluding a held row here would leave a legal-hold conversation's derived signals workspace-visible, the exact disclosure the consumer exists to remove. The cost is that a held activity's thread key and owner id reach this system principal",
 	"internal/modules/privacy/auditaudienceboundary.go:ListAuditLog":            "the compliance read joins activity to evaluate ONE predicate — the audience arm the row's author set — and projects a single boolean from it. No activity column reaches the caller: the join's whole output is content_readable, which can only ever WITHHOLD an audit image, never reveal an activity. A held activity is therefore no more readable through this join than without it. The cost is that the audit IMAGE of a held activity stays readable to the admin, which is a pre-existing property of audit_log rather than of this join — audit_log is append-only and the hold is on the activity — and is filed rather than settled here, because making the compliance trail skip held rows is a decision about A165 and not a fix to the audience gap this join closes",
@@ -290,7 +297,7 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/recordrestore.go:RestoreSeam.readRow":                  "reads ONE audit row by its own id to decide what restoring it means, entity_type parameterized. The image it reads is the image the caller is already looking at on that record's history — this read reveals nothing the history did not — and the restore it drives writes to the target row rather than disclosing the trail. Cost: an activity's before/after passes through this seam when a caller restores one",
 	"internal/compose/humanprecedence.go:fieldOwnership.HumanOwnedConflicts": "asks which fields of ONE record a human last set, by looking for the field's key in an after-image. It projects no image: the statement's output is the set of field KEYS a human owns, so an activity's content cannot leave through it. Cost: an activity's after-image decides which of its own field names are reported as human-owned",
 	"internal/compose/superseded.go:moneyMovedUnderIt":                       "asks whether a later audit row moved money under the row being judged, reading the after-image to compare one amount. It projects a boolean, never the image. Cost: an activity's after-image is read to answer a question about the row it belongs to",
-	"internal/modules/contacts/ensurenamefill.go:displayNameSetByHumanTx":    "asks whether a human ever set this record's display name, by looking for the key in an after-image, and projects EXISTS. No image leaves it. Cost: an activity's after-image is read to answer a question about that same record's naming",
+	"internal/compose/superseded.go:childFieldsThatMoved":                    "asks which image keys the record holds outside its own columns and a later audit row last wrote to a different value, joining the record only to tell a column from a child table. It projects the field KEYS and never a row or an image, and a record type with no child-table fields yields none. Cost: an activity's after-image is read to answer a question about the row it belongs to",
 
 	"internal/modules/capture/sinkcancelmeeting.go:Sink.identityMayCancel": "a cancelled calendar event may fall back to its iCal identity only when NOTHING was captured under its own natural key, in any state. A held (restricted) or archived row under the key is still this event's meeting, and excluding it would read it as absent and let the fallback cancel a different row. One boolean leaves it and no activity column is read. The cost is that a held row's existence under a calendar key decides whether that event's cancellation stops there — a fact the cancelling connector already holds, since it named the key",
 	"internal/modules/capture/seatstanding.go:SeatHoldsActivityTx":         "one boolean leaves this: whether the acting seat captured the row, imported it, or sits on it. No activity column is projected, so a held row is no more readable through it than without it. It deliberately does not exclude archived or restricted rows, because the two writers that ask it re-check both under the row's own lock and a filter here would instead change replayClaimIsProvenTx's answer on an archived incumbent. The cost is that a held row's existence decides whether a seat that already holds it may act — a fact the caller established by naming the row",
@@ -362,7 +369,7 @@ func readsAnActivitysContent(text string) bool {
 // see rather than a route that carries nothing. A reader guarded only through
 // such a call reports red and is ratified by name, which is the direction that
 // asks a human instead of assuming one.
-func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim activityDimension) []string {
+func unguardedActivityReaders(graph map[string]*graphFunc, bindings map[string]map[string]bool, file *ast.File, dim activityDimension) []string {
 	var offenders []string
 	for _, decl := range file.Decls {
 		// The read is looked for in the declaration's whole text, not literal by
@@ -400,7 +407,7 @@ func unguardedActivityReaders(graph map[string]*graphFunc, file *ast.File, dim a
 			// counting a sibling's namer as evidence that the fragment is
 			// composed somewhere.
 			for _, fragment := range activityFragmentsIn(decl) {
-				for _, namer := range unguardedNamers(graph, fragment.names, dim) {
+				for _, namer := range unguardedNamers(graph, namesReaching(bindings, fragment.names), dim) {
 					offenders = append(offenders, namer+": "+gatekit.FirstLineOf(fragment.sql))
 				}
 			}
@@ -605,6 +612,89 @@ func activitySQLIn(value ast.Expr) (string, bool) {
 	return found, found != ""
 }
 
+// packageBindingNames maps each package-level var or const to the identifiers
+// its value names. It reads values as activityFragmentsIn does. A value-less
+// const spec repeats the one before it. Names pair with values by index when
+// their counts agree.
+func packageBindingNames(files []*ast.File) map[string]map[string]bool {
+	out := map[string]map[string]bool{}
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			gen, isGen := decl.(*ast.GenDecl)
+			if !isGen || (gen.Tok != token.VAR && gen.Tok != token.CONST) {
+				continue
+			}
+			var carried []ast.Expr
+			for _, spec := range gen.Specs {
+				value, isValue := spec.(*ast.ValueSpec)
+				if !isValue {
+					continue
+				}
+				values := value.Values
+				switch {
+				case len(values) > 0:
+					carried = values
+				case gen.Tok == token.CONST:
+					values = carried
+				}
+				for i, name := range value.Names {
+					bound := values
+					if len(values) == len(value.Names) {
+						bound = values[i : i+1]
+					}
+					out[name.Name] = identifiersIn(bound)
+				}
+			}
+		}
+	}
+	return out
+}
+
+// identifiersIn collects the identifiers the expressions name.
+func identifiersIn(exprs []ast.Expr) map[string]bool {
+	named := map[string]bool{}
+	for _, expr := range exprs {
+		ast.Inspect(expr, func(node ast.Node) bool {
+			if ident, isIdent := node.(*ast.Ident); isIdent {
+				named[ident.Name] = true
+			}
+			return true
+		})
+	}
+	return named
+}
+
+// namesReaching widens a fragment's names to every package-level binding that
+// names one of them, at any depth. A function can run the fragment through
+// another constant (`columns = "id, " + fragment`). It assembles the same
+// query as one that names the fragment, so it is a namer too.
+func namesReaching(bindings map[string]map[string]bool, names []string) []string {
+	reached := map[string]bool{}
+	for _, name := range names {
+		reached[name] = true
+	}
+	for grew := true; grew; {
+		grew = false
+		for binding, named := range bindings {
+			if reached[binding] {
+				continue
+			}
+			for name := range named {
+				if reached[name] {
+					reached[binding], grew = true, true
+					break
+				}
+			}
+		}
+	}
+	out := make([]string, 0, len(reached))
+	for name := range reached {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
 // unguardedNamers are the functions that assemble a query from this fragment
 // and reach no exclusion, sorted so a failure reads the same on every run.
 //
@@ -618,6 +708,11 @@ func unguardedNamers(graph map[string]*graphFunc, names []string, dim activityDi
 	for key, entry := range graph {
 		mentions := false
 		for _, name := range names {
+			// A local of the same name is the function's own value, not the
+			// package binding that carries the fragment.
+			if entry.shadowed[name] {
+				continue
+			}
 			if entry.reads[name] || entry.calls[name] {
 				mentions = true
 			}
@@ -654,6 +749,7 @@ func TestEveryReaderOfTheActivityTableExcludesRestrictedRows(t *testing.T) {
 	defer restrictedReadersAdmitted.AssertAllMatched(t)
 	subjects := activityReaderScope.Files(t)
 	graphs := map[string]map[string]*graphFunc{}
+	bindings := map[string]map[string]map[string]bool{}
 	for _, src := range subjects {
 		dir := path.Dir(src.Path)
 		if _, done := graphs[dir]; !done {
@@ -663,8 +759,9 @@ func TestEveryReaderOfTheActivityTableExcludesRestrictedRows(t *testing.T) {
 			// alone would follow the call, find no body, and report exactly like
 			// a helper that excludes nothing.
 			graphs[dir] = packageCallGraph(t, dir)
+			bindings[dir] = packageBindingNames(parsePackageFiles(t, dir))
 		}
-		for _, offender := range unguardedActivityReaders(graphs[dir], src.File, heldDimension) {
+		for _, offender := range unguardedActivityReaders(graphs[dir], bindings[dir], src.File, heldDimension) {
 			if restrictedReadersAdmitted.Waived(t, src.Path+":"+strings.SplitN(offender, ":", 2)[0]) {
 				continue
 			}
@@ -792,5 +889,45 @@ func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
 				t.Errorf("readsAnActivitysAuditImage = %v, want %v for:\n%s", got, c.want, c.sql)
 			}
 		})
+	}
+}
+
+// A fragment that reaches its query through another constant is still judged
+// at the function that runs it. The planted package names the activity
+// fragment directly only in a guarded function, and runs it unguarded through
+// other constants. Following direct names alone reads that as clean. A local
+// that shadows an alias, and a sibling bound beside the alias, are not namers.
+func TestARestrictedReaderCensusFollowsAFragmentThroughAConstant(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	planted := filepath.Join(dir, "planted.go")
+	source := "package planted\n\n" +
+		"const sourceProbe = `EXISTS (SELECT 1 FROM activity a WHERE a.id = ev.source_id)`\n\n" +
+		"const columns = `id, ` + sourceProbe\n\n" +
+		"const (\n\taliasProbe = sourceProbe\n\trepeated\n)\n\n" +
+		"const used, unrelated = sourceProbe, `SELECT 1`\n\n" +
+		"func guarded(q func(string)) { q(`SELECT ` + sourceProbe + ` AND a.restricted_at IS NULL`) }\n\n" +
+		"func unguarded(q func(string)) { q(`SELECT ` + columns + ` FROM deal_stage_evidence ev`) }\n\n" +
+		"func viaRepeated(q func(string)) { q(repeated) }\n\n" +
+		"func viaUsed(q func(string)) { q(used) }\n\n" +
+		"func viaUnrelated(q func(string)) { q(unrelated) }\n\n" +
+		"func shadowing(q func(string)) { columns := `SELECT 1`; q(columns) }\n"
+	if err := os.WriteFile(planted, []byte(source), 0o600); err != nil {
+		t.Fatalf("planting the package: %v", err)
+	}
+	file, err := gatekit.ParseFile(planted, 0)
+	if err != nil {
+		t.Fatalf("parsing the planted package: %v", err)
+	}
+	offenders := unguardedActivityReaders(packageCallGraph(t, dir),
+		packageBindingNames(parsePackageFiles(t, dir)), file, heldDimension)
+	for namer, want := range map[string]bool{
+		"unguarded": true, "viaRepeated": true, "viaUsed": true,
+		"guarded": false, "viaUnrelated": false, "shadowing": false,
+	} {
+		got := slices.ContainsFunc(offenders, func(o string) bool { return strings.HasPrefix(o, namer+":") })
+		if got != want {
+			t.Errorf("%s reported = %v, want %v (offenders %v)", namer, got, want, offenders)
+		}
 	}
 }

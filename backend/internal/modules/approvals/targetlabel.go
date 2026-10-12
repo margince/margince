@@ -83,3 +83,12 @@ func targetLabel(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) *str
 	}
 	return label
 }
+
+// stagedTargetLabel is the caption a proposal is staged under: the caller's
+// label when the target table has none, else the target row's own name.
+func stagedTargetLabel(ctx context.Context, tx pgx.Tx, in StageInput) *string {
+	if in.TargetLabel != nil && strings.TrimSpace(*in.TargetLabel) != "" {
+		return in.TargetLabel
+	}
+	return targetLabel(ctx, tx, in.TargetType, in.TargetID)
+}

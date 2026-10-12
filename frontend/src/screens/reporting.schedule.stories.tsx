@@ -1,13 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen } from "storybook/test";
 import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import { reportingSchedule } from "./reporting.scenarios";
 import { ReportingScheduleDialog } from "./reporting.schedule";
 import {
+  reportingStoryCatalog,
   reportingStoryReport,
   reportingStoryRoutes,
 } from "./reporting.story-fixtures";
-import { installFetchStub, StoryProviders } from "./story-utils";
+import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Schedule report" };
 export default meta;
@@ -33,6 +35,9 @@ export const Default: Story = {
       </StoryProviders>
     );
   },
+  play: async () => {
+    await screen.findByRole("dialog");
+  },
 };
 
 export const MonthlyPaused: Story = {
@@ -49,4 +54,37 @@ export const MonthlyPaused: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const RetentionRequired: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/metrics": () =>
+        jsonResponse({ ...reportingStoryCatalog, schedule_ready: false }),
+    });
+    return (
+      <StoryProviders>
+        <Preview />
+      </StoryProviders>
+    );
+  },
+};
+
+export const ReadinessLoading: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/metrics": () => new Promise<Response>(() => undefined),
+    });
+    return (
+      <StoryProviders>
+        <Preview />
+      </StoryProviders>
+    );
+  },
+};
+export const ReadinessLoadingDark: Story = {
+  ...ReadinessLoading,
+  globals: { theme: "dark" },
 };

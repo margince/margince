@@ -23,11 +23,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -315,7 +316,7 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 		  WHERE id = $1`, old)
 	// Enough newer stagings, decided outside the window, to fill any page the
 	// lane would ask for.
-	for i := 0; i < doneLaneWidth+4; i++ {
+	for i := range doneLaneWidth + 4 {
 		id := stageFor(t, e, svc, contact, fmt.Sprintf("An older act %d", i))
 		e.WsExec(t, `UPDATE approval
 			    SET status = 'approved', decided_by_system = true,
@@ -326,6 +327,35 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 	day := assembleFeed(e.Admin(), t, e, now)
 	if got := titlesOn(day.DoneForYou); len(got) != 1 || got[0] != "Filed a message under Riverty" {
 		t.Fatalf("the done-for-you lane = %v, want this morning's act", got)
+	}
+}
+
+// A handled receipt names the record it acted on, read under the reader's
+// grants through the shipped wiring, so the Worklist's Record column can link it.
+func TestAHandledReceiptNamesItsRecord(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Now().UTC()
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
+	if err != nil {
+		t.Fatalf("creating the target: %v", err)
+	}
+	svc := approvals.NewService(e.DB())
+	id := stageFor(t, e, svc, contact, "Sent the follow-up")
+	e.WsExec(t, `UPDATE approval
+		    SET status = 'approved', decided_by_system = true, decided_at = now()
+		  WHERE id = $1`, id)
+
+	feed := newAttentionService(e.Pool, svc, func() time.Time { return now })
+	handled, err := feed.HandledForYou(e.Admin())
+	if err != nil {
+		t.Fatalf("reading the handled receipts: %v", err)
+	}
+	if len(handled.Receipts) != 1 {
+		t.Fatalf("handled %d receipts, want the one act", len(handled.Receipts))
+	}
+	subject := handled.Receipts[0].Subject
+	if subject == nil || subject.Label == nil || *subject.Label != "Anna Weber" {
+		t.Errorf("the receipt's subject = %+v, want the contact named Anna Weber", subject)
 	}
 }
 
@@ -447,10 +477,8 @@ func TestThePlannedLaneCapKeepsTheMostOverdueNotTheNewestLogged(t *testing.T) {
 		t.Fatalf("the lane carries %d cards, want the cap of twelve", len(day.Planned))
 	}
 	got := titlesOn(day.Planned)
-	for _, title := range got {
-		if title == stale {
-			return
-		}
+	if slices.Contains(got, stale) {
+		return
 	}
 	t.Fatalf("the lane dropped the most overdue promise behind twelve tasks filed after it: %v", got)
 }

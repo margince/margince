@@ -5,7 +5,8 @@
 
 package gates
 
-// The contract's refusal kinds are exactly the kinds the engine constructs.
+// The contract's refusal kinds are the kinds the engine constructs, no more and
+// no fewer.
 //
 // A client branches on `details.kind`. A kind the engine builds and the enum
 // lacks reaches a client that cannot name it; a kind the enum carries and

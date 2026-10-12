@@ -101,6 +101,7 @@ function AddToShortlistDialog({
     <ConfirmModal
       open
       onClose={onClose}
+      intent="form"
       title={t("lists.addToShortlist")}
       confirmLabel={t("lists.add")}
       confirmDisabled={

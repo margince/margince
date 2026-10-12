@@ -99,6 +99,10 @@ func sqlLiterals(t *testing.T, path string) []string {
 var erasureCascadeFiles = []string{
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/erasure.go",
+	// The per-reader brief cache, which both acts purge: the row holds
+	// generated prose about the subject and no cascade reaches it while the
+	// contact row survives anonymized.
+	"internal/modules/privacy/erasurebriefcache.go",
 	// The subject's TIMELINE and everything derived from it — split out of
 	// erasure.go when that file crossed the size cap. It is the same Art. 17
 	// transaction, so it counts here; leaving it off would let a table look
@@ -109,6 +113,9 @@ var erasureCascadeFiles = []string{
 	// this cascade — and a spelling per arm is how the cascade came to have
 	// none at all.
 	"internal/modules/privacy/activityidentityretire.go",
+	// The duplicate-pair evidence snapshot, which holds the subject's name,
+	// address and phone number as the detector read them.
+	"internal/modules/privacy/dedupeevidencescrub.go",
 	// The subject's traces in the relationship graph — the interaction
 	// participants, the imported LinkedIn ghosts, and the projection folded out
 	// of both. Same Art. 17 transaction, its own file for the same size reason
@@ -154,6 +161,9 @@ var erasureCascadeFiles = []string{
 	// here so conversation_claim cannot look uncovered the moment its purge
 	// moves file.
 	"internal/modules/privacy/erasure_claims.go",
+	// The quotations a deal's stage evidence holds of the messages emptied
+	// above. Same transaction, its own file for the same both-engines reason.
+	"internal/modules/privacy/erasure_stageevidence.go",
 	"internal/modules/privacy/deliveries.go",
 	// The subject's RESTRICTION record and the deal-room seats their address
 	// holds. Both are executed by EraseContact's own transaction and both write
@@ -162,6 +172,12 @@ var erasureCascadeFiles = []string{
 	// from it.
 	"internal/modules/privacy/erasure_restrict.go",
 	"internal/modules/privacy/erasuredealroom.go",
+	// What colleagues wrote about the subject while asking each other for an
+	// introduction. Its own file because the table is the introductions module's,
+	// and on this list because the row survives the cascade that was meant to
+	// reach it: intro_request's contact FK cascades on DELETE, and an erasure
+	// anonymizes the contact instead.
+	"internal/modules/privacy/erasureintroductions.go",
 	// The subject's own columns, and the strings the anonymize-in-place writes
 	// over them. Reached from the same transaction and each executing SQL of
 	// its own.
@@ -183,6 +199,7 @@ var erasureCascadeFiles = []string{
 var reachedButNotCascade = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
 	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
+	"internal/modules/privacy/floorpolicy.go":          "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
 	"internal/modules/privacy/retentionscope.go":       "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
 	"internal/modules/privacy/erasure_tombstone.go":    "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
 	"internal/modules/privacy/scheduledsends.go":       "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",
@@ -216,6 +233,11 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
 	"internal/modules/privacy/retentionactions.go",
+	// The lead half of the same sweep — anonymizeLead and the communication
+	// record it clears. Its DELETE of communication_override by lead_id is the
+	// statement that satisfies that table's lead retentionPurge predicate; the
+	// contact arm in retentionactions.go cannot reach a row keyed to a lead.
+	"internal/modules/privacy/retention_leadrecord.go",
 	// The two executors that DELETE a row rather than scrub one — the ai_call
 	// payload and the stored provider original. They left retentionactions.go
 	// when it crossed the length cap, and this list is what noticed, exactly as
@@ -240,6 +262,9 @@ var retentionSweepFiles = []string{
 	// list is what would otherwise have reported the sweep as having stopped
 	// deleting them.
 	"internal/modules/privacy/retentionconsent.go",
+	// The activity/erase executor, which left retentionactions.go when it
+	// crossed the length cap.
+	"internal/modules/privacy/activityerase.go",
 }
 
 // sqlStatements splits one Go string literal into the statements it holds. A

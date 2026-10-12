@@ -32,11 +32,8 @@ import (
 // opposite reason (embeddriftsweep.go): nothing but its own tick enqueues it,
 // so there is no waiting row for a worker to answer.
 func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
-	// The deep read is the one kind whose timeout the file cannot state,
-	// because the crawl wall it is built from is an operator's (deepReadTimeout).
-	addDeclaredWorkerWithTimeout[SiteDeepReadArgs](reg,
-		newSiteDeepReadWorker(pool, cfg.DeepReadBrain, cfg.DeepReadFactBrain, cfg.DeepReadTriageBrain, log, cfg.DeepReadCaps, cfg.Blobstore),
-		deepReadTimeout(cfg.DeepReadCaps))
+	addDeclaredWorker[SiteDeepReadArgs](reg,
+		newSiteDeepReadWorker(pool, cfg.DeepReadBrain, cfg.DeepReadFactBrain, cfg.DeepReadTriageBrain, log, cfg.Blobstore))
 	addDeclaredWorker[TranscriptProposeArgs](reg, newTranscriptProposeWorker(pool, cfg.TranscriptProposeBrain, log))
 	// Registered only WITH a lane, unlike its neighbour: the contract declares
 	// registers_nothing without one, because nobody is waiting on a row this

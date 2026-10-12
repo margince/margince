@@ -44,16 +44,15 @@ import (
 // module's writes are not recorded at all", so the rationale has to explain
 // where the history actually lives.
 var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
-	// The restore-drill ledger IS the history. A drill row records who ran a
-	// rehearsal, what it restored to, when it started, when it finished and
-	// what it proved — the whole of what an audit row beside it would say,
-	// written by the act itself rather than about it. The table is append-only
-	// in intent and in enforcement: Begin inserts, Finish closes a running
-	// drill exactly once (the UPDATE matches on outcome = 'running', so a
-	// second close changes nothing and answers not-found), and nothing else
-	// mutates a row. There is no before-image to keep, because no field a
-	// reader relies on is ever overwritten.
-	"internal/modules/continuity": "the drill ledger IS the evidence record; its rows are append-only and closed once, so an audit row beside them would restate what the row already says",
+	// The intent ledger holds no history because it holds no state worth one. A row
+	// says "bytes may exist at this key and no row names them yet". On the ordinary
+	// path it lives for the milliseconds between a put and the transaction that
+	// adopts it; on the failure path it stands until the sweep adjudicates it a
+	// grace period later, which is the whole reason it is written. Neither is a
+	// state change worth an audit row: what happened to the OBJECT is audited where
+	// it matters, by the module that writes the owning row, and the reaper's delete
+	// is the sweep's own act under the system principal.
+	"internal/platform/storedobjects": "a row records that a put is in flight; it is retired by the transaction that adopts the bytes, or adjudicated by the sweep when none ever does. The owning row's write is audited by the module that makes it, and the reaper's delete by the sweep",
 
 	// The audit writer itself. It owns audit_log, event_outbox, system_log and
 	// field_provenance, and auditing its own writes is circular — the audit row

@@ -10,9 +10,17 @@ import (
 	"strings"
 )
 
-// e164 is the wire form the schema documents for contact_phone: "+",
-// a non-zero country digit, 8–15 digits total.
-var e164 = regexp.MustCompile(`^\+[1-9][0-9]{7,14}$`)
+// E164Pattern is the wire form the schema documents for contact_phone: "+", a
+// non-zero country digit, 8–15 digits total.
+//
+// Exported because contact_phone.phone carries the same rule as a CHECK, and the
+// two must be ONE rule rather than two spellings of it — a database that admits
+// what this refuses puts a row in the table that dedupe cannot match, so one
+// contact is created twice without anything saying so.
+// TestTheContactPhoneCheckIsThisPattern holds the two equal in both directions.
+const E164Pattern = `^\+[1-9][0-9]{7,14}$`
+
+var e164 = regexp.MustCompile(E164Pattern)
 
 // Phone is an E.164-normalized number. Separators are formatting, so
 // parsing strips them; a leading 00 is the international-dialing

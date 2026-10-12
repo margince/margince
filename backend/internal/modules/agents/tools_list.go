@@ -78,7 +78,7 @@ var listRecordTypes = []string{
 // required rather than optional — every deployment has stores, so a missing one
 // is a wiring defect, not a configuration.
 func RegisterListTool(r *Registry, p datasource.SystemOfRecordProvider, vocabulary FilterVocabulary) {
-	r.Register(listRecords{p: p, filters: bindableFilters(vocabulary)})
+	r.Register(listRecords{p: p, filters: bindableFilters(vocabulary), name: r.seats})
 }
 
 // bindableFilters intersects the contract's declared filters with the ones the
@@ -100,6 +100,7 @@ type listRecords struct {
 	p datasource.SystemOfRecordProvider
 	// filters is the published vocabulary per record type, already intersected.
 	filters map[string][]listFilter
+	name    SeatNamer
 }
 
 func (t listRecords) Spec() mcp.ToolSpec {
@@ -277,7 +278,7 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(searchResult(ctx, res))
+	return json.Marshal(searchResult(ctx, t.name, res))
 }
 
 // pageLimit reads the page size, telling an ABSENT argument from an explicit

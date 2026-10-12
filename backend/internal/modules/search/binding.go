@@ -94,7 +94,14 @@ func (s *Store) ReindexNeeded(ctx context.Context, configuredIdentity string) (b
 	if err != nil {
 		return false, err
 	}
-	return pending > 0, nil
+	return ReindexRequired(configuredIdentity, populated, pending), nil
+}
+
+// ReindexRequired is ReindexNeeded's rule over figures the caller already
+// holds, so a status read that has the backlog count does not scan for it a
+// second time.
+func ReindexRequired(configuredIdentity, populatedIdentity string, pending int) bool {
+	return configuredIdentity != populatedIdentity || pending > 0
 }
 
 // ReembedClaim is one attempt to take the marker for a new run.

@@ -39,6 +39,7 @@ func (f *fakeCallStore) EnsureConfig(_ context.Context, snap ConfigSnapshot) err
 
 // stubClient returns a fixed response or error.
 type stubClient struct {
+	model.NoHealth
 	resp model.Response
 	err  error
 }
@@ -423,7 +424,7 @@ func TestCompleteEmitsSlog(t *testing.T) {
 	}
 
 	// Find the "ai.call" message
-	var logEntry map[string]interface{}
+	var logEntry map[string]any
 	for _, line := range lines {
 		if err := json.Unmarshal([]byte(line), &logEntry); err != nil {
 			continue
