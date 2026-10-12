@@ -39,6 +39,12 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 		httperr.Write(w, r, err)
 		return
 	}
+	// A missing or null price decodes to 0, which would sell the product free.
+	if price, _ := httperr.PresentField(r, "unit_price_minor"); price == nil {
+		httperr.Write(w, r, httperr.Validation("unit_price_minor", "required",
+			"unit_price_minor is required: send the price in minor units, or 0 for a free item"))
+		return
+	}
 	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
 	in := CreateProductInput{
 		Name:           req.Name,
