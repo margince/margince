@@ -135,6 +135,11 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 			}
 			if p.tally(object, row, outcome, problem) {
 				writers.links.markPending(object, row.ExternalID)
+				if object == migration.ObjectCompany {
+					fields := textFields(row.Fields)
+					creates := outcome == predictCreate || outcome == predictCollides
+					writers.links.markNamesPending(creates, fields[fieldDisplayName], fields[fieldLegalName])
+				}
 			}
 		}
 		if len(rows) < importPredictPage {

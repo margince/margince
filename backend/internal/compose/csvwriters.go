@@ -65,6 +65,9 @@ type csvWriters struct {
 	// companyRefColumn is the file's column mapped to company_ref, empty when
 	// none is; onBrokenLink decides a row whose ref finds nothing.
 	companyRefColumn, onBrokenLink string
+	// companyNameColumn is the column mapped to company_name in a ZIP run. It is
+	// empty in a single CSV, which lands the row whatever its employer name finds.
+	companyNameColumn string
 	// authors caches the seat each author cell resolves to, per run.
 	authors authorSeats
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
@@ -87,18 +90,23 @@ const skipReasonDuplicateEmail = "duplicate_email"
 // runOptions is what a run decides for every part alike.
 type runOptions struct {
 	SourceName, OnDuplicate, ContextTag, OnBrokenLink string
+	// FromZip is a run staged from a ZIP, whose every link follows OnBrokenLink.
+	FromZip bool
 }
 
 // runOptionsOf reads the run-wide decisions off a stored mapping.
 func runOptionsOf(m migration.RunMapping) runOptions {
-	return runOptions{SourceName: m.SourceName, OnDuplicate: m.OnDuplicate, ContextTag: m.ContextTag, OnBrokenLink: m.OnBrokenLink}
+	return runOptions{
+		SourceName: m.SourceName, OnDuplicate: m.OnDuplicate, ContextTag: m.ContextTag,
+		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0,
+	}
 }
 
 // newCSVWriters builds the writer of one part: one object, one file.
 func newCSVWriters(
 	db *database.DB, runID migration.RunID, part migration.PartMapping, run runOptions, links *linkResolver,
 ) *csvWriters {
-	return &csvWriters{
+	w := &csvWriters{
 		pool: db.Pool(),
 		// An imported contact can take a lead over, which carries the lead's
 		// stops and consent links (see newCounterpartyStore).
@@ -122,6 +130,10 @@ func newCSVWriters(
 		nativeIDs:  map[string]ids.UUID{},
 		authors:    authorSeats{},
 	}
+	if run.FromZip {
+		w.companyNameColumn = columnFor(part.Fields, csvEmployerName)
+	}
+	return w
 }
 
 // provenanceOf is the imported row's source stamp: <source>:<object>:<id>, the
@@ -174,7 +186,7 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 // since changed, unchanged when it has not. A row whose company_ref finds
 // nothing is skipped or lands with a warning, as the run's policy says.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
-	link, err := w.companyRefOf(ctx, row)
+	link, err := w.linkProblemOf(ctx, row)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
@@ -205,7 +217,11 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 		if target.reason != "" {
 			return migration.EnsureResult{Skipped: true, SkipReason: target.reason}, nil
 		}
-		return w.reconcile(ctx, target.id, row)
+		reconciled, err := w.reconcile(ctx, target.id, row)
+		if err == nil && !reconciled.Skipped {
+			w.links.markLanded(object, row.ExternalID, target.id)
+		}
+		return reconciled, err
 	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
 	if errors.Is(err, errBoundRecordArchived) {

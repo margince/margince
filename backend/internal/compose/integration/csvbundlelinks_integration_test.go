@@ -176,3 +176,109 @@ func TestACompanyTheCallerCannotSeeIsNotFoundByIDOrByName(t *testing.T) {
 		t.Fatalf("created = %d, want every row skipped", report.Disposition.Created)
 	}
 }
+
+// A company row naming its record by id also carries a ref. A contact of the
+// same upload linking to that ref is created and linked by the commit, as the
+// test run said it would be.
+func TestAContactLinksToACompanyTheZipNamesByID(t *testing.T) {
+	e := setupImportApp(t)
+	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
+	files := map[string]string{
+		"companies.csv": "ref,id,name\nCO-7," + named + ",Named Works AG\n",
+		"contacts.csv":  "ref,email,name,company\nP-1,ida@named.example,Ida,CO-7\n",
+	}
+	parts := append([]AnyMap{
+		{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "id": "id", "name": "display_name"}},
+	}, contactRefParts()...)
+	run := stageBundle(t, e, uploadZip(t, e, "n.zip", zipBytes(t, files)).SourceRef, "n", parts)
+	predicted := readImportReport(t, e, run.ID)
+	if predicted.Links == nil || predicted.Links.Offered != 1 || len(predicted.Links.Unresolved) != 0 || hasIssue(predicted, "broken_link", "CO-7") {
+		t.Fatalf("dry run = %+v, want the link predicted and no broken link", predicted)
+	}
+	approveAndRead(t, e, run.ID)
+	committed := readImportReport(t, e, run.ID)
+	if committed.Disposition.Created != 1 || committed.Disposition.Updated != 1 || hasIssue(committed, "broken_link", "CO-7") {
+		t.Fatalf("committed = %+v, want the contact created, the company updated and no broken link", committed)
+	}
+	if employer := employerOf(t, e, "ida@named.example"); employer != "Named Works AG" {
+		t.Fatalf("employer = %q, want the company the row named by id", employer)
+	}
+}
+
+// In a ZIP run the employer-name column follows the run's broken-link policy as
+// company_ref does. A single CSV still lands the row and reports only the link.
+func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
+	nameParts := []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
+		"ref": "ref", "email": "email", "name": "full_name", "company": "company_name",
+	}}}
+	for _, policy := range []string{"skip_row", "drop_link"} {
+		t.Run(policy, func(t *testing.T) {
+			e := setupImportApp(t)
+			files := map[string]string{"contacts.csv": "ref,email,name,company\nP-1,lu@" + policy + ".example,Lu,Nowhere Ltd\n"}
+			var run importRunDTO
+			if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+				"connector": "csv", "source_ref": uploadZip(t, e, "c.zip", zipBytes(t, files)).SourceRef,
+				"source_name": "c", "on_broken_link": policy, "parts": nameParts,
+			}, nil, &run); status != http.StatusAccepted {
+				t.Fatalf("stage → %d, want 202", status)
+			}
+			wantKind, wantCreated := "broken_link", 0
+			if policy == "drop_link" {
+				wantKind, wantCreated = "dropped_link", 1
+			}
+			report := readImportReport(t, e, run.ID)
+			if report.Disposition.Created != wantCreated || !hasIssue(report, wantKind, "Nowhere Ltd") {
+				t.Fatalf("report = %+v, want %d created and a %s issue naming Nowhere Ltd", report, wantCreated, wantKind)
+			}
+			approveAndRead(t, e, run.ID)
+			if committed := readImportReport(t, e, run.ID); committed.Disposition.Created != wantCreated || !hasIssue(committed, wantKind, "Nowhere Ltd") {
+				t.Fatalf("committed = %+v, want the commit to do what the dry run said", committed)
+			}
+		})
+	}
+	t.Run("single csv", func(t *testing.T) {
+		e := setupImportApp(t)
+		profile, status := uploadCSV(t, e, "contact", "Email,Name,Company\nlu@single.example,Lu,Nowhere Ltd\n")
+		if status != http.StatusOK {
+			t.Fatalf("upload → %d, want 200", status)
+		}
+		run, status := createRunWithMapping(t, e, "contact", profile.SourceRef,
+			map[string]string{"Email": "email", "Name": "full_name", "Company": "company_name"})
+		if status != http.StatusAccepted {
+			t.Fatalf("stage → %d, want 202", status)
+		}
+		report := readImportReport(t, e, run.ID)
+		if report.Disposition.Created != 1 || len(report.Issues) != 0 || report.Links == nil || len(report.Links.Unresolved) != 1 {
+			t.Fatalf("report = %+v, want the row created, no issue and the link unresolved", report)
+		}
+	})
+}
+
+// A name only a company of the same ZIP wears resolves in the test run as at
+// commit. The default skip_row then keeps the contact.
+func TestAContactNamesACompanyOfTheSameZip(t *testing.T) {
+	e := setupImportApp(t)
+	files := map[string]string{
+		"companies.csv": "ref,name\nCO-1,Zipped Works\n",
+		"contacts.csv":  "ref,email,name,company\nP-1,mo@zipped.example,Mo,zipped  works\n",
+	}
+	parts := []AnyMap{
+		{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "name": "display_name"}},
+		{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
+			"ref": "ref", "email": "email", "name": "full_name", "company": "company_name",
+		}},
+	}
+	run := stageBundle(t, e, uploadZip(t, e, "z.zip", zipBytes(t, files)).SourceRef, "z", parts)
+	predicted := readImportReport(t, e, run.ID)
+	if predicted.Disposition.Created != 2 || hasIssue(predicted, "broken_link", "zipped  works") ||
+		predicted.Links == nil || predicted.Links.Offered != 1 || len(predicted.Links.Unresolved) != 0 {
+		t.Fatalf("dry run = %+v, want both rows created and the link predicted", predicted)
+	}
+	approveAndRead(t, e, run.ID)
+	if committed := readImportReport(t, e, run.ID); committed.Disposition.Created != 2 {
+		t.Fatalf("committed = %+v, want both rows created", committed)
+	}
+	if employer := employerOf(t, e, "mo@zipped.example"); employer != "Zipped Works" {
+		t.Fatalf("employer = %q, want the company of the same ZIP", employer)
+	}
+}

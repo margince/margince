@@ -17,7 +17,10 @@ import (
 // only the step it is about.
 func newTestLinkResolver(t *testing.T) *linkResolver {
 	t.Helper()
-	r := &linkResolver{pending: map[linkKey]bool{}, cache: map[linkKey]linkAnswer{}}
+	r := &linkResolver{
+		pending: map[linkKey]bool{}, landed: map[linkKey]ids.UUID{}, cache: map[linkKey]linkAnswer{},
+		names: map[string]pendingName{},
+	}
 	none := func(context.Context, string, string) (linkAnswer, error) { return linkAnswer{}, nil }
 	r.byBinding, r.byNaturalKey, r.byID = none, none, none
 	return r
@@ -44,15 +47,18 @@ func TestARefKeepsItsCase(t *testing.T) {
 	}
 }
 
-func TestAContactLinkFoldsTheEmail(t *testing.T) {
+// A row of this run that named its record by id answers its ref with that
+// record, before the identity map is asked.
+func TestARowNamedByIDAnswersItsRef(t *testing.T) {
 	r := newTestLinkResolver(t)
-	var asked string
-	r.byNaturalKey = func(_ context.Context, _ string, key string) (linkAnswer, error) {
-		asked = key
-		return linkAnswer{Found: true}, nil
+	r.byBinding = func(context.Context, string, string) (linkAnswer, error) {
+		t.Fatal("a ref this run landed must answer before the identity map is read")
+		return linkAnswer{}, nil
 	}
-	if _, err := r.resolve(context.Background(), "contact", "Jo@Acme.COM"); err != nil || asked != "jo@acme.com" {
-		t.Fatalf("asked %q, want the folded address", asked)
+	id := ids.NewV7()
+	r.markLanded("company", " CO-7", id)
+	if got, err := r.resolve(context.Background(), "company", "CO-7"); err != nil || !got.Found || got.ID != id {
+		t.Fatalf("got %+v err %v, want the record the row named", got, err)
 	}
 }
 
@@ -116,7 +122,7 @@ func TestABrokenCompanyRefSkipsOrWarnsByPolicy(t *testing.T) {
 		string(crmcontracts.ImportOnBrokenLinkDropLink): {false, migration.ProblemDroppedLink},
 	} {
 		w := &csvWriters{links: newTestLinkResolver(t), companyRefColumn: "company", onBrokenLink: policy}
-		got, err := w.companyRefOf(context.Background(), row)
+		got, err := w.linkProblemOf(context.Background(), row)
 		if err != nil || got.problem == nil {
 			t.Fatalf("%q: got %+v err %v, want a problem", policy, got, err)
 		}
@@ -134,8 +140,33 @@ func TestACompanyRefThatResolvesIsNoProblem(t *testing.T) {
 	r := newTestLinkResolver(t)
 	r.markPending(migration.ObjectCompany, "CO-1")
 	w := &csvWriters{links: r, companyRefColumn: "company"}
-	got, err := w.companyRefOf(context.Background(), migration.Row{Fields: map[string]any{csvTargetCompanyRef: "CO-1"}})
+	got, err := w.linkProblemOf(context.Background(), migration.Row{Fields: map[string]any{csvTargetCompanyRef: "CO-1"}})
 	if err != nil || got.skip || got.problem != nil {
 		t.Fatalf("got %+v err %v, want no problem", got, err)
+	}
+}
+
+// A name only a company of this upload wears is pending. A created company
+// sharing a name with one in the estate makes the name ambiguous, as at commit.
+// An updated one stays the name's one holder.
+func TestACompanyNameOfThisUploadCountsAsOneMoreHolder(t *testing.T) {
+	estate := employerCandidate{id: ids.From[ids.CompanyKind](ids.NewV7()), count: 1}
+	r := newTestLinkResolver(t)
+	r.markNamesPending(true, "New  Co", "new co")
+	r.markNamesPending(true, "Twin AG")
+	r.markNamesPending(false, "Kept Ltd")
+	for _, tc := range []struct {
+		name string
+		hit  employerCandidate
+		want linkAnswer
+	}{
+		{"new co", employerCandidate{}, linkAnswer{Pending: true}},
+		{"twin ag", estate, linkAnswer{Reason: ambiguousEmployerReason("twin ag")}},
+		{"kept ltd", estate, linkAnswer{Pending: true}},
+		{"elsewhere", estate, linkAnswer{ID: estate.id.UUID, Found: true}},
+	} {
+		if got := employerAnswer(r.names[tc.name].over(tc.hit), tc.name); got != tc.want {
+			t.Fatalf("%s: got %+v, want %+v", tc.name, got, tc.want)
+		}
 	}
 }

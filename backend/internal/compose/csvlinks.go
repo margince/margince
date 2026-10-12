@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -55,10 +54,16 @@ type linkResolver struct {
 	identities   *migration.RunStore
 	pool         *pgxpool.Pool
 	pending      map[linkKey]bool
-	cache        map[linkKey]linkAnswer
+	// landed holds the rows of this run that named their record by id. They
+	// get no identity row, because undo archives every record the map names.
+	landed map[linkKey]ids.UUID
+	cache  map[linkKey]linkAnswer
 	// employers caches one answer per folded company name, bounded by the
 	// names the file carries rather than by the estate.
 	employers map[string]employerCandidate
+	// names holds, per folded company name, the rows of this upload the dry
+	// run predicts will land under it.
+	names map[string]pendingName
 
 	byBinding, byNaturalKey, byID linkStep
 }
@@ -69,8 +74,10 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 		identities:   migration.NewRunStore(db),
 		pool:         db.Pool(),
 		pending:      map[linkKey]bool{},
+		landed:       map[linkKey]ids.UUID{},
 		cache:        map[linkKey]linkAnswer{},
 		employers:    map[string]employerCandidate{},
+		names:        map[string]pendingName{},
 	}
 	r.byBinding, r.byNaturalKey, r.byID = r.bindingOf, r.naturalKeyOf, r.visibleByID
 	return r
@@ -90,8 +97,52 @@ func (r *linkResolver) markPending(object, ref string) {
 	delete(r.cache, key)
 }
 
+// pendingName counts the rows of this upload that will land under one company
+// name. creating is how many of them make a new company.
+type pendingName struct{ landing, creating int }
+
+// markNamesPending records the names of a company row the dry run predicts will
+// land. A later file's name link to it then resolves before the row exists.
+func (r *linkResolver) markNamesPending(creates bool, names ...string) {
+	seen := map[string]bool{}
+	for _, name := range names {
+		key := employerKey(name)
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		p := r.names[key]
+		p.landing++
+		if creates {
+			p.creating++
+		}
+		r.names[key] = p
+	}
+}
+
+// over is a name's answer once this upload's rows have landed. A created
+// company is one more holder of the name. An updated one is already counted,
+// unless the row renames it to this name.
+func (p pendingName) over(hit employerCandidate) employerCandidate {
+	if p.landing == 0 {
+		return hit
+	}
+	count := max(hit.count+p.creating, 1)
+	return employerCandidate{id: hit.id, count: min(count, 2), pending: true}
+}
+
+// markLanded records a row of this run that updated the record it named by id.
+// A later file's link to its ref then finds that record, as the test run said.
+func (r *linkResolver) markLanded(object, ref string, id ids.UUID) {
+	key := linkKey{Object: object, Key: strings.TrimSpace(ref)}
+	r.landed[key] = id
+	delete(r.cache, key)
+}
+
 // resolve answers which record a link cell names. A ref is trimmed and keeps
-// its case, because it is an identifier; an email folds as the store keeps it.
+// its case, because it is an identifier.
+//
+//nolint:unparam // keyed by type like markPending, which marks every part's rows; only company links exist yet.
 func (r *linkResolver) resolve(ctx context.Context, object, raw string) (linkAnswer, error) {
 	key := linkKey{Object: object, Key: strings.TrimSpace(raw)}
 	if answer, ok := r.cache[key]; ok {
@@ -109,16 +160,15 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 	if r.pending[key] {
 		return linkAnswer{Pending: true}, nil
 	}
+	if id, ok := r.landed[key]; ok {
+		return linkAnswer{ID: id, Found: true}, nil
+	}
 	answer, err := r.byBinding(ctx, key.Object, key.Key)
 	if err != nil || answer.Found {
 		return answer, err
 	}
-	natural := key.Key
-	if key.Object == migration.ObjectContact {
-		natural = correspondence.Fold(natural)
-	}
 	// An ambiguous name stops here with its own reason: an id cannot carry it.
-	if answer, err = r.byNaturalKey(ctx, key.Object, natural); err != nil || answer.Found || answer.Reason != "" {
+	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.Found || answer.Reason != "" {
 		return answer, err
 	}
 	if _, parseErr := ids.Parse(key.Key); parseErr == nil {
@@ -163,37 +213,29 @@ func (r *linkResolver) visible(ctx context.Context, object string, id ids.UUID) 
 	return linkAnswer{ID: id, Found: true}, nil
 }
 
-// naturalKeyOf finds a record by the key a human would write: a company by
-// its domain or its one name, a contact by an address.
+// naturalKeyOf finds a company by the key a human would write: its domain, or
+// the one name it carries.
 func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (linkAnswer, error) {
-	switch object {
-	case migration.ObjectCompany:
-		// Matching a company by its domain or name reads the company itself.
-		if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
-			return linkAnswer{}, err
-		}
-		if strings.Contains(key, ".") {
-			answer, err := r.visibleByKey(ctx, companyByDomain, canonicalFor(fieldDomain, key))
-			if err != nil || answer.Found {
-				return answer, err
-			}
-		}
-		hit, err := r.employerFor(ctx, employerKey(key))
-		return employerAnswer(hit, key), err
-	case migration.ObjectContact:
-		if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-			return linkAnswer{}, err
-		}
-		return r.visibleByKey(ctx, contactByEmail, key)
-	default:
+	if object != migration.ObjectCompany {
 		return linkAnswer{}, fmt.Errorf("import: a link cannot name a %q: %w", object, apperrors.ErrConflict)
 	}
+	// A domain holds no space, so a name such as "Acme Inc." skips the read.
+	if strings.Contains(key, ".") && !strings.ContainsRune(key, ' ') {
+		answer, err := r.visibleByDomain(ctx, canonicalFor(fieldDomain, key))
+		if err != nil || answer.Found {
+			return answer, err
+		}
+	}
+	hit, err := r.employerFor(ctx, employerKey(key))
+	return employerAnswer(hit, key), err
 }
 
 // employerAnswer reads a name's candidates as a link. One links, and several is
 // a question for a human. None falls through to the next step.
 func employerAnswer(hit employerCandidate, name string) linkAnswer {
 	switch {
+	case hit.count == 1 && hit.pending:
+		return linkAnswer{Pending: true}
 	case hit.count == 1:
 		return linkAnswer{ID: hit.id.UUID, Found: true}
 	case hit.count > 1:
@@ -203,41 +245,29 @@ func employerAnswer(hit employerCandidate, name string) linkAnswer {
 	}
 }
 
-// naturalKeyRead is one table's natural-key match: the record it names and the
-// statement that finds it, with `$%[1]d` the key and `%[2]s` the row scope.
-type naturalKeyRead struct {
-	object, statement string
-}
-
-var (
-	companyByDomain = naturalKeyRead{migration.ObjectCompany, `
-		SELECT o.id FROM company_domain d JOIN company o ON o.id = d.company_id
-		 WHERE d.domain = $%[1]d AND d.archived_at IS NULL
-		   AND o.archived_at IS NULL AND o.merged_into_id IS NULL AND %[2]s
-		 LIMIT 1`}
-	contactByEmail = naturalKeyRead{migration.ObjectContact, `
-		SELECT o.id FROM contact_email e JOIN contact o ON o.id = e.contact_id
-		 WHERE e.email = $%[1]d AND e.archived_at IS NULL
-		   AND o.archived_at IS NULL AND o.merged_into_id IS NULL AND %[2]s
-		 LIMIT 1`}
-)
-
-// visibleByKey runs one natural-key read inside the caller's row scope. Both
-// keys are unique among live rows, so one row is the whole answer.
-func (r *linkResolver) visibleByKey(ctx context.Context, read naturalKeyRead, key string) (linkAnswer, error) {
+// visibleByDomain finds the live company holding a domain inside the caller's
+// row scope. A domain is unique among live rows, so one row is the whole answer.
+func (r *linkResolver) visibleByDomain(ctx context.Context, domain string) (linkAnswer, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		return linkAnswer{}, err
+	}
 	var answer linkAnswer
 	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		keyPos := arg(key)
-		scope, err := auth.ScopeClauseFor(ctx, read.object, "o", arg)
+		domainPos := arg(domain)
+		scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 		if err != nil {
 			return err
 		}
 		if scope == "" {
 			scope = "TRUE"
 		}
-		err = tx.QueryRow(ctx, storekit.SQLf(read.statement, keyPos, scope), args...).Scan(&answer.ID)
+		err = tx.QueryRow(ctx, storekit.SQLf(`
+			SELECT o.id FROM company_domain d JOIN company o ON o.id = d.company_id
+			 WHERE d.domain = $%d AND d.archived_at IS NULL
+			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL AND %s
+			 LIMIT 1`, domainPos, scope), args...).Scan(&answer.ID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -245,7 +275,7 @@ func (r *linkResolver) visibleByKey(ctx context.Context, read naturalKeyRead, ke
 		return err
 	})
 	if err != nil {
-		return linkAnswer{}, fmt.Errorf("import: finding the linked %s: %w", read.object, err)
+		return linkAnswer{}, fmt.Errorf("import: finding the linked company: %w", err)
 	}
 	return answer, nil
 }

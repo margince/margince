@@ -23064,10 +23064,12 @@ export interface components {
             source_key?: string;
         };
         /**
-         * @description What a ZIP run does with a row whose link names a record no file of the
-         *     ZIP and nothing in the estate answers to. `skip_row` leaves the row out
-         *     and reports it; `drop_link` lands the row without the link and reports
-         *     the dropped link.
+         * @description What a run does with a row whose link names a record no file of the
+         *     upload and nothing in the estate answers to. `skip_row` leaves the row
+         *     out and reports it; `drop_link` lands the row without the link and
+         *     reports the dropped link. A ZIP run applies it to every link. A single
+         *     CSV applies it to `company_ref` only, and lands a row whose
+         *     `company_name` finds nothing, with the link reported as unresolved.
          * @default skip_row
          * @enum {string}
          */

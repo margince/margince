@@ -68,7 +68,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // A row whose company_ref finds nothing is decided first, by the run's policy,
 // as Ensure decides it. A dropped link rides on the landing outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
-	link, err := w.companyRefOf(ctx, row)
+	link, err := w.linkProblemOf(ctx, row)
 	if err != nil {
 		return predictCreate, nil, err
 	}
