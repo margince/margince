@@ -98,6 +98,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"ClaimUndo", func() error { return s.ClaimUndo(ctx, runID) }},
 		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
 		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
+		{"FailStaleValidating", func() error { _, err := s.FailStaleValidating(ctx, time.Minute); return err }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -651,7 +652,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"ResumeApproved": true, "FailValidation": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
-		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true,
+		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true, "FailStaleValidating": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 // importCommitTimeout bounds a detached commit or undo. The work scales with
@@ -20,6 +21,11 @@ import (
 // Too short turns a slow import into a half-written run. The stale-run sweep
 // reads the same budget.
 const importCommitTimeout = 30 * time.Minute
+
+// importTestRunBudget bounds a test run, which answers inside its request. It
+// ends a quarter before the response deadline, so the refusal and the failed run
+// are both written while the caller still waits.
+const importTestRunBudget = httpserver.ResponseDeadline * 3 / 4
 
 // importRecordStopTimeout bounds writing one failure row. The task's own budget
 // may be what ran out, so the write cannot borrow it.

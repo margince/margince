@@ -3,9 +3,10 @@
 
 package compose
 
-// The pass that frees an import whose process stopped mid-commit. It only
-// marks the run failed; approve resumes it. An undoing run is never touched,
-// because undo already resumes it.
+// The pass that frees an import whose process stopped mid-commit or mid-test
+// run. It only marks the run failed; approve resumes a commit, and a test run
+// is uploaded again. An undoing run is never touched, because undo already
+// resumes it.
 
 import (
 	"context"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -25,13 +27,18 @@ import (
 // checkpoint approve resumes from.
 const staleImportCause = "the import stopped because the server restarted; approve it again to continue from its checkpoint"
 
+// staleValidationAfter is when a test run is past saving. Its request ends at
+// the response deadline, so twice that leaves the request time to record it.
+const staleValidationAfter = 2 * httpserver.ResponseDeadline
+
 // ImportRunSweepArgs carries nothing: the pass reads which runs are stale.
 type ImportRunSweepArgs struct{}
 
 // Kind is the stable job identifier River persists in river_job.
 func (ImportRunSweepArgs) Kind() string { return "import_run_sweep" }
 
-// importRunSweepWorker fails every running import idle past the commit budget.
+// importRunSweepWorker fails every running import idle past the commit budget,
+// and every test run its request left behind.
 type importRunSweepWorker struct {
 	identity *identity.Service
 	pool     *pgxpool.Pool
@@ -44,13 +51,17 @@ func (w *importRunSweepWorker) Work(ctx context.Context, _ *river.Job[ImportRunS
 		return jobs.FaultContext(ctx, fmt.Errorf("import_run_sweep: resolving the installation: %w", err))
 	}
 	ctx = principal.SystemActing(ctx, "system:import-run-sweep")
-	failed, err := migration.NewRunStore(InstallationDB(w.pool)).
-		FailStaleRunning(ctx, importCommitTimeout, staleImportCause)
+	runs := migration.NewRunStore(InstallationDB(w.pool))
+	failed, err := runs.FailStaleRunning(ctx, importCommitTimeout, staleImportCause)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("import_run_sweep: failing stale runs: %w", err))
 	}
-	if failed > 0 {
-		w.log.WarnContext(ctx, "import runs had no process left working them", "failed", failed)
+	abandoned, err := runs.FailStaleValidating(ctx, staleValidationAfter)
+	if err != nil {
+		return jobs.FaultContext(ctx, fmt.Errorf("import_run_sweep: failing stale test runs: %w", err))
+	}
+	if failed+abandoned > 0 {
+		w.log.WarnContext(ctx, "import runs had no process left working them", "failed", failed, "test_runs", abandoned)
 	}
 	return nil
 }

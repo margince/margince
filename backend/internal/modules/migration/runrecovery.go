@@ -7,9 +7,9 @@ package migration
 // transitions keep such a run movable when its work dies. A failed run is
 // resumable by approve, and an undoing run by undo.
 //
-// Only `running` is ever moved to `failed`. An `undoing` run is already
-// resumable, and failing it would make approve re-run the commit over a
-// half-undone run.
+// Only `running` and `validating` are ever moved to `failed`. An `undoing` run
+// is already resumable, and failing it would make approve re-run the commit
+// over a half-undone run.
 
 import (
 	"context"
@@ -50,6 +50,17 @@ func (s *RunStore) FailRunning(ctx context.Context, id RunID, cause string) erro
 // run that has not moved for that long has no process left working it. The
 // cutoff is taken on the database clock that wrote updated_at.
 func (s *RunStore) FailStaleRunning(ctx context.Context, idle time.Duration, cause string) (int, error) {
+	return s.failStale(ctx, StatusRunning, idle, cause)
+}
+
+// FailStaleValidating fails every test run opened longer ago than idle. A test
+// run lives inside its request, so one older than that lost its process before
+// it could record how it ended.
+func (s *RunStore) FailStaleValidating(ctx context.Context, idle time.Duration) (int, error) {
+	return s.failStale(ctx, StatusValidating, idle, CauseValidationStopped)
+}
+
+func (s *RunStore) failStale(ctx context.Context, from string, idle time.Duration, cause string) (int, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return 0, err
 	}
@@ -58,17 +69,17 @@ func (s *RunStore) FailStaleRunning(ctx context.Context, idle time.Duration, cau
 		rows, err := tx.Query(ctx, `
 			UPDATE import_run SET status = $1, error = $2, updated_at = now()
 			 WHERE status = $3 AND connector = $4 AND updated_at < now() - make_interval(secs => $5)
-			RETURNING id`, StatusFailed, cause, StatusRunning, ConnectorCSV, idle.Seconds())
+			RETURNING id`, StatusFailed, cause, from, ConnectorCSV, idle.Seconds())
 		if err != nil {
-			return fmt.Errorf("failing stale import runs: %w", err)
+			return fmt.Errorf("failing stale %s import runs: %w", from, err)
 		}
 		stale, err := pgx.CollectRows(rows, pgx.RowTo[RunID])
 		if err != nil {
-			return fmt.Errorf("failing stale import runs: %w", err)
+			return fmt.Errorf("failing stale %s import runs: %w", from, err)
 		}
 		for _, id := range stale {
 			if _, err := storekit.Audit(ctx, tx, "update", ImportRunObject, id,
-				map[string]any{auditFieldStatus: StatusRunning}, map[string]any{auditFieldStatus: StatusFailed}); err != nil {
+				map[string]any{auditFieldStatus: from}, map[string]any{auditFieldStatus: StatusFailed}); err != nil {
 				return err
 			}
 		}

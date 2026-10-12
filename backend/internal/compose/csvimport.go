@@ -66,6 +66,8 @@ type importHandlers struct {
 	failRunning func(ctx context.Context, id migration.RunID, cause string) error
 	// budget bounds a detached commit or undo; zero is importCommitTimeout.
 	budget time.Duration
+	// testRunBudget bounds a dry run; zero is importTestRunBudget.
+	testRunBudget time.Duration
 }
 
 // UploadImportSource stores a file and describes it (IEM-WIRE-8). Nothing is
@@ -254,31 +256,13 @@ func (h importHandlers) stageRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
-	// The writers read every row once for owners and tags, so a file that
-	// breaks past its header fails here first.
-	writers, err := newBundleWriters(ctx, h.db, run.ID, &mapping, source)
+	report, err := h.dryRun(ctx, runs, run.ID, source, skipped, &mapping)
 	if err != nil {
-		failValidation(ctx, runs, run.ID, err)
-		return crmcontracts.ImportRun{}, importProblem(err)
+		return crmcontracts.ImportRun{}, err
 	}
-	report, err := migration.NewEngine(runs, writers).DryRun(ctx, source)
-	if err != nil {
-		// The run row already exists. Left alone it would sit in `validating`
-		// forever with nothing able to move it, so the failure is recorded on
-		// the run the caller was just handed rather than only in the response.
-		failValidation(ctx, runs, run.ID, err)
-		return crmcontracts.ImportRun{}, importProblem(err)
-	}
-	report, err = predictEveryPart(ctx, source, skipped, writers, mapping, report)
-	if err != nil {
-		failValidation(ctx, runs, run.ID, err)
-		return crmcontracts.ImportRun{}, importProblem(err)
-	}
-	report = withGrantProblems(ctx, report, mapping.PartList(), writers.grantProblems)
 	if err := runs.AwaitApproval(ctx, run.ID, report); err != nil {
-		// The same orphan the two branches above avoid: a run that cannot be
-		// parked for a human is a run in `validating` that neither approve nor
-		// resume will ever move.
+		// A run that cannot be parked for a human is a run in `validating`
+		// that neither approve nor resume will ever move.
 		failValidation(ctx, runs, run.ID, err)
 		return crmcontracts.ImportRun{}, err
 	}
@@ -470,13 +454,4 @@ func (h importHandlers) ownsSource(ctx context.Context, sourceRef string) error 
 		return fmt.Errorf("import source %q: %w", sourceRef, apperrors.ErrNotFound)
 	}
 	return nil
-}
-
-// failValidation records a dry run that could not finish, so the run it was
-// opened for does not sit in `validating` with nothing able to move it.
-func failValidation(ctx context.Context, runs *migration.RunStore, id migration.RunID, cause error) {
-	slog.ErrorContext(ctx, "import validation stopped", "run", id, "err", cause)
-	if err := runs.FailValidation(ctx, id); err != nil {
-		slog.ErrorContext(ctx, "recording a failed import validation", "run", id, "err", err)
-	}
 }

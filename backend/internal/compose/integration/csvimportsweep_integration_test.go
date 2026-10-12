@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
 // backdateImportRun makes a run look as if its process stopped writing to it
@@ -78,5 +79,26 @@ func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
 	sweepImportRuns(t, e)
 	if polled := readRun(t, e, run.ID); polled.Status != "undoing" {
 		t.Fatalf("the sweep moved an undoing run to %q; it must stay resumable", polled.Status)
+	}
+}
+
+func TestTheSweepFailsATestRunItsRequestLeftValidating(t *testing.T) {
+	e, _ := setupImportAppHeld(t)
+	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	if _, err := e.Owner.Exec(t.Context(),
+		`UPDATE import_run SET status = 'validating', updated_at = now() WHERE id = $1`, run.ID); err != nil {
+		t.Fatalf("putting the run back in validating: %v", err)
+	}
+
+	sweepImportRuns(t, e)
+	if polled := readRun(t, e, run.ID); polled.Status != "validating" {
+		t.Fatalf("a test run its request may still be working was swept: %q", polled.Status)
+	}
+
+	backdateImportRun(t, e, run.ID)
+	sweepImportRuns(t, e)
+	if polled := readRun(t, e, run.ID); polled.Status != "failed" || polled.Error != migration.CauseValidationStopped {
+		t.Fatalf("after the sweep: %q %q, want failed with the test-run cause", polled.Status, polled.Error)
 	}
 }
