@@ -7055,6 +7055,8 @@ export const en = {
   "heldThreads.kind.explicitlyConfidential": "Marked confidential",
   "heldThreads.kind.unsure": "Unclear",
   "heldThreads.kind.other": "Other reason",
+  "heldThreads.moreParticipants_one": "+{count} more",
+  "heldThreads.moreParticipants_other": "+{count} more",
   "senders.title": "Senders",
   "senders.sub":
     "The decision on each address your mailbox brought in, and your own answer where given. Only you see this list.",
@@ -7063,8 +7065,12 @@ export const en = {
   "senders.colSender": "Sender",
   "senders.colDecision": "Decision",
   "senders.colRecord": "Contact",
-  "senders.recordYes": "On file",
   "senders.recordNo": "No contact",
+  "senders.colMessages": "Messages",
+  "senders.colLastSeen": "Last seen",
+  "senders.messages_one": "{count} message",
+  "senders.messages_other": "{count} messages",
+  "senders.lastSeen": "Last seen {date}",
   "senders.byYou": "You decided",
   "senders.deletesOn": "Oldest message deleted on {date}",
   "senders.markBusiness": "Mark as business",
@@ -10495,10 +10501,12 @@ export const en = {
   "ownerIdentities.domainPlaceholder": "example.com",
   "ownerIdentities.removedToast": "Address removed",
   "ownerIdentities.restoredToast": "Address restored",
-  "ownerIdentities.removeLearnedTitle": "Remove {value}?",
-  "ownerIdentities.removeLearnedBody":
-    "Margince found this address in your mail. If you add it again later, it is saved as an address you typed.",
-  "ownerIdentities.removeConfirm": "Remove",
+  "ownerIdentities.restoreGone":
+    "This address can no longer be put back. Add it again instead.",
+  "ownerIdentities.restoreMovedOn":
+    "This address changed after you removed it, so it was not put back.",
+  "ownerIdentities.restoreDeclaredAgain":
+    "This address is already back in your list.",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":
@@ -10508,6 +10516,7 @@ export const en = {
   "captureExclusions.kind.address": "Address",
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, folder or mailbox",
+  "captureExclusions.addedBy": "Added by {name}",
   "captureExclusions.scopeLabel": "Applies to",
   "capturePurge.title": "Delete mail already captured from {value}?",
   "capturePurge.intro":

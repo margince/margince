@@ -42,9 +42,15 @@ type SenderDecision struct {
 	// OverruledKind is what their decision overruled, so the page can say
 	// "you corrected this" rather than only showing the current answer.
 	OverruledKind string
-	// RecordExists reports whether a contact was actually created, which is
-	// the consequence an owner can see on the rest of the product.
+	// RecordExists reports whether a live contact the reader may open holds
+	// the address, and ContactID names it. Both follow the contact visibility
+	// rule, shares included, so neither answers for a contact out of sight.
 	RecordExists bool
+	ContactID    *ids.UUID
+	// MessageCount and LastSeenAt describe the stored, unarchived mail this
+	// seat imported with the sender as counterparty, in either direction.
+	MessageCount int
+	LastSeenAt   *time.Time
 	// DeletesAt is when this sender's mail is destroyed, set only for a
 	// `personal` verdict the owner has not overruled. Zero means nothing is
 	// scheduled — every other kind is held rather than destroyed.
@@ -92,19 +98,6 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			       coalesce(p.status, '')       AS status,
 			       coalesce(o.decision, '')     AS decision,
 			       coalesce(o.overruled_kind, '') AS overruled_kind,
-			       EXISTS (
-			         SELECT 1 FROM contact_email pe
-			           JOIN contact pr ON pr.id = pe.contact_id AND pr.archived_at IS NULL
-			          WHERE pe.email = coalesce(p.email, o.address)
-			            AND pe.archived_at IS NULL
-			            -- The visibility rule, not just existence. A contact
-			            -- capture minted from somebody else's mailbox is
-			            -- owner-scoped precisely so nobody else learns they
-			            -- exist, and the address here is one the CALLER
-			            -- supplied — so an unscoped EXISTS would answer "does
-			            -- your colleague know this contact" for any address a
-			            -- seat cares to guess.
-			            AND (pr.visibility <> 'owner' OR pr.owner_id = $1)) AS record_exists,
 			       -- Only for a personal verdict the owner has not overruled:
 			       -- every other kind is held, and an override cancels the sweep,
 			       -- so a date on either would name a deletion that never comes.
@@ -127,7 +120,10 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			                AND (SELECT count(*) FROM capture_import c
 			                      WHERE c.activity_id = a.id) = 1)
 			       END AS deletes_at
-			  FROM (SELECT * FROM capture_pending_counterparty WHERE owner_id = $1) p
+			  -- The newest ledger row per address: an aged-out question and the
+			  -- fresh one its sender's next message opened are one sender.
+			  FROM (SELECT DISTINCT ON (email) * FROM capture_pending_counterparty
+			         WHERE owner_id = $1 ORDER BY email, created_at DESC, id DESC) p
 			  FULL OUTER JOIN (SELECT * FROM capture_sender_override WHERE user_id = $1) o
 			    ON o.address = p.email
 			 ORDER BY address`, actor.UserID, windows.ByOwner, windows.ByClassifier)
@@ -139,7 +135,7 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			var d SenderDecision
 			var deletesAt *time.Time
 			if err := rows.Scan(&d.Address, &d.Kind, &d.Status,
-				&d.Decision, &d.OverruledKind, &d.RecordExists, &deletesAt); err != nil {
+				&d.Decision, &d.OverruledKind, &deletesAt); err != nil {
 				return fmt.Errorf("capture: listing a seat's sender decisions: %w", err)
 			}
 			if deletesAt != nil {
@@ -147,7 +143,101 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			}
 			out = append(out, d)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		rows.Close()
+		addresses := make([]string, len(out))
+		for i, d := range out {
+			addresses[i] = d.Address
+		}
+		if err := senderMailTx(ctx, tx, actor.UserID, out, addresses); err != nil {
+			return err
+		}
+		return senderContactsTx(ctx, tx, out, addresses)
 	})
 	return out, err
+}
+
+// senderMailTx counts each sender's mail in this seat's mailbox. Bounded to the
+// listed addresses, so the aggregate never walks a whole mailbox.
+func senderMailTx(ctx context.Context, tx pgx.Tx, user ids.UUID, out []SenderDecision, addresses []string) error {
+	rows, err := tx.Query(ctx, `
+		SELECT a.counterparty_email, count(*), max(a.occurred_at)
+		  FROM activity a
+		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
+		 WHERE a.counterparty_email = ANY($2) AND a.kind = 'email' AND a.archived_at IS NULL
+		 GROUP BY a.counterparty_email`, user, addresses)
+	if err != nil {
+		return fmt.Errorf("capture: counting a seat's mail per sender: %w", err)
+	}
+	defer rows.Close()
+	type mail struct {
+		count int
+		last  time.Time
+	}
+	seen := map[string]mail{}
+	for rows.Next() {
+		var address string
+		var m mail
+		if err := rows.Scan(&address, &m.count, &m.last); err != nil {
+			return fmt.Errorf("capture: counting a seat's mail per sender: %w", err)
+		}
+		seen[address] = m
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("capture: counting a seat's mail per sender: %w", err)
+	}
+	for i := range out {
+		if m, ok := seen[out[i].Address]; ok {
+			last := m.last
+			out[i].MessageCount, out[i].LastSeenAt = m.count, &last
+		}
+	}
+	return nil
+}
+
+// senderContactsTx finds the contact behind each sender through the rule that
+// opens a contact: the read grant, then row scope with its shares. A seat that
+// may not see the contact learns neither its id nor that it exists.
+func senderContactsTx(ctx context.Context, tx pgx.Tx, out []SenderDecision, addresses []string) error {
+	if !auth.ReadGranted(ctx, "contact") {
+		return nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT pe.email, pe.contact_id FROM contact_email pe
+		  JOIN contact pr ON pr.id = pe.contact_id AND pr.archived_at IS NULL
+		 WHERE pe.email = ANY($1) AND pe.archived_at IS NULL
+		 ORDER BY pe.email, pe.contact_id`, addresses)
+	if err != nil {
+		return fmt.Errorf("capture: finding the contacts behind a seat's senders: %w", err)
+	}
+	defer rows.Close()
+	holders := map[string][]ids.UUID{}
+	var candidates []ids.UUID
+	for rows.Next() {
+		var address string
+		var id ids.UUID
+		if err := rows.Scan(&address, &id); err != nil {
+			return fmt.Errorf("capture: finding the contacts behind a seat's senders: %w", err)
+		}
+		holders[address] = append(holders[address], id)
+		candidates = append(candidates, id)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("capture: finding the contacts behind a seat's senders: %w", err)
+	}
+	visible, err := auth.VisibleSubset(ctx, tx, "contact", candidates)
+	if err != nil {
+		return err
+	}
+	for i := range out {
+		for _, id := range holders[out[i].Address] {
+			if visible[id] {
+				out[i].RecordExists, out[i].ContactID = true, &id
+				break
+			}
+		}
+	}
+	return nil
 }

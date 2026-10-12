@@ -6770,6 +6770,8 @@ export const vi = {
   "heldThreads.kind.explicitlyConfidential": "Đã đánh dấu bảo mật",
   "heldThreads.kind.unsure": "Chưa rõ",
   "heldThreads.kind.other": "Lý do khác",
+  "heldThreads.moreParticipants_one": "+{count} địa chỉ khác",
+  "heldThreads.moreParticipants_other": "+{count} địa chỉ khác",
   "senders.title": "Người gửi",
   "senders.sub":
     "Quyết định về từng địa chỉ mà hộp thư đã đưa vào, kèm câu trả lời của bạn nếu có. Chỉ bạn thấy danh sách này.",
@@ -6778,8 +6780,12 @@ export const vi = {
   "senders.colSender": "Người gửi",
   "senders.colDecision": "Quyết định",
   "senders.colRecord": "Liên hệ",
-  "senders.recordYes": "Đã có hồ sơ",
   "senders.recordNo": "Chưa có liên hệ",
+  "senders.colMessages": "Thư",
+  "senders.colLastSeen": "Thư gần nhất",
+  "senders.messages_one": "{count} thư",
+  "senders.messages_other": "{count} thư",
+  "senders.lastSeen": "Thư gần nhất {date}",
   "senders.byYou": "Do người dùng quyết định",
   "senders.deletesOn": "Thư cũ nhất sẽ bị xóa vào {date}",
   "senders.markBusiness": "Đánh dấu là công việc",
@@ -10162,10 +10168,12 @@ export const vi = {
   "ownerIdentities.domainPlaceholder": "vidu.com",
   "ownerIdentities.removedToast": "Đã gỡ địa chỉ",
   "ownerIdentities.restoredToast": "Đã khôi phục địa chỉ",
-  "ownerIdentities.removeLearnedTitle": "Gỡ {value}?",
-  "ownerIdentities.removeLearnedBody":
-    "Margince tìm thấy địa chỉ này trong thư. Nếu thêm lại sau, địa chỉ được lưu như địa chỉ tự nhập.",
-  "ownerIdentities.removeConfirm": "Gỡ",
+  "ownerIdentities.restoreGone":
+    "Đã quá hạn khôi phục địa chỉ này. Thêm lại địa chỉ nếu cần.",
+  "ownerIdentities.restoreMovedOn":
+    "Địa chỉ này đã thay đổi sau khi gỡ nên không khôi phục được.",
+  "ownerIdentities.restoreDeclaredAgain":
+    "Địa chỉ này đã có lại trong danh sách.",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":
     "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
@@ -10174,6 +10182,7 @@ export const vi = {
   "captureExclusions.kind.address": "Địa chỉ",
   "captureExclusions.kind.domain": "Tên miền",
   "captureExclusions.kind.container": "Nhãn, thư mục hoặc hộp thư",
+  "captureExclusions.addedBy": "{name} đã thêm",
   "captureExclusions.scopeLabel": "Áp dụng cho",
   "capturePurge.title": "Xóa thư đã thu thập từ {value}?",
   "capturePurge.intro":

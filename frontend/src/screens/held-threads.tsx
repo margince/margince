@@ -16,6 +16,7 @@ import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useThreadAudience } from "./audienceservice";
 import { problemMessageOf, QueryGate, unwrap } from "./common";
+import { EntityRef } from "./entityref";
 import { useOpenEmail } from "./openemail";
 import { VerdictPassNote } from "./verdictpass";
 import "./held-threads.css";
@@ -35,6 +36,7 @@ import "./held-threads.css";
 
 type HeldThread = components["schemas"]["HeldThread"];
 type HeldThreadList = components["schemas"]["HeldThreadListResponse"];
+type HeldThreadParticipant = components["schemas"]["HeldThreadParticipant"];
 
 // Why a thread is held, in the reader's words. A kind absent from the map is
 // one the server learned to say and this screen has not.
@@ -341,11 +343,55 @@ function ThreadSubject({
   onOpen,
 }: Readonly<{ row: HeldThread; onOpen: (activityId: string) => void }>) {
   const activityId = row.activity_id;
-  return (
+  const subject = (
     <EmailReference
       subject={row.subject}
       withheld={!activityId}
       onOpen={activityId ? () => onOpen(activityId) : undefined}
     />
+  );
+  if (!row.participants?.length) {
+    return subject;
+  }
+  return (
+    <CellStack>
+      {subject}
+      <ThreadParticipants
+        shown={row.participants}
+        count={row.participant_count ?? row.participants.length}
+      />
+    </CellStack>
+  );
+}
+
+// Who the thread is with, so a reader can tell one held thread from another.
+function ThreadParticipants({
+  shown,
+  count,
+}: Readonly<{ shown: HeldThreadParticipant[]; count: number }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const more = count - shown.length;
+  return (
+    <span className="t-caption held-threads-parties">
+      {shown.map((party, at) => (
+        <span key={party.address}>
+          {at > 0 && ", "}
+          {party.contact_id ? (
+            <EntityRef
+              kind="contact"
+              id={party.contact_id}
+              name={party.address}
+            />
+          ) : (
+            party.address
+          )}
+        </span>
+      ))}
+      {more > 0 &&
+        ` ${plural("heldThreads.moreParticipants", more, {
+          count: formatNumber(more, locale),
+        })}`}
+    </span>
   );
 }

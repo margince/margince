@@ -166,70 +166,76 @@ it("shows when each address was declared, under the address", async () => {
   expect(within(list).getByText(/2026/)).toBeTruthy();
 });
 
-// Declaring a typed address again is the exact inverse, so it goes at once.
-it("removes a typed address at once and declares it again through Undo", async () => {
-  const user = userEvent.setup();
-  const removed = vi.fn(() => new Response(null, { status: 204 }));
-  // The restored row is the same address, so the reply need not echo the body.
-  const declared = vi.fn((_body: unknown) =>
-    jsonResponse(identity({ id: "oi-2" }), 201),
-  );
-  showing([identity({})], {
-    "DELETE /capture/owner-identities/oi-1": removed,
-    "POST /capture/owner-identities": declared,
+function removeVerb() {
+  return screen.findByRole("button", {
+    name: "Remove founder@previous-employer.example",
   });
+}
 
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Remove founder@previous-employer.example",
-    }),
-  );
-  expect(screen.queryByRole("dialog")).toBeNull();
-  const said = await screen.findByRole("status");
-  await waitFor(() =>
-    expect(said.textContent).toContain(en["ownerIdentities.removedToast"]),
-  );
-  expect(removed).toHaveBeenCalledTimes(1);
+// Restoring the withdrawn row is the exact inverse, learned or typed alike.
+it.each(["user", "delivered_to"])(
+  "removes a %s address at once and puts that same row back through Undo",
+  async (source) => {
+    const user = userEvent.setup();
+    const removed = vi.fn(() => new Response(null, { status: 204 }));
+    const restored = vi.fn(() => jsonResponse(identity({ source })));
+    showing([identity({ source })], {
+      "DELETE /capture/owner-identities/oi-1": removed,
+      "POST /capture/owner-identities/oi-1/restore": restored,
+    });
 
-  await user.click(
-    await within(said).findByRole("button", { name: en["common.undo"] }),
-  );
-  await waitFor(() =>
-    expect(declared).toHaveBeenCalledWith({
-      kind: "address",
-      value: "founder@previous-employer.example",
-    }),
-  );
-});
+    await user.click(await removeVerb());
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const said = await screen.findByRole("status");
+    await waitFor(() =>
+      expect(said.textContent).toContain(en["ownerIdentities.removedToast"]),
+    );
+    expect(removed).toHaveBeenCalledTimes(1);
 
-// Declared again, a learned address would read as typed: it asks first instead.
-it("asks before removing an address the product learned", async () => {
-  const user = userEvent.setup();
-  const removed = vi.fn(() => new Response(null, { status: 204 }));
-  showing([identity({ source: "delivered_to" })], {
-    "DELETE /capture/owner-identities/oi-1": removed,
-  });
+    await user.click(
+      await within(said).findByRole("button", { name: en["common.undo"] }),
+    );
+    await waitFor(() => expect(restored).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText(en["ownerIdentities.restoredToast"]),
+    ).toBeTruthy();
+  },
+);
 
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Remove founder@previous-employer.example",
-    }),
-  );
-  const dialog = await screen.findByRole("dialog");
-  expect(removed).not.toHaveBeenCalled();
-  await user.click(
-    within(dialog).getByRole("button", {
-      name: en["ownerIdentities.removeConfirm"],
-    }),
-  );
-  await waitFor(() => expect(removed).toHaveBeenCalledTimes(1));
-});
+// Each refusal says what became of the address, in the reader's language.
+it.each([
+  [404, "not_found", "ownerIdentities.restoreGone"],
+  [409, "removal_moved_on", "ownerIdentities.restoreMovedOn"],
+  [409, "identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+] as const)(
+  "words a %i %s refusal of the Undo for the reader",
+  async (status, code, copy) => {
+    const user = userEvent.setup();
+    showing([identity({})], {
+      "DELETE /capture/owner-identities/oi-1": () =>
+        new Response(null, { status: 204 }),
+      "POST /capture/owner-identities/oi-1/restore": () =>
+        jsonResponse(
+          { code, status, detail: "An English sentence for the API." },
+          status,
+        ),
+    });
+
+    await user.click(await removeVerb());
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+
+    expect(await screen.findByText(en[copy])).toBeTruthy();
+    expect(screen.queryByText(/An English sentence/)).toBeNull();
+  },
+);
 
 // The removed row takes its verb with it, so focus moves on to the next one.
-it("hands focus to the next address once a typed one is gone", async () => {
+it("hands focus to the next address once one is gone", async () => {
   const user = userEvent.setup();
   const rows = [
-    identity({}),
+    identity({ source: "delivered_to" }),
     identity({ id: "oi-2", value: "me@side-project.example" }),
   ];
   showing(rows, {
@@ -239,21 +245,16 @@ it("hands focus to the next address once a typed one is gone", async () => {
     },
   });
 
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Remove founder@previous-employer.example",
-    }),
-  );
+  await user.click(await removeVerb());
   const next = screen.getByRole("button", {
     name: "Remove me@side-project.example",
   });
   await waitFor(() => expect(document.activeElement).toBe(next));
 });
 
-// The confirm outlives its row, so it names where focus lands instead.
-it("returns focus to the add verb after a confirmed removal empties the list", async () => {
+it("returns focus to the add verb once the last address is gone", async () => {
   const user = userEvent.setup();
-  const rows = [identity({ source: "delivered_to" })];
+  const rows = [identity({})];
   showing(rows, {
     "DELETE /capture/owner-identities/oi-1": () => {
       rows.shift();
@@ -261,33 +262,8 @@ it("returns focus to the add verb after a confirmed removal empties the list", a
     },
   });
 
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Remove founder@previous-employer.example",
-    }),
-  );
-  const dialog = await screen.findByRole("dialog");
-  await user.click(
-    within(dialog).getByRole("button", {
-      name: en["ownerIdentities.removeConfirm"],
-    }),
-  );
+  await user.click(await removeVerb());
+  expect(await screen.findByTestId("owner-identities-empty")).toBeTruthy();
   const add = screen.getByRole("button", { name: en["ownerIdentities.add"] });
   await waitFor(() => expect(document.activeElement).toBe(add));
-  expect(await screen.findByTestId("owner-identities-empty")).toBeTruthy();
-});
-
-it("keeps the address in the confirm's title while it closes", async () => {
-  const user = userEvent.setup();
-  showing([identity({ source: "delivered_to" })]);
-
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Remove founder@previous-employer.example",
-    }),
-  );
-  const dialog = await screen.findByRole("dialog");
-  const title = within(dialog).getByRole("heading");
-  await user.keyboard("{Escape}");
-  expect(title.textContent).toContain("founder@previous-employer.example");
 });

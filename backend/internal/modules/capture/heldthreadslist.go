@@ -67,6 +67,11 @@ type HeldThread struct {
 	// outage signal: a pending row whose attempts stop climbing is a model
 	// that stopped answering, not a thread that is merely slow.
 	Attempts int
+	// Participants is up to heldThreadPartiesShown of the opening message's
+	// parties outside the workspace, of ParticipantCount in all. Read through
+	// the same content gate as ActivityID, so both are empty whenever it is nil.
+	Participants     []HeldThreadParticipant
+	ParticipantCount int
 }
 
 // Pending reports that no verdict has landed yet, which is the row an owner
@@ -174,7 +179,11 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 			}
 			out = append(out, t)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		rows.Close()
+		return heldThreadPartiesTx(ctx, tx, out)
 	})
 	if err != nil {
 		return nil, err

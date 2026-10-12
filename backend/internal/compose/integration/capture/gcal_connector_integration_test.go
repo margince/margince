@@ -169,6 +169,9 @@ func assertGcalConnectionSurface(grantCtx context.Context, e *integration.Search
 	if len(views) != 1 || views[0].Provider != "gcal" || views[0].Status != "connected" {
 		t.Fatalf("Connections = %+v, want one connected gcal", views)
 	}
+	if views[0].CanBackfill {
+		t.Error("a calendar connector with no backward paging is offered an import of older mail")
+	}
 
 	// Pacing (ADR-0063): the sync that just succeeded scheduled the next one an
 	// interval out, so the connection is NOT due right now — a frequent

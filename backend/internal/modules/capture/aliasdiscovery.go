@@ -60,6 +60,10 @@ func (s *Sink) noteAliasSightingTx(ctx context.Context, tx pgx.Tx, seat ids.UUID
 	if err != nil || known {
 		return err
 	}
+	refused, err := seatRefusedAliasTx(ctx, tx, seat, value)
+	if err != nil || refused {
+		return err
+	}
 	// ON CONFLICT DO NOTHING is the distinctness rule: a re-synced message, or
 	// one replayed by a push notification, is the same sighting rather than a
 	// second one. Without it the threshold could be reached by one message
@@ -103,6 +107,18 @@ func seatAlreadyKnowsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value str
 	// written here: a domain claim covers every address under it, and two
 	// spellings of that rule would disagree the first time one moved.
 	return NewSelfSet(addresses, domains).Covers(value), nil
+}
+
+// seatRefusedAliasTx reports whether the seat withdrew this address after it
+// was learned. Their answer stands over any later delivery evidence.
+func seatRefusedAliasTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value string) (bool, error) {
+	var refused bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM capture_alias_refused WHERE user_id = $1 AND value = $2)`,
+		seat, value).Scan(&refused); err != nil {
+		return false, fmt.Errorf("capture: reading the seat's withdrawn aliases: %w", err)
+	}
+	return refused, nil
 }
 
 // foldIdentityRows collects one seat's identities into the two lists a SelfSet

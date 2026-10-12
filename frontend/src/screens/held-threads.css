@@ -9,3 +9,8 @@
   inline-size: 0;
   min-inline-size: 100%;
 }
+
+/* An address has no spaces, so it breaks anywhere rather than widen the row. */
+.held-threads-parties {
+  overflow-wrap: anywhere;
+}

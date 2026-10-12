@@ -30,6 +30,9 @@ const EVERY_KIND: SenderDecision[] = [
     status: "real",
     overruled: false,
     record_exists: true,
+    contact_id: "0190b7a2-0000-7000-8000-000000000011",
+    message_count: 248,
+    last_seen_at: "2026-10-09T16:20:00Z",
   },
   {
     address: "info@steireif.de",
@@ -37,6 +40,9 @@ const EVERY_KIND: SenderDecision[] = [
     status: "unsure",
     overruled: false,
     record_exists: true,
+    contact_id: "0190b7a2-0000-7000-8000-000000000013",
+    message_count: 31,
+    last_seen_at: "2026-09-28T07:05:00Z",
   },
   {
     address: "anne@hotmail.com",
@@ -44,6 +50,8 @@ const EVERY_KIND: SenderDecision[] = [
     status: "noise",
     overruled: false,
     record_exists: false,
+    message_count: 4,
+    last_seen_at: "2026-08-14T19:42:00Z",
   },
   {
     address: "office@studiolegal.de",
@@ -51,6 +59,9 @@ const EVERY_KIND: SenderDecision[] = [
     status: "real",
     overruled: false,
     record_exists: true,
+    contact_id: "0190b7a2-0000-7000-8000-000000000014",
+    message_count: 12,
+    last_seen_at: "2026-10-01T11:30:00Z",
   },
   {
     address: "receipts@expensify.com",
@@ -58,6 +69,8 @@ const EVERY_KIND: SenderDecision[] = [
     status: "noise",
     overruled: false,
     record_exists: false,
+    message_count: 1093,
+    last_seen_at: "2026-10-11T23:58:00Z",
   },
   {
     address: "news@substack.com",
@@ -65,6 +78,8 @@ const EVERY_KIND: SenderDecision[] = [
     status: "noise",
     overruled: false,
     record_exists: false,
+    message_count: 57,
+    last_seen_at: "2026-10-12T06:00:00Z",
   },
   // A long address, and a kind this build has no word for.
   {
@@ -73,6 +88,7 @@ const EVERY_KIND: SenderDecision[] = [
     status: "unsure",
     overruled: false,
     record_exists: false,
+    message_count: 0,
   },
 ];
 
@@ -87,6 +103,9 @@ const OVERRULED: SenderDecision[] = [
     overruled_kind: "newsletter",
     overruled: true,
     record_exists: true,
+    contact_id: "0190b7a2-0000-7000-8000-000000000015",
+    message_count: 57,
+    last_seen_at: "2026-10-12T06:00:00Z",
   },
   {
     address: "anne@hotmail.com",
@@ -95,13 +114,30 @@ const OVERRULED: SenderDecision[] = [
     overruled_kind: "personal",
     overruled: true,
     record_exists: false,
+    message_count: 4,
+    last_seen_at: "2026-08-14T19:42:00Z",
   },
   ...EVERY_KIND.slice(0, 2),
 ];
 
+// The contacts the rows link to, named as the contact read would name them.
+const CONTACTS: Record<string, string> = {
+  "0190b7a2-0000-7000-8000-000000000011": "Jana Keller",
+  "0190b7a2-0000-7000-8000-000000000013": "Steireif Office",
+  "0190b7a2-0000-7000-8000-000000000014": "Studio Legal Partners",
+  "0190b7a2-0000-7000-8000-000000000015": "Substack Editorial",
+};
+const contactRoutes = Object.fromEntries(
+  Object.entries(CONTACTS).map(([id, full_name]) => [
+    `GET /contacts/${id}`,
+    () => jsonResponse({ id, full_name }),
+  ]),
+);
+
 function story(rows: SenderDecision[], waiting: AwaitingContact[] = []) {
   return () => {
     installFetchStub({
+      ...contactRoutes,
       "GET /me": meRoute({}),
       "GET /capture/senders": () => jsonResponse({ data: rows }),
       "GET /capture/contacts-awaiting-decision": () =>

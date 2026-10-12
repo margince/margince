@@ -287,7 +287,7 @@ Also called: block a sender, ignore a domain, blacklist, do not log.
 ### How do I tell Margince a sender is business, or exclude one?
 To correct what Margince decided about a sender, open **Settings → Connections** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to keep it out.
 1. Open **Settings**, then **Connections**, and go down to **Senders**.
-2. Find the address; the **Decision** column shows what was decided.
+2. Find the address; the **Decision** column shows what was decided. **Contact** opens the contact that holds the address. **Messages** counts your stored mail with it. **Last seen** is when the newest of those arrived or went out.
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. **Withdraw my answer** takes back your answer. A later verdict never writes over a decision you make.
 Also called: mark as not spam, whitelist a sender.
@@ -302,13 +302,15 @@ again by any mailbox."
 
 **Your other addresses** (Settings → Connections): an address you send as, a
 private domain you read, an address you forward from. Mail between them is not
-captured and never creates a contact. Private to you.
+captured and never creates a contact. Private to you. Removing one takes effect
+at once, and **Undo** on the notice puts it back. Removing an
+address Margince found also stops Margince finding it again.
 
 **Capture exclusions** (Settings → Capture activity): addresses and domains
 whose messages never enter the CRM. Your own rules cover only the mailboxes you
 connected. The company's rules cover everyone, and only an administrator may
-change one of those. "Applies from the next message. Messages already captured
-stay."
+change one of those. Each rule names the member who added it. "Applies from the
+next message. Messages already captured stay."
 
 **Consumer mail domains** (Settings → Capture rules): which domains count as
 personal mailboxes. "Mail from a consumer mailbox creates the contact but never
@@ -330,7 +332,8 @@ contacts only you see until their sender is decided. An administrator sees only
 how many there are.
 
 **Held threads** (Settings → Connections): the threads your mailbox is holding
-back right now, with the reason. **Share with the team** releases one.
+back right now, with the reason and the outside addresses on each. **Share with
+the team** releases one.
 
 Three settings decide who may read captured mail. **Mail visibility** is in
 each mailbox's settings in Settings → Connections. **Private correspondence** is on a

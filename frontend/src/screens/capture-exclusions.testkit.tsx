@@ -32,8 +32,20 @@ export const CAPTURE_EDITOR: GrantSpec = {
 export const READER: GrantSpec = { capture_settings: ["read"] };
 
 export const RULES = [
-  { id: "cx-1", scope: "user", kind: "address", value: "ex@partner.test" },
-  { id: "cx-2", scope: "workspace", kind: "domain", value: "recruiter.test" },
+  {
+    id: "cx-1",
+    scope: "user",
+    kind: "address",
+    value: "ex@partner.test",
+    created_by_name: "Lena Vogt",
+  },
+  {
+    id: "cx-2",
+    scope: "workspace",
+    kind: "domain",
+    value: "recruiter.test",
+    created_by_name: null,
+  },
 ];
 
 export type Call = { method: string; url: string; body: unknown };

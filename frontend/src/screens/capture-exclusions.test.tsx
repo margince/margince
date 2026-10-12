@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 describe("CaptureExclusionsCard", () => {
-  it("lists each rule with the scope and kind it binds by", async () => {
+  it("lists each rule with the scope and kind it binds by, and who added it", async () => {
     const { fetchMock } = backend(CAPTURE_EDITOR);
     vi.stubGlobal("fetch", fetchMock);
     render(
@@ -34,9 +34,11 @@ describe("CaptureExclusionsCard", () => {
     await waitFor(() =>
       expect(screen.getByText("ex@partner.test")).toBeTruthy(),
     );
-    // The answer beside each rule is what it binds and what kind it is — the
-    // two facts that decide whether this reader may take it back.
-    expect(screen.getByText("Your mailboxes · Address")).toBeTruthy();
+    // Scope and kind decide whether this reader may take a rule back. A rule
+    // no member added names nobody.
+    expect(
+      screen.getByText("Your mailboxes · Address · Added by Lena Vogt"),
+    ).toBeTruthy();
     expect(screen.getByText("Whole company · Domain")).toBeTruthy();
   });
 

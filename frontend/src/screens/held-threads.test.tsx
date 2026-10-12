@@ -47,6 +47,8 @@ const JUDGED: HeldThread = {
   subject: "Entwurf Aufhebungsvertrag",
   activity_id: "01a05500-0000-7000-8000-0000000000b1",
   occurred_at: "2026-08-29T15:40:00Z",
+  participants: [],
+  participant_count: 0,
 };
 
 // And the refusal, as the server actually answers it: the message EXISTS —
@@ -57,6 +59,8 @@ const WITHHELD: HeldThread = {
   thread_key: "t-withheld",
   subject: undefined,
   activity_id: undefined,
+  participants: undefined,
+  participant_count: undefined,
 };
 
 type Clock = components["schemas"]["CaptureVerdictClock"];
@@ -403,4 +407,46 @@ it("names a thread the classifier was unsure about", async () => {
 
   await screen.findByText(en["heldThreads.kind.unsure"]);
   expect(screen.queryByText("unsure")).toBeNull();
+});
+
+// Who a thread is with tells two held threads apart; a contact on file is a link.
+it("names who a held thread is with, and counts the ones it leaves out", async () => {
+  renderCard([
+    {
+      ...JUDGED,
+      participants: [
+        {
+          address: "k.huber@kanzlei.example",
+          contact_id: "0190b7a2-0000-7000-8000-0000000000c7",
+        },
+        { address: "office@kanzlei.example" },
+      ],
+      participant_count: 7,
+    },
+  ]);
+
+  const link = await screen.findByRole("link", {
+    name: "k.huber@kanzlei.example",
+  });
+  expect(link.getAttribute("href")).toContain(
+    "0190b7a2-0000-7000-8000-0000000000c7",
+  );
+  const parties = link.closest(".held-threads-parties");
+  expect(parties?.textContent).toBe(
+    "k.huber@kanzlei.example, office@kanzlei.example +5 more",
+  );
+  expect(
+    screen.queryByRole("link", { name: "office@kanzlei.example" }),
+  ).toBeNull();
+});
+
+// Withheld names nobody, and a thread only with colleagues has nobody to name.
+it.each([
+  ["a withheld message", WITHHELD],
+  ["a thread only with colleagues", JUDGED],
+])("draws no participant line for %s", async (_, row) => {
+  const { container } = renderCard([row]);
+
+  expect(await screen.findByText(en["heldThreads.kind.legal"])).toBeTruthy();
+  expect(container.querySelector(".held-threads-parties")).toBeNull();
 });

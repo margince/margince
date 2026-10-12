@@ -243,6 +243,9 @@ var rowScopeSpellings = map[string]bool{
 	// The whole-record admissions open with the object grant and then call
 	// EnsureVisible and EnsureWritableLive, so they bound the row the same way.
 	"EnsureReadable": true, "EnsureChangeable": true,
+	// VisibleSubset renders VisiblePredicate over the ids it is handed, so a
+	// projection whose references pass through it is bounded row by row.
+	"VisibleSubset": true,
 }
 
 // referenceSite is one SQL select list in the compose tier that names a

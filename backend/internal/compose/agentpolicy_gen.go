@@ -562,6 +562,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/capture/exclusions":                                           {Op: "createCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/exclusions/{id}/purge":                                {Op: "purgeCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/owner-identities":                                     {Op: "createCaptureOwnerIdentity", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/capture/owner-identities/{id}/restore":                        {Op: "restoreCaptureOwnerIdentity", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/channel-connections":                                          {Op: "connectChannel", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/claims/{id}/settle":                                           {Op: "settleConversationClaim", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/coldstart":                                                    {Op: "coldStartReadback", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
