@@ -390,7 +390,7 @@ var vanillaStubs = []struct {
 	},
 	{
 		rel:   frontendVanillaStub,
-		emit:  func() []byte { return frontendGen(nil, nil) },
+		emit:  func() []byte { return frontendGen(nil, nil, nil) },
 		align: "align the committed stub with tools/gen-composition (emit.go's frontendGenHeader)",
 	},
 	{

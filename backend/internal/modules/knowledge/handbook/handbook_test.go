@@ -122,3 +122,26 @@ func TestOpenRefusesAPathRatherThanReadingOne(t *testing.T) {
 		t.Fatal("Open could not read README.md, so the refusals above prove nothing")
 	}
 }
+
+// A shipped page is listed by its heading, so a page without an H1 would reach
+// Settings as a bare filename.
+func TestEveryEmbeddedPageOpensWithAHeading(t *testing.T) {
+	embedded, err := Pages()
+	if err != nil {
+		t.Fatalf("reading the embedded handbook: %v", err)
+	}
+	if len(embedded) == 0 {
+		t.Fatal("no pages are embedded, so this gate would check nothing")
+	}
+	for _, page := range embedded {
+		if Title(page.Filename) == "" {
+			t.Errorf("%s has no `# ` heading; give the page a title in docs/handbook", page.Filename)
+		}
+	}
+	if got := Title("README.md"); got != "The Margince handbook" {
+		t.Errorf(`Title("README.md") = %q, want the page's H1`, got)
+	}
+	if got := Title("not-shipped.md"); got != "" {
+		t.Errorf("Title of a page this build lacks = %q, want empty", got)
+	}
+}

@@ -229,6 +229,14 @@ func writeKnowledgeErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Validation("file", "already_filed", filed.Error()))
 		return
 	}
+	if errors.Is(err, ErrDocumentShipped) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict,
+			Code:   "document_shipped",
+			Detail: "This page ships with Margince, so it cannot be deleted. It comes back with every update.",
+		})
+		return
+	}
 	if full, ok := errors.AsType[*CorpusFullError](err); ok {
 		httperr.Write(w, r, httperr.Validation("file", "corpus_full", full.Error()))
 		return

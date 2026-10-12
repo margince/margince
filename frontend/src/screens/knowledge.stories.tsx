@@ -101,10 +101,14 @@ function filed(
     id,
     corpus_id: SET_ID,
     filename,
+    title: null,
+    shipped: false,
     content_type: "text/markdown",
     byte_size: 4_096,
     ingest_status: status,
     chunk_count: 12,
+    chunks_embedded: status === "done" ? 12 : 0,
+    embed_state: status === "done" ? "complete" : "indexing",
     created_at: "2026-08-01T00:00:00Z",
   };
 }
@@ -294,8 +298,8 @@ export const DeleteDocumentConfirm: Story = {
   },
 };
 
-// No embedding model is bound, so nothing is searchable. The row says so and
-// says why, instead of a quiet "0 of 1,180" beside documents that read fine.
+// No embedding model is bound, so nothing is searchable. The set says so and
+// why, once, instead of a quiet "0 of 1,180" beside documents that read fine.
 export const NoEmbeddingModel: Story = {
   render: card(
     sets(
@@ -310,7 +314,13 @@ export const NoEmbeddingModel: Story = {
           },
         },
       ],
-      documents([searchable]),
+      documents([
+        {
+          ...searchable,
+          chunks_embedded: 0,
+          embed_state: "no_embedding_model",
+        },
+      ]),
     ),
   ),
   play: showDocuments,

@@ -15,6 +15,7 @@ import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { FileDropzone } from "../design-system/filedropzone";
+import { KeyedName } from "../design-system/keyedname";
 import { PanelBody } from "../design-system/panel";
 import { useLastSubject } from "../design-system/presence";
 import { forReader } from "../format/collate";
@@ -29,10 +30,17 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryStates, throwProblem, unwrap } from "./common";
+import {
+  problemCodeOf,
+  problemMessageOf,
+  QueryStates,
+  throwProblem,
+  unwrap,
+} from "./common";
 import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
+type EmbedState = components["schemas"]["KnowledgeEmbedState"];
 
 export const SETS_KEY = ["knowledge-corpora"];
 
@@ -133,11 +141,49 @@ const INGEST_BADGE: Partial<
   failed: { label: "knowledge.ingest.failed", tone: "danger" },
 };
 
+// Why passages are not all searchable, in the reader's words, for a set or one document.
+export const NOT_SEARCHABLE: Record<
+  Exclude<EmbedState, "complete">,
+  Readonly<{ label: MessageKey; reason: MessageKey; tone: "warning" | "info" }>
+> = {
+  no_embedding_model: {
+    label: "knowledge.notSearchable",
+    reason: "knowledge.reason.noEmbeddingModel",
+    tone: "warning",
+  },
+  indexing: {
+    label: "knowledge.indexing",
+    reason: "knowledge.reason.indexing",
+    tone: "info",
+  },
+};
+
+// An importing or failed document already wears that badge. A searchability
+// state its set already states, with its reason, is not repeated per row.
+function documentBadge(
+  doc: CorpusDocument,
+  setState: EmbedState,
+): Readonly<{
+  label: MessageKey;
+  tone?: "danger" | "info" | "warning";
+}> | null {
+  const ingest = INGEST_BADGE[doc.ingest_status];
+  if (ingest) return ingest;
+  return doc.embed_state === "complete" || doc.embed_state === setState
+    ? null
+    : NOT_SEARCHABLE[doc.embed_state];
+}
+
+function documentName(doc: CorpusDocument): string {
+  return doc.title ?? doc.filename;
+}
+
 function documentColumns({
   t,
   plural,
   locale,
   zone,
+  setState,
   canManage,
   onDelete,
 }: Readonly<{
@@ -145,6 +191,7 @@ function documentColumns({
   plural: PluralTranslator;
   locale: Locale;
   zone: string;
+  setState: EmbedState;
   canManage: boolean;
   onDelete: (doc: CorpusDocument) => void;
 }>): DataTableColumn<CorpusDocument>[] {
@@ -153,7 +200,12 @@ function documentColumns({
       key: "name",
       header: t("knowledge.col.name"),
       grow: true,
-      render: (doc) => doc.filename,
+      render: (doc) =>
+        doc.title === null ? (
+          doc.filename
+        ) : (
+          <KeyedName name={doc.title} code={doc.filename} />
+        ),
     },
     {
       key: "passages",
@@ -190,7 +242,7 @@ function documentColumns({
       header: t("knowledge.col.status"),
       fold: "end",
       render: (doc) => {
-        const badge = INGEST_BADGE[doc.ingest_status];
+        const badge = documentBadge(doc, setState);
         return (
           badge && (
             <CellStack>
@@ -214,15 +266,19 @@ function documentColumns({
       header: t("knowledge.col.actions"),
       headerHidden: true,
       fold: "end",
-      render: (doc) => (
-        <span className="cell-actions">
-          <OverflowMenu label={t("table.rowActions", { name: doc.filename })}>
-            <Button aria-haspopup="dialog" onClick={() => onDelete(doc)}>
-              {t("knowledge.deleteDocument")}
-            </Button>
-          </OverflowMenu>
-        </span>
-      ),
+      // A shipped page is filed again by the next update, so deleting it undoes nothing.
+      render: (doc) =>
+        doc.shipped ? null : (
+          <span className="cell-actions">
+            <OverflowMenu
+              label={t("table.rowActions", { name: documentName(doc) })}
+            >
+              <Button aria-haspopup="dialog" onClick={() => onDelete(doc)}>
+                {t("knowledge.deleteDocument")}
+              </Button>
+            </OverflowMenu>
+          </span>
+        ),
     },
   ];
 }
@@ -231,11 +287,13 @@ function documentColumns({
 export function DocumentList({
   corpusId,
   setName,
+  setState,
   canManage,
   afterDelete,
 }: Readonly<{
   corpusId: string;
   setName: string;
+  setState: EmbedState;
   canManage: boolean;
   // A deleted document takes its row's menu with it; focus lands here instead.
   afterDelete: () => HTMLElement | null;
@@ -250,7 +308,7 @@ export function DocumentList({
   const deleted = useRef(false);
   const label = t("knowledge.documentsIn", { set: setName });
   const documents = [...(query.data?.items ?? [])].sort((a, b) =>
-    forReader(a.filename, b.filename, locale),
+    forReader(documentName(a), documentName(b), locale),
   );
   return (
     <>
@@ -264,6 +322,7 @@ export function DocumentList({
             plural,
             locale,
             zone: viewerZone(),
+            setState,
             canManage,
             onDelete: (doc) => {
               remove.reset();
@@ -289,12 +348,12 @@ export function DocumentList({
       <ConfirmModal
         open={deleting !== null}
         title={t("knowledge.deleteConfirm.title", {
-          name: asked?.filename ?? "",
+          name: asked ? documentName(asked) : "",
         })}
         confirmLabel={t("knowledge.deleteDocument")}
         confirmVariant="danger"
         pending={remove.isPending}
-        error={remove.isError ? problemMessageOf(remove.error, t) : null}
+        error={remove.isError ? deleteRefusal(remove.error, t) : null}
         onClose={() => setDeleting(null)}
         returnFocusTo={() => (deleted.current ? afterDelete() : null)}
         onConfirm={() => {
@@ -315,6 +374,13 @@ export function DocumentList({
       </ConfirmModal>
     </>
   );
+}
+
+// A row can turn shipped between the list read and the press.
+function deleteRefusal(error: unknown, t: Translator): string {
+  return problemCodeOf(error) === "document_shipped"
+    ? t("knowledge.deleteShipped")
+    : problemMessageOf(error, t);
 }
 
 // Two distinct files agreeing on all three are the same bytes for every

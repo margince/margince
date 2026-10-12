@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -385,15 +384,12 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 //
 // Not a GROUP BY join: it drops a corpus with no documents, which must stay in
 // the list reporting zeros.
-const corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
+var corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
 	c.default_ask, c.reindexing, c.created_at, c.archived_at,
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL),
-	(SELECT count(*) FROM knowledge_chunk k WHERE k.corpus_id = c.id AND k.archived_at IS NULL),
-	(SELECT count(*) FROM knowledge_chunk k WHERE k.corpus_id = c.id AND k.archived_at IS NULL AND k.embed_identity IS NOT NULL),
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL
-	    AND d.ingest_status IN ('queued', 'running')),
-	(SELECT array_agg(DISTINCT k.embed_identity) FROM knowledge_chunk k
-	  WHERE k.corpus_id = c.id AND k.archived_at IS NULL AND k.embed_identity IS NOT NULL)`
+	    AND ` + ingestInFlight + `),
+	` + passageColumns("k.corpus_id = c.id")
 
 // corpusRow is the scanned row. It exists because the contract type carries no
 // archived_at and the archive path needs to know — an already-archived corpus
@@ -402,10 +398,8 @@ type corpusRow struct {
 	corpus     crmcontracts.KnowledgeCorpus
 	archivedAt *time.Time
 	// override is the stored min_similarity: nil takes the binding's floor.
-	override          *float64
-	documentsInFlight int
-	// identities are the bindings the corpus's vectors were computed under.
-	identities []string
+	override *float64
+	passages passageCoverage
 }
 
 // wire resolves the floor and the embed state in force under the binding
@@ -415,23 +409,8 @@ func (r corpusRow) wire(identity string) crmcontracts.KnowledgeCorpus {
 	out.MinSimilarity = EffectiveFloor(r.override, identity)
 	overridden := r.override != nil
 	out.MinSimilarityOverridden = &overridden
-	out.Coverage.EmbedState = r.embedState(identity)
+	out.Coverage.EmbedState = r.passages.state(identity)
 	return out
-}
-
-// An empty identity is the unbound lane /me reports as no reindex surface, so
-// Knowledge and System health give one answer.
-func (r corpusRow) embedState(identity string) crmcontracts.KnowledgeCoverageEmbedState {
-	if identity == "" {
-		return crmcontracts.KnowledgeCoverageEmbedStateNoEmbeddingModel
-	}
-	coverage := r.corpus.Coverage
-	stale := slices.ContainsFunc(r.identities, func(stored string) bool { return stored != identity })
-	if (r.corpus.Reindexing != nil && *r.corpus.Reindexing) || r.documentsInFlight > 0 ||
-		coverage.ChunksEmbedded < coverage.ChunksTotal || stale {
-		return crmcontracts.KnowledgeCoverageEmbedStateIndexing
-	}
-	return crmcontracts.KnowledgeCoverageEmbedStateComplete
 }
 
 // ArchivedAt reports when the corpus was archived, or nil while it is live.
@@ -452,19 +431,22 @@ func readCorpus(ctx context.Context, tx pgx.Tx, id ids.UUID, archived storekit.A
 func scanCorpus(row pgx.Row) (corpusRow, error) {
 	var out corpusRow
 	var id ids.UUID
-	var reindexing bool
-	var coverage crmcontracts.KnowledgeCoverage
+	var documentsInFlight int
+	p := &out.passages
 	if err := row.Scan(
 		&id, &out.corpus.Name, &out.corpus.Description, &out.corpus.TopicStatement,
-		&out.override, &out.corpus.DefaultAsk, &reindexing,
+		&out.override, &out.corpus.DefaultAsk, &p.reindexing,
 		&out.corpus.CreatedAt, &out.archivedAt,
-		&coverage.DocumentsTotal, &coverage.ChunksTotal, &coverage.ChunksEmbedded,
-		&out.documentsInFlight, &out.identities,
+		&out.corpus.Coverage.DocumentsTotal, &documentsInFlight,
+		&p.total, &p.embedded, &p.identities,
 	); err != nil {
 		return corpusRow{}, err
 	}
+	p.inFlight = documentsInFlight > 0
 	out.corpus.Id = openapi_types.UUID(id)
-	out.corpus.Coverage = coverage
+	out.corpus.Coverage.ChunksTotal = p.total
+	out.corpus.Coverage.ChunksEmbedded = p.embedded
+	reindexing := p.reindexing
 	out.corpus.Reindexing = &reindexing
 	return out, nil
 }

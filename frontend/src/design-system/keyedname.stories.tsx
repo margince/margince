@@ -28,6 +28,24 @@ export const KeyWithoutName: Story = {
   },
 };
 
+// A long key wraps only after an underscore, and still reads as one string.
+export const LongKeyInANarrowColumn: Story = {
+  args: {
+    name: "Expired confirmation link cleanup",
+    code: "comms_controller_payload_sweep",
+  },
+  render: (args) => (
+    <div style={{ width: 160 }}>
+      <KeyedName {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const key = await canvas.findByText("comms_controller_payload_sweep");
+    await expect(key.querySelectorAll("wbr")).toHaveLength(3);
+  },
+};
+
 type Tier = { name: string; key: string; model: string };
 
 const TIERS: Tier[] = [

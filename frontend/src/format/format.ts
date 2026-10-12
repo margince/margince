@@ -533,7 +533,8 @@ export function formatBytes(bytes: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "unit",
     unit,
-    unitDisplay: "short",
+    // CLDR's short English byte never inflects ("98 byte"); its long form does.
+    unitDisplay: unit === "byte" ? "long" : "short",
     maximumFractionDigits: unit === "byte" ? 0 : 1,
   }).format(value);
 }

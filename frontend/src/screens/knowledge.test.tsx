@@ -71,10 +71,14 @@ function document(over: Record<string, unknown> = {}) {
     id: DOC_ID,
     corpus_id: SET_ID,
     filename: "operating.md",
+    title: null,
+    shipped: false,
     content_type: "text/markdown",
     byte_size: 128,
     ingest_status: "done",
     chunk_count: 4,
+    chunks_embedded: 4,
+    embed_state: "complete",
     created_at: "2026-08-01T00:00:00Z",
     ...over,
   };
@@ -85,6 +89,7 @@ function backendFor(
   opts: {
     sets?: ReturnType<typeof corpus>[];
     documents?: ReturnType<typeof document>[];
+    deleteRefusal?: () => Response;
   } = {},
 ) {
   const posts: string[] = [];
@@ -100,6 +105,7 @@ function backendFor(
       }
       if (req.url.includes("/knowledge/documents/")) {
         deletes.push(req.url);
+        if (opts.deleteRefusal) return opts.deleteRefusal();
         documents = documents.filter((doc) => !req.url.endsWith(doc.id));
         return new Response(null, { status: 204 });
       }
@@ -431,5 +437,179 @@ describe("KnowledgeCard documents", () => {
     expect(globalThis.document.activeElement).toBe(
       screen.getByRole("button", { name: "Documents in How-to" }),
     );
+  });
+
+  it("names a shipped page by its title, its file under it, and offers no delete", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        documents: [
+          document({ id: "u", filename: "pricing.md" }),
+          document({
+            id: "s",
+            filename: "approvals.md",
+            title: "Approving agent proposals",
+            shipped: true,
+          }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    const table = await screen.findByRole("table", {
+      name: "Documents in How-to",
+    });
+    const [shipped, uploaded] = within(table).getAllByRole("row").slice(1);
+    if (!shipped || !uploaded) throw new Error("expected two document rows");
+    expect(
+      within(shipped).getByText("Approving agent proposals"),
+    ).toBeInTheDocument();
+    expect(within(shipped).getByText("approvals.md").tagName).toBe("CODE");
+    expect(within(shipped).queryByRole("button")).toBeNull();
+    // An upload has no title: its file is its name, once.
+    expect(within(uploaded).getAllByText("pricing.md")).toHaveLength(1);
+    expect(
+      within(uploaded).getByRole("button", { name: "Actions for pricing.md" }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks only a document whose searchability differs from its set's", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        documents: [
+          document({ id: "a", filename: "a-searchable.md" }),
+          document({
+            id: "b",
+            filename: "b-unbound.md",
+            chunks_embedded: 0,
+            embed_state: "no_embedding_model",
+          }),
+          document({
+            id: "c",
+            filename: "c-partial.md",
+            chunks_embedded: 1,
+            embed_state: "indexing",
+          }),
+          document({
+            id: "d",
+            filename: "d-queued.md",
+            ingest_status: "queued",
+            chunks_embedded: 0,
+            embed_state: "indexing",
+          }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    const table = await screen.findByRole("table", {
+      name: "Documents in How-to",
+    });
+    const status = (filename: string) => {
+      const row = within(table)
+        .getAllByRole("row")
+        .find((one) => one.textContent?.includes(filename));
+      return [...(row?.querySelectorAll(".badge") ?? [])].map(
+        (badge) => badge.textContent,
+      );
+    };
+    expect(status("a-searchable.md")).toEqual([]);
+    expect(status("b-unbound.md")).toEqual(["Not searchable"]);
+    expect(status("c-partial.md")).toEqual(["Indexing"]);
+    // Still importing says so, and only so.
+    expect(status("d-queued.md")).toEqual(["Queued"]);
+  });
+
+  it("repeats no searchability state its set already states", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        sets: [
+          corpus({
+            coverage: {
+              documents_total: 2,
+              chunks_total: 8,
+              chunks_embedded: 0,
+              embed_state: "no_embedding_model",
+            },
+          }),
+        ],
+        documents: [
+          document({
+            id: "a",
+            filename: "a-unbound.md",
+            chunks_embedded: 0,
+            embed_state: "no_embedding_model",
+          }),
+          document({
+            id: "b",
+            filename: "b-queued.md",
+            ingest_status: "queued",
+            chunks_embedded: 0,
+            embed_state: "no_embedding_model",
+          }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    const table = await screen.findByRole("table", {
+      name: "Documents in How-to",
+    });
+    const badges = [...table.querySelectorAll(".badge")].map(
+      (badge) => badge.textContent,
+    );
+    expect(badges).toEqual(["Queued"]);
+    // The set says it once, with its reason, above its documents.
+    expect(screen.getAllByText("Not searchable")).toHaveLength(1);
+  });
+
+  it("says why a delete was refused when the page turned out to ship", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        deleteRefusal: () =>
+          jsonResponse(
+            {
+              type: "about:blank",
+              title: "Conflict",
+              status: 409,
+              code: "document_shipped",
+              detail: "document ships with the product",
+            },
+            409,
+          ),
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for operating.md" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = within(screen.getByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: "Delete" }));
+    expect(
+      await dialog.findByText(
+        "This page ships with Margince, so it cannot be deleted.",
+      ),
+    ).toBeInTheDocument();
   });
 });

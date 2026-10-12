@@ -14,9 +14,10 @@ import {
 } from "./story-utils";
 
 // One set's documents as its row opens them, A to Z. Only a document still
-// waiting or one that failed carries a badge.
+// waiting, one that failed, or one searchable unlike its set carries a badge.
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
+type EmbedState = components["schemas"]["KnowledgeEmbedState"];
 
 const SET_ID = "00000000-0000-4000-8000-0000000000a1";
 
@@ -30,16 +31,36 @@ function filed(
     id,
     corpus_id: SET_ID,
     filename,
+    title: null,
+    shipped: false,
     content_type: "text/markdown",
     byte_size: chunks * 512,
     ingest_status: status,
     chunk_count: chunks,
+    chunks_embedded: chunks,
+    embed_state: status === "done" ? "complete" : "indexing",
     created_at: "2026-08-01T00:00:00Z",
   };
 }
 
 const DOCUMENTS: CorpusDocument[] = [
   filed("00000000-0000-4000-8000-0000000000b1", "operating.md", "done", 43),
+  // A handbook page: named by its heading, its file under it, and no menu.
+  {
+    ...filed(
+      "00000000-0000-4000-8000-0000000000b5",
+      "approvals.md",
+      "done",
+      18,
+    ),
+    title: "Approving agent proposals",
+    shipped: true,
+  },
+  {
+    ...filed("00000000-0000-4000-8000-0000000000b6", "pricing.md", "done", 9),
+    chunks_embedded: 4,
+    embed_state: "indexing",
+  },
   filed("00000000-0000-4000-8000-0000000000b2", "escalations.md", "running", 0),
   filed("00000000-0000-4000-8000-0000000000b3", "onboarding.md", "queued", 0),
   {
@@ -53,7 +74,11 @@ const DOCUMENTS: CorpusDocument[] = [
   },
 ];
 
-function story(items: CorpusDocument[], canManage: boolean) {
+function story(
+  items: CorpusDocument[],
+  canManage: boolean,
+  setState: EmbedState = "indexing",
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({
@@ -69,6 +94,7 @@ function story(items: CorpusDocument[], canManage: boolean) {
           <DocumentList
             corpusId={SET_ID}
             setName="Operator handbook"
+            setState={setState}
             canManage={canManage}
             afterDelete={() => null}
           />
@@ -101,6 +127,19 @@ export const FiledDark: Story = {
 export const ReadOnly: Story = { render: story(DOCUMENTS, false) };
 
 export const NothingFiled: Story = { render: story([], true) };
+
+// No embedding model bound: the set says so with its reason, so no row repeats it.
+export const NotSearchable: Story = {
+  render: story(
+    DOCUMENTS.map((doc) =>
+      doc.ingest_status === "done"
+        ? { ...doc, chunks_embedded: 0, embed_state: "no_embedding_model" }
+        : doc,
+    ),
+    true,
+    "no_embedding_model",
+  ),
+};
 
 export const DeleteConfirm: Story = {
   render: story(DOCUMENTS, true),

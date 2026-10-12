@@ -87,6 +87,10 @@ func (e *AlreadyFiledError) Error() string {
 // answering it as a validation failure would send them off to fix their file.
 var ErrBlobstoreUnconfigured = errors.New("knowledge: object storage is not configured; a document cannot be stored")
 
+// ErrDocumentShipped is a delete aimed at a page that ships with Margince. The
+// next boot's reconciliation would file it again, so the delete could only hide it.
+var ErrDocumentShipped = errors.New("this page ships with Margince, so it cannot be deleted; it comes back with every update")
+
 // acceptedType decides the media type an upload is filed under.
 //
 // It normalises a browser's Content-Type (which carries parameters —

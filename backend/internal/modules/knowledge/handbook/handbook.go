@@ -85,3 +85,18 @@ func Open(filename string) ([]byte, bool) {
 	}
 	return content, true
 }
+
+// Title is a page's own heading, its first `# ` line, or "" when this build
+// does not ship the page. Every shipped page has one; handbook_test.go holds it.
+func Title(filename string) string {
+	content, ok := Open(filename)
+	if !ok {
+		return ""
+	}
+	for line := range strings.SplitSeq(string(content), "\n") {
+		if heading, found := strings.CutPrefix(line, "# "); found {
+			return strings.TrimSpace(heading)
+		}
+	}
+	return ""
+}
