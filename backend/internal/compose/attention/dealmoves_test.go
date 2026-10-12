@@ -245,6 +245,28 @@ func TestAnUnansweredMailReachesTheRowAsAReply(t *testing.T) {
 	}
 }
 
+func TestAMeetingFollowUpReachesTheRowAsAFreshMessage(t *testing.T) {
+	dealID, meeting, attendee := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	svc := (&Service{}).WithDealMoves(&stubDealMoves{
+		moves: map[ids.UUID]crmcontracts.DealStatusCardMove{
+			// The shape dealstatus/followup.go's followUpMove stores.
+			dealID: cardMove("draft_email", map[string]any{
+				"activity_id": meeting.String(),
+				"links":       []any{map[string]any{"entity_type": "contact", "entity_id": attendee.String()}},
+			}),
+		},
+	})
+	queue := []crmcontracts.WorklistItem{riskRow(dealID)}
+	if err := svc.nameTheStep(context.Background(), queue); err != nil {
+		t.Fatalf("naming the step: %v", err)
+	}
+	move := queue[0].Move
+	if move.Action != crmcontracts.WorklistMoveActionDraftEmail || move.ActivityId != nil {
+		t.Fatalf("the follow-up reached the row as %q naming %v — a reply to the meeting, where the card "+
+			"said to write to its attendees", move.Action, move.ActivityId)
+	}
+}
+
 // A deal nobody has contacted yet. The card's firstOutreach arm builds its move
 // with NO arguments — move(ActionDraftEmail, reason, nil) — and the card
 // normalizes that nil to an empty object rather than leaving it null. So this is

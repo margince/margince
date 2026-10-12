@@ -399,7 +399,7 @@ func TestAColleaguesCopiedReplyOffersTheRequest(t *testing.T) {
 	if err := e.owner.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`, request).Scan(&key); err != nil {
 		t.Fatal(err)
 	}
-	subject, body, direction := "Re: request", "Lars is away; here is the answer.", "outbound"
+	subject, body, direction := "Re: request", "Answering while my colleague is away.", "outbound"
 	at := requestInstant.Add(time.Hour)
 	reply, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: &direction,

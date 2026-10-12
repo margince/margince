@@ -53,6 +53,7 @@ type Message struct {
 	// authored, and empty whenever no such claim can be trusted
 	// (deliveredto.go). It is how a forwarding alias becomes discoverable.
 	deliveredTo string
+	senderAuth  connector.SenderAuthentication
 	autoReply   bool // a reply nobody chose to write: kept off the timeline
 	// machineTouched is the BROADER question — did any machine have a hand in
 	// this? It never drops a message; it only refuses the outbound attestation,
@@ -68,6 +69,7 @@ type Message struct {
 	// calendarNotice answers only the OUTBOUND contact-minting question, and an
 	// inbound invitation is a fact about the message either way.
 	hasCalendarPart bool
+	calendarMethod  string // the part's RFC 5546 method, "" when none is known
 	// deliveryReport is the RFC 3464 shape — `multipart/report` carrying
 	// `report-type=delivery-status`. Kept in its own right beside
 	// hasCalendarPart, and for the same reason: it is a fact about the message
@@ -144,10 +146,12 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// ADR-0082 §3 and not something this parser can recover.
 	bccList, _ := header.AddressList("Bcc")
 	deliveredTo := TopDeliveredTo(header)
+	senderAuth := TopSenderAuthentication(header)
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
-	body, parts, drops, hasCalendarPart := extractText(reader)
+	body, parts, drops, calendar := extractText(reader)
+	hasCalendarPart := calendar.present
 
 	ownerLower := strings.ToLower(strings.TrimSpace(owner))
 	direction := connector.DirectionInbound
@@ -194,10 +198,12 @@ func Parse(raw []byte, owner string) (Message, error) {
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		replyTo:          replyIDs(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		deliveredTo:      deliveredTo,
+		senderAuth:       senderAuth,
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
 		calendarNotice:   calendarNotice,
 		hasCalendarPart:  hasCalendarPart,
+		calendarMethod:   calendar.method(),
 		deliveryReport:   deliveryReport,
 		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
@@ -397,18 +403,20 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			OccurredAt:      m.occurredAt,
 			Direction:       m.direction,
 			HasCalendarPart: m.hasCalendarPart,
+			CalendarMethod:  m.calendarMethod,
 		},
-		Source:       source,
-		CapturedBy:   "connector:" + connectorName,
-		Raw:          raw,
-		DeliveredTo:  m.deliveredTo,
-		Counterparty: m.recordCounterparty(),
-		ThreadKey:    m.threadKey,
-		ReplyTo:      m.replyTo,
-		Participants: m.participants.Participants,
-		Addresses:    m.addresses,
-		Parts:        m.recordParts(),
-		PartDrops:    m.recordDrops(),
+		Source:               source,
+		CapturedBy:           "connector:" + connectorName,
+		Raw:                  raw,
+		DeliveredTo:          m.deliveredTo,
+		SenderAuthentication: m.senderAuth,
+		Counterparty:         m.recordCounterparty(),
+		ThreadKey:            m.threadKey,
+		ReplyTo:              m.replyTo,
+		Participants:         m.participants.Participants,
+		Addresses:            m.addresses,
+		Parts:                m.recordParts(),
+		PartDrops:            m.recordDrops(),
 	}
 }
 

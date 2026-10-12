@@ -68,7 +68,7 @@ describe("NumberSetting", () => {
     );
   });
 
-  it.each(["", "1.5", "lots"])(
+  it.each(["", "1.5", "lots", "1e2", "0x10", "-5"])(
     "refuses %j as not a whole number",
     async (typed) => {
       const user = userEvent.setup();
@@ -163,6 +163,41 @@ describe("NumberSetting", () => {
     await user.tab();
     expect(onCommit).toHaveBeenCalledTimes(1);
   });
+
+  // A reading under a draft the field then refuses would vouch for the draft.
+  it.each(["1e2", "0x10", "-5", "0", "201", "12.5"])(
+    "reads no words under %j, which the field refuses",
+    async (typed) => {
+      const user = userEvent.setup();
+      render(
+        <SettingList>
+          <SettingRow
+            label="Pages per read"
+            description="Most pages one read fetches."
+            control={(control) => (
+              <NumberSetting
+                control={control}
+                value={60}
+                min={1}
+                max={200}
+                refusal={REFUSAL}
+                reading={(count) => `${count} pages in words`}
+                onCommit={vi.fn()}
+              />
+            )}
+          />
+        </SettingList>,
+      );
+      const box = screen.getByRole("textbox", { name: "Pages per read" });
+      expect(screen.getByText("60 pages in words")).toBeInTheDocument();
+      await user.clear(box);
+      await user.type(box, typed);
+      expect(screen.queryByText(/pages in words/)).toBeNull();
+      await user.clear(box);
+      await user.type(box, "120");
+      expect(screen.getByText("120 pages in words")).toBeInTheDocument();
+    },
+  );
 
   it("shows a newer stored value instead of an older draft", async () => {
     const user = userEvent.setup();

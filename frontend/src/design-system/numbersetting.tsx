@@ -33,6 +33,7 @@ export function NumberSetting({
   max,
   lowestOn,
   refusal,
+  reading,
   onCommit,
   disabled,
   testId,
@@ -43,6 +44,8 @@ export function NumberSetting({
   max: number;
   lowestOn?: number;
   refusal: string;
+  /** The typed number in words under the box, for a unit a bare figure hides. */
+  reading?: (value: number) => string;
   onCommit: (next: number) => void;
   disabled?: boolean;
   testId?: string;
@@ -57,26 +60,24 @@ export function NumberSetting({
   } | null>(null);
   const [refused, setRefused] = useState(false);
   const refusalId = useId();
+  const readingId = useId();
   const live = draft !== null && draft.over === value ? draft : null;
   const shown = live?.text ?? String(value);
+  const bounds = { min, max, lowestOn };
+  const typed = acceptedNumber(shown, bounds);
+  const words = reading && typed !== null ? reading(typed) : null;
   const commit = (by: "enter" | "blur") => {
     if (live === null) {
       setRefused(false);
       return;
     }
-    const next = Number(live.text.trim());
-    if (next === value) {
+    if (Number(live.text.trim()) === value) {
       setDraft(null);
       setRefused(false);
       return;
     }
-    if (
-      live.text.trim() === "" ||
-      !Number.isInteger(next) ||
-      next < min ||
-      next > max ||
-      (lowestOn !== undefined && next !== 0 && next < lowestOn)
-    ) {
+    const next = acceptedNumber(live.text, bounds);
+    if (next === null) {
       setRefused(true);
       return;
     }
@@ -92,11 +93,16 @@ export function NumberSetting({
       <TextInput
         {...control}
         aria-describedby={
-          [control["aria-describedby"], refused ? refusalId : null]
+          [
+            control["aria-describedby"],
+            words ? readingId : null,
+            refused ? refusalId : null,
+          ]
             .filter(Boolean)
             .join(" ") || undefined
         }
         aria-invalid={refused ? true : undefined}
+        className="t-num"
         data-testid={testId}
         inputMode="numeric"
         value={shown}
@@ -110,9 +116,34 @@ export function NumberSetting({
           }
         }}
       />
+      {words && (
+        <span id={readingId} className="t-caption numbersetting-reading">
+          {words}
+        </span>
+      )}
       <ErrorLine id={refusalId}>{refused ? refusal : null}</ErrorLine>
     </div>
   );
+}
+
+// Digits only: `Number` would also read "1e3", "0x10" and " -5 " as numbers.
+function acceptedNumber(
+  text: string,
+  {
+    min,
+    max,
+    lowestOn,
+  }: Readonly<{ min: number; max: number; lowestOn?: number }>,
+): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  const next = Number(trimmed);
+  if (next < min || next > max) {
+    return null;
+  }
+  return lowestOn !== undefined && next !== 0 && next < lowestOn ? null : next;
 }
 
 /**

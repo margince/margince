@@ -10,6 +10,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -18,6 +19,7 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { JobHealthCard } from "./jobhealth";
 import { DeadWorkCallout } from "./jobhealthdead";
+import { tableRowCells } from "./tablerow.testkit";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -143,43 +145,44 @@ describe("JobHealthCard", () => {
   it("reports every state of every kind, and which rows carry no company", async () => {
     stubRoutes();
     render(<JobHealthCard />);
-    // All four counts, zeros included: "0 dead" is the reassurance an operator
-    // opened this card for, and a card that only rendered non-zero counts would
-    // read the same whether the queue was healthy or unread. Two rows report a
-    // dead count, so the workspace kind and the dispatcher each contribute one.
-    expect(await screen.findByText("12 waiting")).toBeInTheDocument();
-    expect(screen.getByText("1 running")).toBeInTheDocument();
-    expect(screen.getByText("2 retrying")).toBeInTheDocument();
-    expect(screen.getAllByText("0 dead").length).toBe(2);
-    // The kind is the identifier River persists, shown verbatim — it names both
-    // the count row and the failure below it, which is how an operator ties the
-    // two together.
+    // Every count, zeros included: "0 dead" is the reassurance an operator
+    // opened this card for.
+    const kind = await tableRowCells("This company", "capture_classify");
+    expect(kind.Waiting).toHaveTextContent("12");
+    expect(kind.Running).toHaveTextContent("1");
+    expect(kind.Retrying).toHaveTextContent("2");
+    expect(kind.Dead).toHaveTextContent("0");
+    expect(kind.Queue).toHaveTextContent("default");
+    // The kind is River's identifier, verbatim, in both the count row and the
+    // failure below it, which is how an operator ties the two together.
     expect(screen.getAllByText("capture_classify").length).toBe(2);
-    // The dispatcher row is separated from the workspace's own work, and says
-    // whose counts they are.
-    expect(screen.getByText("retention_sweep_dispatch")).toBeInTheDocument();
+    const dispatcher = await tableRowCells(
+      "Fleet dispatchers",
+      "retention_sweep_dispatch",
+    );
+    expect(dispatcher.Dead).toHaveTextContent("0");
     expect(screen.getByText(/rows with no company/i)).toBeInTheDocument();
-    // Each of the three readings is a NAMED row. The counts and the failures
-    // are the same shape on screen, so a reading that lost its naming would
-    // leave an operator reading fleet work as this company's.
-    expect(screen.getByText("This company")).toBeInTheDocument();
-    expect(screen.getByText("Fleet dispatchers")).toBeInTheDocument();
-    expect(screen.getByText("Recent failures")).toBeInTheDocument();
-    // The stall signal, in a unit that survives the sub-hour case: 4500s reads as
-    // one hour, never format.ts's "0 hr" flooring — and in the singular, which is
-    // the whole reason the four duration keys carry a .one form.
-    expect(screen.getByText(/waited 1 hour\b/)).toBeInTheDocument();
+    // Each reading is named, so fleet work never reads as this company's.
+    expect(
+      screen.getByRole("heading", { name: "This company" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Recent failures" }),
+    ).toBeInTheDocument();
+    // 4,500 seconds is one hour in its largest whole unit, never "0 hr".
+    expect(kind["Oldest wait"]).toHaveTextContent(/^1 hour$/);
   });
 
   it("states nothing is runnable rather than claiming a wait of zero", async () => {
     stubRoutes();
     render(<JobHealthCard />);
-    await screen.findByText("retention_sweep_dispatch");
-    // The dispatcher's oldest_waiting_age_seconds is null — nothing of that
-    // kind is queued now, so the row names its queue and stops there. A "waited
-    // 0 seconds" note would read as a queue that had only just started.
-    expect(screen.getByText("queue periodic")).toBeInTheDocument();
-    expect(screen.queryByText(/waited 0 seconds/)).not.toBeInTheDocument();
+    const dispatcher = await tableRowCells(
+      "Fleet dispatchers",
+      "retention_sweep_dispatch",
+    );
+    // A null age means nothing of the kind is queued, which is not a wait of zero.
+    expect(dispatcher.Queue).toHaveTextContent("periodic");
+    expect(dispatcher["Oldest wait"]).toBeEmptyDOMElement();
   });
 
   it("surfaces the vetted failure text with the attempt it died on", async () => {
@@ -188,7 +191,8 @@ describe("JobHealthCard", () => {
     expect(
       await screen.findByText("the model provider refused the request"),
     ).toBeInTheDocument();
-    expect(screen.getByText(/attempt 2 of 5/)).toBeInTheDocument();
+    const failure = await tableRowCells("Recent failures", "capture_classify");
+    expect(failure.Attempt).toHaveTextContent("2 of 5");
     expect(screen.getByText(/come from the job layer/i)).toBeInTheDocument();
   });
 
@@ -207,8 +211,8 @@ describe("JobHealthCard", () => {
     ).toBeInTheDocument();
     // River's own row id, ungrouped: "4,711" would not find the log line that
     // carries job_id=4711.
-    const note = screen.getByText(/attempt 2 of 5/);
-    expect(note.textContent).toContain("job 4711");
+    const failure = await tableRowCells("Recent failures", "capture_classify");
+    expect(failure["Job ID"]).toHaveTextContent(/^4711$/);
     // Failing SINCE, which the attempt counter cannot say: rung 2 of 5 is the
     // same reading whether the first failure was a minute or a day ago.
     //
@@ -216,7 +220,7 @@ describe("JobHealthCard", () => {
     // when the renderer interpolates nothing, which is the same dangling
     // "failing since" this screen is careful everywhere else not to draw. The
     // year is the stable part across locales; the fixture's is 2026-08-13.
-    expect(note.textContent).toMatch(/failing since .*2026/);
+    expect(failure["Failed at"].textContent).toMatch(/failing since .*2026/);
   });
 
   it("asserts no class, no remedy and no span for a failure nobody could vet", async () => {
@@ -226,7 +230,7 @@ describe("JobHealthCard", () => {
     });
     render(<JobHealthCard />);
     // The vetted substitute still reports what little is known.
-    const note = await screen.findByText(/attempt 2 of 5/);
+    const failure = await tableRowCells("Recent failures", "capture_classify");
     expect(
       screen.getByText("the job failed for a reason it could not classify"),
     ).toBeInTheDocument();
@@ -236,13 +240,8 @@ describe("JobHealthCard", () => {
     // error does produce a first_failed_at, so null is absence and not "one".
     expect(screen.queryByText("provider_unavailable")).not.toBeInTheDocument();
     expect(screen.queryByText(/What to do/)).not.toBeInTheDocument();
-    expect(note.textContent).not.toMatch(/failing since/);
-    // And nothing is drawn as an empty shell: no leading, doubled or trailing
-    // separator, which is what a dropped part leaves behind when it is rendered
-    // as a blank rather than omitted.
-    expect(note.textContent).not.toMatch(/^\s*·/);
-    expect(note.textContent).not.toMatch(/·\s*·/);
-    expect(note.textContent).not.toMatch(/·\s*$/);
+    expect(failure["Failed at"].textContent).not.toMatch(/failing since/);
+    expect(failure.Reason.querySelectorAll("code")).toHaveLength(0);
   });
 
   it("reports the class without a span when only the first failure is missing", async () => {
@@ -262,9 +261,8 @@ describe("JobHealthCard", () => {
     expect(
       screen.getByText(/check the provider status page/),
     ).toBeInTheDocument();
-    const note = screen.getByText(/attempt 2 of 5/);
-    expect(note.textContent).not.toMatch(/failing since/);
-    expect(note.textContent).not.toMatch(/·\s*$/);
+    const failure = await tableRowCells("Recent failures", "capture_classify");
+    expect(failure["Failed at"].textContent).not.toMatch(/failing since/);
   });
 
   it("omits the job id rather than inventing one when the row carries none", async () => {
@@ -280,11 +278,10 @@ describe("JobHealthCard", () => {
     render(<JobHealthCard />);
     // job_id is optional on the wire, so a report from a build that predates it
     // must lose the label with the value rather than print a bare "job".
-    const note = await screen.findByText(/attempt 2 of 5/);
-    expect(note.textContent).not.toMatch(/job\b/);
-    // The span still renders with its value: dropping the id must cost the id
-    // and nothing standing next to it.
-    expect(note.textContent).toMatch(/failing since .*2026/);
+    const failure = await tableRowCells("Recent failures", "capture_classify");
+    expect(failure["Job ID"]).toBeEmptyDOMElement();
+    // Dropping the id costs the id and nothing standing next to it.
+    expect(failure["Failed at"].textContent).toMatch(/failing since .*2026/);
   });
 
   it("gives a dead job the danger treatment and says what it means", async () => {
@@ -311,7 +308,8 @@ describe("JobHealthCard", () => {
     // Nothing to say about a week that holds no more than the day does.
     expect(alert).not.toHaveTextContent(/7 days/i);
     // And the count itself carries the tone on the row it belongs to.
-    expect(screen.getByText("3 dead").closest(".badge")).toHaveClass(
+    const kind = await tableRowCells("This company", "capture_classify");
+    expect(within(kind.Dead).getByText("3").closest(".badge")).toHaveClass(
       "badge-danger",
     );
     expect(screen.getByText("Discarded").closest(".badge")).toHaveClass(
@@ -333,7 +331,8 @@ describe("JobHealthCard", () => {
         }),
     });
     render(<JobHealthCard />);
-    await screen.findByText("531 dead");
+    const kind = await tableRowCells("This company", "capture_classify");
+    expect(kind.Dead).toHaveTextContent("531");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -369,7 +368,7 @@ describe("JobHealthCard", () => {
   it("keeps a healthy report free of the dead-work alert", async () => {
     stubRoutes();
     render(<JobHealthCard />);
-    await screen.findByText("12 waiting");
+    await tableRowCells("This company", "capture_classify");
     // The fixture's dead counts are all zero, so nothing may interrupt. Without
     // this, an unconditional callout would pass the test above unnoticed.
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();

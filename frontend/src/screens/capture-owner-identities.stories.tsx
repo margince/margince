@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import {
   installFetchStub,
@@ -29,6 +30,13 @@ const OWN_DOMAIN = {
   source: "user",
   created_at: "2026-09-01T09:05:00Z",
 };
+const LEARNED = {
+  id: "oi-3",
+  kind: "address",
+  value: "lars.forwarding-alias@old-company.example",
+  source: "delivered_to",
+  created_at: "2026-09-14T06:40:00Z",
+};
 
 function story(identities: Record<string, unknown>[]) {
   return () => {
@@ -38,7 +46,10 @@ function story(identities: Record<string, unknown>[]) {
     });
     return (
       <StoryProviders>
-        <OwnerIdentitiesCard />
+        <ToastProvider>
+          <OwnerIdentitiesCard />
+          <ToastRegion />
+        </ToastProvider>
       </StoryProviders>
     );
   };
@@ -51,11 +62,22 @@ const meta: Meta<typeof OwnerIdentitiesCard> = {
 export default meta;
 type Story = StoryObj<typeof OwnerIdentitiesCard>;
 
-// Both kinds at once: one address, and a whole domain the same contact reads.
-// The kind is the row's answer, because "l.jankowfsky@privat.example" and
-// "privat.example" bind very different amounts of mail and the row has to say
-// which it is.
-export const Populated: Story = { render: story([ALIAS, OWN_DOMAIN]) };
+// Both kinds and a learned alias: the caption says which kind each binds, when
+// it was declared, and that the product found the third.
+export const Populated: Story = {
+  render: story([ALIAS, OWN_DOMAIN, LEARNED]),
+};
+
+export const PopulatedDark: Story = {
+  globals: { theme: "dark" },
+  render: story([ALIAS, OWN_DOMAIN, LEARNED]),
+};
+
+export const PopulatedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story([ALIAS, OWN_DOMAIN, LEARNED]),
+};
 
 // Nothing declared, which is the ordinary state and has to read as a fact rather
 // than as a list that failed to draw — "I have told it about no other addresses"

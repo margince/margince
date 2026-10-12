@@ -303,6 +303,7 @@ internal/modules/activities/dispositionsiblings_integration_test.go 1
 internal/modules/activities/emailrequestrequester_test.go 1
 internal/modules/activities/followupresolve_integration_test.go 3
 internal/modules/activities/followupsetting_integration_test.go 1
+internal/modules/activities/handled_integration_test.go 1
 internal/modules/activities/hiddenbacklog_integration_test.go 3
 internal/modules/activities/hiddenbacklogrows_integration_test.go 2
 internal/modules/activities/meetingfollowup_integration_test.go 1
@@ -317,7 +318,7 @@ internal/modules/activities/ruleset_unit_test.go 2
 internal/modules/activities/threadlessrequest_integration_test.go 2
 internal/modules/activities/waitingbooked_integration_test.go 9
 internal/modules/activities/waitingengagement_integration_test.go 1
-internal/modules/activities/waitinghorizonfallback_integration_test.go 3
+internal/modules/activities/waitinghorizonstored_integration_test.go 3
 internal/modules/activities/waitingload_integration_test.go 3
 internal/modules/activities/waitingownerplan_integration_test.go 1
 internal/modules/agents/apps/hold_test.go 1

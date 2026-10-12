@@ -1,0 +1,9 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion
+ */
+
+/* An address has no spaces, so without this it would push the row's menu past
+   the panel's edge. */
+.capture-exclusions-value {
+  overflow-wrap: anywhere;
+}

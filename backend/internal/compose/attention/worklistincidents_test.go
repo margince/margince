@@ -349,3 +349,32 @@ func TestAGroupTakesItsScreenFromItsMembers(t *testing.T) {
 			"first member's screen", *disagreeing.item.Destination, destinationReview)
 	}
 }
+
+// One reader holds one connection per provider, so an incident folds providers
+// sharing an account label and medium. It names them by that label alone.
+func TestAFoldedCaptureIncidentIsNamedByItsAccountAndMedium(t *testing.T) {
+	connection := func(provider string, calendar bool) crmcontracts.AttentionItem {
+		return captureItem(CaptureConcern{
+			ConnectionID: ids.NewV7(), Kind: "reauth_required",
+			Provider: provider, AccountLabel: "sales@acme.test", Calendar: calendar,
+		})
+	}
+	rows := []crmcontracts.AttentionItem{
+		connection("gmail", false), connection("imap", false), connection("graph", false),
+		connection("gcal", true), connection("graphcal", true), connection("caldav", true),
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
+
+	if len(got) != 2 {
+		t.Fatalf("three mailboxes and three calendars on one account drew %d rows, want one incident each", len(got))
+	}
+	for _, incident := range got {
+		if incident.Batch == nil || incident.Batch.Label == nil || *incident.Batch.Label != "sales@acme.test" {
+			t.Errorf("incident batch = %+v, want it named by the account label", incident.Batch)
+		}
+		if incident.Connection != nil {
+			t.Errorf("incident connection = %+v, want none when the members name different providers", incident.Connection)
+		}
+	}
+}

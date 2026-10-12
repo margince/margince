@@ -130,9 +130,14 @@ function ProfileForm({
           </div>
           {copy.notice}
           <div className="book-actions">
+            {/* The refusal rides the button, so at 390 it stays beside the
+                verb it explains rather than under the next one. */}
             <Button
-              disabled={
-                save.isPending || (!profile.enabled && !profile.provider)
+              disabled={save.isPending}
+              reason={
+                !profile.enabled && !profile.provider
+                  ? t("scheduling.calendarSetupNeeded")
+                  : undefined
               }
               onClick={() => save.mutate({ enabled: !profile.enabled })}
             >
@@ -145,9 +150,6 @@ function ProfileForm({
               {t("scheduling.replace")}
             </Button>
           </div>
-          {!profile.enabled && !profile.provider && (
-            <p className="t-caption">{t("scheduling.calendarSetupNeeded")}</p>
-          )}
           {embedded && <BookingIdentity profile={profile} />}
           <ConfirmModal
             open={replace}

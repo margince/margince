@@ -232,7 +232,8 @@ function stub({
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({ allow })),
     "GET /ai/provider-keys": () => jsonResponse(KEYS),
-    "GET /ai/provider-health": () => jsonResponse({ providers: [] }),
+    "GET /ai/provider-health": () =>
+      jsonResponse({ configured: ["anthropic"], providers: [] }),
     "GET /ai/routing": () => jsonResponse(ROUTING),
     "GET /ai-model-rates": () => jsonResponse({ data: [] }),
     "GET /ai/routing/schema": () => jsonResponse(SCHEMA),

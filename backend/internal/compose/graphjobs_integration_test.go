@@ -71,7 +71,7 @@ func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
 	// The per-workspace turn, which is what River's row now walks rather than
 	// what it carries (ADR-0103): Work enumerates the fleet, and this suite is
 	// about one tenant. It is the same code Work calls per tenant.
-	worker := newParticipantBackfillWorker(e.Pool, quietLog())
+	worker := newParticipantBackfillWorker(e.Pool, nil, quietLog())
 	if err := worker.backfillOneWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("backfill pass: %v", err)
 	}

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { formatInterval } from "../format/interval";
 import { Card } from "./atoms";
 import { NumberSetting } from "./numbersetting";
 import { SettingList, SettingRow } from "./settingrow";
@@ -49,6 +50,7 @@ function Limits() {
               min={30}
               max={600}
               refusal="Enter a whole number of seconds from 30 to 600."
+              reading={(typed) => formatInterval(typed, "en")}
               onCommit={setSeconds}
             />
           )}

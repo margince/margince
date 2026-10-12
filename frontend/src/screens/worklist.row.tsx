@@ -26,9 +26,9 @@ import {
   BriefSetAsides,
   useBriefAnswer,
 } from "./worklist.briefverbs";
+import { consequenceText } from "./worklist.connection";
 import {
   comparisonText,
-  consequenceText,
   dealFactsText,
   isUnprepared,
   itemTitle,
@@ -245,7 +245,7 @@ export function WorklistRow({
     host,
     touch,
   });
-  const named = conditionOf(item);
+  const named = conditionOf(item, t);
   return (
     <PanelRow
       // A CLASS and not a data attribute: `PanelRow` takes a className and

@@ -23,6 +23,7 @@ import {
   meRoute,
   type RouteMap,
 } from "./story-utils";
+import { openRowMenu } from "./tablerow.testkit";
 
 // Settings → Capture: the domains this installation refuses a company. The card
 // answers one question nothing else can — a company that never appeared, was it
@@ -43,10 +44,13 @@ const REOPEN = "POST /capture/blocked-domains/pwc.example/reopen";
 const OPS: GrantSpec = { company: ["read", "update"] };
 const READER: GrantSpec = { company: ["read"] };
 
+// `reason` is the deprecated English sentence; the card renders `reason_code`.
 const BY_HEURISTIC = {
   domain: "expensify.example",
   admission: "suppressed",
   reason: "bulk sender: no reply address",
+  reason_code: "bulk_sender",
+  sender_kind: "transactional",
   source: "heuristic",
   decided_at: "2026-08-02T14:40:00Z",
   company_id: null,
@@ -55,9 +59,12 @@ const BY_HUMAN = {
   domain: "mckinsey.example",
   admission: "admitted",
   reason: "they became a client in July",
+  reason_code: "stated",
+  note: "they became a client in July",
   source: "human",
   decided_at: "2026-08-11T07:05:00Z",
   company_id: "018f3a1b-0000-7000-8000-00000000c001",
+  company_name: "McKinsey and Company",
 };
 
 // A domain nothing decided: the machine gave up, cleared its retry cursor, and
@@ -70,6 +77,7 @@ const UNDECIDED = {
   // assertion about either one ambiguous.
   reason:
     "Nothing on the site named a company, and the sender's name did not explain the domain.",
+  reason_code: "unevidenced",
   source: "unevidenced",
   decided_at: "2026-08-14T11:20:00Z",
   company_id: null,
@@ -133,12 +141,33 @@ describe("BlockedDomainsCard", () => {
         en["blockedDomains.source.human"],
       ),
     ).toBeInTheDocument();
-    // And the reason, which is why the server requires one.
+    // And the reason, in the reader's words rather than the server's English.
     expect(
       within(rowFor("expensify.example")).getByText(
-        "bulk sender: no reply address",
+        en["blockedDomains.reason.bulkTransactional"],
       ),
     ).toBeInTheDocument();
+    expect(screen.queryByText("bulk sender: no reply address")).toBeNull();
+    // A human's reason is their own sentence.
+    expect(
+      within(rowFor("mckinsey.example")).getByText(
+        "they became a client in July",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("names the company a domain produced and opens it", async () => {
+    const user = userEvent.setup();
+    mount(OPS, {
+      [LIST]: () => jsonResponse({ data: [BY_HUMAN], total: 1 }),
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "McKinsey and Company" }),
+    );
+    expect(globalThis.location.hash).toContain(
+      "/companies/018f3a1b-0000-7000-8000-00000000c001",
+    );
   });
 
   it("reads as nothing-refused rather than as a table that failed to draw", async () => {
@@ -276,10 +305,12 @@ describe("BlockedDomainsCard", () => {
     // The row's verb is the OPPOSITE of the standing decision, and taking it
     // opens the form rather than writing: the contract demands a reason and a
     // one-click flip has nowhere to get one.
+    const menu = await openRowMenu(user, "mckinsey.example");
+    expect(
+      menu.queryByRole("button", { name: en["blockedDomains.rowAdmit"] }),
+    ).toBeNull();
     await user.click(
-      within(rowFor("mckinsey.example")).getByRole("button", {
-        name: en["blockedDomains.rowRefuse"],
-      }),
+      menu.getByRole("button", { name: en["blockedDomains.rowRefuse"] }),
     );
 
     const dialog = screen.getByRole("dialog");
@@ -309,34 +340,36 @@ describe("BlockedDomainsCard", () => {
     });
 
     await screen.findByText("pwc.example");
-    const row = rowFor("pwc.example");
-    // The decision verbs are absent on this row. Offering "Allow"
-    // where nothing has been judged invites a call the operator has no grounds
-    // for — not knowing yet is the whole reason the row is in the list.
+    const menu = await openRowMenu(user, "pwc.example");
+    // Not knowing yet is why the row is listed. A call either way would have
+    // no grounds.
     expect(
-      within(row).queryByRole("button", {
-        name: en["blockedDomains.rowAdmit"],
-      }),
+      menu.queryByRole("button", { name: en["blockedDomains.rowAdmit"] }),
     ).toBeNull();
     expect(
-      within(row).queryByRole("button", {
-        name: en["blockedDomains.rowRefuse"],
-      }),
+      menu.queryByRole("button", { name: en["blockedDomains.rowRefuse"] }),
     ).toBeNull();
-    // And the decided row beside it still carries its own.
-    expect(
-      within(rowFor("mckinsey.example")).getByRole("button", {
-        name: en["blockedDomains.rowRefuse"],
-      }),
-    ).toBeInTheDocument();
 
     await user.click(
-      within(row).getByRole("button", { name: en["blockedDomains.rowReopen"] }),
+      menu.getByRole("button", { name: en["blockedDomains.rowReopen"] }),
     );
     await waitFor(() => expect(asked).toEqual(["pwc.example"]));
-    // A re-ask changes nothing visible in the row — the domain stays undecided
-    // until a crawl answers — so the press has to say that it landed.
+    // A re-ask changes nothing visible in the row, so the press says it landed.
     expect(await screen.findByRole("status")).toHaveTextContent("pwc.example");
+  });
+
+  it("offers a re-ask only where the question is open", async () => {
+    const user = userEvent.setup();
+    mount(OPS, {
+      [LIST]: () => jsonResponse({ data: [BY_HUMAN], total: 1 }),
+    });
+
+    await screen.findByText("mckinsey.example");
+    const menu = await openRowMenu(user, "mckinsey.example");
+    // A decided domain answers a re-ask 409.
+    expect(
+      menu.queryByRole("button", { name: en["blockedDomains.rowReopen"] }),
+    ).toBeNull();
   });
 
   it("says what stopped the machine deciding, not merely that nothing did", async () => {
@@ -349,14 +382,69 @@ describe("BlockedDomainsCard", () => {
     expect(
       within(row).getByText(en["blockedDomains.admission.undecided"]),
     ).toBeInTheDocument();
-    // The source column is what an operator can act on: a site that named
-    // nothing is a different problem from mail too old to trust.
+    // The reason is what an operator can act on: a site that named nothing is
+    // a different problem from mail too old to trust.
     expect(
       within(row).getByText(en["blockedDomains.source.unevidenced"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(UNDECIDED.reason)).toBeNull();
+  });
+
+  it("says a colleague kept the domain when they answered its question", async () => {
+    mount(OPS, {
+      [LIST]: () =>
+        jsonResponse({
+          data: [
+            {
+              ...BY_HUMAN,
+              reason_code: "kept_as_company",
+              note: undefined,
+              reason: "kept from the question",
+            },
+          ],
+          total: 1,
+        }),
+    });
+
+    await screen.findByText("mckinsey.example");
+    expect(
+      within(rowFor("mckinsey.example")).getByText(
+        en["blockedDomains.reason.keptAsCompany"],
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // A reason the server has no code for keeps the sentence it stored.
+  it("shows the stored sentence for a reason the server cannot name", async () => {
+    mount(OPS, {
+      [LIST]: () =>
+        jsonResponse({
+          data: [{ ...UNDECIDED, reason_code: "unknown" }],
+          total: 1,
+        }),
+    });
+
+    await screen.findByText("pwc.example");
+    expect(
+      within(rowFor("pwc.example")).getByText(UNDECIDED.reason),
+    ).toBeInTheDocument();
+  });
+
+  // A server older than `reason_code` still sends its sentence.
+  it("shows the stored sentence when the server sends no reason code", async () => {
+    const { reason_code: _absent, ...older } = UNDECIDED;
+    mount(OPS, {
+      [LIST]: () => jsonResponse({ data: [older], total: 1 }),
+    });
+
+    await screen.findByText("pwc.example");
+    expect(
+      within(rowFor("pwc.example")).getByText(UNDECIDED.reason),
     ).toBeInTheDocument();
   });
 
   it("keeps the list readable for a seat that may not change it, and says so", async () => {
+    const user = userEvent.setup();
     mount(READER, {
       [LIST]: () => jsonResponse({ data: [BY_HUMAN], total: 1 }),
     });
@@ -372,7 +460,8 @@ describe("BlockedDomainsCard", () => {
     expect(record.getAttribute("aria-describedby")).toBe(denial.id);
     // The row's own verb is refused by the same fact and points at the same
     // sentence — a per-row flip that stayed live would be a way around it.
-    const flip = within(rowFor("mckinsey.example")).getByRole("button", {
+    const menu = await openRowMenu(user, "mckinsey.example");
+    const flip = menu.getByRole("button", {
       name: en["blockedDomains.rowRefuse"],
     });
     expect(flip).toBeDisabled();

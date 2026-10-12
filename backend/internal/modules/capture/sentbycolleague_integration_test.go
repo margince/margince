@@ -7,6 +7,7 @@ package capture_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -21,12 +22,15 @@ import (
 // colleagueCopy is the copy a seat's mailbox receives when a colleague answers
 // a customer and copies the seat: From the colleague, To the customer.
 func colleagueCopy(sourceID, from string) connector.NormalizedRecord {
-	rec := mailRecord(sourceID, from, from, "arne@client.io", "rep@acme.com", "patrick@client.io")
+	rec := mailRecord(sourceID, from, from, "dana@client.io", "rep@acme.com", "eli@client.io")
 	rec.Participants = []connector.MessageParticipant{
-		{Email: "arne@client.io", Role: connector.ParticipantRoleTo},
+		{Email: "dana@client.io", Role: connector.ParticipantRoleTo},
 		{Email: "rep@acme.com", Role: connector.ParticipantRoleCC},
-		{Email: "patrick@client.io", Role: connector.ParticipantRoleCC},
+		{Email: "eli@client.io", Role: connector.ParticipantRoleCC},
 	}
+	// As Gmail delivers it: its receiving server passed DMARC for the From domain.
+	rec.CapturedBy = "connector:gmail"
+	rec.SenderAuthentication = connector.SenderAuthentication{Server: "mx.google.com", DMARCPassDomain: "acme.com"}
 	return rec
 }
 
@@ -73,10 +77,9 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
-	colleague := seedSeat(ctx, t, db, "marcus@acme.com", "invited")
+	colleague := seedSeat(ctx, t, db, "sam@acme.com", "invited")
 
-	if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat),
-		colleagueCopy("colleague-1", "Marcus@acme.com")); err != nil {
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, colleagueCopy("colleague-1", "Sam@acme.com"))); err != nil {
 		t.Fatalf("Upsert: %v", err)
 	}
 
@@ -84,7 +87,7 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	if got.direction != connector.DirectionOutbound {
 		t.Errorf("direction = %q, want outbound: the customer's question would stay owed", got.direction)
 	}
-	if got.counterparty != "arne@client.io" {
+	if got.counterparty != "dana@client.io" {
 		t.Errorf("counterparty = %q, want the first outside recipient", got.counterparty)
 	}
 	if got.attested {
@@ -124,7 +127,7 @@ func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
 
 	for _, from := range []string{"gone@acme.com", "sales@acme.com"} {
 		t.Run(from, func(t *testing.T) {
-			if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat), colleagueCopy("not-"+from, from)); err != nil {
+			if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, colleagueCopy("not-"+from, from))); err != nil {
 				t.Fatalf("Upsert: %v", err)
 			}
 			got := storedMailFor(ctx, t, db, "not-"+from)
@@ -133,4 +136,85 @@ func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A second, outside From address is a co-author, not the customer the
+// colleague wrote to. The counterparty is the first outside recipient.
+func TestAColleaguesCoAuthorIsNotTheCustomer(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	seedSeat(ctx, t, db, "sam@acme.com", "invited")
+	rec := colleagueCopy("co-authored-1", "sam@acme.com")
+	rec.Addresses = []string{"sam@acme.com", "pat@agency.io", "dana@client.io", "rep@acme.com", "eli@client.io"}
+
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, rec)); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	got := storedMailFor(ctx, t, db, "co-authored-1")
+	if got.direction != connector.DirectionOutbound || got.counterparty != "dana@client.io" {
+		t.Errorf("stored as %s to %q, want outbound to the first outside recipient dana@client.io", got.direction, got.counterparty)
+	}
+}
+
+// A copy to a distribution list names more recipients than capture keeps as
+// participants. They are withheld, and the first of them is still the customer.
+func TestAColleaguesMailToAListIsStillOurs(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	seedSeat(ctx, t, db, "sam@acme.com", "invited")
+	rec := colleagueCopy("list-1", "sam@acme.com")
+	rec.Participants = nil
+	for i := range connector.MaxParticipants + 1 {
+		rec.WithheldParties = append(rec.WithheldParties,
+			connector.MessageParticipant{Email: fmt.Sprintf("buyer%d@client.io", i), Role: connector.ParticipantRoleTo})
+	}
+
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, rec)); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	got := storedMailFor(ctx, t, db, "list-1")
+	if got.direction != connector.DirectionOutbound || got.counterparty != "buyer0@client.io" {
+		t.Errorf("stored as %s to %q, want outbound to the first withheld recipient buyer0@client.io", got.direction, got.counterparty)
+	}
+}
+
+// A From the receiving server did not authenticate is the sender's word alone,
+// and the copy stays the inbound mail capture always filed.
+func TestAnUnauthenticatedColleagueIsNotTrusted(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	seedSeat(ctx, t, db, "sam@acme.com", "invited")
+
+	for name, unauthenticate := range map[string]func(*connector.NormalizedRecord){
+		"no result":                 func(r *connector.NormalizedRecord) { r.SenderAuthentication = connector.SenderAuthentication{} },
+		"DMARC for another domain":  func(r *connector.NormalizedRecord) { r.SenderAuthentication.DMARCPassDomain = "elsewhere.example" },
+		"a server other than Gmail": func(r *connector.NormalizedRecord) { r.SenderAuthentication.Server = "mx.elsewhere.example" },
+		"over IMAP":                 func(r *connector.NormalizedRecord) { r.CapturedBy = "connector:imap" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			rec := colleagueCopy("unauth-"+name, "sam@acme.com")
+			unauthenticate(&rec)
+			if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, rec)); err != nil {
+				t.Fatalf("Upsert: %v", err)
+			}
+			got := storedMailFor(ctx, t, db, "unauth-"+name)
+			if got.direction != connector.DirectionInbound || got.colleague != nil {
+				t.Errorf("an unauthenticated copy was read as the colleague's (direction %q, colleague %v)", got.direction, got.colleague)
+			}
+		})
+	}
+}
+
+// capturedAs is rec as the seat's own connector hands it to the sink: the
+// acting connector is the one the record names.
+func capturedAs(ctx context.Context, ws, seat ids.UUID, rec connector.NormalizedRecord) (context.Context, connector.NormalizedRecord) {
+	ctx = sinkContextFor(ctx, ws, seat, seat)
+	actor, _ := principal.Actor(ctx)
+	actor.ID = rec.CapturedBy
+	return principal.WithActor(ctx, actor), rec
 }

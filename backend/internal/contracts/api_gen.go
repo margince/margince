@@ -2023,6 +2023,24 @@ func (e AttentionThisMorningState) Valid() bool {
 	}
 }
 
+// Defines values for AttentionConnectionFactsMedium.
+const (
+	AttentionConnectionFactsMediumCalendar AttentionConnectionFactsMedium = "calendar"
+	AttentionConnectionFactsMediumMailbox  AttentionConnectionFactsMedium = "mailbox"
+)
+
+// Valid indicates whether the value is a known member of the AttentionConnectionFactsMedium enum.
+func (e AttentionConnectionFactsMedium) Valid() bool {
+	switch e {
+	case AttentionConnectionFactsMediumCalendar:
+		return true
+	case AttentionConnectionFactsMediumMailbox:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionItemActions.
 const (
 	AttentionItemActionsAcknowledge AttentionItemActions = "acknowledge"
@@ -2998,6 +3016,63 @@ func (e BlockedDomainAdmission) Valid() bool {
 	case BlockedDomainAdmissionSuppressed:
 		return true
 	case BlockedDomainAdmissionUndecided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BlockedDomainReasonCode.
+const (
+	BlockedDomainReasonCodeBulkSender     BlockedDomainReasonCode = "bulk_sender"
+	BlockedDomainReasonCodeCompanyCreated BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeKeptAsCompany  BlockedDomainReasonCode = "kept_as_company"
+	BlockedDomainReasonCodeNearDuplicate  BlockedDomainReasonCode = "near_duplicate"
+	BlockedDomainReasonCodeStaleEvidence  BlockedDomainReasonCode = "stale_evidence"
+	BlockedDomainReasonCodeStated         BlockedDomainReasonCode = "stated"
+	BlockedDomainReasonCodeUnevidenced    BlockedDomainReasonCode = "unevidenced"
+	BlockedDomainReasonCodeUnknown        BlockedDomainReasonCode = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
+func (e BlockedDomainReasonCode) Valid() bool {
+	switch e {
+	case BlockedDomainReasonCodeBulkSender:
+		return true
+	case BlockedDomainReasonCodeCompanyCreated:
+		return true
+	case BlockedDomainReasonCodeKeptAsCompany:
+		return true
+	case BlockedDomainReasonCodeNearDuplicate:
+		return true
+	case BlockedDomainReasonCodeStaleEvidence:
+		return true
+	case BlockedDomainReasonCodeStated:
+		return true
+	case BlockedDomainReasonCodeUnevidenced:
+		return true
+	case BlockedDomainReasonCodeUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BlockedDomainSenderKind.
+const (
+	BlockedDomainSenderKindNewsletter    BlockedDomainSenderKind = "newsletter"
+	BlockedDomainSenderKindSpam          BlockedDomainSenderKind = "spam"
+	BlockedDomainSenderKindTransactional BlockedDomainSenderKind = "transactional"
+)
+
+// Valid indicates whether the value is a known member of the BlockedDomainSenderKind enum.
+func (e BlockedDomainSenderKind) Valid() bool {
+	switch e {
+	case BlockedDomainSenderKindNewsletter:
+		return true
+	case BlockedDomainSenderKindSpam:
+		return true
+	case BlockedDomainSenderKindTransactional:
 		return true
 	default:
 		return false
@@ -10948,6 +11023,27 @@ func (e KnowledgeAnswerOutcome) Valid() bool {
 	}
 }
 
+// Defines values for KnowledgeCoverageEmbedState.
+const (
+	KnowledgeCoverageEmbedStateComplete         KnowledgeCoverageEmbedState = "complete"
+	KnowledgeCoverageEmbedStateIndexing         KnowledgeCoverageEmbedState = "indexing"
+	KnowledgeCoverageEmbedStateNoEmbeddingModel KnowledgeCoverageEmbedState = "no_embedding_model"
+)
+
+// Valid indicates whether the value is a known member of the KnowledgeCoverageEmbedState enum.
+func (e KnowledgeCoverageEmbedState) Valid() bool {
+	switch e {
+	case KnowledgeCoverageEmbedStateComplete:
+		return true
+	case KnowledgeCoverageEmbedStateIndexing:
+		return true
+	case KnowledgeCoverageEmbedStateNoEmbeddingModel:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for KnowledgeDocumentIngestStatus.
 const (
 	KnowledgeDocumentIngestStatusKnowledgeDocumentIngestStatusDone    KnowledgeDocumentIngestStatus = "done"
@@ -15123,6 +15219,7 @@ func (e ServiceStatusStatus) Valid() bool {
 
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
+	SetActivityDispositionRequestDispositionHandled  SetActivityDispositionRequestDisposition = "handled"
 	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
 	SetActivityDispositionRequestDispositionNotSales SetActivityDispositionRequestDisposition = "not_sales"
 	SetActivityDispositionRequestDispositionSnooze   SetActivityDispositionRequestDisposition = "snooze"
@@ -15131,6 +15228,8 @@ const (
 // Valid indicates whether the value is a known member of the SetActivityDispositionRequestDisposition enum.
 func (e SetActivityDispositionRequestDisposition) Valid() bool {
 	switch e {
+	case SetActivityDispositionRequestDispositionHandled:
+		return true
 	case SetActivityDispositionRequestDispositionNotMine:
 		return true
 	case SetActivityDispositionRequestDispositionNotSales:
@@ -18681,6 +18780,7 @@ func (e WorklistItemDestination) Valid() bool {
 
 // Defines values for WorklistItemDispositions.
 const (
+	WorklistItemDispositionsWorklistDispositionHandled  WorklistItemDispositions = "handled"
 	WorklistItemDispositionsWorklistDispositionNotMine  WorklistItemDispositions = "not_mine"
 	WorklistItemDispositionsWorklistDispositionNotSales WorklistItemDispositions = "not_sales"
 	WorklistItemDispositionsWorklistDispositionSnooze   WorklistItemDispositions = "snooze"
@@ -18689,6 +18789,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistItemDispositions enum.
 func (e WorklistItemDispositions) Valid() bool {
 	switch e {
+	case WorklistItemDispositionsWorklistDispositionHandled:
+		return true
 	case WorklistItemDispositionsWorklistDispositionNotMine:
 		return true
 	case WorklistItemDispositionsWorklistDispositionNotSales:
@@ -19029,6 +19131,7 @@ const (
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindMetDaysAgo         WorklistReasonKind = "met_days_ago"
+	WorklistReasonKindNoAttendeeOnFile   WorklistReasonKind = "no_attendee_on_file"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindNoNextStep         WorklistReasonKind = "no_next_step"
 	WorklistReasonKindNoReplyDays        WorklistReasonKind = "no_reply_days"
@@ -19088,6 +19191,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindMeetingUnprepared:
 		return true
 	case WorklistReasonKindMetDaysAgo:
+		return true
+	case WorklistReasonKindNoAttendeeOnFile:
 		return true
 	case WorklistReasonKindNoChampion:
 		return true
@@ -23545,7 +23650,13 @@ type AiProfileState string
 
 // AiProviderHealth defines model for AiProviderHealth.
 type AiProviderHealth struct {
-	// Providers Providers that are not answering normally, in name order. Empty when all are.
+	// Configured Every provider the routing binds now, answering or not, in name order and in the
+	// same names `providers` uses. Empty when no AI provider is configured. An empty
+	// `providers` means every provider answers only when this list is not empty too.
+	Configured []string `json:"configured"`
+
+	// Providers Providers that are not answering normally, in name order. Empty when every provider
+	// in `configured` answers, and empty too when `configured` is.
 	Providers []AiProviderHealthEntry `json:"providers"`
 }
 
@@ -24764,9 +24875,10 @@ type Attention struct {
 	// CaptureHealth The reader's OWN capture connections needing the reader's hand: a mailbox
 	// wanting re-authentication, a connection in error, a sync failing, a history
 	// import that ended in error. One card per connection, carrying its worst
-	// condition; `kind` names the condition and `detail` carries the mailbox (its
-	// account label, or the provider where none was recorded). Fixing the
-	// connection lives on the capture settings screen, so the card offers no verbs.
+	// condition; `kind` names the condition, `detail` carries the account label when
+	// the connector recorded one, and `connection` names the provider and whether it
+	// is a mailbox or a calendar. Fixing the connection lives on the capture settings
+	// screen, so the card offers no verbs.
 	//
 	// Capture is per-user, so this lane is each reader's own mailboxes and nobody
 	// else's. Withheld — named in `lanes_omitted` — for a caller with no human
@@ -25031,6 +25143,22 @@ type AttentionLanesOmitted string
 // when the lane itself was withheld (`lanes_omitted` names it).
 type AttentionThisMorningState string
 
+// AttentionConnectionFacts The connection a `capture_health` row is about. Sent only for `source: capture_health`.
+//
+// Typed so the client names it in the reader's language. `detail` and `cause_label` carry
+// the account label when the connector reported one, and are absent when it did not:
+// neither ever carries a provider id.
+type AttentionConnectionFacts struct {
+	// Medium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
+	Medium AttentionConnectionFactsMedium `json:"medium"`
+
+	// Provider The provider id the connection was made with (`gmail`, `imap`, `gcal`, …). A key the client maps to a display name, never prose.
+	Provider string `json:"provider"`
+}
+
+// AttentionConnectionFactsMedium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
+type AttentionConnectionFactsMedium string
+
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
@@ -25224,6 +25352,13 @@ type AttentionItem struct {
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
 	Confidence *float32 `json:"confidence,omitempty"`
+
+	// Connection The connection a `capture_health` row is about. Sent only for `source: capture_health`.
+	//
+	// Typed so the client names it in the reader's language. `detail` and `cause_label` carry
+	// the account label when the connector reported one, and are absent when it did not:
+	// neither ever carries a provider id.
+	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
 
 	// Deal The deal behind a `deal_at_risk` item: the facts its card states, so a client
 	// draws value and ownership without a second read per row. Sent only for
@@ -26119,8 +26254,13 @@ type BlockedDomain struct {
 	// on the row for this state, it is what the absence of a decision is called on the wire.
 	Admission BlockedDomainAdmission `json:"admission"`
 
-	// CompanyId The company on this domain, when one exists — an admitted domain usually has one.
+	// CompanyId The company on this domain, when one exists and the reader may see it. An admitted
+	// domain usually has one. A company the reader may not open is withheld, never pointed at.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// CompanyName The name of the company `company_id` points at. Sent exactly when `company_id` is, so
+	// a company the reader may not see stays withheld by both.
+	CompanyName *string `json:"company_name,omitempty"`
 
 	// DecidedAt When the decision was recorded. For an `undecided` domain, when the row last moved.
 	DecidedAt time.Time `json:"decided_at"`
@@ -26128,8 +26268,32 @@ type BlockedDomain struct {
 	// Domain The registrable domain the decision is about.
 	Domain string `json:"domain"`
 
+	// Note The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`.
+	Note *string `json:"note,omitempty"`
+
 	// Reason One sentence an operator can act on: why this domain was refused, let in, or left open.
+	// Kept for clients that predate `reason_code`. A sentence the machine wrote is English
+	// whatever the reader's language, so a client says `reason_code` in the reader's own
+	// words and shows `note` for a decision somebody explained.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Reason string `json:"reason"`
+
+	// ReasonCode Why, as a code the client words in the reader's language.
+	//
+	// - `stated`: whoever decided wrote the reason down; it travels as `note`.
+	// - `company_created`: a colleague created a company on this domain, which let it in.
+	// - `kept_as_company`: a colleague answered the domain's open question by keeping it
+	//   as a company.
+	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
+	//   company this business works with. `sender_kind` says which, when it is known.
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
+	//   question, as `source` describes each one.
+	// - `unknown`: the row records a reason this server has no word for. `reason` still
+	//   carries its stored sentence.
+	ReasonCode BlockedDomainReasonCode `json:"reason_code"`
+
+	// SenderKind What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
+	SenderKind *BlockedDomainSenderKind `json:"sender_kind,omitempty"`
 
 	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -26144,6 +26308,23 @@ type BlockedDomain struct {
 // refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
 // on the row for this state, it is what the absence of a decision is called on the wire.
 type BlockedDomainAdmission string
+
+// BlockedDomainReasonCode Why, as a code the client words in the reader's language.
+//
+//   - `stated`: whoever decided wrote the reason down; it travels as `note`.
+//   - `company_created`: a colleague created a company on this domain, which let it in.
+//   - `kept_as_company`: a colleague answered the domain's open question by keeping it
+//     as a company.
+//   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
+//     company this business works with. `sender_kind` says which, when it is known.
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
+//     question, as `source` describes each one.
+//   - `unknown`: the row records a reason this server has no word for. `reason` still
+//     carries its stored sentence.
+type BlockedDomainReasonCode string
+
+// BlockedDomainSenderKind What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
+type BlockedDomainSenderKind string
 
 // BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 // `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -35830,11 +36011,12 @@ type HiddenBacklog struct {
 	// read.
 	PastHorizon int `json:"past_horizon"`
 
-	// SetAside Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
-	// least alarming of the four: a snooze lifts on its own moment, so this includes
-	// work that will come back without anybody remembering it. `not_mine` names no
-	// moment, and lifts only when the reader picks the message back up or the record
-	// it is filed under changes hands.
+	// SetAside Work this reader has snoozed, marked `not_mine` or marked `handled`. THEIR OWN
+	// CHOICE, and the least alarming of the four: a snooze lifts on its own moment, so
+	// this includes work that will come back without anybody remembering it. `not_mine`
+	// names no moment, and lifts only when the reader picks the message back up or the
+	// record it is filed under changes hands. `handled` lifts only when the reader picks
+	// it back up.
 	SetAside int `json:"set_aside"`
 
 	// Shown What the eligibility query FOUND under the rules as they stand. Here so the
@@ -37477,7 +37659,33 @@ type KnowledgeCoverage struct {
 	ChunksEmbedded int `json:"chunks_embedded"`
 	ChunksTotal    int `json:"chunks_total"`
 	DocumentsTotal int `json:"documents_total"`
+
+	// EmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+	// searchable rather than shown a bare count.
+	//
+	// - `no_embedding_model`: this installation binds no embedding model, so no passage
+	//   gets a vector and nothing is searchable. It is the same answer as
+	//   `settings_availability.embedding_reindex` being false on `/me`, read from the
+	//   same embed lane.
+	// - `indexing`: a model is bound and work is still owed: a document is queued or
+	//   being read, a re-embed is running, or some passage has no vector under the
+	//   model bound now.
+	// - `complete`: every live passage carries a vector under the model bound now.
+	EmbedState KnowledgeCoverageEmbedState `json:"embed_state"`
 }
+
+// KnowledgeCoverageEmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+// searchable rather than shown a bare count.
+//
+//   - `no_embedding_model`: this installation binds no embedding model, so no passage
+//     gets a vector and nothing is searchable. It is the same answer as
+//     `settings_availability.embedding_reindex` being false on `/me`, read from the
+//     same embed lane.
+//   - `indexing`: a model is bound and work is still owed: a document is queued or
+//     being read, a re-embed is running, or some passage has no vector under the
+//     model bound now.
+//   - `complete`: every live passage carries a vector under the model bound now.
+type KnowledgeCoverageEmbedState string
 
 // KnowledgeDocument defines model for KnowledgeDocument.
 type KnowledgeDocument struct {
@@ -38513,7 +38721,12 @@ type MagicReceipt struct {
 	// happened today". The window's own size arrives with the cursor, which is the
 	// thing that makes it worth counting; a figure asserted before then would be
 	// neither the page nor the window.
-	Totals   MagicTotals `json:"totals"`
+	Totals MagicTotals `json:"totals"`
+
+	// Watching One line per connection whose health needs restoring. Its summary values carry
+	// `provider`, the connection's provider id (`gmail`, `gcal`, …), which the client maps to
+	// a display name; `account`, the account label, when the connector reported one; and
+	// `failing_since` where the condition has a start.
 	Watching []MagicLine `json:"watching"`
 }
 
@@ -43358,8 +43571,8 @@ type ResponseMetrics struct {
 	// day still running is left out, because its next step can still be booked.
 	AtRiskToDay *openapi_types.Date `json:"at_risk_to_day,omitempty"`
 
-	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
-	// judged not sales.
+	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs,
+	// marked done, or judged not sales. None of these is a reply sent.
 	//
 	// Counted from the audit record rather than from what is set aside now. A snooze
 	// that lifted and a not_mine somebody withdrew leave no trace in the current
@@ -44525,8 +44738,9 @@ type SetActivityAudienceRequest struct {
 
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
-	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
-	// `not_mine` bind only the caller.
+	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `handled`,
+	// `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
+	// message another way; the customer's next message arrives as new work.
 	Disposition SetActivityDispositionRequestDisposition `json:"disposition"`
 
 	// ReopenOn What lifts a snooze. `time` is the original behaviour and the default, so a client
@@ -44549,8 +44763,9 @@ type SetActivityDispositionRequest struct {
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 }
 
-// SetActivityDispositionRequestDisposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
-// `not_mine` bind only the caller.
+// SetActivityDispositionRequestDisposition What the reader decided. `not_sales` binds the thread for everybody; `handled`,
+// `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
+// message another way; the customer's next message arrives as new work.
 type SetActivityDispositionRequestDisposition string
 
 // SetAiModelRateRequest defines model for SetAiModelRateRequest.
@@ -45159,16 +45374,28 @@ type SourceAuthor struct {
 
 // Stage A pipeline stage. Mirrors the `stage` table.
 type Stage struct {
-	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
-	CreatedAt  *time.Time         `json:"created_at,omitempty"`
-	Id         openapi_types.UUID `json:"id"`
-	Name       string             `json:"name"`
-	PipelineId openapi_types.UUID `json:"pipeline_id"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+
+	// DealCount Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds.
+	DealCount *int `json:"deal_count,omitempty"`
+
+	// ExitCriteria The stage's live exit criteria, split by whether each blocks a deal leaving.
+	ExitCriteria *StageExitCriteriaCounts `json:"exit_criteria,omitempty"`
+	Id           openapi_types.UUID       `json:"id"`
+	Name         string                   `json:"name"`
+	PipelineId   openapi_types.UUID       `json:"pipeline_id"`
 
 	// Position Unique within the pipeline.
 	Position  int           `json:"position"`
 	Semantic  StageSemantic `json:"semantic"`
 	UpdatedAt *time.Time    `json:"updated_at,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
 
 	// WinProbability won=100, lost=0, open=0..100.
 	WinProbability int `json:"win_probability"`
@@ -45285,6 +45512,15 @@ type StageEvidenceListResponse struct {
 
 // StageEvidenceSource What kind of record the observation was read from.
 type StageEvidenceSource string
+
+// StageExitCriteriaCounts The stage's live exit criteria, split by whether each blocks a deal leaving.
+type StageExitCriteriaCounts struct {
+	// Optional Criteria gathered and shown that never block.
+	Optional int `json:"optional"`
+
+	// Required Criteria a deal must meet to leave the stage.
+	Required int `json:"required"`
+}
 
 // StageExitCriterion One thing that must be true of a deal before it leaves a stage. Mirrors the
 // `stage_exit_criterion` table. Configuration, not observation: whether a
@@ -48967,6 +49203,11 @@ type WorklistItem struct {
 	// have them, which is not the same as never.
 	Company *WorklistCompanyFacts `json:"company,omitempty"`
 
+	// Connection The connection a `capture_health` row is about, carried from the attention item. Sent
+	// only on a single `capture_health` row: a folded incident's members are connections of
+	// different providers, so `batch.label` names the account they share instead.
+	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
+
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close
 	// date slips, one merely idle drifts.
@@ -49132,6 +49373,12 @@ type WorklistItem struct {
 	// Absent when the row offers no single obvious step, which is a real state
 	// rather than a gap: a dedupe pair genuinely asks the reader to choose.
 	PrimaryAction *WorklistItemPrimaryAction `json:"primary_action,omitempty"`
+
+	// Recipients Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
+	// is filed under, then the attendees its calendar entry resolved to a contact this
+	// caller may read. Best first, each once; `contact` is the first of them. Sent on
+	// `meeting_follow_up` rows only, and absent where no attendee is on file.
+	Recipients *[]WorklistContactFacts `json:"recipients,omitempty"`
 
 	// Score Rank within the level. Higher is first. Meaningless across levels.
 	Score *float32 `json:"score,omitempty"`
@@ -52136,6 +52383,12 @@ type LiftSuppressionJSONBody struct {
 
 // DraftContactEmailJSONBody defines parameters for DraftContactEmail.
 type DraftContactEmailJSONBody struct {
+	// AboutActivityId The activity the message follows up, such as the meeting a follow-up is sent after. The writer reads it first, above the recent conversation, with the deal it is filed under. It must be an activity whose content the caller may read; any other id is `422` on `about_activity_id`, the same answer whether it does not exist or is out of reach.
+	AboutActivityId *openapi_types.UUID `json:"about_activity_id,omitempty"`
+
+	// AlsoTo Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds.
+	AlsoTo *[]openapi_types.UUID `json:"also_to,omitempty"`
+
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
 	Intent *string `json:"intent,omitempty"`
 
@@ -55402,6 +55655,13 @@ type UpdateStageParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // ListStageExitCriteriaParams defines parameters for ListStageExitCriteria.
@@ -106230,6 +106490,25 @@ func (siw *ServerInterfaceWrapper) UpdateStage(w http.ResponseWriter, r *http.Re
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
 
 	}
 

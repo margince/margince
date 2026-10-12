@@ -4717,12 +4717,16 @@ export interface paths {
          *     judged had no way to leave, so it returned every morning and the count above it stayed
          *     wrong.
          *
-         *     THREE JUDGEMENTS, TWO REACHES.
+         *     FOUR JUDGEMENTS, TWO REACHES.
          *
          *     `not_sales` is a fact about the THREAD — recognizing the procurement newsletter settles
-         *     what the message is, for everybody. `snooze` and `not_mine` belong to the ONE READER who
-         *     set them: a rep putting a reply down until Thursday must not take it off the colleague who
-         *     owns the deal, and saying "not mine" is precisely saying somebody else must still see it.
+         *     what the message is, for everybody. `handled`, `snooze` and `not_mine` belong to the ONE
+         *     READER who set them: a rep putting a reply down until Thursday must not take it off the
+         *     colleague who owns the deal, and saying "not mine" is precisely saying somebody else must
+         *     still see it. The Worklist offers `not_mine` only on a row whose owner is not the reader.
+         *
+         *     `handled` names no moment and nothing lifts it: the reader dealt with the message another
+         *     way. The customer's next message is new work, so it comes back on its own.
          *
          *     A snooze names a moment still ahead and lifts on its own. `not_mine` names no moment: it
          *     stands until the reader picks the message back up, or until the record it is filed under
@@ -11568,7 +11572,8 @@ export interface paths {
          * Which AI providers are not answering, and why.
          * @description Every provider this process currently treats as degraded, down, out of credit or refusing
          *     its credential, in name order. A provider that is answering normally is not listed, so an
-         *     empty list is the healthy answer.
+         *     empty list is the healthy answer when `configured` names at least one provider. With no
+         *     provider configured both lists are empty, and nothing is answering.
          *
          *     The API and the worker each publish their status changes to Redis and this reads the merged
          *     view, where the worst or blocking status wins, so an outage only the worker saw still shows.
@@ -21112,8 +21117,42 @@ export interface components {
              * @enum {string}
              */
             admission: "suppressed" | "admitted" | "undecided";
-            /** @description One sentence an operator can act on: why this domain was refused, let in, or left open. */
+            /**
+             * @deprecated
+             * @description One sentence an operator can act on: why this domain was refused, let in, or left open.
+             *     Kept for clients that predate `reason_code`. A sentence the machine wrote is English
+             *     whatever the reader's language, so a client says `reason_code` in the reader's own
+             *     words and shows `note` for a decision somebody explained.
+             */
             reason: string;
+            /**
+             * @description Why, as a code the client words in the reader's language.
+             *
+             *     - `stated`: whoever decided wrote the reason down; it travels as `note`.
+             *     - `company_created`: a colleague created a company on this domain, which let it in.
+             *     - `kept_as_company`: a colleague answered the domain's open question by keeping it
+             *       as a company.
+             *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
+             *       company this business works with. `sender_kind` says which, when it is known.
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
+             *       question, as `source` describes each one.
+             *     - `unknown`: the row records a reason this server has no word for. `reason` still
+             *       carries its stored sentence.
+             * @enum {string}
+             */
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "unknown";
+            /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
+            note?: string;
+            /**
+             * @description What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
+             * @enum {string}
+             */
+            sender_kind?: "newsletter" | "transactional" | "spam";
+            /**
+             * @description The name of the company `company_id` points at. Sent exactly when `company_id` is, so
+             *     a company the reader may not see stays withheld by both.
+             */
+            company_name?: string;
             /**
              * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
              *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -21131,7 +21170,8 @@ export interface components {
             decided_at: string;
             /**
              * Format: uuid
-             * @description The company on this domain, when one exists — an admitted domain usually has one.
+             * @description The company on this domain, when one exists and the reader may see it. An admitted
+             *     domain usually has one. A company the reader may not open is withheld, never pointed at.
              */
             company_id?: string | null;
         };
@@ -22501,8 +22541,17 @@ export interface components {
             rungs: components["schemas"]["AiRungHealth"][];
         };
         AiProviderHealth: {
-            /** @description Providers that are not answering normally, in name order. Empty when all are. */
+            /**
+             * @description Providers that are not answering normally, in name order. Empty when every provider
+             *     in `configured` answers, and empty too when `configured` is.
+             */
             providers: components["schemas"]["AiProviderHealthEntry"][];
+            /**
+             * @description Every provider the routing binds now, answering or not, in name order and in the
+             *     same names `providers` uses. Empty when no AI provider is configured. An empty
+             *     `providers` means every provider answers only when this list is not empty too.
+             */
+            configured: string[];
         };
         AiProviderHealthEntry: {
             /** @description The provider's name as the routing binds it, never a key or host. */
@@ -30228,6 +30277,17 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            version?: components["schemas"]["RowVersion"];
+            exit_criteria?: components["schemas"]["StageExitCriteriaCounts"];
+            /** @description Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds. */
+            readonly deal_count?: number;
+        };
+        /** @description The stage's live exit criteria, split by whether each blocks a deal leaving. */
+        StageExitCriteriaCounts: {
+            /** @description Criteria a deal must meet to leave the stage. */
+            required: number;
+            /** @description Criteria gathered and shown that never block. */
+            optional: number;
         };
         CreateStageRequest: {
             /** Format: uuid */
@@ -31360,11 +31420,12 @@ export interface components {
         };
         SetActivityDispositionRequest: {
             /**
-             * @description What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
-             *     `not_mine` bind only the caller.
+             * @description What the reader decided. `not_sales` binds the thread for everybody; `handled`,
+             *     `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
+             *     message another way; the customer's next message arrives as new work.
              * @enum {string}
              */
-            disposition: "snooze" | "not_mine" | "not_sales";
+            disposition: "handled" | "snooze" | "not_mine" | "not_sales";
             reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
@@ -42194,9 +42255,10 @@ export interface components {
              * @description The reader's OWN capture connections needing the reader's hand: a mailbox
              *     wanting re-authentication, a connection in error, a sync failing, a history
              *     import that ended in error. One card per connection, carrying its worst
-             *     condition; `kind` names the condition and `detail` carries the mailbox (its
-             *     account label, or the provider where none was recorded). Fixing the
-             *     connection lives on the capture settings screen, so the card offers no verbs.
+             *     condition; `kind` names the condition, `detail` carries the account label when
+             *     the connector recorded one, and `connection` names the provider and whether it
+             *     is a mailbox or a calendar. Fixing the connection lives on the capture settings
+             *     screen, so the card offers no verbs.
              *
              *     Capture is per-user, so this lane is each reader's own mailboxes and nobody
              *     else's. Withheld — named in `lanes_omitted` — for a caller with no human
@@ -42463,6 +42525,7 @@ export interface components {
              */
             detail?: string;
             staged?: components["schemas"]["AttentionStagedFacts"];
+            connection?: components["schemas"]["AttentionConnectionFacts"];
             /**
              * @description How many days a deal or a relationship has been idle, where the producing lane
              *     measures one. Sent by `deal_at_risk` and `relationship_decay`.
@@ -42649,6 +42712,22 @@ export interface components {
             machine_sender?: boolean;
             /** @description The address's domain already names a company in this workspace. */
             known_company?: boolean;
+        };
+        /**
+         * @description The connection a `capture_health` row is about. Sent only for `source: capture_health`.
+         *
+         *     Typed so the client names it in the reader's language. `detail` and `cause_label` carry
+         *     the account label when the connector reported one, and are absent when it did not:
+         *     neither ever carries a provider id.
+         */
+        AttentionConnectionFacts: {
+            /** @description The provider id the connection was made with (`gmail`, `imap`, `gcal`, …). A key the client maps to a display name, never prose. */
+            provider: string;
+            /**
+             * @description Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
+             * @enum {string}
+             */
+            medium: "mailbox" | "calendar";
         };
         /**
          * @description The deal behind a `deal_at_risk` item: the facts its card states, so a client
@@ -43663,11 +43742,12 @@ export interface components {
              */
             shown: number;
             /**
-             * @description Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
-             *     least alarming of the four: a snooze lifts on its own moment, so this includes
-             *     work that will come back without anybody remembering it. `not_mine` names no
-             *     moment, and lifts only when the reader picks the message back up or the record
-             *     it is filed under changes hands.
+             * @description Work this reader has snoozed, marked `not_mine` or marked `handled`. THEIR OWN
+             *     CHOICE, and the least alarming of the four: a snooze lifts on its own moment, so
+             *     this includes work that will come back without anybody remembering it. `not_mine`
+             *     names no moment, and lifts only when the reader picks the message back up or the
+             *     record it is filed under changes hands. `handled` lifts only when the reader picks
+             *     it back up.
              */
             set_aside: number;
             /**
@@ -43776,8 +43856,8 @@ export interface components {
              */
             median_minutes: number;
             /**
-             * @description How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
-             *     judged not sales.
+             * @description How many rows a reader put DOWN in the window — snoozed, marked not theirs,
+             *     marked done, or judged not sales. None of these is a reply sent.
              *
              *     Counted from the audit record rather than from what is set aside now. A snooze
              *     that lifted and a not_mine somebody withdrew leave no trace in the current
@@ -43908,6 +43988,12 @@ export interface components {
             /** @description The server's own sentence for this item, where it has one. */
             title?: string;
             /**
+             * @description The connection a `capture_health` row is about, carried from the attention item. Sent
+             *     only on a single `capture_health` row: a folded incident's members are connections of
+             *     different providers, so `batch.label` names the account they share instead.
+             */
+            connection?: components["schemas"]["AttentionConnectionFacts"];
+            /**
              * @description Which underlying CONDITION this row reports, so a surface can group repeated
              *     failures of one thing into one row. Opaque identity, never rendered and never
              *     parsed. Absent on a row that reports no shared condition.
@@ -43978,6 +44064,13 @@ export interface components {
              */
             with_contact?: string;
             contact?: components["schemas"]["WorklistContactFacts"];
+            /**
+             * @description Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
+             *     is filed under, then the attendees its calendar entry resolved to a contact this
+             *     caller may read. Best first, each once; `contact` is the first of them. Sent on
+             *     `meeting_follow_up` rows only, and absent where no attendee is on file.
+             */
+            recipients?: components["schemas"]["WorklistContactFacts"][];
             company?: components["schemas"]["WorklistCompanyFacts"];
             /**
              * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
@@ -44043,7 +44136,7 @@ export interface components {
              *     Absent or empty means the row cannot be set aside — most sources answer
              *     through the surface that owns them and leave nothing to dispose of here.
              */
-            dispositions?: ("snooze" | "not_mine" | "not_sales")[];
+            dispositions?: ("handled" | "snooze" | "not_mine" | "not_sales")[];
             /**
              * @description The one verb this row is FOR, out of `actions`. The queue is ranked, so the
              *     reader arriving at a row should not have to weigh three equally-drawn
@@ -44126,6 +44219,12 @@ export interface components {
             done: components["schemas"]["MagicLine"][];
             needs_you: components["schemas"]["MagicLine"][];
             could_not_complete: components["schemas"]["MagicLine"][];
+            /**
+             * @description One line per connection whose health needs restoring. Its summary values carry
+             *     `provider`, the connection's provider id (`gmail`, `gcal`, …), which the client maps to
+             *     a display name; `account`, the account label, when the connector reported one; and
+             *     `failing_since` where the condition has a start.
+             */
             watching: components["schemas"]["MagicLine"][];
             totals: components["schemas"]["MagicTotals"];
             /**
@@ -44398,7 +44497,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -44768,6 +44867,21 @@ export interface components {
             chunks_total: number;
             chunks_embedded: number;
             documents_total: number;
+            /**
+             * @description Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+             *     searchable rather than shown a bare count.
+             *
+             *     - `no_embedding_model`: this installation binds no embedding model, so no passage
+             *       gets a vector and nothing is searchable. It is the same answer as
+             *       `settings_availability.embedding_reindex` being false on `/me`, read from the
+             *       same embed lane.
+             *     - `indexing`: a model is bound and work is still owed: a document is queued or
+             *       being read, a re-embed is running, or some passage has no vector under the
+             *       model bound now.
+             *     - `complete`: every live passage carries a vector under the model bound now.
+             * @enum {string}
+             */
+            embed_state: "no_embedding_model" | "indexing" | "complete";
         };
         KnowledgeDocument: {
             /** Format: uuid */
@@ -46687,6 +46801,13 @@ export interface operations {
                      * @description Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
                      */
                     project_id?: string | null;
+                    /**
+                     * Format: uuid
+                     * @description The activity the message follows up, such as the meeting a follow-up is sent after. The writer reads it first, above the recent conversation, with the deal it is filed under. It must be an activity whose content the caller may read; any other id is `422` on `about_activity_id`, the same answer whether it does not exist or is out of reach.
+                     */
+                    about_activity_id?: string | null;
+                    /** @description Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds. */
+                    also_to?: string[];
                     /**
                      * @description The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
                      *     Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
@@ -51645,6 +51766,14 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
             };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */

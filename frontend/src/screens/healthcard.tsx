@@ -5,8 +5,6 @@ import type { ReactNode } from "react";
 import { EmptyState } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { formatNumber } from "../format/format";
-import type { Locale, PluralBase, PluralTranslator } from "../i18n";
 import { QueryGate, type QueryLike, useMe } from "./common";
 
 // The shell every Settings → System health card wears.
@@ -71,45 +69,16 @@ export function HealthCard<Data>({
 
   const report = canSee ? query.data : undefined;
 
-  // No bottom margin: `.settings-stack` owns the gap between cards, and a card
-  // that adds its own gets two.
+  // The body stands straight in the panel so a report's table bleeds; each
+  // body wraps its own prose in a `PanelBody`.
   return (
     <Panel title={title} footer={report && footer(report)}>
       <PanelBody>
         <PanelIntro>{sub}</PanelIntro>
-        {/* One card's throw stays inside one card. These bodies derive every
-            line from a payload a background system writes, so they have more
-            ways to give out than the panels beside them — and without a
-            boundary the whole Maintenance tab, navigation rail included, goes
-            with them. */}
-        <CardBoundary>{body}</CardBoundary>
       </PanelBody>
+      {/* One card's throw stays inside one card: a body derived from a payload
+          a background system writes must not take the Maintenance tab with it. */}
+      <CardBoundary>{body}</CardBoundary>
     </Panel>
   );
-}
-
-// How long the oldest item in a queue has waited, in the largest whole unit: a
-// job on the job card, a contact or a meeting on the capture card. `format.ts`'s
-// formatDuration cannot answer this: it floors anything under an hour to "0 hr",
-// and a queue that jammed five minutes ago is the reading an operator opens for.
-// A count of one takes the singular key, the house `.one`/`.other` pattern — a
-// queue that jammed sixty-one minutes ago read "waited 1 hours".
-export function formatWaitedFor(
-  seconds: number,
-  plural: PluralTranslator,
-  locale: Locale,
-): string {
-  const [unit, count] =
-    seconds >= 86_400
-      ? (["Days", Math.floor(seconds / 86_400)] as const)
-      : seconds >= 3_600
-        ? (["Hours", Math.floor(seconds / 3_600)] as const)
-        : seconds >= 60
-          ? (["Minutes", Math.floor(seconds / 60)] as const)
-          : (["Seconds", seconds] as const);
-  // Annotated so an unknown unit is a compile error rather than a base the
-  // catalog silently echoes back. Which FORM the base takes is the plural
-  // helper's business, not this function's.
-  const base: PluralBase = `jobs.waited${unit}`;
-  return plural(base, count, { count: formatNumber(count, locale) });
 }

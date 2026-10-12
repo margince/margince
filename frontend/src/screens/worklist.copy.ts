@@ -23,6 +23,7 @@ import {
 } from "./contactpage.address";
 import { caseHref } from "./privacy.caselink";
 import { settingsHref } from "./settingsrouting";
+import { connectionName, connectionTitleKey } from "./worklist.connection";
 import { countsUnder } from "./worklist.narrowing";
 import type {
   Worklist,
@@ -358,14 +359,6 @@ export function comparisonText(
   });
 }
 
-// What happens if the reader does nothing.
-export function consequenceText(item: WorklistItem, t: T): string | null {
-  if (item.consequence === "none") {
-    return null;
-  }
-  return t(`worklist.consequence.${item.consequence}` as const);
-}
-
 // The deal's own figures, in one line: what it is worth, and when it closes.
 //
 // The concept's sharpest example was a €160,100 deal reduced to "no contact for
@@ -660,7 +653,10 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // Typed as a plural base, so a batch kind the catalog carries no pair for
     // fails the build; only the incident sentence reads `cause`.
     const base = `worklist.batch.${item.batch.key}` as const;
-    const cause = item.batch.label ?? t("worklist.batch.unnamedCause");
+    const cause =
+      item.batch.label ??
+      connectionName(item, t) ??
+      t("worklist.batch.unnamedCause");
     // A kind from a newer server has no pair here: its own label, else the
     // generic group name, rather than a lookup that throws.
     if (!isMessageKey(`${base}_other`)) {
@@ -681,7 +677,9 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");
   }
-  const title = t(`worklist.untitled.${item.source}` as const);
+  const title = t(
+    connectionTitleKey(item) ?? (`worklist.untitled.${item.source}` as const),
+  );
   return item.subject?.label ? `${title} · ${item.subject.label}` : title;
 }
 

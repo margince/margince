@@ -10,6 +10,7 @@ import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { CaptureHealthCard, sweepWarning } from "./capturehealth";
 import { jsonResponse, render } from "./settings.testkit";
+import { tableRowCells } from "./tablerow.testkit";
 
 type Health = components["schemas"]["CaptureHealth"];
 type Sweep = components["schemas"]["CaptureSweepHealth"];
@@ -101,9 +102,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function sweepRow(label: RegExp): HTMLElement {
-  const term = screen.getByText(label);
-  const row = term.closest(".factlist-row");
+function factRow(label: string): HTMLElement {
+  const row = screen.getByText(label).closest(".factlist-row");
   if (!(row instanceof HTMLElement)) {
     throw new Error(`no fact row for ${label}`);
   }
@@ -115,33 +115,43 @@ it("counts each mailbox and the installation without naming what waits", async (
 
   render(<CaptureHealthCard />);
 
-  expect(await screen.findByText("Ana Rep")).toBeInTheDocument();
-  expect(screen.getByText("3 contacts waiting")).toBeInTheDocument();
-  expect(screen.getByText("1 thread waiting")).toBeInTheDocument();
+  const box = await tableRowCells("Mailboxes", "Ana Rep");
+  expect(box["Contacts waiting"]).toHaveTextContent("3");
+  expect(box["Threads waiting"]).toHaveTextContent("1");
+  // A count above zero is the one figure in the row worth finding.
   expect(
-    screen.getByText(/contacts: oldest has waited 3 days/),
+    within(box["Contacts waiting"]).getByText("3").closest(".badge"),
+  ).not.toBeNull();
+  // The older of the two waits, in its largest whole unit.
+  expect(box["Oldest wait"]).toHaveTextContent(/^3 days/);
+  expect(
+    within(factRow("Senders waiting for the check")).getByText("4"),
   ).toBeInTheDocument();
-  expect(screen.getByText("4 pending")).toBeInTheDocument();
-  expect(screen.getByText("1 sender with no retries left")).toBeInTheDocument();
-  expect(screen.getByText("201 meetings held")).toBeInTheDocument();
+  expect(
+    within(factRow("Senders with no retries left"))
+      .getByText("1")
+      .closest(".badge"),
+  ).not.toBeNull();
+  expect(
+    within(factRow("Held meetings")).getByText("201").closest(".badge"),
+  ).not.toBeNull();
 });
 
-it("says which pass keeps up, which failed and which left a backlog", async () => {
+it("says which pass failed and which left a backlog, and leaves a pass that keeps up quiet", async () => {
   stubRoutes();
 
   render(<CaptureHealthCard />);
 
-  await screen.findByText("Ana Rep");
-  expect(
-    within(sweepRow(/Settled threads/)).getByText("Keeping up"),
-  ).toBeInTheDocument();
-  const failed = sweepRow(/Unasked contacts/);
-  expect(within(failed).getByText("Last run failed")).toBeInTheDocument();
-  // The class verbatim: the token an operator greps the worker log for.
-  expect(within(failed).getByText("write_conflict")).toBeInTheDocument();
-  expect(
-    within(sweepRow(/Filed meetings/)).getByText("Backlog remains"),
-  ).toBeInTheDocument();
+  const settled = await tableRowCells("Repair passes", "Settled threads");
+  // Keeping up is the normal reading, so it carries no badge.
+  expect(settled.State).toBeEmptyDOMElement();
+  expect(settled["Runs every"]).toHaveTextContent("10 minutes");
+  const failed = await tableRowCells("Repair passes", "Unasked contacts");
+  expect(within(failed.State).getByText("Last run failed")).toBeInTheDocument();
+  expect(within(failed.State).getByText("write_conflict")).toBeInTheDocument();
+  const filed = await tableRowCells("Repair passes", "Filed meetings");
+  expect(within(filed.State).getByText("Backlog remains")).toBeInTheDocument();
+  expect(filed.Processed).toHaveTextContent("200");
 });
 
 it("reads a calm installation as calm, and still shows how each pass stands", async () => {
@@ -159,10 +169,11 @@ it("reads a calm installation as calm, and still shows how each pass stands", as
   expect(
     await screen.findByText("No mailbox has anything waiting."),
   ).toBeInTheDocument();
-  expect(screen.getByText("0 meetings held")).toBeInTheDocument();
   expect(
-    within(sweepRow(/Unasked contacts/)).getByText("Last run failed"),
-  ).toBeInTheDocument();
+    within(factRow("Held meetings")).getByText("0").closest(".badge"),
+  ).toBeNull();
+  const failed = await tableRowCells("Repair passes", "Unasked contacts");
+  expect(within(failed.State).getByText("Last run failed")).toBeInTheDocument();
 });
 
 it("says a pass that never ran has never run, rather than drawing it clean", async () => {
@@ -176,19 +187,11 @@ it("says a pass that never ran has never run, rather than drawing it clean", asy
 
   render(<CaptureHealthCard />);
 
-  const row = await screen.findByText(/Unasked contacts/);
-  const fact = row.closest(".factlist-row");
-  expect(fact).not.toBeNull();
-  expect(
-    within(fact as HTMLElement).getByText("Never run"),
-  ).toBeInTheDocument();
-  expect(
-    within(fact as HTMLElement).getByText(/has not succeeded yet/),
-  ).toBeInTheDocument();
+  const pass = await tableRowCells("Repair passes", "Unasked contacts");
+  expect(within(pass.State).getByText("Never run")).toBeInTheDocument();
+  expect(pass["Last success"]).toHaveTextContent("Never");
 });
 
-// One part missing at a time, so each part of the shape check is proven on
-// its own rather than by a payload that fails several of them at once.
 it.each(["generated_at", "mailboxes", "sweeps", "classifier", "held_meetings"])(
   "reports a payload without %s rather than drawing a clean installation",
   async (field) => {
@@ -200,7 +203,9 @@ it.each(["generated_at", "mailboxes", "sweeps", "classifier", "held_meetings"])(
     render(<CaptureHealthCard />);
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
-    expect(screen.queryByText("Keeping up")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("table", { name: "Repair passes" }),
+    ).not.toBeInTheDocument();
     // The report refused as unreadable, not a body that crashed on the gap:
     // the boundary's fallback would also be an alert.
     expect(
