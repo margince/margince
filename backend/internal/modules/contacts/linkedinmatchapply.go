@@ -34,7 +34,7 @@ const (
 	matchConfirmed = "confirmed"
 	matchRejected  = "rejected"
 	matchSuggested = "suggested"
-	socialLinkedIn = "linkedin"
+	SocialLinkedIn = "linkedin"
 	auditKeySocial = "social"
 )
 
@@ -369,13 +369,13 @@ func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, ownerID, c
 // is no field image to carry — what the contact gained is the whole of it.
 func auditLinkedInHandleGained(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
 	contactAudit, err := storekit.AuditEvent(ctx, tx, "update", entityContact, contactID,
-		map[string]any{auditKeySocial: []string{socialLinkedIn}})
+		map[string]any{auditKeySocial: []string{SocialLinkedIn}})
 	if err != nil {
 		return err
 	}
 	return storekit.EmitEvent(ctx, tx, contactAudit, contactID,
 		crmcontracts.PublicEventContactUpdated{
-			ChangedFields: map[string]any{auditKeySocial: []string{socialLinkedIn}},
+			ChangedFields: map[string]any{auditKeySocial: []string{SocialLinkedIn}},
 		})
 }
 
@@ -415,7 +415,7 @@ func writeLinkedInHandle(ctx context.Context, tx pgx.Tx, connectionID, contactID
 	// would be the ordering the eraser deadlocks against. contact_social is a
 	// declared PII table Art. 17 deletes, and the hold is what stops a handle
 	// landing after the erasure cleared it.
-	_, landed, err := insertSocialHandle(ctx, tx, contactID, socialLinkedIn, *handle)
+	_, landed, err := insertSocialHandle(ctx, tx, contactID, SocialLinkedIn, *handle)
 	if err != nil || !landed {
 		return false, err
 	}

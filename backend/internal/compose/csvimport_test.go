@@ -43,6 +43,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"phone":        in.Phone != nil,
 				"title":        in.Title != nil,
 				"company_name": in.CompanyName != nil,
+				"linkedin_url": in.LinkedInURL != nil,
 				"author":       in.Author.AuthorName != nil,
 				"cf_tier":      in.CustomFields["cf_tier"] != nil,
 			}
@@ -52,6 +53,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"phone":        up.Phone != nil,
 				"title":        up.Title != nil,
 				"company_name": up.CompanyName != nil,
+				"linkedin_url": up.LinkedInURL != nil,
 				"cf_tier":      up.CustomFields["cf_tier"] != nil,
 			}
 			return created, patched
@@ -66,6 +68,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"size_band":           in.SizeBand != nil,
 				"description":         in.Description != nil,
 				"domain":              len(in.Domains) > 0,
+				"linkedin_url":        in.LinkedInURL != nil,
 				"author":              in.Author.AuthorName != nil,
 				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
@@ -82,6 +85,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"industry":     up.Industry != nil,
 				"size_band":    up.SizeBand != nil,
 				"description":  up.Description != nil,
+				"linkedin_url": up.LinkedInURL != nil,
 				// The replace-set behind a pointer: non-nil means the file
 				// carried a domain column, and only then is the stored set
 				// rewritten.
@@ -104,6 +108,8 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"last_name":           in.LastName != nil,
 				"title":               in.Title != nil,
 				"email":               len(in.Emails) > 0,
+				"phone":               len(in.Phones) > 0,
+				"linkedin_url":        in.Social["linkedin"] != nil,
 				"author":              in.Author.AuthorName != nil,
 				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
@@ -123,6 +129,8 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				// contact's emails are child rows, and the patch input
 				// carried no member for them at all.
 				"email":               len(up.Emails) > 0,
+				"phone":               len(up.Phones) > 0,
+				"linkedin_url":        up.Social["linkedin"] != nil,
 				"address.line1":       up.Address != nil && up.Address.Line1 != nil,
 				"address.line2":       up.Address != nil && up.Address.Line2 != nil,
 				"address.city":        up.Address != nil && up.Address.City != nil,

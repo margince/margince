@@ -305,7 +305,7 @@ func fillEmptyLinkedinSlot(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 		}
 		return err
 	}
-	_, landed, err := insertSocialHandle(ctx, tx, contactID.UUID, socialLinkedIn, value)
+	_, landed, err := insertSocialHandle(ctx, tx, contactID.UUID, SocialLinkedIn, value)
 	if err != nil || !landed {
 		return err
 	}

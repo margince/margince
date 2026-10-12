@@ -153,7 +153,7 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 func customFieldsFrom(fields map[string]string, typed map[string]any) map[string]any {
 	var out map[string]any
 	for target, value := range typed {
-		if _, given := fields[target]; !given {
+		if _, given := fields[target]; !given || !strings.HasPrefix(target, customFieldPrefix) {
 			continue
 		}
 		if out == nil {

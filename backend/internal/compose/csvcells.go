@@ -9,6 +9,7 @@ package compose
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -16,6 +17,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -29,13 +31,16 @@ type cellProblem struct {
 }
 
 // checkRow checks the core cells, then each custom-field cell in target order,
-// and answers the filled custom fields in the shape the store binds. The first
-// problem wins.
+// and answers the filled phone, LinkedIn and custom-field cells in the shape
+// the store holds them. The first problem wins.
 func checkRow(object string, fields map[string]string, cat importCatalog) (map[string]any, *cellProblem) {
 	if problem := unwritableReason(object, fields); problem != nil {
 		return nil, problem
 	}
-	var typed map[string]any
+	typed, problem := checkParsedCells(object, fields)
+	if problem != nil {
+		return nil, problem
+	}
 	for _, target := range slices.Sorted(maps.Keys(fields)) {
 		raw := fields[target]
 		if !strings.HasPrefix(target, customFieldPrefix) || strings.TrimSpace(raw) == "" {
@@ -57,6 +62,55 @@ func checkRow(object string, fields map[string]string, cat importCatalog) (map[s
 		typed[target] = value
 	}
 	return typed, nil
+}
+
+// checkParsedCells reads the phone and LinkedIn cells through the parsers the
+// store writes with, so the row carries the spelling the store will hold.
+func checkParsedCells(object string, fields map[string]string) (map[string]any, *cellProblem) {
+	var typed map[string]any
+	for _, target := range []string{fieldPhone, fieldLinkedIn} {
+		text := strings.TrimSpace(fields[target])
+		if text == "" {
+			continue
+		}
+		stored, err := storedSpelling(object, target, text)
+		if err != nil {
+			return nil, &cellProblem{Target: target, Value: fields[target], Message: parseMessage(text, err)}
+		}
+		if typed == nil {
+			typed = map[string]any{}
+		}
+		typed[target] = stored
+	}
+	return typed, nil
+}
+
+// storedSpelling is the parser each object's store runs on a phone or a
+// LinkedIn URL. A company's page and a contact's slot are narrower than a
+// lead's profile URL.
+func storedSpelling(object, target, text string) (string, error) {
+	switch {
+	case target == fieldPhone:
+		phone, err := values.ParsePhone(text)
+		return phone.String(), err
+	case object == migration.ObjectCompany:
+		return contacts.NormalizeCompanyLinkedInURL(text)
+	case object == migration.ObjectContact:
+		return contacts.NormalizeContactLinkedInURL(text)
+	default:
+		return contacts.NormalizeLinkedInURL(text)
+	}
+}
+
+func parseMessage(text string, err error) string {
+	parseErr, ok := errors.AsType[*values.ParseError](err)
+	if !ok {
+		return fmt.Sprintf("%q cannot be read", text)
+	}
+	if parseErr.Code == "phone_needs_country_code" {
+		return fmt.Sprintf("%q needs its country code, like +49 30 1234567", text)
+	}
+	return fmt.Sprintf("%q: %s", text, parseErr.Message)
 }
 
 // checkCell turns one custom-field cell into the value storekit.SQLValue

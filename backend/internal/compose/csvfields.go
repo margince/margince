@@ -24,10 +24,13 @@ const descriptionField = "description"
 // that map onto it.
 const fieldFullName = "full_name"
 
-// fieldLeadPhone is a lead's own phone column, the one number it carries until
-// it is promoted. A contact's numbers are a list in their own table and are
-// mapped separately; a lead has one, so it maps like its email.
-const fieldLeadPhone = "phone"
+// fieldPhone is a phone number. A lead holds one in a column; a contact's
+// numbers are child rows, and the file's number becomes its primary work one.
+const fieldPhone = "phone"
+
+// fieldLinkedIn is a LinkedIn URL: a company's page, a lead's profile, or the
+// LinkedIn handle in a contact's social links.
+const fieldLinkedIn = "linkedin_url"
 
 // fieldEmail is the lead's identifying field: the natural key an import
 // recognizes a row by, and the one value the store canonicalizes on write.
@@ -62,26 +65,19 @@ const leadStatusNew = "new"
 // business already knows lands as contacts. Neither skips the identity ladder.
 //
 // Every field here round-trips: the writer can both CREATE it and UPDATE it.
-// `linkedin_url` is deliberately absent from both lists even though the stores
-// know the field — a lead's patch input has no LinkedIn member and an
-// company's CREATE input has none, so advertising it would accept a
-// column, report the row as written, and drop the value on one of the two
-// paths. A target that only half works is worse than one the screen never
-// offers.
+// A target that only half works is worse than one the screen never offers.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldLeadPhone, fieldTitle, companyNameField, csvTargetAuthor},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, csvTargetAuthor},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
 	// share. It round-trips: the create input takes a domain set and the patch
 	// input takes the same set as a replace-set.
-	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, csvTargetAuthor}, recordAddressTargets...),
-	// `phone`, `social` and `owner_id` are deliberately absent. A contact's
-	// patch input carries no Phones member and no single-column spelling of
-	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
-	// storekit.OwnerOrActor already defaults it to whoever ran the import.
+	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, csvTargetAuthor}, recordAddressTargets...),
+	// `owner_id` is absent: an owner is a uuid a spreadsheet cannot honestly
+	// carry, and storekit.OwnerOrActor defaults it to whoever ran the import.
 	// `author` differs: a name is an honest spelling (csvauthor.go).
-	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldTitle, csvTargetAuthor}, recordAddressTargets...),
+	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor}, recordAddressTargets...),
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -246,14 +242,18 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
 	parent, child, nested := strings.Cut(field, ".")
 	if !nested {
-		// Two targets name a CHILD COLLECTION rather than a column on the
-		// record, so a flat lookup finds nothing and reports them changed on
-		// every re-import of a file nobody edited.
+		// These targets may name a CHILD COLLECTION rather than a column on
+		// the record, so a flat lookup finds nothing and reports them changed
+		// on every re-import of a file nobody edited.
 		switch field {
 		case fieldEmail:
 			return storedPrimaryEmail(current)
 		case fieldDomain:
 			return storedPrimaryDomain(current)
+		case fieldPhone:
+			return storedPrimaryPhone(current)
+		case fieldLinkedIn:
+			return storedLinkedIn(current)
 		}
 		return current[field]
 	}
@@ -324,7 +324,8 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
-	in.Phone = importString(fields, fieldLeadPhone)
+	in.Phone = checkedString(fields, typed, fieldPhone)
+	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
 	in.CustomFields = customFieldsFrom(fields, typed)
@@ -336,7 +337,8 @@ func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.Up
 	return contacts.UpdateLeadInput{
 		FullName:     importString(changed, fieldFullName),
 		Email:        importString(changed, fieldEmail),
-		Phone:        importString(changed, fieldLeadPhone),
+		Phone:        checkedString(changed, typed, fieldPhone),
+		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
 		Title:        importString(changed, fieldTitle),
 		CompanyName:  importString(changed, "company_name"),
 		CustomFields: customFieldsFrom(changed, typed),
@@ -396,6 +398,18 @@ func addressFrom(fields map[string]string) *crmcontracts.Address {
 		return nil
 	}
 	return &addr
+}
+
+// checkedString is a core cell in the spelling checkRow gave it, or the
+// file's text where the cell was not checked.
+func checkedString(fields map[string]string, typed map[string]any, name string) *string {
+	if _, given := fields[name]; !given {
+		return nil
+	}
+	if checked, ok := typed[name].(string); ok {
+		return &checked
+	}
+	return importString(fields, name)
 }
 
 func importString(fields map[string]string, name string) *string {

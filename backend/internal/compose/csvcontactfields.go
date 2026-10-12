@@ -16,6 +16,7 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -47,6 +48,8 @@ func contactCreateFrom(fields map[string]string, typed map[string]any, sourceSys
 	in.Title = importString(fields, fieldTitle)
 	in.Address = addressFrom(fields)
 	in.Emails = contactEmailsFrom(fields)
+	in.Phones = contactPhonesFrom(fields, typed)
+	in.Social = contactSocialFrom(fields, typed)
 	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
 }
@@ -64,6 +67,8 @@ func contactUpdateFrom(changed map[string]string, typed map[string]any) contacts
 		CustomFields: customFieldsFrom(changed, typed),
 	}
 	in.Emails = contactEmailsFrom(changed)
+	in.Phones = contactPhonesFrom(changed, typed)
+	in.Social = contactSocialFrom(changed, typed)
 	return in
 }
 
@@ -100,6 +105,123 @@ func contactEmailsFrom(fields map[string]string) []contacts.ContactEmailInput {
 // carries one address per contact and no column saying what sort it is, and a
 // work address is what a CRM import means.
 const contactEmailTypeWork = "work"
+
+// contactPhonesFrom reads the file's one phone column as the contact's primary
+// work number, nil when the file carried none.
+func contactPhonesFrom(fields map[string]string, typed map[string]any) []contacts.ContactPhoneInput {
+	phone := checkedString(fields, typed, fieldPhone)
+	if phone == nil {
+		return nil
+	}
+	return []contacts.ContactPhoneInput{{Phone: *phone, PhoneType: contactPhoneTypeWork, IsPrimary: true, Position: 1}}
+}
+
+// contactPhoneTypeWork is the kind a file's Phone column names, for the reason
+// contactEmailTypeWork gives.
+const contactPhoneTypeWork = "work"
+
+// contactSocialFrom reads the file's LinkedIn column as the contact's LinkedIn
+// handle, nil when the file carried none.
+func contactSocialFrom(fields map[string]string, typed map[string]any) map[string]any {
+	url := checkedString(fields, typed, fieldLinkedIn)
+	if url == nil {
+		return nil
+	}
+	return map[string]any{contacts.SocialLinkedIn: *url}
+}
+
+// phonesMergedOnto is emailsMergedOnto for numbers: the file's number becomes
+// the primary work number, and every other stored number is kept.
+func phonesMergedOnto(current []byte, mapped []contacts.ContactPhoneInput) ([]contacts.ContactPhoneInput, bool, error) {
+	if len(mapped) == 0 {
+		return nil, false, nil
+	}
+	var record struct {
+		Phones []struct {
+			Phone     string `json:"phone"`
+			PhoneType string `json:"phone_type"`
+			IsPrimary bool   `json:"is_primary"`
+		} `json:"phones"`
+	}
+	if err := json.Unmarshal(current, &record); err != nil {
+		return nil, false, fmt.Errorf("import: reading the stored phones: %w", err)
+	}
+	merged := append([]contacts.ContactPhoneInput(nil), mapped...)
+	merged[0].Position = 1
+	merged[0].IsPrimary = true
+	for _, held := range record.Phones {
+		if held.Phone == mapped[0].Phone {
+			continue
+		}
+		merged = append(merged, contacts.ContactPhoneInput{
+			Phone: held.Phone, PhoneType: held.PhoneType,
+			IsPrimary: held.IsPrimary && held.PhoneType != mapped[0].PhoneType,
+			Position:  len(merged) + 1,
+		})
+	}
+	return merged, true, nil
+}
+
+// socialMergedOnto lays the file's handles over the stored ones, because the
+// store replaces the whole social set it is given.
+func socialMergedOnto(current []byte, mapped map[string]any) (map[string]any, bool, error) {
+	if len(mapped) == 0 {
+		return nil, false, nil
+	}
+	var record struct {
+		Social map[string]any `json:"social"`
+	}
+	if err := json.Unmarshal(current, &record); err != nil {
+		return nil, false, fmt.Errorf("import: reading the stored social links: %w", err)
+	}
+	merged := make(map[string]any, len(record.Social)+len(mapped))
+	maps.Copy(merged, record.Social)
+	maps.Copy(merged, mapped)
+	return merged, true, nil
+}
+
+// storedPrimaryPhone reads the `phone` target: a lead's column, or a contact's
+// primary work number.
+func storedPrimaryPhone(current map[string]json.RawMessage) json.RawMessage {
+	if raw, ok := current[fieldPhone]; ok {
+		return raw
+	}
+	var rows []struct {
+		Phone     string `json:"phone"`
+		PhoneType string `json:"phone_type"`
+		IsPrimary bool   `json:"is_primary"`
+	}
+	if err := json.Unmarshal(current["phones"], &rows); err != nil {
+		return nil
+	}
+	for _, row := range rows {
+		if row.IsPrimary && row.PhoneType == contactPhoneTypeWork {
+			return encodedText(row.Phone)
+		}
+	}
+	return nil
+}
+
+// storedLinkedIn reads the `linkedin_url` target: a company's or a lead's
+// column, or a contact's LinkedIn handle.
+func storedLinkedIn(current map[string]json.RawMessage) json.RawMessage {
+	if raw, ok := current[fieldLinkedIn]; ok {
+		return raw
+	}
+	var social map[string]json.RawMessage
+	if err := json.Unmarshal(current["social"], &social); err != nil {
+		return nil
+	}
+	return social[contacts.SocialLinkedIn]
+}
+
+func encodedText(text string) json.RawMessage {
+	encoded, err := json.Marshal(text)
+	if err != nil {
+		return nil
+	}
+	return encoded
+}
 
 // emailsMergedOnto folds the file's single email column onto the addresses the
 // contact already holds, so an import that names one address does not archive the

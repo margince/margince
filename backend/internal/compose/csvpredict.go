@@ -102,7 +102,7 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 		return predictCreate, "", err
 	}
 	if !found {
-		return w.predictCreatePath(ctx, row)
+		return w.predictCreatePath(ctx, row, typed)
 	}
 	return w.reconcilePrediction(ctx, id, row, typed)
 }
@@ -124,7 +124,7 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 // That one IS disclosure-filtered, whichever mode asked: passing the mode
 // through reported invisible companies as duplicates on a `skip` run, one CSV
 // row at a time.
-func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
+func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, string, error) {
 	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
 	if err != nil {
 		return predictCreate, "", err
@@ -138,6 +138,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (
 	}
 	if takenDomain {
 		return predictUnwritable, domainClaimedReason, nil
+	}
+	takenLinkedIn, err := w.linkedInAlreadyHeld(ctx, typed)
+	if err != nil {
+		return predictCreate, "", err
+	}
+	if takenLinkedIn {
+		return predictUnwritable, linkedInClaimedReason, nil
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {

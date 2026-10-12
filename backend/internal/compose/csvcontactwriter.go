@@ -67,6 +67,45 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 	return migration.EnsureResult{Created: true}, nil
 }
 
+// applyContact writes a contact's changed fields, merging the file's address,
+// email, phone and LinkedIn handle onto what the contact holds, because the
+// store replaces each of those wholesale.
+func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, current []byte, source string) error {
+	// Emails and phones added by an update carry the provenance the create
+	// path stamps; without it their source lands empty.
+	in.Source = source
+	merged, given, err := addressMergedOnto(current, in.Address)
+	if err != nil {
+		return err
+	}
+	if given {
+		in.Address = merged
+	}
+	mergedEmails, given, err := emailsMergedOnto(current, in.Emails)
+	if err != nil {
+		return err
+	}
+	if given {
+		in.Emails = mergedEmails
+	}
+	mergedPhones, given, err := phonesMergedOnto(current, in.Phones)
+	if err != nil {
+		return err
+	}
+	if given {
+		in.Phones = mergedPhones
+	}
+	mergedSocial, given, err := socialMergedOnto(current, in.Social)
+	if err != nil {
+		return err
+	}
+	if given {
+		in.Social = mergedSocial
+	}
+	_, err = w.contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id), in)
+	return err
+}
+
 // contactEmailIsClaimed answers whether the estate already holds this row's
 // address, WITHOUT regard to who holds it.
 //

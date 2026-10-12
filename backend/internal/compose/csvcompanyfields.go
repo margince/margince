@@ -69,6 +69,7 @@ func companyCreateFrom(fields map[string]string, typed map[string]any, sourceSys
 	in.Industry = importString(fields, fieldIndustry)
 	in.SizeBand = importString(fields, "size_band")
 	in.Domains = companyDomainsFrom(fields)
+	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Address = addressFrom(fields)
 	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
@@ -96,6 +97,7 @@ func companyUpdateFrom(changed map[string]string, typed map[string]any) contacts
 		Description:  importString(changed, "description"),
 		Industry:     importString(changed, fieldIndustry),
 		SizeBand:     importString(changed, "size_band"),
+		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
 		Address:      addressFrom(changed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}

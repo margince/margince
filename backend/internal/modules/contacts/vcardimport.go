@@ -284,9 +284,8 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 	// compared verbatim — the exact-match dedupe key, the provider resolver's
 	// lookup — so a card that spelt the profile with http, a trailing slash or
 	// a tracking query would file the same contact under a second identity.
-	// isLinkedinURL has already refused anything the normalizer would.
-	if u := strings.TrimSpace(entry.URL); u != "" && isLinkedinURL(u) {
-		if normalized, err := NormalizeLinkedInURL(u); err == nil {
+	if u := strings.TrimSpace(entry.URL); u != "" {
+		if normalized, err := NormalizeContactLinkedInURL(u); err == nil {
 			contact.Social = map[string]any{profileURLField: normalized}
 		}
 	}

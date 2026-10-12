@@ -310,6 +310,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 			// onto a company that is not its owner.
 			return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
 		}
+		if linkedInClaimed(err) {
+			return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
+		}
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
@@ -358,26 +361,7 @@ func (w *csvWriters) apply(
 		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
 		return err
 	case migration.ObjectContact:
-		in := contactUpdateFrom(changed, typed)
-		// Emails added by an update carry the same provenance the create path
-		// stamps; without it contact_email.source lands empty.
-		in.Source = source
-		merged, given, err := addressMergedOnto(current, in.Address)
-		if err != nil {
-			return err
-		}
-		if given {
-			in.Address = merged
-		}
-		mergedEmails, given, err := emailsMergedOnto(current, in.Emails)
-		if err != nil {
-			return err
-		}
-		if given {
-			in.Emails = mergedEmails
-		}
-		_, err = w.contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id), in)
-		return err
+		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), current, source)
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
 	}
@@ -407,6 +391,9 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed ma
 	})
 	if errors.Is(err, errImportReplayed) {
 		return migration.EnsureResult{Skipped: true, SkipReason: skipReasonNaturalKeyTaken}, nil
+	}
+	if linkedInClaimed(err) {
+		return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -440,6 +427,9 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 		// a contact's claimed email has. One bad row is a skip with a reason, not
 		// a failed run: the rest of the file still lands.
 		return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
+	}
+	if linkedInClaimed(err) {
+		return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err

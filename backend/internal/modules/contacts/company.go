@@ -31,7 +31,10 @@ type CreateCompanyInput struct {
 	ParentCompanyID *ids.CompanyID
 	Address         *crmcontracts.Address
 	Domains         []CompanyDomainInput
-	Source          string
+	// LinkedInURL is the company's LinkedIn page; stored in its canonical
+	// spelling, and unique among live companies.
+	LinkedInURL *string
+	Source      string
 	// SourceSystem names the system an import took this company from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
@@ -51,7 +54,7 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 	if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	by, err := s.readyCompanyCreate(ctx, in)
+	by, err := s.readyCompanyCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -88,7 +91,7 @@ func (s *Store) CreateCompanyTx(ctx context.Context, tx pgx.Tx, in CreateCompany
 	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	by, err := s.readyCompanyCreate(ctx, in)
+	by, err := s.readyCompanyCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -122,12 +125,19 @@ func (s *Store) geocodeANewCompany(ctx context.Context, tx pgx.Tx,
 }
 
 // readyCompanyCreate runs what a create settles BEFORE any transaction
-// opens — the domain parse, the size-band vocabulary and the captured-by
-// resolution — and answers the attribution the write shape stamps. Both entry
-// points call it, so neither can drift from the other's validation.
-func (s *Store) readyCompanyCreate(ctx context.Context, in CreateCompanyInput) (string, error) {
+// opens — the domain and LinkedIn parses, the size-band vocabulary and the
+// captured-by resolution — and answers the attribution the write shape stamps.
+// Both entry points call it, so neither can drift from the other's validation.
+func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) (string, error) {
 	if err := parseCompanyDomains(in.Domains); err != nil {
 		return "", err
+	}
+	if in.LinkedInURL != nil {
+		normalized, err := NormalizeCompanyLinkedInURL(*in.LinkedInURL)
+		if err != nil {
+			return "", err
+		}
+		in.LinkedInURL = &normalized
 	}
 	// Both write paths, not just the patch: a vocabulary checked on update and
 	// not on create is a value the database refuses at birth and the transport
@@ -180,6 +190,7 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		ParentCompanyID: in.ParentCompanyID,
 		Address:         in.Address,
 		Domains:         in.Domains,
+		LinkedInURL:     in.LinkedInURL,
 		Source:          in.Source,
 		SourceSystem:    in.SourceSystem,
 		Author:          in.Author,
