@@ -124,3 +124,31 @@ export const Outage: Story = {
     })),
   ),
 };
+
+// A long subject truncates inside its column. A kind this build has no word
+// for still reads as words, and a thread with no message left says so.
+const EDGES: HeldThread[] = [
+  {
+    ...MIXED[1],
+    thread_key: "t-long",
+    subject:
+      "Quarterly procurement review: revised framework agreement, annex C pricing schedule and the open questions from legal about indemnity caps",
+  },
+  { ...MIXED[1], thread_key: "t-new-kind", kind: "export_control" },
+  {
+    ...MIXED[1],
+    thread_key: "t-erased",
+    has_message: false,
+    subject: undefined,
+    activity_id: undefined,
+    occurred_at: undefined,
+  },
+];
+
+export const Edges: Story = { render: story([...MIXED, ...EDGES]) };
+
+export const MixedPhone: Story = {
+  render: story([...MIXED, ...EDGES]),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

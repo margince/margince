@@ -56,7 +56,12 @@ const SET = {
   min_similarity: 0.35,
   default_ask: true,
   created_at: "2026-08-01T00:00:00Z",
-  coverage: { documents_total: 1, chunks_total: 4, chunks_embedded: 4 },
+  coverage: {
+    documents_total: 1,
+    chunks_total: 4,
+    chunks_embedded: 4,
+    embed_state: "complete",
+  },
 };
 
 // A second set, so the picker exists at all: it is offered only where there is
@@ -550,7 +555,12 @@ describe("AskMarginceModal", () => {
           outcome: "not_ready",
           summary: undefined,
           claims: [],
-          coverage: { documents_total: 2, chunks_total: 9, chunks_embedded: 4 },
+          coverage: {
+            documents_total: 2,
+            chunks_total: 9,
+            chunks_embedded: 4,
+            embed_state: "indexing",
+          },
         }),
       }).fetchMock,
     );

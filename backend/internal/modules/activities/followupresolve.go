@@ -176,7 +176,7 @@ func (w followUpAutoResolve) Plan(_ context.Context, ev workflow.Event) (workflo
 	// carry links, so Plan states the invariant (system follow-ups on
 	// this entity's leads complete) the same way the lead-score
 	// recompute's Plan does.
-	args, err := json.Marshal(map[string]any{"is_done": true})
+	args, err := json.Marshal(map[string]any{auditFieldIsDone: true})
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("activities: encoding the auto-resolve effect: %w", err)
 	}

@@ -676,6 +676,7 @@ export const aiProviderKeys = {
 // health card in their failing state rather than only the empty one.
 // `retry_after` is omitted for a degraded provider only.
 export const aiProviderHealth = {
+  configured: ["gemini", "anthropic"],
   providers: [
     {
       provider: "gemini",
@@ -1007,6 +1008,7 @@ export const knowledgeCorpora = {
         documents_total: 42,
         chunks_total: 1_180,
         chunks_embedded: 1_180,
+        embed_state: "complete",
       },
       created_at: "2026-08-01T00:00:00Z",
     },

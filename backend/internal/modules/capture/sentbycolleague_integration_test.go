@@ -28,6 +28,9 @@ func colleagueCopy(sourceID, from string) connector.NormalizedRecord {
 		{Email: "rep@acme.com", Role: connector.ParticipantRoleCC},
 		{Email: "eli@client.io", Role: connector.ParticipantRoleCC},
 	}
+	// As Gmail delivers it: its receiving server passed DMARC for the From domain.
+	rec.CapturedBy = "connector:gmail"
+	rec.SenderAuthentication = connector.SenderAuthentication{Server: "mx.google.com", DMARCPassDomain: "acme.com"}
 	return rec
 }
 
@@ -76,8 +79,7 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
 	colleague := seedSeat(ctx, t, db, "sam@acme.com", "invited")
 
-	if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat),
-		colleagueCopy("colleague-1", "Sam@acme.com")); err != nil {
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, colleagueCopy("colleague-1", "Sam@acme.com"))); err != nil {
 		t.Fatalf("Upsert: %v", err)
 	}
 
@@ -125,7 +127,7 @@ func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
 
 	for _, from := range []string{"gone@acme.com", "sales@acme.com"} {
 		t.Run(from, func(t *testing.T) {
-			if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat), colleagueCopy("not-"+from, from)); err != nil {
+			if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, colleagueCopy("not-"+from, from))); err != nil {
 				t.Fatalf("Upsert: %v", err)
 			}
 			got := storedMailFor(ctx, t, db, "not-"+from)
@@ -146,7 +148,7 @@ func TestAColleaguesCoAuthorIsNotTheCustomer(t *testing.T) {
 	rec := colleagueCopy("co-authored-1", "sam@acme.com")
 	rec.Addresses = []string{"sam@acme.com", "pat@agency.io", "dana@client.io", "rep@acme.com", "eli@client.io"}
 
-	if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat), rec); err != nil {
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, rec)); err != nil {
 		t.Fatalf("Upsert: %v", err)
 	}
 
@@ -170,7 +172,7 @@ func TestAColleaguesMailToAListIsStillOurs(t *testing.T) {
 			connector.MessageParticipant{Email: fmt.Sprintf("buyer%d@client.io", i), Role: connector.ParticipantRoleTo})
 	}
 
-	if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat), rec); err != nil {
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, rec)); err != nil {
 		t.Fatalf("Upsert: %v", err)
 	}
 
@@ -178,4 +180,41 @@ func TestAColleaguesMailToAListIsStillOurs(t *testing.T) {
 	if got.direction != connector.DirectionOutbound || got.counterparty != "buyer0@client.io" {
 		t.Errorf("stored as %s to %q, want outbound to the first withheld recipient buyer0@client.io", got.direction, got.counterparty)
 	}
+}
+
+// A From the receiving server did not authenticate is the sender's word alone,
+// and the copy stays the inbound mail capture always filed.
+func TestAnUnauthenticatedColleagueIsNotTrusted(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	seedSeat(ctx, t, db, "sam@acme.com", "invited")
+
+	for name, unauthenticate := range map[string]func(*connector.NormalizedRecord){
+		"no result":                 func(r *connector.NormalizedRecord) { r.SenderAuthentication = connector.SenderAuthentication{} },
+		"DMARC for another domain":  func(r *connector.NormalizedRecord) { r.SenderAuthentication.DMARCPassDomain = "elsewhere.example" },
+		"a server other than Gmail": func(r *connector.NormalizedRecord) { r.SenderAuthentication.Server = "mx.elsewhere.example" },
+		"over IMAP":                 func(r *connector.NormalizedRecord) { r.CapturedBy = "connector:imap" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			rec := colleagueCopy("unauth-"+name, "sam@acme.com")
+			unauthenticate(&rec)
+			if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, rec)); err != nil {
+				t.Fatalf("Upsert: %v", err)
+			}
+			got := storedMailFor(ctx, t, db, "unauth-"+name)
+			if got.direction != connector.DirectionInbound || got.colleague != nil {
+				t.Errorf("an unauthenticated copy was read as the colleague's (direction %q, colleague %v)", got.direction, got.colleague)
+			}
+		})
+	}
+}
+
+// capturedAs is rec as the seat's own connector hands it to the sink: the
+// acting connector is the one the record names.
+func capturedAs(ctx context.Context, ws, seat ids.UUID, rec connector.NormalizedRecord) (context.Context, connector.NormalizedRecord) {
+	ctx = sinkContextFor(ctx, ws, seat, seat)
+	actor, _ := principal.Actor(ctx)
+	actor.ID = rec.CapturedBy
+	return principal.WithActor(ctx, actor), rec
 }

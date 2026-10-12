@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -149,6 +150,48 @@ describe("operation settings cards", () => {
       );
     },
   );
+
+  // A bare 86400 hides a day; the reading follows the property's own unit, and
+  // a sweep's 0 reads as off rather than as zero seconds.
+  it("reads each interval in words under its box, as typed", async () => {
+    vi.stubGlobal("fetch", backendFor(SETTINGS_EDITOR).fetchMock);
+    const user = userEvent.setup();
+    render(<BackgroundSchedulesCard />);
+
+    const daily = await screen.findByTestId<HTMLInputElement>(
+      "operation-close_date_sweep_interval_seconds",
+    );
+    expect(daily).toHaveAccessibleDescription(
+      expect.stringContaining("= 1 day"),
+    );
+    const renew = screen.getByTestId<HTMLInputElement>(
+      "operation-gmail_watch_renew_within_hours",
+    );
+    expect(renew).toHaveAccessibleDescription(
+      expect.stringContaining("= 2 days"),
+    );
+    await user.clear(daily);
+    await user.type(daily, "5400");
+    expect(daily).toHaveAccessibleDescription(
+      expect.stringContaining("= 1 hour, 30 minutes"),
+    );
+    const geocode = screen.getByTestId<HTMLInputElement>(
+      "operation-geocode_backfill_interval_seconds",
+    );
+    await user.clear(geocode);
+    await user.type(geocode, "0");
+    expect(geocode).toHaveAccessibleDescription(expect.stringContaining("Off"));
+  });
+
+  it("gives a count no reading", async () => {
+    vi.stubGlobal("fetch", backendFor(SETTINGS_EDITOR).fetchMock);
+    render(<SendPacingCard />);
+
+    const limit = await screen.findByTestId<HTMLInputElement>(
+      "operation-send_rate_limit",
+    );
+    expect(limit).not.toHaveAccessibleDescription(expect.stringContaining("="));
+  });
 
   it("is read-only to a seat without the update grant", async () => {
     vi.stubGlobal("fetch", backendFor(SETTINGS_READER).fetchMock);

@@ -104,6 +104,9 @@ type OwedCandidate struct {
 	// HasCalendarPart says the message carried a calendar payload. Evidence,
 	// not a verdict: an invitation that asks a question is still work.
 	HasCalendarPart bool
+	// CalendarMethod is that part's RFC 5546 method, "" when none is known. A
+	// REPLY is an attendee answering an invitation rather than one.
+	CalendarMethod string
 	// PriorOutbound is our own last message in this thread, when there is one.
 	// Nil for a threadless message and for one that opens a conversation.
 	PriorOutbound *PriorOutbound
@@ -118,7 +121,7 @@ type OwedCandidate struct {
 // block for a subjectless outbound — a failure that reads as the model simply
 // judging worse, with nothing to point at.
 const candidateColumns = `a.id, a.kind, coalesce(a.subject, ''), coalesce(left(a.body, $%[1]d), ''),
-       coalesce(a.has_calendar_part, false),
+       coalesce(a.has_calendar_part, false), coalesce(a.calendar_method, ''),
        coalesce(array_agg(DISTINCT p.address)
                 FILTER (WHERE p.role = 'to' AND p.address <> ''), '{}'),
        coalesce(array_agg(DISTINCT p.address)
@@ -157,7 +160,7 @@ var priorOutboundJoin = `LEFT JOIN LATERAL (
    LIMIT 1) prior ON true`
 
 // candidateGroupBy keeps the participant aggregation from multiplying the row.
-const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.occurred_at,
+const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at,
           prior.id, prior.subject, prior.body, prior.occurred_at`
 
 // scanCandidates reads the rows both candidate queries return.
@@ -170,7 +173,7 @@ func scanCandidates(rows pgx.Rows) ([]OwedCandidate, error) {
 		var priorSubject, priorBody string
 		var priorAt *time.Time
 		if err := rows.Scan(&m.ID, &m.Kind, &m.Subject, &m.Body,
-			&m.HasCalendarPart, &m.To, &m.Cc,
+			&m.HasCalendarPart, &m.CalendarMethod, &m.To, &m.Cc,
 			&priorID, &priorSubject, &priorBody, &priorAt); err != nil {
 			return nil, err
 		}
@@ -260,7 +263,10 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		// beside it does not cover a confidentiality narrowing.
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
 			`a.owed_verdict IS NULL AND `+owedVerdictDecline.offeredSQL("a.", fmt.Sprintf("$%d", arg(ruleset)))+
-				` AND a.audience = 'workspace' AND a.restricted_at IS NULL`)
+				` AND a.audience = 'workspace' AND a.restricted_at IS NULL`,
+			// An unjudged calendar response is off the lane until judged, and
+			// judged it must be: any sender can mark a request REPLY.
+			scopeUnbounded)
 		if err != nil {
 			return err
 		}

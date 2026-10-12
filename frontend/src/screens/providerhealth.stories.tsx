@@ -19,11 +19,12 @@ type Story = StoryObj<typeof ProviderHealthCard>;
 function story(
   providers: unknown[],
   allow: GrantSpec = { ai_diagnostics: ["read"] },
+  configured: string[] = ["anthropic", "gemini", "openai", "jev"],
 ) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ roles: ["admin"], allow })),
-      "GET /ai/provider-health": () => jsonResponse({ providers }),
+      "GET /ai/provider-health": () => jsonResponse({ configured, providers }),
     });
     return (
       <StoryProviders>
@@ -39,6 +40,20 @@ const ahead = (minutes: number) =>
   new Date(Date.now() + minutes * 60_000).toISOString();
 
 export const AllAnswering: Story = { render: story([]) };
+
+// No provider bound: nothing answers, so the card must not say all of them do.
+export const NoneConfigured: Story = {
+  render: story([], { ai_diagnostics: ["read"] }, []),
+};
+
+// The worker reports a provider this process binds none of: the failure still shows.
+export const FailingWithNoneConfigured: Story = {
+  render: story(
+    [{ provider: "openai", health: "down", since: ago(45) }],
+    { ai_diagnostics: ["read"] },
+    [],
+  ),
+};
 
 export const EveryFailure: Story = {
   render: story([
@@ -73,4 +88,9 @@ export const EveryFailureDark: Story = {
 
 export const Withheld: Story = {
   render: story([], { ai_diagnostics: [] }),
+};
+
+export const EveryFailureAtPhoneWidth: Story = {
+  ...EveryFailure,
+  tags: ["uat-phone"],
 };

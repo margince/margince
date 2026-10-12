@@ -15,7 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -23,7 +22,7 @@ import (
 // The stamp is a property of the code, not of the process that computed it.
 func TestTheRulesetStampIsStableAcrossProcesses(t *testing.T) {
 	build := func(fence promptfence.Fence) string {
-		return SystemFor(fence) + "\n" + Prompt(fence, []activities.OwedCandidate{rulesetSample})
+		return SystemFor(fence) + "\n" + Prompt(fence, rulesetSamples)
 	}
 	first, second := ai.PromptDigest(build), ai.PromptDigest(build)
 	if first != second {
@@ -48,7 +47,7 @@ func TestTheRulesetStampIsStableAcrossProcesses(t *testing.T) {
 // — reintroduces exactly this.
 func TestAUserTurnDigestedAloneIsNotStable(t *testing.T) {
 	userTurn := func(fence promptfence.Fence) string {
-		return Prompt(fence, []activities.OwedCandidate{rulesetSample})
+		return Prompt(fence, rulesetSamples)
 	}
 	if first, second := ai.PromptDigest(userTurn), ai.PromptDigest(userTurn); first == second {
 		t.Fatalf("a user turn digested alone is stable at %q, so the folding in Ruleset "+
@@ -67,8 +66,8 @@ func TestAUserTurnDigestedAloneIsNotStable(t *testing.T) {
 // A sample missing one of them would leave that part of the prompt free to
 // change under verdicts still claiming to have been judged by it.
 func TestTheRulesetSampleRendersEveryLineOfTheTemplate(t *testing.T) {
-	rendered := Prompt(promptfence.New(), []activities.OwedCandidate{rulesetSample})
-	for _, line := range []string{"Subject:", "To:", "Cc:", "calendar invitation", "context_for", "Sent:"} {
+	rendered := Prompt(promptfence.New(), rulesetSamples)
+	for _, line := range []string{"Subject:", "To:", "Cc:", "carried a calendar invitation", "reply to a calendar invitation", "context_for", "Sent:"} {
 		if !strings.Contains(rendered, line) {
 			t.Errorf("the ruleset sample does not render %q, so an edit to that line would not move the stamp", line)
 		}

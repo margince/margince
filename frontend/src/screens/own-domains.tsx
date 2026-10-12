@@ -3,11 +3,17 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { Button, EmptyState, Modal, TextInput } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Modal,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
@@ -21,7 +27,12 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
+import {
+  type MutationOutcome,
+  useRowHandoff,
+  useUndoableRemoval,
+} from "./undoableremoval";
 
 // The own-domain surface (CAP-WIRE-2a, ADR-0082/A127): which domains this
 // installation treats as its own, and therefore whose mail it does not store.
@@ -73,10 +84,8 @@ function useAddOwnDomain() {
   });
 }
 
-function useRemoveOwnDomain() {
+function useRemoveOwnDomain(outcome: MutationOutcome<string | null>) {
   const queryClient = useQueryClient();
-  const toast = useToast();
-  const t = useT();
   return useMutation({
     mutationFn: async (domain: string) => {
       unwrap(
@@ -84,10 +93,26 @@ function useRemoveOwnDomain() {
           params: { path: { domain } },
         }),
       );
+      return domain;
     },
+    onError: outcome.onError,
+    onSuccess: (domain) => {
+      queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });
+      outcome.onSuccess(domain);
+    },
+  });
+}
+
+function useRestoreOwnDomain(outcome: MutationOutcome<string>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (domain: string) => {
+      unwrap(await api.POST("/capture/email-domains", { body: { domain } }));
+    },
+    onError: outcome.onError,
     onSuccess: (_written, domain) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });
-      toast.show(t("settings.removedItem", { name: domain }));
+      outcome.onSuccess(domain);
     },
   });
 }
@@ -96,8 +121,8 @@ export function OwnDomainsCard() {
   const t = useT();
   const canManage = useCanWrite("capture_settings", "update");
   const query = useOwnDomains();
-  const remove = useRemoveOwnDomain();
   const [adding, setAdding] = useState(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
   // The denial, said once and POINTED AT. A control that is refused with its
   // reason floating somewhere further down the card has told a screen reader
   // nothing: the reason is read only if the reader happens to arrive at that
@@ -124,7 +149,11 @@ export function OwnDomainsCard() {
       // button says the same thing twice a hand apart. Refused, never hidden:
       // `reasonId` names the one sentence under the rows.
       titleAction={
-        <Button reasonId={refusal} onClick={() => setAdding(true)}>
+        <Button
+          ref={addVerb}
+          reasonId={refusal}
+          onClick={() => setAdding(true)}
+        >
           {t("ownDomains.addOpen")}
         </Button>
       }
@@ -143,7 +172,7 @@ export function OwnDomainsCard() {
               <a href="#/settings/company">{t("ownDomains.openCompany")}</a>
             </PanelIntro>
           </PanelBody>
-          <SettingList bleed="records" testId="own-domains-from-company">
+          <SettingList bleed="settings" testId="own-domains-from-company">
             {anchors.map((domain) => (
               <SettingRow key={domain} label={domain} control={null} />
             ))}
@@ -159,23 +188,13 @@ export function OwnDomainsCard() {
           <CuratedDomains
             list={list.data}
             refusal={refusal}
-            pending={remove.isPending}
-            onRemove={(domain) => remove.mutate(domain)}
+            landing={() => addVerb.current}
           />
         )}
       </QueryGate>
-      {(!canManage || remove.isError) && (
-        <PanelBody className="form-stack">
-          {!canManage && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
-          {remove.isError && (
-            <Callout
-              kind="outcome"
-              tone="danger"
-              title={t("ownDomains.removeFailed")}
-            >
-              {problemMessageOf(remove.error, t)}
-            </Callout>
-          )}
+      {!canManage && (
+        <PanelBody>
+          <p id={denialId}>{t("captureSettings.adminOnly")}</p>
         </PanelBody>
       )}
       {adding && <AddOwnDomainDialog onClose={() => setAdding(false)} />}
@@ -183,26 +202,16 @@ export function OwnDomainsCard() {
   );
 }
 
-/**
- * The curated half: one row per domain, whether it is confirmed as the row's
- * answer, and the verb that takes it back at the right.
- *
- * It was a hand-rolled `<ul>` with an inline-styled `<li>` and an inline
- * `marginLeft` on the state beside each domain — the same list
- * capture-exclusions.tsx had copied, which is the signal the shape belongs to
- * the row language rather than to either screen.
- */
+/** The curated half: one row per domain, and the verb that takes it back. */
 function CuratedDomains({
   list,
   refusal,
-  pending,
-  onRemove,
+  landing,
 }: Readonly<{
   list: WorkspaceEmailDomain[];
   /** The id of the one sentence saying why removal is refused, when it is. */
   refusal: string | undefined;
-  pending: boolean;
-  onRemove: (domain: string) => void;
+  landing: () => HTMLElement | null;
 }>) {
   const t = useT();
   if (list.length === 0) {
@@ -217,27 +226,58 @@ function CuratedDomains({
   return (
     <SettingList bleed="records" testId="own-domains-list">
       {list.map((domain) => (
-        <SettingRow
+        <CuratedDomain
           key={domain.domain}
-          label={domain.domain}
-          value={
-            domain.verified
-              ? t("ownDomains.confirmed")
-              : t("ownDomains.candidate")
-          }
-          control={
-            <IconAction
-              variant="ghost"
-              label={t("ownDomains.remove", { domain: domain.domain })}
-              icon={<Trash2 aria-hidden />}
-              disabled={pending}
-              reasonId={refusal}
-              onClick={() => onRemove(domain.domain)}
-            />
-          }
+          domain={domain}
+          refusal={refusal}
+          landing={landing}
         />
       ))}
     </SettingList>
+  );
+}
+
+// A confirmed domain comes back with Undo, since adding it again restores it.
+// A candidate does not: adding it again would confirm it.
+function CuratedDomain({
+  domain,
+  refusal,
+  landing,
+}: Readonly<{
+  domain: WorkspaceEmailDomain;
+  refusal: string | undefined;
+  landing: () => HTMLElement | null;
+}>) {
+  const t = useT();
+  const verbs = useRowHandoff(landing);
+  const toasts = useUndoableRemoval<string>({
+    removed: t("settings.removedItem", { name: domain.domain }),
+    restored: t("settings.addedItem", { name: domain.domain }),
+  });
+  const restore = useRestoreOwnDomain(toasts.restored);
+  const remove = useRemoveOwnDomain(
+    toasts.removed((name) => restore.mutate(name), domain.verified),
+  );
+  return (
+    <SettingRow
+      label={domain.domain}
+      description={domain.verified ? undefined : t("ownDomains.candidateNote")}
+      value={
+        domain.verified ? undefined : <Badge>{t("ownDomains.candidate")}</Badge>
+      }
+      control={
+        <span className="cell-actions" ref={verbs}>
+          <IconAction
+            variant="ghost"
+            label={t("ownDomains.remove", { domain: domain.domain })}
+            icon={<Trash2 aria-hidden />}
+            pending={remove.isPending}
+            reasonId={refusal}
+            onClick={() => remove.mutate(domain.domain)}
+          />
+        </span>
+      }
+    />
   );
 }
 

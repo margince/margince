@@ -33,7 +33,10 @@ type BlockedDomain struct {
 	Reason    string
 	Source    string
 	DecidedAt time.Time
-	CompanyID *ids.CompanyID
+	// CompanyID and CompanyName are set together by withVisibleCompanyTx, and
+	// only for a company the caller may read.
+	CompanyID   *ids.CompanyID
+	CompanyName *string
 }
 
 // ToContractBlockedDomain is the wire shape of one admission decision.
@@ -43,18 +46,46 @@ type BlockedDomain struct {
 // second spelling would be free to disagree about which fields reach a reader.
 func ToContractBlockedDomain(e BlockedDomain) crmcontracts.BlockedDomain {
 	out := crmcontracts.BlockedDomain{
-		Domain:    e.Domain,
-		Admission: crmcontracts.BlockedDomainAdmission(e.Admission),
-		Reason:    e.Reason,
-		Source:    crmcontracts.BlockedDomainSource(e.Source),
-		DecidedAt: e.DecidedAt,
+		Domain:      e.Domain,
+		Admission:   crmcontracts.BlockedDomainAdmission(e.Admission),
+		Reason:      e.Reason,
+		Source:      crmcontracts.BlockedDomainSource(e.Source),
+		DecidedAt:   e.DecidedAt,
+		CompanyName: e.CompanyName,
 	}
+	out.ReasonCode, out.Note, out.SenderKind = reasonCodeOf(e)
 	if e.CompanyID != nil {
 		id := openapi_types.UUID(e.CompanyID.UUID)
 		out.CompanyId = &id
 	}
 	return out
 }
+
+// standingCompany is the company a disposition row points at, as read beside
+// it and before anybody decided whether the caller may see it.
+type standingCompany struct {
+	id   *ids.UUID
+	name *string
+}
+
+// withVisibleCompanyTx withholds both fields for a company the caller may not
+// read: a mail-captured company stays owner-private even under row_scope=all.
+func withVisibleCompanyTx(ctx context.Context, tx pgx.Tx, d *BlockedDomain, company standingCompany) error {
+	if company.id == nil || company.name == nil {
+		return nil
+	}
+	visible, err := auth.VisibleTo(ctx, tx, entityCompany, *company.id)
+	if err != nil || !visible {
+		return err
+	}
+	typed := ids.From[ids.CompanyKind](*company.id)
+	d.CompanyID, d.CompanyName = &typed, company.name
+	return nil
+}
+
+// domainStandingFrom names a disposition row `d` and the company it points at
+// `c`, which every read of a domain's standing selects from.
+const domainStandingFrom = `company_domain_disposition d LEFT JOIN company c ON c.id = d.company_id`
 
 // domainStanding is where a domain's company question stands, as one row of the
 // operator's list: the decision it carries, or — when nobody decided — the
@@ -72,16 +103,16 @@ func ToContractBlockedDomain(e BlockedDomain) crmcontracts.BlockedDomain {
 // Shared with the single-row read in domainopenquestion.go, so a re-ask answers
 // in the same shape the operator was just looking at.
 const domainStanding = `
-	CASE WHEN pending_reason IS NOT NULL THEN '` + DomainUndecided + `'
-	     ELSE COALESCE(admission, '') END,
-	COALESCE(admission_reason, ` + domainPendingReason + `, ''),
-	CASE WHEN pending_reason IS NOT NULL THEN pending_reason
-	     ELSE COALESCE(admission_source, '') END,
-	COALESCE(admission_at, updated_at),
-	company_id`
+	CASE WHEN d.pending_reason IS NOT NULL THEN '` + DomainUndecided + `'
+	     ELSE COALESCE(d.admission, '') END,
+	COALESCE(d.admission_reason, ` + domainPendingReason + `, ''),
+	CASE WHEN d.pending_reason IS NOT NULL THEN d.pending_reason
+	     ELSE COALESCE(d.admission_source, '') END,
+	COALESCE(d.admission_at, d.updated_at),
+	d.company_id, c.display_name`
 
 // domainPendingReason turns a withholding reason into the sentence a reader
-// gets told, for the two reasons the machine has for leaving a question open.
+// gets told, for each reason the machine has for leaving a question open.
 //
 // Its own fragment because two surfaces render it: the operator's list above,
 // which shows decisions and open questions together, and the owner's own
@@ -98,6 +129,8 @@ const domainPendingReason = `
 	    THEN 'Nothing on the site named a company, and the sender''s name did not explain the domain.'
 	  WHEN '` + PendingStaleEvidence + `'
 	    THEN 'The newest mail from this domain is too old to trust today''s site as evidence about it.'
+	  WHEN '` + PendingNearDuplicate + `'
+	    THEN 'More than one company already carries the name this domain resolved to, so which one it belongs to is for a colleague to decide.'
 	  ELSE '' END`
 
 // domainStandingWhere selects the rows this list is the right surface for: every
@@ -106,7 +139,7 @@ const domainPendingReason = `
 // A bare `status = 'pending'` would sweep in every domain merely awaiting its
 // turn in the crawl queue, which nobody needs to see — the sweep will get to it.
 // What belongs here is the row whose retry cursor was CLEARED, which is what
-// both withholding reasons do: nothing will ask again on its own.
+// every withholding reason does: nothing will ask again on its own.
 //
 // An open question owned by a LIVE colleague is deliberately absent. It reaches
 // them in their own queue (domainquestionlist.go), with the two verbs that
@@ -135,10 +168,10 @@ const domainPendingReason = `
 // Note this admits an undecided row that also carries an admission: re-withholding
 // an admitted domain leaves both columns set, and such a row belongs on a list of
 // decisions whoever owns it.
-var domainStandingWhere = `admission IS NOT NULL
-	OR (pending_reason IS NOT NULL AND NOT EXISTS (
+var domainStandingWhere = `d.admission IS NOT NULL
+	OR (d.pending_reason IS NOT NULL AND NOT EXISTS (
 	      SELECT 1 FROM app_user u
-	       WHERE u.id = company_domain_disposition.owner_id
+	       WHERE u.id = d.owner_id
 	         AND ` + workforce.LiveMemberSQL("u") + `))`
 
 // ListDomainAdmissions returns every domain that carries a decision, plus the
@@ -161,7 +194,7 @@ func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedD
 	var total int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
-			SELECT count(*) FROM company_domain_disposition
+			SELECT count(*) FROM company_domain_disposition d
 			 WHERE `+domainStandingWhere).Scan(&total); err != nil {
 			return fmt.Errorf("contacts: counting domain admissions: %w", err)
 		}
@@ -170,10 +203,10 @@ func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedD
 		// every open question into one heap at the end regardless of when it
 		// was last touched — burying the newest question under the oldest.
 		rows, err := tx.Query(ctx, `
-			SELECT id, domain, `+domainStanding+`
-			  FROM company_domain_disposition
+			SELECT d.id, d.domain, `+domainStanding+`
+			  FROM `+domainStandingFrom+`
 			 WHERE `+domainStandingWhere+`
-			 ORDER BY COALESCE(admission_at, updated_at) DESC
+			 ORDER BY COALESCE(d.admission_at, d.updated_at) DESC
 			 LIMIT $1`, limit)
 		if err != nil {
 			return fmt.Errorf("contacts: listing domain admissions: %w", err)
@@ -181,39 +214,25 @@ func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedD
 		// Collected BEFORE any per-row visibility query: the rows cursor holds
 		// the connection, and a second query on the same transaction while it
 		// is open answers "conn busy".
-		var companyIDs []*ids.UUID
+		var companies []standingCompany
 		for rows.Next() {
 			var d BlockedDomain
-			var companyID *ids.UUID
-			if err := rows.Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &companyID); err != nil {
+			var company standingCompany
+			if err := rows.Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt,
+				&company.id, &company.name); err != nil {
 				rows.Close()
 				return fmt.Errorf("contacts: reading a domain admission: %w", err)
 			}
 			out = append(out, d)
-			companyIDs = append(companyIDs, companyID)
+			companies = append(companies, company)
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {
 			return fmt.Errorf("contacts: listing domain admissions: %w", err)
 		}
-		for i, companyID := range companyIDs {
-			if companyID == nil {
-				continue
-			}
-			// The company id is withheld unless the caller could read that
-			// company. A company captured from mail is owner-PRIVATE
-			// until a human promotes it, and that privacy does not yield to
-			// row_scope=all — so returning the id here would hand every
-			// colleague a pointer to a record the record's own endpoint
-			// correctly 404s. Same rule, and same VisibleTo check, as the
-			// duplicate-domain refusal in company_domains.go.
-			visible, verr := auth.VisibleTo(ctx, tx, entityCompany, *companyID)
-			if verr != nil {
-				return verr
-			}
-			if visible {
-				typed := ids.From[ids.CompanyKind](*companyID)
-				out[i].CompanyID = &typed
+		for i, company := range companies {
+			if err := withVisibleCompanyTx(ctx, tx, &out[i], company); err != nil {
+				return err
 			}
 		}
 		return nil

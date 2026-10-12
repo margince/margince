@@ -1,0 +1,14 @@
+/* Facts sit apart with no separator glyph; a long one starts its own line. */
+.owner-identity-caption {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-3);
+}
+
+/* On a phone the remove verb stays at the end of the address's line. */
+@media (max-width: 640px) {
+  .settinglist-records > .settingrow:has(.owner-identity-caption) {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}

@@ -62,6 +62,7 @@ func (w attentionAwaiting) MeetingFollowUps(
 		out = append(out, attention.AwaitedReply{
 			ActivityID: row.ActivityID, Subject: row.Subject, SentAt: row.SentAt,
 			ContactID: row.ContactID, CompanyID: row.CompanyID, DealID: row.DealID,
+			Recipients: row.Recipients,
 		})
 	}
 	return out, len(rows) >= activities.AwaitingReplyScanCap, nil

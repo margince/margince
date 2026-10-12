@@ -83,6 +83,7 @@ func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 
 type countingAwaiting struct {
 	rows        []AwaitedReply
+	meetings    []AwaitedReply
 	calls       int
 	meetingsErr error
 }
@@ -93,7 +94,7 @@ func (c *countingAwaiting) AwaitingReplies(context.Context, time.Time) ([]Awaite
 }
 
 func (c *countingAwaiting) MeetingFollowUps(context.Context, time.Time) ([]AwaitedReply, bool, error) {
-	return nil, false, c.meetingsErr
+	return c.meetings, false, c.meetingsErr
 }
 
 // The two reads fail apart: a refused or failed meeting read names its own
@@ -117,26 +118,87 @@ func TestAFailedMeetingReadKeepsTheReplies(t *testing.T) {
 	}
 }
 
-// A meeting is not a message to answer: the row offers a fresh message to the
-// contact, and only when it names one.
-func TestAMeetingFollowUpOffersAMessageToTheContactItWasWith(t *testing.T) {
+// A meeting is not a message to answer. The row offers a fresh message to
+// everyone it was with, and names the first of them as its contact.
+func TestAMeetingFollowUpOffersAMessageToEveryoneItWasWith(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
-	row := classifyMeetingFollowUp(AwaitedReply{
+	first, second := ids.NewV7(), ids.NewV7()
+	ranked, actionable := classifyMeetingFollowUp(AwaitedReply{
 		ActivityID: ids.NewV7(), Subject: "Discovery workshop", SentAt: at.Add(-3 * 24 * time.Hour),
-		ContactID: ids.NewV7(),
-	}, at).item
-	if row.Source != sourceMeetingFollowUp || row.Category != crmcontracts.WorklistItemCategoryMeetings {
-		t.Fatalf("row filed as %s/%s", row.Source, row.Category)
+		ContactID: first, DealID: ids.NewV7(), Recipients: []ids.UUID{first, second},
+	}, at)
+	row := ranked.item
+	if !actionable || row.Source != sourceMeetingFollowUp || row.Category != crmcontracts.WorklistItemCategoryMeetings {
+		t.Fatalf("row filed as %s/%s (produced: %v)", row.Source, row.Category, actionable)
 	}
 	if row.Move != nil {
 		t.Fatalf("move = %+v, want none: there is no message to draft a reply to", row.Move)
 	}
 	if !slices.Contains(row.Actions, crmcontracts.WorklistItemActionsReply) {
-		t.Fatalf("actions = %v, want reply to the contact", row.Actions)
+		t.Fatalf("actions = %v, want reply to the attendees", row.Actions)
 	}
-	nobody := classifyMeetingFollowUp(AwaitedReply{ActivityID: ids.NewV7(), SentAt: at, CompanyID: ids.NewV7()}, at).item
-	if slices.Contains(nobody.Actions, crmcontracts.WorklistItemActionsReply) {
-		t.Fatalf("a meeting naming no contact offers a message: %v", nobody.Actions)
+	if row.Recipients == nil || len(*row.Recipients) != 2 || ids.UUID((*row.Recipients)[1].Id) != second {
+		t.Fatalf("recipients = %+v, want both attendees", row.Recipients)
+	}
+	if row.Contact == nil || ids.UUID(row.Contact.Id) != first {
+		t.Errorf("contact = %+v, want the first recipient", row.Contact)
+	}
+}
+
+// With nobody on file the row still has a way forward. It opens the record
+// the meeting is filed under, and says why there is no draft.
+func TestAMeetingWithNoAttendeeOnFileOpensItsRecord(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
+	for name, met := range map[string]AwaitedReply{
+		"deal":    {ActivityID: ids.NewV7(), SentAt: at, DealID: ids.NewV7(), CompanyID: ids.NewV7()},
+		"company": {ActivityID: ids.NewV7(), SentAt: at, CompanyID: ids.NewV7()},
+	} {
+		ranked, actionable := classifyMeetingFollowUp(met, at)
+		row := ranked.item
+		if !actionable || row.Subject == nil || string(row.Subject.Type) != name {
+			t.Fatalf("%s: produced %v with subject %+v, want the %s opened", name, actionable, row.Subject, name)
+		}
+		if !slices.Equal(row.Actions, []crmcontracts.WorklistItemActions{crmcontracts.WorklistItemActions(actionOpen)}) || row.Recipients != nil {
+			t.Errorf("%s: actions = %v, recipients = %v; want open alone", name, row.Actions, row.Recipients)
+		}
+		if !slices.ContainsFunc(row.Because, func(r crmcontracts.WorklistReason) bool {
+			return r.Kind == crmcontracts.WorklistReasonKindNoAttendeeOnFile
+		}) {
+			t.Errorf("%s: reasons = %+v, want one saying no attendee is on file", name, row.Because)
+		}
+	}
+	if _, actionable := classifyMeetingFollowUp(AwaitedReply{ActivityID: ids.NewV7(), SentAt: at}, at); actionable {
+		t.Error("a meeting with no attendee, deal or company on file produced a row")
+	}
+}
+
+// No follow-up row reaches the queue without a verb, whatever the read named.
+func TestNoMeetingFollowUpRowIsDrawnWithoutAnAction(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
+	someone := ids.NewV7()
+	reads := []AwaitedReply{}
+	for _, contact := range [][]ids.UUID{nil, {someone}} {
+		for _, deal := range []ids.UUID{{}, ids.NewV7()} {
+			for _, company := range []ids.UUID{{}, ids.NewV7()} {
+				met := AwaitedReply{ActivityID: ids.NewV7(), SentAt: at, DealID: deal, CompanyID: company, Recipients: contact}
+				if len(contact) > 0 {
+					met.ContactID = contact[0]
+				}
+				reads = append(reads, met)
+			}
+		}
+	}
+	s := &Service{awaiting: &countingAwaiting{meetings: reads}, taskScope: TasksMine, now: func() time.Time { return at }}
+	scoped, _ := s.readingAwaiting(context.Background(), at)
+	if len(scoped.followUps.rows) != len(reads)-1 {
+		t.Fatalf("%d rows from %d reads, want every read but the one naming no record", len(scoped.followUps.rows), len(reads))
+	}
+	for _, row := range scoped.followUps.rows {
+		if len(row.item.Actions) == 0 {
+			t.Errorf("row %s was drawn with no action: %+v", row.item.Id, row.item)
+		}
 	}
 }

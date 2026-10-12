@@ -1,17 +1,11 @@
-import { Circle, CircleCheck, Copy } from "lucide-react";
+import { Circle, CircleCheck } from "lucide-react";
 import type { components } from "../api/schema";
-import {
-  Badge,
-  Button,
-  Field,
-  SegmentedControl,
-  TextInput,
-} from "../design-system/atoms";
+import { Field, SegmentedControl, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { Switch } from "../design-system/switch";
+import { providerName } from "../format/connectorprovider";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -21,36 +15,6 @@ type Profile = components["schemas"]["SchedulingProfile"];
 type Provider = "" | "gcal" | "graphcal";
 
 const LENGTHS = ["15", "30", "45", "60"];
-
-// The link a host most often comes here to fetch, copyable before anything
-// else on the page; its full controls stay in the booking link section.
-export function QuickLink({ profile }: Readonly<{ profile: Profile }>) {
-  const t = useT();
-  const copy = useClipboardCopy(profile.public_url ?? "", {
-    copy: t("scheduling.copyBookingLink"),
-    copied: t("scheduling.copied"),
-    remedy: t("scheduling.copyFallback"),
-  });
-  if (!profile.public_url) return null;
-  return (
-    <div className="meeting-quicklink">
-      <div className="meeting-quicklink-text">
-        <span className="t-name">{t("scheduling.myLink")}</span>
-        <Badge tone={profile.enabled ? "success" : "default"}>
-          {t(profile.enabled ? "scheduling.active" : "scheduling.paused")}
-        </Badge>
-        <span className="t-caption meeting-quicklink-url">
-          {profile.public_url}
-        </span>
-      </div>
-      <Button variant="primary" onClick={copy.copy}>
-        <Copy aria-hidden />
-        {copy.label}
-      </Button>
-      {copy.notice}
-    </div>
-  );
-}
 
 // What still stands between the host and a working booking link, in the order
 // the page asks for it; gone once every step is done.
@@ -129,10 +93,7 @@ export function CalendarSection({
                 { value: "", label: t("scheduling.chooseProvider") },
                 ...providers.map((item) => ({
                   value: item.provider,
-                  label:
-                    item.provider === "gcal"
-                      ? "Google Calendar"
-                      : "Microsoft Outlook",
+                  label: providerName(item.provider, t),
                 })),
               ]}
               onChange={(value) => {

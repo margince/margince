@@ -21,21 +21,6 @@ export function ReindexingNotice() {
   );
 }
 
-/** The reason a failed ingest carries. A set quietly short of a file nobody can
- *  name answers worse than an empty one, because it still answers. */
-export function IngestFailure({ detail }: Readonly<{ detail: string }>) {
-  const t = useT();
-  return (
-    <Callout
-      kind="event"
-      tone="danger"
-      title={t("knowledge.ingestDetailTitle")}
-    >
-      {detail}
-    </Callout>
-  );
-}
-
 /**
  * One refused file out of several. Named, because "3 of 10 failed" leaves the
  * reader to work out WHICH three by comparing two lists by eye.

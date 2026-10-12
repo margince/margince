@@ -117,6 +117,8 @@ const rejected = () =>
         domain: "mail.expensify.test",
         admission: "suppressed",
         reason: "a tool we use",
+        reason_code: "stated",
+        note: "a tool we use",
         source: "human",
         decided_at: "2026-09-08T10:00:00Z",
       },

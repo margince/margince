@@ -22,6 +22,7 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { BULK_MAX_ITEMS } from "./bulkchangeapi";
 import { BulkVerbs } from "./bulkverbs";
 import { throwProblem, unwrap } from "./common";
 import { downloadBytes, filenameFromDisposition } from "./download";
@@ -59,9 +60,6 @@ export type MemberRow = Readonly<
 >;
 
 const MEMBER_PAGE = 50;
-
-/** The contract's bound on one bulk selection (`BulkChangePreviewRequest.items`). */
-export const BULK_MAX_ITEMS = 500;
 
 // The largest page the record lists serve, for walking the members to select.
 const SELECT_ALL_PAGE = 200;

@@ -2,6 +2,7 @@ defacl public objtype=r acl=margince_app=arwd/margince_owner
 public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.activity.activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text])))
+public.activity.activity_calendar_method_check CHECK ((calendar_method = ANY (ARRAY['PUBLISH'::text, 'REQUEST'::text, 'REPLY'::text, 'ADD'::text, 'CANCEL'::text, 'REFRESH'::text, 'COUNTER'::text, 'DECLINECOUNTER'::text])))
 public.activity.activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text]))))
 public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
 public.activity.activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES channel_provider(provider)
@@ -53,6 +54,7 @@ public.activity.audience_reason text gen=- def=-
 public.activity.body text gen=- def=-
 public.activity.booking_interval_exact boolean NOT NULL gen=- def=false
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
+public.activity.calendar_method text gen=- def=-
 public.activity.capture_label text gen=- def=-
 public.activity.capture_label_declined_at timestamp with time zone gen=- def=-
 public.activity.capture_label_declined_ruleset text gen=- def=-
@@ -116,6 +118,17 @@ public.activity_audience_member.created_by text NOT NULL gen=- def=-
 public.activity_audience_member.subject_id uuid NOT NULL gen=- def=-
 public.activity_audience_member.subject_type text NOT NULL gen=- def=-
 public.activity_audience_member_pkey CREATE UNIQUE INDEX activity_audience_member_pkey ON public.activity_audience_member USING btree (activity_id, subject_type, subject_id)
+public.activity_calendar_method_backfill acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_calendar_method_backfill.activity_calendar_method_backfill_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_calendar_method_backfill.activity_calendar_method_backfill_outcome_check CHECK ((outcome = ANY (ARRAY['set'::text, 'none'::text, 'unreadable'::text])))
+public.activity_calendar_method_backfill.activity_calendar_method_backfill_pkey PRIMARY KEY (activity_id)
+public.activity_calendar_method_backfill.activity_created_at timestamp with time zone NOT NULL gen=- def=-
+public.activity_calendar_method_backfill.activity_id uuid NOT NULL gen=- def=-
+public.activity_calendar_method_backfill.checked_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_calendar_method_backfill.outcome text NOT NULL gen=- def=-
+public.activity_calendar_method_backfill_pkey CREATE UNIQUE INDEX activity_calendar_method_backfill_pkey ON public.activity_calendar_method_backfill USING btree (activity_id)
+public.activity_calendar_method_backfill_resume CREATE INDEX activity_calendar_method_backfill_resume ON public.activity_calendar_method_backfill USING btree (activity_created_at, activity_id)
+public.activity_calendar_method_unread CREATE INDEX activity_calendar_method_unread ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'inbound'::text))
 public.activity_class_needs_evidence() secdef=false cfg=- acl=- 
 BEGIN
   IF EXISTS (SELECT 1 FROM activity a
@@ -318,12 +331,12 @@ public.activity_pkey CREATE UNIQUE INDEX activity_pkey ON public.activity USING 
 public.activity_reader_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_reader_state.activity_id uuid NOT NULL gen=- def=-
 public.activity_reader_state.activity_reader_state_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
-public.activity_reader_state.activity_reader_state_known CHECK ((state = ANY (ARRAY['snoozed'::text, 'not_mine'::text])))
+public.activity_reader_state.activity_reader_state_known CHECK ((state = ANY (ARRAY['snoozed'::text, 'not_mine'::text, 'handled'::text])))
 public.activity_reader_state.activity_reader_state_pkey PRIMARY KEY (activity_id, reader_id)
 public.activity_reader_state.activity_reader_state_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_reader_state.activity_reader_state_reopen_known CHECK (((reopen_on IS NULL) OR (reopen_on = ANY (ARRAY['time'::text, 'reply'::text, 'meeting'::text]))))
 public.activity_reader_state.activity_reader_state_reopen_ref_shaped CHECK ((NOT ((reopen_ref IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'meeting'::text)))))
-public.activity_reader_state.activity_reader_state_shaped CHECK ((((state = 'snoozed'::text) AND (reopen_on IS NOT NULL) AND (NOT ((snoozed_until IS NOT NULL) IS DISTINCT FROM (reopen_on = 'time'::text)))) OR ((state = 'not_mine'::text) AND (snoozed_until IS NULL) AND (reopen_on IS NULL))))
+public.activity_reader_state.activity_reader_state_shaped CHECK ((((state = 'snoozed'::text) AND (reopen_on IS NOT NULL) AND (NOT ((snoozed_until IS NOT NULL) IS DISTINCT FROM (reopen_on = 'time'::text)))) OR ((state = ANY (ARRAY['not_mine'::text, 'handled'::text])) AND (snoozed_until IS NULL) AND (reopen_on IS NULL) AND (reopen_ref IS NULL))))
 public.activity_reader_state.reader_id uuid NOT NULL gen=- def=-
 public.activity_reader_state.reopen_on text gen=- def=-
 public.activity_reader_state.reopen_ref uuid gen=- def=-
