@@ -29,10 +29,10 @@
     }
   ],
   "catalog": {
-    "tools": 85,
+    "tools": 86,
     "system_frame_tokens": 586,
-    "tokens": 30301,
-    "median_tool_tokens": 293,
+    "tokens": 30648,
+    "median_tool_tokens": 298,
     "mean_tool_tokens": 356
   },
   "agents": [
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 85,
+      "of_served_tools": 86,
       "tokens": 3810,
       "listing_tokens": 1913,
       "step_schema_tokens": 1311,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 85,
+      "of_served_tools": 86,
       "tokens": 5292,
       "listing_tokens": 2818,
       "step_schema_tokens": 1888,
@@ -88,7 +88,7 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1023
+      "tokens": 1020
     },
     {
       "name": "send_company_email",
@@ -104,7 +104,7 @@
     },
     {
       "name": "compose_analytics_report",
-      "tokens": 772
+      "tokens": 777
     },
     {
       "name": "send_email",
@@ -124,7 +124,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 667
+      "tokens": 671
     },
     {
       "name": "send_message",
@@ -136,7 +136,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 581
+      "tokens": 585
     },
     {
       "name": "forecast_readings",
@@ -152,7 +152,7 @@
     },
     {
       "name": "run_analytics_query",
-      "tokens": 506
+      "tokens": 508
     },
     {
       "name": "progress_deal",
@@ -233,6 +233,10 @@
     {
       "name": "search_report_evidence",
       "tokens": 335
+    },
+    {
+      "name": "describe_vocabulary",
+      "tokens": 334
     },
     {
       "name": "decide_approval",

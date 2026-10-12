@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 81 |
+| Tools | 77 |
 | Resources | 9 |
-| Tool catalog | 250.6 KB |
+| Tool catalog | 240.7 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 65046 |
+| Approx. wire tokens | 62514 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 108.4 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 65.5 KB | 26% | Yes, every step |
-| Input schemas | 57.1 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 19.6 KB | 7% | Partly |
-| **Description + input schema** | **122.6 KB** | **48%** | **the recurring cost** |
+| Output schemas | 104.3 KB | 43% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 60.9 KB | 25% | Yes, every step |
+| Input schemas | 57.0 KB | 23% | Yes, every step |
+| _Names, annotations, punctuation_ | 18.5 KB | 7% | Partly |
+| **Description + input schema** | **117.9 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -52,7 +52,7 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (81)
+### Tools (77)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -79,11 +79,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 3.0 KB |
 | [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
-| [`describe_analytics_vocabulary`](#describe_analytics_vocabulary) | Describe the analytics vocabulary | yes |  | 2.2 KB |
-| [`describe_query_vocabulary`](#describe_query_vocabulary) | Describe the query vocabulary | yes |  | 2.1 KB |
-| [`describe_record_fields`](#describe_record_fields) | Describe the record write vocabulary | yes |  | 2.4 KB |
-| [`describe_report_blocks`](#describe_report_blocks) | Describe the report block grammar | yes |  | 2.0 KB |
-| [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.5 KB |
+| [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 1.5 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.7 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
@@ -3410,11 +3406,11 @@ two can disagree, and no reader could tell the page shows a figure the database 
 Preserve returned coverage, units and capture context. For a query cell, run an analytics query with
 save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is
 what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the
-answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for
-a caller that wants them before composing. Never put a number in a block — cite the cell that
-holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt
-costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope
-"read".)
+answer is a report somebody reads. describe_vocabulary (topic report_blocks) holds the block kinds
+and their fields for a caller that wants them before composing. Never put a number in a block —
+cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set,
+so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires
+passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3714,7 +3710,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
       "type": "string"
     },
     "fields": {
-      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by describe_record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by describe_vocabulary (topic record_fields) — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "idempotency_key": {
@@ -5039,646 +5035,44 @@ immediately; requires passport scope "write".)
 
 </details>
 
-### describe_analytics_vocabulary
+### describe_vocabulary
 
-**Describe the analytics vocabulary**
+**Describe what a tool accepts**
 
 ```text
-Answer what an analytics query may SAY for THIS seat: the populations that can be measured, the
-group_by dimensions and measures each carries, and the aggregate functions and filter operators the
-grammar takes. It is the vocabulary run_analytics_query refuses against, so it holds the spelling of
-a population or field a query got wrong. It describes the vocabulary; it computes nothing —
-run_analytics_query does that. The document is derived per caller and narrowed to what this seat may
-already see, so a withheld field is simply absent rather than marked. It answers the same document
-as the margince://schema/analytics resource, for a caller that reads tools rather than resources.
-Call run_analytics_query directly when the names are already known — an unknown population is
-refused with the allowed set, so a near-miss costs one round trip rather than a lookup. Take
-population, dimension and measure names verbatim — a name outside the document is refused rather
-than approximated. The version line is the schema_version a saved run answers with. (Governance:
-runs immediately; requires passport scope "read".)
+Answer the names another tool accepts, one topic at a time. query: the record types, fields,
+operators and the one relationship hop a query_workspace plan may name. analytics: the populations,
+group_by dimensions, measures and functions run_analytics_query takes for this seat. record_fields:
+what a create_record or update_record `fields` body accepts for each record_type. report_vocabulary:
+the group_by, filters and aggregates each run_report report admits. report_blocks: the block kinds a
+compose_analytics_report document may contain. It returns names, never records or numbers, and none
+of it is a prerequisite: each of those tools refuses an unknown name together with the accepted
+list. query, analytics and record_fields are narrowed to what you may already see. Call the tool
+that does the work directly when the names are already known, and read its refusal when one is
+wrong. Take every name verbatim; a name outside the document is refused, not approximated. In
+record_fields a key with no `?` is required, and a custom field is spelled cf_<slug>. A report
+figure is cited from a saved run, never written into a block. (Governance: runs immediately;
+requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
 
 ```json
 {
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
   "properties": {
-    "data": {
-      "properties": {
-        "vocabulary": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "vocabulary"
+    "topic": {
+      "enum": [
+        "analytics",
+        "query",
+        "record_fields",
+        "report_blocks",
+        "report_vocabulary"
       ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
       "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
     }
   },
   "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### describe_query_vocabulary
-
-**Describe the query vocabulary**
-
-```text
-Answer what a query plan may SAY in this workspace: the record types that can be asked about, the
-fields nameable on each, the operators each field admits, and the one relationship hop a plan may
-take. It is the vocabulary query_workspace refuses against, so it holds the spelling of a field
-whose name a plan got wrong. It describes the vocabulary; it returns no records — query_workspace
-does that. What comes back is narrowed to what you may already read, so it names nothing you could
-not otherwise reach. Call query_workspace once you know the names. This tool answers the same
-document as the margince://schema/query resource, for a client that reads tools rather than
-resources. Take the field and operator names from `targets` verbatim — a plan naming anything
-outside them is refused rather than approximated, so guessing at a spelling costs a round trip.
-`grammar` says how the clauses are assembled, and `version` is the value a plan's own `version`
-member must carry. (Governance: runs immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "vocabulary": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "vocabulary"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### describe_record_fields
-
-**Describe the record write vocabulary**
-
-```text
-Answer what a create_record or update_record `fields` body may SAY: for each record_type, the fields
-that write accepts, which of them are REQUIRED, the shape each takes, and the things a field list
-cannot show — where a deal's pipeline ids come from, which endpoints a relationship kind needs,
-which types carry no custom fields. It is the vocabulary the two write tools refuse against, so it
-holds the spelling of a field a write got wrong. It describes the writes; it creates and changes
-nothing — create_record and update_record do that. It is NOT a prerequisite: an unknown field is
-refused BY NAME with that record_type's whole accepted list, so a first attempt costs one refusal
-rather than a lookup. Create and update are separate sections because they disagree: a field one
-accepts the other may not. Call create_record or update_record directly when the names are already
-known, and read the refusal when one is wrong. This tool answers the same document as the
-margince://schema/record-fields resource, for a caller that reads tools rather than resources. Take
-the field names verbatim — a name outside the document is refused rather than approximated — and
-mind the notation: a key with no `?` is REQUIRED. An extra key must be spelled cf_<slug> or it is
-not a custom field at all. (Governance: runs immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "fields": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "fields"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### describe_report_blocks
-
-**Describe the report block grammar**
-
-```text
-Answer what a compose_analytics_report document may CONTAIN: every block kind, whether it renders
-figures or words, and the severities a callout may state. It describes the grammar; it composes
-nothing and returns no numbers. It is NOT a prerequisite — an unknown block kind is refused by
-name with the whole set, so a first attempt costs one refusal. The grammar is the same for every
-caller, because it is the engine's and not a workspace's. Compose directly when the blocks needed
-are the obvious ones, and read the refusal when a kind is wrong — it carries the accepted set.
-This tool answers the same document as the margince://schema/report-blocks resource, for a caller
-that reads tools rather than resources. A figure is never written into a block, only cited: every
-number names a saved run and a cell inside it. A block carrying a literal number is refused even
-beside a valid citation. (Governance: runs immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "blocks": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "blocks"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### describe_report_vocabulary
-
-**Describe the report vocabulary**
-
-```text
-Answer what a run_report plan may SAY: for each prebuilt report, the names its group_by, filters and
-aggregates admit, what it answers with no plan at all, and what a name means when the name alone
-does not say. It is the vocabulary run_report refuses against, so it holds the spelling of a name a
-plan got wrong. It describes the reports; it runs none and returns no numbers — run_report does
-that. It is NOT a prerequisite: run_report with `report` alone answers that report's default
-question and needs nothing from here, so reach for this only when a plan has to name a grouping, a
-filter or a measure. The names are the same for every caller, because a report's vocabulary is the
-engine's and not a workspace's. Call run_report directly when the report's default answer is the
-answer wanted, and read its refusal when a name is wrong — it carries that argument's accepted
-list. This tool answers the same document as the margince://schema/reports resource, for a caller
-that reads tools rather than resources. Take the names from a report's `group_by`, `filters` and
-`aggregates` verbatim — a plan naming anything outside them is refused rather than approximated.
-`filters` is one object holding both equality predicates and numeric thresholds, so a threshold key
-goes there and not in a slot of its own. (Governance: runs immediately; requires passport scope
-"read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "vocabulary": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "vocabulary"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
+    "topic"
   ],
   "type": "object"
 }
@@ -14982,14 +14376,14 @@ answer later. (Governance: runs immediately; requires passport scope "read".)
 Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in
 the database. The answer carries its columns, rows and schema version; groups too small to disclose
 are withheld, never estimated. Populations, dimensions and measures come from
-margince://schema/analytics, derived for this seat and answered by describe_analytics_vocabulary; a
-name outside it is refused with what would work. Money measures are minor units. An omitted scope is
-this seat's own default population, never the workspace. run_report answers a prebuilt report by
-key; query_workspace lists exact records; the forecast tools answer forecast readings and movement.
-This one is for a novel aggregate no prebuilt report shapes, and for an ad-hoc figure a
-compose_analytics_report document will cite as a query cell: only a saved run can be cited. Set save
-to get a run_id whose cells compose_analytics_report can cite; without it the answer is served once
-and not stored. (Governance: runs immediately; requires passport scope "read".)
+margince://schema/analytics, derived for this seat and answered by describe_vocabulary (topic
+analytics); a name outside it is refused with what would work. Money measures are minor units. An
+omitted scope is this seat's own default population, never the workspace. run_report answers a
+prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast
+readings and movement. This one is for a novel aggregate no prebuilt report shapes, and for an
+ad-hoc figure a compose_analytics_report document will cite as a query cell: only a saved run can be
+cited. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer
+is served once and not stored. (Governance: runs immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -15235,7 +14629,7 @@ search_records or whats_slipping_this_week when the answer is the records rather
 them. Reach for run_analytics_query only when NO prebuilt report answers the question — a report
 is one call, a query is a lookup and a call — or when the figures go into a written document: a
 report's answer has no run_id, so compose_analytics_report cannot cite it. Call a report with no
-plan first for its default answer, then narrow with the names describe_report_vocabulary gives.
+plan first for its default answer, then narrow with the names describe_vocabulary gives.
 (Governance: runs immediately; requires passport scope "read".)
 ```
 
@@ -15291,7 +14685,7 @@ plan first for its default answer, then narrow with the names describe_report_vo
       "type": "array"
     },
     "report": {
-      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by describe_report_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
+      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by describe_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
@@ -16962,7 +16356,7 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
       "type": "string"
     },
     "fields": {
-      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by describe_record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by describe_vocabulary (topic record_fields) — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "id": {

@@ -91,7 +91,10 @@ const clientToolCeiling = 100
 // change_lead_state fronts qualify, promote, disqualify and demote, and lowers
 // it to 81. From here the ceiling only comes down; raising it needs an explicit
 // maintainer decision on #940.
-const publishedToolCeiling = 81
+//
+// describe_vocabulary fronts the five documents naming what another tool
+// accepts, and lowers it to 77.
+const publishedToolCeiling = 77
 
 type mcpInfoFile struct {
 	Totals struct {

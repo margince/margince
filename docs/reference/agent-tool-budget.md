@@ -55,9 +55,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 85 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 85 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 85 |  | 30301 |  |  | 92% |  |  |  |
+| `morning_brief` | 5 | 5 of 86 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 86 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 86 |  | 30648 |  |  | 93% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 293 tokens, mean 356, across 85 served tools.
+Median 298 tokens, mean 356, across 86 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -154,23 +154,23 @@ listing once. Read a row as what that tool costs a menu.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1023 |  |
+| `run_report` | 1020 |  |
 | `send_company_email` | 823 |  |
 | `list_records` | 817 | 2 scenarios |
 | `bulk_update_records` | 809 |  |
-| `compose_analytics_report` | 772 |  |
+| `compose_analytics_report` | 777 |  |
 | `send_email` | 754 |  |
 | `read_lists` | 744 |  |
 | `preview_import` | 725 |  |
 | `log_activity` | 701 | 3 scenarios |
-| `create_record` | 667 |  |
+| `create_record` | 671 |  |
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |
-| `update_record` | 581 |  |
+| `update_record` | 585 |  |
 | `forecast_readings` | 553 |  |
 | `read_reporting` | 535 |  |
 | `query_workspace` | 530 |  |
-| `run_analytics_query` | 506 |  |
+| `run_analytics_query` | 508 |  |
 | `progress_deal` | 505 |  |
 | `resolve_entities` | 493 |  |
 | `change_lead_state` | 467 |  |
@@ -191,6 +191,7 @@ listing once. Read a row as what that tool costs a menu.
 | `search_context` | 344 |  |
 | `check_availability` | 342 |  |
 | `search_report_evidence` | 335 |  |
+| `describe_vocabulary` | 334 |  |
 | `decide_approval` | 332 |  |
 | `forecast_input_checks` | 324 |  |
 | `demote_lead` | 317 |  |

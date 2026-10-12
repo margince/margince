@@ -8,4 +8,5 @@ package agents
 // registered.
 func RegisterRouters(r *Registry) {
 	r.Register(changeLeadState{})
+	r.Register(describeVocabulary{})
 }

@@ -98,6 +98,7 @@ ways.
 | `decide_duplicate` | 🟢 | `write` | no |
 | `decide_approval_bundle` | 🟢 | `write` | no |
 | `describe_query_vocabulary` | 🟢 | `read` | no |
+| `describe_vocabulary` | 🟢 | `read` | no |
 | `describe_analytics_vocabulary` | 🟢 | `read` | no |
 | `describe_record_fields` | 🟢 | `read` | no |
 | `describe_report_blocks` | 🟢 | `read` | no |

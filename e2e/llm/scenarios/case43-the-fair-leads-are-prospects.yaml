@@ -60,7 +60,7 @@ may_call:
   # answer from update_record already names the approval it created.
   - list_approvals
   - read_approval
-  - describe_record_fields
+  - describe_vocabulary
   - whoami
 
 # The writes are pinned as WRITES, because the answer alone cannot hold them.
