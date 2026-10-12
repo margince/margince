@@ -10227,7 +10227,7 @@ export const vi = {
     "Hộp thư này không trả về thư mục nào. Kết nối hộp thư có thư mục, hoặc loại trừ theo địa chỉ hay tên miền.",
   "captureExclusions.containersPartial": "Danh sách thư mục chưa đầy đủ",
   "captureExclusions.containersPartialBody":
-    "Hộp thư có nhiều thư mục hơn số lượng danh sách này đọc được, nên thư mục cần tìm có thể không có ở đây. Nhập tên thư mục bên dưới, hoặc loại trừ theo địa chỉ hay tên miền.",
+    "Hộp thư có nhiều thư mục hơn số lượng danh sách này đọc được, nên thư mục cần tìm có thể không có ở đây. Thay vào đó, hãy loại trừ theo địa chỉ hoặc tên miền.",
   "captureExclusions.containersUnreadable": "Không thể đọc thư mục",
   "captureExclusions.containersUnreadableBody":
     "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Thử lại sau giây lát, hoặc loại trừ theo địa chỉ hay tên miền.",

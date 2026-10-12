@@ -1269,7 +1269,7 @@ test-fe-file-length:
 	@./scripts/check-fe-file-length.test.sh
 
 ## comment-budget — a change may not add more comment lines than the code they
-## explain. Diff-scoped against origin/main, Go only; `doc.go` and generated
+## explain. Diff-scoped against origin/main, Go and TypeScript; `doc.go` and generated
 ## files are exempt. The counterweight to the function ceiling, which does not
 ## count comment lines at all.
 comment-budget:

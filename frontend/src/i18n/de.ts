@@ -10439,7 +10439,7 @@ export const de = {
     "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",
   "captureExclusions.containersPartial": "Diese Ordnerliste ist unvollständig",
   "captureExclusions.containersPartialBody":
-    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Gib seinen Namen unten ein, oder schließe Absender per Adresse oder Domain aus.",
+    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Schließe seine Absender stattdessen per Adresse oder Domain aus.",
   "captureExclusions.containersUnreadable":
     "Deine Ordner konnten nicht gelesen werden",
   "captureExclusions.containersUnreadableBody":

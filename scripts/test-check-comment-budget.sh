@@ -123,6 +123,41 @@ fixture "$dir"
 git -C "$dir" add -A && git -C "$dir" commit -q -m blocky
 expect "block-comment prose counts as comment, not code" 1
 
+# TypeScript is judged by the same bar as Go.
+dir="$tmp/tsover"
+fixture "$dir"
+mkdir -p "$dir/frontend/src"
+{
+	for i in $(seq 1 20); do echo "// why line ${i}"; done
+	for i in $(seq 1 12); do echo "const x${i} = ${i};"; done
+} > "$dir/frontend/src/over.ts"
+git -C "$dir" add -A && git -C "$dir" commit -q -m tsover
+expect "an over-budget TypeScript change fails" 1
+
+# Generated types carry the contract's descriptions as comments; a contract
+# change regenerates them, and that is not prose an author wrote.
+dir="$tmp/tsgen"
+fixture "$dir"
+mkdir -p "$dir/frontend/src/api"
+{
+	for i in $(seq 1 30); do echo "/** field ${i} */"; done
+	for i in $(seq 1 12); do echo "f${i}: string;"; done
+} > "$dir/frontend/src/api/schema.d.ts"
+git -C "$dir" add -A && git -C "$dir" commit -q -m tsgen
+expect "generated TypeScript types are exempt" 0
+
+# A Go raw string may end in a backslash. Read with TypeScript's rules, the
+# backslash escapes the closing backtick and every comment below reads as code.
+dir="$tmp/goraw"
+fixture "$dir"
+{
+	echo "var dir = \`C:\\\`"
+	for i in $(seq 1 20); do echo "// why line ${i}"; done
+	for i in $(seq 1 12); do echo "x${i} := ${i}"; done
+} > "$dir/backend/raw.go"
+git -C "$dir" add -A && git -C "$dir" commit -q -m goraw
+expect "a diff is read with the string rules of its file's language" 1
+
 if (( fails )); then
 	echo "FAIL: test-check-comment-budget — ${fails} of ${ran} case(s) failed"
 	exit 1
