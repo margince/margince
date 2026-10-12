@@ -119,8 +119,8 @@ func requestedObjects(req crmcontracts.CreateImportRunRequest) []string {
 // Each type has one of a header's targets: a company is named by display_name,
 // a contact or lead by full_name.
 var commonHeaders = map[string][]string{
-	"name":    {fieldDisplayName, fieldFullName},
-	"company": {companyNameField},
+	acceptFieldName:           {fieldDisplayName, fieldFullName},
+	string(recordTypeCompany): {companyNameField},
 }
 
 // suggestImportMapping is migration.SuggestMapping plus a header equal to a

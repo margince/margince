@@ -120,11 +120,35 @@ func (b *bundleWriters) resolveOwnersAndTags(ctx context.Context, db *database.D
 	return b.checkTagAndOwnerGrants(ctx, db.Pool())
 }
 
+// cellCollector gathers the distinct owner addresses and tag names of the rows
+// it is given, and the part that first names each tag.
+type cellCollector struct {
+	emails, names []string
+	seenEmail     map[string]bool
+	firstNamedBy  map[string]string
+}
+
+func (c *cellCollector) add(object string, row migration.Row) {
+	fields := textFields(row.Fields)
+	if email := foldedEmail(fields[csvTargetOwner]); email != "" && !c.seenEmail[email] {
+		c.seenEmail[email] = true
+		c.emails = append(c.emails, email)
+	}
+	if tagCellProblem(fields[csvTargetTags]) != nil {
+		return
+	}
+	for _, name := range splitTags(fields[csvTargetTags]) {
+		if _, named := c.firstNamedBy[tagKey(name)]; !named {
+			c.firstNamedBy[tagKey(name)] = object
+			c.names = append(c.names, name)
+		}
+	}
+}
+
 // ownerAndTagCells is the run's distinct owner addresses and tag names, and
 // the part that first names each tag.
 func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy map[string]string) ([]string, []string, error) {
-	var emails, names []string
-	seenEmail := map[string]bool{}
+	c := &cellCollector{seenEmail: map[string]bool{}, firstNamedBy: firstNamedBy}
 	for _, object := range src.Objects() {
 		part, err := partSourceOf(src, object)
 		if err != nil {
@@ -136,27 +160,14 @@ func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy ma
 				return nil, nil, err
 			}
 			for _, row := range rows {
-				fields := textFields(row.Fields)
-				if email := foldedEmail(fields[csvTargetOwner]); email != "" && !seenEmail[email] {
-					seenEmail[email] = true
-					emails = append(emails, email)
-				}
-				if tagCellProblem(fields[csvTargetTags]) != nil {
-					continue
-				}
-				for _, name := range splitTags(fields[csvTargetTags]) {
-					if _, named := firstNamedBy[tagKey(name)]; !named {
-						firstNamedBy[tagKey(name)] = object
-						names = append(names, name)
-					}
-				}
+				c.add(object, row)
 			}
 			if len(rows) < importPredictPage {
 				break
 			}
 		}
 	}
-	return emails, names, nil
+	return c.emails, c.names, nil
 }
 
 // bindNamedCompanies refills the ref of every company row the file names by id.
