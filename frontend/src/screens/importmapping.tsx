@@ -43,7 +43,7 @@ export function ImportMappingTable({
   columns: readonly ImportColumn[];
   rowsProfiled: number;
   // An option's value is the key the mapping sends (`cf_tier`); its text is
-  // the label a person reads (`Tier`).
+  // the label the screen shows (`Tier`).
   targets: readonly ImportFormatColumn[];
   /** The file the targets belong to, named in a chosen field's guide. */
   file: string;

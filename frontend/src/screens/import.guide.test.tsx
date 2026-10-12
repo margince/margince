@@ -89,7 +89,7 @@ describe("the column guide", () => {
         column={{
           name: "company_ref",
           description: "Which company this row belongs to.",
-          example: "ORG-0042",
+          example: "CO-0042",
           required_on_new_row: false,
           custom: false,
         }}

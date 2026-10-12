@@ -261,9 +261,9 @@ function ResultBody({
   );
 }
 
-// What a reversal did: how many rows it reversed, the rows kept because a
-// person edited them since (named, never written back over), and the rows it
-// could not reverse, each with why. The report can lack the undo part when its
+// What a reversal did: how many rows it reversed, and the rows kept because a
+// colleague edited them since (named, never written back over). Also the rows
+// it could not reverse, each with why. The report can lack the undo part when its
 // read failed, and the run is undone all the same.
 function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
   const t = useT();

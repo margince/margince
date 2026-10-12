@@ -66,7 +66,7 @@ export const zipProfile = {
       object: "company",
       rows_profiled: 2,
       columns: [
-        { header: "ref", fill_rate: 1, samples: ["ORG-1"] },
+        { header: "ref", fill_rate: 1, samples: ["CO-1"] },
         { header: "display_name", fill_rate: 1, samples: ["Acme"] },
         { header: "Level", fill_rate: 0.5, samples: ["A"] },
       ],
@@ -83,7 +83,7 @@ export const zipProfile = {
       columns: [
         { header: "ref", fill_rate: 1, samples: ["P-1"] },
         { header: "email", fill_rate: 1, samples: ["jo@acme.com"] },
-        { header: "company_ref", fill_rate: 1, samples: ["ORG-1"] },
+        { header: "company_ref", fill_rate: 1, samples: ["CO-1"] },
       ],
       suggested_mappings: {
         company: { ref: "ref" },

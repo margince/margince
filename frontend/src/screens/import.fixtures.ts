@@ -19,7 +19,7 @@ export const formatFixture: ImportFormat = {
         {
           name: "ref",
           description: "Your own key for this row.",
-          example: "ORG-0042",
+          example: "CO-0042",
           required_on_new_row: false,
           custom: false,
         },
@@ -70,7 +70,7 @@ export const formatFixture: ImportFormat = {
         {
           name: "company_ref",
           description: "Which company this row belongs to.",
-          example: "ORG-0042",
+          example: "CO-0042",
           required_on_new_row: false,
           custom: false,
         },

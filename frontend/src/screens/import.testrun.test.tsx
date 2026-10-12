@@ -47,8 +47,8 @@ const bundleReportFixture = {
       file: "contacts.csv",
       column: "company_ref",
       kind: "broken_link",
-      value: "ORG-9",
-      reason: "No company has the ref ORG-9.",
+      value: "CO-9",
+      reason: "No company has the ref CO-9.",
     },
     {
       line: 3,

@@ -15,7 +15,7 @@ import type { ImportFormatColumn } from "./importtypes";
 /**
  * The guide behind a trigger that names the column. `column.name` is the key a
  * mapping sends (`cf_tier`); the trigger shows `column.label` (`Tier`) where
- * the column has one, because that is the header a person types.
+ * the column has one, because that is the header a user types.
  */
 export function ColumnGuide({
   column,

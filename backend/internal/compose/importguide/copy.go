@@ -26,7 +26,7 @@ var Columns = map[string]Column{
 		En: "Your own key for this row: the ID from your old CRM, or any text you choose. Upload again with the same ref and source name, and Margince updates the record instead of making a second one. Other files use it to link to this row.",
 		De: "Dein eigener Schlüssel für diese Zeile: die ID aus deinem alten CRM oder ein beliebiger Text. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Datensatz, statt einen zweiten anzulegen. Andere Dateien verknüpfen über diesen Wert mit dieser Zeile.",
 		Vi: "Khóa riêng của bạn cho dòng này: ID từ CRM cũ, hoặc văn bản bất kỳ bạn chọn. Tải lên lại với cùng ref và tên nguồn, Margince sẽ cập nhật hồ sơ thay vì tạo hồ sơ thứ hai. Các tệp khác dùng giá trị này để liên kết tới dòng này.",
-	}, Example: same("12345 · ORG-0042 · acme")},
+	}, Example: same("12345 · CO-0042 · acme")},
 	"id": {Description: langcopy.Phrase{
 		En: "The company's Margince ID, from an export of Margince. A row with an ID updates that company and never creates one.",
 		De: "Die Margince-ID des Unternehmens aus einem Export von Margince. Eine Zeile mit ID aktualisiert dieses Unternehmen und legt nie ein neues an.",
@@ -68,7 +68,7 @@ var Columns = map[string]Column{
 		Vi: "Địa chỉ đầy đủ của trang LinkedIn của công ty.",
 	}, Example: same("https://www.linkedin.com/company/acme")},
 	"linkedin_url": {Description: langcopy.Phrase{
-		En: "The full address of the person's LinkedIn profile.",
+		En: "The full address of the LinkedIn profile.",
 		De: "Die vollständige Adresse des LinkedIn-Profils.",
 		Vi: "Địa chỉ đầy đủ của hồ sơ LinkedIn cá nhân.",
 	}, Example: same("https://www.linkedin.com/in/jo-tran")},
@@ -161,7 +161,7 @@ var Columns = map[string]Column{
 		En: "The company this contact works for: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet: die Ref des Unternehmens aus diesem oder einem früheren Import, seine Domain, sein genauer Name oder seine Margince-ID. Passt nichts, meldet die Importvorschau eine fehlerhafte Verknüpfung.",
 		Vi: "Công ty nơi liên hệ này làm việc: ref của công ty trong lần tải lên này hoặc lần trước, tên miền, tên chính xác, hoặc ID Margince. Nếu không khớp, bản xem trước lần nhập báo liên kết bị hỏng.",
-	}, Example: same("ORG-0042 · acme.com")},
+	}, Example: same("CO-0042 · acme.com")},
 }
 
 // Custom is the guide of a custom field, by its type. A picklist's

@@ -21,7 +21,7 @@ func TestTheTemplateHeaderShowsALabelAndTheReadmeListsTheOptions(t *testing.T) {
 		Order: []crmcontracts.ImportObject{crmcontracts.ImportObjectCompany},
 		Files: []crmcontracts.ImportFormatFile{
 			{File: "companies.csv", Object: crmcontracts.ImportObjectCompany, Columns: []crmcontracts.ImportFormatColumn{
-				{Name: "ref", Description: "Your key", Example: "ORG-1"},
+				{Name: "ref", Description: "Your key", Example: "CO-1"},
 				{Name: "cf_tier", Label: new("Tier"), Custom: true, Type: new("picklist"), Options: &[]string{"A", "B"}, Description: "x", Example: "A"},
 				{Name: "cf_note", Label: new("Note, internal"), Custom: true, Description: "y", Example: "z"},
 			}},
@@ -40,7 +40,7 @@ func TestTheTemplateHeaderShowsALabelAndTheReadmeListsTheOptions(t *testing.T) {
 	if header != "ref,Tier,\"Note, internal\"\n" {
 		t.Errorf("header %q, want the labels as CSV cells", header)
 	}
-	for _, want := range []string{"Tier: A, B", "10 MB", "Your key", "ORG-1", "companies.csv"} {
+	for _, want := range []string{"Tier: A, B", "10 MB", "Your key", "CO-1", "companies.csv"} {
 		if !strings.Contains(readme, want) {
 			t.Errorf("readme lacks %q:\n%s", want, readme)
 		}

@@ -23401,7 +23401,7 @@ export interface components {
         };
         /**
          * @description One column and its guide. `name` is the mapping target a column is
-         *     mapped onto; `label` is what a person reads, set for a custom field.
+         *     mapped onto; `label` is what the screen shows, set for a custom field.
          *     A header shows `label` when present, else `name`.
          */
         ImportFormatColumn: {

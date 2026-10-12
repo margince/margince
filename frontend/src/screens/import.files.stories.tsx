@@ -40,7 +40,7 @@ const ZIP_PROFILE = {
       object: "company",
       rows_profiled: 52,
       columns: [
-        { header: "ref", fill_rate: 1, samples: ["ORG-1", "ORG-2"] },
+        { header: "ref", fill_rate: 1, samples: ["CO-1", "CO-2"] },
         { header: "display_name", fill_rate: 1, samples: ["Acme GmbH"] },
         { header: "Tier", fill_rate: 0.6, samples: ["A", "B"] },
       ],
@@ -55,7 +55,7 @@ const ZIP_PROFILE = {
       columns: [
         { header: "ref", fill_rate: 1, samples: ["P-1"] },
         { header: "email", fill_rate: 0.98, samples: ["jo@acme.com"] },
-        { header: "company_ref", fill_rate: 0.9, samples: ["ORG-1"] },
+        { header: "company_ref", fill_rate: 0.9, samples: ["CO-1"] },
         { header: "Notes", fill_rate: 0.04, samples: [] },
       ],
       suggested_mappings: {
