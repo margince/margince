@@ -9150,9 +9150,7 @@ components:
       required: [connector, source_ref]
       properties:
         connector: {type: string, enum: [csv], description: 'The source kind. The Salesforce connector runs the same engine and arrives with its own ticket.'}
-        object:
-          allOf: [{$ref: '#/components/schemas/ImportObject'}]
-          description: 'What a single CSV''s rows are. Sent with `mapping`, never with `parts`.'
+        object: {$ref: '#/components/schemas/ImportObject'}
         source_ref: {type: string, description: 'From `uploadImportSource`.'}
         parts:
           type: array
@@ -9362,9 +9360,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         connector: {type: string, enum: [csv, salesforce]}
-        object:
-          allOf: [{$ref: '#/components/schemas/ImportObject'}]
-          description: 'What a single-CSV run''s rows are. Absent for a ZIP run, whose types are in `parts`.'
+        object: {$ref: '#/components/schemas/ImportObject'}
         file_name: {type: string, description: 'The uploaded file''s name, as the run was created with it. Display only.'}
         source_name: {type: string, description: 'The name the run''s source is filed under.'}
         parts:

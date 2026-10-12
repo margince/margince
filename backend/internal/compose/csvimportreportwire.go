@@ -334,9 +334,9 @@ func toContractUndoReport(id migration.RunID, status string, rep migration.UndoR
 	return out
 }
 
-// withSkippedLines folds the source's own disclosures into the object's report:
-// a row the source could not deliver never reached the writer, so nothing else
-// in the report would ever mention it.
+// withSkippedLines folds the source's own disclosures into the object's report.
+// A row the source could not deliver never reached the writer, so nothing else
+// in the report would mention it.
 func withSkippedLines(report migration.Report, object string, skipped []migration.SkippedLine) migration.Report {
 	if len(skipped) == 0 {
 		return report

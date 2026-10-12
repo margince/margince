@@ -22996,7 +22996,6 @@ export interface components {
         ImportSourceProfile: {
             /** @description Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct. */
             source_ref: string;
-            /** @description What the rows of a single CSV are. Absent for a ZIP, whose files each carry their own in `parts`. */
             object?: components["schemas"]["ImportObject"];
             /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
             file_name?: string;
@@ -23032,7 +23031,6 @@ export interface components {
         ImportPartProfile: {
             /** @description The entry's path inside the ZIP. */
             file: string;
-            /** @description The type the file name names. Absent when it names none, and the human picks one. */
             object?: components["schemas"]["ImportObject"];
             columns: components["schemas"]["ImportColumn"][];
             rows_profiled: number;
@@ -23090,7 +23088,6 @@ export interface components {
              * @enum {string}
              */
             connector: "csv";
-            /** @description What a single CSV's rows are. Sent with `mapping`, never with `parts`. */
             object?: components["schemas"]["ImportObject"];
             /** @description From `uploadImportSource`. */
             source_ref: string;
@@ -23357,7 +23354,6 @@ export interface components {
             id: string;
             /** @enum {string} */
             connector: "csv" | "salesforce";
-            /** @description What a single-CSV run's rows are. Absent for a ZIP run, whose types are in `parts`. */
             object?: components["schemas"]["ImportObject"];
             /** @description The uploaded file's name, as the run was created with it. Display only. */
             file_name?: string;

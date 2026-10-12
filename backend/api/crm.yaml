@@ -32871,9 +32871,7 @@ components:
       required: [source_ref, columns, rows_profiled, suggested_mapping, targets]
       properties:
         source_ref:    { type: string, description: 'Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.' }
-        object:
-          allOf: [ { $ref: '#/components/schemas/ImportObject' } ]
-          description: 'What the rows of a single CSV are. Absent for a ZIP, whose files each carry their own in `parts`.'
+        object:        { $ref: '#/components/schemas/ImportObject' }   # absent for a ZIP, whose files carry their own in `parts`
         file_name:     { type: string, description: 'The uploaded file''s name, for display. The client echoes it to `createImportRun`.' }
         suggested_source_name:
           type: string
@@ -32919,9 +32917,7 @@ components:
       required: [file, columns, rows_profiled, suggested_mappings]
       properties:
         file:   { type: string, description: 'The entry''s path inside the ZIP.' }
-        object:
-          allOf: [ { $ref: '#/components/schemas/ImportObject' } ]
-          description: 'The type the file name names. Absent when it names none, and the human picks one.'
+        object: { $ref: '#/components/schemas/ImportObject' }   # absent when the file name names no type
         columns:
           type: array
           items: { $ref: '#/components/schemas/ImportColumn' }
@@ -32981,9 +32977,7 @@ components:
       required: [connector, source_ref]
       properties:
         connector:  { type: string, enum: [csv], description: 'The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).' }
-        object:
-          allOf: [ { $ref: '#/components/schemas/ImportObject' } ]
-          description: 'What a single CSV''s rows are. Sent with `mapping`, never with `parts`.'
+        object:     { $ref: '#/components/schemas/ImportObject' }   # a single CSV only, with `mapping`
         source_ref: { type: string, description: 'From `uploadImportSource`.' }
         parts:
           type: array
@@ -33287,9 +33281,7 @@ components:
       properties:
         id:         { type: string, format: uuid }
         connector:  { type: string, enum: [csv, salesforce] }
-        object:
-          allOf: [ { $ref: '#/components/schemas/ImportObject' } ]
-          description: 'What a single-CSV run''s rows are. Absent for a ZIP run, whose types are in `parts`.'
+        object:     { $ref: '#/components/schemas/ImportObject' }   # absent for a ZIP run, whose types are in `parts`
         file_name:   { type: string, description: 'The uploaded file''s name, as the run was created with it. Display only.' }
         source_name: { type: string, description: 'The name the run''s source is filed under.' }
         parts:
