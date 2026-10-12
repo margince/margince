@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
@@ -274,10 +275,13 @@ export function VoiceSamples({
   const sources = useVoiceSources(profileId);
   const [removing, setRemoving] = useState<VoiceCorpusSource | null>(null);
   const remove = useMutation({
-    mutationFn: async (sourceId: string) => {
+    mutationFn: async (sample: Readonly<{ id: string; version: number }>) => {
       unwrap(
         await api.DELETE("/voice-profiles/{id}/sources/{sourceId}", {
-          params: { path: { id: profileId, sourceId } },
+          params: {
+            path: { id: profileId, sourceId: sample.id },
+            ...ifMatch(sample.version),
+          },
         }),
       );
     },
@@ -341,7 +345,10 @@ export function VoiceSamples({
               pending={remove.isPending}
               error={remove.isError ? problemMessageOf(remove.error, t) : null}
               onClose={() => setRemoving(null)}
-              onConfirm={() => removing && remove.mutate(removing.id)}
+              onConfirm={() =>
+                removing &&
+                remove.mutate({ id: removing.id, version: removing.version })
+              }
             >
               <p>
                 {drops

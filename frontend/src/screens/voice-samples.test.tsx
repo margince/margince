@@ -47,7 +47,7 @@ function source(over: Partial<Source>): Source {
 }
 
 const SOURCES = [
-  source({}),
+  source({ version: 3 }),
   source({
     id: "vs-2",
     kind: "linkedin",
@@ -135,7 +135,10 @@ function stubApi() {
     vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname.replace(/^\/v1/, "");
       if (request.method !== "GET") {
-        writes.push(`${request.method} ${path}`);
+        const pin = request.headers.get("If-Match");
+        writes.push(
+          `${request.method} ${path}${pin ? ` If-Match ${pin}` : ""}`,
+        );
         return new Response(null, { status: 204 });
       }
       if (path === "/voice-profiles/vp-1/sources") {
@@ -211,7 +214,9 @@ describe("VoiceSamples", () => {
 
     await user.click(dialog.getByRole("button", { name: "Remove sample" }));
     await waitFor(() =>
-      expect(writes).toEqual(["DELETE /voice-profiles/vp-1/sources/vs-1"]),
+      expect(writes).toEqual([
+        "DELETE /voice-profiles/vp-1/sources/vs-1 If-Match 3",
+      ]),
     );
   });
 
