@@ -95,7 +95,14 @@ describe("StageExitCriteria", () => {
   // would fail this.
   it("lists a stage's criteria in position order with required marked", async () => {
     vi.stubGlobal("fetch", criteriaStub({}));
-    render(<StageExitCriteria stageId="s1" semantic="open" canEdit />);
+    render(
+      <StageExitCriteria
+        stageId="s1"
+        stageName="Qualify"
+        semantic="open"
+        canEdit
+      />,
+    );
 
     const first = await screen.findByText("Buyer confirmed the problem");
     const second = screen.getByText("Economic buyer identified");
@@ -115,7 +122,14 @@ describe("StageExitCriteria", () => {
       "fetch",
       criteriaStub({ onPost: (body) => posted.push(body) }),
     );
-    render(<StageExitCriteria stageId="s1" semantic="open" canEdit />);
+    render(
+      <StageExitCriteria
+        stageId="s1"
+        stageName="Qualify"
+        semantic="open"
+        canEdit
+      />,
+    );
 
     await userEvent.click(await screen.findByTestId("new-criterion-s1"));
     await userEvent.type(await screen.findByLabelText(/Key/), "demo_held");
@@ -143,7 +157,14 @@ describe("StageExitCriteria", () => {
   it("refuses to offer criteria on a won or lost stage", async () => {
     for (const semantic of ["won", "lost"] as const) {
       vi.stubGlobal("fetch", criteriaStub({}));
-      render(<StageExitCriteria stageId="s1" semantic={semantic} canEdit />);
+      render(
+        <StageExitCriteria
+          stageId="s1"
+          stageName="Qualify"
+          semantic={semantic}
+          canEdit
+        />,
+      );
       expect(
         await screen.findByText(/is final, so it has no exit criteria/),
       ).toBeTruthy();
@@ -156,11 +177,20 @@ describe("StageExitCriteria", () => {
   // across an edit, so renaming one would orphan every claim recorded under it.
   it("never offers the key on an edit", async () => {
     vi.stubGlobal("fetch", criteriaStub({}));
-    render(<StageExitCriteria stageId="s1" semantic="open" canEdit />);
+    render(
+      <StageExitCriteria
+        stageId="s1"
+        stageName="Qualify"
+        semantic="open"
+        canEdit
+      />,
+    );
 
     const rows = await screen.findAllByRole("listitem");
     await userEvent.click(
-      within(rows[0]).getByRole("button", { name: /Edit criterion/ }),
+      within(rows[0]).getByRole("button", {
+        name: "Edit Buyer confirmed the problem",
+      }),
     );
     expect(await screen.findByLabelText(/Label/)).toBeTruthy();
     expect(screen.queryByLabelText(/^Key/)).toBeNull();
@@ -170,14 +200,21 @@ describe("StageExitCriteria", () => {
   // sees the criteria and none of the verbs.
   it("hides the editor from a reader without pipeline:update", async () => {
     vi.stubGlobal("fetch", criteriaStub({ allow: { pipeline: ["read"] } }));
-    render(<StageExitCriteria stageId="s1" semantic="open" canEdit={false} />);
+    render(
+      <StageExitCriteria
+        stageId="s1"
+        stageName="Qualify"
+        semantic="open"
+        canEdit={false}
+      />,
+    );
 
     // The positive control: the list itself still renders, so the absences
     // below are about the verbs and not about a screen that never loaded.
     expect(await screen.findByText("Buyer confirmed the problem")).toBeTruthy();
     expect(screen.queryByTestId("new-criterion-s1")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Edit criterion/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Remove$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
   });
 
   // A failed read is not an empty stage. Reporting one as the other would have
@@ -198,7 +235,14 @@ describe("StageExitCriteria", () => {
         return jsonResponse({ data: [], page: { next_cursor: null } });
       }),
     );
-    render(<StageExitCriteria stageId="s1" semantic="open" canEdit />);
+    render(
+      <StageExitCriteria
+        stageId="s1"
+        stageName="Qualify"
+        semantic="open"
+        canEdit
+      />,
+    );
 
     expect(await screen.findByText(/Criteria did not load/)).toBeTruthy();
     expect(screen.queryByText(/asks for nothing yet/)).toBeNull();
@@ -212,11 +256,20 @@ describe("StageExitCriteria", () => {
       "fetch",
       criteriaStub({ onDelete: (url) => deleted.push(url) }),
     );
-    render(<StageExitCriteria stageId="s1" semantic="open" canEdit />);
+    render(
+      <StageExitCriteria
+        stageId="s1"
+        stageName="Qualify"
+        semantic="open"
+        canEdit
+      />,
+    );
 
     const rows = await screen.findAllByRole("listitem");
     await userEvent.click(
-      within(rows[0]).getByRole("button", { name: /^Remove$/ }),
+      within(rows[0]).getByRole("button", {
+        name: "Remove Buyer confirmed the problem",
+      }),
     );
     expect(await screen.findByText(/stays readable/)).toBeTruthy();
 

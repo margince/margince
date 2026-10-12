@@ -38,6 +38,30 @@
   white-space: nowrap;
 }
 
+/* reorder: the grip column shrinks to the grip, whose 32px square is the touch
+   target, and leaves the spare width to the text columns. */
+.table .datatable-grip {
+  inline-size: 1px;
+  padding-block: 0;
+  padding-inline-end: 0;
+}
+/* While a row is carried the table is the gesture's, rows that open included. */
+.table.is-sorting {
+  user-select: none;
+}
+.table.is-sorting > tbody > tr,
+.table.is-sorting > tbody > tr.rowlink,
+.table.is-sorting .sortable-handle {
+  cursor: grabbing;
+}
+/* The carried row wears the tint a chosen row wears. `:hover` outranks the
+   folded row's own hover, which the pointer always is over. */
+.table.is-sorting > tbody > tr.is-lifted,
+.table.is-sorting > tbody > tr.is-lifted:hover,
+.table.is-sorting > tbody > tr.is-lifted > td {
+  background: var(--accentLight);
+}
+
 .table > tbody > tr.datatable-detail[hidden] {
   display: none;
 }
@@ -102,7 +126,11 @@
   /* Out of sight, still read: each folded cell is announced by its heading,
      and an empty cell keeps its place so the next one keeps its heading. */
   .table-scroll-fold > .table > thead,
-  .table-scroll-fold > .table > tbody > tr > :is(:empty, [data-fold="hide"]),
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr
+    > :is(:empty:not([data-fold="lead"]), [data-fold="hide"]),
   .table-scroll-fold > .table > tbody > tr > td:has(> .sr-only:only-child) {
     position: absolute;
     inline-size: 1px;
@@ -143,6 +171,16 @@
      trailing cells onto a line of their own. */
   .table-scroll-fold [data-fold="title"] {
     flex: 1 1 0%;
+  }
+  .table-scroll-fold > .table > tbody > tr > [data-fold="lead"] {
+    flex: none;
+    min-inline-size: var(--controlHeight);
+    min-block-size: var(--controlHeight);
+  }
+  /* The folded row is the box that tints; a translucent tint on its cells too
+     would show twice. */
+  .table-scroll-fold > .table.is-sorting > tbody > tr.is-lifted > td {
+    background: transparent;
   }
   .table-scroll-fold [data-fold="end"] {
     flex: none;

@@ -44,7 +44,6 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/relationshiprows.tsx DELETE /relationships/{id}",
   "screens/contractwrites.ts PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
-  "screens/settings.stages.tsx DELETE /stages/{id}",
   "screens/voice-dna.tsx PATCH /voice-profiles/{id}",
 ];
 

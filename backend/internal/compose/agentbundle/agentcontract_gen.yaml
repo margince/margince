@@ -14351,6 +14351,22 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        exit_criteria: {$ref: '#/components/schemas/StageExitCriteriaCounts'}
+        deal_count:
+          type: integer
+          readOnly: true
+          minimum: 0
+          description: >-
+            Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds.
+    StageExitCriteriaCounts:
+      type: object
+      readOnly: true
+      description: The stage's live exit criteria, split by whether each blocks a deal leaving.
+      required: [required, optional]
+      properties:
+        required: {type: integer, minimum: 0, description: Criteria a deal must meet to leave the stage.}
+        optional: {type: integer, minimum: 0, description: Criteria gathered and shown that never block.}
     StageEvidence:
       type: object
       description: |-

@@ -244,29 +244,12 @@ func readPipelineWith(
 	p.Id = openapi_types.UUID(pid)
 	p.Version = &version
 
-	rows, err := tx.Query(ctx,
-		`SELECT id, pipeline_id, name, position, semantic, win_probability, created_at, updated_at
-		 FROM stage WHERE pipeline_id = $1 AND archived_at IS NULL ORDER BY position`, id)
+	stages, err := readStages(ctx, tx, `s.pipeline_id = $1 AND s.archived_at IS NULL`, []any{id})
 	if err != nil {
 		return p, err
 	}
-	defer rows.Close()
-
-	stages := []crmcontracts.Stage{}
-	for rows.Next() {
-		var st crmcontracts.Stage
-		var stID, stPipeline ids.UUID
-		var semantic string
-		if err := rows.Scan(&stID, &stPipeline, &st.Name, &st.Position, &semantic, &st.WinProbability, &st.CreatedAt, &st.UpdatedAt); err != nil {
-			return p, err
-		}
-		st.Id = openapi_types.UUID(stID)
-		st.PipelineId = openapi_types.UUID(stPipeline)
-		st.Semantic = crmcontracts.StageSemantic(semantic)
-		stages = append(stages, st)
-	}
 	p.Stages = &stages
-	return p, rows.Err()
+	return p, nil
 }
 
 // defaultStages is the seeded pipeline shape a fresh workspace gets.

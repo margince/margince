@@ -63,7 +63,12 @@ function Served({
 export const BuyerEvidence: Story = {
   render: () => (
     <Served answer={() => jsonResponse({ data: [criterion({})] })}>
-      <StageExitCriteria stageId={STAGE_ID} semantic="open" canEdit />
+      <StageExitCriteria
+        stageId={STAGE_ID}
+        stageName="Discovery"
+        semantic="open"
+        canEdit
+      />
     </Served>
   ),
 };
@@ -86,7 +91,12 @@ export const Unreadable: Story = {
         )
       }
     >
-      <StageExitCriteria stageId={STAGE_ID} semantic="open" canEdit />
+      <StageExitCriteria
+        stageId={STAGE_ID}
+        stageName="Discovery"
+        semantic="open"
+        canEdit
+      />
     </Served>
   ),
 };
@@ -95,7 +105,12 @@ export const Unreadable: Story = {
 export const TerminalStage: Story = {
   render: () => (
     <Served answer={() => jsonResponse({ data: [] })}>
-      <StageExitCriteria stageId={STAGE_ID} semantic="won" canEdit />
+      <StageExitCriteria
+        stageId={STAGE_ID}
+        stageName="Discovery"
+        semantic="won"
+        canEdit
+      />
     </Served>
   ),
 };

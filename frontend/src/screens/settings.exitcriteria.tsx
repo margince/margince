@@ -45,17 +45,19 @@ const BUYER_KINDS: readonly CriterionKind[] = [
  */
 export function StageExitCriteria({
   stageId,
+  stageName,
   semantic,
   canEdit,
 }: Readonly<{
   stageId: string;
+  stageName: string;
   semantic: components["schemas"]["Stage"]["semantic"];
   canEdit: boolean;
 }>) {
   const t = useT();
   const terminal = semantic === "won" || semantic === "lost";
   const query = useQuery({
-    queryKey: ["stage-exit-criteria", stageId],
+    queryKey: criteriaKey(stageId),
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/stages/{id}/exit-criteria", {
@@ -121,7 +123,7 @@ export function StageExitCriteria({
           />
         ))}
       </ul>
-      {canEdit && <CriterionCreate stageId={stageId} />}
+      {canEdit && <CriterionCreate stageId={stageId} stageName={stageName} />}
     </div>
   );
 }
@@ -139,7 +141,7 @@ function CriterionRow({
   return (
     <li className="criterion-row">
       <span className="criterion-label">{criterion.label}</span>
-      <span className="t-caption">{criterion.key}</span>
+      <span className="t-caption criterion-key">{criterion.key}</span>
       <Badge>{t(CRITERION_KIND_LABEL[criterion.kind])}</Badge>
       <Badge tone={criterion.required ? "warning" : undefined}>
         {criterion.required
@@ -149,11 +151,11 @@ function CriterionRow({
       {canEdit && (
         <span className="criterion-verbs">
           <EditAction<Criterion>
-            label={t("stage.criteria.edit")}
+            label={t("stage.criteria.editOf", { name: criterion.label })}
             savedMessage={(saved) =>
               t("record.saveDone", { name: saved.label })
             }
-            invalidate="stage-exit-criteria"
+            invalidate="pipelines"
             recordKey="stage"
             record={{
               id: criterion.id,
@@ -188,15 +190,46 @@ function CriterionRow({
   );
 }
 
-function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
+function CriterionCreate({
+  stageId,
+  stageName,
+}: Readonly<{ stageId: string; stageName: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        data-testid={`new-criterion-${stageId}`}
+        aria-label={t("stage.criteria.addTo", { name: stageName })}
+        onClick={() => setOpen(true)}
+      >
+        {t("stage.criteria.add")}
+      </Button>
+      <CriterionCreateDialog
+        stageId={stageId}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
+/** The new-criterion form on its own, for a verb that lives outside the editor. */
+export function CriterionCreateDialog({
+  stageId,
+  open,
+  onClose,
+}: Readonly<{ stageId: string; open: boolean; onClose: () => void }>) {
+  const t = useT();
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: async (values: Record<string, string>) => {
+    mutationFn: async (
+      draft: Readonly<{ stageId: string; values: Record<string, string> }>,
+    ) => {
+      const { values } = draft;
       return unwrap(
         await api.POST("/stages/{id}/exit-criteria", {
-          params: { path: { id: stageId } },
+          params: { path: { id: draft.stageId } },
           body: {
             key: values.key,
             label: values.label,
@@ -208,28 +241,23 @@ function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
       );
     },
     onSuccess: () => {
-      setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["stage-exit-criteria"] });
+      onClose();
+      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
     },
   });
   return (
-    <>
-      <Button
-        data-testid={`new-criterion-${stageId}`}
-        onClick={() => setOpen(true)}
-      >
-        {t("stage.criteria.add")}
-      </Button>
-      <CreateRecordModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={t("stage.criteria.add")}
-        fields={criterionCreateFields(t)}
-        pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-        onSubmit={(values) => mutation.mutate(values)}
-      />
-    </>
+    <CreateRecordModal
+      open={open}
+      onClose={() => {
+        mutation.reset();
+        onClose();
+      }}
+      title={t("stage.criteria.add")}
+      fields={criterionCreateFields(t)}
+      pending={mutation.isPending}
+      error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+      onSubmit={(values) => mutation.mutate({ stageId, values })}
+    />
   );
 }
 
@@ -256,12 +284,16 @@ function CriterionRemove({
     },
     onSuccess: () => {
       setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["stage-exit-criteria"] });
+      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
     },
   });
   return (
     <>
-      <Button variant="ghost" onClick={() => setOpen(true)}>
+      <Button
+        variant="ghost"
+        aria-label={t("stage.criteria.removeOf", { name: criterion.label })}
+        onClick={() => setOpen(true)}
+      >
         {t("stage.criteria.remove")}
       </Button>
       <ConfirmModal
@@ -278,6 +310,12 @@ function CriterionRemove({
       </ConfirmModal>
     </>
   );
+}
+
+// Under the pipelines prefix: a criterion write moves the counts the stage
+// table reads from the pipeline, so one invalidation refreshes both.
+function criteriaKey(stageId: string) {
+  return ["pipelines", "exit-criteria", stageId] as const;
 }
 
 function kindOptions(t: ReturnType<typeof useT>) {

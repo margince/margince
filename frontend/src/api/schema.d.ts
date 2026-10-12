@@ -30035,6 +30035,17 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            version?: components["schemas"]["RowVersion"];
+            exit_criteria?: components["schemas"]["StageExitCriteriaCounts"];
+            /** @description Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds. */
+            readonly deal_count?: number;
+        };
+        /** @description The stage's live exit criteria, split by whether each blocks a deal leaving. */
+        StageExitCriteriaCounts: {
+            /** @description Criteria a deal must meet to leave the stage. */
+            required: number;
+            /** @description Criteria gathered and shown that never block. */
+            optional: number;
         };
         CreateStageRequest: {
             /** Format: uuid */
@@ -51511,6 +51522,14 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
             };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */

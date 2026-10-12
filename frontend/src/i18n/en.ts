@@ -6580,10 +6580,6 @@ export const en = {
   "stage.removeTitle": "Remove this stage?",
   "stage.removeBody":
     "“{name}” leaves the pipeline and later stages move up. Past stage changes stay readable. Move its deals before removing it.",
-  "stage.openGroup": "Open stages",
-  "stage.closingGroup": "Closing stages",
-  "stage.closingNote":
-    "Every deal ends in one of these, so they stay after the open stages.",
   "stage.closingMissing":
     "No won or lost stage yet. Add one as a new stage of that type.",
   "stage.orderHint":
@@ -6596,6 +6592,24 @@ export const en = {
   "stage.noneOpenNote":
     "Add the first step a deal takes. It goes before the closing stages.",
   "stage.added": "Stage added",
+  "stage.group": "Stages",
+  "stage.orderHeader": "Order",
+  "stage.colStep": "Step",
+  "stage.colStage": "Stage",
+  "stage.fixedLast": "Stays last",
+  "stage.endsDeal": "Ends the deal",
+  "stage.criteriaRequired_one": "{count} required",
+  "stage.criteriaRequired_other": "{count} required",
+  "stage.criteriaOptional_one": "{count} optional",
+  "stage.criteriaOptional_other": "{count} optional",
+  "stage.criteriaNone": "None",
+  "stage.criteriaCount_one": "{count} criterion",
+  "stage.criteriaCount_other": "{count} criteria",
+  "stage.criteriaNoneFolded": "No criteria",
+  "stage.criteriaDetail": "Criteria details",
+  "stage.criteriaFor": "Exit criteria for {name}",
+  "stage.occupied_one": "{count} deal is in this stage",
+  "stage.occupied_other": "{count} deals are in this stage",
   "stage.criteria.title": "Exit criteria",
   "stage.criteria.sub": "What must be true before a deal leaves this stage.",
   "stage.criteria.buyerCalloutTitle": "Evidence must come from the buyer",
@@ -6616,7 +6630,9 @@ export const en = {
   "stage.criteria.required": "Required",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hint",
-  "stage.criteria.edit": "Edit criterion",
+  "stage.criteria.editOf": "Edit {name}",
+  "stage.criteria.removeOf": "Remove {name}",
+  "stage.criteria.addTo": "Add criterion to {name}",
   "stage.criteria.remove": "Remove",
   "stage.criteria.removeTitle": "Remove this criterion?",
   "stage.criteria.removeBody":
