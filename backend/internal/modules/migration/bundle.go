@@ -5,7 +5,7 @@ package migration
 
 // A bundle is a ZIP of CSV files, one per record type. The entry count and the
 // declared sizes are checked before any entry is read. A read then stops at the
-// size its entry declared.
+// size its entry declared, and never past the bundle's limit.
 
 import (
 	"archive/zip"
@@ -71,6 +71,7 @@ type Bundle struct {
 	Parts   []BundlePart
 	Ignored []IgnoredEntry
 	zr      *zip.Reader
+	limit   uint64
 }
 
 // IsZip tells a ZIP from a CSV by the local-file signature, not the name.
@@ -111,6 +112,7 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 	if err != nil {
 		return Bundle{}, fmt.Errorf("%w: not a readable ZIP: %v", ErrBundleRefused, err)
 	}
+	limit := uint64(declaredSizeFactor) * uint64(max(uploadCap, 0))
 	var entries []*zip.File
 	var declared uint64
 	for _, f := range zr.File {
@@ -118,16 +120,18 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 			continue
 		}
 		entries = append(entries, f)
+		// The sizes come from the ZIP's own headers. Comparing before adding
+		// keeps two huge sizes from wrapping the sum back under the limit.
+		if f.UncompressedSize64 > limit-declared {
+			return Bundle{}, fmt.Errorf("%w: the files add up to more than %d MB, the most that is read",
+				ErrBundleRefused, limit>>20)
+		}
 		declared += f.UncompressedSize64
 	}
 	if len(entries) > MaxBundleEntries {
 		return Bundle{}, fmt.Errorf("%w: %d files, at most %d are read", ErrBundleRefused, len(entries), MaxBundleEntries)
 	}
-	if limit := uint64(declaredSizeFactor) * uint64(max(uploadCap, 0)); declared > limit {
-		return Bundle{}, fmt.Errorf("%w: the files add up to %d MB, at most %d MB are read",
-			ErrBundleRefused, declared>>20, limit>>20)
-	}
-	b := Bundle{zr: zr}
+	b := Bundle{zr: zr, limit: limit}
 	byObject := map[string]string{}
 	for _, f := range entries {
 		if f.Flags&0x1 != 0 {
@@ -151,7 +155,8 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 	return b, nil
 }
 
-// Open reads one entry, stopping at the size it declared.
+// Open reads one entry, stopping at the size it declared or the bundle's limit,
+// whichever is smaller.
 func (b Bundle) Open(entry string) (io.ReadCloser, error) {
 	for _, f := range b.zr.File {
 		if f.Name != entry {
@@ -161,7 +166,7 @@ func (b Bundle) Open(entry string) (io.ReadCloser, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s: %v", ErrBundleRefused, entry, err)
 		}
-		return &sizeGuard{rc: rc, entry: entry, left: f.UncompressedSize64}, nil
+		return &sizeGuard{rc: rc, entry: entry, left: min(f.UncompressedSize64, b.limit)}, nil
 	}
 	return nil, fmt.Errorf("%w: %s is not in the bundle", ErrBundleRefused, entry)
 }
