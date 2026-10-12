@@ -67,7 +67,7 @@
 568 frontend/src/app/account.tsx
 534 frontend/src/screens/logactivity.tsx
 580 frontend/src/screens/dealroomaccess.tsx
-581 frontend/src/screens/taskactions.tsx
+580 frontend/src/screens/taskactions.tsx
 605 frontend/src/screens/knowledge.tsx
 614 frontend/src/screens/onboarding-connect-panels.tsx
 568 frontend/src/screens/retention.tsx
