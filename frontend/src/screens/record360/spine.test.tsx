@@ -598,12 +598,11 @@ describe("the rows a conversation is recognised from", () => {
   });
 });
 
-// The gap is counted from the last thing WE sent, and from nothing else.
+// The gap is counted from the newer of our last message and the last meeting.
 //
 // An account met in June, written to in July, whose only reply came in
-// between: the meeting date would report six weeks of silence that did not
-// happen, and comparing the reply against the MEETING would report no silence
-// at all on an account that has been waiting a month.
+// between. The meeting date would report six weeks of silence that did not
+// happen. A meeting held after our email is in spine.lastcontact.test.tsx.
 describe("what the waiting is measured from", () => {
   const MET = "2026-06-26T09:00:00Z";
   const THEY_WROTE = "2026-07-26T09:00:00Z";
@@ -642,9 +641,8 @@ describe("what the waiting is measured from", () => {
 
 // A meeting is not a message somebody owes a reply to.
 //
-// `silenceSince` falls back to the last meeting so the thread's HEAD still has
-// a date when the timeline is withheld. The gap may not borrow that fallback:
-// an account we met once and never wrote to is not ignoring us, and drawing
+// The thread's HEAD is still dated from the last meeting. The gap is not drawn.
+// An account we met once and never wrote to is not ignoring us. Drawing
 // "they have never written back" over it invents a slight that did not happen.
 describe("an account nobody has written to", () => {
   it("draws no gap when there is a meeting but no outbound message", () => {
