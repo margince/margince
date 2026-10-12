@@ -493,11 +493,3 @@ type (
 // ErrSkip marks a record a connector intentionally skipped (excluded or
 // out of scope); the sync loop counts it, never surfaces it as a failure.
 var ErrSkip = errors.New("connector: record intentionally skipped")
-
-// SenderAuthentication is one receiving server's verdict on who sent a message.
-// Server is the authserv-id it signed the result with. DMARCPassDomain is the
-// From domain DMARC passed for, empty when it did not pass.
-type SenderAuthentication struct {
-	Server          string
-	DMARCPassDomain string
-}

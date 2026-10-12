@@ -63,6 +63,9 @@ func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
 		append([]string{"Authentication-Results: mx.google.com; dmarc=fail header.from=auth.test"}, pass...)...)
 	noOriginal := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-3", gmail)
 	overIMAP := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-4", "connector:imap:seat", pass...)
+	smuggled := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-5", gmail,
+		`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="x; dmarc=pass header.from=auth.test y"@evil.test;`,
+		"       dmarc=fail header.from=auth.test")
 
 	execFile(ctx, t, conn, colleagueCopyAuthUp)
 
@@ -73,6 +76,7 @@ func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
 		"the topmost result failed":              {failed, "inbound", "sam@auth.test"},
 		"no stored original":                     {noOriginal, "inbound", "sam@auth.test"},
 		"captured over IMAP":                     {overIMAP, "inbound", "sam@auth.test"},
+		"a pass smuggled in a quoted sender":     {smuggled, "inbound", "sam@auth.test"},
 	} {
 		var direction, counterparty string
 		var stillColleague bool

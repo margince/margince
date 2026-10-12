@@ -53,6 +53,24 @@ func TestOnlyTheTopmostAuthenticationResultIsRead(t *testing.T) {
 			want:  connector.SenderAuthentication{},
 		},
 		{
+			name: "a forged pass smuggled in a quoted envelope sender",
+			lines: []string{
+				`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="x; dmarc=pass header.from=acme.example y"@evil.example;`,
+				"       dmarc=fail header.from=acme.example",
+			},
+			want: connector.SenderAuthentication{Server: "mx.google.com"},
+		},
+		{
+			name:  "two dmarc results",
+			lines: []string{"Authentication-Results: mx.google.com; dmarc=pass header.from=acme.example; dmarc=fail header.from=acme.example"},
+			want:  connector.SenderAuthentication{Server: "mx.google.com"},
+		},
+		{
+			name:  "a quote this reading cannot pair",
+			lines: []string{`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="x@evil.example; dmarc=pass header.from=acme.example`},
+			want:  connector.SenderAuthentication{},
+		},
+		{
 			name:  "no result at all",
 			lines: []string{"From: sam@acme.example"},
 			want:  connector.SenderAuthentication{},
