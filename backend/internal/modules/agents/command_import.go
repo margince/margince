@@ -125,7 +125,7 @@ func (r importResolver) reportFor(
 		return "", crmcontracts.ImportRunReport{}, fmt.Errorf(
 			"reading the report of import run %s before asking for approval: %w", cmd.RunID, err)
 	}
-	return string(run.Object), report, nil
+	return importObjectName(run.Object), report, nil
 }
 
 // describeImport writes the sentence a human decides on.

@@ -44,33 +44,33 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		run.Status == migration.StatusUndoing || run.Status == migration.StatusUndone
 	seen := map[string]bool{}
 	duplicates := 0
+	parts := make([]crmcontracts.ImportPartReport, 0, len(run.Report.Objects))
 	for _, o := range run.Report.Objects {
+		d := importDispositionOf(o, committed)
+		if committed {
+			d = withoutStaleSkips(d, o.MirrorCount, run.Report.Walks())
+		}
 		out.RowsRead += o.MirrorCount
-		if committed {
-			out.Disposition.Created += o.Created
-			out.Disposition.Updated += o.Updated
-		} else {
-			out.Disposition.Created += o.WillCreate
-			out.Disposition.Updated += o.WillUpdate
-		}
-		// The commit's own count once there is one, for the same reason
-		// Created replaces WillCreate above: the estate moves between the
-		// preview and the approval — a colleague creates one of the companies,
-		// an earlier run lands it — and a finished report that stated the
-		// prediction would describe what was expected rather than what
-		// happened.
-		if committed {
-			duplicates += o.Duplicated
-		} else {
-			duplicates += o.WillDuplicate
-		}
-		out.Disposition.Skipped += appendIssues(&out.Issues, seen, o.Skipped)
+		out.Disposition.Created += d.Created
+		out.Disposition.Updated += d.Updated
+		out.Disposition.Skipped += d.Skipped
+		out.Disposition.Unchanged += d.Unchanged
+		duplicates += *d.Duplicates
+		parts = append(parts, crmcontracts.ImportPartReport{
+			File: partFileOf(run, o), Object: crmcontracts.ImportObject(o.Object),
+			RowsRead: o.MirrorCount, Disposition: d,
+		})
+		appendIssues(&out.Issues, seen, o, o.Skipped)
 		// A collision is reported the same way a skip is — by line, in the
 		// file's own terms — but it does NOT touch Disposition.Skipped: the
 		// row is counted in Created, and adding it here too would report two
 		// outcomes for one row and leave `unchanged` short by the difference.
-		appendIssues(&out.Issues, seen, o.Collisions)
+		appendIssues(&out.Issues, seen, o, o.Collisions)
+		// A warning is a row that lands with something to say about it, so it
+		// is named the same way and counted nowhere.
+		appendIssues(&out.Issues, seen, o, o.Warnings)
 	}
+	out.Parts = &parts
 
 	// Reported even when zero: "0 duplicates" is the answer to the question a
 	// contact is asking before they approve, and an omitted field reads as "not
@@ -78,52 +78,6 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	out.Disposition.Duplicates = &duplicates
 	out.Links = linksOf(run.Report, committed)
 
-	// A finished run's stored report can carry more outcomes than the file has
-	// rows, and there are two causes with different right answers.
-	//
-	// A row the DRY RUN skipped whose collision then vanished commits as a
-	// CREATE, and the stale skip is stored beside the real create — the engine
-	// folds attempts by object class and concatenates their skipped lists. Here
-	// the skip is the entry to drop.
-	//
-	// A RESUMED run can also double-count: ObjectReport.record runs before
-	// advanceCheckpoint, so a checkpoint that fails to persist leaves a counted
-	// row the resume walks again, and attempt reports add their counts. Here the
-	// surplus is in `created`/`updated`, and taking it out of `skipped` would
-	// erase a genuine refusal.
-	//
-	// Nothing in the stored report distinguishes them: per-row entries exist for
-	// skips alone, and everything else is an aggregate. Only the SECOND cause
-	// needs a resume to happen at all, so the attempt count is what tells them
-	// apart — a single-attempt run can only have the first.
-	//
-	// TWO walks is the ordinary committed run — the dry run and the commit,
-	// folded — and that is exactly the report the stale skip lives in: the dry
-	// run wrote it, the commit created the row instead. THREE or more means a
-	// resume, and there the surplus is in created/updated.
-	//
-	// The OBJECT count cannot stand in for the walk count. Attempts fold by
-	// object class, so a run walked five times still reports one object — and a
-	// CSV import is always exactly one class, so a guard reading the object
-	// count was true on every CSV report and took a resumed run's surplus out
-	// of `skipped`, erasing the refusals this report exists to name.
-	if committed {
-		surplus := out.Disposition.Created + out.Disposition.Updated +
-			out.Disposition.Skipped - out.RowsRead
-		if surplus > 0 && run.Report.Walks() <= walksWithoutAResume {
-			out.Disposition.Skipped = max(out.Disposition.Skipped-surplus, 0)
-		}
-	}
-
-	// Unchanged is DERIVED, never carried: it is the rows that were read and
-	// then neither created, updated nor skipped. Carrying the stored figure
-	// would add the dry run's count to the commit's and report more rows than
-	// the file holds — which is the contract's own invariant ("the four sum to
-	// the rows read") failing in the one place a human reads it.
-	out.Disposition.Unchanged = max(
-		out.RowsRead-out.Disposition.Created-out.Disposition.Updated-out.Disposition.Skipped,
-		0,
-	)
 	// Present once the run has been undone, not while undoing — a
 	// still-in-progress or interrupted reversal's partial counts are the
 	// run's own internal resume state, not a finished outcome to report.
@@ -138,6 +92,61 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 // resumed, and a resume is the one cause of surplus that must not be taken out
 // of `skipped`.
 const walksWithoutAResume = 2
+
+// importDispositionOf is one object's four counts, predicted before approval and
+// observed after it. Totals and parts both add from here.
+func importDispositionOf(o migration.ObjectReport, committed bool) crmcontracts.ImportRunDisposition {
+	d := crmcontracts.ImportRunDisposition{Created: o.WillCreate, Updated: o.WillUpdate}
+	// After the commit its own counts stand. The estate moves between preview
+	// and approval, so a finished report must say what happened, not what was
+	// expected.
+	duplicates := o.WillDuplicate
+	if committed {
+		d.Created, d.Updated, duplicates = o.Created, o.Updated, o.Duplicated
+	}
+	d.Duplicates = &duplicates
+	d.Skipped = distinctIssues(o, o.Skipped)
+	d.Unchanged = unchangedOf(d, o.MirrorCount)
+	return d
+}
+
+// withoutStaleSkips takes a committed object's surplus out of `skipped` when
+// the run was never resumed.
+//
+// A stored report can carry more outcomes than the file has rows, for two
+// reasons. First, a row the dry run skipped can commit as a create, and the
+// stale skip stays beside it. Then the skip is the entry to drop. Second, a
+// resumed run can count a row twice when its checkpoint did not persist. Then
+// the surplus is in created or updated, and the skip is a real refusal.
+//
+// Only a resume causes the second, so the walk count tells them apart. Two
+// walks (dry run, then commit) is an ordinary run; three or more is a resume.
+// The object count cannot stand in: attempts fold by object, so one object
+// says nothing about how often it was walked.
+func withoutStaleSkips(d crmcontracts.ImportRunDisposition, rowsRead, walks int) crmcontracts.ImportRunDisposition {
+	surplus := d.Created + d.Updated + d.Skipped - rowsRead
+	if surplus > 0 && walks <= walksWithoutAResume {
+		d.Skipped = max(d.Skipped-surplus, 0)
+	}
+	d.Unchanged = unchangedOf(d, rowsRead)
+	return d
+}
+
+// unchangedOf derives the rows read and neither created, updated nor skipped.
+// The stored figure adds the dry run's count to the commit's. Carrying it would
+// break the rule that the four sum to the rows read.
+func unchangedOf(d crmcontracts.ImportRunDisposition, rowsRead int) int {
+	return max(rowsRead-d.Created-d.Updated-d.Skipped, 0)
+}
+
+// partFileOf names the file an object's rows came from: its ZIP entry, or the
+// uploaded file's own name for a single CSV.
+func partFileOf(run migration.Run, o migration.ObjectReport) string {
+	if o.File == "" && run.Mapping != nil {
+		return run.Mapping.FileName
+	}
+	return o.File
+}
 
 // linksOf renders the connections a run makes, for the half of the report that
 // is not about rows.
@@ -224,22 +233,53 @@ func lineOf(skip migration.SkippedRow) int {
 // row from the report. The pair separates them, and it folds the dry run's skip
 // onto the commit's exactly as before: one row keeps one line across both.
 func appendIssues(
-	issues *[]crmcontracts.ImportRowIssue, seen map[string]bool, rows []migration.SkippedRow,
-) int {
-	added := 0
+	issues *[]crmcontracts.ImportRowIssue, seen map[string]bool, o migration.ObjectReport, rows []migration.SkippedRow,
+) {
 	for _, row := range rows {
-		key := row.ExternalID + "\x00" + strconv.Itoa(row.Line)
+		key := issueKey(o, row)
 		if seen[key] {
 			continue
 		}
 		seen[key] = true
-		added++
 		*issues = append(*issues, crmcontracts.ImportRowIssue{
 			Line:   lineOf(row),
 			Reason: row.Reason,
+			File:   textOrAbsent(o.File),
+			Column: textOrAbsent(row.Column),
+			Kind:   kindOrAbsent(row.Kind),
+			Value:  textOrAbsent(row.Value),
 		})
 	}
-	return added
+}
+
+// distinctIssues counts the rows appendIssues names once each.
+func distinctIssues(o migration.ObjectReport, rows []migration.SkippedRow) int {
+	seen := map[string]bool{}
+	for _, row := range rows {
+		seen[issueKey(o, row)] = true
+	}
+	return len(seen)
+}
+
+// issueKey is what makes two reported rows one. The object joins it because
+// two files of a ZIP may each have a row `line 7`.
+func issueKey(o migration.ObjectReport, row migration.SkippedRow) string {
+	return o.Object + "\x00" + row.ExternalID + "\x00" + strconv.Itoa(row.Line)
+}
+
+func textOrAbsent(text string) *string {
+	if text == "" {
+		return nil
+	}
+	return &text
+}
+
+func kindOrAbsent(kind string) *crmcontracts.ImportProblemKind {
+	if kind == "" {
+		return nil
+	}
+	k := crmcontracts.ImportProblemKind(kind)
+	return &k
 }
 
 // disclosedLine is the WHOLE id the source writes for a row it could not
@@ -251,3 +291,42 @@ func appendIssues(
 // left after the anchors is an incumbent id spelled exactly `line 7`, on a
 // report stored before the line was carried.
 var disclosedLine = regexp.MustCompile(`^line ([0-9]+)$`)
+
+// toContractUndoReport renders the reversal outcome (IEM-WIRE-9).
+func toContractUndoReport(id migration.RunID, status string, rep migration.UndoReport) *crmcontracts.ImportUndoReport {
+	kept := make([]struct {
+		Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Kept item shape
+		Object crmcontracts.ImportObject `json:"object"`
+	}, 0, len(rep.Kept))
+	for _, k := range rep.Kept {
+		kept = append(kept, struct {
+			Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Kept item shape
+			Object crmcontracts.ImportObject `json:"object"`
+		}{Id: openapi_types.UUID(k.ID), Object: crmcontracts.ImportObject(k.Object)})
+	}
+	errored := make([]struct {
+		Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Errored item shape
+		Object crmcontracts.ImportObject `json:"object"`
+		Reason string                    `json:"reason"`
+	}, 0, len(rep.Errored))
+	for _, e := range rep.Errored {
+		errored = append(errored, struct {
+			Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Errored item shape
+			Object crmcontracts.ImportObject `json:"object"`
+			Reason string                    `json:"reason"`
+		}{Id: openapi_types.UUID(e.ID), Object: crmcontracts.ImportObject(e.Object), Reason: e.Reason})
+	}
+	out := &crmcontracts.ImportUndoReport{
+		RunId:         openapi_types.UUID(id),
+		Status:        crmcontracts.ImportRunStatus(status),
+		ReversedCount: rep.ReversedCount,
+		Kept:          kept,
+		Errored:       errored,
+	}
+	// Omitted when the run created everything it touched, which is what an
+	// absent count means on the wire.
+	if rep.UpdatesNotReversed > 0 {
+		out.UpdatesNotReversed = &rep.UpdatesNotReversed
+	}
+	return out
+}

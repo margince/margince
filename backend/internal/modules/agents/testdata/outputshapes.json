@@ -8510,10 +8510,19 @@
                     "column": {
                       "type": "string"
                     },
+                    "file": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
                     "line": {
                       "type": "integer"
                     },
                     "reason": {
+                      "type": "string"
+                    },
+                    "value": {
                       "type": "string"
                     }
                   },
@@ -8564,6 +8573,55 @@
                 "type": "object",
                 "additionalProperties": {
                   "type": "string"
+                }
+              },
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "disposition": {
+                      "type": "object",
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "duplicates": {
+                          "type": "integer"
+                        },
+                        "skipped": {
+                          "type": "integer"
+                        },
+                        "unchanged": {
+                          "type": "integer"
+                        },
+                        "updated": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "created",
+                        "skipped",
+                        "unchanged",
+                        "updated"
+                      ]
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "object": {
+                      "type": "string"
+                    },
+                    "rows_read": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "disposition",
+                    "file",
+                    "object",
+                    "rows_read"
+                  ]
                 }
               },
               "rows_read": {

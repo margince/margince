@@ -58,3 +58,23 @@ func TestAnUncountedReportIsOneWalk(t *testing.T) {
 		t.Errorf("folding two uncounted reports gives %d walks, want 2", got)
 	}
 }
+
+// The dry run and the commit walk the same rows, so a warning both find is one
+// warning. A later attempt that found none keeps the earlier list.
+func TestWarningsTakeTheLaterAttemptsListWhenItHasOne(t *testing.T) {
+	warned := func(ids ...string) Report {
+		or := ObjectReport{Object: ObjectContact, File: "contacts.csv"}
+		for _, id := range ids {
+			or.Warnings = append(or.Warnings, SkippedRow{ExternalID: id, Kind: ProblemDroppedLink})
+		}
+		return Report{Objects: []ObjectReport{or}}
+	}
+	both := warned("P-1").mergedWith(warned("P-1"))
+	if got := both.Objects[0].Warnings; len(got) != 1 || got[0].ExternalID != "P-1" {
+		t.Errorf("warnings = %+v, want P-1 once", got)
+	}
+	kept := warned("P-1").mergedWith(Report{Objects: []ObjectReport{{Object: ObjectContact}}})
+	if got := kept.Objects[0]; len(got.Warnings) != 1 || got.File != "contacts.csv" {
+		t.Errorf("object = %+v, want the earlier warning and file kept", got)
+	}
+}

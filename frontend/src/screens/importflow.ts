@@ -270,7 +270,9 @@ export function useImportFlow(initialObject: ImportObject) {
       forgetRememberedRun();
     }
     if (recovery.data.kind === "run" && run === null && profile === null) {
-      setObject(recovery.data.value.run.object);
+      // A ZIP run names no single object; the old flow only resumes one CSV.
+      const recovered = recovery.data.value.run.object;
+      if (recovered) setObject(recovered);
       setRun(recovery.data.value.run);
       setReport(recovery.data.value.report);
       setResumed(true);

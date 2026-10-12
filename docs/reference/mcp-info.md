@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 84 |
 | Resources | 9 |
-| Tool catalog | 258.0 KB |
+| Tool catalog | 258.5 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66945 |
+| Approx. wire tokens | 67078 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,8 +29,8 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 112.4 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 67.1 KB | 26% | Yes, every step |
+| Output schemas | 112.9 KB | 43% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 67.1 KB | 25% | Yes, every step |
 | Input schemas | 58.3 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
 | **Description + input schema** | **125.4 KB** | **48%** | **the recurring cost** |
@@ -115,7 +115,7 @@ descriptions and input schemas are what each step pays for.
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.2 KB |
-| [`read_import_report`](#read_import_report) | Read an import report | yes |  | 3.0 KB |
+| [`read_import_report`](#read_import_report) | Read an import report | yes |  | 3.6 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.5 KB |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 4.0 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
@@ -12703,10 +12703,19 @@ immediately; requires passport scope "read".)
                   "column": {
                     "type": "string"
                   },
+                  "file": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
                   "line": {
                     "type": "integer"
                   },
                   "reason": {
+                    "type": "string"
+                  },
+                  "value": {
                     "type": "string"
                   }
                 },
@@ -12760,6 +12769,55 @@ immediately; requires passport scope "read".)
                 "type": "string"
               },
               "type": "object"
+            },
+            "parts": {
+              "items": {
+                "properties": {
+                  "disposition": {
+                    "properties": {
+                      "created": {
+                        "type": "integer"
+                      },
+                      "duplicates": {
+                        "type": "integer"
+                      },
+                      "skipped": {
+                        "type": "integer"
+                      },
+                      "unchanged": {
+                        "type": "integer"
+                      },
+                      "updated": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "created",
+                      "skipped",
+                      "unchanged",
+                      "updated"
+                    ],
+                    "type": "object"
+                  },
+                  "file": {
+                    "type": "string"
+                  },
+                  "object": {
+                    "type": "string"
+                  },
+                  "rows_read": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "disposition",
+                  "file",
+                  "object",
+                  "rows_read"
+                ],
+                "type": "object"
+              },
+              "type": "array"
             },
             "rows_read": {
               "type": "integer"

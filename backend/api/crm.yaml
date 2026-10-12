@@ -27435,6 +27435,29 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }   # unreadable file, duplicate header names, empty header row
 
   /imports:
+    get:
+      tags: [Import]
+      operationId: listImportRuns
+      security: [ { cookieAuth: [] } ]   # human session only — the Data import page's history
+      x-agent-access: human-only
+      summary: List this workspace's recent CSV import runs, newest first.
+      description: |
+        The history the Data import page shows: each run with its file, its
+        source name, its parts and its state. Only `csv` runs are listed; the
+        flip's own runs carry no mapping this surface can describe.
+
+        Gated on reading `import_run`, the same grant that reads one run.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportRunList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Import]
       operationId: createImportRun
@@ -32843,10 +32866,28 @@ components:
         What one uploaded file looks like, plus the mapping proposed for it.
         Nothing here is stored against a run yet: the human may change every
         line of `suggested_mapping` before `createImportRun` accepts one.
-      required: [source_ref, object, columns, rows_profiled, suggested_mapping, targets]
+      required: [source_ref, columns, rows_profiled, suggested_mapping, targets]
       properties:
         source_ref:    { type: string, description: 'Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.' }
-        object:        { $ref: '#/components/schemas/ImportObject' }
+        object:
+          allOf: [ { $ref: '#/components/schemas/ImportObject' } ]
+          description: 'What the rows of a single CSV are. Absent for a ZIP, whose files each carry their own in `parts`.'
+        file_name:     { type: string, description: 'The uploaded file''s name, for display. The client echoes it to `createImportRun`.' }
+        suggested_source_name:
+          type: string
+          maxLength: 80
+          description: |
+            The server's proposal for `createImportRun`'s `source_name`: a ZIP's file stem with
+            every character outside `[A-Za-z0-9 ._-]` turned into `-`, cut to 80. Empty for a
+            single CSV, so a re-upload of one keeps the namespace it was first imported under.
+        parts:
+          type: array
+          items: { $ref: '#/components/schemas/ImportPartProfile' }
+          description: 'One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.'
+        ignored:
+          type: array
+          items: { $ref: '#/components/schemas/ImportIgnoredEntry' }
+          description: 'The ZIP entries no part was made from, each with why. Listed so a file left out is never a silent one.'
         columns:
           type: array
           items: { $ref: '#/components/schemas/ImportColumn' }
@@ -32870,13 +32911,92 @@ components:
             target would be accepted, reported as written, and dropped. Naming one is refused by
             `createImportRun` rather than silently ignored.
 
+    ImportPartProfile:
+      type: object
+      description: One file of an uploaded ZIP, profiled the way a single CSV is.
+      required: [file, columns, rows_profiled, suggested_mappings]
+      properties:
+        file:   { type: string, description: 'The entry''s path inside the ZIP.' }
+        object:
+          allOf: [ { $ref: '#/components/schemas/ImportObject' } ]
+          description: 'The type the file name names. Absent when it names none, and the human picks one.'
+        columns:
+          type: array
+          items: { $ref: '#/components/schemas/ImportColumn' }
+        rows_profiled: { type: integer, minimum: 0 }
+        suggested_mappings:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: { type: string }
+          description: 'One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file''s type needs no second call.'
+
+    ImportIgnoredEntry:
+      type: object
+      description: One ZIP entry no part was made from.
+      required: [file, reason]
+      properties:
+        file:   { type: string, description: 'The entry''s path inside the ZIP.' }
+        reason:
+          type: string
+          enum: [unknown_name, not_yet_importable]
+          description: '`unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.'
+
+    ImportPartRequest:
+      type: object
+      description: One file of a ZIP run, with the type and mapping the human settled for it.
+      required: [file, object, mapping]
+      properties:
+        file:   { type: string, description: 'The entry''s path inside the ZIP, as the profile''s `parts[].file` spells it.' }
+        object: { $ref: '#/components/schemas/ImportObject' }
+        mapping:
+          type: object
+          additionalProperties: { type: string }
+          description: '`{source column → target field}` for this file, validated as the single-CSV `mapping` is. A column mapped to `ref` is the file''s own row id, which other files'' links name.'
+        source_key: { type: string, description: 'The column holding the row''s stable id, as the single-CSV `source_key`. A column mapped to `ref` wins over it.' }
+
+    ImportOnBrokenLink:
+      type: string
+      enum: [skip_row, drop_link]
+      default: skip_row
+      description: |
+        What a ZIP run does with a row whose link names a record no file of the
+        ZIP and nothing in the estate answers to. `skip_row` leaves the row out
+        and reports it; `drop_link` lands the row without the link and reports
+        the dropped link.
+
+    ImportProblemKind:
+      type: string
+      enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row]
+      description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
+
     CreateImportRunRequest:
       type: object
-      required: [connector, object, source_ref, mapping]
+      description: |
+        Exactly one of two shapes: `object` and `mapping` for one CSV, or
+        `parts` for a ZIP. Both or neither is refused.
+      required: [connector, source_ref]
       properties:
         connector:  { type: string, enum: [csv], description: 'The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).' }
-        object:     { $ref: '#/components/schemas/ImportObject' }
+        object:
+          allOf: [ { $ref: '#/components/schemas/ImportObject' } ]
+          description: 'What a single CSV''s rows are. Sent with `mapping`, never with `parts`.'
         source_ref: { type: string, description: 'From `uploadImportSource`.' }
+        parts:
+          type: array
+          items: { $ref: '#/components/schemas/ImportPartRequest' }
+          description: 'The files of a ZIP to import, one type per file. Two files naming one type are refused.'
+        source_name:
+          type: string
+          maxLength: 80
+          pattern: '^[A-Za-z0-9 ._-]*$'
+          description: 'The name this source is filed under, so a re-upload of the same export updates rather than duplicates. The profile''s `suggested_source_name` is the proposal.'
+        on_broken_link:
+          $ref: '#/components/schemas/ImportOnBrokenLink'
+        file_name:
+          type: string
+          maxLength: 255
+          description: 'The uploaded file''s name, echoed from the profile''s `file_name`. Display only: nothing about the run is decided by it.'
         mapping:
           type: object
           additionalProperties: { type: string }
@@ -33044,8 +33164,21 @@ components:
       required: [line, reason]
       properties:
         line:   { type: integer, minimum: 1, description: 'The line in the uploaded file, counting the header as line 1.' }
+        file:   { type: string, description: 'The ZIP entry the line is in. Absent for a single CSV.' }
         column: { type: [string, 'null'], description: 'The offending column, when one is to blame.' }
+        kind:   { $ref: '#/components/schemas/ImportProblemKind' }
+        value:  { type: string, description: 'The cell value at fault, when one is, so a screen can group the rows that share it.' }
         reason: { type: string, description: 'What is wrong, in terms of the file the human uploaded — never a database or driver message.' }
+
+    ImportPartReport:
+      type: object
+      description: One file's slice of a run's report.
+      required: [file, object, rows_read, disposition]
+      properties:
+        file:        { type: string }
+        object:      { $ref: '#/components/schemas/ImportObject' }
+        rows_read:   { type: integer, minimum: 0 }
+        disposition: { $ref: '#/components/schemas/ImportRunDisposition' }
 
     ImportRunReport:
       type: object
@@ -33058,6 +33191,10 @@ components:
         status:    { $ref: '#/components/schemas/ImportRunStatus' }
         rows_read: { type: integer, minimum: 0 }
         disposition: { $ref: '#/components/schemas/ImportRunDisposition' }
+        parts:
+          type: array
+          items: { $ref: '#/components/schemas/ImportPartReport' }
+          description: 'The same counts per file, in import order. A single CSV reports one part.'
         issues:
           type: array
           items: { $ref: '#/components/schemas/ImportRowIssue' }
@@ -33143,11 +33280,19 @@ components:
 
     ImportRun:
       type: object
-      required: [id, connector, object, status, checkpoint, source, captured_by, created_at, updated_at]
+      required: [id, connector, status, checkpoint, source, captured_by, created_at, updated_at]
       properties:
         id:         { type: string, format: uuid }
         connector:  { type: string, enum: [csv, salesforce] }
-        object:     { $ref: '#/components/schemas/ImportObject' }
+        object:
+          allOf: [ { $ref: '#/components/schemas/ImportObject' } ]
+          description: 'What a single-CSV run''s rows are. Absent for a ZIP run, whose types are in `parts`.'
+        file_name:   { type: string, description: 'The uploaded file''s name, as the run was created with it. Display only.' }
+        source_name: { type: string, description: 'The name the run''s source is filed under.' }
+        parts:
+          type: array
+          items: { $ref: '#/components/schemas/ImportRunPart' }
+          description: 'The files the run imports, in import order. A single CSV is one part.'
         status:     { $ref: '#/components/schemas/ImportRunStatus' }
         checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing`; 0 = not started either way. What a resume continues from.' }
         error:      { type: [string, 'null'], description: 'Why a failed run stopped, in the uploader''s terms. Never a driver or SQL message.' }
@@ -33155,6 +33300,22 @@ components:
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at:  { type: string, format: date-time }
         updated_at:  { type: string, format: date-time }
+
+    ImportRunPart:
+      type: object
+      required: [file, object, row_count]
+      properties:
+        file:      { type: string }
+        object:    { $ref: '#/components/schemas/ImportObject' }
+        row_count: { type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.' }
+
+    ImportRunList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ImportRun' }
 
     # ---- error (RFC 7807) ----
     NoticeKind:

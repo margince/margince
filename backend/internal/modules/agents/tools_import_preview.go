@@ -95,7 +95,7 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 		Connector: crmcontracts.CreateImportRunRequestConnector(importConnectorCSV),
 		Object:    profile.Object,
 		SourceRef: profile.SourceRef,
-		Mapping:   mapping,
+		Mapping:   &mapping,
 	}
 	if args.OnDuplicate != "" {
 		policy := crmcontracts.ImportOnDuplicate(args.OnDuplicate)
@@ -184,8 +184,8 @@ func proposalCoversTheFile(profile crmcontracts.ImportSourceProfile, mapping map
 		Guidance: fmt.Sprintf(
 			"it could not place %s, because they match no %s field by name. Send a mapping "+
 				"that says what each column is. A %s takes: %s",
-			strings.Join(quoted(unplaced), ", "), profile.Object,
-			profile.Object, strings.Join(profile.Targets, ", ")),
+			strings.Join(quoted(unplaced), ", "), importObjectName(profile.Object),
+			importObjectName(profile.Object), strings.Join(profile.Targets, ", ")),
 	}
 }
 

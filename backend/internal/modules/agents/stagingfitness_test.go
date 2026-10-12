@@ -399,8 +399,9 @@ func (stagingTags) TaggableTypes() []string { return []string{"contact", "compan
 type stagingImports struct{ Imports }
 
 func (stagingImports) ReadRun(_ context.Context, id ids.UUID) (crmcontracts.ImportRun, error) {
+	contact := crmcontracts.ImportObjectContact
 	return crmcontracts.ImportRun{
-		Id: openapi_types.UUID(id), Object: "contact", Status: "awaiting_approval",
+		Id: openapi_types.UUID(id), Object: &contact, Status: "awaiting_approval",
 	}, nil
 }
 

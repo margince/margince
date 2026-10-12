@@ -51,6 +51,33 @@ type RunMapping struct {
 	// chose it, and a decision that lived only in the create call would be lost
 	// by the time anything wrote a row.
 	ContextTag string `json:"context_tag,omitempty"`
+	// Parts is a ZIP run's files, one object each; empty for a single CSV,
+	// whose one part is Object, Fields and SourceKey above.
+	Parts []PartMapping `json:"parts,omitempty"`
+	// SourceName is the namespace the run's provenance is filed under.
+	SourceName string `json:"source_name,omitempty"`
+	// FileName is the uploaded file's name, for display only: nothing about
+	// the run is decided by it.
+	FileName     string `json:"file_name,omitempty"`
+	OnBrokenLink string `json:"on_broken_link,omitempty"`
+}
+
+// PartMapping is one file of a run: which object its rows are, which column
+// lands in which field, and which column identifies a row.
+type PartMapping struct {
+	File      string            `json:"file"`
+	Object    string            `json:"object"`
+	Fields    map[string]string `json:"fields"`
+	SourceKey string            `json:"source_key"`
+}
+
+// PartList answers the run's parts, so a reader walks a single CSV and a ZIP
+// the same way: a single-CSV mapping is one part.
+func (m RunMapping) PartList() []PartMapping {
+	if len(m.Parts) > 0 {
+		return m.Parts
+	}
+	return []PartMapping{{File: m.FileName, Object: m.Object, Fields: m.Fields, SourceKey: m.SourceKey}}
 }
 
 // CreateStagedRunInput opens a run that must be approved before it writes.
@@ -224,6 +251,62 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 	if err := auth.Require(ctx, importRunObject, principal.ActionRead); err != nil {
 		return Run{}, err
 	}
+	var run Run
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		run, err = scanStaged(tx.QueryRow(ctx, `
+			SELECT `+stagedColumns+`
+			-- Scoped as well as keyed, exactly as Get is: a run id from another
+			-- workspace owes the existence-hiding not-found, not its status,
+			-- its mapping and its report.
+			  FROM import_run WHERE id = $1`, id))
+		return err
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Run{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
+	}
+	if err != nil {
+		return Run{}, fmt.Errorf("reading import run %s: %w", id, err)
+	}
+	return run, nil
+}
+
+// ListStaged reads the newest CSV runs, each as GetStaged reads one. The
+// flip's own runs are left out: they carry no mapping this surface describes.
+func (s *RunStore) ListStaged(ctx context.Context, limit int) ([]Run, error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	runs := []Run{}
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT `+stagedColumns+`
+			  FROM import_run WHERE connector = $1
+			 ORDER BY created_at DESC, id DESC LIMIT $2`, ConnectorCSV, limit)
+		if err != nil {
+			return fmt.Errorf("listing import runs: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			run, err := scanStaged(rows)
+			if err != nil {
+				return err
+			}
+			runs = append(runs, run)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return runs, nil
+}
+
+// stagedColumns is what scanStaged reads, in its order.
+const stagedColumns = `id, connector, status, source_ref, checkpoint, created_at, updated_at,
+			mapping, report, undo_report, error, captured_by`
+
+func scanStaged(row pgx.Row) (Run, error) {
 	var (
 		run        Run
 		mapping    []byte
@@ -231,21 +314,9 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 		undoReport []byte
 		runErr     *string
 	)
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, `
-			SELECT id, connector, status, source_ref, checkpoint, created_at, updated_at, mapping, report, undo_report, error, captured_by
-			-- Scoped as well as keyed, exactly as Get is: a run id from another
-			-- workspace owes the existence-hiding not-found, not its status,
-			-- its mapping and its report.
-			  FROM import_run WHERE id = $1`, id)
-		return row.Scan(&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
-			&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy)
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return Run{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
-		}
-		return Run{}, fmt.Errorf("reading import run %s: %w", id, err)
+	if err := row.Scan(&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
+		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy); err != nil {
+		return Run{}, err
 	}
 	if runErr != nil {
 		run.Error = *runErr
@@ -253,26 +324,26 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 	if len(mapping) > 0 {
 		var m RunMapping
 		if err := json.Unmarshal(mapping, &m); err != nil {
-			return Run{}, fmt.Errorf("reading the mapping of import run %s: %w", id, err)
+			return Run{}, fmt.Errorf("reading the mapping of import run %s: %w", run.ID, err)
 		}
 		// An empty object is what the flip's own runs carry; only a mapping
 		// that actually names one is handed on, so a caller cannot mistake
 		// "no mapping" for "a mapping of nothing".
-		if m.Object != "" {
+		if m.Object != "" || len(m.Parts) > 0 {
 			run.Mapping = &m
 		}
 	}
 	if len(report) > 0 {
 		var rep Report
 		if err := json.Unmarshal(report, &rep); err != nil {
-			return Run{}, fmt.Errorf("reading the report of import run %s: %w", id, err)
+			return Run{}, fmt.Errorf("reading the report of import run %s: %w", run.ID, err)
 		}
 		run.Report = &rep
 	}
 	if len(undoReport) > 0 {
 		var rep UndoReport
 		if err := json.Unmarshal(undoReport, &rep); err != nil {
-			return Run{}, fmt.Errorf("reading the undo report of import run %s: %w", id, err)
+			return Run{}, fmt.Errorf("reading the undo report of import run %s: %w", run.ID, err)
 		}
 		run.UndoReport = &rep
 	}

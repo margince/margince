@@ -83,6 +83,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID); return err }},
 		{"FailValidation", func() error { return s.FailValidation(ctx, runID, errors.New("boom")) }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
+		{"ListStaged", func() error { _, err := s.ListStaged(ctx, 20); return err }},
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
@@ -643,7 +644,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
 		"CreateStagedRun": true, "AwaitApproval": true, "Approve": true,
-		"ResumeApproved": true, "FailValidation": true, "GetStaged": true,
+		"ResumeApproved": true, "FailValidation": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
 	}

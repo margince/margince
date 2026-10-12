@@ -221,18 +221,14 @@ func TestChangedFieldsComparesEmailAsTheStoreWillHoldIt(t *testing.T) {
 }
 
 func TestMappingFromRefusesTwoColumnsOntoOneField(t *testing.T) {
-	_, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"Work Email": "email", "Personal Email": "email"},
-	})
+	_, err := mappingFor(migration.ObjectLead, map[string]string{"Work Email": "email", "Personal Email": "email"}, crmcontracts.CreateImportRunRequest{})
 	if err == nil {
 		t.Fatal("two columns onto one field were accepted; the row builder would pick one at random")
 	}
 }
 
 func TestMappingFromRefusesATargetTheObjectDoesNotHave(t *testing.T) {
-	_, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"Revenue": "annual_revenue"},
-	})
+	_, err := mappingFor(migration.ObjectLead, map[string]string{"Revenue": "annual_revenue"}, crmcontracts.CreateImportRunRequest{})
 	if err == nil {
 		t.Fatal("an unknown target was accepted; the run would fail at the first row instead")
 	}
@@ -297,9 +293,7 @@ func TestMappingRefusalsNameTheFieldsTheObjectAccepts(t *testing.T) {
 
 	for name, mapping := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := mappingFrom(migration.ObjectCompany, crmcontracts.CreateImportRunRequest{
-				Mapping: mapping,
-			})
+			_, err := mappingFor(migration.ObjectCompany, mapping, crmcontracts.CreateImportRunRequest{})
 			if err == nil {
 				t.Fatal("the mapping was accepted; expected a refusal")
 			}
@@ -315,9 +309,7 @@ func TestMappingRefusalsNameTheFieldsTheObjectAccepts(t *testing.T) {
 func TestMappingFromNeedsAColumnThatIdentifiesARow(t *testing.T) {
 	// Nothing maps to email, and no explicit source key is given, so no row
 	// could be recognized on a re-import or found by an undo.
-	_, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"Name": "full_name"},
-	})
+	_, err := mappingFor(migration.ObjectLead, map[string]string{"Name": "full_name"}, crmcontracts.CreateImportRunRequest{})
 	if err == nil {
 		t.Fatal("a mapping with no identifying column was accepted")
 	}
@@ -325,8 +317,7 @@ func TestMappingFromNeedsAColumnThatIdentifiesARow(t *testing.T) {
 
 func TestMappingFromRefusesASourceKeyThatIsNotMapped(t *testing.T) {
 	key := "Some Other Column"
-	_, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping:   map[string]string{"Email": "email"},
+	_, err := mappingFor(migration.ObjectLead, map[string]string{"Email": "email"}, crmcontracts.CreateImportRunRequest{
 		SourceKey: &key,
 	})
 	if err == nil {
@@ -335,11 +326,9 @@ func TestMappingFromRefusesASourceKeyThatIsNotMapped(t *testing.T) {
 }
 
 func TestMappingFromDefaultsTheSourceKeyToTheIdentifyingColumn(t *testing.T) {
-	mapping, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"E-mail": "email", "Name": "full_name"},
-	})
+	mapping, err := mappingFor(migration.ObjectLead, map[string]string{"E-mail": "email", "Name": "full_name"}, crmcontracts.CreateImportRunRequest{})
 	if err != nil {
-		t.Fatalf("mappingFrom: %v", err)
+		t.Fatalf("stagedMappingFrom: %v", err)
 	}
 	if mapping.SourceKey != "E-mail" {
 		t.Fatalf("source key = %q, want the column mapped onto email", mapping.SourceKey)
@@ -570,6 +559,7 @@ func TestColumnProfileReachesTheWireWithSamplesAndRate(t *testing.T) {
 var nonFieldTargets = gatekit.Waive(map[string]string{
 	csvTargetID:     "names the RECORD the row is — a selector, not a value",
 	csvEmployerName: "names an EDGE from the record to a company — written as a relationship, not a column",
+	csvTargetRef:    "the row's id in the source system — the part's source key, not a value",
 })
 
 // createOnlyTargets are columns the import writes when it creates a record and
@@ -643,20 +633,26 @@ func TestAStoredReportsSkipStillNamesItsLine(t *testing.T) {
 func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 	var issues []crmcontracts.ImportRowIssue
 	seen := map[string]bool{}
-	added := appendIssues(&issues, seen, []migration.SkippedRow{
+	lead := migration.ObjectReport{Object: migration.ObjectLead}
+	appendIssues(&issues, seen, lead, []migration.SkippedRow{
 		// What the source writes for a row with no key at all, on line 7.
 		{ExternalID: "line 7", Line: 7, Reason: "no key"},
 		// A row on line 12 whose key column really does hold that text.
 		{ExternalID: "line 7", Line: 12, Reason: "not-a-uuid"},
 	})
-	if added != 2 || len(issues) != 2 {
-		t.Fatalf("issues = %+v (added %d), want both rows — they are two rows a contact must go fix",
-			issues, added)
+	if len(issues) != 2 {
+		t.Fatalf("issues = %+v, want both rows — they are two rows a contact must go fix", issues)
 	}
 	// And the fold that DOES belong still happens: one row skipped twice.
-	added = appendIssues(&issues, seen, []migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
-	if added != 0 {
+	appendIssues(&issues, seen, lead, []migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
+	if len(issues) != 2 {
 		t.Errorf("the same row was reported twice; the dry run's skip and the commit's are one row")
+	}
+	// Two files of a ZIP each have their own line 7.
+	appendIssues(&issues, seen, migration.ObjectReport{Object: migration.ObjectCompany, File: "companies.csv"},
+		[]migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
+	if len(issues) != 3 || issues[2].File == nil || *issues[2].File != "companies.csv" {
+		t.Errorf("issues = %+v, want a third issue naming companies.csv", issues)
 	}
 }
 
@@ -717,12 +713,11 @@ func TestMappingCarriesTheContextTagToTheCommit(t *testing.T) {
 	t.Parallel()
 
 	word := openapi_types.UUID(ids.NewV7())
-	mapping, err := mappingFrom(migration.ObjectCompany, crmcontracts.CreateImportRunRequest{
-		Mapping:      map[string]string{"Name": "display_name"},
+	mapping, err := mappingFor(migration.ObjectCompany, map[string]string{"Name": "display_name"}, crmcontracts.CreateImportRunRequest{
 		ContextTagId: &word,
 	})
 	if err != nil {
-		t.Fatalf("mappingFrom: %v", err)
+		t.Fatalf("stagedMappingFrom: %v", err)
 	}
 	if mapping.ContextTag != word.String() {
 		t.Fatalf("the run's word did not reach the stored mapping: got %q, want %q",
@@ -737,8 +732,7 @@ func TestMappingRefusesTheZeroContextTag(t *testing.T) {
 	t.Parallel()
 
 	var zero openapi_types.UUID
-	_, err := mappingFrom(migration.ObjectCompany, crmcontracts.CreateImportRunRequest{
-		Mapping:      map[string]string{"Name": "display_name"},
+	_, err := mappingFor(migration.ObjectCompany, map[string]string{"Name": "display_name"}, crmcontracts.CreateImportRunRequest{
 		ContextTagId: &zero,
 	})
 	if err == nil {
@@ -750,11 +744,9 @@ func TestMappingRefusesTheZeroContextTag(t *testing.T) {
 func TestMappingWithoutAContextTagFilesNothing(t *testing.T) {
 	t.Parallel()
 
-	mapping, err := mappingFrom(migration.ObjectCompany, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"Name": "display_name"},
-	})
+	mapping, err := mappingFor(migration.ObjectCompany, map[string]string{"Name": "display_name"}, crmcontracts.CreateImportRunRequest{})
 	if err != nil {
-		t.Fatalf("mappingFrom: %v", err)
+		t.Fatalf("stagedMappingFrom: %v", err)
 	}
 	if mapping.ContextTag != "" {
 		t.Fatalf("a run naming no word carried one anyway: %q", mapping.ContextTag)
@@ -805,4 +797,13 @@ func TestNoContextTagAsksNothing(t *testing.T) {
 	if err := h.contextTagIsApplicable(context.Background(), ""); err != nil {
 		t.Fatalf("a run naming no word was refused: %v", err)
 	}
+}
+
+// mappingFor stages a single-CSV request for one object, as a create does.
+func mappingFor(
+	object string, mapping map[string]string, req crmcontracts.CreateImportRunRequest,
+) (migration.RunMapping, error) {
+	obj := crmcontracts.ImportObject(object)
+	req.Object, req.Mapping = &obj, &mapping
+	return stagedMappingFrom(req)
 }

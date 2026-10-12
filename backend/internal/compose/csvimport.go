@@ -156,9 +156,10 @@ func (h importHandlers) profileAndStore(
 	if err := h.blobs.Put(ctx, key, bytes.NewReader(body), int64(len(body)), "text/csv"); err != nil {
 		return crmcontracts.ImportSourceProfile{}, fmt.Errorf("storing the import source: %w", err)
 	}
+	obj := crmcontracts.ImportObject(object)
 	return crmcontracts.ImportSourceProfile{
 		SourceRef:        key,
-		Object:           crmcontracts.ImportObject(object),
+		Object:           &obj,
 		Columns:          toContractColumns(profile),
 		RowsProfiled:     profile.RowsProfiled,
 		SuggestedMapping: migration.SuggestMapping(profile, targets),
@@ -210,14 +211,18 @@ func (h importHandlers) CreateImportRun(w http.ResponseWriter, r *http.Request) 
 func (h importHandlers) stageRun(
 	ctx context.Context, req crmcontracts.CreateImportRunRequest,
 ) (crmcontracts.ImportRun, error) {
-	object := string(req.Object)
 	if err := h.ownsSource(ctx, req.SourceRef); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	mapping, err := mappingFrom(object, req)
+	mapping, err := stagedMappingFrom(req)
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
+	if len(mapping.Parts) > 0 {
+		return crmcontracts.ImportRun{}, httperr.Validation("parts", "not_yet",
+			"This server cannot stage a ZIP yet; upload one CSV at a time.")
+	}
+	object := mapping.Object
 	if err := refuseAuthorFromNonImporter(ctx, mapping.Fields); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}

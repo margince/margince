@@ -18,6 +18,31 @@ type SkippedRow struct {
 	// can go to it. Zero when the source has no file behind it.
 	Line   int    `json:"line,omitempty"`
 	Reason string `json:"reason"`
+	Column string `json:"column,omitempty"`
+	// Kind is one of ProblemKinds, so a screen can group the problems.
+	Kind  string `json:"kind,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+// The kinds of problem a report names. The contract's ImportProblemKind enum
+// is this same list, and a test holds the two equal.
+const (
+	ProblemBrokenLink   = "broken_link"
+	ProblemDroppedLink  = "dropped_link"
+	ProblemInvalidValue = "invalid_value"
+	ProblemUnknownOwner = "unknown_owner"
+	ProblemNewTag       = "new_tag"
+	ProblemDuplicate    = "duplicate"
+	ProblemPermission   = "permission"
+	ProblemUnusableRow  = "unusable_row"
+)
+
+// ProblemKinds answers every problem kind, in a new slice the caller may sort.
+func ProblemKinds() []string {
+	return []string{
+		ProblemBrokenLink, ProblemDroppedLink, ProblemInvalidValue, ProblemUnknownOwner,
+		ProblemNewTag, ProblemDuplicate, ProblemPermission, ProblemUnusableRow,
+	}
 }
 
 // skipReasonEmptyPayload marks a source row with no fields at all — the
@@ -27,7 +52,9 @@ const skipReasonEmptyPayload = "empty_payload"
 
 // ObjectReport is one object class's slice of the run/dry-run report.
 type ObjectReport struct {
-	Object      string `json:"object"`
+	Object string `json:"object"`
+	// File is the ZIP entry this object's rows came from; empty for a single CSV.
+	File        string `json:"file,omitempty"`
 	MirrorCount int    `json:"mirror_count"`
 	WillCreate  int    `json:"will_create"`
 	WillUpdate  int    `json:"will_update"`
@@ -61,6 +88,9 @@ type ObjectReport struct {
 	WillDuplicate int      `json:"duplicates,omitempty"`
 	Duplicated    int      `json:"duplicated,omitempty"`
 	Disclosures   []string `json:"disclosures,omitempty"`
+	// Warnings are rows that land with something reported about them, such as
+	// a dropped link. Not skips, so they never count in Skipped.
+	Warnings []SkippedRow `json:"warnings,omitempty"`
 }
 
 // Report is the run (or dry-run) outcome: per-object dispositions plus
@@ -186,6 +216,14 @@ func (r Report) mergedWith(next Report) Report {
 		into.WillDuplicate += or.WillDuplicate
 		into.Duplicated += or.Duplicated
 		into.Disclosures = append(into.Disclosures, or.Disclosures...)
+		// Warnings replace, as edges do: the dry run and the commit walk the
+		// same rows, so adding their warnings would name each one twice.
+		if len(or.Warnings) > 0 {
+			into.Warnings = or.Warnings
+		}
+		if or.File != "" {
+			into.File = or.File
+		}
 	}
 	return out
 }

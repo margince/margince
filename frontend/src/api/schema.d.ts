@@ -18905,7 +18905,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List this workspace's recent CSV import runs, newest first.
+         * @description The history the Data import page shows: each run with its file, its
+         *     source name, its parts and its state. Only `csv` runs are listed; the
+         *     flip's own runs carry no mapping this surface can describe.
+         *
+         *     Gated on reading `import_run`, the same grant that reads one run.
+         */
+        get: operations["listImportRuns"];
         put?: never;
         /**
          * Create an import run from an uploaded source and a column mapping, and dry-run it.
@@ -22987,7 +22995,20 @@ export interface components {
         ImportSourceProfile: {
             /** @description Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct. */
             source_ref: string;
-            object: components["schemas"]["ImportObject"];
+            /** @description What the rows of a single CSV are. Absent for a ZIP, whose files each carry their own in `parts`. */
+            object?: components["schemas"]["ImportObject"];
+            /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
+            file_name?: string;
+            /**
+             * @description The server's proposal for `createImportRun`'s `source_name`: a ZIP's file stem with
+             *     every character outside `[A-Za-z0-9 ._-]` turned into `-`, cut to 80. Empty for a
+             *     single CSV, so a re-upload of one keeps the namespace it was first imported under.
+             */
+            suggested_source_name?: string;
+            /** @description One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level. */
+            parts?: components["schemas"]["ImportPartProfile"][];
+            /** @description The ZIP entries no part was made from, each with why. Listed so a file left out is never a silent one. */
+            ignored?: components["schemas"]["ImportIgnoredEntry"][];
             columns: components["schemas"]["ImportColumn"][];
             /** @description Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest. */
             rows_profiled: number;
@@ -23006,15 +23027,78 @@ export interface components {
              */
             targets: string[];
         };
+        /** @description One file of an uploaded ZIP, profiled the way a single CSV is. */
+        ImportPartProfile: {
+            /** @description The entry's path inside the ZIP. */
+            file: string;
+            /** @description The type the file name names. Absent when it names none, and the human picks one. */
+            object?: components["schemas"]["ImportObject"];
+            columns: components["schemas"]["ImportColumn"][];
+            rows_profiled: number;
+            /** @description One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call. */
+            suggested_mappings: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+        };
+        /** @description One ZIP entry no part was made from. */
+        ImportIgnoredEntry: {
+            /** @description The entry's path inside the ZIP. */
+            file: string;
+            /**
+             * @description `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+             * @enum {string}
+             */
+            reason: "unknown_name" | "not_yet_importable";
+        };
+        /** @description One file of a ZIP run, with the type and mapping the human settled for it. */
+        ImportPartRequest: {
+            /** @description The entry's path inside the ZIP, as the profile's `parts[].file` spells it. */
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            /** @description `{source column → target field}` for this file, validated as the single-CSV `mapping` is. A column mapped to `ref` is the file's own row id, which other files' links name. */
+            mapping: {
+                [key: string]: string;
+            };
+            /** @description The column holding the row's stable id, as the single-CSV `source_key`. A column mapped to `ref` wins over it. */
+            source_key?: string;
+        };
+        /**
+         * @description What a ZIP run does with a row whose link names a record no file of the
+         *     ZIP and nothing in the estate answers to. `skip_row` leaves the row out
+         *     and reports it; `drop_link` lands the row without the link and reports
+         *     the dropped link.
+         * @default skip_row
+         * @enum {string}
+         */
+        ImportOnBrokenLink: "skip_row" | "drop_link";
+        /**
+         * @description What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
+         * @enum {string}
+         */
+        ImportProblemKind: "broken_link" | "dropped_link" | "invalid_value" | "unknown_owner" | "new_tag" | "duplicate" | "permission" | "unusable_row";
+        /**
+         * @description Exactly one of two shapes: `object` and `mapping` for one CSV, or
+         *     `parts` for a ZIP. Both or neither is refused.
+         */
         CreateImportRunRequest: {
             /**
              * @description The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
              * @enum {string}
              */
             connector: "csv";
-            object: components["schemas"]["ImportObject"];
+            /** @description What a single CSV's rows are. Sent with `mapping`, never with `parts`. */
+            object?: components["schemas"]["ImportObject"];
             /** @description From `uploadImportSource`. */
             source_ref: string;
+            /** @description The files of a ZIP to import, one type per file. Two files naming one type are refused. */
+            parts?: components["schemas"]["ImportPartRequest"][];
+            /** @description The name this source is filed under, so a re-upload of the same export updates rather than duplicates. The profile's `suggested_source_name` is the proposal. */
+            source_name?: string;
+            on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
+            /** @description The uploaded file's name, echoed from the profile's `file_name`. Display only: nothing about the run is decided by it. */
+            file_name?: string;
             /**
              * @description `{source column → target field}`, as the human settled it. Validated against
              *     the object's live field catalog before the run is created.
@@ -23039,7 +23123,7 @@ export interface components {
              *     A row naming an id nothing answers to is reported as a skipped row saying so,
              *     never created quietly under a new id.
              */
-            mapping: {
+            mapping?: {
                 [key: string]: string;
             };
             /**
@@ -23171,10 +23255,22 @@ export interface components {
         ImportRowIssue: {
             /** @description The line in the uploaded file, counting the header as line 1. */
             line: number;
+            /** @description The ZIP entry the line is in. Absent for a single CSV. */
+            file?: string;
             /** @description The offending column, when one is to blame. */
             column?: string | null;
+            kind?: components["schemas"]["ImportProblemKind"];
+            /** @description The cell value at fault, when one is, so a screen can group the rows that share it. */
+            value?: string;
             /** @description What is wrong, in terms of the file the human uploaded — never a database or driver message. */
             reason: string;
+        };
+        /** @description One file's slice of a run's report. */
+        ImportPartReport: {
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            rows_read: number;
+            disposition: components["schemas"]["ImportRunDisposition"];
         };
         /**
          * @description The same shape before and after approval: a dry run reports what the
@@ -23186,6 +23282,8 @@ export interface components {
             status: components["schemas"]["ImportRunStatus"];
             rows_read: number;
             disposition: components["schemas"]["ImportRunDisposition"];
+            /** @description The same counts per file, in import order. A single CSV reports one part. */
+            parts?: components["schemas"]["ImportPartReport"][];
             /** @description Row-level refusals, enumerated. A file half-ignored under a success message is worse than a refusal. */
             issues: components["schemas"]["ImportRowIssue"][];
             /** @description Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it. */
@@ -23256,7 +23354,14 @@ export interface components {
             id: string;
             /** @enum {string} */
             connector: "csv" | "salesforce";
-            object: components["schemas"]["ImportObject"];
+            /** @description What a single-CSV run's rows are. Absent for a ZIP run, whose types are in `parts`. */
+            object?: components["schemas"]["ImportObject"];
+            /** @description The uploaded file's name, as the run was created with it. Display only. */
+            file_name?: string;
+            /** @description The name the run's source is filed under. */
+            source_name?: string;
+            /** @description The files the run imports, in import order. A single CSV is one part. */
+            parts?: components["schemas"]["ImportRunPart"][];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from. */
             checkpoint: number;
@@ -23269,6 +23374,15 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        ImportRunPart: {
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            /** @description Rows the file holds, once a dry run has read it; 0 before. */
+            row_count: number;
+        };
+        ImportRunList: {
+            data: components["schemas"]["ImportRun"][];
         };
         /**
          * @description What a coaching notice is about. A closed vocabulary, because a notice addressed to a
@@ -72886,6 +73000,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listImportRuns: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRunList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
             422: components["responses"]["ValidationError"];
         };
     };

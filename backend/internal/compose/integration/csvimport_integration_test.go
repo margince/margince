@@ -938,3 +938,20 @@ func duplicatesSaid(report importReportDTO) string {
 	}
 	return strconv.Itoa(*report.Disposition.Duplicates)
 }
+
+func TestRecentImportsListsTheRunsNewestFirst(t *testing.T) {
+	e := setupImportApp(t)
+	first, _ := uploadCSV(t, e, "lead", prospectCSV)
+	createRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
+	second, _ := uploadCSV(t, e, "lead", prospectCSV)
+	newest, _ := createRunWithMapping(t, e, "lead", second.SourceRef, second.SuggestedMapping)
+	var list struct {
+		Data []importRunDTO `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/imports?limit=5", nil, nil, &list); status != http.StatusOK {
+		t.Fatalf("list → %d", status)
+	}
+	if len(list.Data) != 2 || list.Data[0].ID != newest.ID {
+		t.Fatalf("list = %+v, want two runs with %s first", list.Data, newest.ID)
+	}
+}

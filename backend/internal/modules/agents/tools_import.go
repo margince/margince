@@ -303,11 +303,20 @@ func importRunArg(in json.RawMessage) (ids.UUID, error) {
 	return id, nil
 }
 
+// importObjectName is the object a single-CSV run or profile names, and empty
+// for a ZIP, which names one per part.
+func importObjectName(object *crmcontracts.ImportObject) string {
+	if object == nil {
+		return ""
+	}
+	return string(*object)
+}
+
 // importRunResult reshapes one run for the wire.
 func importRunResult(run crmcontracts.ImportRun) ImportRunResult {
 	out := ImportRunResult{
 		RunID:      run.Id.String(),
-		Object:     string(run.Object),
+		Object:     importObjectName(run.Object),
 		State:      string(run.Status),
 		Checkpoint: run.Checkpoint,
 	}

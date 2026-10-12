@@ -162,9 +162,10 @@ func (r recordingImports) ProfileSource(
 	if r.stored != nil {
 		*r.stored = true
 	}
+	imported := crmcontracts.ImportObject(object)
 	profile := crmcontracts.ImportSourceProfile{
 		SourceRef:        "ws/import-source/stored",
-		Object:           crmcontracts.ImportObject(object),
+		Object:           &imported,
 		SuggestedMapping: r.suggested,
 		Targets:          r.targets,
 	}

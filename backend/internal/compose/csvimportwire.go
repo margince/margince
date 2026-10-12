@@ -16,9 +16,11 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -30,13 +32,88 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// mappingFrom validates the requested mapping against the object's live field
-// catalog. A target the object does not have is refused here rather than at row
-// 40,000 of a commit.
-func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migration.RunMapping, error) {
-	targets, err := importTargets(object)
+// stagedMappingFrom turns a create request into the mapping a run is staged
+// with. A single CSV sends object and mapping, and a ZIP sends one part per
+// file. A request with both shapes or neither is refused.
+func stagedMappingFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMapping, error) {
+	single := req.Object != nil || req.Mapping != nil
+	if single == (req.Parts != nil) {
+		return migration.RunMapping{}, httperr.Validation("parts", "one_shape",
+			"Send either object and mapping for one CSV, or parts for a ZIP.")
+	}
+	m, err := runOptionsFrom(req)
 	if err != nil {
 		return migration.RunMapping{}, err
+	}
+	if single {
+		if req.Object == nil || req.Mapping == nil {
+			return migration.RunMapping{}, httperr.Validation("mapping", "one_shape",
+				"A single CSV needs both object and mapping.")
+		}
+		part, err := partMappingFrom(string(*req.Object), *req.Mapping, req.SourceKey)
+		if err != nil {
+			return migration.RunMapping{}, err
+		}
+		m.Object, m.Fields, m.SourceKey = part.Object, part.Fields, part.SourceKey
+		return m, nil
+	}
+	if len(*req.Parts) == 0 {
+		return migration.RunMapping{}, httperr.Validation("parts", "empty", "Name at least one file of the ZIP to import.")
+	}
+	fileOf := map[string]string{}
+	for _, p := range *req.Parts {
+		object := string(p.Object)
+		if other, taken := fileOf[object]; taken {
+			// Two files of one type would land under one source key namespace,
+			// and which file's row won a shared id would be read order.
+			return migration.RunMapping{}, httperr.Validation("parts", "duplicate_object",
+				fmt.Sprintf("%q and %q are both %s files; a ZIP imports one file per type.", other, p.File, object))
+		}
+		fileOf[object] = p.File
+		part, err := partMappingFrom(object, p.Mapping, p.SourceKey)
+		if err != nil {
+			return migration.RunMapping{}, err
+		}
+		part.File = p.File
+		m.Parts = append(m.Parts, part)
+	}
+	return m, nil
+}
+
+// sourceNamePattern is the contract's pattern for `source_name`.
+var sourceNamePattern = regexp.MustCompile(`^[A-Za-z0-9 ._-]*$`)
+
+const (
+	maxSourceName     = 80
+	maxImportFileName = 255
+)
+
+// sourceNameFrom trims the requested source name and holds it to the contract.
+func sourceNameFrom(raw *string) (string, error) {
+	if raw == nil {
+		return "", nil
+	}
+	name := strings.TrimSpace(*raw)
+	if len(name) > maxSourceName || !sourceNamePattern.MatchString(name) {
+		return "", httperr.Validation("source_name", "invalid",
+			fmt.Sprintf("A source name is at most %d letters, digits, spaces, dots, underscores or hyphens.", maxSourceName))
+	}
+	return name, nil
+}
+
+// unsupportedObject refuses an object no import lands.
+func unsupportedObject() error {
+	return httperr.Validation("object", "unsupported",
+		"An import lands companies, contacts or leads; name one of them.")
+}
+
+// partMappingFrom validates one file's mapping against the object's live field
+// catalog. A target the object does not have is refused here rather than at row
+// 40,000 of a commit.
+func partMappingFrom(object string, mapping map[string]string, requestedKey *string) (migration.PartMapping, error) {
+	targets, err := importTargets(object)
+	if err != nil {
+		return migration.PartMapping{}, unsupportedObject()
 	}
 	allowed := make(map[string]bool, len(targets))
 	for _, t := range targets {
@@ -44,7 +121,7 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 	}
 	fields := map[string]string{}
 	claimed := map[string]string{}
-	for column, target := range req.Mapping {
+	for column, target := range mapping {
 		if !allowed[target] {
 			// The set is closed, small, and invisible from where the caller
 			// stands. Naming the target that failed without naming the ones
@@ -52,7 +129,7 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 			// function is already holding. `city` is the case that forces it:
 			// it reads like an obvious field on a company, is not one, and the
 			// refusal alone gives no path to the answer.
-			return migration.RunMapping{}, httperr.Validation("mapping", "unknown_target",
+			return migration.PartMapping{}, httperr.Validation("mapping", "unknown_target",
 				fmt.Sprintf("%q is not a field a %s can receive. It takes: %s.",
 					target, object, strings.Join(targets, ", ")))
 		}
@@ -60,7 +137,7 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 			// Two columns onto one field: whichever the row builder happened to
 			// write last would win, so identical requests could import
 			// different data. Refused rather than resolved by luck.
-			return migration.RunMapping{}, httperr.Validation("mapping", "duplicate_target",
+			return migration.PartMapping{}, httperr.Validation("mapping", "duplicate_target",
 				fmt.Sprintf("%q and %q both map to %q; one column per field.", other, column, target))
 		}
 		claimed[target] = column
@@ -73,15 +150,19 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 		// needs the vocabulary, because a header like "Company,Website,City"
 		// matches none of these by name and the proposal is deliberately
 		// timid about guessing (migration.SuggestMapping).
-		return migration.RunMapping{}, httperr.Validation("mapping", "empty",
+		return migration.PartMapping{}, httperr.Validation("mapping", "empty",
 			fmt.Sprintf("A run with no mapped column would import nothing. "+
 				"Map at least one column onto a field a %s can receive: %s.",
 				object, strings.Join(targets, ", ")))
 	}
 
 	sourceKey := csvSourceKeyDefault[object]
-	if req.SourceKey != nil && strings.TrimSpace(*req.SourceKey) != "" {
-		sourceKey = strings.TrimSpace(*req.SourceKey)
+	if refColumn := columnFor(fields, csvTargetRef); refColumn != "" {
+		// Other files' links name the source system's own row id. A re-upload
+		// and an undo find the row by it too.
+		sourceKey = refColumn
+	} else if requestedKey != nil && strings.TrimSpace(*requestedKey) != "" {
+		sourceKey = strings.TrimSpace(*requestedKey)
 	} else if idColumn := columnFor(fields, csvTargetID); idColumn != "" &&
 		columnFor(fields, csvSourceKeyDefault[object]) == "" {
 		// A file that names its records and carries nothing else to identify a
@@ -101,13 +182,19 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 		sourceKey = columnFor(fields, sourceKey)
 	}
 	if sourceKey == "" {
-		return migration.RunMapping{}, httperr.Validation("source_key", "unmappable",
+		return migration.PartMapping{}, httperr.Validation("source_key", "unmappable",
 			fmt.Sprintf("Map a column to %q, or name the column that identifies a row.", csvSourceKeyDefault[object]))
 	}
 	if _, mapped := fields[sourceKey]; !mapped {
-		return migration.RunMapping{}, httperr.Validation("source_key", "unmapped_column",
+		return migration.PartMapping{}, httperr.Validation("source_key", "unmapped_column",
 			fmt.Sprintf("%q is not one of the mapped columns.", sourceKey))
 	}
+	return migration.PartMapping{Object: object, Fields: fields, SourceKey: sourceKey}, nil
+}
+
+// runOptionsFrom reads what a request decides for the whole run, whichever of
+// the two shapes it takes.
+func runOptionsFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMapping, error) {
 	onDuplicate := string(crmcontracts.ImportOnDuplicateCreate)
 	if req.OnDuplicate != nil {
 		if !req.OnDuplicate.Valid() {
@@ -128,9 +215,29 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 		}
 		contextTag = req.ContextTagId.String()
 	}
+	onBrokenLink := string(crmcontracts.ImportOnBrokenLinkSkipRow)
+	if req.OnBrokenLink != nil {
+		if !req.OnBrokenLink.Valid() {
+			return migration.RunMapping{}, httperr.Validation("on_broken_link", "invalid_enum",
+				fmt.Sprintf("%q is not a broken-link policy; it takes skip_row or drop_link.", string(*req.OnBrokenLink)))
+		}
+		onBrokenLink = string(*req.OnBrokenLink)
+	}
+	sourceName, err := sourceNameFrom(req.SourceName)
+	if err != nil {
+		return migration.RunMapping{}, err
+	}
+	fileName := ""
+	if req.FileName != nil {
+		fileName = *req.FileName
+	}
+	if utf8.RuneCountInString(fileName) > maxImportFileName {
+		return migration.RunMapping{}, httperr.Validation("file_name", "too_long",
+			fmt.Sprintf("A file name is at most %d characters.", maxImportFileName))
+	}
 	return migration.RunMapping{
-		Object: object, Fields: fields, SourceKey: sourceKey, OnDuplicate: onDuplicate,
-		ContextTag: contextTag,
+		OnDuplicate: onDuplicate, ContextTag: contextTag, OnBrokenLink: onBrokenLink,
+		SourceName: sourceName, FileName: fileName,
 	}, nil
 }
 
@@ -278,8 +385,24 @@ func toContractImportRun(run migration.Run) crmcontracts.ImportRun {
 		CreatedAt:  run.CreatedAt,
 		UpdatedAt:  run.UpdatedAt,
 	}
-	if run.Mapping != nil {
-		out.Object = crmcontracts.ImportObject(run.Mapping.Object)
+	if m := run.Mapping; m != nil {
+		if len(m.Parts) == 0 {
+			object := crmcontracts.ImportObject(m.Object)
+			out.Object = &object
+		}
+		if m.FileName != "" {
+			out.FileName = &m.FileName
+		}
+		if m.SourceName != "" {
+			out.SourceName = &m.SourceName
+		}
+		parts := make([]crmcontracts.ImportRunPart, 0, len(m.PartList()))
+		for _, p := range m.PartList() {
+			parts = append(parts, crmcontracts.ImportRunPart{
+				File: p.File, Object: crmcontracts.ImportObject(p.Object), RowCount: rowsOf(run.Report, p.Object),
+			})
+		}
+		out.Parts = &parts
 	}
 	if run.Error != "" {
 		message := run.Error
@@ -288,43 +411,18 @@ func toContractImportRun(run migration.Run) crmcontracts.ImportRun {
 	return out
 }
 
-// toContractUndoReport renders the reversal outcome (IEM-WIRE-9).
-func toContractUndoReport(id migration.RunID, status string, rep migration.UndoReport) *crmcontracts.ImportUndoReport {
-	kept := make([]struct {
-		Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Kept item shape
-		Object crmcontracts.ImportObject `json:"object"`
-	}, 0, len(rep.Kept))
-	for _, k := range rep.Kept {
-		kept = append(kept, struct {
-			Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Kept item shape
-			Object crmcontracts.ImportObject `json:"object"`
-		}{Id: openapi_types.UUID(k.ID), Object: crmcontracts.ImportObject(k.Object)})
+// rowsOf is how many rows the run's report read for one object; 0 before a
+// dry run has read any.
+func rowsOf(rep *migration.Report, object string) int {
+	if rep == nil {
+		return 0
 	}
-	errored := make([]struct {
-		Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Errored item shape
-		Object crmcontracts.ImportObject `json:"object"`
-		Reason string                    `json:"reason"`
-	}, 0, len(rep.Errored))
-	for _, e := range rep.Errored {
-		errored = append(errored, struct {
-			Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Errored item shape
-			Object crmcontracts.ImportObject `json:"object"`
-			Reason string                    `json:"reason"`
-		}{Id: openapi_types.UUID(e.ID), Object: crmcontracts.ImportObject(e.Object), Reason: e.Reason})
+	for _, o := range rep.Objects {
+		if o.Object == object {
+			return o.MirrorCount
+		}
 	}
-	out := &crmcontracts.ImportUndoReport{
-		RunId:         openapi_types.UUID(id),
-		Status:        crmcontracts.ImportRunStatus(status),
-		ReversedCount: rep.ReversedCount,
-		Kept:          kept,
-		Errored:       errored,
-	}
-	// Omitted when the run created everything it touched, which is what an
-	// absent count means on the wire.
-	if rep.UpdatesNotReversed > 0 {
-		out.UpdatesNotReversed = &rep.UpdatesNotReversed
-	}
-	return out
+	return 0
 }
 
 // readImportUpload takes the multipart body apart under the deployment's import
@@ -350,8 +448,7 @@ func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (stri
 
 	object := strings.TrimSpace(r.FormValue("object"))
 	if _, ok := csvTargets[object]; !ok {
-		return "", nil, httperr.Validation("object", "unsupported",
-			"An import lands companies, contacts or leads; name one of them.")
+		return "", nil, unsupportedObject()
 	}
 
 	file, _, err := r.FormFile("file")

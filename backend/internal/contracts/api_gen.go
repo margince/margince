@@ -10216,6 +10216,24 @@ func (e HistoryEdgeOtherEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ImportIgnoredEntryReason.
+const (
+	ImportIgnoredEntryReasonNotYetImportable ImportIgnoredEntryReason = "not_yet_importable"
+	ImportIgnoredEntryReasonUnknownName      ImportIgnoredEntryReason = "unknown_name"
+)
+
+// Valid indicates whether the value is a known member of the ImportIgnoredEntryReason enum.
+func (e ImportIgnoredEntryReason) Valid() bool {
+	switch e {
+	case ImportIgnoredEntryReasonNotYetImportable:
+		return true
+	case ImportIgnoredEntryReasonUnknownName:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportObject.
 const (
 	ImportObjectCompany ImportObject = "company"
@@ -10237,6 +10255,24 @@ func (e ImportObject) Valid() bool {
 	}
 }
 
+// Defines values for ImportOnBrokenLink.
+const (
+	ImportOnBrokenLinkDropLink ImportOnBrokenLink = "drop_link"
+	ImportOnBrokenLinkSkipRow  ImportOnBrokenLink = "skip_row"
+)
+
+// Valid indicates whether the value is a known member of the ImportOnBrokenLink enum.
+func (e ImportOnBrokenLink) Valid() bool {
+	switch e {
+	case ImportOnBrokenLinkDropLink:
+		return true
+	case ImportOnBrokenLinkSkipRow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportOnDuplicate.
 const (
 	ImportOnDuplicateCreate ImportOnDuplicate = "create"
@@ -10249,6 +10285,42 @@ func (e ImportOnDuplicate) Valid() bool {
 	case ImportOnDuplicateCreate:
 		return true
 	case ImportOnDuplicateSkip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportProblemKind.
+const (
+	ImportProblemKindBrokenLink   ImportProblemKind = "broken_link"
+	ImportProblemKindDroppedLink  ImportProblemKind = "dropped_link"
+	ImportProblemKindDuplicate    ImportProblemKind = "duplicate"
+	ImportProblemKindInvalidValue ImportProblemKind = "invalid_value"
+	ImportProblemKindNewTag       ImportProblemKind = "new_tag"
+	ImportProblemKindPermission   ImportProblemKind = "permission"
+	ImportProblemKindUnknownOwner ImportProblemKind = "unknown_owner"
+	ImportProblemKindUnusableRow  ImportProblemKind = "unusable_row"
+)
+
+// Valid indicates whether the value is a known member of the ImportProblemKind enum.
+func (e ImportProblemKind) Valid() bool {
+	switch e {
+	case ImportProblemKindBrokenLink:
+		return true
+	case ImportProblemKindDroppedLink:
+		return true
+	case ImportProblemKindDuplicate:
+		return true
+	case ImportProblemKindInvalidValue:
+		return true
+	case ImportProblemKindNewTag:
+		return true
+	case ImportProblemKindPermission:
+		return true
+	case ImportProblemKindUnknownOwner:
+		return true
+	case ImportProblemKindUnusableRow:
 		return true
 	default:
 		return false
@@ -32336,7 +32408,8 @@ type CreateDealRoomRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CreateImportRunRequest defines model for CreateImportRunRequest.
+// CreateImportRunRequest Exactly one of two shapes: `object` and `mapping` for one CSV, or
+// `parts` for a ZIP. Both or neither is refused.
 type CreateImportRunRequest struct {
 	// Connector The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
 	Connector CreateImportRunRequestConnector `json:"connector"`
@@ -32355,6 +32428,9 @@ type CreateImportRunRequest struct {
 	// estate, and tagging it would claim the batch contains records it
 	// only touched.
 	ContextTagId *openapi_types.UUID `json:"context_tag_id,omitempty"`
+
+	// FileName The uploaded file's name, echoed from the profile's `file_name`. Display only: nothing about the run is decided by it.
+	FileName *string `json:"file_name,omitempty"`
 
 	// Mapping `{source column → target field}`, as the human settled it. Validated against
 	// the object's live field catalog before the run is created.
@@ -32378,34 +32454,16 @@ type CreateImportRunRequest struct {
 	//
 	// A row naming an id nothing answers to is reported as a skipped row saying so,
 	// never created quietly under a new id.
-	Mapping map[string]string `json:"mapping"`
+	Mapping *map[string]string `json:"mapping,omitempty"`
 
-	// Object What the file's rows are, and therefore what the run creates.
-	//
-	// `company` creates companies.
-	//
-	// `lead` and `contact` are two answers to one question about a file of
-	// humans, and the caller picks the one that matches where the file came
-	// from.
-	//
-	// `lead` is the right answer for a machine-sourced list — a scraped
-	// export, a purchased list, a conference badge dump. Those rows land in
-	// the unworked `new` status and a human promotes the ones worth keeping.
-	// Landing them as contacts would put unqualified rows in the same table as
-	// the contacts the business actually deals with.
-	//
-	// `contact` is for a file of humans the business already knows — a
-	// migration off another CRM, a re-import of a corrected export, a
-	// customer list from a system being retired. Those rows were qualified
-	// somewhere else, and routing them through the lead table would force a
-	// human to re-approve records nobody doubts.
-	//
-	// Neither value bypasses anything. A `contact` run runs the same identity
-	// ladder every other contact create runs, refuses a row whose email
-	// already belongs to another contact, and files a review pair for a near
-	// match — so a file of duplicates produces a review queue, not a silent
-	// merge.
-	Object ImportObject `json:"object"`
+	// Object What a single CSV's rows are. Sent with `mapping`, never with `parts`.
+	Object *ImportObject `json:"object,omitempty"`
+
+	// OnBrokenLink What a ZIP run does with a row whose link names a record no file of the
+	// ZIP and nothing in the estate answers to. `skip_row` leaves the row out
+	// and reports it; `drop_link` lands the row without the link and reports
+	// the dropped link.
+	OnBrokenLink *ImportOnBrokenLink `json:"on_broken_link,omitempty"`
 
 	// OnDuplicate What to do with a row naming a record the estate ALREADY holds — found
 	// by the same dedupe ladder every create path runs, not by this
@@ -32437,6 +32495,9 @@ type CreateImportRunRequest struct {
 	// the count is separate from `created`.
 	OnDuplicate *ImportOnDuplicate `json:"on_duplicate,omitempty"`
 
+	// Parts The files of a ZIP to import, one type per file. Two files naming one type are refused.
+	Parts *[]ImportPartRequest `json:"parts,omitempty"`
+
 	// SourceKey The source column holding the row's stable id. For a row this run
 	// CREATES it is written to the row's provenance, so a re-uploaded file
 	// updates rather than duplicates (IEM-AC-9) and an undo can find what
@@ -32453,6 +32514,9 @@ type CreateImportRunRequest struct {
 	// new companies therefore maps a column every row carries, and the
 	// `id` column says which rows are corrections.
 	SourceKey *string `json:"source_key,omitempty"`
+
+	// SourceName The name this source is filed under, so a re-upload of the same export updates rather than duplicates. The profile's `suggested_source_name` is the proposal.
+	SourceName *string `json:"source_name,omitempty"`
 
 	// SourceRef From `uploadImportSource`.
 	SourceRef string `json:"source_ref"`
@@ -35825,6 +35889,18 @@ type ImportColumn struct {
 	Samples []string `json:"samples"`
 }
 
+// ImportIgnoredEntry One ZIP entry no part was made from.
+type ImportIgnoredEntry struct {
+	// File The entry's path inside the ZIP.
+	File string `json:"file"`
+
+	// Reason `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+	Reason ImportIgnoredEntryReason `json:"reason"`
+}
+
+// ImportIgnoredEntryReason `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+type ImportIgnoredEntryReason string
+
 // ImportObject What the file's rows are, and therefore what the run creates.
 //
 // `company` creates companies.
@@ -35851,6 +35927,12 @@ type ImportColumn struct {
 // match — so a file of duplicates produces a review queue, not a silent
 // merge.
 type ImportObject string
+
+// ImportOnBrokenLink What a ZIP run does with a row whose link names a record no file of the
+// ZIP and nothing in the estate answers to. `skip_row` leaves the row out
+// and reports it; `drop_link` lands the row without the link and reports
+// the dropped link.
+type ImportOnBrokenLink string
 
 // ImportOnDuplicate What to do with a row naming a record the estate ALREADY holds — found
 // by the same dedupe ladder every create path runs, not by this
@@ -35882,31 +35964,63 @@ type ImportObject string
 // the count is separate from `created`.
 type ImportOnDuplicate string
 
-// ImportRowIssue One row the import could not take, named by its line so a human can go fix it.
-type ImportRowIssue struct {
-	// Column The offending column, when one is to blame.
-	Column *string `json:"column,omitempty"`
+// ImportPartProfile One file of an uploaded ZIP, profiled the way a single CSV is.
+type ImportPartProfile struct {
+	Columns []ImportColumn `json:"columns"`
 
-	// Line The line in the uploaded file, counting the header as line 1.
-	Line int `json:"line"`
+	// File The entry's path inside the ZIP.
+	File string `json:"file"`
 
-	// Reason What is wrong, in terms of the file the human uploaded — never a database or driver message.
-	Reason string `json:"reason"`
+	// Object The type the file name names. Absent when it names none, and the human picks one.
+	Object       *ImportObject `json:"object,omitempty"`
+	RowsProfiled int           `json:"rows_profiled"`
+
+	// SuggestedMappings One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call.
+	SuggestedMappings map[string]map[string]string `json:"suggested_mappings"`
 }
 
-// ImportRun defines model for ImportRun.
-type ImportRun struct {
-	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
-	CapturedBy *string `json:"captured_by,omitempty"`
+// ImportPartReport One file's slice of a run's report.
+type ImportPartReport struct {
+	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
+	Disposition ImportRunDisposition `json:"disposition"`
+	File        string               `json:"file"`
 
-	// Checkpoint Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from.
-	Checkpoint int                `json:"checkpoint"`
-	Connector  ImportRunConnector `json:"connector"`
-	CreatedAt  time.Time          `json:"created_at"`
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `company` creates companies.
+	//
+	// `lead` and `contact` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as contacts would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `contact` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `contact` run runs the same identity
+	// ladder every other contact create runs, refuses a row whose email
+	// already belongs to another contact, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
+	Object   ImportObject `json:"object"`
+	RowsRead int          `json:"rows_read"`
+}
 
-	// Error Why a failed run stopped, in the uploader's terms. Never a driver or SQL message.
-	Error *string            `json:"error,omitempty"`
-	Id    openapi_types.UUID `json:"id"`
+// ImportPartRequest One file of a ZIP run, with the type and mapping the human settled for it.
+type ImportPartRequest struct {
+	// File The entry's path inside the ZIP, as the profile's `parts[].file` spells it.
+	File string `json:"file"`
+
+	// Mapping `{source column → target field}` for this file, validated as the single-CSV `mapping` is. A column mapped to `ref` is the file's own row id, which other files' links name.
+	Mapping map[string]string `json:"mapping"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -35934,7 +36048,61 @@ type ImportRun struct {
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
 	Object ImportObject `json:"object"`
-	Source string       `json:"source"`
+
+	// SourceKey The column holding the row's stable id, as the single-CSV `source_key`. A column mapped to `ref` wins over it.
+	SourceKey *string `json:"source_key,omitempty"`
+}
+
+// ImportProblemKind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
+type ImportProblemKind string
+
+// ImportRowIssue One row the import could not take, named by its line so a human can go fix it.
+type ImportRowIssue struct {
+	// Column The offending column, when one is to blame.
+	Column *string `json:"column,omitempty"`
+
+	// File The ZIP entry the line is in. Absent for a single CSV.
+	File *string `json:"file,omitempty"`
+
+	// Kind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
+	Kind *ImportProblemKind `json:"kind,omitempty"`
+
+	// Line The line in the uploaded file, counting the header as line 1.
+	Line int `json:"line"`
+
+	// Reason What is wrong, in terms of the file the human uploaded — never a database or driver message.
+	Reason string `json:"reason"`
+
+	// Value The cell value at fault, when one is, so a screen can group the rows that share it.
+	Value *string `json:"value,omitempty"`
+}
+
+// ImportRun defines model for ImportRun.
+type ImportRun struct {
+	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
+	CapturedBy *string `json:"captured_by,omitempty"`
+
+	// Checkpoint Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from.
+	Checkpoint int                `json:"checkpoint"`
+	Connector  ImportRunConnector `json:"connector"`
+	CreatedAt  time.Time          `json:"created_at"`
+
+	// Error Why a failed run stopped, in the uploader's terms. Never a driver or SQL message.
+	Error *string `json:"error,omitempty"`
+
+	// FileName The uploaded file's name, as the run was created with it. Display only.
+	FileName *string            `json:"file_name,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+
+	// Object What a single-CSV run's rows are. Absent for a ZIP run, whose types are in `parts`.
+	Object *ImportObject `json:"object,omitempty"`
+
+	// Parts The files the run imports, in import order. A single CSV is one part.
+	Parts  *[]ImportRunPart `json:"parts,omitempty"`
+	Source string           `json:"source"`
+
+	// SourceName The name the run's source is filed under.
+	SourceName *string `json:"source_name,omitempty"`
 
 	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
 	// carries the checkpoint it stopped at, and resuming continues from
@@ -35994,61 +36162,14 @@ type ImportRunLinks struct {
 	Unresolved *[]ImportUnresolvedLink `json:"unresolved,omitempty"`
 }
 
-// ImportRunReport The same shape before and after approval: a dry run reports what the
-// commit will do, a finished run reports what it did.
-type ImportRunReport struct {
-	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
-	Disposition ImportRunDisposition `json:"disposition"`
-
-	// EstimatedDurationSeconds A dry run's estimate for the commit. Null when the run has already finished and the real duration is on the run record.
-	EstimatedDurationSeconds *int `json:"estimated_duration_seconds,omitempty"`
-
-	// Issues Row-level refusals, enumerated. A file half-ignored under a success message is worse than a refusal.
-	Issues []ImportRowIssue `json:"issues"`
-
-	// Links The connections between records a run makes, counted apart from the rows
-	// it writes.
-	//
-	// A link is not a row and is never added to the disposition's four: one
-	// contact row can arrive with an employer and produce both a created contact
-	// and an applied link, and counting it twice would make the four stop
-	// summing to the rows read.
-	//
-	// Today the only link a delimited file carries is a contact's employer,
-	// named by a company column the mapping points at `company`.
-	Links *ImportRunLinks `json:"links,omitempty"`
-
-	// Mapping `{source column → target field}` as the run was staged with it, after validation — the same shape the create request's `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping.
-	Mapping  *map[string]string `json:"mapping,omitempty"`
-	RowsRead int                `json:"rows_read"`
-	RunId    openapi_types.UUID `json:"run_id"`
-
-	// SourceKeyUsed Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it.
-	SourceKeyUsed string `json:"source_key_used"`
-
-	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-	// carries the checkpoint it stopped at, and resuming continues from
-	// there rather than re-reading the file from the top. `undoing`/`undone`
-	// (IEM-WIRE-9) are the reversal's own states, reachable only from
-	// `complete` and only for the `csv` connector.
-	Status ImportRunStatus `json:"status"`
-
-	// Undo Present once the run has been undone (`status: undone`, IEM-WIRE-9); absent otherwise.
-	Undo *ImportUndoReport `json:"undo,omitempty"`
+// ImportRunList defines model for ImportRunList.
+type ImportRunList struct {
+	Data []ImportRun `json:"data"`
 }
 
-// ImportRunStatus IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-// carries the checkpoint it stopped at, and resuming continues from
-// there rather than re-reading the file from the top. `undoing`/`undone`
-// (IEM-WIRE-9) are the reversal's own states, reachable only from
-// `complete` and only for the `csv` connector.
-type ImportRunStatus string
-
-// ImportSourceProfile What one uploaded file looks like, plus the mapping proposed for it.
-// Nothing here is stored against a run yet: the human may change every
-// line of `suggested_mapping` before `createImportRun` accepts one.
-type ImportSourceProfile struct {
-	Columns []ImportColumn `json:"columns"`
+// ImportRunPart defines model for ImportRunPart.
+type ImportRunPart struct {
+	File string `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -36077,6 +36198,81 @@ type ImportSourceProfile struct {
 	// merge.
 	Object ImportObject `json:"object"`
 
+	// RowCount Rows the file holds, once a dry run has read it; 0 before.
+	RowCount int `json:"row_count"`
+}
+
+// ImportRunReport The same shape before and after approval: a dry run reports what the
+// commit will do, a finished run reports what it did.
+type ImportRunReport struct {
+	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
+	Disposition ImportRunDisposition `json:"disposition"`
+
+	// EstimatedDurationSeconds A dry run's estimate for the commit. Null when the run has already finished and the real duration is on the run record.
+	EstimatedDurationSeconds *int `json:"estimated_duration_seconds,omitempty"`
+
+	// Issues Row-level refusals, enumerated. A file half-ignored under a success message is worse than a refusal.
+	Issues []ImportRowIssue `json:"issues"`
+
+	// Links The connections between records a run makes, counted apart from the rows
+	// it writes.
+	//
+	// A link is not a row and is never added to the disposition's four: one
+	// contact row can arrive with an employer and produce both a created contact
+	// and an applied link, and counting it twice would make the four stop
+	// summing to the rows read.
+	//
+	// Today the only link a delimited file carries is a contact's employer,
+	// named by a company column the mapping points at `company`.
+	Links *ImportRunLinks `json:"links,omitempty"`
+
+	// Mapping `{source column → target field}` as the run was staged with it, after validation — the same shape the create request's `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping.
+	Mapping *map[string]string `json:"mapping,omitempty"`
+
+	// Parts The same counts per file, in import order. A single CSV reports one part.
+	Parts    *[]ImportPartReport `json:"parts,omitempty"`
+	RowsRead int                 `json:"rows_read"`
+	RunId    openapi_types.UUID  `json:"run_id"`
+
+	// SourceKeyUsed Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it.
+	SourceKeyUsed string `json:"source_key_used"`
+
+	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
+	// carries the checkpoint it stopped at, and resuming continues from
+	// there rather than re-reading the file from the top. `undoing`/`undone`
+	// (IEM-WIRE-9) are the reversal's own states, reachable only from
+	// `complete` and only for the `csv` connector.
+	Status ImportRunStatus `json:"status"`
+
+	// Undo Present once the run has been undone (`status: undone`, IEM-WIRE-9); absent otherwise.
+	Undo *ImportUndoReport `json:"undo,omitempty"`
+}
+
+// ImportRunStatus IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
+// carries the checkpoint it stopped at, and resuming continues from
+// there rather than re-reading the file from the top. `undoing`/`undone`
+// (IEM-WIRE-9) are the reversal's own states, reachable only from
+// `complete` and only for the `csv` connector.
+type ImportRunStatus string
+
+// ImportSourceProfile What one uploaded file looks like, plus the mapping proposed for it.
+// Nothing here is stored against a run yet: the human may change every
+// line of `suggested_mapping` before `createImportRun` accepts one.
+type ImportSourceProfile struct {
+	Columns []ImportColumn `json:"columns"`
+
+	// FileName The uploaded file's name, for display. The client echoes it to `createImportRun`.
+	FileName *string `json:"file_name,omitempty"`
+
+	// Ignored The ZIP entries no part was made from, each with why. Listed so a file left out is never a silent one.
+	Ignored *[]ImportIgnoredEntry `json:"ignored,omitempty"`
+
+	// Object What the rows of a single CSV are. Absent for a ZIP, whose files each carry their own in `parts`.
+	Object *ImportObject `json:"object,omitempty"`
+
+	// Parts One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.
+	Parts *[]ImportPartProfile `json:"parts,omitempty"`
+
 	// RowsProfiled Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest.
 	RowsProfiled int `json:"rows_profiled"`
 
@@ -36085,6 +36281,11 @@ type ImportSourceProfile struct {
 
 	// SuggestedMapping Proposed `{source column → target field}`. Normalized-name matches only; an unmatched column is absent rather than guessed.
 	SuggestedMapping map[string]string `json:"suggested_mapping"`
+
+	// SuggestedSourceName The server's proposal for `createImportRun`'s `source_name`: a ZIP's file stem with
+	// every character outside `[A-Za-z0-9 ._-]` turned into `-`, cut to 80. Empty for a
+	// single CSV, so a re-upload of one keeps the namespace it was first imported under.
+	SuggestedSourceName *string `json:"suggested_source_name,omitempty"`
 
 	// Targets The closed set a mapping may name — every field this object can receive THROUGH AN
 	// IMPORT, which is not every field it has.
@@ -52741,6 +52942,11 @@ type ListFxRatesParams struct {
 	From *string `form:"from,omitempty" json:"from,omitempty"`
 }
 
+// ListImportRunsParams defines parameters for ListImportRuns.
+type ListImportRunsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
 	// File The delimited file to import. UTF-8; the first row is the header.
@@ -68491,6 +68697,9 @@ type ServerInterface interface {
 	// Enqueue an async FX-rate refresh (stages 🟡 proposals).
 	// (POST /fx-rates/propose-refresh)
 	ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request)
+	// List this workspace's recent CSV import runs, newest first.
+	// (GET /imports)
+	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
 	// Create an import run from an uploaded source and a column mapping, and dry-run it.
 	// (POST /imports)
 	CreateImportRun(w http.ResponseWriter, r *http.Request)
@@ -72313,6 +72522,12 @@ func (_ Unimplemented) SetFxRate(w http.ResponseWriter, r *http.Request) {
 // Enqueue an async FX-rate refresh (stages 🟡 proposals).
 // (POST /fx-rates/propose-refresh)
 func (_ Unimplemented) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List this workspace's recent CSV import runs, newest first.
+// (GET /imports)
+func (_ Unimplemented) ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -94141,6 +94356,45 @@ func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListImportRuns operation middleware
+func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListImportRunsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListImportRuns(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateImportRun operation middleware
 func (siw *ServerInterfaceWrapper) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 
@@ -110901,6 +111155,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/fx-rates/propose-refresh", wrapper.ProposeFxRateRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports", wrapper.ListImportRuns)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports", wrapper.CreateImportRun)

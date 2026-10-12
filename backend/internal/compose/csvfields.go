@@ -99,6 +99,10 @@ var csvTargets = map[string][]string{
 // An id has none of that. It names one record or no record.
 const csvTargetID = "id"
 
+// csvTargetRef is the column holding the row's own id in the source system, the
+// one other files' links name. It is the part's source key, never a stored field.
+const csvTargetRef = "ref"
+
 // recordAddressTargets are the address fields a CSV column may name, spelled with
 // the `address.` prefix the record-fields schema already uses for the nested
 // shape (`address: {city, country, …}`). The mapping itself stays flat — one
@@ -157,7 +161,7 @@ func importTargets(object string) ([]string, error) {
 	if linksEmployer(object) {
 		targets = append(targets, csvEmployerName)
 	}
-	return targets, nil
+	return append(targets, csvTargetRef), nil
 }
 
 // selectsByID reports whether an object's rows may name the record they are.
@@ -185,17 +189,15 @@ func linksEmployer(object string) bool {
 // isNonFieldTarget reports whether a mapped target names something other than a
 // value the record stores.
 //
-// Two targets qualify and they are different from each other, which is why this
-// is a set rather than a comparison. `id` names the RECORD the row is. The
-// employer column names an EDGE from that record to another one. Neither is a
-// column on the record, so neither may be compared against the stored JSON: the
-// lookup would find nothing, report the row as changed, and hand the update path
-// a field the store has no setter for — an update on every re-import of a file
-// nobody edited.
+// Three targets qualify. `id` names the RECORD the row is, and `ref` its id in
+// the source system. The employer column names an EDGE to another record. None
+// is a column on the record, so none is compared against the stored JSON. The
+// lookup would find nothing and report the row as changed, so every re-import
+// of an unedited file would update every row.
 //
 // Excluded in one place rather than at each caller so no path can forget one.
 func isNonFieldTarget(field string) bool {
-	return field == csvTargetID || field == csvEmployerName
+	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef
 }
 
 // changedFields reports which mapped values differ from what the stored record

@@ -10,15 +10,15 @@
   "totals": {
     "tools": 84,
     "resources": 9,
-    "tool_catalog_bytes": 264221,
+    "tool_catalog_bytes": 264753,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 66945,
+    "approx_wire_tokens_total": 67078,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 68727,
       "input_schema_bytes": 59657,
-      "output_schema_bytes": 115053,
+      "output_schema_bytes": 115585,
       "description_plus_input_schema_bytes": 128384
     }
   },
@@ -11613,10 +11613,19 @@
                           "column": {
                             "type": "string"
                           },
+                          "file": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
                           "line": {
                             "type": "integer"
                           },
                           "reason": {
+                            "type": "string"
+                          },
+                          "value": {
                             "type": "string"
                           }
                         },
@@ -11670,6 +11679,55 @@
                         "type": "string"
                       },
                       "type": "object"
+                    },
+                    "parts": {
+                      "items": {
+                        "properties": {
+                          "disposition": {
+                            "properties": {
+                              "created": {
+                                "type": "integer"
+                              },
+                              "duplicates": {
+                                "type": "integer"
+                              },
+                              "skipped": {
+                                "type": "integer"
+                              },
+                              "unchanged": {
+                                "type": "integer"
+                              },
+                              "updated": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "created",
+                              "skipped",
+                              "unchanged",
+                              "updated"
+                            ],
+                            "type": "object"
+                          },
+                          "file": {
+                            "type": "string"
+                          },
+                          "object": {
+                            "type": "string"
+                          },
+                          "rows_read": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "disposition",
+                          "file",
+                          "object",
+                          "rows_read"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
                     },
                     "rows_read": {
                       "type": "integer"
