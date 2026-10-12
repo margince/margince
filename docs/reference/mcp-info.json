@@ -10,16 +10,16 @@
   "totals": {
     "tools": 66,
     "resources": 9,
-    "tool_catalog_bytes": 215712,
+    "tool_catalog_bytes": 215838,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 54818,
+    "approx_wire_tokens_total": 54849,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 57685,
+      "description_bytes": 57811,
       "input_schema_bytes": 54591,
       "output_schema_bytes": 87281,
-      "description_plus_input_schema_bytes": 112276
+      "description_plus_input_schema_bytes": 112402
     }
   },
   "tools": {
@@ -10159,7 +10159,7 @@
           "readOnlyHint": true,
           "title": "Read tags"
         },
-        "description": "Read the workspace's tags. list: every word, with the tag_id the other tag calls take. get: one tag and how many contacts, companies, deals and leads carry it. record: the tags on one contact, company, deal or lead, with who applied each and when. list returns archived words only with include_archived, and they cannot be applied; `truncated` means a word missing from the list may still exist. In record, `withheld` true means the vocabulary is hidden from this caller, NOT that the record has no tags — never report it as none. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Read the workspace's tags. list: every word, with the tag_id the other tag calls take. get: one tag and how many contacts, companies, deals and leads carry it. record: the tags on one contact, company, deal or lead, with who applied each and when. list returns archived words only with include_archived, and they cannot be applied; `truncated` means a word missing from the list may still exist. In record, `withheld` true means the vocabulary is hidden from this caller, NOT that the record has no tags — never report it as none. A word the user says fits a contact you are creating goes to create_record as offer_tag, which offers it without applying it. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "properties": {
             "include_archived": {

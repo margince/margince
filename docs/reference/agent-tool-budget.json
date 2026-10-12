@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 66,
     "system_frame_tokens": 586,
-    "tokens": 26339,
+    "tokens": 26371,
     "median_tool_tokens": 344,
-    "mean_tool_tokens": 398
+    "mean_tool_tokens": 399
   },
   "agents": [
     {
@@ -271,6 +271,10 @@
       "tokens": 267
     },
     {
+      "name": "read_tags",
+      "tokens": 266
+    },
+    {
       "name": "invite_meeting",
       "tokens": 264
     },
@@ -285,10 +289,6 @@
     {
       "name": "commit_import",
       "tokens": 239
-    },
-    {
-      "name": "read_tags",
-      "tokens": 235
     },
     {
       "name": "create_task",

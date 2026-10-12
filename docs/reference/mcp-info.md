@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 66 |
 | Resources | 9 |
-| Tool catalog | 210.7 KB |
+| Tool catalog | 210.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 54818 |
+| Approx. wire tokens | 54849 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 85.2 KB | 40% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 56.3 KB | 26% | Yes, every step |
+| Descriptions (incl. governance clause) | 56.5 KB | 26% | Yes, every step |
 | Input schemas | 53.3 KB | 25% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **109.6 KB** | **52%** | **the recurring cost** |
+| **Description + input schema** | **109.8 KB** | **52%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.3 KB |
-| [`read_tags`](#read_tags) | Read tags | yes |  | 1.1 KB |
+| [`read_tags`](#read_tags) | Read tags | yes |  | 1.3 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.6 KB |
@@ -11066,8 +11066,9 @@ and how many contacts, companies, deals and leads carry it. record: the tags on 
 company, deal or lead, with who applied each and when. list returns archived words only with
 include_archived, and they cannot be applied; `truncated` means a word missing from the list may
 still exist. In record, `withheld` true means the vocabulary is hidden from this caller, NOT that
-the record has no tags — never report it as none. (Governance: runs immediately; requires passport
-scope "read".)
+the record has no tags — never report it as none. A word the user says fits a contact you are
+creating goes to create_record as offer_tag, which offers it without applying it. (Governance: runs
+immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>

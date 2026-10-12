@@ -345,10 +345,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `draft_follow_ups_for` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `whats_slipping_this_week` | 1.00 | 3 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
+| `read_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `relink_activities` | 1.00 | 6 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
-| `read_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
@@ -418,8 +418,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `change_tags` | 0.89 | 8/9 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
 | `draft_follow_ups_for` | 0.67 | 2/3 | - | `case44_chase_what_is_slipping` |
-| `relink_activities` | 0.83 | 5/6 | - | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `read_tags` | 0.89 | 8/9 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
+| `relink_activities` | 0.83 | 5/6 | - | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `decide_duplicate` | 0.67 | 2/3 | - | `case56_not_the_same` |
 
 ## Who judged it, and how well

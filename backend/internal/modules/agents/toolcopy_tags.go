@@ -82,6 +82,8 @@ var readTagsCopy = toolCopy{
 		"`truncated` means a word missing from the list may still exist. In record, `withheld` " +
 		"true means the vocabulary is hidden from this caller, NOT that the record has no tags — " +
 		"never report it as none.",
+	Retain: "A word the user says fits a contact you are creating goes to create_record as " +
+		"offer_tag, which offers it without applying it.",
 }
 
 var changeTagsCopy = toolCopy{
