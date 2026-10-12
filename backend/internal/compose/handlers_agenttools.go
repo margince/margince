@@ -35,8 +35,7 @@ func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
 			continue
 		}
 		if spec.Unlisted {
-			// Reached through the router that fronts it, which is what a
-			// client is shown and so what this mirror shows.
+			// Never offered to a client, so this mirror does not show it.
 			continue
 		}
 		out = append(out, crmcontracts.AgentTool{

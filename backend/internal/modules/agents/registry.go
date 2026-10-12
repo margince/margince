@@ -152,9 +152,10 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 // serve it again later. What an answer cost is what its replay costs, and only
 // the frame that ran the tool can see it. Deriving it afterwards from the
 // envelope's evidence would undercount an answer that hands over more than it
-// can name. A repeat would then cost less than the call. It serves name as given and
-// resolves no router. Callers holding a name a client chose go through
-// InvokeServed, and taskexecute holds the target a task stored.
+// can name. A repeat would then cost less than the call.
+//
+// It serves name as given and resolves no router. Callers holding a name a
+// client chose go through InvokeServed; taskexecute holds the stored target.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
 	// The REGISTERED spec, not a fresh Spec() call. The two are the same for a
 	// tool whose spec is a literal, and every tool here is — but the registered

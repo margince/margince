@@ -18,14 +18,30 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// router is a tool that runs as one of several Unlisted tools, picked by one
-// argument. The tool name is the approval kind, the tier-floor key and the retry
-// key. A routed call is therefore served under the target's name from the first
-// check on, and the router itself never handles, stages or is admitted.
+// router is a tool that runs as one of several Unlisted tools. The tool name is
+// the approval kind, the tier-floor key and the retry key. A routed call is
+// therefore served under the target's name from the first check on, and the
+// router itself never handles, stages or is admitted. Every router picks its
+// target either by one argument (fieldRouter) or by which arguments a call
+// names (targetChooser).
 type router interface {
 	mcp.Tool
-	routeField() string
 	routeTargets() map[string]string
+}
+
+// fieldRouter picks its target by the value of one argument.
+type fieldRouter interface {
+	routeField() string
+}
+
+// routeFieldOf is the argument a router picks by, and false for a router that
+// picks by which arguments a call names.
+func routeFieldOf(rt router) (string, bool) {
+	fr, ok := rt.(fieldRouter)
+	if !ok {
+		return "", false
+	}
+	return fr.routeField(), true
 }
 
 // Served is one call's answer and the tool that produced it. When the call
@@ -58,17 +74,15 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		spec.MaxArgsBytes = max(spec.MaxArgsBytes, argsLimit(target))
 		spec.Egress = spec.Egress || target.Egress
 	}
-	spec.InputSchema = routedSchema(spec.Name, rt.routeField(), choices, spec.InputSchema, targets)
+	_, chooses := rt.(targetChooser)
+	field, picksByField := routeFieldOf(rt)
+	if chooses == picksByField {
+		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+		panic(fmt.Sprintf("crmagents: router %s must pick its target either by one argument or by the arguments named", spec.Name))
+	}
+	spec.InputSchema = routedSchema(spec.Name, field, choices, spec.InputSchema, targets)
 	spec.OutputSchema = nil
 	return spec
-}
-
-// argsLimit is the bound withinArgsBound holds a tool's arguments to.
-func argsLimit(spec mcp.ToolSpec) int64 {
-	if spec.MaxArgsBytes == 0 {
-		return httperr.MaxBodyBytes
-	}
-	return spec.MaxArgsBytes
 }
 
 // routeTarget is one registered target's own spec, refused unless a router may
@@ -79,24 +93,30 @@ func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 	r.mu.RLock()
 	t, ok := r.tools[name]
 	r.mu.RUnlock()
+	// The target's own spec: the registered one carries the members the
+	// surface adds, such as the retry key, which the router gains by itself.
+	var spec mcp.ToolSpec
+	if ok {
+		spec = t.Spec()
+	}
 	var why string
 	switch _, isRouter := t.(router); {
 	case !ok:
 		why = "is not registered (register targets first)"
 	case isRouter:
 		why = "is itself a router"
-	case !t.Spec().Unlisted:
+	case !spec.Unlisted:
 		why = "is still offered, so fronting it would list one capability twice"
-	case t.Spec().Tier == mcp.TierDynamic:
+	case spec.Tier == mcp.TierDynamic:
 		why = "has a dynamic tier"
-	case t.Spec().HumanOnly, t.Spec().SelfDescribing, t.Spec().ConfirmsInConversation:
+	case spec.HumanOnly, spec.SelfDescribing, spec.ConfirmsInConversation:
 		why = "is offered or confirmed in a way a router does not carry"
 	}
 	if why != "" {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: router %s cannot front %s: it %s", routerName, name, why))
 	}
-	return t.Spec()
+	return spec
 }
 
 type routeChoice struct {
@@ -275,7 +295,9 @@ func (r *Registry) resolve(name string, in json.RawMessage) (string, json.RawMes
 	if err != nil {
 		return "", nil, err
 	}
-	delete(members, rt.routeField())
+	if field, ok := routeFieldOf(rt); ok {
+		delete(members, field)
+	}
 	out, err := json.Marshal(members)
 	if err != nil {
 		return "", nil, errors.Join(errRouteArguments, err)
@@ -295,7 +317,7 @@ func pickTarget(rt router, members map[string]json.RawMessage) (string, error) {
 	if chooser, ok := rt.(targetChooser); ok {
 		return chooser.chooseTarget(members)
 	}
-	field := rt.routeField()
+	field, _ := routeFieldOf(rt)
 	var choice string
 	if json.Unmarshal(members[field], &choice) == nil {
 		if target, ok := rt.routeTargets()[choice]; ok {

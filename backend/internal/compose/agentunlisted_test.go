@@ -4,45 +4,87 @@
 package compose
 
 import (
+	"encoding/json"
 	"slices"
 	"strings"
 	"testing"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// A scheduled agent's run is offered what the registry offers. An Unlisted
-// tool is never offered, so an allowlist naming one leaves the run without it.
-func TestNoScheduledAgentIsGivenAnUnlistedTool(t *testing.T) {
+// A scheduled agent's run is offered what the registry offers, so an Unlisted
+// tool leaves the run without it. A router is refused too: the runner allows
+// the name called, so a router would allow every action behind it.
+func TestNoScheduledAgentIsGivenAnUnlistedToolOrARouter(t *testing.T) {
 	unlisted := unlistedTools(t)
+	registry := servedSurface(t)
 	for _, agent := range mustScheduledAgents() {
 		for _, name := range agent.Tools {
-			if unlisted[name] {
-				t.Errorf("%s is allowed %s, which only a router reaches; allow the router instead",
-					agent.Name, name)
+			_, isRouter := registry.RouteTargets(name)
+			if unlisted[name] || isRouter {
+				t.Errorf("%s is allowed %s, which a scheduled run cannot hold to one action; "+
+					"leave it out until the allowlist can name an action", agent.Name, name)
 			}
 		}
 	}
 }
 
-// A model can call only what it is shown. A description that names an Unlisted
-// tool sends the model to a name it was never given.
+// A model can call only what it is shown. A description, or an argument's,
+// that names an Unlisted tool sends the model to a name it was never given.
 func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
+	defer namesAnApprovalKind.AssertAllMatched(t)
 	unlisted := unlistedTools(t)
 	for _, spec := range servedSurface(t).Specs() {
 		if spec.Unlisted {
 			continue
 		}
-		for _, word := range strings.FieldsFunc(spec.Description, func(c rune) bool {
+		text := spec.Description + " " + strings.Join(argumentDescriptions(t, spec.InputSchema), " ")
+		for _, word := range strings.FieldsFunc(text, func(c rune) bool {
 			return c != '_' && !unicode.IsLower(c) && !unicode.IsDigit(c)
 		}) {
-			if unlisted[word] {
-				t.Errorf("%s's description names %s, which is not offered; name the router that fronts it",
+			if unlisted[word] && !namesAnApprovalKind.Waived(t, spec.Name+":"+word) {
+				t.Errorf("%s's description names %s, which is not offered; name the tool that reaches it",
 					spec.Name, word)
 			}
 		}
 	}
+}
+
+// namesAnApprovalKind ratifies a word in a description that is spelled like an
+// unlisted tool and names something else: a staged action's kind, or a verb.
+var namesAnApprovalKind = gatekit.Waive(map[string]string{
+	"list_approvals:advance_deal":    "the kind filter's example is an approval kind, and a deal move stages under advance_deal",
+	"bulk_update_records:remove_tag": "one of its own bulk verbs, spelled like the tool and not naming it",
+})
+
+// argumentDescriptions collects the descriptions in an input schema, at any depth.
+func argumentDescriptions(t *testing.T, schema json.RawMessage) []string {
+	t.Helper()
+	var doc any
+	if err := json.Unmarshal(schema, &doc); err != nil {
+		t.Fatalf("reading an input schema: %v", err)
+	}
+	var out []string
+	var walk func(any)
+	walk = func(node any) {
+		switch n := node.(type) {
+		case map[string]any:
+			if d, ok := n["description"].(string); ok {
+				out = append(out, d)
+			}
+			for _, v := range n {
+				walk(v)
+			}
+		case []any:
+			for _, v := range n {
+				walk(v)
+			}
+		}
+	}
+	walk(doc)
+	return out
 }
 
 // offeredSpecs is the served surface a client is offered: every registered tool

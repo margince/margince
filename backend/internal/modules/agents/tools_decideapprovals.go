@@ -26,8 +26,6 @@ func (decideApprovals) Spec() mcp.ToolSpec {
 	}
 }
 
-func (decideApprovals) routeField() string { return "" }
-
 const (
 	decideOne    = "decide_approval"
 	decideBundle = "decide_approval_bundle"
@@ -42,14 +40,13 @@ var errDecideNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of s
 // chooseTarget treats a null id as absent, as the surface does everywhere, and
 // drops it: the target refuses an argument it does not take.
 func (decideApprovals) chooseTarget(members map[string]json.RawMessage) (string, error) {
-	named := func(id string) bool {
+	for _, id := range []string{"staged_action_id", "bundle_id"} {
 		if isNull(members[id]) {
 			delete(members, id)
 		}
-		_, ok := members[id]
-		return ok
 	}
-	one, bundle := named("staged_action_id"), named("bundle_id")
+	_, one := members["staged_action_id"]
+	_, bundle := members["bundle_id"]
 	switch {
 	case one && !bundle:
 		return decideOne, nil

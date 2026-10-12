@@ -50,7 +50,8 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 		// a retention classification a human confirms, here over every
 		// message in the thread. relinkActivityTier reads `entity_type` off these
 		// arguments exactly as it does off the single form's.
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic, Unlisted: true,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		Unlisted:     true, // replaced by relink_activities, which this refuses every call in favour of
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkThread",
 		InputSchema: schema(`{"type":"object","required":["thread_key","entity_type","entity_id"],"properties":{

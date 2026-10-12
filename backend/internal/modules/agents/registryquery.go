@@ -152,8 +152,7 @@ func outsideToolName(c rune) bool {
 //
 // It answers the SCOPE axis only. Invoke remains the authority on the seat
 // ceiling and object RBAC, which are re-derived per call — this narrows what is
-// advertised and enforces nothing. An Unlisted tool is reached through the
-// router that fronts it, so only the router is offered.
+// advertised and enforces nothing. An Unlisted tool is never offered.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
