@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const colleagueCopyAuthUp = "core/1791786513_a_colleagues_copy_needs_an_authenticated_from.up.sql"
+const colleagueCopyAuthUp = "core/1791798498_a_colleagues_copy_needs_an_authenticated_from.up.sql"
 
 // rereadCopyWithOriginal seeds a copy migration 1791775182 re-read as the
 // colleague's, with its stored original when authResults is not empty.
