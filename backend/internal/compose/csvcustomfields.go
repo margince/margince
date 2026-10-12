@@ -98,7 +98,7 @@ func readImportColumns(ctx context.Context, db *database.DB, object string) (imp
 	return importColumns{catalog: cat, store: store}, nil
 }
 
-// requestedObjects is every object a create request names, in its order.
+// requestedObjects answers the objects a create request names, in its order.
 func requestedObjects(req crmcontracts.CreateImportRunRequest) []string {
 	if req.Object != nil {
 		return []string{string(*req.Object)}

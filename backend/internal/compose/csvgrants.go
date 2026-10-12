@@ -40,7 +40,7 @@ type grantNeed struct {
 	Why    string
 }
 
-// grantsFor is every object grant a run's commit takes: each part's create and
+// grantsFor lists the object grants a run's commit takes: each part's create and
 // update, tag read where tags are applied, and tag create where names are new.
 // Applying a tag also takes the record's update, which each part already needs.
 func grantsFor(parts []migration.PartMapping, needsNewTags, appliesTags bool) []grantNeed {
@@ -55,12 +55,16 @@ func grantsFor(parts []migration.PartMapping, needsNewTags, appliesTags bool) []
 			grantNeed{Object: part.Object, Action: principal.ActionUpdate, Why: edit})
 	}
 	if appliesTags {
-		needs = append(needs, grantNeed{Object: tagObject, Action: principal.ActionRead,
-			Why: "You cannot read tags, so the tags column is not imported"})
+		needs = append(needs, grantNeed{
+			Object: tagObject, Action: principal.ActionRead,
+			Why: "You cannot read tags, so the tags column is not imported",
+		})
 	}
 	if needsNewTags {
-		needs = append(needs, grantNeed{Object: tagObject, Action: principal.ActionCreate,
-			Why: "You cannot create tags, so a tag new to the CRM is not added"})
+		needs = append(needs, grantNeed{
+			Object: tagObject, Action: principal.ActionCreate,
+			Why: "You cannot create tags, so a tag new to the CRM is not added",
+		})
 	}
 	return needs
 }
@@ -122,7 +126,7 @@ func checkGrants(
 	return problems, nil
 }
 
-// refusedOwners is every resolved address whose seat the importer may not name
+// refusedOwners answers the resolved addresses whose seat the importer may not name
 // as a new record's owner, asked in one read transaction.
 func refusedOwners(ctx context.Context, pool *pgxpool.Pool, owners *ownerResolver) ([]string, error) {
 	var refused []string
