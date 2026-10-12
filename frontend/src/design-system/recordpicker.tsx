@@ -5,12 +5,9 @@ import { problemMessageOf } from "../screens/common";
 import { Button, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
 
-// The shared debounced search→candidate-list→pick pattern: this used to live
-// duplicated, near-identically, inline in MergeAction (screens/merge.tsx) and
-// AddRelationshipAction (screens/relationships.tsx) — both wire a search
-// transport, debounce 250ms, render candidates as pickable buttons, and
-// surface a search failure inline rather than throwing it. Neither of those
-// two has been migrated onto this extraction yet.
+// The shared debounced search→candidate-list→pick pattern. MergeAction
+// (screens/merge.tsx) draws it; AddRelationshipAction (screens/relationships.tsx)
+// still holds its own copy.
 //
 // It is now PUBLISHED to the extension tier (surface/design-system.ts), which
 // makes this comment something third parties read. Two things it does not do,
@@ -21,7 +18,13 @@ import { ErrorLine } from "./errorline";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
-export type RecordPickerCandidate = { id: string; name: string };
+// `detail` is the line under the name that tells two look-alike names apart
+// (a contact's company and address, a company's domain).
+export type RecordPickerCandidate = {
+  id: string;
+  name: string;
+  detail?: string;
+};
 
 // Named once: by `label` standing alone, or by the `<label for>` a `Field`
 // points at `id`. Not both: an aria-label overrides the visible label it repeats.
@@ -169,7 +172,14 @@ export function RecordPicker({
       {selected && (
         <p className="recordpicker-selected" aria-live="polite">
           <Check className="recordpicker-selected-check" aria-hidden />
-          {selected.name}
+          <span className="recordpicker-selected-text">
+            <span>{selected.name}</span>
+            {selected.detail && (
+              <span className="t-caption recordpicker-option-detail">
+                {selected.detail}
+              </span>
+            )}
+          </span>
         </p>
       )}
       {answered && candidates.length === 0 && (
@@ -191,7 +201,12 @@ export function RecordPicker({
                   setTerm("");
                 }}
               >
-                {candidate.name}
+                <span>{candidate.name}</span>
+                {candidate.detail && (
+                  <span className="t-caption recordpicker-option-detail">
+                    {candidate.detail}
+                  </span>
+                )}
               </Button>
             </li>
           ))}

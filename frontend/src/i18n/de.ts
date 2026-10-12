@@ -1404,6 +1404,8 @@ export const de = {
   "merge.pickTarget": "Beizubehaltenden Datensatz auswählen",
   "merge.confirm":
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
+  "merge.confirmDetail":
+    "{source} mit {target} ({detail}) zusammenführen? {source} wird dabei archiviert.",
   "merge.submit": "Zusammenführen",
 
   "tab.overview": "Übersicht",
@@ -1553,6 +1555,16 @@ export const de = {
     "Dieser Platz hat nur Lesezugriff, daher wurde die Anfrage abgelehnt. Lass den Platz von einem Admin hochstufen.",
   "common.versionSkew":
     "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
+  "common.duplicate.email":
+    "Ein anderer Kontakt oder Lead hat diese E-Mail-Adresse schon, deshalb wurde sie hier nicht gespeichert.",
+  "common.duplicate.domain":
+    "Ein anderes Unternehmen hat diese Domain schon, deshalb wurde sie hier nicht gespeichert.",
+  "common.duplicate.linkedinUrl":
+    "Ein anderer Lead hat dieses LinkedIn-Profil schon, deshalb wurde es hier nicht gespeichert.",
+  "common.duplicate.contactLead":
+    "Für diesen Kontakt gibt es schon einen aktiven Lead, deshalb wurde kein zweiter angelegt.",
+  "common.duplicate.slotTaken":
+    "Dieser Termin ist nicht mehr frei. Wähle eine andere Zeit.",
   "common.retry": "Erneut versuchen",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
@@ -4356,6 +4368,8 @@ export const de = {
   "field.unset": "Nicht festgelegt",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
+  "field.editEmails": "E-Mail-Adressen bearbeiten",
+  "field.editPhones": "Telefonnummern bearbeiten",
   "field.addDomain": "Domain hinzufügen",
 
   "field.addRegisterVat": "USt-ID hinzufügen",
