@@ -6031,6 +6031,7 @@ export const en = {
     "{count} rows were skipped. problems.csv lists each one.",
   "import.result.undoing":
     "Undo is running. If it stops, Continue undo picks it up from there.",
+  "import.result.problemsFile": "problems.csv",
   "import.result.undo": "Undo this import",
   "import.result.done": "Done",
   "import.test.detail": "{created} new · {updated} update · {unchanged} same",

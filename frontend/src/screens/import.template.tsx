@@ -96,11 +96,7 @@ function ColumnChip({ column }: Readonly<{ column: ImportFormatColumn }>) {
   return (
     <Badge tone={column.custom ? "accent" : "default"}>
       {column.label ?? column.name}
-      {column.required_on_new_row ? (
-        <span aria-hidden className="import-template__required">
-          {" ●"}
-        </span>
-      ) : null}
+      {column.required_on_new_row ? <span aria-hidden>{" ●"}</span> : null}
     </Badge>
   );
 }

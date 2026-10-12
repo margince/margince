@@ -147,7 +147,7 @@ function TestRunBody({
       <div className="import__actions">
         {report.issues.length > 0 ? (
           <a className="link-button" href={problemsHref(runId)} download>
-            problems.csv
+            {t("import.result.problemsFile")}
           </a>
         ) : null}
         <Button variant="ghost" onClick={wizard.reset}>

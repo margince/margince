@@ -5886,6 +5886,7 @@ export const de = {
     "{count} Zeilen wurden übersprungen. problems.csv nennt jede.",
   "import.result.undoing":
     "Das Rückgängigmachen läuft. Hält es an, macht „Weiter rückgängig machen“ dort weiter.",
+  "import.result.problemsFile": "problems.csv",
   "import.result.undo": "Diesen Import rückgängig machen",
   "import.result.done": "Fertig",
   "import.test.detail":

@@ -221,9 +221,9 @@ describe("the CSV import page in the shell", () => {
 
       await leaveForTheRow(user);
 
-      expect(
-        await screen.findByText("New import", {}, { timeout: SETTLE_MS }),
-      ).toBeInTheDocument();
+      // The hash has already moved, so the hub is one render away, not a
+      // settle: a default waiter is enough.
+      expect(await screen.findByText("New import")).toBeInTheDocument();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     },
     LEAVE_AFTER_COMMIT_TEST_MS,

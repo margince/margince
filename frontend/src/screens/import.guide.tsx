@@ -33,7 +33,6 @@ export function ColumnGuide({
     <Popover
       onHover
       label={label ?? column.label ?? column.name}
-      className="import-guide__trigger"
       panelClassName="import-guide"
     >
       <p>{column.description}</p>

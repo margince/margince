@@ -221,7 +221,7 @@ function ResultBody({
       <div className="import__actions">
         {report.issues.length > 0 ? (
           <a className="link-button" href={problemsHref(run.id)} download>
-            problems.csv
+            {t("import.result.problemsFile")}
           </a>
         ) : null}
         {run.status === "complete" ? (

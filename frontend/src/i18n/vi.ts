@@ -5758,6 +5758,7 @@ export const vi = {
     "Đã bỏ qua {count} dòng. problems.csv liệt kê từng dòng.",
   "import.result.undoing":
     "Đang hoàn tác. Nếu bị dừng, Tiếp tục hoàn tác sẽ chạy tiếp từ đó.",
+  "import.result.problemsFile": "problems.csv",
   "import.result.undo": "Hoàn tác lần nhập này",
   "import.result.done": "Xong",
   "import.test.detail":
