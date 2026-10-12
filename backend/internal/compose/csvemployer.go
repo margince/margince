@@ -39,6 +39,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -82,7 +83,7 @@ func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employer
 	if normalized == "" {
 		return employerResolution{reason: "the company column is empty, so the row names no employer"}, nil
 	}
-	hit, err := w.employerFor(ctx, normalized)
+	hit, err := w.links.employerFor(ctx, normalized)
 	if err != nil {
 		return employerResolution{}, err
 	}
@@ -91,12 +92,17 @@ func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employer
 		return employerResolution{reason: fmt.Sprintf(
 			"no company named %q is in the CRM, so there was nothing to link this contact to", strings.TrimSpace(name))}, nil
 	case hit.count > 1:
-		return employerResolution{reason: fmt.Sprintf(
-			"more than one company is named %q, so which one employs this contact is a question only a human can answer",
-			strings.TrimSpace(name))}, nil
+		return employerResolution{reason: ambiguousEmployerReason(name)}, nil
 	default:
 		return employerResolution{id: hit.id, found: true}, nil
 	}
+}
+
+// ambiguousEmployerReason is the answer for a name more than one visible
+// company wears.
+func ambiguousEmployerReason(name string) string {
+	return fmt.Sprintf("more than one company is named %q, so which one employs this contact is a question only a human can answer",
+		strings.TrimSpace(name))
 }
 
 // employerKey folds a company name for comparison: case and whitespace, and
@@ -154,12 +160,12 @@ type employerCandidate struct {
 // same staleness collidesWithExisting already accepts and for the same reason:
 // the failure mode is a missing link the report names, never a link to the
 // wrong company.
-func (w *csvWriters) employerFor(ctx context.Context, key string) (employerCandidate, error) {
-	if hit, ok := w.employers[key]; ok {
+func (r *linkResolver) employerFor(ctx context.Context, key string) (employerCandidate, error) {
+	if hit, ok := r.employers[key]; ok {
 		return hit, nil
 	}
 	var found employerCandidate
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
 		// Scoped to what this caller may READ, so a company they cannot see
 		// contributes nothing — neither a match nor an ambiguity.
 		var args []any
@@ -206,10 +212,7 @@ func (w *csvWriters) employerFor(ctx context.Context, key string) (employerCandi
 	}); err != nil {
 		return employerCandidate{}, fmt.Errorf("import: %w", err)
 	}
-	if w.employers == nil {
-		w.employers = map[string]employerCandidate{}
-	}
-	w.employers[key] = found
+	r.employers[key] = found
 	return found, nil
 }
 
@@ -218,24 +221,10 @@ func (w *csvWriters) employerFor(ctx context.Context, key string) (employerCandi
 // The `From` endpoint resolves through the run's identity map, which knows the
 // contact this run just landed. The `To` endpoint is a NAME and resolves through
 // resolveEmployer, exactly once per distinct name thanks to the cached index.
-//
-// A conflict is convergence, not a failure: the edge is unique per (contact,
-// company), and the engine's association phase is replayed whole by a
-// resumed run. Every other error still stops the run, because an edge that
-// failed for an unknown reason is not an edge anybody should assume landed.
 func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
-	contactID, found, err := w.lookup(ctx, migration.ObjectContact, a.FromID)
-	if errors.Is(err, errBoundRecordArchived) {
-		found, err = false, nil
-	}
-	if err != nil {
-		return migration.AssocResult{}, err
-	}
-	if !found {
-		// The row never landed — refused, skipped, or not yet committed. The
-		// contact is the thing missing, so that is what the report says.
-		return migration.AssocResult{Reason: fmt.Sprintf(
-			"the contact identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID)}, nil
+	contactID, missing, err := w.landedContact(ctx, a)
+	if err != nil || missing != "" {
+		return migration.AssocResult{Reason: missing}, err
 	}
 	resolved, err := w.resolveEmployer(ctx, a.ToID)
 	if err != nil {
@@ -244,18 +233,61 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 	if !resolved.found {
 		return migration.AssocResult{Reason: resolved.reason}, nil
 	}
+	return w.writeEmployment(ctx, contactID, resolved.id, w.provenanceOf(a.FromID+"→"+a.ToID))
+}
 
+// linkCompanyRef writes the edge a company_ref cell names, through the run's
+// one link resolver, so it finds what the row check found.
+func (w *csvWriters) linkCompanyRef(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
+	contactID, missing, err := w.landedContact(ctx, a)
+	if err != nil || missing != "" {
+		return migration.AssocResult{Reason: missing}, err
+	}
+	answer, err := w.links.resolve(ctx, migration.ObjectCompany, a.ToID)
+	if err != nil {
+		return migration.AssocResult{}, err
+	}
+	if !answer.Found {
+		return migration.AssocResult{Reason: answer.Reason}, nil
+	}
+	return w.writeEmployment(ctx, contactID, ids.From[ids.CompanyKind](answer.ID), w.provenanceOf(a.FromID+"→"+a.ToID))
+}
+
+// landedContact is the contact an edge starts at, or why there is none: the
+// row was refused, skipped, or not yet committed.
+func (w *csvWriters) landedContact(ctx context.Context, a migration.Assoc) (ids.UUID, string, error) {
+	contactID, found, err := w.lookup(ctx, migration.ObjectContact, a.FromID)
+	if errors.Is(err, errBoundRecordArchived) {
+		found, err = false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, "", err
+	}
+	if !found {
+		return ids.UUID{}, fmt.Sprintf(
+			"the contact identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID), nil
+	}
+	return contactID, "", nil
+}
+
+// writeEmployment writes one contact→company employment edge.
+//
+// A conflict is convergence, not a failure. The edge is unique per (contact,
+// company), and a resumed run replays the association phase whole. Every other
+// error stops the run: an edge that failed for an unknown reason did not land.
+func (w *csvWriters) writeEmployment(
+	ctx context.Context, contactID ids.UUID, companyID ids.CompanyID, source string,
+) (migration.AssocResult, error) {
 	pid := ids.From[ids.ContactKind](contactID)
-	oid := resolved.id
 	if _, err := w.contacts.CreateRelationship(ctx, contacts.CreateRelationshipInput{
 		Kind:      relationshipKindEmployment,
 		ContactID: &pid,
-		CompanyID: &oid,
+		CompanyID: &companyID,
 		// Stated rather than left nil: a company column on a contact row means
 		// THE employer, singular, and a caller who said so must not have the
 		// store's own rule decide otherwise.
 		IsCurrentPrimary: ptrTrue(),
-		Source:           w.provenanceOf(a.FromID + "→" + a.ToID),
+		Source:           source,
 	}); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
 			// The edge is unique per (contact, company), so a conflict means
@@ -271,9 +303,40 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 			// the disclosure says linked rather than created.
 			return migration.AssocResult{Applied: true}, nil
 		}
-		return migration.AssocResult{}, fmt.Errorf("import: linking %s to %q: %w", a.FromID, a.ToID, err)
+		return migration.AssocResult{}, fmt.Errorf("import: linking %s to %s: %w", pid, companyID, err)
 	}
 	return migration.AssocResult{Applied: true}, nil
+}
+
+// rowLink is what a row's company_ref cell says about the row: nothing, a
+// warning it lands with, or a reason it is skipped.
+type rowLink struct {
+	skip    bool
+	problem *migration.SkippedRow
+}
+
+// companyRefOf checks a contact row's company_ref before the row lands, so the
+// run's broken-link policy decides the row and not only its edge. The dry run
+// and the commit both ask here.
+func (w *csvWriters) companyRefOf(ctx context.Context, row migration.Row) (rowLink, error) {
+	ref := strings.TrimSpace(textFields(row.Fields)[csvTargetCompanyRef])
+	if w.companyRefColumn == "" || ref == "" {
+		return rowLink{}, nil
+	}
+	answer, err := w.links.resolve(ctx, migration.ObjectCompany, ref)
+	if err != nil || answer.resolves() {
+		return rowLink{}, err
+	}
+	problem := &migration.SkippedRow{
+		ExternalID: row.ExternalID, Line: row.Line, Column: w.companyRefColumn,
+		Kind: migration.ProblemBrokenLink, Value: ref, Reason: answer.Reason,
+	}
+	if w.onBrokenLink != string(crmcontracts.ImportOnBrokenLinkDropLink) {
+		return rowLink{skip: true, problem: problem}, nil
+	}
+	problem.Kind = migration.ProblemDroppedLink
+	problem.Reason = answer.Reason + "; the row was imported without the link"
+	return rowLink{problem: problem}, nil
 }
 
 // relationshipKindEmployment is the edge a company column means.

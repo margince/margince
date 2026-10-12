@@ -67,7 +67,9 @@ func checkEveryPartsColumns(ctx context.Context, source migration.Source, mappin
 }
 
 // predictEveryPart refines the dry run's report one part at a time, in import
-// order, and names on each type the file it came from.
+// order, and names on each type the file it came from. The company part's rows
+// are marked pending before the contact part is read, so a contact's link finds
+// a company of the same upload.
 func predictEveryPart(
 	ctx context.Context, source migration.Source, skipped func(object string) []migration.SkippedLine,
 	writers *bundleWriters, mapping migration.RunMapping, report migration.Report,
@@ -76,6 +78,9 @@ func predictEveryPart(
 	for _, part := range mapping.PartList() {
 		fileOf[part.Object] = part.File
 	}
+	// The engine's dry run counted the links offered; each part adds the ones
+	// that will resolve.
+	report.Associations = 0
 	for _, object := range migration.ImportOrder {
 		if _, ok := fileOf[object]; !ok {
 			continue

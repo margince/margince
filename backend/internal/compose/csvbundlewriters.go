@@ -18,6 +18,9 @@ import (
 // a bundle of one part, so every run reaches the engine through this.
 type bundleWriters struct {
 	parts map[string]*csvWriters
+	// links is the one resolver every part writer shares, so a row of one
+	// file finds a row of another.
+	links *linkResolver
 	// fallback reverses a row whose type the run's parts do not name: a run
 	// staged before parts existed records rows under its one object only.
 	fallback *csvWriters
@@ -46,9 +49,9 @@ func newBundleWriters(
 		seen[part.Object] = true
 	}
 	options := runOptionsOf(settled)
-	b := &bundleWriters{parts: map[string]*csvWriters{}}
+	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importSourceSystem(settled.SourceName))}
 	for _, part := range parts {
-		w := newCSVWriters(db, runID, part, options)
+		w := newCSVWriters(db, runID, part, options, b.links)
 		b.parts[part.Object] = w
 		if b.fallback == nil {
 			b.fallback = w

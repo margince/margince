@@ -5,7 +5,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -21,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -61,10 +59,12 @@ type csvWriters struct {
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
 	// identity map.
 	nativeIDs map[string]ids.UUID
-	// employers caches one answer per folded company name the FILE names, so a
-	// file naming one employer on every row asks the database once. Nil until
-	// the first row needs it; bounded by the file, never by the estate.
-	employers map[string]employerCandidate
+	// links finds the record a link cell names. One resolver serves every part
+	// of the run, so a contact can name a company of the same upload.
+	links *linkResolver
+	// companyRefColumn is the file's column mapped to company_ref, empty when
+	// none is; onBrokenLink decides a row whose ref finds nothing.
+	companyRefColumn, onBrokenLink string
 	// authors caches the seat each author cell resolves to, per run.
 	authors authorSeats
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
@@ -95,7 +95,9 @@ func runOptionsOf(m migration.RunMapping) runOptions {
 }
 
 // newCSVWriters builds the writer of one part: one object, one file.
-func newCSVWriters(db *database.DB, runID migration.RunID, part migration.PartMapping, run runOptions) *csvWriters {
+func newCSVWriters(
+	db *database.DB, runID migration.RunID, part migration.PartMapping, run runOptions, links *linkResolver,
+) *csvWriters {
 	return &csvWriters{
 		pool: db.Pool(),
 		// An imported contact can take a lead over, which carries the lead's
@@ -103,12 +105,15 @@ func newCSVWriters(db *database.DB, runID migration.RunID, part migration.PartMa
 		contacts: contacts.NewStore(db).WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)),
-		tags:         collections.NewStore(db),
-		identities:   migration.NewRunStore(db),
-		runID:        runID,
-		object:       part.Object,
-		sourceSystem: importSourceSystem(run.SourceName),
-		onDuplicate:  run.OnDuplicate,
+		tags:             collections.NewStore(db),
+		identities:       migration.NewRunStore(db),
+		runID:            runID,
+		object:           part.Object,
+		sourceSystem:     links.sourceSystem,
+		onDuplicate:      run.OnDuplicate,
+		links:            links,
+		companyRefColumn: columnFor(part.Fields, csvTargetCompanyRef),
+		onBrokenLink:     run.OnBrokenLink,
 		// An unparseable id files nothing rather than failing the run. The wire
 		// refused the shapes a client can send, so what reaches here is a stored
 		// mapping — and a run that already passed its dry run must not die at
@@ -156,6 +161,9 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 	if a.FromType == migration.ObjectContact && a.ToType == migration.AssocTargetCompanyName {
 		return w.linkEmployer(ctx, a)
 	}
+	if a.FromType == migration.ObjectContact && a.ToType == migration.AssocTargetCompanyRef {
+		return w.linkCompanyRef(ctx, a)
+	}
 	return migration.AssocResult{
 		Applied: false,
 		Reason:  fmt.Sprintf("a delimited import carries no %s→%s edge; it was not applied", a.FromType, a.ToType),
@@ -163,8 +171,25 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 }
 
 // Ensure lands one row: created the first time, updated when the file has
-// since changed, unchanged when it has not.
+// since changed, unchanged when it has not. A row whose company_ref finds
+// nothing is skipped or lands with a warning, as the run's policy says.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
+	link, err := w.companyRefOf(ctx, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if link.skip {
+		return migration.EnsureResult{Skipped: true, SkipReason: link.problem.Reason, Problem: link.problem}, nil
+	}
+	landed, err := w.ensureRow(ctx, object, row)
+	if err == nil && !landed.Skipped {
+		landed.Problem = link.problem
+	}
+	return landed, err
+}
+
+// ensureRow is Ensure once the row's links allow it to land.
+func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
 	// The same refusal the dry run reported, so the two cannot disagree about
 	// this row. Without it the preview would disclose a skip and the commit
 	// would then fail on the store's own constraint instead — a different
@@ -282,43 +307,6 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	}
 	w.updated++
 	return migration.EnsureResult{Disclosure: fmt.Sprintf("row %s: %d field(s) rewritten from the file", row.ExternalID, len(changed))}, nil
-}
-
-// read answers the stored record as its own JSON — the surface changedFields
-// compares against, and the same shape the contract serves for it.
-func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
-	switch w.object {
-	case migration.ObjectLead:
-		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
-		if err != nil {
-			return nil, err
-		}
-		return encodeRecord(lead)
-	case migration.ObjectCompany:
-		company, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.LiveOnly)
-		if err != nil {
-			return nil, err
-		}
-		return encodeRecord(company)
-	case migration.ObjectContact:
-		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.LiveOnly)
-		if err != nil {
-			return nil, err
-		}
-		return encodeRecord(contact)
-	default:
-		return nil, fmt.Errorf("import: %q is not an importable object", w.object)
-	}
-}
-
-// encodeRecord renders one stored record as JSON. Generic so no wire type
-// is widened to an empty interface on the way through.
-func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Contact](record T) ([]byte, error) {
-	encoded, err := json.Marshal(record)
-	if err != nil {
-		return nil, fmt.Errorf("import: reading the stored record: %w", err)
-	}
-	return encoded, nil
 }
 
 // apply writes the changed fields. `current` is the stored record's JSON, which

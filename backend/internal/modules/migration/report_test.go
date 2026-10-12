@@ -79,3 +79,28 @@ func TestAResumedRunKeepsTheWarningsOfRowsBeforeTheCheckpoint(t *testing.T) {
 		t.Errorf("file = %q, want contacts.csv kept", got.File)
 	}
 }
+
+// A row's problem names its column, kind and value whether the row was skipped
+// or landed with a warning, so a screen can group both.
+func TestARowsProblemReachesItsSkipOrItsWarning(t *testing.T) {
+	problem := &SkippedRow{Column: "company", Kind: ProblemDroppedLink, Value: "CO-404", Reason: "no company"}
+	var or ObjectReport
+	or.record(Row{ExternalID: "P-1", Line: 2}, EnsureResult{Created: true, Problem: problem})
+	if or.Created != 1 || len(or.Skipped) != 0 || len(or.Warnings) != 1 {
+		t.Fatalf("report = %+v, want one created row carrying one warning", or)
+	}
+	want := SkippedRow{ExternalID: "P-1", Line: 2, Column: "company", Kind: ProblemDroppedLink, Value: "CO-404", Reason: "no company"}
+	if or.Warnings[0] != want {
+		t.Fatalf("warning = %+v, want %+v", or.Warnings[0], want)
+	}
+
+	broken := &SkippedRow{Column: "company", Kind: ProblemBrokenLink, Value: "CO-404"}
+	or.record(Row{ExternalID: "P-2", Line: 3}, EnsureResult{Skipped: true, SkipReason: "no company", Problem: broken})
+	if len(or.Skipped) != 1 || or.Skipped[0].Kind != ProblemBrokenLink || or.Skipped[0].Value != "CO-404" ||
+		or.Skipped[0].Column != "company" || or.Skipped[0].Reason != "no company" {
+		t.Fatalf("skipped = %+v, want the skip to carry the problem's column, kind and value", or.Skipped)
+	}
+	if len(or.Warnings) != 1 {
+		t.Fatalf("warnings = %d, want a skipped row's problem kept out of the warnings", len(or.Warnings))
+	}
+}

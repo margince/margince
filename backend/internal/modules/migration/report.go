@@ -135,7 +135,11 @@ type SkippedAssoc struct {
 func (or *ObjectReport) record(row Row, res EnsureResult) {
 	switch {
 	case res.Skipped:
-		or.Skipped = append(or.Skipped, SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason})
+		skip := SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason}
+		if res.Problem != nil {
+			skip.Column, skip.Kind, skip.Value = res.Problem.Column, res.Problem.Kind, res.Problem.Value
+		}
+		or.Skipped = append(or.Skipped, skip)
 	case res.Unchanged:
 		or.Unchanged++
 	case res.Created:
@@ -151,6 +155,11 @@ func (or *ObjectReport) record(row Row, res EnsureResult) {
 	}
 	if res.Disclosure != "" {
 		or.Disclosures = append(or.Disclosures, res.Disclosure)
+	}
+	if res.Problem != nil && !res.Skipped {
+		warning := *res.Problem
+		warning.ExternalID, warning.Line = row.ExternalID, row.Line
+		or.Warnings = append(or.Warnings, warning)
 	}
 }
 

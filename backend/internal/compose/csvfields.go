@@ -103,6 +103,10 @@ const csvTargetID = "id"
 // one other files' links name. It is the part's source key, never a stored field.
 const csvTargetRef = "ref"
 
+// csvTargetCompanyRef names a contact's employer by the company's ref, its
+// domain, its one name or its id. Like the employer name it writes an edge.
+const csvTargetCompanyRef = migration.AssocTargetCompanyRef
+
 // recordAddressTargets are the address fields a CSV column may name, spelled with
 // the `address.` prefix the record-fields schema already uses for the nested
 // shape (`address: {city, country, …}`). The mapping itself stays flat — one
@@ -159,7 +163,7 @@ func importTargets(object string) ([]string, error) {
 		targets = append(targets, csvTargetID)
 	}
 	if linksEmployer(object) {
-		targets = append(targets, csvEmployerName)
+		targets = append(targets, csvEmployerName, csvTargetCompanyRef)
 	}
 	return append(targets, csvTargetRef), nil
 }
@@ -189,15 +193,15 @@ func linksEmployer(object string) bool {
 // isNonFieldTarget reports whether a mapped target names something other than a
 // value the record stores.
 //
-// Three targets qualify. `id` names the RECORD the row is, and `ref` its id in
-// the source system. The employer column names an EDGE to another record. None
+// Four targets qualify. `id` names the RECORD the row is, and `ref` its id in
+// the source system. The two employer columns name an EDGE to another record. None
 // is a column on the record, so none is compared against the stored JSON. The
 // lookup would find nothing and report the row as changed, so every re-import
 // of an unedited file would update every row.
 //
 // Excluded in one place rather than at each caller so no path can forget one.
 func isNonFieldTarget(field string) bool {
-	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef
+	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef || field == csvTargetCompanyRef
 }
 
 // changedFields reports which mapped values differ from what the stored record

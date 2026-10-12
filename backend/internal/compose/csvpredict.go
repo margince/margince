@@ -56,15 +56,34 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 	return outcome, err
 }
 
-// predict answers what the commit will do AND, when it will refuse, the sentence
-// the report shows for it.
+// predictRow answers what the commit will do, and what the report says about
+// the row: why it is refused, or the warning it lands with.
 //
 // The reason travels with the outcome rather than being recomputed by the
 // caller. It used to be recomputed — from unwritableReason, which knows about
 // the size_band vocabulary and nothing else — so a refusal from any other source
 // reached the report as a skip with an EMPTY reason, and the reader reading it
 // was told a row would not land without being told why.
-func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
+//
+// A row whose company_ref finds nothing is decided first, by the run's policy,
+// as Ensure decides it. A dropped link rides on the landing outcome.
+func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
+	link, err := w.companyRefOf(ctx, row)
+	if err != nil {
+		return predictCreate, nil, err
+	}
+	if link.skip {
+		return predictUnwritable, link.problem, nil
+	}
+	outcome, refusal, err := w.predictLanding(ctx, row)
+	if refusal != "" {
+		return outcome, &migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: refusal}, err
+	}
+	return outcome, link.problem, err
+}
+
+// predictLanding is predictRow once the row's links allow it to land.
+func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
 	if reason := unwritableReason(w.object, textFields(row.Fields)); reason != "" {
 		return predictUnwritable, reason, nil
 	}

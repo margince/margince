@@ -37,6 +37,15 @@ import (
 // spelling it again, so both sides are one value by construction.
 const AssocTargetCompanyName = "company_name"
 
+// AssocTargetCompanyRef is the `To` endpoint kind for an edge naming a company
+// by its ref in the source system. The company is a row of this upload or of an
+// earlier import, or one Margince already holds.
+const AssocTargetCompanyRef = "company_ref"
+
+// employerTargets are the mapping targets whose column names a contact's
+// employer, each emitted as an edge of its own kind.
+var employerTargets = []string{AssocTargetCompanyName, AssocTargetCompanyRef}
+
 // assocCategoryEmployment is what the edge means: this contact works here.
 const assocCategoryEmployment = "employment"
 
@@ -57,8 +66,13 @@ func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
 	if s.object != ObjectContact {
 		return nil, nil
 	}
-	column := s.columnFor(AssocTargetCompanyName)
-	if column == "" {
+	columns := map[string]string{}
+	for _, target := range employerTargets {
+		if column := s.columnFor(target); column != "" {
+			columns[target] = column
+		}
+	}
+	if len(columns) == 0 {
 		return nil, nil
 	}
 
@@ -82,30 +96,32 @@ func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
 			return nil
 		}
 		claimed[row.ExternalID] = true
-
-		at, ok := index[column]
-		if !ok || at >= len(record) {
-			return nil
+		for _, target := range employerTargets {
+			if edge, ok := employerEdge(row.ExternalID, target, columns[target], record, index); ok {
+				out = append(out, edge)
+			}
 		}
-		name := strings.TrimSpace(record[at])
-		if name == "" {
-			// The file said nothing about this contact's employer, which is not
-			// the same as saying they have none. No edge, no disclosure.
-			return nil
-		}
-		out = append(out, Assoc{
-			FromType: ObjectContact,
-			FromID:   row.ExternalID,
-			ToType:   AssocTargetCompanyName,
-			ToID:     name,
-			Category: assocCategoryEmployment,
-		})
 		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("reading the employer column: %w", err)
 	}
 	return out, nil
+}
+
+// employerEdge is the edge one employer column of one row names. An empty cell
+// says nothing about the contact's employer, which is not the same as saying
+// they have none: no edge, no disclosure.
+func employerEdge(from, target, column string, record []string, index map[string]int) (Assoc, bool) {
+	at, ok := index[column]
+	if column == "" || !ok || at >= len(record) {
+		return Assoc{}, false
+	}
+	to := strings.TrimSpace(record[at])
+	if to == "" {
+		return Assoc{}, false
+	}
+	return Assoc{FromType: ObjectContact, FromID: from, ToType: target, ToID: to, Category: assocCategoryEmployment}, true
 }
 
 // columnFor answers which source column was mapped onto a target.

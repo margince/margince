@@ -166,6 +166,9 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				assertNonFieldTarget(t, object, csvEmployerName, targets, created, patched,
 					"it names the company a contact works AT, and writing it would put a company's name in a field on the contact",
 					"a contact file naming employers would be refused")
+				assertNonFieldTarget(t, object, csvTargetCompanyRef, targets, created, patched,
+					"it names the company a contact works AT by its ref, and writing it would put a ref in a field on the contact",
+					"a contact file naming employers by ref would be refused")
 			}
 		})
 	}
@@ -557,9 +560,10 @@ func TestColumnProfileReachesTheWireWithSamplesAndRate(t *testing.T) {
 // rather than left behind. A target absent from here must reach both the create
 // and the update input.
 var nonFieldTargets = gatekit.Waive(map[string]string{
-	csvTargetID:     "names the RECORD the row is — a selector, not a value",
-	csvEmployerName: "names an EDGE from the record to a company — written as a relationship, not a column",
-	csvTargetRef:    "the row's id in the source system — the part's source key, not a value",
+	csvTargetID:         "names the RECORD the row is — a selector, not a value",
+	csvEmployerName:     "names an EDGE from the record to a company — written as a relationship, not a column",
+	csvTargetCompanyRef: "names an EDGE from the record to a company by its ref — written as a relationship, not a column",
+	csvTargetRef:        "the row's id in the source system — the part's source key, not a value",
 })
 
 // createOnlyTargets are columns the import writes when it creates a record and
