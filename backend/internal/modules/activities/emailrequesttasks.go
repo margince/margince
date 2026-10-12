@@ -76,7 +76,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
      AND (`+assigneeSQL+`) IS NOT NULL
      AND NOT EXISTS (SELECT 1 FROM activity_reader_state mine
        WHERE mine.activity_id = a.id AND mine.reader_id = (`+assigneeSQL+`)
-       AND (mine.state = 'not_mine' OR (mine.state = 'snoozed' AND NOT `+wake+`)))`)
+       AND (mine.state = 'not_mine' OR (mine.state = 'snoozed' AND NOT `+wake+`)))`, neverRelaxed)
 		if err != nil {
 			return err
 		}

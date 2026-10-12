@@ -121,6 +121,8 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 		"core's MIME walk saw in a raw RFC822 message; a unit hands over an already-normalized " +
 		"record with no parts to walk, so it carried no calendar payload for anyone to have read. " +
 		"Publishing it would let a unit assert a parse it never performed",
+	"CalendarMethod": "empty is the right answer for a unit, for the reason HasCalendarPart's is: the method " +
+		"is read from a calendar part of a raw RFC822 message, and a unit hands over no parts to read it from",
 	"SentByColleague": "zero is the right answer for a unit. The sink sets it itself, from a From address " +
 		"that exactly matches a seat; a unit stating it would name a colleague as the author of a message " +
 		"the core never checked against its seats",

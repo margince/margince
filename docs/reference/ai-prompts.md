@@ -4187,7 +4187,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `owed_verdict` / `owed`
 
-`system 2,475 B (~618 tok)`: rules 2,203 B · boundary 272 B · after boundary 0 B · **cacheable 89%**
+`system 2,729 B (~682 tok)`: rules 2,457 B · boundary 272 B · after boundary 0 B · **cacheable 90%**
 
 <details><summary>system prompt</summary>
 
@@ -4206,6 +4206,9 @@ the reader among the Cc recipients only is informs_us even when its text asks fo
 is asks_us only when the text names the copied reader as the one to act. A message that
 carries a calendar invitation is asks_us only when it also asks something a calendar reply cannot
 answer.
+A message that is a reply to a calendar invitation (an attendee accepting, declining or proposing
+another time through their calendar) is informs_us unless its own words ask the recipient side
+something new: the calendar has already recorded the answer.
 A message WITHOUT a calendar invitation that proposes a specific time for a call or a meeting, or
 accepts one the recipient side has not yet confirmed, is asks_us: the slot is not agreed until they
 answer, so the sender is waiting on them. A message confirming a time the recipient side has

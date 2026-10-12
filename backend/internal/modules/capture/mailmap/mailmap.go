@@ -68,6 +68,7 @@ type Message struct {
 	// calendarNotice answers only the OUTBOUND contact-minting question, and an
 	// inbound invitation is a fact about the message either way.
 	hasCalendarPart bool
+	calendarMethod  string // the part's RFC 5546 method, "" when none is known
 	// deliveryReport is the RFC 3464 shape — `multipart/report` carrying
 	// `report-type=delivery-status`. Kept in its own right beside
 	// hasCalendarPart, and for the same reason: it is a fact about the message
@@ -147,7 +148,8 @@ func Parse(raw []byte, owner string) (Message, error) {
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
-	body, parts, drops, hasCalendarPart := extractText(reader)
+	body, parts, drops, calendar := extractText(reader)
+	hasCalendarPart := calendar.present
 
 	ownerLower := strings.ToLower(strings.TrimSpace(owner))
 	direction := connector.DirectionInbound
@@ -198,6 +200,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		machineTouched:   machineTouched,
 		calendarNotice:   calendarNotice,
 		hasCalendarPart:  hasCalendarPart,
+		calendarMethod:   calendar.method(),
 		deliveryReport:   deliveryReport,
 		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
@@ -397,6 +400,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			OccurredAt:      m.occurredAt,
 			Direction:       m.direction,
 			HasCalendarPart: m.hasCalendarPart,
+			CalendarMethod:  m.calendarMethod,
 		},
 		Source:       source,
 		CapturedBy:   "connector:" + connectorName,

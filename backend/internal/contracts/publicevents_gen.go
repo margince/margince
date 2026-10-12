@@ -30,6 +30,42 @@ func (e PublicEventActivityChangedFieldsAudience) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsCalendarMethod.
+const (
+	CalendarMethodAdd            PublicEventActivityChangedFieldsCalendarMethod = "ADD"
+	CalendarMethodCancel         PublicEventActivityChangedFieldsCalendarMethod = "CANCEL"
+	CalendarMethodCounter        PublicEventActivityChangedFieldsCalendarMethod = "COUNTER"
+	CalendarMethodDeclineCounter PublicEventActivityChangedFieldsCalendarMethod = "DECLINECOUNTER"
+	CalendarMethodPublish        PublicEventActivityChangedFieldsCalendarMethod = "PUBLISH"
+	CalendarMethodRefresh        PublicEventActivityChangedFieldsCalendarMethod = "REFRESH"
+	CalendarMethodReply          PublicEventActivityChangedFieldsCalendarMethod = "REPLY"
+	CalendarMethodRequest        PublicEventActivityChangedFieldsCalendarMethod = "REQUEST"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsCalendarMethod enum.
+func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
+	switch e {
+	case CalendarMethodAdd:
+		return true
+	case CalendarMethodCancel:
+		return true
+	case CalendarMethodCounter:
+		return true
+	case CalendarMethodDeclineCounter:
+		return true
+	case CalendarMethodPublish:
+		return true
+	case CalendarMethodRefresh:
+		return true
+	case CalendarMethodReply:
+		return true
+	case CalendarMethodRequest:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityChangedFieldsDirection.
 const (
 	DirectionBecameOutbound PublicEventActivityChangedFieldsDirection = "outbound"
@@ -885,7 +921,7 @@ type PublicEventActivityCaptured struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus the undo of a project filing, explicit request-reminder restoration's restored flag and capture's own-sent-mail direction correction — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+// PublicEventActivityChangedFields The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -895,6 +931,9 @@ type PublicEventActivityChangedFields struct {
 
 	// Body Whether the body was touched (a presence flag, not the content — bodies can be large and are never echoed onto the wire).
 	Body *bool `json:"body,omitempty"`
+
+	// CalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
+	CalendarMethod *PublicEventActivityChangedFieldsCalendarMethod `json:"calendar_method,omitempty"`
 
 	// Direction Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
 	Direction *PublicEventActivityChangedFieldsDirection `json:"direction,omitempty"`
@@ -933,6 +972,9 @@ type PublicEventActivityChangedFields struct {
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.
 type PublicEventActivityChangedFieldsAudience string
 
+// PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
+type PublicEventActivityChangedFieldsCalendarMethod string
+
 // PublicEventActivityChangedFieldsDirection Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
 type PublicEventActivityChangedFieldsDirection string
 
@@ -961,7 +1003,7 @@ type PublicEventActivityRelinkedRef struct {
 
 // PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the contact/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
 type PublicEventActivityUpdated struct {
-	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus the undo of a project filing, explicit request-reminder restoration's restored flag and capture's own-sent-mail direction correction — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+	// ChangedFields The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map.
 	ChangedFields PublicEventActivityChangedFields `json:"changed_fields"`
 }
 

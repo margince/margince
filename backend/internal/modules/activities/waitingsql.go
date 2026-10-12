@@ -283,7 +283,7 @@ var waitingRepliesSQL = `
 	   -- newsletter somebody recognised does not arrive as fresh work. Slots 11
 	   -- and 17 relax the not-sales and informs_us judgements for their hidden
 	   -- figures.
-	   AND ` + owedSQL("$%[1]d", "%[11]s", "%[17]s") + `
+	   AND ` + owedSQL("$%[1]d", "%[11]s", "%[17]s", "%[21]s") + `
 	   -- Set aside by THIS reader, and only this reader.
 	   --
 	   -- Judged against the row's CURRENT state rather than against what it was

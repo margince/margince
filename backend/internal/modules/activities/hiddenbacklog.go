@@ -330,7 +330,7 @@ func (s *Store) waitingStatement(
 		fmt.Sprintf("$%d", arg(readerAddresses)),
 		informsUs,
 		noKeyset, bookedDiscover,
-		setAside), nil
+		setAside, neverRelaxed), nil
 }
 
 // countWaiting is the statement above asked for how many.

@@ -920,7 +920,7 @@ export interface components {
              */
             entity_id: string;
         };
-        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus the undo of a project filing, explicit request-reminder restoration's restored flag and capture's own-sent-mail direction correction — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
+        /** @description The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
             /** @description True when explicit request acceptance restores an archived unfinished reminder. */
             restored?: boolean;
@@ -970,6 +970,11 @@ export interface components {
              * @enum {string}
              */
             audience?: "workspace" | "participants" | "selected";
+            /**
+             * @description The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
+             * @enum {string}
+             */
+            calendar_method?: "PUBLISH" | "REQUEST" | "REPLY" | "ADD" | "CANCEL" | "REFRESH" | "COUNTER" | "DECLINECOUNTER";
         };
         /** @description Payload for activity.updated — a BOUNDED delta (unlike the contact/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map. */
         PublicEventActivityUpdated: {
@@ -1838,6 +1843,7 @@ export const publicEventLeadDisqualifyReasonChangedChangeValues: ReadonlyArray<F
 export const publicEventActivityChangedFieldsMeeting_statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["meeting_status"]> = ["booked", "held", "no_show", "canceled"];
 export const publicEventActivityChangedFieldsDirectionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["direction"]> = ["outbound"];
 export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["audience"]> = ["workspace", "participants", "selected"];
+export const publicEventActivityChangedFieldsCalendar_methodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["calendar_method"]> = ["PUBLISH", "REQUEST", "REPLY", "ADD", "CANCEL", "REFRESH", "COUNTER", "DECLINECOUNTER"];
 export const publicEventForecastAssuranceCreatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["status"]> = ["complete", "incomplete"];
 export const publicEventForecastAssuranceCreatedReadinessValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["readiness"]> = ["ready", "ready_with_exceptions", "needs_review", "checks_incomplete"];
 export const publicEventForecastExceptionResolvedOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastExceptionResolved"]["outcome"]> = ["fixed_record", "added_evidence", "value_correct", "not_relevant", "remind_later", "reassign", "condition_cleared"];

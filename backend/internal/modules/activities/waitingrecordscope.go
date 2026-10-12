@@ -52,7 +52,7 @@ func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any
 // The subquery is uncorrelated — it computes its own candidate set rather
 // than reading the outer FROM — so its own `a` alias shadowing the outer
 // query's is harmless.
-func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.Time, entityType *string, entityID *ids.UUID, ownDomains, readerAddresses []string, horizonDays int, alsoBeforeTheCap string) (string, error) {
+func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.Time, entityType *string, entityID *ids.UUID, ownDomains, readerAddresses []string, horizonDays int, alsoBeforeTheCap, unjudgedResponses string) (string, error) {
 	instant := arg(asOf)
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
@@ -115,7 +115,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			fmt.Sprintf("$%d", arg(readerAddresses)),
 			neverRelaxed,
 			noKeyset, bookedDiscover,
-			neverRelaxed) +
+			neverRelaxed, unjudgedResponses) +
 		") waiting_thread)", nil
 }
 
@@ -126,7 +126,7 @@ func appendWaitingReplyClause(ctx context.Context, in ListActivitiesInput, arg f
 	if in.WaitingReplyAsOf == nil {
 		return where, nil
 	}
-	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID, in.ownDomains, in.readerAddresses, in.horizonDays, "")
+	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID, in.ownDomains, in.readerAddresses, in.horizonDays, "", neverRelaxed)
 	if err != nil {
 		return nil, err
 	}

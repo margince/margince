@@ -11,6 +11,11 @@ The owed verdict (`asks_us` or `informs_us`) decides what the sender asks for. T
 still needs action, even when its label is `meeting`. When a `noise` label disagrees, a confirmed
 request stays open for review and is not handed to anyone on its own.
 
+A reply to a calendar invite, such as a contact saying no to a meeting, is owed nothing on its own. It
+is owed only when the owed verdict says `asks_us` or someone took it on. Capture reads this from the
+method the mail's calendar part names (`REPLY`, `COUNTER` or `DECLINECOUNTER`). The owed verdict
+still reads every such mail, because a sender can put that method on any mail.
+
 The activities module owns the request state. Its shared checks serve the email brief, the waiting
 queue and the queue of mail still to classify. They also serve the reminders it files on its own, and
 the deal's read of its own requests. That last read runs apart from the newest history, so a request can

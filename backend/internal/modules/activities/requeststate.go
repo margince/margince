@@ -78,10 +78,17 @@ const confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQ
 
 const outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
+// calendarResponseSQL is an attendee answering an invitation (RFC 5546 REPLY,
+// COUNTER, DECLINECOUNTER). Such a message is owed an answer only when
+// confirmed: "Declined" waits on nobody, and its meeting label must not say so.
+// TestTheCalendarResponseReadersAgree holds it to calendarmethod.IsResponse.
+const calendarResponseSQL = `coalesce(a.calendar_method, '') IN ('REPLY', 'COUNTER', 'DECLINECOUNTER')`
+
 // A scheduling/commitment label is enough to keep an unjudged candidate for
 // review, never enough to assign it.
 const requestIntentSQL = confirmedRequestSQL + `
- OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting'))`
+ OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting')
+     AND NOT ` + calendarResponseSQL + `)`
 
 const requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`
 
@@ -92,5 +99,6 @@ const requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + 
 func reviewableRequestSQL(asOf string) string {
 	return requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
  OR (a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
-   OR (a.thread_key IS NOT NULL AND NOT ` + answeredSQL("a", asOf) + `))))`
+   OR (a.thread_key IS NOT NULL AND NOT ` + calendarResponseSQL + `
+       AND NOT ` + answeredSQL("a", asOf) + `))))`
 }
