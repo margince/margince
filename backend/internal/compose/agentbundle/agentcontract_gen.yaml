@@ -15226,6 +15226,12 @@ components:
           format: uuid
           description: >-
             Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
+        attendee_user_ids:
+          type: array
+          maxItems: 25
+          items: {type: string, format: uuid}
+          description: >-
+            Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
         duration_seconds: {type: [integer, 'null']}
         direction: {type: [string, 'null'], enum: [null, inbound, outbound]}
         meeting_status:

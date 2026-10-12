@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 66 |
 | Resources | 9 |
-| Tool catalog | 213.5 KB |
+| Tool catalog | 213.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 55536 |
+| Approx. wire tokens | 55619 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 85.6 KB | 40% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 57.1 KB | 26% | Yes, every step |
-| Input schemas | 55.0 KB | 25% | Yes, every step |
+| Input schemas | 55.3 KB | 25% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **112.1 KB** | **52%** | **the recurring cost** |
+| **Description + input schema** | **112.4 KB** | **52%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -89,7 +89,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 2.3 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.7 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 4.1 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 4.4 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
@@ -6779,6 +6779,15 @@ runs immediately; requires passport scope "write".)
 {
   "additionalProperties": false,
   "properties": {
+    "attendee_user_ids": {
+      "description": "Meeting or call only: the workspace members who attended besides you, ids from list_colleagues. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused.",
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "maxItems": 25,
+      "type": "array"
+    },
     "body": {
       "description": "Prose a colleague reads. Same language rule as subject.",
       "type": "string"

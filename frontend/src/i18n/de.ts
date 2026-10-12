@@ -4614,6 +4614,10 @@ export const de = {
   "log.transcriptUploadFailed":
     "Die Datei wurde nicht gelesen. Füge stattdessen den Text ein.",
   "log.attendee": "Teilnehmende",
+  "log.otherAttendees": "Weitere Teilnehmende",
+  "log.removeAttendee": "{name} entfernen",
+  "log.colleagues": "Teammitglieder, die dabei waren",
+  "log.addColleague": "Teammitglied hinzufügen",
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fälligkeitsdatum",

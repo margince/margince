@@ -363,8 +363,8 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `log_activity` | 1.00 | 6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
+| `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `progress_deal` | 1.00 | 3 | `case45_move_the_deal_on` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `change_lead_state` | 1.00 | 3 | `case40_sort_the_queue`, `case47_tidy_the_fair_list` |
