@@ -18931,12 +18931,8 @@ export interface paths {
          *     here rather than at row 40,000: the mapping is validated against the set
          *     of targets `uploadImportSource` reported for this object.
          *
-         *     Custom fields are NOT in that set. An import lands its rows through the
-         *     stores' caller-opened transaction seams, which refuse custom fields by
-         *     design — reading the catalog is the second connection those seams exist
-         *     to avoid — so a `cf_` target would be accepted, reported as written, and
-         *     dropped. It is refused here instead, and it arrives when the seam can
-         *     carry it.
+         *     The object's active custom fields are in that set, each by its `cf_` key.
+         *     Their values are checked against the field's type and picklist options.
          */
         post: operations["createImportRun"];
         delete?: never;
@@ -23020,10 +23016,9 @@ export interface components {
              * @description The closed set a mapping may name — every field this object can receive THROUGH AN
              *     IMPORT, which is not every field it has.
              *
-             *     Custom fields are absent on purpose. An import writes through the stores'
-             *     caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
-             *     target would be accepted, reported as written, and dropped. Naming one is refused by
-             *     `createImportRun` rather than silently ignored.
+             *     The object's active custom fields are targets, each by its `cf_` key. A column whose
+             *     header is a field's label or key is suggested onto it, and its values are checked
+             *     against the field's type and picklist options.
              */
             targets: string[];
         };

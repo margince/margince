@@ -70,6 +70,7 @@ func companyCreateFrom(fields map[string]string, sourceSystem, source string) co
 	in.SizeBand = importString(fields, "size_band")
 	in.Domains = companyDomainsFrom(fields)
 	in.Address = addressFrom(fields)
+	in.CustomFields = customFieldsFrom(fields)
 	return in
 }
 
@@ -90,12 +91,13 @@ func companyCreateFrom(fields map[string]string, sourceSystem, source string) co
 
 func companyUpdateFrom(changed map[string]string) contacts.UpdateCompanyInput {
 	in := contacts.UpdateCompanyInput{
-		DisplayName: importString(changed, fieldDisplayName),
-		LegalName:   importString(changed, "legal_name"),
-		Description: importString(changed, "description"),
-		Industry:    importString(changed, fieldIndustry),
-		SizeBand:    importString(changed, "size_band"),
-		Address:     addressFrom(changed),
+		DisplayName:  importString(changed, fieldDisplayName),
+		LegalName:    importString(changed, "legal_name"),
+		Description:  importString(changed, "description"),
+		Industry:     importString(changed, fieldIndustry),
+		SizeBand:     importString(changed, "size_band"),
+		Address:      addressFrom(changed),
+		CustomFields: customFieldsFrom(changed),
 	}
 	// The replace-set behind a pointer: nil leaves the stored domains alone, an
 	// empty slice CLEARS them. Taken only when the column actually carried a

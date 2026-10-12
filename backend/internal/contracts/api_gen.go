@@ -36399,10 +36399,9 @@ type ImportSourceProfile struct {
 	// Targets The closed set a mapping may name — every field this object can receive THROUGH AN
 	// IMPORT, which is not every field it has.
 	//
-	// Custom fields are absent on purpose. An import writes through the stores'
-	// caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
-	// target would be accepted, reported as written, and dropped. Naming one is refused by
-	// `createImportRun` rather than silently ignored.
+	// The object's active custom fields are targets, each by its `cf_` key. A column whose
+	// header is a field's label or key is suggested onto it, and its values are checked
+	// against the field's type and picklist options.
 	Targets []string `json:"targets"`
 }
 

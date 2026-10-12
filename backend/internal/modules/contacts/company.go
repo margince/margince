@@ -79,21 +79,20 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 // transaction — one whose own write must land with this company or not at
 // all. Same gates in the same order; only the transaction is borrowed.
 //
-// Custom fields are refused rather than dropped: the catalog they are matched
-// against is read in a transaction of its own, which is exactly the second
-// connection this seam exists to avoid taking.
-func (s *Store) CreateCompanyTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) (crmcontracts.Company, error) {
+// Custom fields ride on the columns the caller read before it opened the
+// transaction (ActiveCreateColumns); with none, they are refused, never dropped.
+func (s *Store) CreateCompanyTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, cols CustomColumns) (crmcontracts.Company, error) {
 	if err := auth.Require(ctx, "company", principal.ActionCreate); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	if err := refuseCustomFields(in.CustomFields); err != nil {
+	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	by, err := s.readyCompanyCreate(ctx, in)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	out, err := createCompanyInTx(ctx, tx, in, by, nil)
+	out, err := createCompanyInTx(ctx, tx, in, by, cols.cols)
 	if err != nil {
 		return out, err
 	}

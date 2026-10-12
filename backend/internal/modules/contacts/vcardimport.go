@@ -364,7 +364,7 @@ func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*id
 		company, createErr := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
 			DisplayName: name,
 			Source:      vcardSource,
-		})
+		}, CustomColumns{})
 		if createErr != nil {
 			return nil, createErr
 		}
@@ -483,7 +483,7 @@ func vcardEvidence(entry VCardEntry) string {
 // stage a second review of a review. The creating authority is the caller's —
 // the deciding human — so the store's own create gate answers for them.
 func (s *Store) CreateFromVCardReviewTx(ctx context.Context, tx pgx.Tx, entry VCardEntry) (ids.ContactID, error) {
-	contact, err := s.CreateContactTx(ctx, tx, contactFromVCard(entry))
+	contact, err := s.CreateContactTx(ctx, tx, contactFromVCard(entry), CustomColumns{})
 	if err != nil {
 		return ids.ContactID{}, fmt.Errorf("contacts: creating the reviewed card's contact: %w", err)
 	}

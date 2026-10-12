@@ -6,6 +6,8 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 
@@ -138,20 +140,15 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectContact: fieldEmail,
 }
 
-// importTargets is the closed set a mapping may name for one object.
-//
-// Custom-field (cf_*) columns are NOT in it, and that is a limit rather than an
-// oversight: an import lands its rows through the stores' caller-opened
-// transaction seams, which refuse custom fields by design — reading the
-// catalog is exactly the second connection those seams exist to avoid. So a
-// cf_ target would be accepted, reported as written, and dropped. Custom
-// fields arrive when the seam can carry them, not before.
-func importTargets(object string) ([]string, error) {
+// importTargets is the closed set a mapping may name for one object: its core
+// fields, then each active custom field by key, in column order.
+func importTargets(object string, cat importCatalog) ([]string, error) {
 	core, ok := csvTargets[object]
 	if !ok {
 		return nil, fmt.Errorf("import: %q has no mappable fields", object)
 	}
 	targets := append([]string(nil), core...)
+	targets = append(targets, slices.Sorted(maps.Keys(cat.byName))...)
 	if selectsByID(object) {
 		// Accepted as a column and absent from csvTargets, because those two
 		// lists answer different questions. csvTargets is what a row WRITES, and
@@ -324,17 +321,19 @@ func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source s
 	in.Phone = importString(fields, fieldLeadPhone)
 	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
+	in.CustomFields = customFieldsFrom(fields)
 	return in
 }
 
 // leadUpdateFrom builds the patch for the fields that actually differ.
 func leadUpdateFrom(changed map[string]string) contacts.UpdateLeadInput {
 	return contacts.UpdateLeadInput{
-		FullName:    importString(changed, fieldFullName),
-		Email:       importString(changed, fieldEmail),
-		Phone:       importString(changed, fieldLeadPhone),
-		Title:       importString(changed, fieldTitle),
-		CompanyName: importString(changed, "company_name"),
+		FullName:     importString(changed, fieldFullName),
+		Email:        importString(changed, fieldEmail),
+		Phone:        importString(changed, fieldLeadPhone),
+		Title:        importString(changed, fieldTitle),
+		CompanyName:  importString(changed, "company_name"),
+		CustomFields: customFieldsFrom(changed),
 	}
 }
 

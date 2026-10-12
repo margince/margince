@@ -31,10 +31,25 @@ var (
 	_ migration.UndoWriters = (*bundleWriters)(nil)
 )
 
+// runOptions is what a run decides for every part alike.
+type runOptions struct {
+	SourceName, OnDuplicate, ContextTag, OnBrokenLink string
+	// FromZip is a run staged from a ZIP, whose every link follows OnBrokenLink.
+	FromZip bool
+}
+
+// runOptionsOf reads the run-wide decisions off a stored mapping.
+func runOptionsOf(m migration.RunMapping) runOptions {
+	return runOptions{
+		SourceName: m.SourceName, OnDuplicate: m.OnDuplicate, ContextTag: m.ContextTag,
+		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0,
+	}
+}
+
 // newBundleWriters is where a run's run-wide reads happen, once, before the
 // engine walks any part; it builds one writer per part.
 func newBundleWriters(
-	_ context.Context, db *database.DB, runID migration.RunID, mapping *migration.RunMapping,
+	ctx context.Context, db *database.DB, runID migration.RunID, mapping *migration.RunMapping,
 ) (*bundleWriters, error) {
 	settled := migration.RunMapping{}
 	if mapping != nil {
@@ -51,7 +66,11 @@ func newBundleWriters(
 	options := runOptionsOf(settled)
 	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importSourceSystem(settled.SourceName))}
 	for _, part := range parts {
-		w := newCSVWriters(db, runID, part, options, b.links)
+		cols, err := readImportColumns(ctx, db, part.Object)
+		if err != nil {
+			return nil, err
+		}
+		w := newCSVWriters(db, runID, part, options, b.links, cols)
 		b.parts[part.Object] = w
 		if b.fallback == nil {
 			b.fallback = w

@@ -30,9 +30,13 @@ func (h importHandlers) profileBundle(
 	slices.SortStableFunc(ordered, func(a, b migration.BundlePart) int {
 		return slices.Index(migration.ImportOrder, a.Object) - slices.Index(migration.ImportOrder, b.Object)
 	})
+	catalogs, err := readImportCatalogs(ctx, h.db, migration.ImportOrder)
+	if err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
+	}
 	parts := make([]crmcontracts.ImportPartProfile, 0, len(ordered))
 	for _, part := range ordered {
-		profiled, err := profilePart(ctx, bundle, part)
+		profiled, err := profilePart(ctx, bundle, part, catalogs)
 		if err != nil {
 			return crmcontracts.ImportSourceProfile{}, importProblem(err)
 		}
@@ -66,7 +70,7 @@ func (h importHandlers) profileBundle(
 // mapping for every importable object, so the screen can change the file's type
 // without asking again. Every error names the file.
 func profilePart(
-	ctx context.Context, bundle migration.Bundle, part migration.BundlePart,
+	ctx context.Context, bundle migration.Bundle, part migration.BundlePart, catalogs map[string]importCatalog,
 ) (crmcontracts.ImportPartProfile, error) {
 	body, err := readBundleEntry(ctx, bundle, part.Entry)
 	if err != nil {
@@ -81,11 +85,11 @@ func profilePart(
 	}
 	suggestions := make(map[string]map[string]string, len(migration.ImportOrder))
 	for _, object := range migration.ImportOrder {
-		targets, err := importTargets(object)
+		targets, err := importTargets(object, catalogs[object])
 		if err != nil {
 			return crmcontracts.ImportPartProfile{}, err
 		}
-		suggestions[object] = migration.SuggestMapping(profile, targets)
+		suggestions[object] = suggestImportMapping(profile, targets, catalogs[object])
 	}
 	object := crmcontracts.ImportObject(part.Object)
 	return crmcontracts.ImportPartProfile{

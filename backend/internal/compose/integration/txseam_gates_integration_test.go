@@ -17,9 +17,9 @@ package integration
 // the same answer.
 //
 // One asymmetry is deliberate and is not tested here as a difference: a
-// caller-opened create refuses custom-field values, because the catalog they
-// are matched against cannot be read from inside the caller's transaction.
-// That refusal has its own arms in txseam_singleconn.
+// caller-opened create carries custom-field values only with the catalog its
+// caller read before opening the transaction. txseam_singleconn and
+// csvcustomfields hold both halves.
 //
 // The row count runs INSIDE the transaction the test opened, before the
 // rollback. That ordering is the point: a seam that inserted the row and then
@@ -118,7 +118,7 @@ func TestBothContactCreatesRefuseTheSameThings(t *testing.T) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
 	}
 	probe := f.refusedInTx(f.ungated, t, "contact", func(tx pgx.Tx) error {
-		_, err := f.contacts.CreateContactTx(f.ungated, tx, valid)
+		_, err := f.contacts.CreateContactTx(f.ungated, tx, valid, contacts.CustomColumns{})
 		return err
 	})
 	if !errors.Is(probe.err, apperrors.ErrPermissionDenied) {
@@ -136,7 +136,7 @@ func TestBothContactCreatesRefuseTheSameThings(t *testing.T) {
 	}
 	_, storeOpened := f.contacts.CreateContact(f.granted, malformed)
 	probe = f.refusedInTx(f.granted, t, "contact", func(tx pgx.Tx) error {
-		_, err := f.contacts.CreateContactTx(f.granted, tx, malformed)
+		_, err := f.contacts.CreateContactTx(f.granted, tx, malformed, contacts.CustomColumns{})
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)
@@ -153,7 +153,7 @@ func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
 	}
 	probe := f.refusedInTx(f.ungated, t, "company", func(tx pgx.Tx) error {
-		_, err := f.contacts.CreateCompanyTx(f.ungated, tx, valid)
+		_, err := f.contacts.CreateCompanyTx(f.ungated, tx, valid, contacts.CustomColumns{})
 		return err
 	})
 	if !errors.Is(probe.err, apperrors.ErrPermissionDenied) {
@@ -169,7 +169,7 @@ func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 	bad := contacts.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "manual", SizeBand: &band}
 	_, storeOpened := f.contacts.CreateCompany(f.granted, bad)
 	probe = f.refusedInTx(f.granted, t, "company", func(tx pgx.Tx) error {
-		_, err := f.contacts.CreateCompanyTx(f.granted, tx, bad)
+		_, err := f.contacts.CreateCompanyTx(f.granted, tx, bad, contacts.CustomColumns{})
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)
@@ -187,7 +187,7 @@ func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
 	}
 	probe := f.refusedInTx(f.ungated, t, "lead", func(tx pgx.Tx) error {
-		_, _, err := f.contacts.CreateLeadTx(f.ungated, tx, valid)
+		_, _, err := f.contacts.CreateLeadTx(f.ungated, tx, valid, contacts.CustomColumns{})
 		return err
 	})
 	if !errors.Is(probe.err, apperrors.ErrPermissionDenied) {
@@ -202,7 +202,7 @@ func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
 	bad := contacts.CreateLeadInput{Email: &email, Status: "promoted", Source: "manual"}
 	_, _, storeOpened := f.contacts.CreateLead(f.granted, bad)
 	probe = f.refusedInTx(f.granted, t, "lead", func(tx pgx.Tx) error {
-		_, _, err := f.contacts.CreateLeadTx(f.granted, tx, bad)
+		_, _, err := f.contacts.CreateLeadTx(f.granted, tx, bad, contacts.CustomColumns{})
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)
@@ -219,7 +219,7 @@ func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
 	}
 	probe := f.refusedInTx(f.ungated, t, "deal", func(tx pgx.Tx) error {
-		_, err := f.deals.CreateDealTx(f.ungated, tx, valid)
+		_, err := f.deals.CreateDealTx(f.ungated, tx, valid, deals.CustomColumns{})
 		return err
 	})
 	if !errors.Is(probe.err, apperrors.ErrPermissionDenied) {
@@ -238,7 +238,7 @@ func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
 	}
 	_, storeOpened := f.deals.CreateDeal(f.granted, half)
 	probe = f.refusedInTx(f.granted, t, "deal", func(tx pgx.Tx) error {
-		_, err := f.deals.CreateDealTx(f.granted, tx, half)
+		_, err := f.deals.CreateDealTx(f.granted, tx, half, deals.CustomColumns{})
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)
@@ -261,7 +261,7 @@ func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
 	}
 	_, storeOpened = f.deals.CreateDeal(f.granted, unpairedInput)
 	probe = f.refusedInTx(f.granted, t, "deal", func(tx pgx.Tx) error {
-		_, err := f.deals.CreateDealTx(f.granted, tx, unpairedInput)
+		_, err := f.deals.CreateDealTx(f.granted, tx, unpairedInput, deals.CustomColumns{})
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)

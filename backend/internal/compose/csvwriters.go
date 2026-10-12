@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -70,6 +71,8 @@ type csvWriters struct {
 	companyNameColumn string
 	// authors caches the seat each author cell resolves to, per run.
 	authors authorSeats
+	// cols is the part's custom fields, read before any row transaction opens.
+	cols importColumns
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no
 	// such outcome — so the count rides here and the report reads it.
@@ -87,30 +90,17 @@ const skipReasonNaturalKeyTaken = "natural_key_already_taken"
 // resolves.
 const skipReasonDuplicateEmail = "duplicate_email"
 
-// runOptions is what a run decides for every part alike.
-type runOptions struct {
-	SourceName, OnDuplicate, ContextTag, OnBrokenLink string
-	// FromZip is a run staged from a ZIP, whose every link follows OnBrokenLink.
-	FromZip bool
-}
-
-// runOptionsOf reads the run-wide decisions off a stored mapping.
-func runOptionsOf(m migration.RunMapping) runOptions {
-	return runOptions{
-		SourceName: m.SourceName, OnDuplicate: m.OnDuplicate, ContextTag: m.ContextTag,
-		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0,
-	}
-}
-
 // newCSVWriters builds the writer of one part: one object, one file.
 func newCSVWriters(
 	db *database.DB, runID migration.RunID, part migration.PartMapping, run runOptions, links *linkResolver,
+	cols importColumns,
 ) *csvWriters {
 	w := &csvWriters{
 		pool: db.Pool(),
 		// An imported contact can take a lead over, which carries the lead's
 		// stops and consent links (see newCounterpartyStore).
-		contacts: contacts.NewStore(db).WithStopCarrier(consent.NewStore(db)).
+		contacts: contacts.NewStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
+			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)),
 		tags:             collections.NewStore(db),
@@ -129,6 +119,7 @@ func newCSVWriters(
 		contextTag: parseContextTag(run.ContextTag),
 		nativeIDs:  map[string]ids.UUID{},
 		authors:    authorSeats{},
+		cols:       cols,
 	}
 	if run.FromZip && linksEmployer(part.Object) {
 		w.companyNameColumn = columnFor(part.Fields, csvEmployerName)
@@ -409,7 +400,7 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
-		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in)
+		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in, w.cols.store)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating lead %s: %w", row.ExternalID, err)
 		}
@@ -441,7 +432,7 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migr
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
-		company, err := w.contacts.CreateCompanyTx(ctx, tx, in)
+		company, err := w.contacts.CreateCompanyTx(ctx, tx, in, w.cols.store)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)
 		}

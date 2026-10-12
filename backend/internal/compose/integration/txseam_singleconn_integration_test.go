@@ -32,7 +32,6 @@ package integration
 
 import (
 	"context"
-	"errors"
 	"net/url"
 	"os"
 	"testing"
@@ -264,75 +263,66 @@ func TestUpdateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	}
 }
 
-// The three caller-opened creates the flip lands its estate through. Each one
-// runs with the catalog WIRED and a workspace that has an active custom column
-// — the arrangement under which a seam that reached for the catalog would
-// block — and each refuses custom-field values rather than dropping them,
-// because the catalog that would match them cannot be read from in here.
+// The caller-opened creates the import lands its rows through. Each one runs
+// with the catalog WIRED and a workspace that has an active custom column, the
+// arrangement under which a seam that reached for the catalog would block. The
+// columns its caller read before the transaction ride the create.
 
 func TestCreateContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "contact", "Tier")
+	active, err := f.contacts.ActiveCreateColumns(f.ctx, "contact")
+	if err != nil {
+		t.Fatalf("reading the contact's active custom columns: %v", err)
+	}
 	f.requireCatalogAnswers(t, "contact")
 
 	var created crmcontracts.Contact
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = f.contacts.CreateContactTx(f.ctx, tx, contacts.CreateContactInput{
-			FullName: "Ada Lovelace", Source: "manual",
-		})
+			FullName: "Ada Lovelace", Source: "manual", CustomFields: map[string]any{col: "gold"},
+		}, active)
 		return err
 	}); err != nil {
 		t.Fatalf("creating the contact inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
 	}
-	if created.FullName != "Ada Lovelace" {
-		t.Errorf("created contact = %+v, want the one the caller asked for", created)
-	}
-
-	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		_, err := f.contacts.CreateContactTx(f.ctx, tx, contacts.CreateContactInput{
-			FullName: "Grace Hopper", Source: "manual", CustomFields: map[string]any{col: "gold"},
-		})
-		return err
-	})
-	if !errors.Is(err, contacts.ErrCustomFieldsNeedTheStoresOwnTransaction) {
-		t.Fatalf("err = %v, want the custom-field refusal — a create that dropped them would report success with the values missing", err)
+	if created.FullName != "Ada Lovelace" || created.AdditionalProperties[col] != "gold" {
+		t.Errorf("created contact = %+v, want the one the caller asked for with %s = gold", created, col)
 	}
 }
 
 func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "company", "Segment")
+	active, err := f.contacts.ActiveCreateColumns(f.ctx, "company")
+	if err != nil {
+		t.Fatalf("reading the company's active custom columns: %v", err)
+	}
 	f.requireCatalogAnswers(t, "company")
 
 	var created crmcontracts.Company
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = f.contacts.CreateCompanyTx(f.ctx, tx, contacts.CreateCompanyInput{
-			DisplayName: "Analytical Engines", Source: "manual",
-		})
+			DisplayName: "Analytical Engines", Source: "manual", CustomFields: map[string]any{col: "enterprise"},
+		}, active)
 		return err
 	}); err != nil {
 		t.Fatalf("creating the company inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
 	}
-	if created.DisplayName != "Analytical Engines" {
-		t.Errorf("created company = %+v, want the one the caller asked for", created)
-	}
-
-	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		_, err := f.contacts.CreateCompanyTx(f.ctx, tx, contacts.CreateCompanyInput{
-			DisplayName: "Difference Engines", Source: "manual", CustomFields: map[string]any{col: "enterprise"},
-		})
-		return err
-	})
-	if !errors.Is(err, contacts.ErrCustomFieldsNeedTheStoresOwnTransaction) {
-		t.Fatalf("err = %v, want the custom-field refusal", err)
+	if created.DisplayName != "Analytical Engines" || created.AdditionalProperties[col] != "enterprise" {
+		t.Errorf("created company = %+v, want the one the caller asked for with %s = enterprise", created, col)
 	}
 }
 
 func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "lead", "Segment")
+	active, err := f.contacts.ActiveCreateColumns(f.ctx, "lead")
+	if err != nil {
+		t.Fatalf("reading the lead's active custom columns: %v", err)
+	}
 	f.requireCatalogAnswers(t, "lead")
 
 	email := "jean@bartik.test"
@@ -342,25 +332,14 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 		var err error
 		created, fresh, err = f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
 			FullName: new("Jean Bartik"), Email: &email, Status: "new", Source: "manual",
-		})
+			CustomFields: map[string]any{col: "enterprise"},
+		}, active)
 		return err
 	}); err != nil {
 		t.Fatalf("creating the lead inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
 	}
-	if !fresh || created.Email == nil || string(*created.Email) != email {
-		t.Errorf("created lead = %+v (fresh=%v), want the one the caller asked for", created, fresh)
-	}
-
-	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		other := "betty@holberton.test"
-		_, _, err := f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
-			FullName: new("Betty Holberton"), Email: &other, Status: "new", Source: "manual",
-			CustomFields: map[string]any{col: "enterprise"},
-		})
-		return err
-	})
-	if !errors.Is(err, contacts.ErrCustomFieldsNeedTheStoresOwnTransaction) {
-		t.Fatalf("err = %v, want the custom-field refusal", err)
+	if !fresh || created.Email == nil || string(*created.Email) != email || created.AdditionalProperties[col] != "enterprise" {
+		t.Errorf("created lead = %+v (fresh=%v), want the one the caller asked for with %s = enterprise", created, fresh, col)
 	}
 }
 
@@ -368,6 +347,10 @@ func TestCreateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
 	pipeline, stage, _ := DealFixture(t, f.e)
 	col := f.defineTxSeamField(t, "deal", "Renewal Risk")
+	active, err := f.deals.ActiveDealColumns(f.ctx)
+	if err != nil {
+		t.Fatalf("reading the deal's active custom columns: %v", err)
+	}
 	f.requireCatalogAnswers(t, "deal")
 
 	var created crmcontracts.Deal
@@ -375,23 +358,13 @@ func TestCreateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 		var err error
 		created, err = f.deals.CreateDealTx(f.ctx, tx, deals.CreateDealInput{
 			Name: "Difference Engine", PipelineID: pipeline, StageID: stage, Source: "manual",
-		})
+			CustomFields: map[string]any{col: "high"},
+		}, active)
 		return err
 	}); err != nil {
 		t.Fatalf("creating the deal inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
 	}
-	if created.Name != "Difference Engine" {
-		t.Errorf("created deal = %+v, want the one the caller asked for", created)
-	}
-
-	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		_, err := f.deals.CreateDealTx(f.ctx, tx, deals.CreateDealInput{
-			Name: "Analytical Engine", PipelineID: pipeline, StageID: stage, Source: "manual",
-			CustomFields: map[string]any{col: "high"},
-		})
-		return err
-	})
-	if !errors.Is(err, deals.ErrCustomFieldsNeedTheStoresOwnTransaction) {
-		t.Fatalf("err = %v, want the custom-field refusal", err)
+	if created.Name != "Difference Engine" || created.AdditionalProperties[col] != "high" {
+		t.Errorf("created deal = %+v, want the one the caller asked for with %s = high", created, col)
 	}
 }

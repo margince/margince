@@ -50,7 +50,7 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row) (migr
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
-		contact, err := w.contacts.CreateContactTx(ctx, tx, in)
+		contact, err := w.contacts.CreateContactTx(ctx, tx, in, w.cols.store)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating contact %s: %w", row.ExternalID, err)
 		}

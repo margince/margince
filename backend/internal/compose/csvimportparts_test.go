@@ -27,7 +27,7 @@ func TestAPartsRequestBecomesOneMappingPerFile(t *testing.T) {
 	m, err := stagedMappingFrom(partsRequest(
 		crmcontracts.ImportPartRequest{File: "contacts.csv", Object: crmcontracts.ImportObjectContact, Mapping: map[string]string{"ref": "ref", "email": "email"}},
 		crmcontracts.ImportPartRequest{File: "companies.csv", Object: crmcontracts.ImportObjectCompany, Mapping: map[string]string{"ref": "ref", "name": "display_name"}},
-	))
+	), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestAPartsRequestNamingOneTypeTwiceIsRefused(t *testing.T) {
 	part := crmcontracts.ImportPartRequest{File: "a.csv", Object: crmcontracts.ImportObjectLead, Mapping: map[string]string{"email": "email"}}
 	second := part
 	second.File = "b.csv"
-	_, err := stagedMappingFrom(partsRequest(part, second))
+	_, err := stagedMappingFrom(partsRequest(part, second), nil)
 	var v *httperr.DetailedError
 	if !errors.As(err, &v) || v.Fields[0].Code != "duplicate_object" {
 		t.Fatalf("err = %v, want a duplicate_object refusal", err)
@@ -60,13 +60,13 @@ func TestARequestWithBothShapesIsRefused(t *testing.T) {
 	req := partsRequest(crmcontracts.ImportPartRequest{File: "a.csv", Object: crmcontracts.ImportObjectLead, Mapping: map[string]string{"email": "email"}})
 	obj := crmcontracts.ImportObjectLead
 	req.Object = &obj
-	if _, err := stagedMappingFrom(req); err == nil {
+	if _, err := stagedMappingFrom(req, nil); err == nil {
 		t.Fatal("object+mapping and parts together must be refused")
 	}
 }
 
 func TestARequestWithNeitherShapeIsRefused(t *testing.T) {
-	_, err := stagedMappingFrom(crmcontracts.CreateImportRunRequest{Connector: "csv", SourceRef: "ws/import/x"})
+	_, err := stagedMappingFrom(crmcontracts.CreateImportRunRequest{Connector: "csv", SourceRef: "ws/import/x"}, nil)
 	var v *httperr.DetailedError
 	if !errors.As(err, &v) || v.Fields[0].Code != "one_shape" {
 		t.Fatalf("err = %v, want a one_shape refusal", err)
@@ -77,7 +77,7 @@ func TestASourceNameOutsideTheContractPatternIsRefused(t *testing.T) {
 	req := partsRequest(crmcontracts.ImportPartRequest{File: "a.csv", Object: crmcontracts.ImportObjectLead, Mapping: map[string]string{"email": "email"}})
 	bad := "HubSpot export (2)"
 	req.SourceName = &bad
-	_, err := stagedMappingFrom(req)
+	_, err := stagedMappingFrom(req, nil)
 	var v *httperr.DetailedError
 	if !errors.As(err, &v) || v.Fields[0].Field != "source_name" {
 		t.Fatalf("err = %v, want a source_name refusal", err)
@@ -88,13 +88,13 @@ func TestAPartsRequestKeepsAChosenBrokenLinkPolicy(t *testing.T) {
 	req := partsRequest(crmcontracts.ImportPartRequest{File: "a.csv", Object: crmcontracts.ImportObjectLead, Mapping: map[string]string{"email": "email"}})
 	policy := crmcontracts.ImportOnBrokenLinkDropLink
 	req.OnBrokenLink = &policy
-	m, err := stagedMappingFrom(req)
+	m, err := stagedMappingFrom(req, nil)
 	if err != nil || m.OnBrokenLink != "drop_link" {
 		t.Fatalf("m = %+v, err = %v", m, err)
 	}
 	unknown := crmcontracts.ImportOnBrokenLink("guess")
 	req.OnBrokenLink = &unknown
-	if _, err := stagedMappingFrom(req); err == nil {
+	if _, err := stagedMappingFrom(req, nil); err == nil {
 		t.Fatal("a broken-link policy outside the enum must be refused")
 	}
 }
@@ -103,7 +103,7 @@ func TestASingleCSVRequestStillMapsAsToday(t *testing.T) {
 	obj, mapping := crmcontracts.ImportObjectLead, map[string]string{"Email": "email"}
 	m, err := stagedMappingFrom(crmcontracts.CreateImportRunRequest{
 		Connector: "csv", SourceRef: "ws/import/x", Object: &obj, Mapping: &mapping,
-	})
+	}, nil)
 	if err != nil || m.Object != migration.ObjectLead || m.SourceKey != "Email" || len(m.PartList()) != 1 {
 		t.Fatalf("m = %+v, err = %v", m, err)
 	}
@@ -113,7 +113,7 @@ func TestASingleCSVRequestMappingRefRecordsItAsTheSourceKey(t *testing.T) {
 	obj, mapping := crmcontracts.ImportObjectCompany, map[string]string{"Name": "display_name", "Company ID": "ref"}
 	m, err := stagedMappingFrom(crmcontracts.CreateImportRunRequest{
 		Connector: "csv", SourceRef: "ws/import/x", Object: &obj, Mapping: &mapping,
-	})
+	}, nil)
 	if err != nil || m.SourceKey != "Company ID" {
 		t.Fatalf("m = %+v, err = %v", m, err)
 	}
@@ -219,7 +219,7 @@ func TestAPartsRequestNamingAFileTwiceOrNoneIsRefused(t *testing.T) {
 		"repeated": partsRequest(lead, company),
 		"blank":    partsRequest(lead, blank),
 	} {
-		_, err := stagedMappingFrom(req)
+		_, err := stagedMappingFrom(req, nil)
 		var v *httperr.DetailedError
 		if !errors.As(err, &v) || v.Fields[0].Code != "file_name" {
 			t.Errorf("%s: err = %v, want a file_name refusal", name, err)
@@ -231,7 +231,7 @@ func TestAPartsRequestWithATopLevelSourceKeyIsRefused(t *testing.T) {
 	req := partsRequest(crmcontracts.ImportPartRequest{File: "a.csv", Object: crmcontracts.ImportObjectLead, Mapping: map[string]string{"email": "email"}})
 	key := "email"
 	req.SourceKey = &key
-	_, err := stagedMappingFrom(req)
+	_, err := stagedMappingFrom(req, nil)
 	var v *httperr.DetailedError
 	if !errors.As(err, &v) || v.Fields[0].Code != "one_shape" {
 		t.Fatalf("err = %v, want one_shape: a part carries its own source_key", err)

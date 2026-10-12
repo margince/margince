@@ -44,6 +44,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"title":        in.Title != nil,
 				"company_name": in.CompanyName != nil,
 				"author":       in.Author.AuthorName != nil,
+				"cf_tier":      in.CustomFields["cf_tier"] != nil,
 			}
 			patched := map[string]bool{
 				"full_name":    up.FullName != nil,
@@ -51,6 +52,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"phone":        up.Phone != nil,
 				"title":        up.Title != nil,
 				"company_name": up.CompanyName != nil,
+				"cf_tier":      up.CustomFields["cf_tier"] != nil,
 			}
 			return created, patched
 		},
@@ -71,8 +73,10 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"address.region":      in.Address != nil && in.Address.Region != nil,
 				"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
 				"address.country":     in.Address != nil && in.Address.Country != nil,
+				"cf_tier":             in.CustomFields["cf_tier"] != nil,
 			}
 			patched := map[string]bool{
+				"cf_tier":      up.CustomFields["cf_tier"] != nil,
 				"display_name": up.DisplayName != nil,
 				"legal_name":   up.LegalName != nil,
 				"industry":     up.Industry != nil,
@@ -107,8 +111,10 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"address.region":      in.Address != nil && in.Address.Region != nil,
 				"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
 				"address.country":     in.Address != nil && in.Address.Country != nil,
+				"cf_tier":             in.CustomFields["cf_tier"] != nil,
 			}
 			patched := map[string]bool{
+				"cf_tier":    up.CustomFields["cf_tier"] != nil,
 				"full_name":  up.FullName != nil,
 				"first_name": up.FirstName != nil,
 				"last_name":  up.LastName != nil,
@@ -128,7 +134,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 		},
 	} {
 		t.Run(object, func(t *testing.T) {
-			targets, err := importTargets(object)
+			targets, err := importTargets(object, tierCatalog())
 			if err != nil {
 				t.Fatalf("importTargets: %v", err)
 			}
@@ -171,23 +177,6 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					"a contact file naming employers by ref would be refused")
 			}
 		})
-	}
-}
-
-// A custom-field column is not offered, because the caller-opened transaction
-// the import writes through refuses custom fields: offering one would accept a
-// column, report the row as written, and drop the value.
-func TestImportTargetsOfferNoCustomFields(t *testing.T) {
-	for _, object := range []string{migration.ObjectLead, migration.ObjectCompany, migration.ObjectContact} {
-		targets, err := importTargets(object)
-		if err != nil {
-			t.Fatalf("importTargets(%s): %v", object, err)
-		}
-		for _, target := range targets {
-			if len(target) > 3 && target[:3] == "cf_" {
-				t.Errorf("%s advertises %q, which the import write path cannot carry", object, target)
-			}
-		}
 	}
 }
 
@@ -281,7 +270,7 @@ func TestMappingComparesColumnsTheWayTheRowBuilderDoes(t *testing.T) {
 // caller who guesses wrong has nowhere to look. An agent driving this over MCP
 // cannot open the field catalog the way a screen can.
 func TestMappingRefusalsNameTheFieldsTheObjectAccepts(t *testing.T) {
-	targets, err := importTargets(migration.ObjectCompany)
+	targets, err := importTargets(migration.ObjectCompany, importCatalog{})
 	if err != nil {
 		t.Fatalf("importTargets: %v", err)
 	}
@@ -809,5 +798,5 @@ func mappingFor(
 ) (migration.RunMapping, error) {
 	obj := crmcontracts.ImportObject(object)
 	req.Object, req.Mapping = &obj, &mapping
-	return stagedMappingFrom(req)
+	return stagedMappingFrom(req, nil)
 }

@@ -47,6 +47,7 @@ func contactCreateFrom(fields map[string]string, sourceSystem, source string) co
 	in.Title = importString(fields, fieldTitle)
 	in.Address = addressFrom(fields)
 	in.Emails = contactEmailsFrom(fields)
+	in.CustomFields = customFieldsFrom(fields)
 	return in
 }
 
@@ -55,11 +56,12 @@ func contactCreateFrom(fields map[string]string, sourceSystem, source string) co
 // mentioned an address does not read as "this contact now has none".
 func contactUpdateFrom(changed map[string]string) contacts.UpdateContactInput {
 	in := contacts.UpdateContactInput{
-		FullName:  importString(changed, fieldFullName),
-		FirstName: importString(changed, "first_name"),
-		LastName:  importString(changed, "last_name"),
-		Title:     importString(changed, fieldTitle),
-		Address:   addressFrom(changed),
+		FullName:     importString(changed, fieldFullName),
+		FirstName:    importString(changed, "first_name"),
+		LastName:     importString(changed, "last_name"),
+		Title:        importString(changed, fieldTitle),
+		Address:      addressFrom(changed),
+		CustomFields: customFieldsFrom(changed),
 	}
 	in.Emails = contactEmailsFrom(changed)
 	return in

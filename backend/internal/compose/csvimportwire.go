@@ -35,8 +35,9 @@ import (
 
 // stagedMappingFrom turns a create request into the mapping a run is staged
 // with. A single CSV sends object and mapping, and a ZIP sends one part per
-// file. A request with both shapes or neither is refused.
-func stagedMappingFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMapping, error) {
+// file. A request with both shapes or neither is refused. catalogs holds each
+// named object's custom fields; an object missing from it has none.
+func stagedMappingFrom(req crmcontracts.CreateImportRunRequest, catalogs map[string]importCatalog) (migration.RunMapping, error) {
 	single := req.Object != nil || req.Mapping != nil
 	if single == (req.Parts != nil) || (req.Parts != nil && req.SourceKey != nil) {
 		return migration.RunMapping{}, httperr.Validation("parts", "one_shape",
@@ -51,14 +52,15 @@ func stagedMappingFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMa
 			return migration.RunMapping{}, httperr.Validation("mapping", "one_shape",
 				"A single CSV needs both object and mapping.")
 		}
-		part, err := partMappingFrom(string(*req.Object), *req.Mapping, req.SourceKey)
+		object := string(*req.Object)
+		part, err := partMappingFrom(object, *req.Mapping, req.SourceKey, catalogs[object])
 		if err != nil {
 			return migration.RunMapping{}, err
 		}
 		m.Object, m.Fields, m.SourceKey = part.Object, part.Fields, part.SourceKey
 		return m, nil
 	}
-	m.Parts, err = partsMappingFrom(*req.Parts)
+	m.Parts, err = partsMappingFrom(*req.Parts, catalogs)
 	if err != nil {
 		return migration.RunMapping{}, err
 	}
@@ -67,7 +69,7 @@ func stagedMappingFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMa
 
 // partsMappingFrom validates a ZIP's parts: each names its own file and its own
 // object, and each mapping holds as a single CSV's would.
-func partsMappingFrom(requested []crmcontracts.ImportPartRequest) ([]migration.PartMapping, error) {
+func partsMappingFrom(requested []crmcontracts.ImportPartRequest, catalogs map[string]importCatalog) ([]migration.PartMapping, error) {
 	if len(requested) == 0 {
 		return nil, httperr.Validation("parts", "empty", "Name at least one file of the ZIP to import.")
 	}
@@ -87,7 +89,7 @@ func partsMappingFrom(requested []crmcontracts.ImportPartRequest) ([]migration.P
 				fmt.Sprintf("%q and %q are both %s files; a ZIP imports one file per type.", other, p.File, object))
 		}
 		fileOf[object] = p.File
-		part, err := partMappingFrom(object, p.Mapping, p.SourceKey)
+		part, err := partMappingFrom(object, p.Mapping, p.SourceKey, catalogs[object])
 		if err != nil {
 			return nil, err
 		}
@@ -127,8 +129,10 @@ func unsupportedObject() error {
 // partMappingFrom validates one file's mapping against the object's live field
 // catalog. A target the object does not have is refused here rather than at row
 // 40,000 of a commit.
-func partMappingFrom(object string, mapping map[string]string, requestedKey *string) (migration.PartMapping, error) {
-	targets, err := importTargets(object)
+func partMappingFrom(
+	object string, mapping map[string]string, requestedKey *string, cat importCatalog,
+) (migration.PartMapping, error) {
+	targets, err := importTargets(object, cat)
 	if err != nil {
 		return migration.PartMapping{}, unsupportedObject()
 	}

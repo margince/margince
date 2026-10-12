@@ -90,14 +90,13 @@ func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontract
 // CreateLead's does: false when the idempotency replay found the lead already
 // landed, so a caller can tell a fresh capture from a re-import.
 //
-// Custom fields are refused rather than dropped: the catalog they are matched
-// against is read in a transaction of its own, which is exactly the second
-// connection this seam exists to avoid taking.
-func (s *Store) CreateLeadTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput) (crmcontracts.Lead, bool, error) {
+// Custom fields ride on the columns the caller read before it opened the
+// transaction (ActiveCreateColumns); with none, they are refused, never dropped.
+func (s *Store) CreateLeadTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, cols CustomColumns) (crmcontracts.Lead, bool, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionCreate); err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
-	if err := refuseCustomFields(in.CustomFields); err != nil {
+	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
 	// Reading the contact takes a connection of its own, which is what this
@@ -110,7 +109,7 @@ func (s *Store) CreateLeadTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput)
 	if err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
-	out, created, err := createLeadInTx(ctx, tx, in, by, nil)
+	out, created, err := createLeadInTx(ctx, tx, in, by, cols.cols)
 	if err != nil || !created {
 		return out, created, err
 	}
