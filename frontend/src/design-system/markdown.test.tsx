@@ -484,6 +484,37 @@ describe("autolink shows where every link goes", () => {
   });
 });
 
+describe("a link to a Margince page stays in this tab", () => {
+  const own = () => `${window.location.origin}/#/deals/42`;
+  const other = "https://example.com/#/deals/42";
+
+  it.each([
+    ["a bare address", (href: string) => href],
+    ["a written link", (href: string) => `[the deal](${href})`],
+  ])(
+    "opens %s on this origin in place, and one elsewhere in a new tab",
+    (_, write) => {
+      render(
+        <Markdown source={`${write(own())}\n\n${write(other)}`} autolink />,
+      );
+      const [inApp, outbound] = screen.getAllByRole("link");
+      expect(inApp).toHaveAttribute("href", own());
+      expect(inApp).not.toHaveAttribute("target");
+      expect(inApp).toHaveAttribute("rel", "noopener noreferrer");
+      expect(outbound).toHaveAttribute("href", other);
+      expect(outbound).toHaveAttribute("target", "_blank");
+    },
+  );
+
+  it("still shows the real address behind a label on this origin", () => {
+    const { container } = render(
+      <Markdown source={`[Your bank](${own()})`} autolink />,
+    );
+    expect(screen.getByRole("link").textContent).toBe(own());
+    expect(visibleText(container)).toBe(`Your bank (${own()})`);
+  });
+});
+
 describe("which characters a bare address takes", () => {
   const linked = (source: string) => {
     render(<Markdown source={source} autolink />);
