@@ -27,6 +27,7 @@ package gates
 // answer itself.
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/printer"
@@ -327,7 +328,7 @@ func migratedFunctionBody(rest string) (string, int, error) {
 		if standard := sqlStandardReturn.FindStringIndex(rest[:statementEnd]); standard != nil {
 			return rest[standard[0]:statementEnd], statementEnd, nil
 		}
-		return "", 0, fmt.Errorf("its body is neither dollar-quoted nor a RETURN, so the census cannot read it")
+		return "", 0, errors.New("its body is neither dollar-quoted nor a RETURN, so the census cannot read it")
 	}
 	tag := rest[open[0]:open[1]]
 	closing := strings.Index(rest[open[1]:], tag)
