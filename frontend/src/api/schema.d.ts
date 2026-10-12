@@ -23149,11 +23149,11 @@ export interface components {
              */
             targets: string[];
         };
-        /** @description One file of an uploaded ZIP, profiled the way a single CSV is. */
+        /** @description One file of an uploaded ZIP, profiled the way a single CSV is. Only a file whose name names a type is a part; any other file is listed under `ignored`. */
         ImportPartProfile: {
             /** @description The entry's path inside the ZIP. */
             file: string;
-            object?: components["schemas"]["ImportObject"];
+            object: components["schemas"]["ImportObject"];
             columns: components["schemas"]["ImportColumn"][];
             rows_profiled: number;
             /** @description One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call. */

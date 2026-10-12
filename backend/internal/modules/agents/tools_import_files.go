@@ -128,13 +128,13 @@ func mappedParts(
 	previews := make([]ImportPreviewFile, 0, len(args))
 	for _, f := range args {
 		at := slices.IndexFunc(profiled, func(p crmcontracts.ImportPartProfile) bool {
-			return importObjectName(p.Object) == f.Object
+			return string(p.Object) == f.Object
 		})
 		if at < 0 {
 			return nil, nil, fmt.Errorf("the stored files hold no %s file for %q", f.Object, f.Name)
 		}
 		part := profiled[at]
-		view := crmcontracts.ImportSourceProfile{Object: part.Object, Columns: part.Columns}
+		view := crmcontracts.ImportSourceProfile{Object: &part.Object, Columns: part.Columns}
 		mapping := maps.Clone(part.SuggestedMappings[f.Object])
 		if mapping == nil {
 			mapping = map[string]string{}

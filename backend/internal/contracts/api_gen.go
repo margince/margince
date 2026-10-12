@@ -36299,7 +36299,7 @@ type ImportOnBrokenLink string
 // the count is separate from `created`.
 type ImportOnDuplicate string
 
-// ImportPartProfile One file of an uploaded ZIP, profiled the way a single CSV is.
+// ImportPartProfile One file of an uploaded ZIP, profiled the way a single CSV is. Only a file whose name names a type is a part; any other file is listed under `ignored`.
 type ImportPartProfile struct {
 	Columns []ImportColumn `json:"columns"`
 
@@ -36331,8 +36331,8 @@ type ImportPartProfile struct {
 	// already belongs to another contact, and files a review pair for a near
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
-	Object       *ImportObject `json:"object,omitempty"`
-	RowsProfiled int           `json:"rows_profiled"`
+	Object       ImportObject `json:"object"`
+	RowsProfiled int          `json:"rows_profiled"`
 
 	// SuggestedMappings One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call.
 	SuggestedMappings map[string]map[string]string `json:"suggested_mappings"`

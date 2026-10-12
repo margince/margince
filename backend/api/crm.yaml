@@ -33060,11 +33060,11 @@ components:
 
     ImportPartProfile:
       type: object
-      description: One file of an uploaded ZIP, profiled the way a single CSV is.
-      required: [file, columns, rows_profiled, suggested_mappings]
+      description: One file of an uploaded ZIP, profiled the way a single CSV is. Only a file whose name names a type is a part; any other file is listed under `ignored`.
+      required: [file, object, columns, rows_profiled, suggested_mappings]
       properties:
         file:   { type: string, description: 'The entry''s path inside the ZIP.' }
-        object: { $ref: '#/components/schemas/ImportObject' }   # absent when the file name names no type
+        object: { $ref: '#/components/schemas/ImportObject' }
         columns:
           type: array
           items: { $ref: '#/components/schemas/ImportColumn' }

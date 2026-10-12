@@ -91,10 +91,9 @@ func profilePart(
 		}
 		suggestions[object] = suggestImportMapping(profile, targets, catalogs[object])
 	}
-	object := crmcontracts.ImportObject(part.Object)
 	return crmcontracts.ImportPartProfile{
 		File:              part.Entry,
-		Object:            &object,
+		Object:            crmcontracts.ImportObject(part.Object),
 		Columns:           toContractColumns(profile),
 		RowsProfiled:      profile.RowsProfiled,
 		SuggestedMappings: suggestions,

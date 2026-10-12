@@ -129,12 +129,12 @@ func twoPartProfile() crmcontracts.ImportSourceProfile {
 	company, contact := crmcontracts.ImportObject(importObjectCompany), crmcontracts.ImportObject(importObjectContact)
 	parts := []crmcontracts.ImportPartProfile{
 		{
-			File: "companies.csv", Object: &company,
+			File: "companies.csv", Object: company,
 			Columns:           []crmcontracts.ImportColumn{{Header: "ref"}, {Header: "name"}},
 			SuggestedMappings: map[string]map[string]string{importObjectCompany: {"ref": "ref", "name": "display_name"}},
 		},
 		{
-			File: "contacts.csv", Object: &contact,
+			File: "contacts.csv", Object: contact,
 			Columns:           []crmcontracts.ImportColumn{{Header: "ref"}, {Header: "email"}},
 			SuggestedMappings: map[string]map[string]string{importObjectContact: {"ref": "ref", "email": "email"}},
 		},

@@ -63,7 +63,7 @@ function asPart(payload: unknown): ImportPartProfile {
   const rows_profiled = read("rows_profiled");
   if (
     typeof file !== "string" ||
-    !(object === undefined || isImportObject(object)) ||
+    !isImportObject(object) ||
     !Array.isArray(columns) ||
     typeof rows_profiled !== "number"
   ) {
