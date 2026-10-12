@@ -1143,14 +1143,11 @@ function isSetupSection(section: Section): section is SetupSection {
   return section in SETUP_LABEL;
 }
 
+// The row keeps its own order, not the address list's that `available` follows.
 // Custom reports open from Reports; a reader who may not read saved reports
 // still asks their own questions, so for them it is a tab of its own.
 export function analyticsTabs(available: readonly Section[]): Section[] {
-  // In the row's own order: `available` follows the address list, which is
-  // not the order a reader meets the sections in.
-  const tabs = TAB_SECTIONS.filter((candidate) =>
-    available.includes(candidate),
-  );
+  const tabs = TAB_SECTIONS.filter((section) => available.includes(section));
   return tabs.includes("reports") || !available.includes("questions")
     ? tabs
     : [...tabs, "questions"];
