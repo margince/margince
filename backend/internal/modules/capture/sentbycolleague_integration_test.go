@@ -1,0 +1,126 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package capture_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+)
+
+// colleagueCopy is the copy a seat's mailbox receives when a colleague answers
+// a customer and copies the seat: From the colleague, To the customer.
+func colleagueCopy(sourceID, from string) connector.NormalizedRecord {
+	rec := mailRecord(sourceID, from, from, "arne@client.io", "rep@acme.com", "patrick@client.io")
+	rec.Participants = []connector.MessageParticipant{
+		{Email: "arne@client.io", Role: connector.ParticipantRoleTo},
+		{Email: "rep@acme.com", Role: connector.ParticipantRoleCC},
+		{Email: "patrick@client.io", Role: connector.ParticipantRoleCC},
+	}
+	return rec
+}
+
+type storedMail struct {
+	direction, counterparty string
+	attested                bool
+	colleague               *ids.UUID
+	fromUser                *ids.UUID
+}
+
+func storedMailFor(ctx context.Context, t *testing.T, db *database.DB, sourceID string) storedMail {
+	t.Helper()
+	var m storedMail
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT a.direction, coalesce(a.counterparty_email, ''), a.counterparty_outbound_attested, a.sent_by_colleague,
+			       (SELECT p.user_id FROM activity_participant p
+			         WHERE p.activity_id = a.id AND p.role = 'from' AND p.user_id IS NOT NULL)
+			  FROM activity a WHERE a.source_id = $1`, sourceID).
+			Scan(&m.direction, &m.counterparty, &m.attested, &m.colleague, &m.fromUser)
+	}); err != nil {
+		t.Fatalf("reading the captured mail: %v", err)
+	}
+	return m
+}
+
+func seedSeat(ctx context.Context, t *testing.T, db *database.DB, email, status string) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name, status) VALUES ($1, $2, $2, $3)`,
+			id, email, status)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding %s: %v", email, err)
+	}
+	return id
+}
+
+// A colleague's answer to a customer is the workspace's own mail to that
+// customer: outbound, to the first outside recipient, written by the colleague
+// and not by the seat whose mailbox held the copy. Nobody attested it.
+func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	colleague := seedSeat(ctx, t, db, "marcus@acme.com", "invited")
+
+	if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat),
+		colleagueCopy("colleague-1", "Marcus@acme.com")); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	got := storedMailFor(ctx, t, db, "colleague-1")
+	if got.direction != connector.DirectionOutbound {
+		t.Errorf("direction = %q, want outbound: the customer's question would stay owed", got.direction)
+	}
+	if got.counterparty != "arne@client.io" {
+		t.Errorf("counterparty = %q, want the first outside recipient", got.counterparty)
+	}
+	if got.attested {
+		t.Error("the copy is attested, but no provider vouched that this mailbox sent it")
+	}
+	if got.colleague == nil || *got.colleague != colleague {
+		t.Errorf("sent_by_colleague = %v, want the colleague %v", got.colleague, colleague)
+	}
+	if got.fromUser == nil || *got.fromUser != colleague {
+		t.Errorf("the From participant is %v, want the colleague %v and not the seat", got.fromUser, colleague)
+	}
+}
+
+// Only a seat's exact address is a colleague. An archived seat, or another
+// address at the own domain, stays the inbound mail capture always filed.
+func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	gone := seedSeat(ctx, t, db, "gone@acme.com", "deactivated")
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE app_user SET archived_at = now() WHERE id = $1`, gone)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, from := range []string{"gone@acme.com", "sales@acme.com"} {
+		t.Run(from, func(t *testing.T) {
+			if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat), colleagueCopy("not-"+from, from)); err != nil {
+				t.Fatalf("Upsert: %v", err)
+			}
+			got := storedMailFor(ctx, t, db, "not-"+from)
+			if got.direction != connector.DirectionInbound || got.colleague != nil {
+				t.Errorf("mail from %s was read as a colleague's (direction %q, colleague %v)", from, got.direction, got.colleague)
+			}
+		})
+	}
+}

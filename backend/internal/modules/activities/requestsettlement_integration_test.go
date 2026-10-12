@@ -387,6 +387,38 @@ func TestAForgedThreadIsNotSettledByOurReplyToSomebodyElse(t *testing.T) {
 	}
 }
 
+// A colleague's answer, held as a copy in another seat's mailbox, settles the
+// request; the same reply with nobody named as its author does not.
+//
+// sent_by_colleague is written by capture alone, a module this package cannot
+// call, so the fixture stamps it on a row the real writer logged.
+func TestAColleaguesCopiedReplyOffersTheRequest(t *testing.T) {
+	e := setupLoad(t)
+	request := seedEmailRequest(t, e, "Answered by a colleague", "commitment", OwedVerdictAsksUs)
+	var key string
+	if err := e.owner.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`, request).Scan(&key); err != nil {
+		t.Fatal(err)
+	}
+	subject, body, direction := "Re: request", "Lars is away; here is the answer.", "outbound"
+	at := requestInstant.Add(time.Hour)
+	reply, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{
+		Kind: "email", Subject: &subject, Body: &body, Direction: &direction,
+		ThreadKey: key, Source: "test", OccurredAt: &at, CounterpartyEmail: requestCounterparty,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := repliedIDs(t, e, requestInstant.Add(48*time.Hour))[request]; ok {
+		t.Fatal("an unattested reply that names no colleague settled the request — a typed From would then do the same")
+	}
+	if _, err := e.owner.Exec(e.as(), `UPDATE activity SET sent_by_colleague = $1 WHERE id = $2`, e.other, reply.Id); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := repliedIDs(t, e, requestInstant.Add(48*time.Hour))[request]; !ok {
+		t.Fatal("a colleague's reply on the customer's thread did not offer the request for settlement")
+	}
+}
+
 // The counterparty is carried out of the selection so the conversation read can
 // bind to it without reading the column a second time. A candidate that lost it
 // would make that read unbindable, and an unbindable read is the whole defect.

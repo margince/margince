@@ -5,6 +5,7 @@ public.activity.activity_audience_check CHECK ((audience = ANY (ARRAY['workspace
 public.activity.activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text]))))
 public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
 public.activity.activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES channel_provider(provider)
+public.activity.activity_colleague_mail_is_outbound CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound'::text)))
 public.activity.activity_direction_check CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound'::text, 'outbound'::text]))))
 public.activity.activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL)))
 public.activity.activity_exact_booking_duration CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))
@@ -39,6 +40,7 @@ public.activity.activity_restriction_needs_class CHECK (((restricted_at IS NULL)
 public.activity.activity_restriction_window CHECK (((restricted_until IS NULL) OR (restricted_until > restricted_at)))
 public.activity.activity_retention_class_known CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence'::text)))
 public.activity.activity_retention_class_stamped CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))
+public.activity.activity_sent_by_colleague_fkey FOREIGN KEY (sent_by_colleague) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
@@ -92,6 +94,7 @@ public.activity.restricted_until timestamp with time zone gen=- def=-
 public.activity.retention_class text gen=- def=-
 public.activity.retention_class_at timestamp with time zone gen=- def=-
 public.activity.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) || setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) || ' '::text) || COALESCE(body, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))
+public.activity.sent_by_colleague uuid gen=- def=-
 public.activity.source text NOT NULL gen=- def=-
 public.activity.source_activity_id uuid gen=- def=-
 public.activity.source_author_id uuid gen=- def=-
