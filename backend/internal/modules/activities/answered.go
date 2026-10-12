@@ -160,7 +160,14 @@ func touchAnswerArm(asker, touch, walk string) answerArm {
 // second correspondent, and that answers nobody else on it. A Bcc copy is not
 // an answer either, even when a colleague's copy took it as its counterparty.
 // A message with no sender address, a chat, binds on the thread alone.
+//
+// ourOutboundInThisThread asks a narrower question, for settlement evidence:
+// attested mail to one stored counterparty. It decides no badge, so it keeps
+// neither the To/Cc rows nor the Bcc test read here.
 func threadAnswerArm(inbound, later string) answerArm {
+	// The off-thread arms' senderAddresses starts from the `from` row for its
+	// index plan. Here the folded counterparty counts too: an inbound row may
+	// have no `from` row.
 	sender := `SELECT ` + inbound + `.counterparty_email
 	     UNION
 	    SELECT lower(btrim(answer_known.email)) FROM activity_participant answer_asker

@@ -26,7 +26,8 @@ import (
 //
 // The counterparty is the ladder's stand-in, picked among the recipients only.
 // rec.Addresses also lists every From address, so a co-author beside the
-// colleague would otherwise stand in for the customer.
+// colleague would otherwise stand in for the customer. Past the participant cap
+// every recipient is withheld, so the withheld parties are candidates too.
 func (s *Sink) asSentByColleagueTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (connector.NormalizedRecord, ActivityFields, error) {
@@ -44,8 +45,8 @@ func (s *Sink) asSentByColleagueTx(
 	}
 	from := foldAddress(cp.Email)
 	recipients := rec
-	recipients.Addresses = make([]string, 0, len(rec.Participants))
-	for _, p := range rec.Participants {
+	recipients.Addresses = make([]string, 0, len(rec.Participants)+len(rec.WithheldParties))
+	for _, p := range slices.Concat(rec.Participants, rec.WithheldParties) {
 		if foldAddress(p.Email) != from {
 			recipients.Addresses = append(recipients.Addresses, p.Email)
 		}

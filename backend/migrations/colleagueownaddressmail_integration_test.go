@@ -60,8 +60,57 @@ func TestAColleaguesMailUnderAnOwnAddressIsOurs(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// A customer's question, captured before the customer was invited as a seat.
+	var question, invitedLater string
+	if err := conn.QueryRow(ctx, `
+		INSERT INTO activity (kind, subject, direction, occurred_at, source_system, source_id, source, captured_by,
+		                      counterparty_email)
+		VALUES ('email', 'Question', 'inbound', now(), 'gmail', 'before-invite-1', 'gmail:seed', 'connector:gmail:' || $1,
+		        'alice@client.test') RETURNING id`, seat).Scan(&question); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'to', 'dana@client.test')`, question); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.QueryRow(ctx, `
+		INSERT INTO app_user (email, display_name, status, created_at) VALUES ('alice@client.test', 'Alice', 'invited', now() + interval '1 minute')
+		RETURNING id`).Scan(&invitedLater); err != nil {
+		t.Fatal(err)
+	}
+
+	// Left alone: a copy naming no outside recipient, and the colleague's mail
+	// captured by their own mailbox.
+	untouched := map[string]string{}
+	for sourceID, capturer := range map[string]string{"internal-only-1": seat, "own-mailbox-1": colleague} {
+		var id string
+		if err := conn.QueryRow(ctx, `
+			INSERT INTO activity (kind, subject, direction, occurred_at, source_system, source_id, source, captured_by,
+			                      counterparty_email)
+			VALUES ('email', 'Lunch', 'inbound', now(), 'gmail', $1, 'gmail:seed', 'connector:gmail:' || $2,
+			        'sam@colleague.test') RETURNING id`, sourceID, capturer).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		untouched[sourceID] = id
+	}
+	if _, err := conn.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'to', 'dana@client.test')`,
+		untouched["own-mailbox-1"]); err != nil {
+		t.Fatal(err)
+	}
+
 	execFile(ctx, t, conn, colleagueMailUnderOwnAddress)
 	execFile(ctx, t, conn, colleagueMailUnderOwnAddress)
+
+	for sourceID, id := range untouched {
+		if left := colleagueCopyState(ctx, t, conn, id, colleague); left.direction != "inbound" || left.byColleague {
+			t.Errorf("%s is %+v, want the inbound mail it was", sourceID, left)
+		}
+	}
+
+	if later := colleagueCopyState(ctx, t, conn, question, invitedLater); later.direction != "inbound" || later.byColleague {
+		t.Errorf("a question from a seat invited after it was captured is %+v, want the inbound mail it was", later)
+	}
 
 	got := colleagueCopyState(ctx, t, conn, copied, colleague)
 	if got != (copyState{direction: "outbound", counterparty: "dana@client.test", byColleague: true, fromColleague: true, rereads: 1}) {

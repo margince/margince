@@ -43,7 +43,10 @@ WITH own_domain AS (
            ORDER BY array_position(ARRAY['to', 'cc', 'bcc'], r.role), r.id
            LIMIT 1) AS recipient
     FROM activity a
+    -- A seat created after the mail was captured was not a colleague when
+    -- capture read it: a customer invited later keeps their questions.
     JOIN app_user u ON lower(u.email) = a.counterparty_email AND u.archived_at IS NULL
+     AND u.created_at <= a.created_at
    WHERE a.kind = 'email' AND a.direction = 'inbound' AND NOT a.has_calendar_part
      AND a.captured_by LIKE 'connector:%'
      AND split_part(a.captured_by, ':', 3) <> u.id::text
@@ -68,16 +71,16 @@ SELECT 'system', 'migration', 'update', 'activity', id,
        jsonb_build_object('migration', '1791782100_a_colleagues_mail_is_ours_under_an_own_address')
   FROM reread;
 
-DELETE FROM activity_request_settlement s USING audit_log reread
- WHERE s.request_activity_id = reread.entity_id AND reread.action = 'update'
-   AND reread.after->>'migration' = '1791782100_a_colleagues_mail_is_ours_under_an_own_address';
+-- Every colleague copy, as in 1791778974: the earlier ones were cleaned there,
+-- and capture files no request on outbound mail, so these are the rows above.
+DELETE FROM activity_request_settlement s USING activity a
+ WHERE s.request_activity_id = a.id AND a.sent_by_colleague IS NOT NULL;
 
 -- The reminders are locked first, and the human test runs in the next
 -- statement, for the reason 1791778974 gives.
 SELECT count(*) FROM (
   SELECT r.id FROM activity r JOIN activity a ON a.id = r.source_activity_id
-   WHERE EXISTS (SELECT 1 FROM audit_log reread WHERE reread.entity_id = a.id AND reread.action = 'update'
-           AND reread.after->>'migration' = '1791782100_a_colleagues_mail_is_ours_under_an_own_address')
+   WHERE a.sent_by_colleague IS NOT NULL
      AND r.source_system = 'email_request' AND NOT r.is_done AND r.archived_at IS NULL
      FOR UPDATE OF r
 ) locked;
@@ -86,8 +89,7 @@ WITH retired AS (
   UPDATE activity r
      SET archived_at = now()
     FROM activity a
-   WHERE EXISTS (SELECT 1 FROM audit_log reread WHERE reread.entity_id = a.id AND reread.action = 'update'
-           AND reread.after->>'migration' = '1791782100_a_colleagues_mail_is_ours_under_an_own_address')
+   WHERE a.sent_by_colleague IS NOT NULL
      AND r.source_system = 'email_request' AND r.source_activity_id = a.id
      AND NOT r.is_done AND r.archived_at IS NULL
      AND NOT EXISTS (SELECT 1 FROM audit_log worked
