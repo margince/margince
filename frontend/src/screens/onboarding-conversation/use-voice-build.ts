@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import type { Dispatch } from "react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
@@ -87,14 +87,16 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
 
   const poll = useQuery({
     queryKey: ["voice-build", profileId, buildId],
-    enabled: profileId !== null && buildId !== null,
-    queryFn: async (): Promise<VoiceBuild> => {
-      return unwrap(
-        await api.GET("/voice-profiles/{id}/builds/{buildId}", {
-          params: { path: { id: profileId ?? "", buildId: buildId ?? "" } },
-        }),
-      );
-    },
+    queryFn:
+      profileId !== null && buildId !== null
+        ? async (): Promise<VoiceBuild> => {
+            return unwrap(
+              await api.GET("/voice-profiles/{id}/builds/{buildId}", {
+                params: { path: { id: profileId, buildId } },
+              }),
+            );
+          }
+        : skipToken,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       if (status === "queued" || status === "running") {
@@ -173,15 +175,18 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
   // read degrades the result card to its honest empty line, never blocks.
   const builtVersion = useQuery({
     queryKey: ["voice-built-version", profileId, buildId],
-    enabled: profileId !== null && poll.data?.status === "succeeded",
-    queryFn: async (): Promise<VoiceProfileVersion | null> => {
-      const data = unwrap(
-        await api.GET("/voice-profiles/{id}/versions", {
-          params: { path: { id: profileId ?? "" } },
-        }),
-      );
-      return pickBuiltVersion(data.data);
-    },
+    enabled: poll.data?.status === "succeeded",
+    queryFn:
+      profileId !== null
+        ? async (): Promise<VoiceProfileVersion | null> => {
+            const data = unwrap(
+              await api.GET("/voice-profiles/{id}/versions", {
+                params: { path: { id: profileId } },
+              }),
+            );
+            return pickBuiltVersion(data.data);
+          }
+        : skipToken,
   });
 
   return {

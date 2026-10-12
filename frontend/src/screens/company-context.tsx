@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ArrowRight, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
@@ -402,32 +407,24 @@ export function CompanyContextCard() {
 
   const siteRead = useQuery({
     queryKey: ["company-context-refresh", readID],
-    enabled: readID !== null,
-    queryFn: async (): Promise<SiteRead> => {
-      return unwrap(
-        await api.GET("/company/site-reads/{readId}", {
-          params: { path: { readId: readID ?? "" } },
-        }),
-      );
-    },
+    queryFn:
+      readID !== null
+        ? async (): Promise<SiteRead> =>
+            unwrap(
+              await api.GET("/company/site-reads/{readId}", {
+                params: { path: { readId: readID } },
+              }),
+            )
+        : skipToken,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === "queued" || status === "reading" ? 900 : false;
     },
   });
 
-  // What the reviewer starts from, as ONE comparable string, and the effect
-  // below seeds from it rather than from the array.
-  //
-  // The poll re-fetches this read every 900ms while the crawl is still running
-  // and hands back a new array each time. Keyed on the array's identity, the
-  // seed therefore ran on every tick: it rebuilt the default Set roughly
-  // once a second and wiped whatever the reviewer had ticked or cleared in the
-  // meantime — a change they had deliberately deselected reappeared under their
-  // cursor, and the box they ticked was gone by the time they read the next
-  // row. What the seed is really about is the ARRIVAL of a set of proposals,
-  // which is what this names: two polls that propose the same changes produce
-  // the same string and the effect does not run again.
+  // What the reviewer starts from, as one comparable string. The poll returns
+  // a new array every 900ms. The seed effect must run only when new proposals
+  // arrive, or it resets the reviewer's ticks.
   const defaultSelection = (siteRead.data?.comparisons ?? [])
     .filter(
       (item) =>
