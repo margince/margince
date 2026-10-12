@@ -53060,7 +53060,7 @@ type ListImportRunsParams struct {
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import. UTF-8; the first row is the header.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
@@ -53088,7 +53088,7 @@ type UploadImportSourceMultipartBody struct {
 	// already belongs to another contact, and files a review pair for a near
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
-	Object ImportObject `json:"object"`
+	Object *ImportObject `json:"object,omitempty"`
 }
 
 // CreateCorpusJSONBody defines parameters for CreateCorpus.

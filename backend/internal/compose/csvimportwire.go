@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"path"
 	"regexp"
 	"sort"
 	"strconv"
@@ -344,6 +345,8 @@ func importProblem(err error) error {
 		return httperr.Validation("file", "not_utf8", err.Error())
 	case errors.Is(err, migration.ErrSourceUnreadable):
 		return httperr.Validation("file", "unreadable", err.Error())
+	case errors.Is(err, migration.ErrBundleRefused):
+		return httperr.Validation("file", "bundle_refused", err.Error())
 	case errors.Is(err, migration.ErrObjectNotInSource):
 		return httperr.Validation("object", "mismatch", err.Error())
 	case errors.Is(err, blobstore.ErrNotFound):
@@ -419,15 +422,23 @@ func rowsOf(rep *migration.Report, object string) int {
 	return 0
 }
 
+// importUpload is one uploaded file. Object is empty for a ZIP, whose file
+// names say what each part holds.
+type importUpload struct {
+	Object   string
+	FileName string
+	Body     []byte
+}
+
 // readImportUpload takes the multipart body apart under the deployment's import
-// cap and returns the object the rows are and the file's bytes.
+// cap and returns the object the rows are, the file's base name and its bytes.
 //
 // The bytes are read whole rather than streamed to the blobstore, and that is
 // deliberate: the same upload must be BOTH profiled and stored, and a stream
 // can only be consumed once. The cap is what makes reading it whole safe, and
 // MaxBytesReader (not a bare LimitReader) is what turns an over-cap upload into
 // a refusal rather than a file silently cut in half.
-func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (string, []byte, error) {
+func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (importUpload, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	// upload:route /v1/imports/sources — the ceiling this parse runs under is granted to that
 	// path in compose.uploadCeilings, and TestEveryMultipartParseNamesItsRoute
@@ -437,17 +448,12 @@ func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (stri
 		// The cap is DERIVED, never spelled again in prose: this sentence said
 		// "10 MB" while the constant beside it decided the real answer, and the
 		// two were free to drift the moment either moved.
-		return "", nil, httperr.MultipartRefusal(err, limit)
+		return importUpload{}, httperr.MultipartRefusal(err, limit)
 	}
 
-	object := strings.TrimSpace(r.FormValue("object"))
-	if _, ok := csvTargets[object]; !ok {
-		return "", nil, unsupportedObject()
-	}
-
-	file, _, err := r.FormFile("file")
+	file, header, err := r.FormFile("file")
 	if err != nil {
-		return "", nil, httperr.Validation("file", "missing", "Attach the file to import as `file`.")
+		return importUpload{}, httperr.Validation("file", "missing", "Attach the file to import as `file`.")
 	}
 	defer func(ctx context.Context) {
 		if cerr := file.Close(); cerr != nil {
@@ -457,12 +463,16 @@ func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (stri
 
 	body, err := readAllUpload(file)
 	if err != nil {
-		return "", nil, httperr.Validation("file", "unreadable", "The upload could not be read.")
+		return importUpload{}, httperr.Validation("file", "unreadable", "The upload could not be read.")
 	}
 	if len(body) == 0 {
-		return "", nil, httperr.Validation("file", "empty", "The uploaded file has no content.")
+		return importUpload{}, httperr.Validation("file", "empty", "The uploaded file has no content.")
 	}
-	return object, body, nil
+	object := strings.TrimSpace(r.FormValue("object"))
+	if _, ok := csvTargets[object]; !ok && !migration.IsZip(body) {
+		return importUpload{}, unsupportedObject()
+	}
+	return importUpload{Object: object, FileName: path.Base(header.Filename), Body: body}, nil
 }
 
 func readAllUpload(file multipart.File) ([]byte, error) {

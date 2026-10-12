@@ -72968,10 +72968,10 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import. UTF-8; the first row is the header.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header.
                      */
                     file: string;
-                    object: components["schemas"]["ImportObject"];
+                    object?: components["schemas"]["ImportObject"];
                 };
             };
         };

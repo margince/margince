@@ -67,6 +67,10 @@ type importDispositionDTO struct {
 type importIssueDTO struct {
 	Line   int    `json:"line"`
 	Reason string `json:"reason"`
+	File   string `json:"file"`
+	Kind   string `json:"kind"`
+	Column string `json:"column"`
+	Value  string `json:"value"`
 }
 
 type importLinksDTO struct {
@@ -88,6 +92,11 @@ type importReportDTO struct {
 	Issues        []importIssueDTO     `json:"issues"`
 	SourceKeyUsed string               `json:"source_key_used"`
 	Mapping       map[string]string    `json:"mapping"`
+	Parts         []struct {
+		File     string `json:"file"`
+		Object   string `json:"object"`
+		RowsRead int    `json:"rows_read"`
+	} `json:"parts"`
 }
 
 type leadListDTO struct {
