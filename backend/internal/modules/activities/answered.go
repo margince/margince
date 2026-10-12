@@ -157,8 +157,9 @@ func touchAnswerArm(asker, touch, walk string) answerArm {
 // answered the customer whether or not this reader may see it.
 //
 // The reply must be sent to the sender. One thread can hold our mail to a
-// second correspondent, and that answers nobody else on it. A message with no
-// sender address, a chat, binds on the thread alone.
+// second correspondent, and that answers nobody else on it. A Bcc copy is not
+// an answer either, even when a colleague's copy took it as its counterparty.
+// A message with no sender address, a chat, binds on the thread alone.
 func threadAnswerArm(inbound, later string) answerArm {
 	sender := `SELECT ` + inbound + `.counterparty_email
 	     UNION
@@ -173,7 +174,10 @@ func threadAnswerArm(inbound, later string) answerArm {
 	    AND answer_thread.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
 	    AND answer_thread.direction = 'outbound'
 	    AND (` + inbound + `.counterparty_email IS NULL
-	      OR answer_thread.counterparty_email IN (` + sender + `)
+	      OR (answer_thread.counterparty_email IN (` + sender + `)
+	        AND NOT EXISTS (SELECT 1 FROM activity_participant answer_blind
+	             WHERE answer_blind.activity_id = answer_thread.id AND answer_blind.role = 'bcc'
+	               AND lower(btrim(answer_blind.address)) = answer_thread.counterparty_email))
 	      OR EXISTS (SELECT 1 FROM activity_participant answer_told
 	           WHERE answer_told.activity_id = answer_thread.id AND answer_told.role IN ('to', 'cc')
 	             AND lower(btrim(answer_told.address)) IN (` + sender + `)))

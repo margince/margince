@@ -12,8 +12,8 @@ import (
 )
 
 // Our mail on a customer's thread answers them only when it is sent to them.
-// Mail to a second correspondent on the same thread leaves the customer
-// unanswered; a reply that copies them answers.
+// Mail to a second correspondent on the same thread, or a Bcc copy, leaves the
+// customer unanswered; a reply that copies them answers.
 func TestAReplyOnTheThreadToSomebodyElseDoesNotAnswerTheSender(t *testing.T) {
 	e := setupLoad(t)
 	contact := ids.NewV7()
@@ -43,6 +43,19 @@ func TestAReplyOnTheThreadToSomebodyElseDoesNotAnswerTheSender(t *testing.T) {
 	if elsewhere.Answered != before.Answered {
 		t.Fatalf("the answered count moved %d → %d: our mail to another correspondent on the thread answered the sender",
 			before.Answered, elsewhere.Answered)
+	}
+
+	blind := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, counterparty_email, source, captured_by)
+		VALUES ($1, 'email', 'outbound', 'Re: Question', now() - interval '90 minutes', $2, $3, 'seed', 'system')`,
+		blind, thread, sender)
+	e.exec(t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'bcc', $2)`, blind, sender)
+	bcc, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bcc.Answered != before.Answered {
+		t.Fatalf("the answered count moved %d → %d: a Bcc copy answered the sender", before.Answered, bcc.Answered)
 	}
 
 	copied := ids.NewV7()
