@@ -10,7 +10,7 @@ import {
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
 import { entityTimelineKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "./common";
 import { type RelinkKind, useRecordTargets } from "./recordtargets";
 
 // Moving a filed message to the record it actually belongs to, extracted from
@@ -116,42 +116,38 @@ export function RelinkModal({
         throwProblem({ title: t("compose.relinkNoVersion") });
       }
       if (threadKey && thread) {
-        const { data, error } = await api.POST("/activities/relink-thread", {
-          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+        return unwrap(
+          await api.POST("/activities/relink-thread", {
+            params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+            body: {
+              thread_key: threadKey,
+              entity_type: kind,
+              entity_id: target.id,
+              replace_existing_of_type: replace,
+            },
+          }),
+        );
+      }
+      return unwrap(
+        await api.POST("/activities/{id}/relink", {
+          params: {
+            // The version the reader's copy was read at, so a relink cannot overwrite
+            // a change nobody saw. Unpinned is last-write-wins, so requireVersion
+            // refuses the write and the mutation's error path tells the reader.
+            // The idempotency key goes inside the precondition, not in its own
+            // `header:`: they share one slot, and written twice the later wins.
+            ...ifMatch(requireVersion(version ?? undefined), {
+              "Idempotency-Key": crypto.randomUUID(),
+            }),
+            path: { id: activityId },
+          },
           body: {
-            thread_key: threadKey,
             entity_type: kind,
             entity_id: target.id,
             replace_existing_of_type: replace,
           },
-        });
-        if (error) throwProblem(error);
-        return data;
-      }
-      const { data, error } = await api.POST("/activities/{id}/relink", {
-        params: {
-          // The version the reader's copy was read at, so a relink cannot
-          // overwrite a change nobody saw. requireVersion refuses the write
-          // rather than sending it unpinned: unpinned is last-write-wins, and
-          // the mutation's own error path is what tells the reader it did not
-          // go through.
-          //
-          // The idempotency key travels INSIDE the precondition rather than in
-          // a `header:` of its own: they are one slot, and written twice the
-          // later wins.
-          ...ifMatch(requireVersion(version ?? undefined), {
-            "Idempotency-Key": crypto.randomUUID(),
-          }),
-          path: { id: activityId },
-        },
-        body: {
-          entity_type: kind,
-          entity_id: target.id,
-          replace_existing_of_type: replace,
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
+        }),
+      );
     },
     onSuccess: () => {
       for (const queryKey of entityTimelineKeys(entityType, entityId)) {

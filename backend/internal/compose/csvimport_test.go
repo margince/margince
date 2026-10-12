@@ -40,6 +40,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			created := map[string]bool{
 				"full_name":    in.FullName != nil,
 				"email":        in.Email != nil,
+				"phone":        in.Phone != nil,
 				"title":        in.Title != nil,
 				"company_name": in.CompanyName != nil,
 				"author":       in.Author.AuthorName != nil,
@@ -47,6 +48,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			patched := map[string]bool{
 				"full_name":    up.FullName != nil,
 				"email":        up.Email != nil,
+				"phone":        up.Phone != nil,
 				"title":        up.Title != nil,
 				"company_name": up.CompanyName != nil,
 			}

@@ -48,13 +48,11 @@ func writeExtractionAcceptErr(w http.ResponseWriter, r *http.Request, err error)
 	// UnsupportedEntityTypeError and ExtractionAcceptError carry their own verdicts
 	// (MessageFault / FieldFault), so the fallthrough below renders them. Do not
 	// re-spell either here: two spellings of one refusal is how the surfaces drift.
-	var amountPair *deals.AmountCurrencyPairError
-	if errors.As(err, &amountPair) {
+	if amountPair, ok := errors.AsType[*deals.AmountCurrencyPairError](err); ok {
 		httperr.Write(w, r, httperr.Validation(acceptFieldCurrency, "amount_currency_pair", amountPair.Error()))
 		return
 	}
-	var pastClose *deals.PastCloseDateError
-	if errors.As(err, &pastClose) {
+	if pastClose, ok := errors.AsType[*deals.PastCloseDateError](err); ok {
 		httperr.Write(w, r, httperr.Validation(acceptFieldExpectedClose, "close_date_past", pastClose.Error()))
 		return
 	}

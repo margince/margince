@@ -15,6 +15,7 @@ package agents
 import (
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -140,4 +141,8 @@ type PreparedHandoff struct {
 	// empty list means nothing was found missing, not that nothing was
 	// checked.
 	Gaps []HandoffGap `json:"gaps"`
+	// SectionsOmitted names the lists this caller may not read, as the project
+	// page does. Deals, stakeholders or open_commitments missing from the
+	// answer for that reason are withheld, not empty.
+	SectionsOmitted []crmcontracts.Project360Section `json:"sections_omitted"`
 }

@@ -134,6 +134,7 @@ func (t queryWorkspace) Spec() mcp.ToolSpec {
 		Description:   queryWorkspaceCopy.render(),
 		Instead:       queryWorkspaceCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "queryWorkspace",
 		// The plan document is NOT re-declared here. Its grammar is published
 		// at margince://schema/query, derived per caller from the field catalog
 		// and the live column catalog — a second copy of it in this schema

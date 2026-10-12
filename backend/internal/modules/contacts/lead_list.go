@@ -57,7 +57,7 @@ var leadListFields = map[string]storekit.SortField{
 	leadCompanyColumn: storekit.Column(fieldcatalog.TypeText),
 	leadStatusColumn:  storekit.Column(fieldcatalog.TypeText),
 	leadScoreColumn:   storekit.Column(fieldcatalog.TypeNumber),
-	ownerIDColumn:     storekit.Column(storekit.KindUUID),
+	ownerIDColumn:     storekit.OwnerNameSort(leadEntity),
 	// The three the list draws and does not store. Each reads the same
 	// expression the row is PRINTED from (lead_read.go), so a reader sees the
 	// value the page was arranged by.

@@ -178,7 +178,7 @@ func parseRecipes(t *testing.T, path string) (map[string]*recipeTarget, map[stri
 	vars := readLiteralVars(string(body))
 	targets := map[string]*recipeTarget{}
 	var current []string
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		if strings.HasPrefix(line, "\t") {
 			for _, name := range current {
 				targets[name].recipes = append(targets[name].recipes, line)

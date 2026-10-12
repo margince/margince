@@ -22,7 +22,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { entityTimelineKeys } from "./activitykeys";
 import { proposalEmailBody } from "./booking-proposal-message";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { ComposeModal } from "./compose";
 
 type Proposal = components["schemas"]["MeetingProposal"];
@@ -64,10 +64,11 @@ export function useMeetingProposals(contactId: string | undefined) {
     queryKey: meetingProposalsKey(contactId),
     enabled: Boolean(contactId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/scheduling/proposals", {
-        params: { query: { contact_id: contactId ?? "" } },
-      });
-      if (error) throwProblem(error);
+      const data = unwrap(
+        await api.GET("/scheduling/proposals", {
+          params: { query: { contact_id: contactId ?? "" } },
+        }),
+      );
       return data.data;
     },
   });
@@ -102,10 +103,11 @@ export function WaitingSection({
     mutationFn: async ({
       proposalId,
     }: Readonly<{ proposalId: string; contactId: string }>) => {
-      const { error } = await api.DELETE("/activities/{id}", {
-        params: { path: { id: proposalId } },
-      });
-      if (error) throwProblem(error);
+      unwrap(
+        await api.DELETE("/activities/{id}", {
+          params: { path: { id: proposalId } },
+        }),
+      );
     },
     onSuccess: async (_done, { contactId }) => {
       withdrawn.current = true;

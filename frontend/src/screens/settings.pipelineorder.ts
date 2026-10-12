@@ -17,7 +17,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import { problemCodeOf, problemMessageOf, unwrap } from "./common";
 
 type Pipeline = components["schemas"]["Pipeline"];
 
@@ -111,19 +111,17 @@ export function useStageOrder(): Reorder {
         undoable: boolean;
       }>,
     ) => {
-      const { data, error } = await api.PUT("/pipelines/{id}/stage-order", {
-        params: {
-          path: { id: move.before.id },
-          // The version the order was drawn from: a ladder somebody else has
-          // reshaped since then refuses instead of being overwritten.
-          ...ifMatch(requireVersion(move.before.version)),
-        },
-        body: { stage_ids: [...move.order] },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/pipelines/{id}/stage-order", {
+          params: {
+            path: { id: move.before.id },
+            // The version the order was drawn from: a ladder somebody else has
+            // reshaped since then refuses instead of being overwritten.
+            ...ifMatch(requireVersion(move.before.version)),
+          },
+          body: { stage_ids: [...move.order] },
+        }),
+      );
     },
     onSuccess: (saved, move) => {
       putPipeline(queryClient, saved);
@@ -185,12 +183,11 @@ export function usePipelineOrder(): CatalogReorder {
         undoable: boolean;
       }>,
     ) => {
-      const { error } = await api.PUT("/pipelines/order", {
-        body: { pipeline_ids: [...move.order] },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/pipelines/order", {
+          body: { pipeline_ids: [...move.order] },
+        }),
+      );
     },
     onSuccess: (_saved, move) => {
       settle(queryClient);

@@ -10,7 +10,7 @@ import { formatDateTime, formatDecimal, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import { leadScoreKey } from "./leadkeys";
 import { leadStatusLabel, scoreFactorLabel } from "./leadpresentation";
@@ -152,13 +152,11 @@ function ScoreCard({
   const explain = useQuery({
     queryKey: leadScoreKey(lead.id),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}/score", {
-        params: { path: { id: lead.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}/score", {
+          params: { path: { id: lead.id } },
+        }),
+      );
     },
   });
   const factors = explain.data?.current?.factors ?? [];

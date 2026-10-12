@@ -20,7 +20,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { metricLabel } from "./reporting.model";
 
 type Framework = components["schemas"]["ReportingFramework"];
@@ -32,18 +32,14 @@ export function ReportingDefinitions() {
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const framework = useQuery({
     enabled: canPublish && section === "setup",
     queryKey: ["reporting-framework"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/framework");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/framework"));
     },
   });
   return (
@@ -143,11 +139,11 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
   const pipelines = useQuery({
     queryKey: ["reporting-framework-pipelines"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
     },
   });
   const write = useMutation({
@@ -158,12 +154,12 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
       version: number;
       definition: Framework["definition"];
     }) => {
-      const { data, error } = await api.PUT("/analytics/framework", {
-        params: { ...ifMatch(version) },
-        body: definition,
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.PUT("/analytics/framework", {
+          params: { ...ifMatch(version) },
+          body: definition,
+        }),
+      );
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["reporting-framework"] });

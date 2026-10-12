@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -449,7 +450,7 @@ func orphanedSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	// nothing references. Refuse rather than purge the vault on a census that
 	// returned nothing.
 	if len(columns) == 0 {
-		return nil, fmt.Errorf("data reset: no table declares a credential handle column, so every sealed " +
+		return nil, errors.New("data reset: no table declares a credential handle column, so every sealed " +
 			"ref would read as orphaned — the handle-column derivation has stopped matching this schema")
 	}
 	referenced := make([]string, 0, len(columns)+1)
@@ -472,7 +473,7 @@ func orphanedSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	// third deployment credential is covered by being declared.
 	keys := deploymentSecretRefKeys()
 	if len(keys) == 0 {
-		return nil, fmt.Errorf("data reset: no deployment credential declares a settings key for its vault " +
+		return nil, errors.New("data reset: no deployment credential declares a settings key for its vault " +
 			"ref, so the refs that must SURVIVE the reset would read as orphaned and be purged")
 	}
 	referenced = append(referenced,

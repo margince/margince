@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -194,6 +195,11 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 			decision = RoutingDecision{Reason: "already_owned"} // a human assignment outranks routing
 			return nil
 		}
+		// A website lead whose notice may still bounce is not handed to anybody.
+		if held, err := websiteLeadNoticePending(ctx, tx, leadID.UUID); err != nil || held {
+			decision = RoutingDecision{Reason: "notice_pending"}
+			return err
+		}
 		if !LeadStatus(status).Open() {
 			decision = RoutingDecision{Reason: "terminal_status"}
 			return nil
@@ -279,7 +285,7 @@ func ownerCapacity(ctx context.Context, tx pgx.Tx, candidates []ids.UserID) (act
 		  FROM app_user u
 		  LEFT JOIN lead l ON l.owner_id = u.id
 		       AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
-		 WHERE u.id = ANY($1) AND u.status = 'active' AND u.archived_at IS NULL
+		 WHERE u.id = ANY($1) AND `+workforce.LiveMemberSQL("u")+`
 		       AND NOT u.is_agent AND u.seat_type <> 'read'
 		 GROUP BY u.id`, candidates)
 	if err != nil {

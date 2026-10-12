@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 84 |
 | Resources | 9 |
-| Tool catalog | 257.1 KB |
+| Tool catalog | 258.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 66707 |
+| Approx. wire tokens | 66945 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 112.1 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 66.9 KB | 26% | Yes, every step |
-| Input schemas | 57.8 KB | 22% | Yes, every step |
+| Output schemas | 112.4 KB | 43% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 67.1 KB | 26% | Yes, every step |
+| Input schemas | 58.3 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
-| **Description + input schema** | **124.7 KB** | **48%** | **the recurring cost** |
+| **Description + input schema** | **125.4 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -62,7 +62,7 @@ descriptions and input schemas are what each step pays for.
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.7 KB |
-| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 2.8 KB |
+| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.2 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
@@ -72,7 +72,7 @@ descriptions and input schemas are what each step pays for.
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
-| [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
+| [`create_tag`](#create_tag) | Create a tag |  |  | 2.0 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.1 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.5 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
-| [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
+| [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.7 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
@@ -98,7 +98,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 3.0 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.5 KB |
-| [`list_documents`](#list_documents) | List a record's documents | yes |  | 2.2 KB |
+| [`list_documents`](#list_documents) | List a record's documents | yes |  | 2.3 KB |
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.4 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.7 KB |
@@ -120,7 +120,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 4.0 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
-| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
+| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.3 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
@@ -137,7 +137,7 @@ descriptions and input schemas are what each step pays for.
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.6 KB |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 3.9 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.1 KB |
-| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.3 KB |
+| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.5 KB |
 | [`who_knows`](#who_knows) | Who knows this contact | yes |  | 2.2 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
 
@@ -1380,13 +1380,15 @@ immediately; requires passport scope "read".)
 
 ```text
 Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the
-record's Documents tab — use it whenever the user wants a file kept on a record, and never save a
-file's text as a note instead. Up to 6.2 MB per file, or less where the workspace sets a smaller
-upload limit. Common document, image and email formats are accepted; any other kind is refused, and
-the refusal names the accepted ones. Tell the user about a refused file; never rename, convert or
-zip it to get it accepted. The file is stored, not read, and is not filed against a contract. Use
-log_activity for what was said about the file, linked to the same record. Keep attachment_id to name
-the file to the user. (Governance: runs immediately; requires passport scope "write".)
+record's Documents tab, or on one activity such as the meeting it came from — use it whenever the
+user wants a file kept on a record, and never save a file's text as a note instead. Up to 6.2 MB per
+file, or less where the workspace sets a smaller upload limit. Common document, image and email
+formats are accepted; any other kind is refused, and the refusal names the accepted ones. Tell the
+user about a refused file; never rename, convert or zip it to get it accepted. The file is stored,
+not read. It is filed against a contract only when you name contract_id; read_project_360 lists a
+project's contracts with their ids. Use log_activity for what was said about the file, linked to the
+same record. Keep attachment_id to name the file to the user. (Governance: runs immediately;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1403,6 +1405,11 @@ the file to the user. (Governance: runs immediately; requires passport scope "wr
       "description": "The file's media type, e.g. application/pdf",
       "type": "string"
     },
+    "contract_id": {
+      "description": "The agreement this file is paper for, when it is one",
+      "format": "uuid",
+      "type": "string"
+    },
     "entity_id": {
       "format": "uuid",
       "type": "string"
@@ -1413,7 +1420,8 @@ the file to the user. (Governance: runs immediately; requires passport scope "wr
         "contact",
         "deal",
         "lead",
-        "project"
+        "project",
+        "activity"
       ],
       "type": "string"
     },
@@ -1461,6 +1469,10 @@ the file to the user. (Governance: runs immediately; requires passport scope "wr
           "type": "string"
         },
         "content_type": {
+          "type": "string"
+        },
+        "contract_id": {
+          "format": "uuid",
           "type": "string"
         },
         "created_at": {
@@ -3879,6 +3891,9 @@ passport scope "write".)
       ],
       "type": "string"
     },
+    "description": {
+      "type": "string"
+    },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
@@ -6119,9 +6134,9 @@ Draft a follow-up for each deal in a segment at once — today only the slipping
 each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only
 for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One
 call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific
-conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft
-comes back with its deal_id and draft_activity_id — those are how a human finds the drafts to
-review. (Governance: runs immediately; requires passport scope "draft".)
+conversation; this tool answers "chase everything that is slipping" or "that has gone quiet", not
+"reply to this". Each draft comes back with its deal_id and draft_activity_id — those are how a
+human finds the drafts to review. (Governance: runs immediately; requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>
@@ -8388,10 +8403,11 @@ is_agent seat. (Governance: runs immediately; requires passport scope "read".)
 **List a record's documents**
 
 ```text
-List the files stored on a company, contact, deal, lead or project, newest first: name, type, size
-and who added them. It lists and never returns a file's contents. Check it before attaching a file
-again, so the record does not carry the same file twice. Keep next_cursor to read the next page.
-(Governance: runs immediately; requires passport scope "read".)
+List the files stored on a company, contact, deal, lead, project or activity, newest first: name,
+type, size, who added them and the contract each is filed against. It lists and never returns a
+file's contents. Check it before attaching a file again, so the record does not carry the same file
+twice. Keep next_cursor to read the next page. (Governance: runs immediately; requires passport
+scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -8414,7 +8430,8 @@ again, so the record does not carry the same file twice. Keep next_cursor to rea
         "contact",
         "deal",
         "lead",
-        "project"
+        "project",
+        "activity"
       ],
       "type": "string"
     },
@@ -8458,6 +8475,10 @@ again, so the record does not carry the same file twice. Keep next_cursor to rea
                 "type": "string"
               },
               "content_type": {
+                "type": "string"
+              },
+              "contract_id": {
+                "format": "uuid",
                 "type": "string"
               },
               "created_at": {
@@ -10974,6 +10995,12 @@ runs immediately; requires passport scope "read".)
           "format": "uuid",
           "type": "string"
         },
+        "sections_omitted": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "stakeholders": {
           "items": {
             "properties": {
@@ -11010,6 +11037,7 @@ runs immediately; requires passport scope "read".)
         "open_commitments",
         "phase",
         "project_id",
+        "sections_omitted",
         "stakeholders"
       ],
       "type": "object"
@@ -12799,6 +12827,9 @@ immediately; requires passport scope "read".)
                 },
                 "status": {
                   "type": "string"
+                },
+                "updates_not_reversed": {
+                  "type": "integer"
                 }
               },
               "required": [
@@ -14156,9 +14187,21 @@ schedules in Analytics. (Governance: runs immediately; requires passport scope "
       "type": "string"
     },
     "limit": {
+      "maximum": 100,
+      "minimum": 1,
       "type": "integer"
     },
     "mode": {
+      "enum": [
+        "catalog",
+        "evaluate",
+        "reports",
+        "report",
+        "editions",
+        "edition",
+        "evidence",
+        "compare"
+      ],
       "type": "string"
     },
     "reference": {
@@ -17866,8 +17909,8 @@ from their own fields — a deal nobody can point at a reason for is absent rath
 and it is scoped to the deals the caller may see. Use run_report for the pipeline as a whole
 (totals, counts, breakdowns), and at_risk_relationships when the question is who a deal rests on
 rather than whether it is moving. Keep each deal_id if you intend to act; draft_follow_ups_for works
-over this same ranked set without you re-deriving it. (Governance: runs immediately; requires
-passport scope "read".)
+over this same ranked set at the default quiet_days without you re-deriving it. (Governance: runs
+immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -17879,6 +17922,13 @@ passport scope "read".)
     "limit": {
       "description": "Cap the ranked set; omit for the full evidenced set",
       "maximum": 50,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "quiet_days": {
+      "default": 60,
+      "description": "Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold",
+      "maximum": 365,
       "minimum": 1,
       "type": "integer"
     }

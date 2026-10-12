@@ -153,7 +153,7 @@ func schemaDateColumns(t *testing.T) []string {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
 	var columns []string
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		if m := dateColumnLine.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
 			columns = append(columns, m[1]+"."+m[2])
 		}

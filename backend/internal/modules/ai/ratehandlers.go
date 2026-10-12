@@ -33,8 +33,7 @@ func toContractModelRate(r ModelRateRow) crmcontracts.AiModelRate {
 // writeRateErr maps the ai rate store's typed validation error to a 422,
 // falling through to the sentinel registry otherwise.
 func writeRateErr(w http.ResponseWriter, r *http.Request, err error) {
-	var invalid *RateValidationError
-	if errors.As(err, &invalid) {
+	if invalid, ok := errors.AsType[*RateValidationError](err); ok {
 		httperr.Write(w, r, httperr.Validation(invalid.Field, invalid.Code, invalid.Message))
 		return
 	}

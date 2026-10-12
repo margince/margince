@@ -61,7 +61,7 @@ export type Block = Located &
     | { kind: "paragraph"; run: Run }
     | { kind: "code"; run: Run }
     | { kind: "rule" }
-    | { kind: "list"; ordered: boolean; items: Run[] }
+    | { kind: "list"; ordered: boolean; start: number; items: Run[] }
     | { kind: "quote"; blocks: Block[] }
     | { kind: "table"; header: Run[]; rows: Run[][] }
   );
@@ -227,6 +227,8 @@ function takeList(lines: string[], i: number, first: number): Taken {
     block: {
       kind: "list",
       ordered,
+      // The number the list was written from: "5. Fifth" is the fifth step.
+      start: ordered ? Number.parseInt(lines[i].trim(), 10) : 1,
       items: items.map((item) => ({ nodes: parseInline(item.join("\n")) })),
       line: first + i,
       endLine: first + j - 1,

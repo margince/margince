@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // maxMailErrorRunes bounds the stored cause, matching the CHECK on both
@@ -123,7 +124,7 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 // reads to find out why a message did not arrive would bury the relay failures
 // that column exists for.
 func (s *Store) EmailFailed(ctx context.Context, id ids.UUID, cause string) error {
-	cause = truncate(cause, maxMailErrorRunes)
+	cause = textcut.Runes(cause, maxMailErrorRunes)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Predicated on the claim, which is what the table's own CHECK says
 		// too: a cause beside no attempt describes a send that never happened.

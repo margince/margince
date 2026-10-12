@@ -96,6 +96,9 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if counts.ActivityLinks, err = relinkLinkRows(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink activity/list/tag rows: %w", err)
 	}
+	if err := moveKindIDRows(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
+		return counts, err
+	}
 	if err := relinkParticipantRows(ctx, tx, sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("relink activity participants: %w", err)
 	}
@@ -360,6 +363,9 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		        AND o.state IN ('submitting','in_progress','submission_unknown'))`,
 		sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("re-fingerprint the merged-away record's live runs: %w", err)
+	}
+	if err := settleCategoryClaims(ctx, tx, sourceID, targetID); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE provider_run SET contact_id = $2 WHERE contact_id = $1`,

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -383,9 +384,7 @@ func splitConfirmedProfile(proposed []DeepReadField, legalEntities []SiteReadLeg
 		}
 	}
 	values := make(map[string]*string, len(in.Fields)+1)
-	for field, value := range in.Fields {
-		values[field] = value
-	}
+	maps.Copy(values, in.Fields)
 	values[fieldDisplayName] = &in.DisplayName
 
 	siteFields := make([]ColdStartFieldInput, 0, len(values))

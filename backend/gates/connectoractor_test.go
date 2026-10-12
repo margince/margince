@@ -28,6 +28,7 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -54,7 +55,8 @@ const connectorActorPrefix = "connector:"
 // about existing; a reader who finds one of these selecting among vendors
 // should delete the entry rather than widen it.
 var oneOfItsKindForever = gatekit.Waive(map[string]string{
-	"connector:finance": "the finance mirror's own name, not a vendor's: one ledger sweep per installation, converting the source ledger into the base currency as it writes. There is nothing to read the name from, because there is never more than one",
+	"connector:finance":  "the finance mirror's own name, not a vendor's: one ledger sweep per installation, converting the source ledger into the base currency as it writes. There is nothing to read the name from, because there is never more than one",
+	"connector:siteread": "the platform's own crawler, not a vendor: it reads the company's own published pages, so there is no third party to name and never a second one to choose between. It records itself as a connector because the Sink admits that type alone, and the prefix has to agree with the type it is bound with",
 })
 
 // TestNoPrincipalNamesAConnectorInAStringLiteral is the census.
@@ -97,9 +99,19 @@ func TestNoPrincipalNamesAConnectorInAStringLiteral(t *testing.T) {
 }
 
 // writtenActorID is one principal id this census could read, and where.
+//
+// The principal's type rides along because the two are one answer. storekit
+// stamps actor_type from the type and actor_id from the id. An audit row is
+// coherent only when both name one kind of actor.
 type writtenActorID struct {
 	file string
 	id   string
+	typ  string
+	// kind is the prefix the id starts with, readable even when the rest is
+	// assembled at run time. The provider run's id is one of those, built from
+	// a prefix constant and a vendor name that strict folding cannot settle.
+	// Nothing that waits for a whole string can see it.
+	kind string
 }
 
 // packageSource parses one directory's non-test Go and indexes every string
@@ -257,6 +269,7 @@ func principalActorIDs(t *testing.T, files map[string]*ast.File, constants map[s
 					return true
 				}
 			}
+			found := writtenActorID{file: path, typ: principalFieldType(lit)}
 			for _, element := range lit.Elts {
 				field, isField := element.(*ast.KeyValueExpr)
 				if !isField {
@@ -271,8 +284,12 @@ func principalActorIDs(t *testing.T, files map[string]*ast.File, constants map[s
 				// asking for, and reporting a guess about one would be worse
 				// than saying nothing.
 				if text, ok := gatekit.StringExpr(field.Value, constants, gatekit.FoldStrict); ok {
-					out = append(out, writtenActorID{file: path, id: text})
+					found.id = text
 				}
+				found.kind = actorKindPrefix(field.Value, constants)
+			}
+			if found.id != "" || found.kind != "" {
+				out = append(out, found)
 			}
 			return true
 		})
@@ -287,4 +304,107 @@ func namesAPrincipal(expr ast.Expr, qualifier string, dotImported bool) bool {
 		return namesAPrincipal(star.X, qualifier, dotImported)
 	}
 	return isPrincipalType(expr, qualifier, dotImported)
+}
+
+// principalFieldType is the PrincipalX a literal's Type field names. It is
+// empty when the type is read from a value rather than written down.
+func principalFieldType(lit *ast.CompositeLit) string {
+	for _, element := range lit.Elts {
+		field, isField := element.(*ast.KeyValueExpr)
+		if !isField {
+			continue
+		}
+		if key, isIdent := field.Key.(*ast.Ident); !isIdent || key.Name != "Type" {
+			continue
+		}
+		switch typed := field.Value.(type) {
+		case *ast.SelectorExpr:
+			return typed.Sel.Name
+		case *ast.Ident:
+			return typed.Name
+		}
+	}
+	return ""
+}
+
+// connectorKinds pairs an actor-id prefix with the type that may carry it.
+// Only the connector kind is here. The test below says why.
+//
+// gatekit:fixture the actor kinds whose prefix and principal type must agree
+var connectorKinds = map[string]string{connectorActorPrefix: "PrincipalConnector"}
+
+// TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal holds both directions of
+// one pairing.
+//
+// storekit writes actor_type from the type and actor_id from the id. A
+// `connector:` id under any other type writes an audit row that contradicts
+// itself, and audit_log admits no correction. The reverse is the same
+// disagreement seen from the other side.
+//
+// The connector kind alone, because the agent spelling is still being decided.
+// Twenty jobs bind PrincipalSystem with an `agent:` id, and the direction
+// changes whether they answer to RBAC at all. Widening this map is the whole
+// change once that is settled.
+func TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal(t *testing.T) {
+	t.Parallel()
+	read := 0
+	err := filepath.WalkDir("internal", func(dir string, d fs.DirEntry, err error) error {
+		if err != nil || !d.IsDir() {
+			return err
+		}
+		files, constants := packageSource(t, dir)
+		for _, named := range principalActorIDs(t, files, constants) {
+			if named.typ == "" || named.kind == "" {
+				continue
+			}
+			read++
+			for prefix, wantType := range connectorKinds {
+				idSays := named.kind == prefix
+				typeSays := named.typ == wantType
+				if idSays == typeSays {
+					continue
+				}
+				t.Errorf("%s: binds %s with an id of kind %q. storekit stamps actor_type from the type and actor_id "+
+					"from the id, so this writes an audit row naming two kinds of actor for one act, and "+
+					"audit_log admits no correction. Make the two name one kind",
+					named.file, named.typ, named.kind)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read == 0 {
+		t.Fatal("this census read no principal that names both a type and a written id, and this tree has many: " +
+			"the reader has stopped matching rather than the tree having changed")
+	}
+}
+
+// actorKindPrefix is the actor kind an ID expression starts with.
+//
+// It folds the leftmost operand of a concatenation rather than the whole
+// expression. An id whose vendor is read from the work is the shape the
+// sibling census asks for. Its kind is still written down in front of it.
+func actorKindPrefix(expr ast.Expr, constants map[string]string) string {
+	for {
+		binary, isBinary := expr.(*ast.BinaryExpr)
+		if !isBinary || binary.Op != token.ADD {
+			break
+		}
+		expr = binary.X
+	}
+	text, ok := gatekit.StringExpr(expr, constants, gatekit.FoldStrict)
+	if !ok {
+		return ""
+	}
+	for prefix := range connectorKinds {
+		if strings.HasPrefix(text, prefix) {
+			return prefix
+		}
+	}
+	if at := strings.Index(text, ":"); at > 0 {
+		return text[:at+1]
+	}
+	return ""
 }

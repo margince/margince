@@ -166,7 +166,8 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		pool: pool,
 		// The capture list config is the SAME value the sink is composed from, so
 		// the tier ladder and the verdict lane read one operator allowlist.
-		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, cfg.CaptureConfig, log),
+		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, cfg.CaptureConfig, log).
+			WithObjectStores(cfg.Blobstore, cfg.ControllerVault),
 		// The personal-mail purge and the private-thread strip, only when an
 		// object store is bound: a nil store skips both, since changing the rows
 		// that name an attachment while its bytes stay in a bucket would report
@@ -176,7 +177,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// The stall notice, which is the only thing that tells a seat their
 		// backlog stopped moving: an outage refunds the attempt rather than
 		// spending it, so nothing retires and nothing else surfaces it.
-		backlogNotice: NewBacklogStallNotifier(notices.NewStore(InstallationDB(pool)), time.Now),
+		backlogNotice: NewBacklogStallNotifier(notices.NewStore(InstallationDB(pool)), pool, time.Now),
 		log:           log,
 	})
 	// The confidentiality verdict, registered unconditionally for a related but

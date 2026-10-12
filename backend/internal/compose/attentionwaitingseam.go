@@ -196,7 +196,7 @@ func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time) ([]a
 	var kept []activities.WaitingReply
 	var before time.Time
 	cut := false
-	for round := 0; round < waitingRefillRounds; round++ {
+	for range waitingRefillRounds {
 		rows, err := w.store.WaitingRepliesBefore(ctx, asOf, before)
 		if err != nil {
 			return nil, false, err

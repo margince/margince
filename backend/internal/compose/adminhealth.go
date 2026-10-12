@@ -6,13 +6,11 @@ package compose
 // What every operational report on Settings → System health has in common:
 // who may read it, and what a read that fails answers.
 //
-// Three surfaces ask the same two questions — background jobs, capture's
-// judgement queues, and what the core refused from a connector. The ADMISSION
-// is the part that must not be spelled three times: it is a fail-closed ladder
-// whose ORDER is the security property (an unbound actor before RequireHuman,
-// because RequireHuman reports one with an unmapped error that renders as a
-// 500 — a security surface should not answer "nobody asked" with a server
-// fault), and a third copy is how one of them silently loses a rung.
+// Every System health report asks the same two questions. The ADMISSION must
+// not be spelled per report: it is a fail-closed ladder, and its ORDER is the
+// security property. An unbound actor is refused before RequireHuman, which
+// reports one with an unmapped error that renders as a 500. A second copy is how
+// one report silently loses a rung.
 
 import (
 	"context"
@@ -33,13 +31,11 @@ import (
 // admitHealthReader answers whether this caller may read an operational
 // report, writing the refusal itself when they may not.
 //
-// All three reports gate on `job_health:read` and on a human session. The
-// object is the same one deliberately: they answer one question for one reader,
-// and a System health page with one card grant-derived and its neighbour
-// role-derived is a page whose access rules nobody can state. Human-only is
-// asserted here rather than inferred from RBAC, because an admin-minted
-// read-scoped passport satisfies every object grant — this is the rung that
-// does not depend on the wiring being right.
+// Every report gates on `job_health:read` and on a human session. One object
+// for every card keeps the page's access rules statable. Human-only is asserted
+// here rather than inferred from RBAC, because an admin-minted read-scoped
+// passport satisfies every object grant. This rung does not depend on the
+// wiring being right.
 func admitHealthReader(w http.ResponseWriter, r *http.Request) bool {
 	ctx := r.Context()
 	if _, ok := principal.Actor(ctx); !ok {

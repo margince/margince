@@ -27,6 +27,7 @@ package httpserver
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"sort"
 	"strconv"
@@ -264,9 +265,7 @@ func (m *HTTPMetrics) Write(w io.Writer) {
 	}
 	m.mu.Lock()
 	requests := make(map[requestKey]uint64, len(m.requests))
-	for k, v := range m.requests {
-		requests[k] = v
-	}
+	maps.Copy(requests, m.requests)
 	latency := make(map[routeKey]Histogram, len(m.latency))
 	for k, v := range m.latency {
 		latency[k] = v.Snapshot()

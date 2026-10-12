@@ -45,7 +45,7 @@ func breachedLeadEvent(t *testing.T, e *integration.Env, owner *pgx.Conn) (ids.U
 		t.Fatal(err)
 	}
 	_, _, err := activities.NewStore(e.DB()).LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: leadTestPtr("Incoming enquiry"), Direction: leadTestPtr("inbound"),
+		Kind: "email", Subject: new("Incoming enquiry"), Direction: new("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
 	})
 	if err != nil {
@@ -275,4 +275,51 @@ func TestLeadSLAEscalationWritesBothHalvesOrNeither(t *testing.T) {
 	if recipients := leadSLANoticeRecipients(t, owner); len(recipients) != 0 {
 		t.Errorf("notices = %d after a refused notice write, want 0", len(recipients))
 	}
+}
+
+// The escalation's notice and task speak the installation's language.
+//
+// Both are stored, and the digest mail quotes the notice subject. A rep
+// reading their worklist in German must not find an English line in it.
+func TestTheSLAEscalationIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+
+	integration.SetBaseLanguage(e.Admin(), t, e.Pool, "de")
+	if subject := escalateAndReadNoticeSubject(t, e, owner); !strings.Contains(subject, "SLA-Verstoß") {
+		t.Errorf("the installation is set to German and the notice reads %q", subject)
+	}
+
+	// The other direction catches copy that happens to be one language: a test
+	// asserting only German passes against code that always writes German.
+	integration.SetBaseLanguage(e.Admin(), t, e.Pool, "en")
+	if subject := escalateAndReadNoticeSubject(t, e, owner); !strings.Contains(subject, "SLA breach") {
+		t.Errorf("the installation was changed to English and the notice reads %q", subject)
+	}
+}
+
+// escalateAndReadNoticeSubject runs one breach through the real handler and
+// answers the subject it stored.
+//
+// A fresh lead each call, because both halves carry the breach's natural key.
+// A second escalation of one breach is the no-op the dedupe exists for.
+func escalateAndReadNoticeSubject(t *testing.T, e *integration.Env, owner *pgx.Conn) string {
+	t.Helper()
+	_, ev, deadline, ctx := breachedLeadEvent(t, e, owner)
+	h := newLeadSLAEscalation(e.DB(), func() time.Time { return deadline.Add(time.Hour) })
+	eff, err := h.Plan(ctx, ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Apply(ctx, ev, eff, nil); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	var subject string
+	if err := owner.QueryRow(context.Background(), `
+		SELECT subject FROM notice
+		 WHERE kind = $1 ORDER BY created_at DESC, id DESC LIMIT 1`,
+		noticeKindLeadSLA).Scan(&subject); err != nil {
+		t.Fatalf("reading the stored notice: %v", err)
+	}
+	return subject
 }

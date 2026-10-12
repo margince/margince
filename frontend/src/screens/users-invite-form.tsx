@@ -12,7 +12,7 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 import { roleOptions, useAssignableRoles } from "./roles.queries";
 import { AccessPreviewPanel } from "./users-access";
@@ -97,18 +97,19 @@ export function InviteUserForm({
     mutationFn: async (
       choice: Readonly<{ role: Role; teams: string[]; greeting: string }>,
     ): Promise<string> => {
-      const { data, error: err } = await api.POST("/users", {
-        body: {
-          email: email.trim(),
-          display_name: displayName,
-          ...(choice.greeting === "" ? {} : { greeting_name: choice.greeting }),
-          role: choice.role,
-          team_ids: choice.teams,
-        },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      const data = unwrap(
+        await api.POST("/users", {
+          body: {
+            email: email.trim(),
+            display_name: displayName,
+            ...(choice.greeting === ""
+              ? {}
+              : { greeting_name: choice.greeting }),
+            role: choice.role,
+            team_ids: choice.teams,
+          },
+        }),
+      );
       return data.id;
     },
     onSuccess: (newUserId) => {

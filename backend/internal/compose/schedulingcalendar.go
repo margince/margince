@@ -52,18 +52,28 @@ func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider
 	if err := auth.Require(hostCtx, "activity", principal.ActionCreate); err != nil {
 		return err
 	}
-	_, _, err = c.registry.CalendarFor(ctx, host, provider, true)
-	if errors.Is(err, capture.ErrNoConnection) {
-		return connector.ErrAuthRejected
-	}
+	_, _, err = c.calendarFor(ctx, host, provider, true)
 	return err
+}
+
+// calendarFor is the only door to the registry's calendar. A host with no
+// connection reads as one whose connection was refused, so callers map one
+// sentinel.
+//
+//nolint:ireturn // optional connector capability
+func (c schedulingCalendar) calendarFor(ctx context.Context, host ids.UserID, provider string, write bool) (connector.CalendarScheduler, connector.Auth, error) {
+	scheduler, credential, err := c.registry.CalendarFor(ctx, host, provider, write)
+	if errors.Is(err, capture.ErrNoConnection) {
+		return nil, nil, connector.ErrAuthRejected
+	}
+	return scheduler, credential, err
 }
 
 func (c schedulingCalendar) Busy(ctx context.Context, host ids.UserID, provider, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
 	if c.registry == nil {
 		return nil, apperrors.ErrPermissionDenied
 	}
-	scheduler, credential, err := c.registry.CalendarFor(ctx, host, provider, false)
+	scheduler, credential, err := c.calendarFor(ctx, host, provider, false)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +102,7 @@ func (c schedulingCalendar) Save(ctx context.Context, host ids.UserID, provider 
 		return connector.CalendarReceipt{}, err
 	}
 
-	scheduler, credential, err := c.registry.CalendarFor(ctx, host, provider, true)
+	scheduler, credential, err := c.calendarFor(ctx, host, provider, true)
 	if err != nil {
 		return connector.CalendarReceipt{}, err
 	}
@@ -103,7 +113,7 @@ func (c schedulingCalendar) Cancel(ctx context.Context, host ids.UserID, provide
 	if err := c.checkCalendar(ctx, host, provider, calendar); err != nil {
 		return err
 	}
-	scheduler, credential, err := c.registry.CalendarFor(ctx, host, provider, true)
+	scheduler, credential, err := c.calendarFor(ctx, host, provider, true)
 	if err != nil {
 		return err
 	}
@@ -114,7 +124,7 @@ func (c schedulingCalendar) Lookup(ctx context.Context, host ids.UserID, provide
 	if err := c.checkCalendar(ctx, host, provider, in.CalendarID); err != nil {
 		return nil, err
 	}
-	scheduler, credential, err := c.registry.CalendarFor(ctx, host, provider, false)
+	scheduler, credential, err := c.calendarFor(ctx, host, provider, false)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +159,7 @@ func (c schedulingCalendar) List(ctx context.Context, host ids.UserID, provider 
 	if c.registry == nil {
 		return nil, apperrors.ErrPermissionDenied
 	}
-	scheduler, credential, err := c.registry.CalendarFor(ctx, host, provider, false)
+	scheduler, credential, err := c.calendarFor(ctx, host, provider, false)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +170,7 @@ func (c schedulingCalendar) Inspect(ctx context.Context, host ids.UserID, provid
 	if err := c.checkCalendar(ctx, host, provider, calendar); err != nil {
 		return connector.CalendarState{}, err
 	}
-	scheduler, credential, err := c.registry.CalendarFor(ctx, host, provider, false)
+	scheduler, credential, err := c.calendarFor(ctx, host, provider, false)
 	if err != nil {
 		return connector.CalendarState{}, err
 	}

@@ -67,9 +67,11 @@ thing.
 ## Text follows the writing guides
 
 English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
-German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md). `copy-style.test.ts` and
-`copy-style-de.test.ts` hold only the rules a program can check. The tone, the words, the length and
-the shape of a message are yours to check before you add or change a value.
+German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md) and Vietnamese adds
+[`ui-copy-style-vi.md`](../docs/reference/ui-copy-style-vi.md). `copy-style.test.ts`,
+`copy-style-de.test.ts` and `copy-style-vi.test.ts` hold only the rules a program can check. The
+tone, the words, the length and the shape of a message are yours to check before you add or change
+a value.
 
 ## A test must pass on a slow machine
 

@@ -85,7 +85,7 @@ func grantedScopes(t *testing.T) map[string]map[string]bool {
 	body := between(src, "var grantScopes = map[string][]string{", "\n}")
 	for _, m := range entry.FindAllStringSubmatch(body, -1) {
 		scopes := map[string]bool{}
-		for _, raw := range strings.Split(m[2], ",") {
+		for raw := range strings.SplitSeq(m[2], ",") {
 			if s := strings.Trim(strings.TrimSpace(raw), `"`); s != "" {
 				scopes[s] = true
 			}
@@ -196,13 +196,13 @@ func specNameAndScope(lit *ast.CompositeLit) (name, scope string) {
 // empty when either marker is gone — which the caller's emptiness check turns
 // into a failure rather than a silent pass.
 func between(src, from, to string) string {
-	start := strings.Index(src, from)
-	if start < 0 {
+	_, after, ok := strings.Cut(src, from)
+	if !ok {
 		return ""
 	}
-	rest := src[start+len(from):]
-	if end := strings.Index(rest, to); end >= 0 {
-		return rest[:end]
+	rest := after
+	if before, _, ok := strings.Cut(rest, to); ok {
+		return before
 	}
 	return rest
 }

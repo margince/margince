@@ -8,7 +8,7 @@ package integration
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -62,7 +62,7 @@ func (b *bookingProviderTransport) event(r *http.Request) (*http.Response, error
 
 func (b *bookingProviderTransport) saveEvent(r *http.Request, id string) (*http.Response, error) {
 	if r.URL.Query().Get("sendUpdates") != "all" {
-		return nil, fmt.Errorf("calendar write omitted attendee notification")
+		return nil, errors.New("calendar write omitted attendee notification")
 	}
 	var event map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {

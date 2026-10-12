@@ -52,12 +52,7 @@ const kindMeeting = "meeting"
 // IsParticipantKind answers whether it is meaningful to record who was on an
 // activity of this kind. Every Go writer of activity_participant asks this one.
 func IsParticipantKind(kind string) bool {
-	for _, k := range participantKinds {
-		if k == kind {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(participantKinds, kind)
 }
 
 // IsInteractionKind reports whether the activity represents an exchange.

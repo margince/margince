@@ -17,6 +17,7 @@ package filterpropose
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -188,7 +189,7 @@ func Parse(raw string) (Answer, error) {
 	// Required by the schema, so absent means malformed rather than empty: read
 	// as empty, a provider answering `{}` would report a sentence as unreadable.
 	if answer.Groups == nil {
-		return Answer{}, fmt.Errorf("filterpropose: the reply carries no groups field, which the schema requires")
+		return Answer{}, errors.New("filterpropose: the reply carries no groups field, which the schema requires")
 	}
 	if answer.Join != joinAnd && answer.Join != joinOr {
 		return Answer{}, fmt.Errorf("filterpropose: the reply joins its groups with %q, not and/or", answer.Join)

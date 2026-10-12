@@ -101,12 +101,9 @@ func (s *Store) DemoteLead(
 		if err != nil {
 			return err
 		}
-		if _, err := storekit.LockRow(ctx, tx, "contact", contactID.UUID, storekit.LiveOnly); err != nil {
-			return fmt.Errorf("lock promoted contact: %w", err)
-		}
 		// The lead lock serializes a demote against a concurrent re-promote or
 		// second demote; the loser re-reads the state and answers 409.
-		if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.IncludeArchived); err != nil {
+		if err := lockContactThenLead(ctx, tx, contactID, storekit.LiveOnly, id); err != nil {
 			return err
 		}
 		lead, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)

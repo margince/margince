@@ -46,7 +46,7 @@ func (e *contractVisEnv) seedDeliveries(t *testing.T, n int) (ids.UUID, []ids.UU
 	}
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 	ordered := make([]ids.UUID, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		id := ids.NewV7()
 		if _, err := e.owner.Exec(ctx, `
 			INSERT INTO webhook_delivery

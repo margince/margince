@@ -20,6 +20,7 @@ package contacts
 // that predates that fix holds it.
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -143,10 +144,5 @@ func TestTheSweepDrainsAContactWhoseParticipantRowPredatesAMerge(t *testing.T) {
 
 // containsContact reports whether the sweep offered this contact.
 func containsContact(contacts []ids.ContactID, want ids.ContactID) bool {
-	for _, p := range contacts {
-		if p == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(contacts, want)
 }

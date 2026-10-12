@@ -55,20 +55,26 @@ type setupClaimResponse struct {
 
 type setupStatusResponse struct {
 	Claimable bool `json:"claimable"`
+	// Jurisdictions are the pack codes the claim form offers. Sent only while
+	// the installation is claimable, so a provisioned one discloses nothing new.
+	Jurisdictions []string `json:"jurisdictions,omitempty"`
 }
 
 // Field names are snake_case: these routes are hand-written and outside
 // crm.yaml, so they follow the convention the linter enforces on hand-written
 // Go rather than the camelCase the generated contract types carry.
 type setupClaimRequest struct {
-	SetupToken    string `json:"setup_token"`
-	CompanyName   string `json:"company_name"`
-	Timezone      string `json:"timezone"`
-	BaseCurrency  string `json:"base_currency"`
-	BaseLanguage  string `json:"base_language"`
-	AdminEmail    string `json:"admin_email"`
-	AdminName     string `json:"admin_name"`
-	AdminPassword string `json:"admin_password"`
+	SetupToken   string `json:"setup_token"`
+	CompanyName  string `json:"company_name"`
+	Timezone     string `json:"timezone"`
+	BaseCurrency string `json:"base_currency"`
+	BaseLanguage string `json:"base_language"`
+	// Country is a pointer because "" is a real answer (no pack) and an
+	// absent key is a form that never asked.
+	Country       *string `json:"country"`
+	AdminEmail    string  `json:"admin_email"`
+	AdminName     string  `json:"admin_name"`
+	AdminPassword string  `json:"admin_password"`
 }
 
 // setupStatus answers whether a claim is possible.
@@ -83,7 +89,11 @@ func setupStatus(svc *identity.Service, limit *ratelimit.Limiter) http.HandlerFu
 			httperr.Write(w, r, err)
 			return
 		}
-		httperr.WriteJSON(w, http.StatusOK, setupStatusResponse{Claimable: outstanding})
+		status := setupStatusResponse{Claimable: outstanding}
+		if outstanding {
+			status.Jurisdictions = compiledInCodes()
+		}
+		httperr.WriteJSON(w, http.StatusOK, status)
 	}
 }
 
@@ -125,6 +135,7 @@ func setupClaim(svc *identity.Service, pool *pgxpool.Pool, seeds deployconfig.Se
 			BaseCurrency:  in.BaseCurrency,
 			BaseLanguage:  in.BaseLanguage,
 			Timezone:      in.Timezone,
+			Country:       in.Country,
 			AdminEmail:    in.AdminEmail,
 			AdminName:     in.AdminName,
 			AdminPassword: in.AdminPassword,

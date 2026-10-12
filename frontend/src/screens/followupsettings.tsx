@@ -7,7 +7,7 @@ import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { worklistKey } from "./worklist.queries";
 
 type FollowUpSettings = components["schemas"]["FollowUpSettings"];
@@ -39,14 +39,9 @@ function useUpdateFollowUpSettings() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: FollowUpSettings) => {
-      const { data, error } = await api.PATCH(
-        "/activities/follow-up-settings",
-        { body },
+      return unwrap(
+        await api.PATCH("/activities/follow-up-settings", { body }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: FOLLOW_UP_SETTINGS_KEY });

@@ -424,11 +424,11 @@ func stringField(t *testing.T, doc map[string]any, key string) string {
 func resourceMetadataParam(t *testing.T, challenge string) string {
 	t.Helper()
 	const key = `resource_metadata="`
-	start := strings.Index(challenge, key)
-	if start < 0 {
+	_, after, ok := strings.Cut(challenge, key)
+	if !ok {
 		t.Fatalf("challenge %q carries no resource_metadata parameter", challenge)
 	}
-	rest := challenge[start+len(key):]
+	rest := after
 	end := strings.Index(rest, `"`)
 	if end < 0 {
 		t.Fatalf("challenge %q has an unterminated resource_metadata value", challenge)

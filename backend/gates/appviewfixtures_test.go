@@ -312,7 +312,7 @@ func collectRequired(node any, at []string, out map[string]bool) {
 func fixtureMembers(source []byte) map[string]int {
 	out := map[string]int{}
 	var path []string
-	for _, line := range strings.Split(string(source), "\n") {
+	for line := range strings.SplitSeq(string(source), "\n") {
 		code := fixtureCode(line)
 		if key := fixtureKey.FindStringSubmatch(code); key != nil {
 			if at, under := underData(append(append([]string{}, path...), key[1])); under {
@@ -376,7 +376,7 @@ func fixtureCode(line string) string {
 	var quote rune
 	escaped := false
 	runes := []rune(line)
-	for i := 0; i < len(runes); i++ {
+	for i := range runes {
 		r := runes[i]
 		switch {
 		case quote != 0 && escaped:

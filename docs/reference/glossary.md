@@ -40,6 +40,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | IMAP | The standard protocol for reading mail from a mail server. |
+| Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
@@ -58,6 +59,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Redis | The in-memory store Margince uses as its event bus. |
 | REST | The style of HTTP API Margince offers next to MCP. |
 | RTF | Rich Text Format, a document format most word processors read. |
+| skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |
 | SonarCloud | A code quality service that scans each pull request. |
 | Telegram | A chat app Margince can send messages through. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
@@ -67,6 +69,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+| ZIP | A file format that packs many files into one. |
 
 ## Names without a meaning yet
 

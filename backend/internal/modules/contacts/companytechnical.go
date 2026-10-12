@@ -5,8 +5,9 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -58,7 +59,7 @@ var technicalLanes = func() []TechnicalLane {
 	for lane := range laneFields {
 		lanes = append(lanes, lane)
 	}
-	sort.Slice(lanes, func(i, j int) bool { return lanes[i] < lanes[j] })
+	slices.Sort(lanes)
 	return lanes
 }()
 
@@ -77,10 +78,8 @@ var laneFields = map[TechnicalLane][]string{
 // cannot end up with a caller still attributing that field to the old one.
 func LaneOwningField(field string) TechnicalLane {
 	for lane, fields := range laneFields {
-		for _, owned := range fields {
-			if owned == field {
-				return lane
-			}
+		if slices.Contains(fields, field) {
+			return lane
 		}
 	}
 	return ""
@@ -299,10 +298,10 @@ func (s *Store) auditTechnicalEnrichment(
 // constraint violation.
 func validateTechnicalEnrichment(in TechnicalEnrichment) error {
 	if in.CompanyID.IsZero() {
-		return fmt.Errorf("technical enrichment: no company")
+		return errors.New("technical enrichment: no company")
 	}
 	if in.ObservedAt.IsZero() {
-		return fmt.Errorf("technical enrichment: no observation time")
+		return errors.New("technical enrichment: no observation time")
 	}
 	authoritative := map[string]bool{}
 	for _, field := range reconciledFields(in.Completed) {

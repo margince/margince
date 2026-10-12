@@ -31,6 +31,11 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		in.Kind = &k
 	}
 	in.ChannelProvider = params.ChannelProvider
+	if err := httperr.RequirePair("entity_type", params.EntityType,
+		"entity_id", params.EntityId); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if params.EntityType != nil && params.EntityId != nil {
 		et := string(*params.EntityType)
 		// The entity filter targets the polymorphic activity_link seam, so

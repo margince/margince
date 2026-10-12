@@ -298,6 +298,9 @@ type NoticeCase struct {
 	DueAt     time.Time
 	// OpenedAt is when the duty was recorded; see classifyLegalDeadline.
 	OpenedAt time.Time
+	// Acquisition is the evidence the deadline was computed from, nil when none
+	// resolves, so a card never shows a bare date as authoritative.
+	Acquisition *crmcontracts.NoticeAcquisition
 }
 
 // Briefing is the overnight brief's queue for the acting rep, best-ranked

@@ -20,6 +20,7 @@ package gates
 import (
 	"go/ast"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -107,10 +108,8 @@ func setsMeetingStatus(file *ast.File) bool {
 	// Statements, escapes decoded and `+` chains flattened. Reading the source
 	// text instead would miss a statement assembled across two lines, and see a
 	// double-quoted one as its escapes rather than as the SQL Postgres receives.
-	for _, statement := range gatekit.SQLStatementsOf(file) {
-		if sqlWritesMeetingStatus(statement) {
-			return true
-		}
+	if slices.ContainsFunc(gatekit.SQLStatementsOf(file), sqlWritesMeetingStatus) {
+		return true
 	}
 	writes := false
 	ast.Inspect(file, func(n ast.Node) bool {

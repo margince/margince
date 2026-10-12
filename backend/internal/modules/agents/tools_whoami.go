@@ -73,12 +73,16 @@ func (t whoami) Spec() mcp.ToolSpec {
 		Description:   whoamiCopy.render(),
 		Instead:       whoamiCopy.Instead,
 		RequiredScope: principal.ScopeRead, SelfDescribing: true, Tier: mcp.TierAutoExecute,
+		OpenAPIOp:    "getActingIdentity",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[WhoamiResult](),
 	}
 }
 
-func (t whoami) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t whoami) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	who, err := t.read(ctx)
 	if err != nil {
 		return nil, err

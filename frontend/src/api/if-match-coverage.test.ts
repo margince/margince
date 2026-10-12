@@ -36,7 +36,6 @@ const srcRoot = join(apiDir, "..");
 // fails the first test below, and a fixed one fails the second until its line
 // here is deleted. Nothing keeps a stale entry alive.
 const UNPINNED_WRITES: readonly string[] = [
-  "screens/automations.tsx PATCH /automations/{id}",
   // A proposal's list entry carries no version to pin; withdrawing archives it,
   // so two withdrawals racing end in the one state either would reach alone.
   "screens/contactmeetings.waiting.tsx DELETE /activities/{id}",
@@ -46,7 +45,6 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/contractwrites.ts PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
   "screens/settings.stages.tsx DELETE /stages/{id}",
-  "screens/share.tsx DELETE /record-grants/{id}",
   "screens/voice-dna.tsx DELETE /voice-profiles/{id}/sources/{sourceId}",
   "screens/voice-dna.tsx PATCH /voice-profiles/{id}",
 ];

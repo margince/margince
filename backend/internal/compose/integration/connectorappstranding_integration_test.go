@@ -126,8 +126,7 @@ func TestAnErroredConnectionStillRefusesAChangedClientID(t *testing.T) {
 	if err == nil {
 		t.Fatal("a changed client id was accepted over an errored connection, stranding its refresh token")
 	}
-	var invalid settings.InvalidValue
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[settings.InvalidValue](err); !ok {
 		t.Fatalf("refused with %v, want a settings.InvalidValue the operator can read", err)
 	}
 

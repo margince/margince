@@ -85,7 +85,7 @@ func senderKindsFromSchema(t *testing.T) []string {
 			continue
 		}
 		kinds = nil
-		for _, raw := range strings.Split(found[1], ",") {
+		for raw := range strings.SplitSeq(found[1], ",") {
 			if trimmed := strings.Trim(strings.TrimSpace(raw), "'"); trimmed != "" {
 				kinds = append(kinds, trimmed)
 			}

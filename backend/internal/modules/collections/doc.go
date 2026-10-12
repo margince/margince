@@ -17,6 +17,7 @@
 // applies the reader's current row scope.
 //
 // Tables owned: list, list_member, list_member_event, list_revision,
-// list_live_member, list_evaluation, list_visit, saved_view, tag, taggable.
+// list_live_member, list_evaluation, list_visit, saved_view, tag, taggable,
+// tag_suggestion, tag_suggestion_evidence.
 // Imports shared + platform only; never a sibling module.
 package collections

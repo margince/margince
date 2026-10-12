@@ -10,7 +10,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { openAnalyticsSection } from "./analytics.address";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { executionLabel } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
 import { ReportingReportDetail } from "./reporting.report";
@@ -28,17 +28,17 @@ export function ReportingLibrary() {
   const query = useQuery({
     queryKey: ["reporting-reports", cursor, filter],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/reports", {
-        params: {
-          query: {
-            cursor,
-            limit: 30,
-            scheduled: filter === "scheduled" || undefined,
+      return unwrap(
+        await api.GET("/analytics/reports", {
+          params: {
+            query: {
+              cursor,
+              limit: 30,
+              scheduled: filter === "scheduled" || undefined,
+            },
           },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
+        }),
+      );
     },
   });
   if (route.id2)

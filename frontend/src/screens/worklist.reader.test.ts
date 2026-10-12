@@ -78,7 +78,7 @@ it("renders the recorded stages in each language without inventing a missing sta
   for (const [language, missing] of [
     ["en", "Unknown stage"],
     ["de", "Unbekannte Phase"],
-    ["vi", "Giai đoạn không rõ"],
+    ["vi", "Không rõ giai đoạn"],
   ] as const) {
     const translated = noticeDetail(
       {

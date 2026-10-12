@@ -86,8 +86,7 @@ func answeredAbsent(t *testing.T, err error, probe string) {
 	if err == nil {
 		t.Fatalf("%s was reversed", probe)
 	}
-	var refusal RefusedRestore
-	if errors.As(err, &refusal) {
+	if refusal, ok := errors.AsType[RefusedRestore](err); ok {
 		t.Fatalf("%s answered the refusal %q; naming a reason is proof the entry exists, "+
 			"and this caller may not learn that", probe, refusal.Reason)
 	}

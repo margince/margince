@@ -342,7 +342,7 @@ func TestEveryMultipartParseNamesItsRoute(t *testing.T) {
 	named := map[string]bool{}
 	for _, fileMarkers := range markers {
 		for _, marker := range fileMarkers {
-			for _, route := range strings.Split(marker, ", ") {
+			for route := range strings.SplitSeq(marker, ", ") {
 				named[route] = true
 			}
 		}

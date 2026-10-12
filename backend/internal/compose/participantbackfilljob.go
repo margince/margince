@@ -24,6 +24,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -90,11 +91,11 @@ func (w *participantBackfillWorker) backfillOneWorkspace(ctx context.Context, wo
 func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws ids.UUID) (int, error) {
 	wsCtx := principal.WithWorkspaceID(ctx, ws)
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:participant_backfill",
+		Type: principal.PrincipalSystem, ID: contacts.DisplayNameRepairActor,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+	for range participantBackfillBatchesPerTick {
 		n, err := w.store.BackfillParticipantsBatch(wsCtx, participantBackfillBatch)
 		if err != nil {
 			return total, err
@@ -147,7 +148,7 @@ func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws id
 // nothing, so a workspace with none left costs one probe a tick.
 func (w *participantBackfillWorker) backfillMeetingRSVPWorkspace(wsCtx context.Context) (int, error) {
 	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+	for range participantBackfillBatchesPerTick {
 		n, err := backfillMeetingRSVPBatch(wsCtx, w.pool, meetingRSVPBackfillPerTick, w.log)
 		if err != nil {
 			return total, err
@@ -167,7 +168,7 @@ func (w *participantBackfillWorker) backfillMeetingRSVPWorkspace(wsCtx context.C
 // nothing, so a workspace with none left costs one probe a tick.
 func (w *participantBackfillWorker) repairMeetingAttendeesWorkspace(wsCtx context.Context) (int, error) {
 	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+	for range participantBackfillBatchesPerTick {
 		n, err := repairMeetingAttendeesBatch(wsCtx, w.pool, meetingAttendeeRepairPerTick, w.log)
 		if err != nil {
 			return total, err
@@ -187,7 +188,7 @@ func (w *participantBackfillWorker) repairMeetingAttendeesWorkspace(wsCtx contex
 // nothing, so a workspace with no stale display names costs one probe a tick.
 func (w *participantBackfillWorker) refreshDisplayNamesWorkspace(wsCtx context.Context) (int, error) {
 	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+	for range participantBackfillBatchesPerTick {
 		n, err := repairStaleDisplayNamesBatch(wsCtx, w.pool, participantReplayBatch, w.log)
 		if err != nil {
 			return total, err
@@ -207,7 +208,7 @@ func (w *participantBackfillWorker) refreshDisplayNamesWorkspace(wsCtx context.C
 // nothing, so a workspace with no such rows left costs one probe a tick.
 func (w *participantBackfillWorker) recoverNamesWorkspace(wsCtx context.Context) (int, error) {
 	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+	for range participantBackfillBatchesPerTick {
 		n, err := recoverAttendeeNamesBatch(wsCtx, w.pool, participantReplayBatch, w.log)
 		if err != nil {
 			return total, err
@@ -234,7 +235,7 @@ const participantReplayBatch = 100
 // something true.
 func (w *participantBackfillWorker) replayWorkspace(wsCtx context.Context) (int, error) {
 	total := 0
-	for i := 0; i < participantBackfillBatchesPerTick; i++ {
+	for range participantBackfillBatchesPerTick {
 		n, err := replayParticipantsBatch(wsCtx, w.pool, participantReplayBatch, w.log)
 		if err != nil {
 			return total, err

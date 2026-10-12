@@ -23,6 +23,7 @@ package gates
 import (
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -174,10 +175,5 @@ func hasAnyPrefix(s string, prefixes []string) bool {
 }
 
 func slicesContains(haystack []string, needle string) bool {
-	for _, s := range haystack {
-		if s == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }

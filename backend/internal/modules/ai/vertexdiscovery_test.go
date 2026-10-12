@@ -42,7 +42,7 @@ func googleAt(t *testing.T, handler http.HandlerFunc) (brainSelector, *countingG
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	google := &countingGoogle{googleFixture: googleFixture{base: srv.URL}}
+	google := &countingGoogle{base: srv.URL}
 	return func(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 		return selectBrainOn(cfg, keys, &http.Client{Timeout: CallCeiling, Transport: google})
 	}, google

@@ -51,15 +51,15 @@ func TestEveryIdentifierFieldIsNamedAndUnderstood(t *testing.T) {
 		declared[f] = true
 	}
 
-	shape := reflect.TypeOf(provider.ContactIdentifiers{})
+	shape := reflect.TypeFor[provider.ContactIdentifiers]()
 	if shape.NumField() == 0 {
 		t.Fatal("ContactIdentifiers has no fields, so this gate would pass over an empty subject")
 	}
 
 	if len(declared) != shape.NumField() {
 		var carried []string
-		for i := range shape.NumField() {
-			carried = append(carried, shape.Field(i).Name)
+		for field := range shape.Fields() {
+			carried = append(carried, field.Name)
 		}
 		t.Errorf("ContactIdentifiers carries %d fields (%s) but IdentifierFields() names %d.\n\n"+
 			"A field nobody named cannot be rejected by the registry when a rule misspells it, and a rule "+

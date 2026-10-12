@@ -158,7 +158,7 @@ func TestDecideCompanyNameIsDeterministicAcrossEqualEvidence(t *testing.T) {
 	if !ok {
 		t.Fatal("expected a verdict")
 	}
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		got, ok := DecideCompanyName(candidate)
 		if !ok || got.Name != first.Name {
 			t.Fatalf("run %d answered %q (ok=%v), want a stable %q", i, got.Name, ok, first.Name)
@@ -173,7 +173,7 @@ func TestDecideCompanyNameIsDeterministicAcrossEqualEvidence(t *testing.T) {
 // company is keyed by. Only the site dossier writes without asking.
 func TestOnlyTheDossierAuthorizesAnUnattendedRename(t *testing.T) {
 	signatures := make([]SignatureCompanyName, 0, 6)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		signatures = append(signatures, SignatureCompanyName{
 			ContactID: ids.New[ids.ContactKind](),
 			Value:     "Gitex Global GmbH i.L. — ACCOUNT CHANGED, remit to DE00",

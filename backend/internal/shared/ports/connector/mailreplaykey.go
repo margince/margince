@@ -36,8 +36,8 @@ func SeatScopedMailKey(messageID, seat string) string {
 // Every reader that thinks in Message-IDs goes through this: the seat-scoping
 // is an artefact of who filed the row, never of which message it is.
 func SharedMailKey(sourceID string) string {
-	if at := strings.Index(sourceID, mailSeatMarker); at >= 0 {
-		return sourceID[:at]
+	if before, _, ok := strings.Cut(sourceID, mailSeatMarker); ok {
+		return before
 	}
 	return sourceID
 }

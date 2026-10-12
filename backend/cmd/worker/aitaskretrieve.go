@@ -35,12 +35,12 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/cliflags"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // previewWidth is how much of a passage the table shows: wide enough to
@@ -188,10 +188,7 @@ func writeRetrieval(w io.Writer, cfg aiTaskRetrieveFlags, result compose.CorpusP
 // because a passage spans several and one table row must stay one row.
 func passagePreview(text string) string {
 	flat := strings.Join(strings.Fields(text), " ")
-	if utf8.RuneCountInString(flat) <= previewWidth {
-		return flat
-	}
-	return string([]rune(flat)[:previewWidth]) + "…"
+	return textcut.RunesMarked(flat, previewWidth, "…")
 }
 
 // emitRetrievedFixture hands the result to the other command, in the shape that

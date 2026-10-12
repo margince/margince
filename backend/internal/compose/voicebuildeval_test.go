@@ -19,7 +19,7 @@ import (
 func evalSamples(count int) []ai.VoiceSample {
 	samples := make([]ai.VoiceSample, 0, count)
 	registers := []string{"email", "spoken", "long_form"}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		text := strings.Repeat("useful sentence about the work. ", 100)
 		samples = append(samples, ai.VoiceSample{
 			ID: fmt.Sprintf("s-%d", i), Kind: "email", Register: registers[i%len(registers)],

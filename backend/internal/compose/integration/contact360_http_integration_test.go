@@ -15,6 +15,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -217,9 +218,7 @@ func TestAMomentDoesNotClaimAbsenceForASectionTheReaderCouldNotSee(t *testing.T)
 	// The same record, read by someone who may not see activities.
 	blind := roomPerms
 	blind.Objects = map[string]principal.ObjectGrant{}
-	for object, grant := range roomPerms.Objects {
-		blind.Objects[object] = grant
-	}
+	maps.Copy(blind.Objects, roomPerms.Objects)
 	delete(blind.Objects, "activity")
 
 	page := read(e.As(e.Rep1, []ids.UUID{e.Team1}, blind))

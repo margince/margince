@@ -76,7 +76,7 @@ func readsIt(text string) error {
 // the model is shown is the one the answer path would have raised.
 func TestALaneThatCanReAskIsGivenTheSitesOwnRefusal(t *testing.T) {
 	t.Parallel()
-	lane := &retryingLane{plainLane: plainLane{reply: refusable}, second: sendable}
+	lane := &retryingLane{reply: refusable, second: sendable}
 	res, err := Ask(context.Background(), lane, model.Request{}, readsIt)
 	if err != nil {
 		t.Fatalf("asking: %v", err)

@@ -14,6 +14,7 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -252,7 +253,7 @@ func queuedAt(ctx context.Context, tx pgx.Tx, o occurrence) (time.Time, error) {
 func attributedTo(ctx context.Context, tx pgx.Tx, passportID *ids.PassportID) (context.Context, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok {
-		return nil, fmt.Errorf("runner: no actor bound; an activity announcement cannot be attributed")
+		return nil, errors.New("runner: no actor bound; an activity announcement cannot be attributed")
 	}
 	if passportID == nil {
 		// No passport is a real state — a job seeded before one was bound — and

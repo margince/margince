@@ -23,28 +23,28 @@ func TestOpenDSRsComeBackSoonestDeadlineFirst(t *testing.T) {
 	e := setupDSR(t)
 	later, err := e.store.CreateDSR(e.ctx, CreateDSRInput{
 		Kind: "access", SubjectRef: "later@dsr.test",
-		DueAt: time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC),
+		DueAt: new(time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	soon, err := e.store.CreateDSR(e.ctx, CreateDSRInput{
 		Kind: "erasure", SubjectRef: "soon@dsr.test",
-		DueAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
+		DueAt: new(time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	answered, err := e.store.CreateDSR(e.ctx, CreateDSRInput{
 		Kind: "access", SubjectRef: "done@dsr.test",
-		DueAt: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC),
+		DueAt: new(time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	resolution := "handled"
 	if _, err := e.store.UpdateDSR(e.ctx, answered.ID, UpdateDSRInput{
-		Status: strptr("fulfilled"), Resolution: &resolution,
+		Status: new("fulfilled"), Resolution: &resolution,
 	}); err != nil {
 		t.Fatalf("closing the answered request: %v", err)
 	}

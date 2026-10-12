@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import { worklistKey } from "./worklist.queries";
 
 // The forward half of the weekly. `brief.queries.ts` reads the week that closed;
@@ -86,10 +86,7 @@ export function useStartWeeklyPlan() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/weekly-plans/current");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.POST("/weekly-plans/current"));
       return data ?? null;
     },
     onSuccess: (plan) => {
@@ -102,13 +99,11 @@ export function useAddCommitment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (commitment: NewWeeklyPlanCommitment) => {
-      const { data, error } = await api.POST("/weekly-plans/commitments", {
-        body: commitment,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/weekly-plans/commitments", {
+          body: commitment,
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });
@@ -132,13 +127,12 @@ export function useSetCommitmentState() {
       id,
       state,
     }: Readonly<{ id: string; state: SettableState }>) => {
-      const { error } = await api.PUT("/weekly-plans/commitments/{id}/state", {
-        params: { path: { id } },
-        body: { state },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/weekly-plans/commitments/{id}/state", {
+          params: { path: { id } },
+          body: { state },
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });
@@ -156,13 +150,12 @@ export function useAskForHelp() {
       id,
       helpRequested,
     }: Readonly<{ id: string; helpRequested: string }>) => {
-      const { error } = await api.PUT("/weekly-plans/commitments/{id}/help", {
-        params: { path: { id } },
-        body: { help_requested: helpRequested },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/weekly-plans/commitments/{id}/help", {
+          params: { path: { id } },
+          body: { help_requested: helpRequested },
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });
@@ -185,16 +178,12 @@ export function useAnswerCommitment(ownerId: string | undefined) {
       id,
       managerResponse,
     }: Readonly<{ id: string; managerResponse: string }>) => {
-      const { error } = await api.PUT(
-        "/weekly-plans/commitments/{id}/response",
-        {
+      unwrap(
+        await api.PUT("/weekly-plans/commitments/{id}/response", {
           params: { path: { id } },
           body: { manager_response: managerResponse },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
@@ -225,12 +214,11 @@ export function useSetPlanContract() {
         capacity_note?: string | null;
       }>,
     ) => {
-      const { error } = await api.PUT("/weekly-plans/current/contract", {
-        body: contract,
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/weekly-plans/current/contract", {
+          body: contract,
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });

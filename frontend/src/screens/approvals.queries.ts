@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { type QueryLike, throwProblem } from "./common";
+import { type QueryLike, unwrap } from "./common";
 
 // The approvals query-hook family.
 //
@@ -49,21 +49,20 @@ async function fetchAllApprovals(
   const all: Approval[] = [];
   let cursor: string | null | undefined;
   do {
-    const { data, error } = await api.GET("/approvals", {
-      params: {
-        query: {
-          status,
-          limit: 50,
-          cursor: cursor ?? undefined,
-          bundle_id: target?.bundleId,
-          target_entity_type: target?.entityType,
-          target_entity_id: target?.entityId,
+    const data = unwrap(
+      await api.GET("/approvals", {
+        params: {
+          query: {
+            status,
+            limit: 50,
+            cursor: cursor ?? undefined,
+            bundle_id: target?.bundleId,
+            target_entity_type: target?.entityType,
+            target_entity_id: target?.entityId,
+          },
         },
-      },
-    });
-    if (error) {
-      throwProblem(error);
-    }
+      }),
+    );
     all.push(...data.data);
     cursor = data.page?.has_more ? (data.page.next_cursor ?? null) : null;
   } while (cursor);

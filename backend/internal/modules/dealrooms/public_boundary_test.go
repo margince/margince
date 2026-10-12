@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 const publicHandlersFile = "handlers_public.go"
@@ -140,6 +141,7 @@ func TestSessionScopedStoreNeverConsultsTheSeatGates(t *testing.T) {
 		// The exchange predicate is a named constant spliced into two statements;
 		// fold it back in so each statement is judged whole.
 		text = strings.ReplaceAll(text, "`+exchangeablePredicate+`", exchangeablePredicate)
+		text = strings.ReplaceAll(text, "`+workforce.LiveMemberSQL(\"u\")+`", workforce.LiveMemberSQL("u"))
 		// The address lookup splices the roster's FROM clause in through %s;
 		// fold that in too, so its statement is judged on its own predicate.
 		text = strings.ReplaceAll(text, "participantColumns, participantFrom,", "")

@@ -29,8 +29,7 @@ func WriteMultipartRefusal(w http.ResponseWriter, r *http.Request, err error, li
 // MultipartRefusal is WriteMultipartRefusal for a caller that returns its
 // refusal rather than writing it.
 func MultipartRefusal(err error, limit int64) *DetailedError {
-	var tooLarge *http.MaxBytesError
-	if errors.As(err, &tooLarge) {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		return BodyTooLargeRefusal(fmt.Sprintf("the upload exceeds the %s limit", Megabytes(limit)))
 	}
 	return Validation("file", "invalid_multipart",

@@ -45,6 +45,10 @@ type Registry struct {
 	// supplied value to it, so `minimum`/`maximum` bind the surface instead of
 	// describing an intention.
 	numArgs map[string][]numBound
+	// enumArgs[tool] is the closed vocabulary its schema declares for each text
+	// argument, read off the schema once at registration. Invoke holds a
+	// supplied word to it, so `enum` binds the surface as `minimum` does.
+	enumArgs map[string][]enumArg
 	// requiredArgs[tool] is what that tool's schema says it cannot run without,
 	// read off the schema once at registration. Invoke holds a call to it, so
 	// `required` binds the surface rather than describing an intention that
@@ -98,6 +102,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		specs:        map[string]mcp.ToolSpec{},
 		idArgs:       map[string]idArgSpec{},
 		numArgs:      map[string][]numBound{},
+		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
@@ -345,9 +350,15 @@ func (r *Registry) tierResolverFor(ctx context.Context, t mcp.Tool, name string,
 	}
 }
 
-// errFileCannotWait answers a confirm-first call that carries a file: staging it
+// ErrFileCannotWait answers a confirm-first call that carries a file: staging it
 // would keep the file's bytes in the approval, so nothing is staged.
-var errFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
+var ErrFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
+
+// FileCannotWait is that answer on both doors, over the refusal that asked for
+// an approval. So a caller reads one code wherever it sent the file.
+func FileCannotWait(refusal error) error {
+	return fmt.Errorf("%w: %w", ErrFileCannotWait, refusal)
+}
 
 // stageRefusedCall parks a 🟡 call the gate refused as a staged approval, so
 // the human decision the refusal asks for has somewhere to land; a retry
@@ -357,7 +368,7 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 	stageable, ok := t.(stageableTool)
 	switch {
 	case !ok && t.Spec().MaxArgsBytes > httperr.MaxBodyBytes:
-		return fmt.Errorf("%w: %w", errFileCannotWait, refusal)
+		return FileCannotWait(refusal)
 	case !ok:
 		return refusal
 	}

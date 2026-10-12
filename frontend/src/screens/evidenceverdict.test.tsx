@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   EvidenceVerdict,
   factClaim,
@@ -274,7 +275,7 @@ describe("a human's verdict on a machine's claim", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(
-        "This record changed since it was opened. Reload and retry.",
+        en["common.versionSkew"],
       ),
     );
   });

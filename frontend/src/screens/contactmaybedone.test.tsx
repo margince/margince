@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ContactToday } from "./contacttoday";
@@ -78,13 +79,49 @@ function show(moment: ContactMoment) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactToday view={VIEW} moment={moment} onAction={() => {}} />
+        <ToastProvider>
+          <ContactToday view={VIEW} moment={moment} onAction={() => {}} />
+          <ToastRegion />
+        </ToastProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
 
 describe("a promise our last email may have kept", () => {
+  it("confirms Done with an Undo that reopens the task on the version the write produced", async () => {
+    const writes: { body: unknown; ifMatch: string | null }[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "update"] }),
+    });
+    const routed = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (request.method === "PATCH") {
+          writes.push({
+            body: await request.clone().json(),
+            ifMatch: request.headers.get("If-Match"),
+          });
+          return jsonResponse({ ...TASK, is_done: true, version: 5 });
+        }
+        return routed(input, init);
+      }),
+    );
+    show(QUESTION);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(await screen.findByText("Task completed")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(writes[1].body).toEqual({ is_done: false });
+    expect(writes[1].ifMatch).toContain("5");
+  });
+
   it("completes the task on Done, at the version the card was drawn against", async () => {
     const patched = vi.fn();
     installFetchStub({

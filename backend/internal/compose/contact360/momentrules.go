@@ -13,6 +13,7 @@ package contact360
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -38,10 +39,8 @@ import (
 // it: what it saw, it saw.
 func withheld(page *crmcontracts.Contact360, sections ...crmcontracts.Contact360SectionsOmitted) bool {
 	for _, omitted := range page.SectionsOmitted {
-		for _, section := range sections {
-			if omitted == section {
-				return true
-			}
+		if slices.Contains(sections, omitted) {
+			return true
 		}
 	}
 	return false
@@ -77,7 +76,7 @@ func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Co
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:missing_next_step",
 		Rule:                crmcontracts.ContactMomentRuleMissingNextStep,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            "No next step on the open deal",
 		// The seat this contact actually holds, named — not "the contact whose
@@ -150,7 +149,7 @@ func thinRelationshipMoment(_ context.Context, _ time.Time, page *crmcontracts.C
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:thin_relationship",
 		Rule:                crmcontracts.ContactMomentRuleThinRelationship,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            "No interactions recorded",
 		WhyNow:              "No interactions or colleagues found in the records you can see.",
@@ -248,15 +247,6 @@ func fingerprintOf(evidence []crmcontracts.ContactMomentEvidence) string {
 	}
 	return owedwork.Fingerprint(marks)
 }
-
-// entityType lifts a destination's entity type, which the contract models as a
-// nullable enum and therefore a pointer.
-func entityType(v crmcontracts.ContactMomentDestinationEntityType) *crmcontracts.ContactMomentDestinationEntityType {
-	return &v
-}
-
-// prefill lifts the string map the contract carries as an optional object.
-func prefill(v map[string]string) *map[string]string { return &v }
 
 // recordedSeat names this contact's seat on the deal as the record spells it,
 // falling back to what is true when no role was recorded.

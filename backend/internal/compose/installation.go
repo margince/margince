@@ -66,6 +66,7 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 				BaseCurrency:  cfg.Workspace.BaseCurrency,
 				BaseLanguage:  cfg.Workspace.BaseLanguage,
 				Timezone:      cfg.Workspace.Timezone,
+				Country:       configuredCountry(cfg),
 				AdminEmail:    b.Email,
 				AdminName:     b.DisplayName,
 				AdminPassword: pw,
@@ -94,6 +95,9 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 		log.Info("installation bootstrapped", "workspace_id", wsID.String(), "workspace", cfg.Workspace.Name)
 	} else {
 		log.Info("installation bound to existing company", "workspace_id", wsID.String())
+		if err := seedConfiguredCountry(ctx, pool, log, cfg); err != nil {
+			return err
+		}
 	}
 	// THE PUBLISHED WORDING, ON EVERY BOOT and not only on the one that creates
 	// the workspace.

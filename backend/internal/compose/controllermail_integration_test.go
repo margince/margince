@@ -39,6 +39,12 @@ func (v *sealingVault) Put(_ context.Context, secret string) (string, error) {
 	return "sealed-ref", nil
 }
 
+// Delete destroys the sealed link, as an erasure asks the vault to.
+func (v *sealingVault) Delete(context.Context, string) error {
+	v.sealed = ""
+	return nil
+}
+
 // confirmLaneEnv is one subject with a live address and the real lane wired.
 type confirmLaneEnv struct {
 	e       *integration.Env

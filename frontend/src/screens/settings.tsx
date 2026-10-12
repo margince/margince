@@ -1,72 +1,21 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
-import { api, FIRST_PAGE } from "../api/client";
-import type { components, operations } from "../api/schema";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useState } from "react";
+import { api } from "../api/client";
+import type { operations } from "../api/schema";
 import { THEME_LABEL_KEYS } from "../app/account";
-import { dotTier } from "../app/autonomy";
-import { useCan, useCanWrite } from "../app/capability";
-import { isEntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
+import { useCanWrite } from "../app/capability";
 import { navigateReplacing, type Route } from "../app/router";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
-import { useUnsavedGuard } from "../app/unsaved";
-import {
-  Avatar,
-  Badge,
-  Button,
-  Checkbox,
-  Disclosure,
-  EmptyState,
-  Field,
-  Modal,
-  Skeleton,
-  Textarea,
-  TextInput,
-} from "../design-system/atoms";
+import { Avatar, Button, Disclosure, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { useSettledValue } from "../design-system/debouncedsearch";
-import { Heading } from "../design-system/heading";
-import {
-  Panel,
-  PanelBody,
-  PanelIntro,
-  PanelPlate,
-} from "../design-system/panel";
-import {
-  PassportSelect,
-  ScopeChips,
-  scopeChipLabel,
-} from "../design-system/passportselect";
-import { FieldGuard, RoleBadge } from "../design-system/rbac";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { type Toast, useToast } from "../design-system/toast";
-import {
-  AutonomyDot,
-  EvidenceChip,
-  FieldDiff,
-  PassportChip,
-  toEvidence,
-} from "../design-system/trust";
-import { stable } from "../format/collate";
-import { formatDate, formatDateTime, formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
+import { useToast } from "../design-system/toast";
+import { formatNumber } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AgentConnectionsCard } from "./agent-token-settings";
 import { AiBudgetCard } from "./ai-admin";
@@ -76,7 +25,6 @@ import { AiRoutingCard } from "./ai-routing";
 import { AiTasksCard } from "./ai-tasks";
 import { AiCallsCard } from "./aicalls";
 import { AiUsageCard } from "./aiusage";
-import { ActorTag } from "./audit";
 import { AutomationsAdmin } from "./automations";
 import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
@@ -90,21 +38,17 @@ import {
   WebsiteReadingCard,
 } from "./capture-settings";
 import {
-  LoadMoreButton,
   problemMessageOf,
   QueryGate,
-  resetToSignedOut,
-  throwProblem,
+  unwrap,
   useLogout,
   useMe,
-  WriteRefused,
 } from "./common";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
-import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
 import { FollowUpSettingsCard } from "./followupsettings";
@@ -134,15 +78,22 @@ import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
+import { JurisdictionCard } from "./settings.jurisdiction";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SystemHealthPage } from "./settings.systemhealth";
+import { AgentToolsCard } from "./settings-agenttools";
+import { AuditLogCard } from "./settings-audit";
+import { AutonomyTiersCard } from "./settings-autonomytiers";
 import {
   DisplayNameSettingRow,
   GreetingNameSettingRow,
 } from "./settings-names";
+import { PassportCard } from "./settings-passports";
+import { SignatureSettingRow } from "./settingssignaturerow";
 import { SignInMethodsCard } from "./sign-in-methods";
+import { SignatureTemplateCard } from "./signaturetemplatecard";
 import { TagVocabularyCard } from "./tagadmin";
 import { ThisDevicePanel } from "./thisdevice";
 import { TeamsCard } from "./users-access";
@@ -165,7 +116,6 @@ import {
   useVisibleSettingsPages,
 } from "./settingsnav";
 import { settingsHref, settingsRouteTarget } from "./settingsrouting";
-import { useSaveSignature } from "./settingssignature";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -229,6 +179,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
           <FxRatesCard />
           <CompanyContextCard />
           <FollowUpSettingsCard />
+          <SignatureTemplateCard />
         </>
       );
     case "authentication":
@@ -362,21 +313,19 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     // ---- governance ----
     case "privacy":
       return <PrivacyLanes />;
+    case "jurisdiction":
+      return <JurisdictionCard />;
     case "audit":
-      // Split from the privacy page it used to end. The trail proves the
-      // surfaces there were honoured, but it answers to `audit_log` where they
-      // answer to the consent registry and the retention policy — so a reader
-      // could hold the audit grant and be refused the page carrying it.
+      // Its own page: it answers to `audit_log`, where the privacy page answers
+      // to consent and retention, and one reader can hold one without the other.
       return <AuditLogCard />;
     case "system-health":
       return <SystemHealthPage />;
     case "extensions":
       return <ExtensionAccessCard />;
     case "reset":
-      // Its own page, and the reason is the ordering the old Maintenance page
-      // could not express: a reindex, a queue reading and "empty the
-      // installation" were three verbs on one screen, ascending in consequence
-      // and separated by nothing.
+      // Its own page: a reindex, a queue reading and "empty the installation"
+      // were three verbs on one screen, separated by nothing.
       return <ResetDataCard />;
   }
 }
@@ -597,7 +546,7 @@ function AgentsTab() {
           that connects with its own fresh credential instead. */}
       <ConnectedAgentsCard />
       <AgentToolsCard />
-      <AutonomyCard />
+      <AutonomyTiersCard />
       {/* Which kinds of proposal stop asking this reader. It sat on Account,
           under the identity, because it is a statement about them rather than
           about the company — but every other thing on this page is also
@@ -667,160 +616,17 @@ function AccountCard() {
             </div>
           )}
         </QueryGate>
-        <SettingList>
-          {/* The credential first, because it is the one row that decides
-              whether the other two are reachable at all. The row and its
-              three-field form live in passwordcard.tsx, exported as a ROW
-              precisely so this page can place it among its own. */}
-          <DisplayNameSettingRow toast={toast} />
-          <GreetingNameSettingRow toast={toast} />
-          <PasswordSettingRow />
-          <SignatureSettingRow toast={toast} />
-          <LanguageSettingRow />
-          <AppearanceSettingRow />
-          <BriefDeliveryRows />
-        </SettingList>
       </PanelBody>
+      <SettingList bleed="settings">
+        <DisplayNameSettingRow toast={toast} />
+        <GreetingNameSettingRow toast={toast} />
+        <PasswordSettingRow />
+        <SignatureSettingRow toast={toast} />
+        <LanguageSettingRow />
+        <AppearanceSettingRow />
+        <BriefDeliveryRows />
+      </SettingList>
     </Panel>
-  );
-}
-
-// The sign-off appended below every message this member sends, as one row.
-//
-// It lives beside identity rather than under the composer because it is who
-// the sender IS, not something about one mail: a signature written per message
-// would be a different signature every time, which is the opposite of what one
-// is for. Plain text, because the transport sends text/plain — markup here
-// would arrive as tags in the message.
-//
-// A textarea committed with a Save button is the settings page's MODAL case,
-// not its row case: the row states what the setting is and what it currently
-// says, and the verb opens the form. The row's answer is the sign-off's first
-// line, which is the part a reader recognises their own signature by.
-function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
-  const t = useT();
-  const titleId = useId();
-  const formId = useId();
-  const [open, setOpen] = useState(false);
-  const [body, setBody] = useState<string | null>(null);
-  const signature = useQuery({
-    queryKey: ["me-email-signature"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/me/email-signature");
-      if (error) {
-        throwProblem(error);
-      }
-      return data ?? { body: "" };
-    },
-  });
-  const save = useSaveSignature((saved) => {
-    // Hand the edit back to the server's answer. It trims what it stores, so
-    // a member who typed trailing spaces would otherwise keep seeing them
-    // over a row that no longer has them — with Save still lit, offering to
-    // save a difference that exists only in the browser.
-    setBody(saved?.body ?? "");
-    // Committing the edit is what the dialog was opened for, so a save closes
-    // it — and the toast is what says the write landed, on the page the
-    // reader is handed back to.
-    setOpen(false);
-    toast.show(t("settings.saved"));
-  });
-
-  // The saved value until the member types; theirs from then on. Reading state
-  // straight from the query would discard every keystroke the moment a refetch
-  // landed underneath them.
-  const stored = signature.data?.body ?? "";
-  const shown = body ?? stored;
-  // The same comparison the Save button already made, now also the claim that
-  // stops a sidebar click throwing the draft away.
-  const dirty = shown !== stored;
-  // Only while the dialog is SHOWING. It outlives its own close, so a draft the
-  // reader already walked away from would otherwise go on blocking navigation
-  // from behind a dialog that is no longer on screen.
-  useUnsavedGuard(open && dirty);
-  // The first line, because a sign-off is several lines and only the first one
-  // identifies it. `.split` on a string always yields at least one element, so
-  // the empty signature reads as the empty string and the row says so instead —
-  // but only once the read has answered: "no sign-off set" while the request is
-  // still out is a claim about the member's signature made before anybody knows
-  // what it is.
-  const firstLine = stored.split("\n")[0].trim();
-  const answer = signature.isPending
-    ? undefined
-    : firstLine === ""
-      ? t("settings.signatureNone")
-      : firstLine;
-
-  // Leaving discards the draft rather than keeping it: the reader closed the
-  // form, and a sign-off half-typed into a dialog nobody reopened is not an
-  // edit anybody is coming back to.
-  // Closing only CLOSES. The dialog outlives it so it can animate out, and a
-  // draft cleared on the way out snaps back to the stored sign-off in front of
-  // a reader still watching the dialog leave. The discarding happens on the
-  // next OPEN, which is the same moment the reader asks for a blank form.
-  const close = () => setOpen(false);
-  const edit = () => {
-    setBody(null);
-    save.reset();
-    setOpen(true);
-  };
-
-  return (
-    <>
-      <SettingRow
-        label={t("settings.signature")}
-        description={t("settings.signatureSub")}
-        value={answer}
-        control={
-          <Button variant="ghost" onClick={edit}>
-            {t("settings.signatureEdit")}
-          </Button>
-        }
-      />
-      <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
-          {t("settings.signature")}
-        </Heading>
-        {/* A real form: nothing is written until Save is pressed. */}
-        <form
-          id={formId}
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (dirty && !save.isPending) save.mutate(shown);
-          }}
-        >
-          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-          <Field label={t("settings.signatureLabel")}>
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={5}
-                value={shown}
-                placeholder={t("settings.signaturePlaceholder")}
-                onChange={(event) => setBody(event.target.value)}
-              />
-            )}
-          </Field>
-          <p className="t-caption">{t("settings.signatureHint")}</p>
-        </form>
-        <div className="actions">
-          <Button variant="ghost" onClick={close}>
-            {t("settings.signatureCancel")}
-          </Button>
-          <Button
-            type="submit"
-            form={formId}
-            variant="primary"
-            disabled={!save.isPending && !dirty}
-            pending={save.isPending}
-            busyLabel={t("settings.signatureSaving")}
-          >
-            {t("record.save")}
-          </Button>
-        </div>
-      </Modal>
-    </>
   );
 }
 
@@ -888,10 +694,7 @@ function LanguageSettingRow() {
   // dropped request than letting the next sign-in re-ask the server.
   const remember = useMutation({
     mutationFn: async (next: Locale) => {
-      const { error } = await api.PUT("/me/locale", { body: { locale: next } });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(await api.PUT("/me/locale", { body: { locale: next } }), t);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["me"] });
@@ -931,619 +734,6 @@ function LanguageSettingRow() {
         />
       )}
     />
-  );
-}
-
-const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
-
-// The scope's wire token is what the server reads; a contact choosing what
-// authority to hand their agent needs the sentence. Composed rather than
-// switched, and annotated so an added scope is a missing-key compile error
-// rather than a checkbox that quietly labels itself `enrich` in every
-// language.
-function scopeLabelKey(scope: (typeof PASSPORT_SCOPES)[number]): MessageKey {
-  return `passport.scope.${scope}`;
-}
-
-function PassportCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  const queryClient = useQueryClient();
-  const [label, setLabel] = useState("");
-  const [scopes, setScopes] = useState<Set<string>>(new Set(["read", "draft"]));
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [minting, setMinting] = useState(false);
-  const revokingRow = useRef<HTMLElement | null>(null);
-  const tokenRegion = useRef<HTMLDivElement | null>(null);
-  const mintTitleId = useId();
-  const mintFormId = useId();
-  const mintScopeHintId = useId();
-
-  // Metadata only — the wire schema carries no token (PassportSummary),
-  // so this list cannot re-disclose one.
-  const list = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  const mint = useMutation({
-    mutationFn: async () => {
-      const { data, error, response } = await api.POST("/passports", {
-        body: {
-          label: label.trim() || null,
-          scopes: [...scopes] as (
-            | "read"
-            | "draft"
-            | "write"
-            | "send"
-            | "enrich"
-          )[],
-        },
-      });
-      // An expired session must not read as a mint that did nothing. The `me`
-      // probe is cached for five minutes, so without this the screen keeps
-      // believing it is signed in and the button simply fails in silence —
-      // which is how the OAuth consent screen's empty-passport guide became an
-      // inescapable loop: it sends the human here to mint, the mint 401s
-      // without saying so, and returning finds no passport and shows the same
-      // guide again.
-      //
-      // Keyed on the STATUS rather than on `error` being truthy: a non-2xx
-      // with no body leaves `error` undefined in this client (compose.tsx
-      // documents the same shape), and that response would otherwise pass as
-      // a success and then render an undefined token.
-      if (response.status === 401) {
-        // useLogout's order, for its reason: drop every other cached answer
-        // BEFORE resetting the probe. AuthGate restores this route after the
-        // next sign-in, and whoever signs in then must not be shown the
-        // previous session's passport list out of cache.
-        await resetToSignedOut(queryClient);
-      }
-      if (error) {
-        throwProblem(error);
-      }
-      if (!response.ok) {
-        // A refusal that carried no problem document still has to refuse.
-        throwProblem({
-          type: "about:blank",
-          title: response.statusText || "Request failed",
-          status: response.status,
-        });
-      }
-      return data;
-    },
-    onSuccess: () => list.refetch(),
-  });
-
-  // AS-2 kill-switch: revoke is a hard DELETE, never a soft toggle in this
-  // client — ConfirmModal guards it so a stray click can't kill a live
-  // agent's credential.
-  const revoke = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/passports/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: async () => {
-      // Refetch BEFORE closing, so the row focus returns to is already carrying
-      // the revoked state it is meant to announce. Closing first restores focus
-      // against the pre-revoke DOM and reads the row back unchanged.
-      await list.refetch();
-      setConfirmId(null);
-    },
-  });
-
-  // The token arrives asynchronously, is shown once, and is never re-disclosed:
-  // announcing it is not enough on its own, because a reader whose focus is
-  // still on the Mint button has to hunt for what they just made. Focus moves
-  // to the region holding it, which is also what makes the copy gesture reach
-  // it from the keyboard.
-  const minted = mint.isSuccess;
-  useEffect(() => {
-    if (minted) {
-      tokenRegion.current?.focus();
-    }
-  }, [minted]);
-
-  // Closing resets the whole attempt, so re-opening starts clean rather than
-  // showing the previous mint's token or its refusal. The scope defaults come
-  // back with it: each opening is a new passport.
-  const closeMint = useCallback(() => {
-    // Refused while the request is outstanding, and this is about losing a
-    // credential rather than about tidiness. `mint.reset()` detaches the
-    // observer; it does not cancel the POST, so a dialog closed mid-flight
-    // still creates a passport whose token, never re-served, goes with it.
-    if (mint.isPending) {
-      return;
-    }
-    setMinting(false);
-    setLabel("");
-    setScopes(new Set(["read", "draft"]));
-    mint.reset();
-  }, [mint]);
-
-  return (
-    // The card LISTS what exists; minting is a dialog of its own.
-    <Panel
-      title={t("settings.passports")}
-      // The card's one create verb, in the header band beside the title rather
-      // than as a trailing row: a row whose label reads "Mint a new passport"
-      // beside a button reading "New passport" says the same thing twice, and it made
-      // a third interval out of what is not a decision the list holds. The verb
-      // names the THING it creates and the dialog's submit names the act —
-      // two buttons reading "Mint passport" are one name for two acts, for a
-      // reader and for a name-based query alike.
-      //
-      // Ghost, which is Button's default: the primary it used to carry was the
-      // only one on the page, and a page with one loud button reads as if the
-      // other three cards had nothing to offer.
-      titleAction={
-        <Button onClick={() => setMinting(true)}>
-          {t("settings.mintOpen")}
-        </Button>
-      }
-    >
-      <PanelBody>
-        {/* Both sentences above the rows, neither as a `panel-foot` band: every
-            card on this page reads title, prose, rows. */}
-        <PanelIntro>{t("settings.passportsSub")}</PanelIntro>
-        <PanelIntro>{t("settings.passportsLendHint")}</PanelIntro>
-        <SettingList>
-          {/* Only what this human MINTED, each credential its own row: the name
-              on the left, what it currently IS on the right — masked token,
-              scopes, dates, and the verb that kills it. A row carrying a
-              connection was issued by the token exchange to a client — it
-              belongs to ConnectedAgentsCard, and listing it here put a raw DCR
-              client id among the names the human chose. `connection` is the
-              server's own statement of which kind a row is; the `oauth:` label
-              prefix is display text and decides nothing.
-              The rows are handed to the enclosing list as its own children
-              rather than wrapped in a list of their own: the hairline between
-              two credentials belongs to the card that holds both. */}
-          <QueryGate
-            pendingLabel={t("settings.passports")}
-            query={list}
-            empty={(page) =>
-              page.data.every((passport) => passport.connection != null)
-            }
-          >
-            {(page) =>
-              page.data
-                .filter((passport) => passport.connection == null)
-                .map((passport) => (
-                  <PassportRow
-                    key={passport.id}
-                    passport={passport}
-                    locale={locale}
-                    onRevoke={(row) => {
-                      revokingRow.current = row;
-                      setConfirmId(passport.id);
-                    }}
-                  />
-                ))
-            }
-          </QueryGate>
-        </SettingList>
-      </PanelBody>
-      <Modal
-        open={minting}
-        onClose={closeMint}
-        closeDisabled={mint.isPending}
-        labelledBy={mintTitleId}
-        intent="confirm"
-      >
-        <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
-          {t("settings.mint")}
-        </Heading>
-        {/* The token region is mounted for the whole life of the dialog rather
-            than appearing with the token in it: a live region inserted at the
-            same moment as its content is not reliably announced, and this token
-            is shown exactly once. */}
-        <div
-          className="passport-token"
-          ref={tokenRegion}
-          tabIndex={-1}
-          role="status"
-        >
-          {mint.isSuccess && (
-            <PanelPlate>
-              <p>{t("settings.tokenOnce")}</p>
-              <p className="passport-token-value">{mint.data.token}</p>
-            </PanelPlate>
-          )}
-        </div>
-        {!mint.isSuccess && (
-          <form
-            id={mintFormId}
-            className="form-stack"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (scopes.size > 0 && !mint.isPending) mint.mutate();
-            }}
-          >
-            <Field label={t("settings.passportLabel")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={label}
-                  onChange={(event) => setLabel(event.target.value)}
-                />
-              )}
-            </Field>
-            <fieldset
-              className="field-multiselect"
-              aria-describedby={mintScopeHintId}
-            >
-              <legend className="t-name">{t("settings.passportScopes")}</legend>
-              <p id={mintScopeHintId} className="t-caption">
-                {t("settings.passportScopesHint")}
-              </p>
-              {PASSPORT_SCOPES.map((scope) => (
-                <Checkbox
-                  key={scope}
-                  checked={scopes.has(scope)}
-                  onChange={(event) => {
-                    const next = new Set(scopes);
-                    if (event.target.checked) {
-                      next.add(scope);
-                    } else {
-                      next.delete(scope);
-                    }
-                    setScopes(next);
-                  }}
-                  label={t(scopeLabelKey(scope))}
-                />
-              ))}
-            </fieldset>
-            {/* Beside the button that produced it, not below the tokens. */}
-            <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
-          </form>
-        )}
-        <div className="actions">
-          {mint.isSuccess ? (
-            // It stays open on success: closing would take the one sight of a
-            // credential the server never re-discloses.
-            <Button variant="primary" onClick={closeMint}>
-              {t("settings.mintDone")}
-            </Button>
-          ) : (
-            <>
-              <Button disabled={mint.isPending} onClick={closeMint}>
-                {t("settings.mintCancel")}
-              </Button>
-              <Button
-                type="submit"
-                form={mintFormId}
-                variant="primary"
-                // A scopeless passport can do nothing, so the press is refused
-                // with a sentence; never mid-mint, as `reason` outranks `pending`.
-                reason={
-                  scopes.size === 0 && !mint.isPending
-                    ? t("settings.passportScopesRequired")
-                    : undefined
-                }
-                pending={mint.isPending}
-                busyLabel={t("settings.minting")}
-              >
-                {t("settings.mint")}
-              </Button>
-            </>
-          )}
-        </div>
-      </Modal>
-      <ConfirmModal
-        open={confirmId != null}
-        onClose={() => {
-          setConfirmId(null);
-          revoke.reset();
-        }}
-        title={t("settings.revoke")}
-        confirmLabel={t("settings.revoke")}
-        confirmVariant="danger"
-        onConfirm={() => confirmId && revoke.mutate(confirmId)}
-        pending={revoke.isPending}
-        error={revoke.error ? problemMessageOf(revoke.error, t) : null}
-        // The revoked passport's own row, which survives the DELETE as a
-        // struck-through entry carrying the "revoked" badge — so focus lands on
-        // the outcome, at the place the reader was working. The Revoke button
-        // they pressed cannot be the target: it is what the badge replaced.
-        returnFocusTo={() => revokingRow.current}
-      >
-        <p>{t("settings.revokeConfirm")}</p>
-      </ConfirmModal>
-    </Panel>
-  );
-}
-
-type PassportSummary = components["schemas"]["PassportSummary"];
-
-// One minted passport as one row: the name the human gave it on the left, what
-// the credential currently IS on the right, and the verb that kills it at the
-// same x as every other answer on the page. The revoked state is STRUCK, never
-// dimmed: dimming drops the row under the AA contrast floor (B-EP09.21), and it
-// is the revoked row a reader most needs to read.
-//
-// The row is wrapped rather than bare because the revoke confirm hands focus
-// back HERE — the button it was opened from is gone by then — and the wrapper is
-// what carries `data-passport` for the resolver and the -1 tab index that makes
-// it reachable by focus() without joining anybody's Tab order.
-function PassportRow({
-  passport,
-  locale,
-  onRevoke,
-}: Readonly<{
-  passport: PassportSummary;
-  locale: Locale;
-  onRevoke: (row: HTMLElement | null) => void;
-}>) {
-  const t = useT();
-  const recordZone = useRecordZone();
-  const revoked = passport.revoked_at != null;
-  return (
-    <div data-passport={passport.id} tabIndex={-1}>
-      <SettingRow
-        label={
-          <span className={revoked ? "passport-struck" : undefined}>
-            {passport.label}
-          </span>
-        }
-        // The credential's lifetime reads on the LEFT, under the name: it
-        // qualifies which passport this is rather than answering what it is set
-        // to, and six facts crowded into the right column left the name with
-        // three characters of width.
-        description={
-          <span className="settings-run">
-            <span>
-              {t("settings.created", {
-                date: formatDate(passport.created_at, locale, recordZone),
-              })}
-            </span>
-            {/* A credential's lifetime is a personal deadline, so it reads on
-                the viewer's own calendar — the same zone-by-purpose split the
-                consent screen makes. created_at above stays the fixed record
-                zone. */}
-            {passport.expires_at && (
-              <span>
-                {t("settings.expires", {
-                  date: formatDate(passport.expires_at, locale, viewerZone()),
-                })}
-              </span>
-            )}
-          </span>
-        }
-        value={
-          <span className="settings-run">
-            {/* The credential exists but is withheld by design (shown once at
-                mint) — masked reads as "withheld", not absent. */}
-            <span className="t-label">{t("settings.token")}</span>
-            <FieldGuard mode="masked" />
-            <ScopeChips
-              labels={passport.scopes.map((scope) => scopeChipLabel(t, scope))}
-            />
-          </span>
-        }
-        control={
-          revoked ? (
-            <Badge tone="danger">{t("settings.revoked")}</Badge>
-          ) : (
-            <Button
-              variant="danger"
-              // The row is remembered from the CLICK rather than from
-              // `confirmId`: the focus resolver runs as the dialog closes, by
-              // which time that state is already back to null and there is
-              // nothing left to look the row up by.
-              onClick={(event) =>
-                onRevoke(
-                  event.currentTarget.closest<HTMLElement>("[data-passport]"),
-                )
-              }
-            >
-              {t("settings.revoke")}
-            </Button>
-          )
-        }
-      />
-    </div>
-  );
-}
-
-// The read-only tool console (IT-1): the same governed surface an MCP client
-// sees — GET /agent-tools, with an optional passport selector that strikes
-// through any row the selected passport's granted scopes don't cover. No passport
-// picked means every row reads as reachable (the unfiltered inventory).
-function AgentToolsCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  const [passportId, setPassportId] = useState<string>("");
-  const tools = useQuery({
-    queryKey: ["agent-tools"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/agent-tools");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-  const passports = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-  // Live, and minted by the human themselves. A connection's credential is
-  // neither: it is minted fresh by the token exchange from whatever the human
-  // ticked on the consent screen, so it was never a standalone passport a
-  // human picked from a list — offering one here would offer a choice that
-  // doesn't exist, and would put a raw DCR client id back in front of a reader
-  // the rest of this change just took it away from.
-  const mintedPassports = (passports.data?.data ?? []).filter(
-    (p) => p.revoked_at == null && p.connection == null,
-  );
-  // Whether this human has ever minted one — a REVOKED one still counts, so
-  // the row a human just revoked does not yank the selector out from under
-  // them (the test below pins that transition). A connection's credential
-  // never counts, revoked or not: a human who only ever connected agents,
-  // never minted, has no selector to show.
-  const everMintedAPassport = (passports.data?.data ?? []).some(
-    (p) => p.connection == null,
-  );
-  // The filter follows the selector: a passport revoked while it was the
-  // chosen scope drops out of the options, and the <select> then shows "all
-  // passports" — so the inventory must read as unfiltered too, rather than
-  // stay quietly scoped to a credential no longer on offer.
-  const scopeId = mintedPassports.some((p) => p.id === passportId)
-    ? passportId
-    : "";
-  const grantedScopes = new Set(
-    mintedPassports.find((p) => p.id === scopeId)?.scopes ?? [],
-  );
-
-  return (
-    <Panel title={t("tools.title")}>
-      <PanelBody>
-        <PanelIntro>{t("tools.sub")}</PanelIntro>
-        <SettingList>
-          {/* The dial FIRST, then the inventory it narrows — the posture before
-              the judgements that read it. Absent, not disabled, while this human
-              has minted nothing: a selector offering one choice is a control
-              with nothing behind it. `PassportSelect` carries its own accessible
-              name ("All passports"), the way `Switch` does, so the row hands it
-              no ARIA of its own. */}
-          {everMintedAPassport && (
-            <SettingRow
-              label={t("tools.scopeLabel")}
-              control={
-                <PassportSelect
-                  options={mintedPassports.map((p) => ({
-                    id: p.id,
-                    label: t("tools.scopedTo", { label: p.label }),
-                    scopes: p.scopes,
-                  }))}
-                  value={scopeId}
-                  onChange={setPassportId}
-                  allowEmpty
-                  emptyLabel={t("tools.scopeAll")}
-                  ariaLabel={t("tools.scopeAll")}
-                />
-              }
-            />
-          )}
-          {/* The inventory is a REFERENCE, and it is 68 tools long: each row
-              carries the tool's name, what it is for, and the text an agent
-              selects it by, which is the promise this console makes — and read
-              open it measured 14,000px, so the card was a page-long wall in
-              front of the two rows above it that a reader actually sets. So it
-              is the card's secondary half and it is closed: the rule this page
-              follows for anything advanced or diagnostic.
-
-              One row per governed tool, handed to the list inside as its own
-              children so the hairline between two tools comes from the list
-              that holds both. */}
-          <QueryGate
-            query={tools}
-            empty={(data) => data.data.length === 0}
-            pendingLabel={t("tools.title")}
-          >
-            {(data) => (
-              <Disclosure
-                summary={t("tools.inventory", {
-                  count: formatNumber(data.data.length, locale),
-                })}
-              >
-                <SettingList>
-                  {data.data.map((tool) => (
-                    <ToolRow
-                      key={tool.name}
-                      tool={tool}
-                      reachable={
-                        !scopeId ||
-                        tool.required_scope == null ||
-                        grantedScopes.has(tool.required_scope)
-                      }
-                    />
-                  ))}
-                </SettingList>
-              </Disclosure>
-            )}
-          </QueryGate>
-        </SettingList>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-type AgentTool = components["schemas"]["AgentTool"];
-
-// One governed tool as one row, in the same two columns as every other row on
-// this page: the tool's NAME is the label, what it is for and what an agent
-// selects it by read under it, and the governance it runs under answers on the
-// right.
-//
-// The name and its written title used to share the label's line, so each row
-// read as a pair of unrelated strings — "company_coverage  Relationship coverage
-// on a deal" — beside cards whose rows are a label with a description beneath.
-// The title is a statement ABOUT the tool, so it goes where this page puts those.
-//
-// Struck, not dimmed: dimming the row to 0.4 took the whole row under the AA
-// contrast floor (B-EP09.21) — including the words that are supposed to be the
-// text equivalent of the dimming, so the one part a reader needs most became the
-// hardest to read. The strikethrough wraps the NAME and its display title and
-// nothing else: the badges state the tool's governance, which is true either
-// way, and the unreachable line is the explanation.
-//
-// That line is prose and therefore NOT a control: it used to sit in the right
-// column beside the badges, which is what left the answers on this card at three
-// different widths. It says something about the tool, so it reads with the rest
-// of what this row says about it.
-//
-// Wrapped rather than bare because `data-tool` is how the console's own coverage
-// reads one tool's row out of the inventory.
-function ToolRow({
-  tool,
-  reachable,
-}: Readonly<{ tool: AgentTool; reachable: boolean }>) {
-  const t = useT();
-  const struck = reachable ? undefined : "tool-out-of-scope";
-  return (
-    <div data-tool={tool.name}>
-      <SettingRow
-        label={
-          <span className={["tool-name", struck].filter(Boolean).join(" ")}>
-            {tool.name}
-          </span>
-        }
-        description={
-          <span className="tool-row-text">
-            {tool.title && <span className={struck}>{tool.title}</span>}
-            {/* The text an agent actually selects on. This console promises the
-                surface an MCP client sees, and the name alone was never that. */}
-            <span>{tool.description}</span>
-            {!reachable && <span>{t("tools.unreachable")}</span>}
-          </span>
-        }
-        control={
-          <span className="settings-run">
-            <AutonomyDot tier={dotTier(tool.tier)} />
-            {tool.required_scope && <Badge>{tool.required_scope}</Badge>}
-            {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
-          </span>
-        }
-      />
-    </div>
   );
 }
 
@@ -1603,13 +793,11 @@ function ResetDataCard() {
       // clearing here means a retry's error can never leave a previous
       // success sitting on screen, and an in-flight retry shows no summary.
       setSummary(null);
-      const { data, error } = await api.POST("/admin/reset-data", {
-        body: { confirmation: typed },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/admin/reset-data", {
+          body: { confirmation: typed },
+        }),
+      );
     },
     onSuccess: (data) => {
       setOpen(false);
@@ -1634,23 +822,22 @@ function ResetDataCard() {
     >
       <PanelBody className="form-stack">
         <PanelIntro>{t("settings.dangerZoneSub")}</PanelIntro>
-        <SettingList>
-          {/* One row, because there is one act: what it does on the left, the
-              verb that does it on the right. This verb opens the question and
-              the dialog's confirm answers it, so each is named for its own act
-              — a destructive button and the button that asks again about it
-              must not read the same while both are on screen. */}
-          <SettingRow
-            label={t("settings.resetDataLabel")}
-            description={t("settings.resetDataDesc")}
-            control={
-              <Button variant="danger" onClick={() => setOpen(true)}>
-                {t("settings.resetDataButton")}
-              </Button>
-            }
-          />
-        </SettingList>
-        {summary && (
+      </PanelBody>
+      <SettingList bleed="settings">
+        {/* This button and the dialog's confirm share the screen, so each is
+            named for its own act. */}
+        <SettingRow
+          label={t("settings.resetDataLabel")}
+          description={t("settings.resetDataDesc")}
+          control={
+            <Button variant="danger" onClick={() => setOpen(true)}>
+              {t("settings.resetDataButton")}
+            </Button>
+          }
+        />
+      </SettingList>
+      {summary && (
+        <PanelBody>
           <p className="t-caption settings-danger-result" role="status">
             {t("settings.resetDataResult", {
               tables: formatNumber(summary.tables_cleared, locale),
@@ -1660,14 +847,14 @@ function ResetDataCard() {
               objects: formatNumber(summary.objects_deleted, locale),
             })}
           </p>
-        )}
-        {summary?.drain_timed_out && (
-          // ds:ignore a warning in --warningText, not a refusal
-          <p className="settings-danger-warning" role="alert">
-            {t("settings.resetDataDrainWarning")}
-          </p>
-        )}
-      </PanelBody>
+          {summary.drain_timed_out && (
+            // ds:ignore a warning in --warningText, not a refusal
+            <p className="settings-danger-warning" role="alert">
+              {t("settings.resetDataDrainWarning")}
+            </p>
+          )}
+        </PanelBody>
+      )}
       <ConfirmModal
         open={open}
         onClose={() => {
@@ -1700,416 +887,6 @@ function ResetDataCard() {
           onChange={(event) => setTyped(event.target.value)}
         />
       </ConfirmModal>
-    </Panel>
-  );
-}
-
-// The tier table: informational, and the advance-stage row is locked — there
-// is no toggle that could soften it (AC-settings). It reads AFTER the passports
-// and the tools it governs, because nothing on it can be acted on: it is the
-// reference for the tiers those rows are marked with. "Locked" is about the
-// FLOOR, not about waiting every time: advancing resolves its tier per move and
-// only stages when the move closes the deal, and that floor is what no toggle
-// reaches.
-function AutonomyCard() {
-  const t = useT();
-  return (
-    <Panel title={t("settings.autonomy")}>
-      <PanelBody>
-        <PanelIntro>{t("settings.autonomySub")}</PanelIntro>
-        {/* Four rows in the page's own language, even though none of them is
-            settable: what the tier COVERS reads left as prose, and the tier it
-            runs at — the dot, and on the locked row the badge saying the answer
-            cannot move — sits at the same x as every answer on this page. A
-            reader coming from the tool inventory above is matching dots, which
-            is why sending carries the green one: a contact's grant of the `send`
-            scope IS the approval, so a funded send does not stage a second. */}
-        <SettingList>
-          <SettingRow
-            label={t("settings.tierRead")}
-            control={<AutonomyDot tier="auto" />}
-          />
-          <SettingRow
-            label={t("settings.tierSend")}
-            control={<AutonomyDot tier="auto" />}
-          />
-          <SettingRow
-            label={t("settings.tierWait")}
-            control={<AutonomyDot tier="confirm" />}
-          />
-          <SettingRow
-            label={t("settings.tierAdvance")}
-            // The dot and the badge are ONE answer — the tier, and the fact that
-            // it cannot move — so they travel as a run at the page's own 8px chip
-            // gap. Handed to the control column loose, they took its 12px flex
-            // gap instead, which put the one row on this page carrying two chips
-            // at a different interval from every tool row above it.
-            control={
-              <span className="settings-run">
-                <AutonomyDot tier="confirm" />
-                <Badge tone="warning">{t("settings.locked")}</Badge>
-              </span>
-            }
-          />
-        </SettingList>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-type AuditLogEntry = components["schemas"]["AuditLogEntry"];
-
-// The union of before/after keys for one row's diff — a key present on
-// neither side is never shown, so the panel only ever displays fields the
-// mutation actually touched.
-function diffKeys(
-  before: AuditLogEntry["before"],
-  after: AuditLogEntry["after"],
-): string[] {
-  const keys = new Set<string>();
-  for (const key of Object.keys(before ?? {})) {
-    keys.add(key);
-  }
-  for (const key of Object.keys(after ?? {})) {
-    keys.add(key);
-  }
-  // `stable`, because these are the record's OWN column names, rendered
-  // untranslated a few lines below: the reader's UI language has no claim on
-  // their order, and one audit row must not read in two orders on two machines
-  // showing the same page.
-  return [...keys].sort(stable);
-}
-
-// A key absent from an object (withheld/never set) reads the same as an
-// explicit null through FieldDiff's honest empty marker (created/cleared) —
-// this never fabricates a value for a key the side genuinely lacks.
-function diffValue(
-  rec: AuditLogEntry["before"] | AuditLogEntry["after"],
-  key: string,
-): string | null {
-  const value = rec?.[key];
-  if (value === null || value === undefined) {
-    return null;
-  }
-  // Object/array field values (custom-field JSON, links, ...) need JSON
-  // rendering — the bare String() coercion collapses them to "[object
-  // Object]", which is neither readable nor honest about what changed.
-  return typeof value === "object" ? JSON.stringify(value) : String(value);
-}
-
-// yyyy-mm-dd from a date input, read as a UTC instant: start-of-day for
-// `from`, end-of-day for `to`, so the range is inclusive of the whole `to`
-// day rather than silently truncating it at midnight.
-function fromDateParam(date: string): string {
-  return new Date(`${date}T00:00:00.000Z`).toISOString();
-}
-function toDateParam(date: string): string {
-  return new Date(`${date}T23:59:59.999Z`).toISOString();
-}
-
-type AuditLogFilters = Readonly<{
-  actor: string;
-  entityType: string;
-  entityId: string;
-  action: string;
-  from: string;
-  to: string;
-}>;
-
-// The unfiltered question the view opens on. One object rather than six
-// useState strings, so the filter row can be its own component that hands back
-// a whole answer instead of taking six setters — and so the query key is that
-// same answer, which cannot drift from what the request carries.
-const UNFILTERED_AUDIT_LOG: AuditLogFilters = {
-  actor: "",
-  entityType: "",
-  entityId: "",
-  action: "",
-  from: "",
-  to: "",
-};
-
-// The six filters, declared once, so the accessible wiring is identical across
-// the row. Each is a `Field` — a real <label> with `htmlFor`, so clicking the
-// words focuses the control. It used to be a `t-label` span pointed at by
-// aria-labelledby, on the reasoning that a real label would wrap every field
-// onto its own line; that is not what happens. `.field` IS a flex column, and
-// the grid around it decides the layout either way, so the span bought nothing
-// and cost the click target.
-const AUDIT_LOG_FILTER_FIELDS: readonly Readonly<{
-  key: keyof AuditLogFilters;
-  labelKey: MessageKey;
-  // A calendar picker rather than free text — the two ends of the range.
-  date?: boolean;
-}>[] = [
-  { key: "actor", labelKey: "settings.auditActor" },
-  { key: "entityType", labelKey: "settings.auditEntity" },
-  { key: "entityId", labelKey: "settings.auditEntityId" },
-  { key: "action", labelKey: "settings.auditAction" },
-  { key: "from", labelKey: "settings.auditFrom", date: true },
-  { key: "to", labelKey: "settings.auditTo", date: true },
-];
-
-// Every filter is optional-if-blank, so this stays a flat spread rather than
-// a chain of conditionals in the queryFn itself (kept the query builder under
-// the cognitive-complexity gate).
-function auditLogQueryParams(
-  filters: AuditLogFilters,
-  pageParam: string | null,
-) {
-  const { actor, entityType, entityId, action, from, to } = filters;
-  return {
-    limit: 20,
-    ...(pageParam ? { cursor: pageParam } : {}),
-    ...(actor.trim() ? { actor: actor.trim() } : {}),
-    ...(entityType.trim() ? { entity_type: entityType.trim() } : {}),
-    ...(entityId.trim() ? { entity_id: entityId.trim() } : {}),
-    ...(action.trim() ? { action: action.trim() } : {}),
-    ...(from ? { from: fromDateParam(from) } : {}),
-    ...(to ? { to: toDateParam(to) } : {}),
-  };
-}
-
-function AuditLogFilterFields({
-  filters,
-  onChange,
-}: Readonly<{
-  filters: AuditLogFilters;
-  onChange: (next: AuditLogFilters) => void;
-}>) {
-  const t = useT();
-  return (
-    // Six dials, each one a row of the page's own language: what it narrows on
-    // the left, the box that narrows it on the right, at the x every other
-    // answer on this page sits at. They were a grid of labelled cells before —
-    // legible on its own, and a second layout for the same question in the one
-    // card that has both.
-    //
-    // Each one applies on its own (debounced), so this is a list of rows and NOT
-    // a form: there is nothing to submit, which is exactly why the six do not
-    // belong in a dialog.
-    <SettingList>
-      {AUDIT_LOG_FILTER_FIELDS.map((field) => (
-        <SettingRow
-          key={field.key}
-          label={t(field.labelKey)}
-          control={(control) => (
-            <TextInput
-              {...control}
-              className="settingrow-measure"
-              type={field.date ? "date" : undefined}
-              value={filters[field.key]}
-              onChange={(event) =>
-                onChange({ ...filters, [field.key]: event.target.value })
-              }
-            />
-          )}
-        />
-      ))}
-    </SettingList>
-  );
-}
-
-function AuditLogRow({
-  entry,
-  meUserId,
-}: Readonly<{ entry: AuditLogEntry; meUserId?: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const [expanded, setExpanded] = useState(false);
-  const keys = diffKeys(entry.before, entry.after);
-  const evidence = toEvidence(entry.evidence);
-
-  return (
-    // A log entry is not a settings decision, so it is not a SettingRow: it is
-    // one line of a record, and the rows of the log rule between themselves
-    // inside the one stacked row that holds the whole trail.
-    <div className="audit-row">
-      <div className="audit-row-head">
-        {/* The company's clock, the same one the record change history
-            reads on: an audit entry is a fact in the shared book, and on the
-            viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin
-            and 22 August to one in Ho Chi Minh City — two operators quoting the
-            same line quote different days. */}
-        <span className="t-caption">
-          {formatDateTime(entry.occurred_at, locale, recordZone)}
-        </span>
-        <ActorTag entry={entry} meUserId={meUserId} />
-        <Badge tone="accent">{entry.action}</Badge>
-        {entry.entity_id && isEntityKind(entry.entity_type) ? (
-          <EntityRef kind={entry.entity_type} id={entry.entity_id} />
-        ) : (
-          <span className="t-caption">
-            {entry.entity_type}
-            {entry.entity_id ? ` ${entry.entity_id}` : ""}
-          </span>
-        )}
-        <Button
-          aria-expanded={expanded}
-          aria-label={t("settings.auditExpand")}
-          onClick={() => setExpanded((value) => !value)}
-        >
-          <ChevronDown aria-hidden className="expander-chevron" />
-        </Button>
-      </div>
-      {expanded && (
-        <div className="audit-row-diff">
-          {keys.map((key) => (
-            <div key={key} className="audit-diff-line">
-              <span className="t-label">{key}</span>
-              <FieldDiff
-                oldValue={diffValue(entry.before, key)}
-                newValue={diffValue(entry.after, key)}
-              />
-            </div>
-          ))}
-          {entry.passport_id && <PassportChip id={entry.passport_id} />}
-          {entry.on_behalf_of && (
-            <span className="t-caption">
-              {t("settings.auditOnBehalf")} <span>{entry.on_behalf_of}</span>
-            </span>
-          )}
-          {entry.authorization_rule && (
-            <span className="t-caption">
-              {t("settings.auditRule")}: {entry.authorization_rule}
-            </span>
-          )}
-          {evidence && <EvidenceChip evidence={evidence} />}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// The result half of the audit view: the answer to whatever the filter row
-// currently asks. Keyset "load more" via the page cursor, and a filter change
-// is a new question — the filters ARE the query key, so changing one restarts
-// the cursor chain instead of appending to a stale one.
-
-function AuditLogEntries({
-  filters,
-  meUserId,
-}: Readonly<{ filters: AuditLogFilters; meUserId?: string }>): ReactNode {
-  const t = useT();
-  // `audit_log:read`, which is what privacy.ListAuditLog asks for.
-  //
-  // It was the literal admin role (AAD-ROLE-4/A91) until the trail got an
-  // object of its own. Gated here rather than merely rendered, and the fetch is
-  // disabled for anyone without it: a reader must not issue a call that can
-  // only 403, nor be handed a red failure with a Retry that cannot succeed.
-  const canSee = useCan("audit_log", "read");
-  const query = useInfiniteQuery({
-    queryKey: ["audit-log", filters],
-    enabled: canSee,
-    initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/audit-log", {
-        params: { query: auditLogQueryParams(filters, pageParam) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    getNextPageParam: (last) => last.page.next_cursor ?? null,
-  });
-
-  const entries = query.data?.pages.flatMap((page) => page.data) ?? [];
-
-  // Honest state matrix (§3a): withheld, loading, error, empty, then the rows —
-  // kept as sequential branches rather than a nested ternary in the JSX below.
-  // The whole trail is the control of ONE stacked row now, so no branch wraps
-  // itself in a `PanelBody`: the row it sits in already owns the inset.
-  if (!canSee) {
-    // Withheld rather than absent, and the card keeps its place: an absent trail
-    // on a page that opens for ops would read as "nothing has happened here",
-    // which is a different claim from "this is not yours to read". The same
-    // choice the subject-request queue above it makes, for the same reason.
-    return <EmptyState>{t("settings.auditAdminOnly")}</EmptyState>;
-  }
-  if (query.isPending) {
-    return (
-      <div className="audit-loading">
-        <Skeleton width="60%" />
-        <Skeleton width="90%" />
-      </div>
-    );
-  }
-  if (query.isError) {
-    return (
-      <EmptyState>
-        <p>{t("common.error")}</p>
-        {/* ds:ignore the cause under an EmptyState's headline */}
-        <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
-        <Button onClick={() => query.refetch()}>{t("common.retry")}</Button>
-      </EmptyState>
-    );
-  }
-  if (entries.length === 0) {
-    return <EmptyState>{t("common.empty")}</EmptyState>;
-  }
-  return (
-    <div className="audit-entries settingrow-measure">
-      {entries.map((entry) => (
-        <AuditLogRow key={entry.id} entry={entry} meUserId={meUserId} />
-      ))}
-      <LoadMoreButton query={query} />
-    </div>
-  );
-}
-
-// AC-settings-16: the attributable audit view — live filters over actor /
-// entity_type / entity_id / action / from / to, keyset "load more" via the
-// page cursor. ONE card, because every other filtered list in this product puts
-// its dials inside the list's own surface: a card of its own titled "Filters"
-// made six inputs a subject in the page outline, level with the trail they
-// narrow, and left a reader scanning two cards to answer one question. Inside
-// that one card the dials are the secondary half — a reader arrives to read what
-// happened — so they sit in a disclosure rather than above the trail.
-// Each entry expands into the before/after diff plus the agent attribution trail
-// (passport, on-behalf-of human, authorization rule, grounding evidence) —
-// collapsed by default so the flat scan stays fast.
-export function AuditLogCard() {
-  const t = useT();
-  // The current user's id is what lets ActorTag read "You" rather than naming
-  // the viewer back to themselves. It is the BARE user id; the wire spells a
-  // human actor "human:<uuid>", and ActorTag owns that difference.
-  const meUserId = useMe().data?.user?.id;
-  const canSee = useCan("audit_log", "read");
-  const [filters, setFilters] = useState<AuditLogFilters>(UNFILTERED_AUDIT_LOG);
-  // The row reads what is being typed; the entries read what has settled, so
-  // typing `agent:runner` is one `GET /audit-log` rather than twelve.
-  const asked = useSettledValue(filters);
-  return (
-    <Panel title={t("settings.auditEntries")}>
-      <PanelBody>
-        <PanelIntro>{t("settings.auditSub")}</PanelIntro>
-        <SettingList>
-          {/* The dials are the card's SECONDARY half — a reader arrives to read
-              what happened, and narrows it second — so they sit in a
-              disclosure, closed, rather than costing every visit six input
-              boxes above the trail. Not a dialog: each filter applies on its
-              own, and a dialog with nothing to submit would leave a narrowed
-              list behind a closed door.
-              Absent, not withheld, for a reader who may not read the trail: six
-              inputs that narrow a list they cannot see are a control with
-              nothing behind it. The TRAIL below stays and says why — absence
-              there would claim nothing had happened. */}
-          {canSee && (
-            <Disclosure summary={t("settings.auditFilters")}>
-              <AuditLogFilterFields filters={filters} onChange={setFilters} />
-            </Disclosure>
-          )}
-          {/* The trail is the subject of this card rather than an answer beside
-              a question, so it takes the row's whole width. */}
-          <SettingRow
-            label={t("settings.auditTrailLabel")}
-            layout="stack"
-            control={<AuditLogEntries filters={asked} meUserId={meUserId} />}
-          />
-        </SettingList>
-      </PanelBody>
     </Panel>
   );
 }

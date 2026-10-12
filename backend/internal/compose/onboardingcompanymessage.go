@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
@@ -383,17 +384,12 @@ func remainingOnboardingFields(draft identity.OnboardingCompanyDraft) []string {
 func isCompanyStatusQuestion(message string) bool {
 	normalized := strings.ToLower(strings.Join(strings.Fields(message), " "))
 	normalized = strings.TrimRight(normalized, "?!. ")
-	for _, phrase := range []string{
+	return slices.Contains([]string{
 		"does this work", "does this work now", "is this working", "is this working now", "is this working yet",
 		"what is the status", "what is the status now", "what is the status of the website research", "what is the status of website research",
 		"funktioniert das", "funktioniert das jetzt", "klappt das", "klappt das jetzt", "wie ist der status", "wie ist jetzt der status",
 		"wie ist der status der web-recherche", "wie ist der status der website-recherche",
-	} {
-		if normalized == phrase {
-			return true
-		}
-	}
-	return false
+	}, normalized)
 }
 
 func onboardingStatusMessage(locale string, research onboardingResearchState, missing int) string {

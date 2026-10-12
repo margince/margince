@@ -148,7 +148,7 @@ export const CorrectionRefused: Story = {
     await user.type(field, "Automotive tier-one supply");
     await user.click(canvas.getByRole("button", { name: en["evidence.save"] }));
     const refusal = await canvas.findByRole("alert");
-    await expect(refusal).toHaveTextContent(en["edit.versionSkew"]);
+    await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
     await expect(field).toHaveAttribute("aria-invalid", "true");
   },
@@ -202,7 +202,7 @@ export const RowMovedUnderYou: Story = {
       await canvas.findByRole("button", { name: en["evidence.confirm"] }),
     );
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      en["edit.versionSkew"],
+      en["common.versionSkew"],
     );
   },
 };

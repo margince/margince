@@ -38,7 +38,7 @@ import (
 // language not listed here is not exempt — it is unwritten, and adding one adds
 // it here.
 var processingRecords = []string{
-	"../docs/compliance/de/verarbeitungsverzeichnis-und-dsfa.md",
+	"../extensions/de/documents/de/verarbeitungsverzeichnis-und-dsfa.md",
 }
 
 // citedGoFile matches a backtick-quoted Go path in the record's prose, which is

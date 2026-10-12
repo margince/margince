@@ -12,7 +12,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { LISTS_KEY } from "./lists.queries";
 
 type CustomField = components["schemas"]["CustomField"];
@@ -31,13 +31,11 @@ export function RetireFieldConfirm({
   const queryClient = useQueryClient();
   const retire = useMutation({
     mutationFn: async (target: CustomField) => {
-      const { data, error } = await api.POST("/custom-fields/{id}/retire", {
-        params: { path: { id: target.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/custom-fields/{id}/retire", {
+          params: { path: { id: target.id } },
+        }),
+      );
     },
     onSuccess: (_data, target) => {
       // A list on the field now reports it, so every list read is stale.
@@ -76,13 +74,11 @@ function FieldLiveLists({ fieldId }: Readonly<{ fieldId: string }>) {
     // (sharing, archive, a new Live List) refetches it.
     queryKey: [LISTS_KEY, "field-use", fieldId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/custom-fields/{id}/lists", {
-        params: { path: { id: fieldId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/custom-fields/{id}/lists", {
+          params: { path: { id: fieldId } },
+        }),
+      );
     },
   });
   const found = lists.data;

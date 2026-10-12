@@ -11,11 +11,13 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -30,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // AppEnv is the heaviest of the three exported fixtures: a real compose handler
@@ -255,8 +258,44 @@ func (e *AppEnv) SetWorkspaceSeat(t *testing.T, seat string) {
 // Call issues one API request with the dev workspace header and decodes
 // the JSON response into out (when non-nil), returning the status code.
 //
+// A create body that lacks the `source` the contract requires gets one, as
+// every real client sends it. CallVerbatim sends the body untouched.
+//
 //craft:ignore naked-any the test transport seam: body/out are whichever request/response shapes the scenario exercises
 func (e *AppEnv) Call(t *testing.T, method, path string, body any, headers map[string]string, out any) int {
+	t.Helper()
+	return e.CallVerbatim(t, method, path, withRecordSource(method, path, body), headers, out)
+}
+
+// recordCreateRoutes matches the create routes whose contract body requires
+// `source` and whose scenarios mostly care about something other than it.
+var recordCreateRoutes = regexp.MustCompile(`^/v1/(` +
+	`leads|relationships|activities|tasks|custom-fields|products|signals|deal-rooms|` +
+	`deals/[^/]+/offers|deal-rooms/[^/]+/(participants|documents))$`)
+
+// withRecordSource returns body with a `source` added when it is a create map
+// for one of recordCreateRoutes without one. Any other body is returned as is.
+//
+//craft:ignore naked-any the test transport seam: body is whichever request shape the scenario exercises
+func withRecordSource(method, path string, body any) any {
+	fields, ok := body.(map[string]any)
+	if !ok || method != http.MethodPost || !recordCreateRoutes.MatchString(path) {
+		return body
+	}
+	if _, stated := fields["source"]; stated {
+		return body
+	}
+	withSource := make(map[string]any, len(fields)+1)
+	maps.Copy(withSource, fields)
+	withSource["source"] = provenance.RecordSourceManual
+	return withSource
+}
+
+// CallVerbatim is Call without the default source, for a scenario about what a
+// body leaves out.
+//
+//craft:ignore naked-any the test transport seam: body/out are whichever request/response shapes the scenario exercises
+func (e *AppEnv) CallVerbatim(t *testing.T, method, path string, body any, headers map[string]string, out any) int {
 	t.Helper()
 	var reqBody io.Reader
 	if body != nil {

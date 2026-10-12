@@ -29,6 +29,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CircleAlert, CircleCheck, CircleDashed, Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { rowsOf } from "../api/rows";
 import { SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -241,10 +242,6 @@ export function MagicPanel({
 // version skew, and only a list the server sent can say there is nothing in it.
 function hasLines(rows: readonly MagicLine[] | undefined): boolean {
   return rowsOf(rows).length > 0;
-}
-
-function rowsOf(rows: readonly MagicLine[] | undefined): readonly MagicLine[] {
-  return Array.isArray(rows) ? rows : [];
 }
 
 // How many records the lines stand for; a line without a count is one.

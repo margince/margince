@@ -81,9 +81,9 @@ func TestErasureClearsTheSubjectTextColumnsItUsedToLeave(t *testing.T) {
 				// overrides, so a reason with nothing behind it is a row the
 				// product cannot produce.
 				`INSERT INTO lead (id, full_name, source, captured_by, promoted_contact_id,
-				                   linkedin_url, disqualify_note, score_computed, score_override_reason)
+				                   linkedin_url, phone, disqualify_note, score_computed, score_override_reason)
 				 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text, $3,
-				         'https://www.linkedin.com/in/hedda-subject',
+				         'https://www.linkedin.com/in/hedda-subject', '+493099998888',
 				         'said on the call she has moved to a competitor', 61,
 				         'raised by hand after she answered the second mail')`,
 				lead, user, contact)
@@ -96,16 +96,16 @@ func TestErasureClearsTheSubjectTextColumnsItUsedToLeave(t *testing.T) {
 				`SELECT photo_object_key, photo_origin FROM contact WHERE id = $1`, contact.UUID,
 				"contact.photo_object_key", "contact.photo_origin")
 			assertNulled(ctx, t, tx,
-				`SELECT linkedin_url, disqualify_note, score_override_reason FROM lead WHERE id = $1`, lead,
-				"lead.linkedin_url", "lead.disqualify_note", "lead.score_override_reason")
+				`SELECT linkedin_url, phone, disqualify_note, score_override_reason FROM lead WHERE id = $1`, lead,
+				"lead.linkedin_url", "lead.phone", "lead.disqualify_note", "lead.score_override_reason")
 		})
 	}
 }
 
 // The lead's own retention action, which reaches a lead nobody was promoted
 // from — so the twin sweep above never sees it. A fourth writer of the same
-// three columns, and the one a contact-driven test cannot reach.
-func TestTheLeadRetentionActionClearsTheSameThreeColumns(t *testing.T) {
+// columns, and the one a contact-driven test cannot reach.
+func TestTheLeadRetentionActionClearsTheSameColumns(t *testing.T) {
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -121,9 +121,9 @@ func TestTheLeadRetentionActionClearsTheSameThreeColumns(t *testing.T) {
 		// it overrides, so a reason with nothing behind it is a row the product
 		// cannot produce.
 		`INSERT INTO lead (id, full_name, source, captured_by,
-		                   linkedin_url, disqualify_note, score_computed, score_override_reason)
+		                   linkedin_url, phone, disqualify_note, score_computed, score_override_reason)
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text,
-		         'https://www.linkedin.com/in/hedda-subject',
+		         'https://www.linkedin.com/in/hedda-subject', '+493099998888',
 		         'said on the call she has moved to a competitor', 61,
 		         'raised by hand after she answered the second mail')`,
 		lead, user)
@@ -133,8 +133,8 @@ func TestTheLeadRetentionActionClearsTheSameThreeColumns(t *testing.T) {
 	}
 
 	assertNulled(ctx, t, tx,
-		`SELECT linkedin_url, disqualify_note, score_override_reason FROM lead WHERE id = $1`, lead,
-		"lead.linkedin_url", "lead.disqualify_note", "lead.score_override_reason")
+		`SELECT linkedin_url, phone, disqualify_note, score_override_reason FROM lead WHERE id = $1`, lead,
+		"lead.linkedin_url", "lead.phone", "lead.disqualify_note", "lead.score_override_reason")
 }
 
 // The two arms that scrub a delivery's addressing: the Art. 17 scrub, which

@@ -113,6 +113,9 @@ const (
 	// telling its reader otherwise misdescribes the decision to the contact
 	// reviewing it.
 	ReleasedSourceWithdrawal = "withdrawn: the record it was read from was erased by a controller's decision"
+	// NoiseSourceWithdrawal names one withdrawn because the message it quotes
+	// was judged noise, stayed hidden past its undo window, and was destroyed.
+	NoiseSourceWithdrawal = "withdrawn: the message it was read from was judged noise and erased"
 )
 
 // addressPatterns turns the subject's addresses into regexes that match each

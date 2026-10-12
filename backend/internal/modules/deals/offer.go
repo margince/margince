@@ -370,7 +370,10 @@ type UpdateOfferInput struct {
 	IntroText      *string
 	TermsText      *string
 	TemplateID     *ids.OfferTemplateID
-	IfVersion      *int64
+	// Clear are the fields the caller sent as an explicit null, which is a
+	// request to empty them rather than to leave them alone.
+	Clear     []string
+	IfVersion *int64
 }
 
 // UpdateOffer also answers the rendering a buyer change retired, nil when none
@@ -402,6 +405,9 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 			return err
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly)
 			return err
 		}
@@ -427,6 +433,9 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 // the rendering a buyer change retired.
 func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer, in UpdateOfferInput) (*storekit.Patch, *string, error) {
 	p := storekit.NewPatch()
+	if err := storekit.ApplyClears(p, in.Clear, clearableOfferColumns(current)); err != nil {
+		return nil, nil, err
+	}
 	var retired *string
 	if in.Currency != nil {
 		p.Set("currency", current.Currency, *in.Currency)

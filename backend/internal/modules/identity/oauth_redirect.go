@@ -13,6 +13,7 @@ package identity
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 
@@ -125,9 +126,7 @@ func clientResponseURI(req authorizeRequest, answer url.Values) (string, error) 
 	for _, name := range responseParams {
 		params.Del(name)
 	}
-	for key, list := range answer {
-		params[key] = list
-	}
+	maps.Copy(params, answer)
 	// An absent state means NO state parameter, not an empty one: a client that
 	// sent none must not be handed one to compare against.
 	if req.State != "" {

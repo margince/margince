@@ -5,7 +5,7 @@ package identity
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -14,7 +14,7 @@ import (
 // DateFormat changes date notation without changing stored dates or timezone boundaries.
 var DateFormat = settings.Define[string]("installation.date_format", installationSettingsObject, "update", "locale", func(value string) error {
 	if !crmcontracts.InstallationSettingsDateFormat(value).Valid() {
-		return fmt.Errorf("a date format is one of locale, dmy, mdy, ymd")
+		return errors.New("a date format is one of locale, dmy, mdy, ymd")
 	}
 	return nil
 }).AsInstallationIdentity()
@@ -22,7 +22,7 @@ var DateFormat = settings.Define[string]("installation.date_format", installatio
 // TimeFormat selects the displayed clock convention without changing stored instants.
 var TimeFormat = settings.Define[string]("installation.time_format", installationSettingsObject, "update", "locale", func(value string) error {
 	if !crmcontracts.InstallationSettingsTimeFormat(value).Valid() {
-		return fmt.Errorf("a time format is one of locale, 24h, 12h")
+		return errors.New("a time format is one of locale, 24h, 12h")
 	}
 	return nil
 }).AsInstallationIdentity()

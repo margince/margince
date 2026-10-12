@@ -33,9 +33,9 @@ import { useTruncationTooltip } from "./tooltip";
 // The list surface's shell: the header (view tabs, count, primary action),
 // the caption and the toolbar (search, filter chips, an archived toggle and
 // whatever presentation dials the caller owns). It knows nothing about
-// columns, density, paging or rows — those stay in listtable.tsx, and the
-// pipeline board reuses this same shell for the same reason a contact list
-// and a lead list do: the dials belong to the surface, not to what fills it.
+// columns, density, paging or rows, which belong to ListTable. The pipeline
+// board reuses this same shell, as a contact list and a lead list do. The
+// dials belong to the surface, not to what fills it.
 //
 // A view tab reports only its index. What a view MEANS — a sort, a set of
 // filters, a stage — is the caller's to decide, which is what lets the board
@@ -527,7 +527,7 @@ function FilterRow({
 }>) {
   const t = useT();
   const active = chip.options.find((option) => option.value === value);
-  const valueLabel = active?.label ?? pickedLabel ?? value;
+  const valueLabel = active?.label ?? pickedLabel ?? chip.appliedName ?? value;
   return (
     <fieldset className="lt-frow" aria-label={`${chip.label}: ${valueLabel}`}>
       <span className="lt-frow-attr">{chip.label}</span>
@@ -877,7 +877,6 @@ export function CountLine({
   last,
   total,
   more = false,
-  narrowed = false,
   sortedBy,
 }: Readonly<{
   unit: string;
@@ -891,19 +890,6 @@ export function CountLine({
    * report a total the client cannot know.
    */
   more?: boolean;
-  /**
-   * A dial is cutting the set down, so an empty list is empty BECAUSE of one.
-   *
-   * It only changes the zero, and it has to. "No companies yet" over a search
-   * that matched nothing is a claim about the workspace rather than about the
-   * search — and the table's own empty row says "no companies match these
-   * filters" directly underneath it, so the reader got both sentences at once
-   * and one of them was false. The narrowed zero belongs to the body, which is
-   * where the reader is looking and where the way back to everything is, so
-   * this line says nothing about the count and goes on saying what the order
-   * is.
-   */
-  narrowed?: boolean;
   sortedBy?: string;
 }>) {
   const t = useT();
@@ -916,13 +902,11 @@ export function CountLine({
     count: formatNumber(total, locale),
     unit,
   };
+  // An empty list says why in its body: none yet, none matching, a failed read.
+  // A zero here would only repeat that sentence or contradict it.
   const counted =
     total === 0
-      ? narrowed
-        ? // The narrowed zero belongs to the body, which is where the reader is
-          // looking and where the way back to everything is.
-          ""
-        : t("table.none", { unit })
+      ? ""
       : more
         ? t("table.rangeLoaded", range)
         : t("table.range", range);

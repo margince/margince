@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -44,6 +45,7 @@ import (
 // such "there is nothing to do" case and are always wired.
 func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Logger) *privacy.RetentionService {
 	return privacy.NewRetentionService(db, blob, log, RawCapturePurgerFor(db)).
+		WithCountry(identity.CountryForDecision).
 		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 		})
@@ -73,12 +75,22 @@ func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
 	return controllerPayloads{v: vault}
 }
 
+// ComposedEraser is the eraser an Art. 17 erasure runs through, with every
+// seam it needs to destroy the bytes behind the rows: the object store, the
+// payload vault and capture's raw-capture purge. blob and vault may be nil in a
+// deployment that configured neither.
+func ComposedEraser(pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault) *privacy.Eraser {
+	db := InstallationDB(pool)
+	return privacy.NewEraser(db).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
+		WithPayloadVault(privacyPayloads(vault))
+}
+
 func (s *Server) rewirePrivacyVault(pool *pgxpool.Pool) {
 	if pool == nil {
 		return
 	}
 	payloads := privacyPayloads(s.vault)
-	s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithBlobstore(s.blob).WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).WithPayloadVault(payloads))
+	s.consentHandlers = s.WithEraser(ComposedEraser(pool, s.blob, s.vault))
 	s.privacyHandlers = s.WithPayloadVault(payloads)
 	if s.blob != nil {
 		s.purger = NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), s.blob, s.log).WithPayloadVault(payloads))

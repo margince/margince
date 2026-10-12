@@ -6,7 +6,7 @@ import { SettingRow } from "../design-system/settingrow";
 import type { Toast } from "../design-system/toast";
 import { greetingNameOf } from "../format/greetingname";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem, useMe } from "./common";
+import { problemMessageOf, unwrap, useMe } from "./common";
 
 // The two names on the Account card: the one colleagues see you by and the one
 // they greet you by. Both are the caller's own and read back from `/me`.
@@ -31,12 +31,12 @@ export function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       maxRunes={255}
       emptyAllowed={false}
       save={async (next) => {
-        const { data, error } = await api.PUT("/me/display-name", {
-          body: { display_name: next },
-        });
-        if (error) {
-          throwProblem(error, t);
-        }
+        const data = unwrap(
+          await api.PUT("/me/display-name", {
+            body: { display_name: next },
+          }),
+          t,
+        );
         void queryClient.invalidateQueries({
           queryKey: ["scheduling-profile"],
         });
@@ -69,12 +69,12 @@ export function GreetingNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         undefined
       }
       save={async (next) => {
-        const { data, error } = await api.PUT("/me/greeting-name", {
-          body: { greeting_name: next === "" ? null : next },
-        });
-        if (error) {
-          throwProblem(error, t);
-        }
+        const data = unwrap(
+          await api.PUT("/me/greeting-name", {
+            body: { greeting_name: next === "" ? null : next },
+          }),
+          t,
+        );
         return data?.greeting_name ?? "";
       }}
     />

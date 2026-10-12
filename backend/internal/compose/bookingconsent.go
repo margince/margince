@@ -151,8 +151,7 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 	// The consent module's client-fault type is its own; the booking
 	// transport only knows the platform vocabulary — translate here so a
 	// bad DOI token reads as the 422 it is, not a 500.
-	var invalid *consent.ValidationError
-	if errors.As(err, &invalid) {
+	if invalid, ok := errors.AsType[*consent.ValidationError](err); ok {
 		return activities.MarketingNotRequested, httperr.Validation(invalid.Field, "invalid", invalid.Reason)
 	}
 	if err != nil {

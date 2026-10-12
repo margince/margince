@@ -35,7 +35,7 @@ func deskWithoutCompanyAccess() context.Context {
 
 func offerNamingBuyer(company ids.UUID) crmcontracts.Offer {
 	buyer := openapi_types.UUID(company)
-	snapshot := map[string]interface{}{"display_name": "Meridian Labs"}
+	snapshot := map[string]any{"display_name": "Meridian Labs"}
 	rendering := "offers/meridian-labs.pdf"
 	return crmcontracts.Offer{BuyerCompanyId: &buyer, BuyerSnapshot: &snapshot, PdfAssetRef: &rendering}
 }

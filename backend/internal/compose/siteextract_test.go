@@ -184,7 +184,7 @@ func TestExtractSiteProfilePanicDegradesNotCrashes(t *testing.T) {
 // against the in-memory fetcher.
 func streamFixtureSite(n int) *fakeSite {
 	site := &fakeSite{pages: seedOnly()}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		pageURL := fmt.Sprintf("%s/services-%02d", seedURL, i)
 		site.sitemap = append(site.sitemap, pageURL)
 		site.pages[pageURL] = fakeSitePage{text: fmt.Sprintf("Audit %02d\n", i) + readable(fmt.Sprintf("catalog %02d", i))}
@@ -205,10 +205,10 @@ func TestCrawlAndExtractStreamsDeterministicallyAndProfilesTheWholeCrawl(t *test
 		site := streamFixtureSite(pages)
 		var profileCalls atomic.Int32
 		brain := countingLaneFake{
-			laneFake: laneFake{profileReply: `{"fields":[]}`, pageReplies: map[string]string{}},
-			profile:  &profileCalls,
+			profileReply: `{"fields":[]}`, pageReplies: map[string]string{},
+			profile: &profileCalls,
 		}
-		for i := 0; i < pages; i++ {
+		for i := range pages {
 			pageURL := fmt.Sprintf("%s/services-%02d", seedURL, i)
 			brain.pageReplies[pageURL] = fmt.Sprintf(`{"facts":[{"f":"service","v":"Audit %02d — catalog line","e":"s0"}]}`, i)
 		}
@@ -368,10 +368,10 @@ func TestALargeCrawlIsProfiledOnEverythingItFound(t *testing.T) {
 	site := streamFixtureSite(pages)
 	var profileCalls atomic.Int32
 	brain := growingProfileFake{
-		laneFake: laneFake{pageReplies: map[string]string{}},
-		profile:  &profileCalls,
+		pageReplies: map[string]string{},
+		profile:     &profileCalls,
 	}
-	for i := 0; i < pages; i++ {
+	for i := range pages {
 		pageURL := fmt.Sprintf("%s/services-%02d", seedURL, i)
 		brain.pageReplies[pageURL] = fmt.Sprintf(
 			`{"facts":[{"f":"service","v":"Audit %02d — catalog line","e":"s0"}]}`, i)
@@ -470,10 +470,10 @@ func TestAnOverBudgetFirstPassIsNotAskedAgainWithABiggerPrompt(t *testing.T) {
 	site := streamFixtureSite(pages)
 	var calls atomic.Int32
 	brain := budgetDeferringFake{
-		laneFake: laneFake{pageReplies: map[string]string{}},
-		calls:    &calls,
+		pageReplies: map[string]string{},
+		calls:       &calls,
 	}
-	for i := 0; i < pages; i++ {
+	for i := range pages {
 		brain.pageReplies[fmt.Sprintf("%s/services-%02d", seedURL, i)] = `{"facts":[]}`
 	}
 	crawler := testSiteCrawler(site)
@@ -502,10 +502,10 @@ func TestARerunThatRescuesAFailedFirstPassLeavesTheReadWhole(t *testing.T) {
 	site := streamFixtureSite(pages)
 	var calls atomic.Int32
 	brain := failThenAnswerFake{
-		laneFake: laneFake{pageReplies: map[string]string{}},
-		calls:    &calls,
+		pageReplies: map[string]string{},
+		calls:       &calls,
 	}
-	for i := 0; i < pages; i++ {
+	for i := range pages {
 		brain.pageReplies[fmt.Sprintf("%s/services-%02d", seedURL, i)] = `{"facts":[]}`
 	}
 	crawler := testSiteCrawler(site)

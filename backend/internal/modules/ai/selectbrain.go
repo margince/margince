@@ -234,7 +234,7 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 	case providerGeminiVertex:
 		return selectVertex(cfg, keys, httpc)
 	case "":
-		return nil, fmt.Errorf("ai: binding has no provider")
+		return nil, errors.New("ai: binding has no provider")
 	default:
 		return nil, fmt.Errorf("ai: unknown provider %q (have: %s)", cfg.Provider, strings.Join(knownProviders, ", "))
 	}

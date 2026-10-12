@@ -3,7 +3,11 @@
 
 package contacts
 
-import "github.com/margince/margince/backend/internal/shared/kernel/employment"
+import (
+	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+)
 
 // The one relationship kind whose role is part of what the row MEANS: who
 // handles a company's invoices, and in what capacity. Its vocabulary and its
@@ -47,10 +51,8 @@ func validBillingContactRole(kind string, role *string) error {
 	if role == nil || *role == "" {
 		return &RequiredFieldError{Field: fieldRole}
 	}
-	for _, allowed := range BillingContactRoles {
-		if *role == allowed {
-			return nil
-		}
+	if slices.Contains(BillingContactRoles, *role) {
+		return nil
 	}
 	return &BillingContactRoleError{Role: *role}
 }

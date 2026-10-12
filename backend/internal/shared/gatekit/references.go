@@ -226,7 +226,7 @@ func moduleRootAndPath() (dir, modPath string, ok bool) {
 			// resolving nothing.
 			//nolint:gosec // G304: the path is Getwd plus a fixed filename, never an input
 			if body, readErr := os.ReadFile(candidate); readErr == nil {
-				for _, line := range strings.Split(string(body), "\n") {
+				for line := range strings.SplitSeq(string(body), "\n") {
 					if rest, found := strings.CutPrefix(strings.TrimSpace(line), "module "); found {
 						moduleDir, modulePath, moduleOK = dir, strings.TrimSpace(rest), true
 						return

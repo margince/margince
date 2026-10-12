@@ -80,7 +80,10 @@ func (t listChannelProviders) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t listChannelProviders) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t listChannelProviders) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	entries, err := t.directory.ChannelProviders(ctx)
 	if err != nil {
 		return nil, err

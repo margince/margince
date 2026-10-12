@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // BlockedDomain is one domain's standing admission decision, as the admin list
@@ -131,20 +132,14 @@ const domainPendingReason = `
 // the row would be a company held out of the CRM with no surface admitting it
 // exists.
 //
-// The liveness test is spelled here rather than shared with identity's
-// LiveMemberSQL, which is the canonical copy: contacts may not import a sibling
-// module. The two must agree, and identity/livemember_test.go asserts that
-// predicate literally — so a change there that this misses shows up as a
-// deactivated owner's questions reappearing on the operator's list.
-//
 // Note this admits an undecided row that also carries an admission: re-withholding
 // an admitted domain leaves both columns set, and such a row belongs on a list of
 // decisions whoever owns it.
-const domainStandingWhere = `admission IS NOT NULL
+var domainStandingWhere = `admission IS NOT NULL
 	OR (pending_reason IS NOT NULL AND NOT EXISTS (
 	      SELECT 1 FROM app_user u
 	       WHERE u.id = company_domain_disposition.owner_id
-	         AND u.status = 'active' AND u.archived_at IS NULL))`
+	         AND ` + workforce.LiveMemberSQL("u") + `))`
 
 // ListDomainAdmissions returns every domain that carries a decision, plus the
 // open questions nobody owns, most recently moved first.

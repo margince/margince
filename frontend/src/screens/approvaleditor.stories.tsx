@@ -155,7 +155,21 @@ export const OutcomeVersionSkew: Story = {
     <StoryProviders>
       <DecideOutcome
         decide={{ isError: true, error: new Error("stale") }}
-        skew
+        skewKey="decision.versionSkew"
+        alreadyDecided={false}
+        onReRead={() => {}}
+      />
+    </StoryProviders>
+  ),
+};
+
+// A rate proposal's lost race points at the refresh rather than a re-stage.
+export const OutcomeRateMoved: Story = {
+  render: () => (
+    <StoryProviders>
+      <DecideOutcome
+        decide={{ isError: true, error: new Error("stale") }}
+        skewKey="decision.fxRateMoved"
         alreadyDecided={false}
         onReRead={() => {}}
       />
@@ -168,7 +182,7 @@ export const OutcomeGenericFailure: Story = {
     <StoryProviders>
       <DecideOutcome
         decide={{ isError: true, error: new Error("network unreachable") }}
-        skew={false}
+        skewKey={null}
         alreadyDecided={false}
         onReRead={() => {}}
       />

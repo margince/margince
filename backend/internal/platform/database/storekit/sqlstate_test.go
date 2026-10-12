@@ -34,6 +34,7 @@ func TestIsInvalidValueForType_pgxOverflowWording(t *testing.T) {
 func TestIsInvalidValueForType_sqlstates(t *testing.T) {
 	cases := map[string]bool{
 		"22021": true, // NUL or malformed UTF-8
+		"22P05": true, // NUL inside a jsonb value
 		"22P02": true,
 		"22003": true,
 		"22012": false, // division by zero is the server's sum

@@ -104,9 +104,9 @@ func companyMessageChangeRequestFixture() onboardingCompanyMessageFixture {
 	fixture := companyMessageFixture()
 	fixture.Message = "Please change our industry to Robotics manufacturing."
 	fixture.Conversation.CurrentDraft = identity.OnboardingCompanyDraft{
-		DisplayName:  stringPointer("Acme Robotics"),
-		OfferSummary: stringPointer("Warehouse robotics"),
-		ICP:          stringPointer("Mid-market logistics operators"),
+		DisplayName:  new("Acme Robotics"),
+		OfferSummary: new("Warehouse robotics"),
+		ICP:          new("Mid-market logistics operators"),
 	}
 	fixture.Conversation.NextRequired = ""
 	fixture.Conversation.RemainingRequired = nil

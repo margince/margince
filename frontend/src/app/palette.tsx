@@ -94,6 +94,7 @@ const SETTINGS_ALIASES: Readonly<
   usage: ["spend", "cost", "budget", "tokens"],
   "model-calls": ["logs", "trace", "calls"],
   privacy: ["gdpr", "consent", "retention", "erasure"],
+  jurisdiction: ["country", "law", "legal"],
   audit: ["trail", "log", "history"],
   "system-health": ["jobs", "health", "reindex", "maintenance"],
   extensions: ["units", "plugins"],

@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // sourceHuman is what a human acting in the UI writes. Connectors and imports
@@ -33,12 +34,12 @@ const sourceHuman = "human"
 // subject name comes from whichever arm is populated, and COALESCE collapses
 // the two so the caller gets one column rather than a pair it has to choose
 // between.
-const assignmentSelect = `
+var assignmentSelect = `
 	SELECT a.id,
 	       a.company_id, a.deal_id, a.project_id,
 	       a.user_id, a.team_id,
 	       COALESCE(u.display_name, t.name) AS subject_name,
-	       COALESCE(u.status <> 'active' OR u.archived_at IS NOT NULL, t.archived_at IS NOT NULL, false) AS subject_inactive,
+	       COALESCE(NOT (` + workforce.LiveMemberSQL("u") + `), t.archived_at IS NOT NULL, false) AS subject_inactive,
 	       a.role_id, r.key, r.label, r.active, r.sort_order,
 	       a.source, a.version, a.created_at, a.updated_at, a.archived_at
 	  FROM record_assignment a
@@ -87,7 +88,7 @@ func scanAssignmentRow(sc rowScanner) (assignmentRow, error) {
 	case team != nil:
 		r.SubjectKind, r.SubjectID = crmcontracts.AssignmentSubjectKindTeam, *team
 	default:
-		return assignmentRow{}, fmt.Errorf("record_assignment row has no assignee")
+		return assignmentRow{}, errors.New("record_assignment row has no assignee")
 	}
 	return r, nil
 }

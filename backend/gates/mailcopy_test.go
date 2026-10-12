@@ -80,7 +80,7 @@ func mailLabelLanguages(t *testing.T) []string {
 			"against the frontend in each language it admits, so it now certifies nothing")
 	}
 	var out []string
-	for _, raw := range strings.Split(declared[1], ",") {
+	for raw := range strings.SplitSeq(declared[1], ",") {
 		if language := strings.TrimSpace(raw); language != "" {
 			out = append(out, language)
 		}

@@ -115,7 +115,7 @@ func (s *Service) readFollowUps(
 			Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld,
 		}
 	case err != nil:
-		slog.ErrorContext(ctx, "a follow-up read failed", "source", source, "error", err)
+		slog.Log(ctx, laneFailureLevel(ctx), "a follow-up read failed", "source", source, "error", err)
 		return nil, false, &crmcontracts.WorklistSourceUnavailable{
 			Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}

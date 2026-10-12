@@ -13,14 +13,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, translate } from "../i18n";
 import { en } from "../i18n/en";
-import {
-  AuditRail,
-  CustomFieldsAdmin,
-  FieldBuilder,
-  FieldTable,
-} from "./customfields";
+import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
+import { AuditRail, FieldTable } from "./customfields.table";
 
 afterEach(cleanup);
 
@@ -181,6 +177,22 @@ const field = (over: Partial<CustomField> = {}): CustomField => ({
   ...over,
 });
 
+const menuName = (label: string) =>
+  translate("en", "table.rowActions", { name: label });
+
+// The row's own menu, so a test cannot pass by opening another row's.
+async function openFieldMenu(label: string) {
+  const trigger = await screen.findByRole("button", { name: menuName(label) });
+  await userEvent.click(trigger);
+  const items = document.getElementById(
+    trigger.getAttribute("aria-controls") ?? "",
+  );
+  if (!items) {
+    throw new Error(`the menu for ${label} drew no items`);
+  }
+  return within(items);
+}
+
 describe("FieldTable", () => {
   it("lists a field with its immutable api key and a type chip", () => {
     wrap(
@@ -199,19 +211,23 @@ describe("FieldTable", () => {
     expect(screen.getByText("You")).toBeInTheDocument();
   });
 
-  it("renders an honest empty state for an object with no fields", () => {
+  it("offers a live field's verbs in its row menu", async () => {
     wrap(
       <FieldTable
-        object="contact"
-        fields={[]}
+        object="deal"
+        fields={[field()]}
         canEdit
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
       />,
     );
+    const menu = await openFieldMenu("Renewal date");
     expect(
-      screen.getByText(/No custom fields on Contact yet/i),
+      menu.getByRole("button", { name: en["cf.edit"] }),
+    ).toBeInTheDocument();
+    expect(
+      menu.getByRole("button", { name: en["cf.archive"] }),
     ).toBeInTheDocument();
   });
 
@@ -226,10 +242,13 @@ describe("FieldTable", () => {
         onArchive={() => {}}
       />,
     );
-    expect(screen.queryByRole("button", { name: /Archive field/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: menuName("Renewal date") }),
+    ).toBeNull();
   });
 
-  it("dims a retired field and marks it retired", () => {
+  // The API offers no restore, so a retired row offers nothing at all.
+  it("marks a retired field retired and offers it no verb", () => {
     wrap(
       <FieldTable
         object="deal"
@@ -240,7 +259,10 @@ describe("FieldTable", () => {
         onArchive={() => {}}
       />,
     );
-    expect(screen.getByText(/Retired/i)).toBeInTheDocument();
+    expect(screen.getByText(en["cf.retired"])).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: menuName("Renewal date") }),
+    ).toBeNull();
   });
 });
 
@@ -477,7 +499,9 @@ describe("CustomFieldsAdmin", () => {
     );
     expect(screen.queryByRole("button", { name: "New field" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add field" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Archive field/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: menuName("Renewal date") }),
+    ).toBeNull();
     expect(
       screen.getByText(/read-only access to custom fields/i),
     ).toBeInTheDocument();
@@ -496,13 +520,9 @@ describe("CustomFieldsAdmin", () => {
       ),
     );
     renderAdmin();
-    await waitFor(() => expect(screen.getByText("Renewal date")).toBeTruthy());
-    expect(
-      screen.getAllByRole("button", { name: /Archive field/i }).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /Edit label/i }).length).toBe(
-      1,
-    );
+    const menu = await openFieldMenu("Renewal date");
+    expect(menu.getByRole("button", { name: en["cf.archive"] })).toBeTruthy();
+    expect(menu.getByRole("button", { name: en["cf.edit"] })).toBeTruthy();
     // The row that opens the builder, spelled as the catalog spells it.
     expect(screen.queryByText("Add field to Deal")).toBeNull();
     expect(screen.queryByRole("button", { name: "New field" })).toBeNull();
@@ -527,7 +547,9 @@ describe("CustomFieldsAdmin", () => {
     expect(screen.getByRole("button", { name: "New field" })).toBeTruthy();
     const dialog = await openBuilder();
     expect(dialog.getByRole("button", { name: "Add field" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Archive field/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: menuName("Renewal date") }),
+    ).toBeNull();
   });
 
   it("rolls back the optimistic staged row and toasts the error on create failure", async () => {
@@ -564,6 +586,15 @@ describe("CustomFieldsAdmin", () => {
     expect(screen.getByText("Existing field")).toBeInTheDocument();
   });
 
+  it("renders an honest empty state for an object with no fields", async () => {
+    vi.stubGlobal("fetch", customFieldsBackend([], [], []));
+    renderAdmin();
+    expect(
+      await screen.findByText(/No custom fields on Deal yet/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
   it("archives a field and shows the archived toast", async () => {
     const calls: Recorded[] = [];
     vi.stubGlobal(
@@ -578,9 +609,8 @@ describe("CustomFieldsAdmin", () => {
     await waitFor(() =>
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Archive field/i }),
-    );
+    const menu = await openFieldMenu("Renewal date");
+    await userEvent.click(menu.getByRole("button", { name: en["cf.archive"] }));
     const dialog = await screen.findByRole("dialog");
     expect(
       await within(dialog).findByText(en["cf.retire.noLists"]),
@@ -623,9 +653,8 @@ describe("CustomFieldsAdmin", () => {
       ),
     );
     renderAdmin();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Archive field/i }),
-    );
+    const menu = await openFieldMenu("Renewal date");
+    await userEvent.click(menu.getByRole("button", { name: en["cf.archive"] }));
     const dialog = await screen.findByRole("dialog");
     expect(
       await within(dialog).findByText("Renewals this quarter"),
@@ -655,7 +684,8 @@ describe("CustomFieldsAdmin", () => {
     await waitFor(() =>
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
-    await userEvent.click(screen.getByRole("button", { name: /Edit label/i }));
+    const menu = await openFieldMenu("Renewal date");
+    await userEvent.click(menu.getByRole("button", { name: en["cf.edit"] }));
     const input = screen.getByLabelText(/New label/i);
     await userEvent.clear(input);
     await userEvent.type(input, "Contract end date");

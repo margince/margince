@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
+import { useIdempotencyKey } from "../api/idempotencykey";
 import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
@@ -9,7 +10,6 @@ import {
   Checkbox,
   Field,
   Modal,
-  Textarea,
   TextInput,
 } from "../design-system/atoms";
 import {
@@ -20,6 +20,7 @@ import {
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { useSinglePress } from "../design-system/presslatch";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -33,16 +34,15 @@ import {
   activityRequestBody,
   KINDS_WITH_A_CONTACT,
 } from "./activitybody";
-import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
+import { ActivityBodyField } from "./activitybodyfield";
+import { loggedActivityKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
-import { throwProblem, useMe } from "./common";
+import { unwrap, useMe } from "./common";
+import "./logactivity.css";
 
-// Log a note or task from a 360 (contact/company/deal/lead): the contract's
-// logActivity POST, linked to the record being viewed, occurred_at stamped
-// at submit, source=manual. On success every read that renders this record's
-// timeline is invalidated (see activitykeys) so the fresh entry appears
-// without a reload. Server-side validation is the truth — a 422 renders its
-// RFC 7807 detail verbatim.
+// Log an activity from a 360: the logActivity POST, linked to the record being
+// viewed, source=manual. Success invalidates every read of this record's
+// timeline (see activitykeys); a 422 renders its detail verbatim.
 
 const EMPTY_DRAFT: ActivityDraft = {
   kind: "note",
@@ -97,12 +97,11 @@ async function searchCompanyContacts(
   companyID: string,
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/contacts", {
-    params: { query: { company_id: companyID, q, limit: 20 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: { query: { company_id: companyID, q, limit: 20 } },
+    }),
+  );
   return data.data.map((contact) => ({
     id: contact.id,
     // full_name, which the contract documents as always present. display_name
@@ -160,7 +159,11 @@ export function LogActivityForm({
   const [attendee, setAttendee] = useState<RecordPickerCandidate | null>(null);
   const needsAttendee =
     entityType === "company" && KINDS_WITH_A_CONTACT.has(draft.kind);
+  // The same test activityRequestBody sends source_system on.
+  const transcript = draft.kind === "meeting" && draft.asTranscript;
+  const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
+  const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
   const log = useMutation({
     // Keyed on entityId, the record this form is open on, not the created
     // activity's own id: the reader wants the name of what the activity is
@@ -175,47 +178,40 @@ export function LogActivityForm({
       draft: ActivityDraft;
       zone: string;
       attendee: RecordPickerCandidate | null;
+      idempotencyKey: string;
     }) => {
-      const { data, error } = await api.POST("/activities", {
-        body: activityRequestBody(
-          input.draft,
-          entityType,
-          entityId,
-          input.zone,
-          input.attendee,
-        ),
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/activities", {
+          params: { header: { "Idempotency-Key": input.idempotencyKey } },
+          body: activityRequestBody(
+            input.draft,
+            entityType,
+            entityId,
+            input.zone,
+            input.attendee,
+          ),
+        }),
+        t,
+      );
     },
     onSuccess: (_data, input) => {
-      const keys =
-        input.draft.kind === "task"
-          ? taskWriteKeys(entityType, entityId)
-          : entityTimelineKeys(entityType, entityId);
-      for (const queryKey of keys) {
+      for (const queryKey of loggedActivityKeys(
+        input.draft.kind,
+        entityType,
+        entityId,
+        input.attendee?.id,
+      )) {
         queryClient.invalidateQueries({ queryKey });
-      }
-      // The attendee's OWN timeline too. The activity is filed against the
-      // contact, so the company screen this form sits on reaches it through the
-      // employer walk while the contact's page holds it directly — and a reader
-      // who logs a meeting here and opens the contact expects to find it.
-      if (input.attendee) {
-        for (const queryKey of entityTimelineKeys(
-          "contact",
-          input.attendee.id,
-        )) {
-          queryClient.invalidateQueries({ queryKey });
-        }
       }
       setDraft(freshDraft(input.zone));
       setAttendee(null);
+      renewKey();
       onLogged?.();
     },
   });
 
+  // Enter in a field submits past the Save button, so the form is latched too.
+  const singlePress = useSinglePress(log.isPending);
   const setField = (patch: Partial<ActivityDraft>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
@@ -242,10 +238,10 @@ export function LogActivityForm({
     <form
       id={formId}
       className="form-stack"
-      onSubmit={(event) => {
+      onSubmit={singlePress((event) => {
         event.preventDefault();
-        log.mutate({ draft, zone: recordZone, attendee });
-      }}
+        log.mutate({ draft, zone: recordZone, attendee, idempotencyKey });
+      })}
     >
       <div className="form-row">
         <Field label={t("log.kind")}>
@@ -336,20 +332,19 @@ export function LogActivityForm({
           onChange={(event) => setField({ asTranscript: event.target.checked })}
         />
       )}
-      <Field
-        label={draft.asTranscript ? t("log.transcriptLabel") : t("log.body")}
-        hint={draft.asTranscript ? t("log.transcriptHint") : undefined}
-      >
-        {(control) => (
-          <Textarea
-            {...control}
-            rows={draft.asTranscript ? 10 : 3}
-            value={draft.body}
-            onChange={(event) => setField({ body: event.target.value })}
-          />
-        )}
-      </Field>
-      {draft.kind === "meeting" && draft.asTranscript && (
+      {/* In the drawer the body is the form's subject, so it takes the room
+          left under the fields; the standing card keeps it compact. */}
+      <ActivityBodyField
+        label={transcript ? t("log.transcriptLabel") : t("log.body")}
+        hint={transcript ? t("log.transcriptHint") : undefined}
+        transcript={transcript}
+        rows={bodyRows}
+        grow={banded}
+        className="logactivity-body-field"
+        value={draft.body}
+        onChange={(body) => setField({ body })}
+      />
+      {transcript && (
         <Field label={t("log.transcriptUpload")} hint={fileError ?? undefined}>
           {(control) => (
             <TextInput
@@ -388,7 +383,7 @@ export function LogActivityForm({
   );
   return banded ? (
     <>
-      <DrawerBody>{form(null)}</DrawerBody>
+      <DrawerBody className="logactivity-drawer-body">{form(null)}</DrawerBody>
       <DrawerFoot className="actions">{submit}</DrawerFoot>
     </>
   ) : (

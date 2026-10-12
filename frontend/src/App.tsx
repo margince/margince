@@ -733,7 +733,7 @@ function UnavailableOrClaimable({
     // A successful claim provisions the installation, so the same /v1/me probe
     // that sent us here now answers — the boundary re-resolves rather than this
     // screen deciding where to go next.
-    return <SetupClaimScreen onClaimed={onRetry} />;
+    return <SetupClaimScreen onClaimed={onRetry} status={claimable.data} />;
   }
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }

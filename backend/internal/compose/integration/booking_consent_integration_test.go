@@ -14,6 +14,7 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"testing"
 	"time"
@@ -31,9 +32,7 @@ func bookingAt(start time.Time, contactID string, extra AnyMap) AnyMap {
 		"subject": "Consented discovery call",
 		"links":   []AnyMap{{"entity_type": "contact", "entity_id": contactID}},
 	}
-	for k, v := range extra {
-		body[k] = v
-	}
+	maps.Copy(body, extra)
 	return body
 }
 

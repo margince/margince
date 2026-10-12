@@ -25,6 +25,10 @@
         },
         "timezone": {
           "type": "string"
+        },
+        "country": {
+          "description": "Country is the jurisdiction the installation runs under, as a lower-case ISO 3166-1 alpha-2 code naming a compiled-in pack. Empty leaves it unset. Seeded once, also into an existing installation that has none stored; after that Settings → Jurisdiction changes it, never this file.",
+          "type": "string"
         }
       }
     },
@@ -203,12 +207,13 @@
               "type": "string"
             },
             "password": {
-              "description": "Password is the reference form: ${file:...} or ${env:...}.",
+              "description": "Password is the reference form: ${file:...} or ${env:...}, or ${none} for a relay that takes no credential.",
               "type": "string",
-              "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+              "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$|^\\s*\\$\\{none\\}\\s*$",
               "examples": [
                 "${env:VARIABLE_NAME}",
-                "${file:/run/secrets/name}"
+                "${file:/run/secrets/name}",
+                "${none}"
               ]
             },
             "password_file": {

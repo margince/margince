@@ -73,5 +73,10 @@ export function WonWithoutContractFact({
   // design system: one screen's free-text field is not a shape the shared
   // identity row owes everybody, and IdentityFact already takes a className for
   // exactly this.
-  return <IdentityFact className="deal-win-detail">{detail}</IdentityFact>;
+  return <IdentityFact className="deal-close-detail">{detail}</IdentityFact>;
+}
+
+/** Why a lost deal was lost, beside the `lost` badge it explains. */
+export function LostReasonFact({ reason }: Readonly<{ reason: string }>) {
+  return <IdentityFact className="deal-close-detail">{reason}</IdentityFact>;
 }

@@ -59,8 +59,37 @@ func TestAnAdmittedMoveRefusesAStageThatClosedAfterTheGateReadIt(t *testing.T) {
 		t.Fatalf("err = %v, want ErrVersionSkew — the move was admitted unattended as open-to-open "+
 			"and closed the deal instead", err)
 	}
+	assertSkewReads(t, err, "A stage changed while this move ran, so the deal was not moved. "+
+		"The move now goes from a stage marked open to one marked won. "+
+		"Read the pipeline's stages again, then repeat the call if the move still applies.")
 	if n := e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND status = 'open' AND closed_at IS NULL`, deal); n != 1 {
 		t.Error("the deal was closed by a move the gate never admitted")
+	}
+}
+
+// A stage archived in the window is refused too: nothing established what that
+// stage was, so the admitted premise cannot be re-derived.
+func TestAnAdmittedMoveRefusesAStageArchivedAfterTheGateReadIt(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, target := DealFixture(t, e)
+	deal := e.SeedDeal(t, "Stage archive race", pipeline, open, &e.Rep1)
+	e.WsExec(t, `UPDATE stage SET semantic = 'open' WHERE id = $1`, target)
+	store := deals.NewStore(e.DB(), installseam.Deals())
+
+	admitted := admitOpenToOpenMove(t, e)
+	e.WsExec(t, `UPDATE stage SET archived_at = now() WHERE id = $1`, open)
+
+	_, err := store.AdvanceDeal(admitted, ids.From[ids.DealKind](deal), deals.AdvanceDealInput{ToStageID: target})
+	assertSkewReads(t, err, "A stage this move names was archived while it ran, so the deal was not moved. "+
+		"Read the deal and its pipeline's stages again before you move it.")
+}
+
+// assertSkewReads holds a refusal to the exact sentence its reader is given.
+func assertSkewReads(t *testing.T, err error, want string) {
+	t.Helper()
+	var skew *apperrors.VersionSkewError
+	if !errors.As(err, &skew) || skew.Message != want {
+		t.Fatalf("err = %v, want version skew reading %q", err, want)
 	}
 }
 

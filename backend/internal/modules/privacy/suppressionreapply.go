@@ -28,18 +28,18 @@ import (
 // subject was erased twice and why, not appear to repeat itself.
 const ReapplySuppressionsReason = "resurrected after erasure; suppression list reapplied"
 
-// ReapplySuppressions re-erases every live subject whose address is on the
-// suppression list, and reports how many it found.
+// ReapplySuppressions re-erases every live subject whose address or channel
+// identity is on the suppression list, and reports how many it found.
 //
 // Zero is the answer on a healthy installation, and that is the point: the
 // pass is cheap to run and its result is evidence either way. A non-zero
 // answer is not a failure of this pass — it is this pass catching one.
 //
-// The hashing happens in Go, through the same SuppressionHash the eraser
-// writes with. Doing it in SQL would mean lower()/btrim() standing in for
-// Go's normalization, and the two agree on ASCII and not everywhere else —
-// a second spelling of the hash silently forks the list, which is the one
-// mistake suppression.go names in its own header.
+// The hashing happens in Go, through the same SuppressionHash and
+// ChannelIdentityHash the eraser writes with. In SQL, lower() and btrim()
+// would stand in for Go's normalization, and the two agree only on ASCII. A
+// second spelling of the hash silently forks the list, which is the mistake
+// suppression.go names in its own header.
 func (e *Eraser) ReapplySuppressions(ctx context.Context) (int, error) {
 	// The same gate the erasure itself asks for, asked once at the top. The
 	// scan below reads every contact in the installation to decide which ones
@@ -48,7 +48,7 @@ func (e *Eraser) ReapplySuppressions(ctx context.Context) (int, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return 0, err
 	}
-	suppressed, err := e.suppressedEmailHashes(ctx)
+	suppressed, err := e.suppressedHashes(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -83,22 +83,26 @@ func (e *Eraser) ReapplySuppressions(ctx context.Context) (int, error) {
 	return taken, refused
 }
 
-// suppressedEmailHashes reads the standing instruction.
-func (e *Eraser) suppressedEmailHashes(ctx context.Context) (map[string]struct{}, error) {
-	hashes := map[string]struct{}{}
+// suppressionEntry is one row of the list: the kind of identifier and its
+// hash. The kind is part of the key, because the journal files each kind
+// under its own prefix.
+type suppressionEntry struct{ kind, hash string }
+
+// suppressedHashes reads the standing instruction, every kind of it.
+func (e *Eraser) suppressedHashes(ctx context.Context) (map[suppressionEntry]struct{}, error) {
+	hashes := map[suppressionEntry]struct{}{}
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			`SELECT value_hash FROM erasure_suppression WHERE kind = 'email'`)
+		rows, err := tx.Query(ctx, `SELECT kind, value_hash FROM erasure_suppression`)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var hash string
-			if err := rows.Scan(&hash); err != nil {
+			var entry suppressionEntry
+			if err := rows.Scan(&entry.kind, &entry.hash); err != nil {
 				return err
 			}
-			hashes[hash] = struct{}{}
+			hashes[entry] = struct{}{}
 		}
 		return rows.Err()
 	}); err != nil {
@@ -108,64 +112,101 @@ func (e *Eraser) suppressedEmailHashes(ctx context.Context) (map[string]struct{}
 }
 
 // contactsMatchingSuppression finds the live contacts an erasure should
-// already have taken.
+// already have taken, by address or by channel identity.
 //
-// Every live address is hashed rather than every suppressed hash being
-// searched for: the list is the smaller side on a healthy installation, and
+// Every live identifier is hashed, rather than every suppressed hash being
+// searched for. The list is the smaller side on a healthy installation, and
 // the comparison has to happen in Go anyway.
-func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map[string]struct{}) ([]ids.UUID, error) {
-	type candidate struct {
-		contact ids.UUID
-		hash    string
+func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map[suppressionEntry]struct{}) ([]ids.UUID, error) {
+	// Each kind on the list, with the live contacts' identifiers of that kind
+	// and how the eraser hashed them.
+	liveIdentifierQueries := []struct {
+		kind  string
+		query string
+		hash  func(rows pgx.Rows) (ids.UUID, string, error)
+	}{
+		{
+			kind: "email",
+			query: `
+				SELECT ce.contact_id, ce.email
+				  FROM contact_email ce
+				  JOIN contact c ON c.id = ce.contact_id AND c.archived_at IS NULL
+				 ORDER BY ce.contact_id`,
+			hash: func(rows pgx.Rows) (ids.UUID, string, error) {
+				var contactID ids.UUID
+				var email string
+				err := rows.Scan(&contactID, &email)
+				return contactID, storekit.SuppressionHash(email), err
+			},
+		},
+		{
+			kind: "channel_identity",
+			query: `
+				SELECT ci.contact_id, ci.provider, ci.channel_user_id
+				  FROM contact_channel_identity ci
+				  JOIN contact c ON c.id = ci.contact_id AND c.archived_at IS NULL
+				 ORDER BY ci.contact_id`,
+			hash: func(rows pgx.Rows) (ids.UUID, string, error) {
+				var contactID ids.UUID
+				var provider, account string
+				err := rows.Scan(&contactID, &provider, &account)
+				return contactID, storekit.ChannelIdentityHash(provider, account), err
+			},
+		},
 	}
 	// The database read finishes before any of it is asked about. Probing the
 	// journal inside the cursor would hold one transaction open across a
-	// network round trip per address, so a slow store would keep a read
-	// transaction alive for as long as it took and a failing one would roll
-	// the whole scan back.
+	// network round trip per identifier.
 	var matched []ids.UUID
-	var ask []candidate
+	var ask []suppressionCandidate
 	seen := map[ids.UUID]struct{}{}
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT ce.contact_id, ce.email
-			  FROM contact_email ce
-			  JOIN contact c ON c.id = ce.contact_id AND c.archived_at IS NULL
-			 ORDER BY ce.contact_id`)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var contactID ids.UUID
-			var email string
-			if err := rows.Scan(&contactID, &email); err != nil {
+		for _, source := range liveIdentifierQueries {
+			rows, err := tx.Query(ctx, source.query)
+			if err != nil {
 				return err
 			}
-			if _, already := seen[contactID]; already {
-				continue
+			for rows.Next() {
+				contactID, hash, err := source.hash(rows)
+				if err != nil {
+					rows.Close()
+					return err
+				}
+				if _, already := seen[contactID]; already {
+					continue
+				}
+				entry := suppressionEntry{kind: source.kind, hash: hash}
+				if _, ok := suppressed[entry]; ok {
+					seen[contactID] = struct{}{}
+					matched = append(matched, contactID)
+					continue
+				}
+				ask = append(ask, suppressionCandidate{contact: contactID, suppressionEntry: entry})
 			}
-			hash := storekit.SuppressionHash(email)
-			if _, ok := suppressed[hash]; ok {
-				seen[contactID] = struct{}{}
-				matched = append(matched, contactID)
-				continue
+			rows.Close()
+			if err := rows.Err(); err != nil {
+				return err
 			}
-			ask = append(ask, candidate{contact: contactID, hash: hash})
 		}
-		return rows.Err()
+		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("privacy: looking for resurrected subjects: %w", err)
 	}
 
-	// Whatever the database's own list did not name, the exported journal
-	// might: that is the restore case, where the rows came back and the list
-	// that would have caught them rolled back with them.
+	return e.matchJournaled(ctx, ask, seen, matched)
+}
+
+// matchJournaled asks the exported journal about what the database's own list
+// did not name. That is the restore case: the rows came back, and the list
+// that would have caught them rolled back with them.
+func (e *Eraser) matchJournaled(
+	ctx context.Context, ask []suppressionCandidate, seen map[ids.UUID]struct{}, matched []ids.UUID,
+) ([]ids.UUID, error) {
 	for _, c := range ask {
 		if _, already := seen[c.contact]; already {
 			continue
 		}
-		journaled, err := e.journalSuppressed(ctx, "email", c.hash)
+		journaled, err := e.journalSuppressed(ctx, c.kind, c.hash)
 		if err != nil {
 			return nil, err
 		}
@@ -176,4 +217,11 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 		matched = append(matched, c.contact)
 	}
 	return matched, nil
+}
+
+// suppressionCandidate is a live contact's identifier that the database's own
+// list does not name, still to be asked of the journal.
+type suppressionCandidate struct {
+	contact ids.UUID
+	suppressionEntry
 }

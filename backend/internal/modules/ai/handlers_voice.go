@@ -296,8 +296,7 @@ func (h Handlers) DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request
 }
 
 func writeVoiceErr(w http.ResponseWriter, r *http.Request, err error) {
-	var ingest *CorpusIngestError
-	if errors.As(err, &ingest) {
+	if ingest, ok := errors.AsType[*CorpusIngestError](err); ok {
 		code := ingest.Code
 		if code == "" {
 			code = "invalid"

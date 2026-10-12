@@ -65,15 +65,15 @@ func meetingOverShape(clause string) string {
 func meetingOverClause(t *testing.T, name, body string) string {
 	t.Helper()
 	const opens = "archived_at IS NOT NULL"
-	at := strings.Index(body, opens)
-	if at < 0 {
+	before, _, ok := strings.Cut(body, opens)
+	if !ok {
 		t.Fatalf("%s no longer contains %q, so this gate would compare nothing and "+
 			"report a pass. Re-derive the marker from the clause's current text.",
 			name, opens)
 	}
 	// Walk back to the parenthesis this predicate opens under, then forward to
 	// its match: everything between is the clause, operators included.
-	start := strings.LastIndex(body[:at], "(")
+	start := strings.LastIndex(before, "(")
 	if start < 0 {
 		t.Fatalf("%s opens the meeting-over clause with no enclosing parenthesis", name)
 	}

@@ -260,7 +260,7 @@ func TestTheWorkerServesItsOwnAICounters(t *testing.T) {
 func TestTheWorkerServesNoAISampleBeforeAnyCallIsRouted(t *testing.T) {
 	_, body := get(t, startForTest(t)+"/metrics")
 
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.HasPrefix(line, "margince_ai_") {
 			t.Errorf("a worker that has routed no call served an AI sample, which a rate reads as a "+
 				"healthy tier: %s", line)

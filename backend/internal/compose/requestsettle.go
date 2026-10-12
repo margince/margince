@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 const (
@@ -375,14 +376,15 @@ func (s *RequestSettler) commit(ctx context.Context, candidate settleCandidate, 
 // A date the model invented is worse than no date: it puts a deadline on
 // somebody's task that nobody agreed to. So an unparseable value is dropped
 // rather than guessed at, and the task simply stays undated — which is what
-// every machine-filed reminder is anyway.
+// every machine-filed reminder is anyway. A date outside the storable range is
+// dropped the same way.
 func settleDueDate(value string) *time.Time {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return nil
 	}
 	for _, layout := range []string{time.RFC3339, "2006-01-02"} {
-		if at, err := time.Parse(layout, value); err == nil {
+		if at, err := time.Parse(layout, value); err == nil && datasource.InstantInRange(at) {
 			return &at
 		}
 	}

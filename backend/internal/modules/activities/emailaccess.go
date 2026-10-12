@@ -43,7 +43,7 @@ func readEmailAccess(
 	out := crmcontracts.EmailAccess{
 		ContentState:  crmcontracts.EmailAccessContentStateAvailable,
 		ChangeMode:    crmcontracts.EmailAccessChangeModeNone,
-		ChangeScope:   ptr(crmcontracts.EmailAccessChangeScopeNone),
+		ChangeScope:   new(crmcontracts.EmailAccessChangeScopeNone),
 		DisplayStatus: crmcontracts.EmailAccessStatusTeam,
 	}
 	if activity.Audience != nil {
@@ -90,14 +90,14 @@ func readEmailAccess(
 		out.CanChange = sender
 		if sender {
 			out.ChangeMode = crmcontracts.EmailAccessChangeModeThreadContribution
-			out.ChangeScope = ptr(crmcontracts.EmailAccessChangeScopeThread)
+			out.ChangeScope = new(crmcontracts.EmailAccessChangeScopeThread)
 		}
 	case writable:
 		// Hand-logged: its audience is exactly what somebody set, so a writer
 		// of the row sets it.
 		out.CanChange = true
 		out.ChangeMode = crmcontracts.EmailAccessChangeModeMessageAudience
-		out.ChangeScope = ptr(crmcontracts.EmailAccessChangeScopeMessage)
+		out.ChangeScope = new(crmcontracts.EmailAccessChangeScopeMessage)
 	}
 
 	// Who is named on a selected audience, read back only for the caller who

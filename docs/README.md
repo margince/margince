@@ -42,9 +42,8 @@ An installation needs these documents before it may read the mail of its own tea
 customer signs them, and Margince does not check them.
 [handbook/compliance.md](handbook/compliance.md) says why.
 
-- [compliance/en/README.md](compliance/en/README.md): the list, in English, with each German document
-  next to its English copy. Sign the German ones in [compliance/de/](compliance/de/), because only
-  the German text is the legal one.
+- [compliance/README.md](compliance/README.md): the list, with each German document next to its
+  English copy. `extensions/de` ships them, and only the German text is the legal one.
 
 ### Attacks: what we must do as the maker
 
@@ -115,6 +114,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   cloud model provider.
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
   model provider goes down.
+- [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
+  used, and record the time it takes.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
   (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md): test a model for one place in the code
@@ -188,6 +189,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [ui-copy-style.md](reference/ui-copy-style.md): how to write English text in the app.
 - [docs-prose-style.md](reference/docs-prose-style.md): how to write a doc page.
 - [ui-copy-style-de.md](reference/ui-copy-style-de.md): what German text in the app adds.
+- [ui-copy-style-vi.md](reference/ui-copy-style-vi.md): what Vietnamese text in the app adds.
 - [issue-labels.md](reference/issue-labels.md): every issue label. `AGENTS.md` has the short form.
 - [license-release-rule.md](reference/license-release-rule.md): the license date on each release.
   [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md` have the license line each

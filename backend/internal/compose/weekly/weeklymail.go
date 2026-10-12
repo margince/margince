@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -286,9 +287,7 @@ func (e *Engine) MailFailed(ctx context.Context, reviewID ids.UUID, cause string
 	if err != nil {
 		return err
 	}
-	if n := len([]rune(cause)); n > maxMailErrorRunes {
-		cause = string([]rune(cause)[:maxMailErrorRunes])
-	}
+	cause = textcut.Runes(cause, maxMailErrorRunes)
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE weekly_review SET mail_error = $3

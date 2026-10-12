@@ -14,6 +14,7 @@ package privacy
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -139,6 +140,11 @@ type SARPackage struct {
 	// decision can be an outstanding obligation TO them, which is a thing held
 	// about somebody that they would have no other way to discover.
 	RequestSettlements []map[string]any `json:"request_settlements"`
+	// StageEvidence is what a model or a record concluded about a deal from the
+	// subject's messages. It carries the quoted words, whether they agreed or
+	// proposed, and how sure the writer was. Owed on ReplyJudgements' ground, because it
+	// is a conclusion drawn from what they wrote.
+	StageEvidence []map[string]any `json:"stage_evidence"`
 	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
 	// is what one colleague wrote ABOUT them, and the decision is one colleagues
@@ -249,7 +255,11 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, contactID, emails, leads, identities)
+		authored, err := subjectAuthoredMessages(ctx, tx, contactID, emails, identities)
+		if err != nil {
+			return err
+		}
+		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
 
 		subject, err := rowMaps(ctx, tx, `
 			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
@@ -305,9 +315,7 @@ func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	if err := tx.QueryRow(ctx, query, contactID).Scan(dests...); err != nil {
 		return err
 	}
-	for name, value := range storekit.ExtractValues(columns, dests) {
-		subject[name] = value
-	}
+	maps.Copy(subject, storekit.ExtractValues(columns, dests))
 	return nil
 }
 
@@ -463,9 +471,10 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 	return out, rows.Err()
 }
 
-// subjectStrings runs a one-column text query into a slice.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID) ([]string, error) {
-	rows, err := tx.Query(ctx, query, contactID.UUID)
+// subjectStrings runs a one-column text query into a slice. The contact is $1,
+// and any further arguments follow it.
+func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID, more ...any) ([]string, error) {
+	rows, err := tx.Query(ctx, query, append([]any{contactID.UUID}, more...)...)
 	if err != nil {
 		return nil, err
 	}

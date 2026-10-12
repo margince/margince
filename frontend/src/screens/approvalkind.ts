@@ -181,3 +181,11 @@ export function approvalKindLabel(kind: string, t: Translator): string {
   const key = KIND_LABEL[kind];
   return key ? t(key) : humanizeKind(kind);
 }
+
+// A rate proposal's apply re-reads the sheet, so its lost race is answered by
+// a fresh refresh rather than by staging the same proposal again.
+export function decisionSkewKey(kind: string | null): MessageKey {
+  return kind === "fx_rate_proposal"
+    ? "decision.fxRateMoved"
+    : "decision.versionSkew";
+}

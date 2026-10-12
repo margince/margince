@@ -146,7 +146,7 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	integration.ApplyRiverSchema(t)
 	// The exact fixture the direct-Sweep test uses: an overdue, active,
 	// commit-override deal — never auto-final, always a staged proposal.
-	id := e.seedSweepDeal(t, "Commit slipped", e.late, stringp("commit"), intp(-10), 3)
+	id := e.seedSweepDeal(t, "Commit slipped", e.late, new("commit"), new(-10), 3)
 
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	runner, err := NewJobRunner(e.Pool, quiet, JobRunnerConfig{})

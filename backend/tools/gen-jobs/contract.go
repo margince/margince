@@ -44,10 +44,7 @@ func decodeMapping[T any](node *yaml.Node, out *T) error {
 	}
 	dec := yaml.NewDecoder(&buf)
 	dec.KnownFields(true)
-	if err := dec.Decode(out); err != nil {
-		return err
-	}
-	return nil
+	return dec.Decode(out)
 }
 
 // queueDef is one queues.<name> entry: the pool bound, and why it is that
@@ -328,7 +325,7 @@ func rejectSecondDocument(dec *yaml.Decoder) error {
 	case err != nil:
 		return fmt.Errorf("parsing contract: reading past the first document: %w", err)
 	default:
-		return fmt.Errorf("the contract carries more than one YAML document — everything after the first `---` is hashed into the generated fingerprint and compiled into neither table; keep every kind in one document")
+		return errors.New("the contract carries more than one YAML document — everything after the first `---` is hashed into the generated fingerprint and compiled into neither table; keep every kind in one document")
 	}
 }
 

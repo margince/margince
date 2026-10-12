@@ -22,7 +22,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Wordmark } from "./auth";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 // The buyer's page around its documents: the ground and the product's mark,
 // the screens a dead or lapsed link lands on, the hero the seller wrote, and
@@ -82,12 +82,12 @@ export function LinkRequest() {
   const request = useMutation({
     mutationKey: ["buyer-room-link-request"],
     mutationFn: async (address: string) => {
-      const { error } = await api.POST("/public/rooms/link-request", {
-        body: { email: address },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/public/rooms/link-request", {
+          body: { email: address },
+        }),
+        t,
+      );
     },
   });
   if (request.isSuccess) {

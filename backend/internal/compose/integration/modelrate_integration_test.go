@@ -93,8 +93,7 @@ func TestModelRateRejects(t *testing.T) {
 	assertInvalid := func(t *testing.T, in ai.SetModelRateInput) {
 		t.Helper()
 		_, err := store.SetModelRate(ctx, in)
-		var v *ai.RateValidationError
-		if !errors.As(err, &v) {
+		if _, ok := errors.AsType[*ai.RateValidationError](err); !ok {
 			t.Fatalf("expected RateValidationError, got %v", err)
 		}
 	}

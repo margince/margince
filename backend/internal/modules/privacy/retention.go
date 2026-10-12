@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // publishedRetentionAction is the check the one emit site whose action comes off
@@ -420,17 +419,21 @@ func (s *RetentionService) dueRecords(ctx context.Context, pol retentionPolicy, 
 	if strings.Contains(selector, "$3") && !strings.Contains(selector, "$4") {
 		args = append(args, pol.Action)
 	}
-	if strings.Contains(selector, "$4") {
-		floor := jurisdiction.RetentionClass{}
-		if pol.Action != actionArchive {
-			floor = statutoryCorrespondenceFloor(ref)
-		}
-		args = append(args, floor.Keep.String(), floor.Anchor == jurisdiction.AnchorCalendarYearEnd)
-	}
 	// The ids stay untyped: the selector's entity varies by policy scope (lead,
 	// activity, contact, deal), so the kind is only known one dispatch deeper.
 	var due []ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if strings.Contains(selector, "$4") {
+			floor := archiveFloor
+			if pol.Action != actionArchive {
+				var err error
+				if floor, err = resolveFloorPolicyAt(ctx, tx, s.eraser.country, ref); err != nil {
+					return err
+				}
+			}
+			floorCurrent, floorCarried := floor.sqlArgs()
+			args = append(args, floorCurrent, floorCarried)
+		}
 		rows, err := tx.Query(ctx, selector, args...)
 		if err != nil {
 			return err

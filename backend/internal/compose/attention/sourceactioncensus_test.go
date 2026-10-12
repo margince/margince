@@ -22,6 +22,7 @@ package attention
 
 import (
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -73,6 +74,7 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// the deal it proposes, `dismiss` records that it is not one, and `open`
 	// reaches the company through the routing table.
 	"deal_suggestion":      {"decide", "dismiss", "open"},
+	"tag_suggestion":       {"decide", "dismiss", "open"},
 	"introduction_request": {"decide", "open"},
 	// Drawn by NoticeAcknowledge rather than through the routing table.
 	"notice": {"acknowledge", "open"},
@@ -214,14 +216,14 @@ func lanesOf(t *testing.T, day crmcontracts.Attention) map[string][]crmcontracts
 		name := structure.Field(at).Name
 		switch field.Kind() {
 		case reflect.Slice:
-			if items, ok := field.Interface().([]crmcontracts.AttentionItem); ok {
+			if items, ok := reflect.TypeAssert[[]crmcontracts.AttentionItem](field); ok {
 				out[name] = items
 			}
 		case reflect.Pointer:
 			if field.IsNil() {
 				continue
 			}
-			if items, ok := field.Elem().Interface().([]crmcontracts.AttentionItem); ok {
+			if items, ok := reflect.TypeAssert[[]crmcontracts.AttentionItem](field.Elem()); ok {
 				out[name] = items
 			}
 		}
@@ -230,12 +232,7 @@ func lanesOf(t *testing.T, day crmcontracts.Attention) map[string][]crmcontracts
 }
 
 func slicesContain(in []crmcontracts.AttentionItemActions, want crmcontracts.AttentionItemActions) bool {
-	for _, one := range in {
-		if one == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(in, want)
 }
 
 // TestTheCensusDescribesEverySourceTheQueueClassifies keeps the table honest in
@@ -342,7 +339,10 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			Domain: "mckinsey.com", Reason: "Nothing on the site named a company.",
 			AskedAt: readInstant,
 		}}}).
-		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}})
+		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}}).
+		WithTagSuggestions(&stubTagSuggestions{rows: []crmcontracts.TagSuggestion{
+			tagSuggestionRow(crmcontracts.TagSuggestionEntityTypeContact),
+		}})
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)

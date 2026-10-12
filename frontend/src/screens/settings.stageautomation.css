@@ -1,0 +1,12 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* A transition is one name; the pinned column keeps both stages on one line. */
+.stageauto-transition {
+  white-space: nowrap;
+}
+
+/* A second line under a rule's hint, inside the row's description paragraph. */
+.stagerule-note {
+  display: block;
+}

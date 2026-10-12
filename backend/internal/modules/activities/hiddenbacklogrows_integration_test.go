@@ -15,6 +15,7 @@ package activities
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -137,5 +138,23 @@ func TestAnUnknownRuleIsRefusedRatherThanAnsweredEmpty(t *testing.T) {
 
 	if !errors.Is(err, ErrUnknownHiddenRule) {
 		t.Fatalf("err = %v, want ErrUnknownHiddenRule", err)
+	}
+	// And it names the field, so the transport answers 422 rather than a
+	// server fault. The route's handler claimed the generated router had
+	// already refused an unknown word; it had not, so this refusal was what
+	// the caller saw, as `500 internal`.
+	unknown, ok := errors.AsType[*UnknownHiddenRuleError](err)
+	if !ok {
+		t.Fatalf("err = %v, want UnknownHiddenRuleError so the refusal carries a field", err)
+	}
+	field, code, message := unknown.FieldFault()
+	if field != "rule" {
+		t.Errorf("field = %q, want rule", field)
+	}
+	if code != "invalid_enum" {
+		t.Errorf("code = %q, want invalid_enum", code)
+	}
+	if !strings.Contains(message, "no_such_rule") {
+		t.Errorf("message = %q, want the rejected word in it", message)
 	}
 }

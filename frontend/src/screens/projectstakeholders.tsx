@@ -31,7 +31,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { projectRoleLabel } from "./record360";
 
 type SetProjectStakeholderRequest =
@@ -64,12 +64,11 @@ function invalidateProject(
 }
 
 async function searchContacts(query: string): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/contacts", {
-    params: { query: { q: query, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: { query: { q: query, limit: 10 } },
+    }),
+  );
   return data.data.map((contact) => ({
     id: contact.id,
     name: contact.full_name,
@@ -101,13 +100,12 @@ export function AddProjectStakeholder({
       contactId: string;
       role: ProjectStakeholderRole;
     }) => {
-      const { error } = await api.PUT("/projects/{id}/stakeholders", {
-        params: { path: { id: projectId } },
-        body: { contact_id: chosen.contactId, role: chosen.role },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/projects/{id}/stakeholders", {
+          params: { path: { id: projectId } },
+          body: { contact_id: chosen.contactId, role: chosen.role },
+        }),
+      );
     },
     onSuccess: () => {
       invalidateProject(queryClient, projectId);
@@ -217,13 +215,11 @@ export function RemoveProjectStakeholder({
 
   const detach = useMutation({
     mutationFn: async (contact: string) => {
-      const { error } = await api.DELETE(
-        "/projects/{id}/stakeholders/{contact_id}",
-        { params: { path: { id: projectId, contact_id: contact } } },
+      unwrap(
+        await api.DELETE("/projects/{id}/stakeholders/{contact_id}", {
+          params: { path: { id: projectId, contact_id: contact } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       invalidateProject(queryClient, projectId);

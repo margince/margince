@@ -20,6 +20,7 @@ import { isRealCalendarDay } from "../format/calendarday";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   EDITABLE_FIELDS,
@@ -28,7 +29,7 @@ import {
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import "./approvalrow.css";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import "./common.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
@@ -117,13 +118,11 @@ export function ApprovalDetailModal({
     queryKey: ["approval", approvalId],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await api.GET("/approvals/{id}", {
-        params: { path: { id: approvalId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/approvals/{id}", {
+          params: { path: { id: approvalId } },
+        }),
+      );
     },
   });
   return (
@@ -281,33 +280,29 @@ function FieldLine({ name, value }: Readonly<{ name: string; value: string }>) {
   );
 }
 
-/**
- * The row-local decide outcomes that KEEP the row mounted: a generic error and
- * the version-skew re-stage state. The already-decided note is deliberately NOT
- * here — it fires a pending invalidation that unmounts the row, so it is
- * surfaced at screen level by `useDecisionSink`, where it survives the refetch.
- */
+/** Outcomes that keep the row mounted. Already-decided is not one: its refetch
+ *  unmounts the row, so `useDecisionSink` says it at screen level. */
 export function DecideOutcome({
   decide,
-  skew,
+  skewKey,
   alreadyDecided,
   onReRead,
 }: Readonly<{
   decide: { isError: boolean; error: unknown };
-  skew: boolean;
+  skewKey: MessageKey | null;
   alreadyDecided: boolean;
   onReRead: () => void;
 }>) {
   const t = useT();
-  const generic = decide.isError && !skew && !alreadyDecided;
+  const generic = decide.isError && !skewKey && !alreadyDecided;
   return (
     <>
       {generic && <ErrorLine error={decide.error} />}
-      {skew && (
+      {skewKey && (
         <ErrorLine
           actions={<Button onClick={onReRead}>{t("decision.reRead")}</Button>}
         >
-          {t("decision.versionSkew")}
+          {t(skewKey)}
         </ErrorLine>
       )}
     </>

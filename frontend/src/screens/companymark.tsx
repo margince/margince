@@ -10,7 +10,7 @@ import { Callout } from "../design-system/callout";
 import { CompanyLogo } from "../design-system/companylogo";
 import { FileDropzone } from "../design-system/filedropzone";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "./common";
 import { storeCompany } from "./installationcompany";
 import "./companymark.css";
 
@@ -110,19 +110,11 @@ export function CompanyMark({
 // path LITERAL: a variable would leave the response `unknown` and the profile
 // this write settles unchecked.
 async function deleteWideMark(): Promise<CompanyProfile> {
-  const { data, error } = await api.DELETE("/company/logo");
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(await api.DELETE("/company/logo"));
 }
 
 async function deleteIconMark(): Promise<CompanyProfile> {
-  const { data, error } = await api.DELETE("/company/logo/icon");
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(await api.DELETE("/company/logo/icon"));
 }
 
 type MarkWrites = ReturnType<typeof useMarkWrites>;

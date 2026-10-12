@@ -20,11 +20,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // TraceOutcome is what the pipeline did with one MESSAGE.
@@ -341,8 +342,8 @@ func tracePayload(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) 
 		// erasure removed.
 		return nil, nil, nil
 	}
-	return nonEmpty(clampRunes(address, maxTraceAddressChars)),
-		nonEmpty(clampRunes(in.Subject, maxTraceSubjectChars)), nil
+	return nonEmpty(textcut.Runes(address, maxTraceAddressChars)),
+		nonEmpty(textcut.Runes(in.Subject, maxTraceSubjectChars)), nil
 }
 
 // traceChannelPayload is tracePayload's other half: what to record about a
@@ -373,8 +374,8 @@ func traceChannelPayload(ctx context.Context, tx pgx.Tx, in TraceEntry) (*string
 	if suppressed {
 		return nil, nil, nil
 	}
-	return nonEmpty(clampRunes(name, maxTraceAddressChars)),
-		nonEmpty(clampRunes(in.Subject, maxTraceSubjectChars)), nil
+	return nonEmpty(textcut.Runes(name, maxTraceAddressChars)),
+		nonEmpty(textcut.Runes(in.Subject, maxTraceSubjectChars)), nil
 }
 
 // validate refuses an entry that would record a decision nobody can read back.
@@ -386,7 +387,7 @@ func (in TraceEntry) validate() error {
 	case in.SourceSystem == "" || in.SourceID == "":
 		return fmt.Errorf("capture: a trace entry carries no natural key (outcome %q)", in.Outcome)
 	case in.Outcome == "":
-		return fmt.Errorf("capture: a trace entry names no outcome")
+		return errors.New("capture: a trace entry names no outcome")
 	case in.Stage == "":
 		return fmt.Errorf("capture: a trace entry names no pipeline stage (outcome %q)", in.Outcome)
 	case !pipelinetrace.CanStore(in.Stage):
@@ -416,16 +417,6 @@ func traceSourceID(sourceID string, namesAContact bool) string {
 	}
 	sum := sha256.Sum256([]byte(sourceID))
 	return "sha256:" + hex.EncodeToString(sum[:])
-}
-
-// clampRunes bounds text by RUNES rather than bytes, so a multi-byte subject is
-// cut at a character boundary and the column's CHECK sees what this function
-// counted.
-func clampRunes(text string, limit int) string {
-	if utf8.RuneCountInString(text) <= limit {
-		return text
-	}
-	return string([]rune(text)[:limit])
 }
 
 func nonEmpty(text string) *string {

@@ -35,6 +35,8 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["due_at", "history.field.due_at"],
   ["email", "history.field.email"],
   ["emails", "history.field.emails"],
+  // A lead's one number, beside the contact's `phones` list below.
+  ["phone", "history.field.phone"],
   ["ended_at", "history.field.ended_at"],
   ["expected_close_date", "history.field.expected_close_date"],
   ["first_name", "history.field.first_name"],

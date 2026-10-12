@@ -17,6 +17,11 @@ package compose
 // Nothing here can delete it for them: the process cannot edit its own
 // deployment.
 //
+// Leaving the declaration out falls back to the sealed copy. To stop using a
+// sealed relay password, the deployment says `password: ${none}`, and the boot
+// deletes the sealed copy. The license token has no such spelling: an
+// installation removing its license has stopped paying.
+//
 // The DECLARATION outranks the sealed copy, which is the opposite of the order
 // the BYOK provider keys take, and the difference is not an oversight. A
 // provider key has a human write path — the routing surface — so the vault has
@@ -256,12 +261,17 @@ var (
 	}
 )
 
-// SealedSMTPPassword resolves the relay credential the mailer authenticates
-// with, sealing whatever the deployment declared.
+// sealedSMTPPassword resolves the relay credential the mailer authenticates
+// with, and seals whatever the deployment declared. A password declared absent
+// resolves to nothing; RemoveDeclaredAbsentCredentials deleted its sealed copy
+// at boot.
 //
 // An empty result is an unauthenticated relay, which is a posture rather than a
 // mistake: it is what an installation that names no password has always had.
-func SealedSMTPPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg deployconfig.Config, lookup config.Lookup, log *slog.Logger) (string, error) {
+func sealedSMTPPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg deployconfig.Config, lookup config.Lookup, log *slog.Logger) (string, error) {
+	if cfg.Email.SMTPPasswordRemoved() {
+		return "", nil
+	}
 	declared, err := cfg.Email.SMTPPassword(lookup)
 	if err != nil {
 		return "", err
@@ -322,6 +332,85 @@ func sealedSecret(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault,
 	}
 	b := vaultBinding{pool: pool, vault: vault, ws: ids.From[ids.WorkspaceKind](ws), log: log}
 	return resolveSecret(bootCtx(ctx, ws, secretSealActor), b, s, declared)
+}
+
+// RemoveDeclaredAbsentCredentials deletes the sealed copy of every deployment
+// credential the deployment declares absent. Both serving roles call it at
+// boot, whether or not outbound mail is enabled. A removal is a revocation: a
+// leaked password must not stay sealed for the day mail is turned back on.
+func RemoveDeclaredAbsentCredentials(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg deployconfig.Config, log *slog.Logger) error {
+	if !cfg.Email.SMTPPasswordRemoved() {
+		return nil
+	}
+	return unsealSecret(ctx, pool, vault, smtpPassword, log)
+}
+
+// unsealSecret binds the boot principal and hands off to unseal. A process
+// with no vault, or an installation with no workspace yet, has sealed nothing,
+// so there is nothing to remove.
+func unsealSecret(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, s deploymentSecret, log *slog.Logger) error {
+	if vault == nil {
+		return nil
+	}
+	ws, err := singletonWorkspace(ctx, pool)
+	if err != nil {
+		return err
+	}
+	if ws == (ids.UUID{}) {
+		return nil
+	}
+	b := vaultBinding{pool: pool, vault: vault, ws: ids.From[ids.WorkspaceKind](ws), log: log}
+	return b.unseal(bootCtx(ctx, ws, secretSealActor), s)
+}
+
+// unseal deletes the sealed copy of a credential declared absent: the blob
+// first, then the row that names it. In that order a failed step leaves the
+// row, so the next boot retries, and a vault delete is idempotent. The other
+// order could strand the ciphertext with nothing pointing at it. Failures are
+// logged, not returned: this process runs on no credential either way.
+func (b vaultBinding) unseal(ctx context.Context, s deploymentSecret) error {
+	store := NewSettingsStore(b.pool)
+	stored, err := settings.Get(ctx, store, s.ref)
+	if err != nil {
+		return fmt.Errorf("compose: reading where %s is sealed: %w", s.name, err)
+	}
+	if stored == "" {
+		return nil
+	}
+	if err := b.vault.Delete(ctx, b.ws, keyvault.Ref(stored)); err != nil {
+		b.log.ErrorContext(ctx, "cannot delete a sealed deployment credential the deployment declares removed; it is not used, and the next boot tries again",
+			"credential_name", s.name, "declared_at", s.declaredAt, "error", err)
+		return nil
+	}
+	var removed bool
+	err = store.WriteTx(ctx, func(tx pgx.Tx) error {
+		// The lock record() takes, so a seal cannot repoint the row between
+		// this comparison and the delete below.
+		if err := settings.LockForWrite(ctx, tx, s.ref.Key()); err != nil {
+			return err
+		}
+		current, err := settings.GetTx(ctx, tx, s.ref)
+		if err != nil {
+			return err
+		}
+		if current != stored {
+			// A ref other than the one just deleted was recorded meanwhile;
+			// it is not this boot's to remove.
+			return nil
+		}
+		removed, err = settings.DeleteTx(ctx, store, tx, s.ref)
+		return err
+	})
+	if err != nil {
+		b.log.ErrorContext(ctx, "deleted a sealed deployment credential but not the record of where it was; the next boot tries again",
+			"credential_name", s.name, "declared_at", s.declaredAt, "error", err)
+		return nil
+	}
+	if removed {
+		b.log.InfoContext(ctx, "removed a sealed deployment credential on this boot; the deployment declares it absent",
+			"credential_name", s.name, "declared_at", s.declaredAt)
+	}
+	return nil
 }
 
 // deploymentSecretRefKeys is the settings key each deployment credential keeps

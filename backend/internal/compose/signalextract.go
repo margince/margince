@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -353,10 +354,14 @@ func (x *SignalExtractor) ask(ctx context.Context, thread settledThread) ([]extr
 func extractRequest(thread settledThread, lang string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
-	prompt.WriteString("One email conversation, oldest first (untrusted):\n")
+	prompt.WriteString("One email conversation, oldest first, each message without the history it quotes (untrusted):\n")
 	for _, message := range thread.Messages {
+		// The sender's own words only, because that is what validateEventEvidence
+		// holds a quote to. Shown the history, the model cites a reply for a
+		// promise it merely quotes, and the whole reading is refused.
 		body := fmt.Sprintf("Direction: %s\nSent: %s\nSubject: %s\n%s",
-			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject, message.Body)
+			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
+			textlang.CurrentMessage(message.Body))
 		prompt.WriteString(fence.WrapAttr("source_id", message.ID.String(), body) + "\n")
 	}
 	fmt.Fprintf(&prompt,

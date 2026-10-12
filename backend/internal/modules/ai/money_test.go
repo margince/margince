@@ -27,8 +27,7 @@ func TestUsdPerMTokToMicroUSD(t *testing.T) {
 func TestUsdPerMTokRejects(t *testing.T) {
 	for _, bad := range []string{"-1", "abc", "", "1e400", "12345678901234567890"} {
 		_, err := UsdPerMTokToMicroUSD("input_per_mtok", bad)
-		var v *RateValidationError
-		if !errors.As(err, &v) {
+		if _, ok := errors.AsType[*RateValidationError](err); !ok {
 			t.Errorf("UsdPerMTokToMicroUSD(%q) err = %v, want RateValidationError", bad, err)
 		}
 	}

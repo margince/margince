@@ -77,9 +77,10 @@ const addButton = () =>
     name: en["consumerMail.addOpen"],
   }) as HTMLButtonElement;
 
-// The per-row remove control is icon-only; its accessible name is the label.
+// The per-row remove control is icon-only, so its name says which domain it
+// takes back: a list of identical "Remove" buttons names nothing.
 const removeButton = () =>
-  screen.getByRole("button", { name: "Remove" }) as HTMLButtonElement;
+  screen.getByRole("button", { name: "Remove gmx.test" }) as HTMLButtonElement;
 
 describe("ConsumerMailDomainsCard", () => {
   it("enables add and remove on capture_settings:update", async () => {

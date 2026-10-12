@@ -5,7 +5,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useLocale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { ProblemError, problemMessageOf, throwProblem } from "../common";
+import { ProblemError, problemMessageOf, unwrap } from "../common";
 import type { CompanyDraft } from "../onboarding";
 import { changeDraftField, prefill } from "../onboarding";
 import { defaultSelectedFactKeys } from "../onboarding-facts";
@@ -283,13 +283,11 @@ export function useCompanyRead({
     queryKey: ["company-site-read", readId],
     enabled: readId !== null,
     queryFn: async (): Promise<CompanySiteRead> => {
-      const { data, error } = await api.GET("/company/site-reads/{readId}", {
-        params: { path: { readId: readId ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/company/site-reads/{readId}", {
+          params: { path: { readId: readId ?? "" } },
+        }),
+      );
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -342,13 +340,11 @@ export function useCompanyRead({
     queryFn: async (): Promise<Proposal> => {
       // The open questions' copy speaks the user's language; option values
       // stay locale-invariant server-side.
-      const { data, error } = await api.GET("/onboarding/company/proposal", {
-        params: { query: { locale: promptLocale } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/onboarding/company/proposal", {
+          params: { query: { locale: promptLocale } },
+        }),
+      );
     },
   });
 

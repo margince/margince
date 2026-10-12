@@ -114,7 +114,6 @@ func buildOfferDiff(added, removed []crmcontracts.OfferLineItem, changed []offer
 			Before *crmcontracts.OfferLineItem `json:"before,omitempty"`
 		}, len(changed))
 		for i, c := range changed {
-			c := c
 			pairs[i] = struct {
 				After  *crmcontracts.OfferLineItem `json:"after,omitempty"`
 				Before *crmcontracts.OfferLineItem `json:"before,omitempty"`
@@ -124,5 +123,3 @@ func buildOfferDiff(added, removed []crmcontracts.OfferLineItem, changed []offer
 	}
 	return diff
 }
-
-func boolPtr(b bool) *bool { return &b }

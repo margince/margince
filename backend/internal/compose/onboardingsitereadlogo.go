@@ -68,8 +68,8 @@ func (e *deepReadEngine) getCompanySiteReadLogo(w http.ResponseWriter, r *http.R
 	// spares the repeat fetches without holding a stale mark for long.
 	w.Header().Set("Cache-Control", "private, max-age=300")
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: obj.Size},
-		Body:     rc,
+		ContentType: imagenorm.ContentType, Inline: true, Size: obj.Size,
+		Body: rc,
 	}, "site read logo "+readID.String())
 }
 

@@ -166,7 +166,7 @@ func reportingFactValue(ctx context.Context, frame crmcontracts.ReportingContext
 	}
 	if spec.money {
 		if value == "" {
-			value = BaseValueSQL(b.add(frame.EvaluatedAt), b.add(frame.Currency), "t")
+			value = deals.BaseValueSQL(b.add(frame.EvaluatedAt), b.add(frame.Currency), "t")
 		}
 		var err error
 		value, err = auth.MaskedExpressionSQL(ctx, string(recordTypeDeal), "amount_minor", "t", value, b.arg)

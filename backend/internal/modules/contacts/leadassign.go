@@ -160,6 +160,10 @@ func ensureLeadUpdateAuthority(ctx context.Context, tx pgx.Tx, id ids.LeadID, in
 	if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly); err != nil {
 		return err
 	}
+	// Giving a lead an owner is a claim, single, bulk or by assignment.
+	if err := refuseWebsiteLeadNotYetTold(ctx, tx, id.UUID); err != nil {
+		return err
+	}
 	if !ownershipOnlyLeadUpdate(in) {
 		// Mixed content: the write arm answers, so an ownerless lead refuses
 		// the whole patch rather than admitting the fields riding along with

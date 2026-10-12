@@ -64,7 +64,7 @@ func (e *closeDateEnv) correctionAuditIDFor(t *testing.T, dealID ids.UUID) ids.U
 // it understands. Every one of the sweep's tiers touches both.
 func TestACorrectionIsTakenBackWithEveryFieldItMoved(t *testing.T) {
 	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Rolled forward overnight", e.early, nil, intp(-12), 3)
+	deal := e.seedSweepDeal(t, "Rolled forward overnight", e.early, nil, new(-12), 3)
 	wasClosing := today().AddDate(0, 0, -12)
 
 	if err := e.sweep(); err != nil {
@@ -100,8 +100,7 @@ func TestACorrectionIsTakenBackWithEveryFieldItMoved(t *testing.T) {
 	_, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{
 		ExpectedClose: &yesterday,
 	})
-	var pastClose *deals.PastCloseDateError
-	if !errors.As(err, &pastClose) {
+	if _, ok := errors.AsType[*deals.PastCloseDateError](err); !ok {
 		t.Errorf("the normal editor accepted a past close date (%v) — the exception leaked", err)
 	}
 }
@@ -115,7 +114,7 @@ func TestACorrectionIsTakenBackWithEveryFieldItMoved(t *testing.T) {
 // the next pass, their answer lasting exactly until the sweep ran again.
 func TestAReversedCorrectionIsNotReappliedTomorrow(t *testing.T) {
 	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Undone and left alone", e.early, nil, intp(-12), 3)
+	deal := e.seedSweepDeal(t, "Undone and left alone", e.early, nil, new(-12), 3)
 	wasClosing := today().AddDate(0, 0, -12)
 
 	if err := e.sweep(); err != nil {
@@ -143,7 +142,7 @@ func TestAReversedCorrectionIsNotReappliedTomorrow(t *testing.T) {
 // FIELD: renaming the deal leaves the undo available, re-dating it does not.
 func TestATakenBackCorrectionRefusesToOverwriteALaterEdit(t *testing.T) {
 	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Corrected then re-dated", e.early, nil, intp(-12), 3)
+	deal := e.seedSweepDeal(t, "Corrected then re-dated", e.early, nil, new(-12), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -159,8 +158,7 @@ func TestATakenBackCorrectionRefusesToOverwriteALaterEdit(t *testing.T) {
 	}
 
 	_, err := e.Deals.RevertCorrection(e.Admin(), correction, nil, nil)
-	var conflict *deals.CorrectionReversalError
-	if !errors.As(err, &conflict) {
+	if _, ok := errors.AsType[*deals.CorrectionReversalError](err); !ok {
 		t.Fatalf("undo after a human edit → %v, want a conflict that names the field", err)
 	}
 	kept := e.readSwept(t, deal)
@@ -172,7 +170,7 @@ func TestATakenBackCorrectionRefusesToOverwriteALaterEdit(t *testing.T) {
 // Undo twice is one reversal, not a toggle.
 func TestTakingACorrectionBackTwiceIsOneReversal(t *testing.T) {
 	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Undone twice", e.early, nil, intp(-12), 3)
+	deal := e.seedSweepDeal(t, "Undone twice", e.early, nil, new(-12), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -182,8 +180,7 @@ func TestTakingACorrectionBackTwiceIsOneReversal(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := e.Deals.RevertCorrection(e.Admin(), correction, nil, nil)
-	var conflict *deals.CorrectionReversalError
-	if !errors.As(err, &conflict) {
+	if _, ok := errors.AsType[*deals.CorrectionReversalError](err); !ok {
 		t.Errorf("second undo → %v, want a refusal saying it is already taken back", err)
 	}
 	var reversals int
@@ -215,7 +212,7 @@ func TestTakingACorrectionBackTwiceIsOneReversal(t *testing.T) {
 // the memory itself is broken.
 func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
 	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Confirmed after being undone", e.early, nil, intp(-12), 3)
+	deal := e.seedSweepDeal(t, "Confirmed after being undone", e.early, nil, new(-12), 3)
 	wasClosing := today().AddDate(0, 0, -12)
 
 	if err := e.sweep(); err != nil {
@@ -270,7 +267,7 @@ func (e *closeDateEnv) magicReceipt(t *testing.T, since time.Time) (crmcontracts
 // route.
 func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
 	e := setupCloseDate(t)
-	e.seedSweepDeal(t, "Corrected overnight", e.early, nil, intp(-12), 3)
+	e.seedSweepDeal(t, "Corrected overnight", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
@@ -322,7 +319,7 @@ func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
 // correction writes.
 func TestTheGenericRestoreRouteHonorsACorrectionTheReceiptOffersUndoOn(t *testing.T) {
 	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Corrected overnight, undone through the real route", e.early, nil, intp(-12), 3)
+	deal := e.seedSweepDeal(t, "Corrected overnight, undone through the real route", e.early, nil, new(-12), 3)
 	wasClosing := today().AddDate(0, 0, -12)
 
 	if err := e.sweep(); err != nil {
@@ -376,7 +373,7 @@ func TestTheGenericRestoreRouteHonorsACorrectionTheReceiptOffersUndoOn(t *testin
 // *deals.CorrectionReversalError a 500 would fall through to.
 func TestTheGenericRestoreRouteRefusesACorrectionOverwrittenByALaterEdit(t *testing.T) {
 	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Corrected then re-dated, undone through the real route", e.early, nil, intp(-12), 3)
+	deal := e.seedSweepDeal(t, "Corrected then re-dated, undone through the real route", e.early, nil, new(-12), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -422,7 +419,7 @@ func TestTheGenericRestoreRouteRefusesACorrectionOverwrittenByALaterEdit(t *test
 // which field moved under it.
 func TestTheGenericRestoreRouteRefusesAStaleVersionOnACorrection(t *testing.T) {
 	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Corrected, then renamed by someone else", e.early, nil, intp(-12), 3)
+	deal := e.seedSweepDeal(t, "Corrected, then renamed by someone else", e.early, nil, new(-12), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)

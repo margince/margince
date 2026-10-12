@@ -547,9 +547,8 @@ func TestACursorTheQueueDidNotMintIsRefused(t *testing.T) {
 		{"another route's cursor", foreign},
 	} {
 		t.Run(token.name, func(t *testing.T) {
-			var malformed *storekit.MalformedCursorError
 			_, _, err := e.store.ListNoticeCases(ctx, nil, 0, token.value)
-			if !errors.As(err, &malformed) {
+			if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 				t.Fatalf("%s answered %v, want a malformed-cursor refusal", token.name, err)
 			}
 		})

@@ -12,7 +12,7 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingProfileScreen } from "./booking-profile";
-import { QueryGate, throwProblem, useMe } from "./common";
+import { QueryGate, throwProblem, unwrap, useMe } from "./common";
 import { useConnectors } from "./connectors";
 import {
   CalendarSection,
@@ -270,11 +270,11 @@ function useSaveMeetingSettings(
       if (latest.error) throwProblem(latest.error);
       const changes = changedMeetingPreferences(original, next);
       if (Object.keys(changes).length === 0) return latest.data;
-      const { data, error } = await api.PUT("/scheduling/profile", {
-        body: { ...latest.data, ...changes },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.PUT("/scheduling/profile", {
+          body: { ...latest.data, ...changes },
+        }),
+      );
     },
     onSuccess: async (profile) => {
       onSaved(profile);

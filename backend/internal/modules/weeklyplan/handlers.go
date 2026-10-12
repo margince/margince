@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Handlers is the plan's HTTP surface.
@@ -174,7 +175,7 @@ func parseEditDate(raw json.RawMessage) (*time.Time, bool, error) {
 		return nil, false, badDate
 	}
 	day, err := time.Parse(time.DateOnly, text)
-	if err != nil {
+	if err != nil || !datasource.InstantInRange(day) {
 		return nil, false, badDate
 	}
 	return &day, true, nil

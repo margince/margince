@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -97,7 +98,7 @@ func (r *Registry) requireDeclaredArgs(name string, args json.RawMessage) error 
 	if err := joinArgRefusals(r.requireDeclaredPresence(name, args), r.requireDeclaredIDs(name, args)); err != nil {
 		return err
 	}
-	return r.requireDeclaredBounds(name, args)
+	return joinArgRefusals(r.requireDeclaredBounds(name, args), r.requireDeclaredEnums(name, args))
 }
 
 // joinArgRefusals answers with both refusals when both fired, and with whichever
@@ -124,7 +125,7 @@ func joinArgRefusals(first, second error) error {
 	}
 	return &BadArgsError{
 		Cause:    fmt.Errorf("%w; %w", firstArgs.Cause, secondArgs.Cause),
-		Guidance: firstArgs.Guidance,
+		Guidance: strings.Join(slices.DeleteFunc([]string{firstArgs.Guidance, secondArgs.Guidance}, func(g string) bool { return g == "" }), "; "),
 	}
 }
 

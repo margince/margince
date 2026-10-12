@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -275,9 +276,7 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		companyID := target.id
 
 		fields := make(map[string]*string, len(in.Fields)+1)
-		for field, value := range in.Fields {
-			fields[field] = value
-		}
+		maps.Copy(fields, in.Fields)
 		fields[fieldDisplayName] = &in.DisplayName
 		applied, err := writeCompanyFields(ctx, tx, companyID, by, fields)
 		if err != nil {

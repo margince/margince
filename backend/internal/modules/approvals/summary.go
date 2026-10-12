@@ -22,6 +22,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -74,12 +75,5 @@ func boundRunes(s string, n int) string {
 		return s
 	}
 	const ellipsis = "…"
-	cut := n - len(ellipsis)
-	if cut < 0 {
-		cut = 0
-	}
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return strings.TrimSpace(s[:cut]) + ellipsis
+	return strings.TrimSpace(textcut.Bytes(s, n-len(ellipsis))) + ellipsis
 }

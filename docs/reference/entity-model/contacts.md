@@ -6,7 +6,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-43 columns · primary key `(id)` · referenced by 40 foreign keys
+43 columns · primary key `(id)` · referenced by 42 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -431,7 +431,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-32 columns · primary key `(id)` · referenced by 43 foreign keys
+32 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -677,7 +677,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `confidence` | `numeric(4,3)` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `evidence_snippet` | `text` | yes | The verbatim source text the value was read from, so the reader can check the claim against its own source. |
-| `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 1 more. |
+| `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 3 more. |
 | `observed_at` | `timestamp with time zone`, default `now()` | yes | When the source stated this value: the mail's own date, rather than when the pass read it. |
 | `source_ref` | `text` | yes | What was read, as `activity:<uuid>` for a signature or `site_read:<url>` for a page. |
 | `superseded_captured_by` | `text` |  |  |
@@ -700,7 +700,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
-- `contact_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website'])))`
+- `contact_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website', 'first_name', 'last_name'])))`
 - `contact_profile_field_value_key_cardinality`: `CHECK (((field = 'phone') = (value_key <> '')))`
 - `contact_profile_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_contact_profile_field`: `UNIQUE (contact_id, field, value_key)`
@@ -926,13 +926,15 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## email_signature
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `body` | `text` | yes | The sign-off appended below every message this member sends, plain text. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
+| `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the workspace template's `{phone}`. |
+| `title` | `text`, default `''::text` | yes | The member's title, filled into the workspace template's `{title}`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -976,7 +978,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-37 columns · primary key `(id)` · referenced by 14 foreign keys
+38 columns · primary key `(id)` · referenced by 17 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -993,6 +995,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `linkedin_url` | `text` |  | Normalized LinkedIn profile URL; the exact-match dedupe key. |
 | `merged_into_id` | `uuid` |  | Set when this lead was merged away into another, and null otherwise. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
+| `phone` | `text` |  | E.164, as a contact's number is. |
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |
@@ -1092,6 +1095,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `lead_disqualify_reason_label_once`: `unique, btree (lower(btrim(label)))`
 - `lead_disqualify_reason_pkey`: `unique, btree (id)`
 
 **Triggers**
@@ -1320,6 +1324,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `partner_cert_status_check`: `CHECK ((cert_status = ANY (ARRAY['applied', 'certified', 'suspended'])))`
+- `partner_certified_staff_check`: `CHECK ((certified_staff >= 0))`
 - `partner_company_id_key`: `UNIQUE (company_id)`
 - `partner_margin_tier_check`: `CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15', 'tier2_20', 'tier3_25']))))`
 - `partner_partner_fit_override_reason_check`: `CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0)))`
@@ -1418,7 +1423,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## relationship
 
-21 columns · primary key `(id)` · referenced by 1 foreign key
+22 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1431,6 +1436,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `employment_status` | `text` |  | Employment assertion. |
 | `ended_at` | `date` |  | Missing date; employment_status distinguishes former and unknown from ongoing. |
 | `ended_precision` | `text` |  | One of `day`, `month`. |
+| `first_observed_at` | `timestamp with time zone` |  |  |
 | `is_current_primary` | `boolean`, default `false` | yes | Employment; the one current primary employer (≤1 per contact). |
 | `kind` | `text` | yes | One of `employment`, `deal_stakeholder`, `partner_of`, `referred_by`, `co_sell_with`, `project_stakeholder` and 3 more. |
 | `project_id` | `uuid` |  | The project on a project_stakeholder or project_company edge. |

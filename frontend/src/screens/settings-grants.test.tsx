@@ -82,9 +82,12 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    // System health too: its schedule cards are this same editor's.
+    // System health too: its schedule cards are this same editor's. And the
+    // jurisdiction, which this editor changes.
     await waitFor(() =>
-      expect(offeredPages()).toEqual(floorPlus("company", "system-health")),
+      expect(offeredPages()).toEqual(
+        floorPlus("company", "jurisdiction", "system-health"),
+      ),
     );
   });
 

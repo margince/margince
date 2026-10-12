@@ -11,7 +11,7 @@ import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
-import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import { problemCodeOf, problemMessageOf, unwrap } from "./common";
 import "./common.css";
 import "./imap-connect-form.css";
 
@@ -117,16 +117,14 @@ export function ImapMailboxForm({
 
   const connect = useMutation({
     mutationFn: async (request: ImapConnectRequest) => {
-      const { data, error } = await api.POST("/connectors/{provider}/connect", {
-        params: { path: { provider: "imap" } },
-        body: {
-          imap: request,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/connectors/{provider}/connect", {
+          params: { path: { provider: "imap" } },
+          body: {
+            imap: request,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       // Never claim a connection the server did not confirm: the row list

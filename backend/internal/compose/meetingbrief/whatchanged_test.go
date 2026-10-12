@@ -14,10 +14,10 @@ import (
 // takes those claims out of the set so no later section repeats them.
 func TestWhatChangedListsOnlyWhatHappenedAfterTheReaderLastSpoke(t *testing.T) {
 	in := fullInput()
-	in.LastSpokeAt = ptr(at(5))
+	in.LastSpokeAt = new(at(5))
 	in.Commitments = []ClaimIn{
-		{ContactName: "Ana Roth", Kind: kindObjection, Body: "the cure period", Status: statusOpen, SourceID: activityID, OccurredAt: ptr(at(7))},
-		{ContactName: "Ana Roth", Kind: kindDecision, Body: "pilot first", Status: "done", SourceID: activityID, OccurredAt: ptr(at(2))},
+		{ContactName: "Ana Roth", Kind: kindObjection, Body: "the cure period", Status: statusOpen, SourceID: activityID, OccurredAt: new(at(7))},
+		{ContactName: "Ana Roth", Kind: kindDecision, Body: "pilot first", Status: "done", SourceID: activityID, OccurredAt: new(at(2))},
 	}
 	in.Recent = []ActIn{
 		{ID: activityID, Kind: "email", Subject: "Re: redline", Direction: "inbound", At: at(8)},
@@ -57,7 +57,7 @@ func TestFirstContactIsSaidRatherThanNothingChanged(t *testing.T) {
 
 func TestAQuietSpellSaysNothingCapturedHasChanged(t *testing.T) {
 	in := fullInput()
-	in.LastSpokeAt = ptr(at(9))
+	in.LastSpokeAt = new(at(9))
 	in.Commitments = nil
 	in.Recent = nil
 	changed := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindWhatChanged)
@@ -71,7 +71,7 @@ func TestAQuietSpellSaysNothingCapturedHasChanged(t *testing.T) {
 // complete: it read claims and conversations only.
 func TestWhatChangedNamesWhatHappenedToTheDealNotOnlyWhatWasSaid(t *testing.T) {
 	in := fullInput()
-	in.LastSpokeAt = ptr(at(5))
+	in.LastSpokeAt = new(at(5))
 	in.Commitments = nil
 	in.Recent = nil
 	in.DealMoves = []DealMoveIn{
@@ -81,9 +81,11 @@ func TestWhatChangedNamesWhatHappenedToTheDealNotOnlyWhatWasSaid(t *testing.T) {
 	}
 	changed := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindWhatChanged)
 	var joined string
+	var joinedSb84 strings.Builder
 	for _, line := range changed.Sentences {
-		joined += line.Text + " | "
+		joinedSb84.WriteString(line.Text + " | ")
 	}
+	joined += joinedSb84.String()
 	for _, want := range []string{"revision 3 was sent", "moved from Qualified to Proposal", "confirmed a document in the Deal Room"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("what changed = %q, want it to say %q", joined, want)
@@ -98,7 +100,7 @@ func TestWhatChangedNamesWhatHappenedToTheDealNotOnlyWhatWasSaid(t *testing.T) {
 // see a stage move or an offer — citing the meeting would send them nowhere.
 func TestEveryDealMoveCitesTheDeal(t *testing.T) {
 	in := fullInput()
-	in.LastSpokeAt = ptr(at(5))
+	in.LastSpokeAt = new(at(5))
 	in.Commitments = nil
 	in.Recent = nil
 	in.DealMoves = []DealMoveIn{{At: at(2), Text: "Since then the deal moved to Proposal.", DealID: dealID}}

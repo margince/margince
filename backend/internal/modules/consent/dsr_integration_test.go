@@ -127,7 +127,7 @@ func setupDSR(t *testing.T) *dsrEnv {
 func (e *dsrEnv) mustCreate(t *testing.T, kind, subjectRef string) dsrRow {
 	t.Helper()
 	row, err := e.store.CreateDSR(e.ctx, CreateDSRInput{
-		Kind: kind, SubjectRef: subjectRef, DueAt: time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC),
+		Kind: kind, SubjectRef: subjectRef, DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("creating %s DSR: %v", kind, err)
@@ -148,7 +148,7 @@ func TestListDSRsNarrowsByStatus(t *testing.T) {
 
 	answer := "handled by hand"
 	if _, err := e.store.UpdateDSR(e.ctx, toClose.ID, UpdateDSRInput{
-		Status: strptr("fulfilled"), Resolution: &answer,
+		Status: new("fulfilled"), Resolution: &answer,
 	}); err != nil {
 		t.Fatalf("closing the second request: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestClosingWithAWhitespaceOnlyResolutionIsRefused(t *testing.T) {
 	blank := "   "
 
 	_, err := e.store.UpdateDSR(e.ctx, req.ID, UpdateDSRInput{
-		Status: strptr("fulfilled"), Resolution: &blank,
+		Status: new("fulfilled"), Resolution: &blank,
 	})
 
 	var verr *ValidationError
@@ -235,8 +235,6 @@ func listDSRsOverHTTP(t *testing.T, h Handlers, r *http.Request, params crmcontr
 	}
 	return body.Data
 }
-
-func strptr(s string) *string { return &s }
 
 func TestFulfillErasureHTTPRefusesAnUnresolvableSubject(t *testing.T) {
 	e := setupDSR(t)
@@ -318,7 +316,7 @@ func TestFulfillErasureHTTPRefusesAnAlreadyRejectedRequest(t *testing.T) {
 	req := e.mustCreate(t, "erasure", ids.NewV7().String())
 	answer := "the subject withdrew the request"
 	if _, err := e.store.UpdateDSR(e.ctx, req.ID, UpdateDSRInput{
-		Status: strptr("rejected"), Resolution: &answer,
+		Status: new("rejected"), Resolution: &answer,
 	}); err != nil {
 		t.Fatalf("rejecting the request: %v", err)
 	}

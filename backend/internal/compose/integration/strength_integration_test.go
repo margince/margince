@@ -36,7 +36,7 @@ func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 
 	// The §4.1 worked example: 12 directed interactions inside 90 days
 	// (7 inbound, 5 outbound), the most recent 5 days ago.
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		direction := "inbound"
 		if i >= 7 {
 			direction = "outbound"

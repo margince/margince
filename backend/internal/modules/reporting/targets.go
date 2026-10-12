@@ -137,7 +137,7 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 
 func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (crmcontracts.ReportingWindow, string, error) {
 	empty := crmcontracts.ReportingWindow{}
-	if in.Value < 0 || in.Value > 9007199254740991 || !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
+	if in.Value < 0 || in.Value > values.MaxExactInteger || !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
 		return empty, "", invalid("enter a non-negative target and a revision reason")
 	}
 	catalog, err := s.evaluator.Catalog(ctx)

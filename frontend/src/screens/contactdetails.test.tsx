@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import { ContactDetails } from "./contactdetails";
 import { view } from "./contactpage.testkit";
 import {
@@ -143,7 +144,7 @@ it("shows friendly conflict copy and retains the draft", async () => {
   await user.clear(input);
   await user.type(input, "CEO{Enter}");
   expect((await screen.findByRole("alert")).textContent).toContain(
-    "This record changed since it was opened",
+    en["common.versionSkew"],
   );
   expect(screen.getByDisplayValue("CEO")).toBeTruthy();
   expect(screen.queryByText("internal version mismatch")).toBeNull();

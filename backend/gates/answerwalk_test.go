@@ -17,6 +17,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -73,11 +74,8 @@ func answerWalkSites(path string, file *ast.File) []string {
 	var sites []string
 	for _, decl := range file.Decls {
 		name := declarationName(decl)
-		for _, sql := range gatekit.SQLStatementsOf(decl) {
-			if walksForOutbound(sql) {
-				sites = append(sites, path+":"+name)
-				break
-			}
+		if slices.ContainsFunc(gatekit.SQLStatementsOf(decl), walksForOutbound) {
+			sites = append(sites, path+":"+name)
 		}
 	}
 	return sites

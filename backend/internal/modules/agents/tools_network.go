@@ -284,7 +284,7 @@ func (t introPathTool) Spec() mcp.ToolSpec {
 		Description:   introPathToCopy.render(),
 		Instead:       introPathToCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getCompanyGraph",
+		OpenAPIOp: "listIntroPaths",
 		InputSchema: schema(`{"type":"object","properties":{
 			"company_id":{"type":"string","format":"uuid","description":"The company to find a warm route into"}},
 			"required":["company_id"],"additionalProperties":false}`),
@@ -345,7 +345,7 @@ func (t atRiskTool) Spec() mcp.ToolSpec {
 		Description:   atRiskRelationshipsCopy.render(),
 		Instead:       atRiskRelationshipsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listDeals + getDealCoverage",
+		OpenAPIOp: "listAtRiskRelationships",
 		// No arguments. The question is about the caller's own book, and the
 		// row scope already decides what that is — an owner or team filter here
 		// would be a second, weaker spelling of the same rule.

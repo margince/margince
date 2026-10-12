@@ -15,7 +15,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useThreadAudience } from "./audienceservice";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, unwrap } from "./common";
 import { useOpenEmail } from "./openemail";
 import { VerdictPassNote } from "./verdictpass";
 
@@ -52,9 +52,7 @@ export function HeldThreadsCard() {
   const query = useQuery({
     queryKey: ["held-threads"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/capture/held-threads");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/capture/held-threads"));
     },
   });
 

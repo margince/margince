@@ -15,11 +15,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // zeroPct is the stored default for a percentage nobody supplied, at the
@@ -78,8 +80,8 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 // when neither the caller nor the product snapshot supplied a value.
 func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discount, tax string) {
 	unitVal = "unit"
-	if unit != nil && *unit != "" {
-		unitVal = *unit
+	if unit != nil && values.HasVisibleText(*unit) {
+		unitVal = strings.TrimSpace(*unit)
 	}
 	discount = zeroPct
 	if discountPct != nil {

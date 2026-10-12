@@ -120,7 +120,7 @@ func (ie *ingestEnv) attempt(t *testing.T, documentID ids.UUID) (int, error) {
 // visible as a count rather than as a single duplicate row.
 func prose(paragraphs int) string {
 	var b strings.Builder
-	for i := 0; i < paragraphs; i++ {
+	for range paragraphs {
 		b.WriteString(strings.Repeat("The corpus answers only from what a workspace filed in it. ", 12))
 		b.WriteString("\n\n")
 	}
@@ -686,8 +686,7 @@ func TestAStatedContentTypeIsNotOverriddenByTheExtension(t *testing.T) {
 		Content:     strings.NewReader("%PDF-1.7"),
 	}, ie.queue)
 
-	var unsupported *knowledge.UnsupportedTypeError
-	if !errors.As(err, &unsupported) {
+	if _, ok := errors.AsType[*knowledge.UnsupportedTypeError](err); !ok {
 		t.Fatalf("a PDF named .md = %v, want UnsupportedTypeError", err)
 	}
 }
@@ -703,8 +702,7 @@ func TestAnUploadWithNoContentTypeAndAnUnreadableExtensionIsRefused(t *testing.T
 		Content:     strings.NewReader("PK\x03\x04"),
 	}, ie.queue)
 
-	var unsupported *knowledge.UnsupportedTypeError
-	if !errors.As(err, &unsupported) {
+	if _, ok := errors.AsType[*knowledge.UnsupportedTypeError](err); !ok {
 		t.Fatalf("a .docx with no stated type = %v, want UnsupportedTypeError", err)
 	}
 }

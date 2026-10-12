@@ -43,7 +43,7 @@ func TestALeadCountNeverExceedsTheCallersOwnList(t *testing.T) {
 	// expects a team lens to withhold.
 	stranger := e.seedID(t, `INSERT INTO app_user (id, email, display_name)
 		VALUES ($1, 'off-team@example.test', 'Off Team')`)
-	for i := 0; i < 7; i++ {
+	for range 7 {
 		e.seedID(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
 			VALUES ($1, 'Mine', 'new', 'inbound', 'human:x', $2)`, e.Rep1)
 		e.seedID(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)

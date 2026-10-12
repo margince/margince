@@ -21,6 +21,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -151,11 +153,11 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	if s.controllerRelay == nil || s.vault == nil || s.confirmLinkBase == "" || s.confirmRunner == nil {
 		return
 	}
-	s.consentHandlers = s.WithConfirmationLane(
-		NewControllerMailQueue(pool, s.confirmRunner),
-		confirmLinkVault{s.vault},
-		s.confirmLinkBase,
-	)
+	queue := NewControllerMailQueue(pool, s.confirmRunner)
+	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase)
+	s.siteLeadNotices.store.Store(consent.NewStore(InstallationDB(pool)).
+		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase))
 }
 
 // errNoWorkspaceForConfirmLink marks a seal attempted with no workspace in

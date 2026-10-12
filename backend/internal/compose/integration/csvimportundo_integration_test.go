@@ -28,11 +28,13 @@ type importUndoErroredDTO struct {
 }
 
 type importUndoReportDTO struct {
-	RunID         string                 `json:"run_id"`
-	Status        string                 `json:"status"`
-	ReversedCount int                    `json:"reversed_count"`
-	Kept          []importUndoKeptDTO    `json:"kept"`
-	Errored       []importUndoErroredDTO `json:"errored"`
+	RunID         string `json:"run_id"`
+	Status        string `json:"status"`
+	ReversedCount int    `json:"reversed_count"`
+	// UpdatesNotReversed is what an update-only run's undo has to admit.
+	UpdatesNotReversed int                    `json:"updates_not_reversed"`
+	Kept               []importUndoKeptDTO    `json:"kept"`
+	Errored            []importUndoErroredDTO `json:"errored"`
 }
 
 type importReportWithUndoDTO struct {

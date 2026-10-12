@@ -174,7 +174,7 @@ func TestEveryFactIsFencedBeforeItReachesTheModel(t *testing.T) {
 // string walking would put a seam in production code for a test's convenience.
 func outsideEveryNoteSpan(content, marker, needle string) bool {
 	inside := false
-	for _, part := range strings.Split(content, marker) {
+	for part := range strings.SplitSeq(content, marker) {
 		if !inside && strings.Contains(part, needle) {
 			return true
 		}
@@ -416,9 +416,11 @@ func TestAnIndirectRouteHandsTheModelNoEdgeAndNoMiddleName(t *testing.T) {
 
 	sent := noteRequest(facts)
 	prompt := sent.System
+	var promptSb419 strings.Builder
 	for _, message := range sent.Messages {
-		prompt += "\n" + message.Content
+		promptSb419.WriteString("\n" + message.Content)
 	}
+	prompt += promptSb419.String()
 	for _, absent := range []string{"developing", "Marta Reyes", "2026-08-20"} {
 		if strings.Contains(prompt, absent) {
 			t.Errorf("the model was handed %q on an indirect route:\n%s", absent, prompt)
@@ -428,9 +430,11 @@ func TestAnIndirectRouteHandsTheModelNoEdgeAndNoMiddleName(t *testing.T) {
 	// a blanket removal.
 	direct := noteRequest(warmNote())
 	carried := direct.System
+	var carriedSb431 strings.Builder
 	for _, message := range direct.Messages {
-		carried += "\n" + message.Content
+		carriedSb431.WriteString("\n" + message.Content)
 	}
+	carried += carriedSb431.String()
 	if !strings.Contains(carried, "developing") {
 		t.Errorf("a direct route stopped telling the model the relationship:\n%s", carried)
 	}

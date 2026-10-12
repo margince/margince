@@ -45,10 +45,7 @@ func newTOTPSecret() (string, error) {
 // keeps the index non-negative so it survives the round trip through a signed
 // database column.
 func totpStepIndex(t time.Time) int64 {
-	unix := t.Unix()
-	if unix < 0 {
-		unix = 0
-	}
+	unix := max(t.Unix(), 0)
 	return unix / int64(totpStep.Seconds())
 }
 

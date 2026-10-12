@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -155,7 +156,8 @@ func deleteSubjectLinkedInGhosts(
 		               AND r.archived_at IS NULL
 		               AND (r.company_id = g.matched_company_id
 		                    OR lower(f_unaccent(o.display_name)) = g.normalized_company
-		                    OR lower(f_unaccent(o.display_name)) LIKE g.normalized_company || ' %')))`,
+		                    OR lower(f_unaccent(o.display_name)) LIKE `+
+		storekit.EscapeLikeSQL("g.normalized_company")+` || ' %')))`,
 		contactID, emails, subjectName, linkedInHandles)
 	return err
 }

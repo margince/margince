@@ -39,6 +39,8 @@ type Eraser struct {
 	// source_id) pair the erasure deliberately keeps, and an Art. 15 export
 	// serves it back. purgeContentDerivedFrom refuses rather than doing half.
 	purgeRawCaptures RawCapturePurger
+	// country selects the jurisdiction whose correspondence floor binds.
+	country CountryReader
 }
 
 // NewEraser binds the erasure pass to the installation's pool.

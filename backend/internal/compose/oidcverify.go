@@ -396,7 +396,7 @@ func (v *oidcTokenVerifier) fetchJWKS(ctx context.Context) (map[string]*rsa.Publ
 // with a 1h default when absent — the JWKS is safe to reuse between rotations.
 func cacheTTL(cacheControl string) time.Duration {
 	ttl := time.Hour
-	for _, part := range strings.Split(cacheControl, ",") {
+	for part := range strings.SplitSeq(cacheControl, ",") {
 		part = strings.TrimSpace(part)
 		if v, ok := strings.CutPrefix(part, "max-age="); ok {
 			if secs, err := strconv.Atoi(v); err == nil {

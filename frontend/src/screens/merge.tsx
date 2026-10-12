@@ -174,7 +174,8 @@ export function MergeAction<Survivor extends { id: string }>({
           </Button>
           <Button
             variant="danger"
-            disabled={!target || mutation.isPending}
+            disabled={!target}
+            pending={mutation.isPending}
             onClick={() => {
               if (target) {
                 mutation.mutate(target.id);

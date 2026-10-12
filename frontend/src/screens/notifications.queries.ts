@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { worklistKey } from "./worklist.queries";
 
 // The notification query-hook family: the centre's own reads and writes, in one
@@ -65,13 +65,11 @@ export function useNotifications() {
     refetchOnWindowFocus: true,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/notices", {
-        params: { query: { cursor: pageParam ?? undefined } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/notices", {
+          params: { query: { cursor: pageParam ?? undefined } },
+        }),
+      );
     },
     // An ABSENT cursor is the last page. The endpoint declines to mint one
     // there on purpose, so a walk that treated "no cursor" as "ask again" would
@@ -97,10 +95,7 @@ export function useMarkAllNoticesRead() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await api.POST("/notices/read-all");
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(await api.POST("/notices/read-all"));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
@@ -113,11 +108,7 @@ export function useNotificationPreferences() {
   return useQuery({
     queryKey: PREFERENCES_KEY,
     queryFn: async () => {
-      const { data, error } = await api.GET("/me/notification-preferences");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/me/notification-preferences"));
     },
   });
 }
@@ -141,13 +132,11 @@ export function useSaveNotificationPreference() {
       class: NotificationClass;
       delivery: NotificationDelivery;
     }) => {
-      const { data, error } = await api.PUT("/me/notification-preferences", {
-        body: choice,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/me/notification-preferences", {
+          body: choice,
+        }),
+      );
     },
     // The server answers with the whole set, so the cache takes its word rather
     // than patching one row locally: `chosen` flips on the row that was written

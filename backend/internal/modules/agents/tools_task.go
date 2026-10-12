@@ -6,6 +6,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -88,7 +89,7 @@ func TaskAsActivity(in json.RawMessage) (json.RawMessage, error) {
 	}
 	subject := strings.TrimSpace(args.Subject)
 	if subject == "" {
-		return nil, &BadArgsError{Cause: fmt.Errorf("subject is required: a task has to say what is to be done")}
+		return nil, &BadArgsError{Cause: errors.New("subject is required: a task has to say what is to be done")}
 	}
 	body := map[string]any{"kind": "task", "subject": subject}
 	if args.Body != nil {
