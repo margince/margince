@@ -86,3 +86,20 @@ func TestAReimportAddsTagsButNeverRemovesOne(t *testing.T) {
 		t.Fatalf("tags = %v, want the new one added and the old one kept", tags)
 	}
 }
+
+func TestAnApproveThatIsRefusedCreatesNoTag(t *testing.T) {
+	e := setupImportApp(t)
+	profile, _ := uploadCSV(t, e, "company", "Name,Tags\nBusy GmbH,Fresh\n")
+	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
+	// A second approve while the first one's commit is still running.
+	if _, err := e.Owner.Exec(context.Background(), `UPDATE import_run SET status = 'running' WHERE id = $1`, run.ID); err != nil {
+		t.Fatalf("marking the run running: %v", err)
+	}
+	tagsBefore := tagCount(t, e)
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusConflict {
+		t.Fatalf("approve of a running run → %d, want 409", status)
+	}
+	if got := tagCount(t, e); got != tagsBefore {
+		t.Fatalf("tag count = %d after a refused approve, want %d", got, tagsBefore)
+	}
+}

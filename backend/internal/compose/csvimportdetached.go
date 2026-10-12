@@ -26,6 +26,10 @@ const importCommitTimeout = 30 * time.Minute
 // out of time; the engine could not record it on the expired context.
 const importOverBudgetCause = "the import ran past its time budget; approve it again to continue from its checkpoint"
 
+// importTagsFailedCause is the error a run carries when the tags its file names
+// could not be created before its first row.
+const importTagsFailedCause = "the import could not create the tags its file names; approve it again to retry"
+
 // RunImportInline runs a detached task where it is handed, so a test sees the
 // finished run in the response that started it.
 func RunImportInline(task func()) { task() }

@@ -358,10 +358,6 @@ func (h importHandlers) commitRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, importProblem(err)
 	}
-	// The tags the file names exist before any row that carries them lands.
-	if err := writers.tags.createMissing(ctx); err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
 	if run.Status == migration.StatusFailed {
 		if err := writers.bindNamedCompanies(ctx, source); err != nil {
 			return crmcontracts.ImportRun{}, importProblem(err)
@@ -371,6 +367,13 @@ func (h importHandlers) commitRun(
 	runs := migration.NewRunStore(h.db)
 	approved, err := h.startOrResume(ctx, runs, run)
 	if err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
+	// The tags the file names exist before any row that carries them lands,
+	// and only once the approval is accepted.
+	if err := writers.tags.createMissing(ctx); err != nil {
+		slog.ErrorContext(ctx, "import tags could not be created", "run", approved.ID, "err", err)
+		h.recordStop(ctx, approved.ID, importTagsFailedCause)
 		return crmcontracts.ImportRun{}, err
 	}
 
