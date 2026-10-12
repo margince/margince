@@ -26,6 +26,14 @@
   flex-shrink: 0;
 }
 
+@media (max-height: 32rem) {
+  .compose-fields > .richtext {
+    flex: 0 0 auto;
+    block-size: 35dvh;
+    min-block-size: 0;
+  }
+}
+
 .compose-band-body {
   display: flex;
   flex-direction: column;

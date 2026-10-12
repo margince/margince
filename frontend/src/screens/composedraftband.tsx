@@ -5,6 +5,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { identifierNumber } from "../format/format";
 import { useT } from "../i18n";
@@ -51,7 +52,15 @@ export function DraftBand({
   }
   return (
     <div className="compose-band-body">
-      <Callout tone="ai" kind="standing" title={t("compose.aiDisclosureTitle")}>
+      <Callout
+        tone="ai"
+        kind="standing"
+        title={
+          <Heading as="span" size="xsmall" role="heading" aria-level={3}>
+            {t("compose.aiDisclosureTitle")}
+          </Heading>
+        }
+      >
         {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
       </Callout>
       <DraftReasons

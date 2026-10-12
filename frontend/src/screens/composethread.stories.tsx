@@ -139,7 +139,9 @@ export const DraftedBesideThread: StoryObj = {
     const send = dialog
       .getByRole("button", { name: "Send" })
       .getBoundingClientRect();
-    await expect(body.height).toBeGreaterThanOrEqual(280);
+    await expect(body.height).toBeGreaterThanOrEqual(
+      window.innerHeight <= 512 ? 60 : 280,
+    );
     await expect(body.top).toBeGreaterThanOrEqual(0);
     const toolbar = dialog
       .getByRole("button", { name: "Bold" })
@@ -162,4 +164,10 @@ export const DraftedOnPhone: StoryObj = {
   ...DraftedBesideThread,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+export const DraftedOnLandscapePhone: StoryObj = {
+  ...DraftedBesideThread,
+  globals: { viewport: { value: "phoneOnItsSide" } },
+  tags: ["uat-phone-on-its-side"],
 };
