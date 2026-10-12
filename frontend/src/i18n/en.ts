@@ -891,6 +891,7 @@ export const en = {
   "systemJob.linkedin_rematch": "LinkedIn import matching",
   "systemJob.list_checker": "Live list check",
   "systemJob.mail_draft_retention": "Mail draft cleanup",
+  "systemJob.waiting_horizon_refresh": "Waiting horizon refresh",
   "systemJob.meeting_delivery": "Calendar delivery",
   "systemJob.merge": "Record merge",
   "systemJob.notice_case_open": "Privacy request intake",

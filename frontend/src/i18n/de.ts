@@ -911,6 +911,7 @@ export const de = {
   "systemJob.linkedin_rematch": "Zuordnung des LinkedIn-Imports",
   "systemJob.list_checker": "Prüfung der Live-Listen",
   "systemJob.mail_draft_retention": "Bereinigung von E-Mail-Entwürfen",
+  "systemJob.waiting_horizon_refresh": "Aktualisierung des Wartehorizonts",
   "systemJob.meeting_delivery": "Kalenderzustellung",
   "systemJob.merge": "Zusammenführung von Datensätzen",
   "systemJob.notice_case_open": "Aufnahme von Datenschutzanfragen",

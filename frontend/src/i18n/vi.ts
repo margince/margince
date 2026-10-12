@@ -888,6 +888,7 @@ export const vi = {
   "systemJob.linkedin_rematch": "Đối chiếu dữ liệu nhập từ LinkedIn",
   "systemJob.list_checker": "Kiểm tra danh sách động",
   "systemJob.mail_draft_retention": "Dọn dẹp thư nháp",
+  "systemJob.waiting_horizon_refresh": "Cập nhật tầm theo dõi chờ phản hồi",
   "systemJob.meeting_delivery": "Gửi lời mời trên lịch",
   "systemJob.merge": "Gộp hồ sơ",
   "systemJob.notice_case_open": "Tiếp nhận yêu cầu về quyền riêng tư",
