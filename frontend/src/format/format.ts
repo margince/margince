@@ -524,16 +524,15 @@ export function formatDateTime(
 }
 
 // A stored file's size, for a reader deciding whether to open it — never for
-// arithmetic. The unit steps with the file rather than being fixed: a 412-byte
-// note rendered on a kilobyte scale reads "0 kB", which looks like a file that
-// failed to upload. The unit words ride Intl's own vocabulary, so de and vi
-// read correctly without a lookup table here.
+// arithmetic. The unit steps with the file rather than being fixed. A 412-byte
+// note on a kilobyte scale reads "0 kB", which looks like a failed upload.
+// Intl's own unit words serve de and vi. A byte takes the long form, because
+// the short English one never inflects ("98 byte").
 export function formatBytes(bytes: number, locale: Locale): string {
   const [value, unit] = byteScale(bytes);
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "unit",
     unit,
-    // CLDR's short English byte never inflects ("98 byte"); its long form does.
     unitDisplay: unit === "byte" ? "long" : "short",
     maximumFractionDigits: unit === "byte" ? 0 : 1,
   }).format(value);
