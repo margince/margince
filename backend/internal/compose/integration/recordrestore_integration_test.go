@@ -914,3 +914,57 @@ func TestEndToEnd_anArchiveRestoreNamesTheLinkItCouldNotBringBack(t *testing.T) 
 		t.Errorf("left_behind = %+v, want the one employment link, named by kind only", answer.LeftBehind)
 	}
 }
+
+type leadPhoneRecord struct {
+	Version int64   `json:"version"`
+	Phone   *string `json:"phone"`
+}
+
+func readLeadPhone(t *testing.T, e *apptest.AppEnv, id string) leadPhoneRecord {
+	t.Helper()
+	var lead leadPhoneRecord
+	if status := e.Call(t, "GET", "/v1/leads/"+id, nil, nil, &lead); status != 200 {
+		t.Fatalf("read lead → %d", status)
+	}
+	return lead
+}
+
+// A lead's number comes off both ways a person reaches for: a null on the
+// update, and putting back the change that filled it in.
+func TestEndToEnd_aLeadsPhoneClearsByNullAndByRestore(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/leads",
+		AnyMap{"full_name": "Dialled Wrong"}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/leads/"+created.ID,
+		AnyMap{"phone": "+84901234567"}, nil, nil); status != 200 {
+		t.Fatalf("fill the phone → %d", status)
+	}
+
+	entry := theUpdateEntry(t, readHistory(t, e, "lead", created.ID))
+	status, _ := restore(t, e, "lead", created.ID, entry.ID, readLeadPhone(t, e, created.ID).Version)
+	if status != 200 {
+		t.Fatalf("restore of the phone fill → %d (%s), want 200", status, reasonOf(entry))
+	}
+	if phone := readLeadPhone(t, e, created.ID).Phone; phone != nil {
+		t.Errorf("phone after the restore = %q, want null", *phone)
+	}
+
+	if status := e.Call(t, "PATCH", "/v1/leads/"+created.ID,
+		AnyMap{"phone": "+84901234567"}, nil, nil); status != 200 {
+		t.Fatalf("fill the phone again → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/leads/"+created.ID,
+		AnyMap{"phone": nil}, nil, nil); status != 200 {
+		t.Fatalf("clear the phone → %d, want 200", status)
+	}
+	if phone := readLeadPhone(t, e, created.ID).Phone; phone != nil {
+		t.Errorf("phone after an explicit null = %q, want null", *phone)
+	}
+}
