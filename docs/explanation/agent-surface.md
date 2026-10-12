@@ -37,6 +37,14 @@ the write routes that declare them. The key is then the tool's, held per caller 
 per path. So one key on two records of one tool answers `409`, and a key spent over MCP replays on
 REST.
 
+**Routers.** A client counts tools against one budget for every server it connects, so look-alike tools
+are published as one. A router (`internal/modules/agents/router.go`) is a listed tool that runs as one of
+several unlisted tools, picked by an argument: `change_lead_state` with `action: promote` runs as
+`promote_lead`. `Registry.InvokeServed` resolves the router before anything else runs. So admission,
+staging, redemption, retry keys and MCP Tasks all see the name of the target. That name is the approval
+kind and the contract verb, and a router changes neither. An unlisted tool still runs when a client calls
+it by name; `tools/list` leaves it out. `TestThePublishedToolCountStaysUnderItsCeiling` holds the count.
+
 **Files on MCP and REST.** A passport lists a record's files and uploads one over MCP
 (`list_documents`, `attach_document`) or over REST (`listAttachments`, `listCompanyDocuments`,
 `listDealDocuments`, `uploadAttachment`). An upload carries the whole file in its input, and two

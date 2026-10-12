@@ -18,7 +18,7 @@ The steps are the same over MCP and REST:
 3. **Commit**: approve the run by its ID. *This* is the call that writes.
 
 Over MCP that is three tool calls: `preview_import` (the CSV goes in the call, as text),
-`read_import_report` and `commit_import`.
+`read_import` with `view: report`, and `commit_import`.
 
 Over REST you upload the file first, so it is four calls:
 

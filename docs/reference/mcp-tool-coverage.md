@@ -90,12 +90,12 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 91 |
+| Tools the assistant is offered | 66 |
 | … some case requires | 45 |
 | … some case requires as one of a set | 2 |
-| … **no case requires** | 44 |
+| … **no case requires** | 19 |
 | … of those, permitted somewhere but never required | 15 |
-| Prompt tokens spent on tools no case requires | 12033 |
+| Prompt tokens spent on tools no case requires | 6243 |
 | Use cases | 34 |
 | Acceptance criteria the cases declare, each with a statement | 81 |
 
@@ -117,7 +117,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 91 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 66 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -462,7 +462,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 44 tools no use case requires, **8 are graded elsewhere** and 36 are untried by any lane.
+So of the 19 tools no use case requires, **8 are graded elsewhere** and 11 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -470,46 +470,21 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 |---|---:|---|---|---|
 | `list_records` | 817 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `resolve_entities` | 493 | - | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` | - |
-| `advance_deal` | 446 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `review_commitments` | 401 | - | `case41_close_the_project` | `overnight_at_risk_sweep` |
 | `enrich` | 396 | `enrich` | - | - |
 | `prep_for_meeting` | 394 | - | `case23_find_us_a_slot`, `case5_before_the_meeting` | - |
 | `draft_email` | 385 | `draft_reply` | - | - |
-| `describe_report_vocabulary` | 349 | - | - | - |
 | `catch_me_up_on` | 348 | `agent_loop` | `case23_find_us_a_slot`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case44_chase_what_is_slipping`, `case48_that_whole_thread_is_filed_wrong`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
-| `describe_record_fields` | 345 | - | - | - |
 | `search_report_evidence` | 335 | - | `case49_who_can_introduce_us` | - |
 | `describe_vocabulary` | 334 | - | `case20_put_it_in_the_board_pack`, `case43_the_fair_leads_are_prospects`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case7_ask_for_a_number` | - |
-| `decide_approval` | 332 | - | - | - |
-| `forecast_input_checks` | 324 | - | - | - |
-| `demote_lead` | 317 | - | - | - |
-| `promote_lead` | 304 | - | - | - |
 | `read_record` | 292 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
-| `describe_analytics_vocabulary` | 286 | - | - | - |
 | `prepare_handoff` | 267 | - | `case41_close_the_project` | - |
-| `describe_query_vocabulary` | 266 | - | - | - |
 | `company_coverage` | 246 | - | `case5_before_the_meeting` | - |
-| `describe_report_blocks` | 245 | - | - | - |
-| `relink_thread` | 240 | - | - | - |
-| `decide_approval_bundle` | 235 | - | - | - |
-| `qualify_lead` | 229 | - | - | - |
-| `apply_tag` | 226 | - | - | - |
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | - |
-| `disqualify_lead` | 209 | - | - | - |
-| `list_input_checks` | 209 | - | - | - |
 | `read_brief` | 205 | `agent_loop` | - | `morning_brief` |
-| `update_tag` | 205 | - | - | - |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |
-| `data_coverage` | 195 | - | - | - |
-| `create_tag` | 191 | - | - | - |
 | `list_pipelines` | 186 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
 | `list_documents` | 180 | - | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` | - |
-| `remove_tag` | 166 | - | - | - |
-| `get_record_tags` | 144 | - | - | - |
 | `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract` | - |
-| `list_tags` | 95 | - | - | - |
-| `get_tag` | 88 | - | - | - |
-| `read_import_report` | 77 | - | - | - |
-| `read_import_run` | 67 | - | - | - |
 

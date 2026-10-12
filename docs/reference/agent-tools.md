@@ -37,11 +37,10 @@ and the discovery documents. There is no stdio transport and no `cmd/mcp` binary
 
 ## The catalog
 
-Every core verb the surface serves; the generated [mcp-info.md](mcp-info.md) has the live tool count.
-`TestTheToolCatalogsTiersAreTheContractsTiers` holds the tiers and the rows of this table against the contract, both
-ways. Every operation with `x-mcp-tool` in `api/crm.yaml` has a registered tool of that verb. Every registered tool is
-declared by an operation. `TestEveryDeclaredToolVerbIsRegistered` and `TestEveryRegisteredToolIsDeclared` hold both
-ways.
+Every core verb the surface serves, including those a client reaches only through a router
+([agent-surface.md](../explanation/agent-surface.md)); [mcp-info.md](mcp-info.md) has what a client is offered.
+`TestTheToolCatalogsTiersAreTheContractsTiers` holds the tiers and rows against the contract, both ways, and
+`TestEveryDeclaredToolVerbIsRegistered` and `TestEveryRegisteredToolIsDeclared` hold the verbs, both ways.
 
 - **Tier**: 🟢 runs at once. 🟡 is refused until a human gives the staged approval. **dynamic** is decided on each call,
   from what the call points at. It may only *raise* the tier.

@@ -4,9 +4,12 @@
 package compose
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // A scheduled agent's run is offered what the registry offers, and an Unlisted
@@ -40,6 +43,13 @@ func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
 			}
 		}
 	}
+}
+
+// offeredSpecs is the served surface a client is offered: every registered tool
+// but the ones only a router reaches.
+func offeredSpecs(t *testing.T) []mcp.ToolSpec {
+	t.Helper()
+	return slices.DeleteFunc(servedSurface(t).Specs(), func(spec mcp.ToolSpec) bool { return spec.Unlisted })
 }
 
 func unlistedTools(t *testing.T) map[string]bool {
