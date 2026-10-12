@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -94,6 +95,9 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			return err
 		}},
 		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
+		{"ClaimUndo", func() error { return s.ClaimUndo(ctx, runID) }},
+		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
+		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Now(), "stopped"); return err }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -647,6 +651,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"ResumeApproved": true, "FailValidation": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
+		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {

@@ -3,18 +3,62 @@
 
 package compose
 
-// The budget an import commit carries once it has left its request.
-//
-// Its own file, the way platform/keyvault keeps CleanupTimeout in detached.go:
-// a detach budget is a decision about what happens after the caller is gone,
-// and it reads as one beside the rule it answers rather than among the page
-// sizes and blob prefixes csvimport.go is otherwise made of.
+// A commit or an undo runs after its request has answered. The response
+// deadline is far shorter than the work, so approve and undo answer with the
+// run as it stands, and the screen follows the run.
 
-import "time"
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/margince/margince/backend/internal/modules/migration"
+)
 
 // importCommitTimeout bounds a detached commit or undo. The work scales with
 // the upload, whose ceiling is CAP-BODY and set by the deployment, so this sits
 // an order of magnitude above any cap rather than tracking one: too short turns
 // a slow-but-succeeding import into the half-written run the detach exists to
-// prevent.
+// prevent. The stale-run sweep reads the same budget.
 const importCommitTimeout = 30 * time.Minute
+
+// RunImportInline runs a detached task where it is handed, so a test sees the
+// finished run in the response that started it.
+func RunImportInline(task func()) { task() }
+
+// runDetached hands work to the import runner on a context that outlives the
+// request and carries the commit budget. A panic fails the run with its cause,
+// because the engine records only the failures it sees; a returned error is
+// already on the run and is logged here.
+func (h importHandlers) runDetached(ctx context.Context, id migration.RunID, name string, work func(context.Context) error) {
+	detach := h.detach
+	if detach == nil {
+		detach = func(task func()) { go task() }
+	}
+	detach(func() {
+		taskCtx, release := context.WithTimeout(context.WithoutCancel(ctx), importCommitTimeout)
+		defer release()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				slog.ErrorContext(taskCtx, "import "+name+" panicked", "run", id, "panic", recovered)
+				h.recordStop(taskCtx, id, fmt.Sprintf("the import stopped unexpectedly: %v", recovered))
+			}
+		}()
+		if err := work(taskCtx); err != nil {
+			slog.ErrorContext(taskCtx, "import "+name+" failed", "run", id, "err", err)
+		}
+	})
+}
+
+// recordStop fails a running run with its cause. An undoing run is left
+// undoing, which undo already resumes.
+func (h importHandlers) recordStop(ctx context.Context, id migration.RunID, cause string) {
+	fail := h.failRunning
+	if fail == nil {
+		fail = migration.NewRunStore(h.db).FailRunning
+	}
+	if err := fail(ctx, id, cause); err != nil {
+		slog.ErrorContext(ctx, "recording a stopped import", "run", id, "err", err)
+	}
+}

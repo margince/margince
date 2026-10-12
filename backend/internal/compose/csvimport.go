@@ -58,6 +58,11 @@ type importHandlers struct {
 	// Zero refuses every upload, which is the honest reading of "nobody has
 	// said" for a bound.
 	uploadLimit int64
+	// detach runs a commit or undo after the request answers; nil runs it on
+	// its own goroutine. failRunning records a run whose work stopped; nil is
+	// the run store's FailRunning.
+	detach      func(task func())
+	failRunning func(ctx context.Context, id migration.RunID, cause string) error
 }
 
 // UploadImportSource stores a file and describes it (IEM-WIRE-8). Nothing is
@@ -308,7 +313,8 @@ func (h importHandlers) GetImportRunReport(w http.ResponseWriter, r *http.Reques
 	httperr.WriteJSON(w, http.StatusOK, toContractImportReport(run))
 }
 
-// ApproveImportRun commits a validated run (IEM-WIRE-5).
+// ApproveImportRun commits a validated run (IEM-WIRE-5). It answers with the
+// run as it stands once the commit has been handed off.
 func (h importHandlers) ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	out, err := h.commitRun(r.Context(), id)
 	if err != nil {
@@ -369,20 +375,13 @@ func (h importHandlers) commitRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
-	// The commit outlives the request deliberately. Cancelling it when the
-	// browser goes away would leave the run `running` with rows already
-	// committed and nothing able to record the failure — a state neither
-	// approve (not awaiting) nor resume (not failed) can move.
-	commitCtx, releaseCommit := context.WithTimeout(context.WithoutCancel(ctx), importCommitTimeout)
-	defer releaseCommit()
-	if _, err := migration.NewEngine(runs, writers).Run(commitCtx, approved.ID, source); err != nil {
-		// The engine has already recorded the failure and its checkpoint on the
-		// run; the caller is told which run to resume rather than being handed
-		// a bare 500.
-		return crmcontracts.ImportRun{}, importProblem(err)
-	}
-
-	final, err := runs.GetStaged(commitCtx, approved.ID)
+	// The engine records a failure and its checkpoint on the run itself, so
+	// the caller reads the outcome from the run, not from this answer.
+	h.runDetached(ctx, approved.ID, "commit", func(commitCtx context.Context) error {
+		_, err := migration.NewEngine(runs, writers).Run(commitCtx, approved.ID, source)
+		return err
+	})
+	final, err := runs.GetStaged(ctx, approved.ID)
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}

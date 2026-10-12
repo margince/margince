@@ -881,6 +881,7 @@ export const en = {
   "systemJob.graph_edge": "Relationship strength update",
   "systemJob.graph_edge_reconcile": "Relationship strength update",
   "systemJob.handbook_corpus": "Handbook indexing",
+  "systemJob.import_run_sweep": "Stopped import check",
   "systemJob.installation_setup_read": "Setup check",
   "systemJob.intro_advance": "Introduction follow-up",
   "systemJob.introduction_expiry": "Introduction expiry",

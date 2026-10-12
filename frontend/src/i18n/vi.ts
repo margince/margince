@@ -878,6 +878,7 @@ export const vi = {
   "systemJob.graph_edge": "Cập nhật độ mạnh của quan hệ",
   "systemJob.graph_edge_reconcile": "Cập nhật độ mạnh của quan hệ",
   "systemJob.handbook_corpus": "Lập chỉ mục sổ tay",
+  "systemJob.import_run_sweep": "Kiểm tra lượt nhập bị dừng",
   "systemJob.installation_setup_read": "Kiểm tra thiết lập",
   "systemJob.intro_advance": "Việc tiếp theo cho lời giới thiệu",
   "systemJob.introduction_expiry": "Hết hạn lời giới thiệu",

@@ -69,7 +69,7 @@ type sharedApproval struct {
 // A run of a CSV import reads the same on GET /imports/{id} and read_import_run,
 // and its report on GET /imports/{id}/report and read_import_report.
 func TestImportRoutesAnswerAsTheirTools(t *testing.T) {
-	d := newTwoDoors(t, "import-read-doors", "read")
+	d := newTwoDoorsWith(t, "import-read-doors", []compose.Option{compose.WithImportCommitRunner(compose.RunImportInline)}, "read")
 	run, _ := importContactFile(t, d.e, "Email,Full Name,Title\nada@doors.example,Ada Doors,Engineer\n")
 
 	bothDoorsName(t, "import run",

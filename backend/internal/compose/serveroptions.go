@@ -176,6 +176,15 @@ func WithBlobstore(store blobstore.Store) Option {
 	}
 }
 
+// WithImportCommitRunner sets what runs an import's commit and undo once the
+// request has answered. A test passes RunImportInline to see the finished run
+// in the response, or a runner that holds the task to see what came first.
+func WithImportCommitRunner(run func(task func())) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.importHandlers.detach = run
+	}
+}
+
 // WithKeyvault wires the secret store: it feeds the /readyz probe and backs
 // the capture connector-credential path (Authenticate seals the credential
 // bundle, Sync resolves it). Without it a role that persists or resolves
