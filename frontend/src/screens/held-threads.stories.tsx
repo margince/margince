@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { HeldThreadsCard } from "./held-threads";
 import {
@@ -127,7 +128,22 @@ export default meta;
 
 type Story = StoryObj<typeof HeldThreadsCard>;
 
-export const Mixed: Story = { render: story(MIXED) };
+// Wide, who a thread is with sits under its subject: no column of its own.
+export const Mixed: Story = {
+  render: story(MIXED),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Entwurf Aufhebungsvertrag" });
+    const drawn = [...canvasElement.querySelectorAll("th")].filter(
+      (heading) => heading.getBoundingClientRect().width > 0,
+    );
+    await expect(drawn.map((heading) => heading.textContent)).not.toContain(
+      "Participants",
+    );
+    const line = canvasElement.querySelector(".held-threads-parties");
+    await expect(line?.getBoundingClientRect().height).toBeGreaterThan(0);
+  },
+};
 
 // Nothing held is a READING, not an absent list: "my mailbox is withholding
 // nothing right now" is what an owner opens this card to confirm.
@@ -171,8 +187,26 @@ const EDGES: HeldThread[] = [
 
 export const Edges: Story = { render: story([...MIXED, ...EDGES]) };
 
+// Folded, the same addresses are a caption line of their own under line one.
 export const MixedPhone: Story = {
   render: story([...MIXED, ...EDGES]),
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByRole("button", {
+      name: "Entwurf Aufhebungsvertrag",
+    });
+    const beside = canvasElement.querySelector(".held-threads-parties");
+    await expect(beside?.getBoundingClientRect().height).toBe(0);
+    const cell = canvasElement.querySelector(
+      'td[data-fold="only"]:not(:empty)',
+    );
+    const row = cell?.closest("tr")?.getBoundingClientRect();
+    const box = cell?.getBoundingClientRect();
+    await expect(box?.height).toBeGreaterThan(0);
+    await expect(Math.round(box?.width ?? 0)).toBeGreaterThan(
+      Math.round((row?.width ?? 0) / 2),
+    );
+  },
 };

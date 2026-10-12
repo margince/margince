@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { Fragment, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
@@ -159,31 +159,30 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             header: t("heldThreads.colThread"),
             grow: true,
             render: (row) => (
-              // Three states, not two: a subject, a message that carries none,
-              // and no message at all, which still governs later mail.
-              <span className="held-threads-subject" id={subjectId(row)}>
-                {row.has_message ? (
-                  <ThreadSubject row={row} onOpen={setOpenEmail} />
-                ) : (
-                  <CellStack>
-                    <span>{t("heldThreads.noSubject")}</span>
-                    <span className="t-caption" id={erasedId(row)}>
-                      {t("heldThreads.nothingToShare")}
-                    </span>
-                  </CellStack>
-                )}
-              </span>
+              <>
+                {/* Three states, not two: a subject, a message that carries
+                    none, and no message at all, which still governs later mail. */}
+                <span className="held-threads-subject" id={subjectId(row)}>
+                  {row.has_message ? (
+                    <ThreadSubject row={row} onOpen={setOpenEmail} />
+                  ) : (
+                    <CellStack>
+                      <span>{t("heldThreads.noSubject")}</span>
+                      <span className="t-caption" id={erasedId(row)}>
+                        {t("heldThreads.nothingToShare")}
+                      </span>
+                    </CellStack>
+                  )}
+                </span>
+                <ThreadParticipants row={row} beside />
+              </>
             ),
           },
           {
             key: "parties",
             header: t("heldThreads.colParties"),
-            grow: true,
-            render: (row) => <ThreadParticipants row={row} limit={1} />,
-            folded: (row) =>
-              row.participants?.length ? (
-                <ThreadParticipants row={row} />
-              ) : undefined,
+            fold: "only",
+            render: (row) => <ThreadParticipants row={row} />,
           },
           {
             key: "why",
@@ -362,42 +361,41 @@ function ThreadSubject({
 }
 
 // Who the thread is with, so a reader can tell one held thread from another.
-// Beside the subject the first address stands for the rest, which are counted.
-// Folded, the line has the row's width for every address it was given.
+// Beside the subject it is one line cut short; folded, a line of its own.
 function ThreadParticipants({
   row,
-  limit,
-}: Readonly<{ row: HeldThread; limit?: number }>) {
+  beside = false,
+}: Readonly<{ row: HeldThread; beside?: boolean }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  const given = row.participants ?? [];
-  if (given.length === 0) {
+  const shown = row.participants ?? [];
+  if (shown.length === 0) {
     return null;
   }
-  const shown = given.slice(0, limit);
-  const more = (row.participant_count ?? given.length) - shown.length;
+  const more = (row.participant_count ?? shown.length) - shown.length;
   return (
     <span
       className={
-        limit === undefined
-          ? "held-threads-parties-all"
-          : "held-threads-parties"
+        beside ? "t-caption held-threads-parties" : "held-threads-parties-all"
       }
     >
       <span className="held-threads-parties-list">
         {shown.map((party, at) => (
-          <span key={party.address}>
-            {at > 0 && ", "}
-            {party.contact_id ? (
-              <EntityRef
-                kind="contact"
-                id={party.contact_id}
-                name={party.address}
-              />
-            ) : (
-              party.address
-            )}
-          </span>
+          <Fragment key={party.address}>
+            {at > 0 && " "}
+            <span className="held-threads-party">
+              {party.contact_id ? (
+                <EntityRef
+                  kind="contact"
+                  id={party.contact_id}
+                  name={party.address}
+                />
+              ) : (
+                party.address
+              )}
+              {at < shown.length - 1 && ","}
+            </span>
+          </Fragment>
         ))}
       </span>
       {more > 0 && (

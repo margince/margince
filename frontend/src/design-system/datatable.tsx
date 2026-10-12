@@ -60,7 +60,7 @@ export function DataTable<Row>({
   const sortable = useSortableRows(rows, rowKey, reorder);
   const columns = [
     ...(reorder ? [gripColumn(reorder.header, sortable.grip)] : []),
-    ...ownColumns,
+    ...ownColumns.filter((column) => fold || column.fold !== "only"),
     ...(disclosure ? [disclosure.column] : []),
   ];
   const title = foldTitle(columns);
@@ -279,7 +279,8 @@ export type DataTableColumn<Row> = Readonly<{
   // Where the cell goes when a `fold` table folds. "hide" leaves sight but is
   // still read, so it must not hold a control. "lead" and "trail" keep their
   // width empty or not, so every title and every last control sits on one edge.
-  fold?: "title" | "end" | "hide" | "lead" | "trail";
+  // "only" is hide's mirror: absent until the table folds, then a line of its own.
+  fold?: "title" | "end" | "hide" | "lead" | "trail" | "only";
   /** The cell once its table folds and the heading is out of sight: a bare figure says its unit. Undefined keeps the cell. */
   folded?: (row: Row) => ReactNode | undefined;
 }>;
@@ -339,6 +340,7 @@ function columnClass<Row>(column: DataTableColumn<Row>): string | undefined {
     column.align === "end" ? "datatable-end" : "",
     column.grow ? "datatable-grow" : "",
     column.key === GRIP_COLUMN ? "datatable-grip" : "",
+    column.fold === "only" ? "datatable-fold-only" : "",
   ].filter(Boolean);
   return classes.length > 0 ? classes.join(" ") : undefined;
 }

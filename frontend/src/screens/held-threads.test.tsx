@@ -431,18 +431,26 @@ it("names who a held thread is with, and counts the ones it leaves out", async (
   expect(beside.getAttribute("href")).toContain(
     "0190b7a2-0000-7000-8000-0000000000c7",
   );
-  // Beside the subject the first address stands for the rest, counted in an
-  // element of its own so a cut line never cuts the count.
+  // Under the subject, in the subject's own cell: one run of addresses that a
+  // narrow cell cuts short. The count is an element of its own.
   const line = beside.closest(".held-threads-parties");
-  expect(line?.textContent).toBe("k.huber@kanzlei.example+6 more");
-  // Folded, the line has room for every address the server gave.
-  const all = folded.closest(".held-threads-parties-all");
-  expect(all?.querySelector(".held-threads-parties-list")?.textContent).toBe(
+  expect(line?.closest("td")?.textContent).toContain(JUDGED.subject);
+  expect(line?.querySelector(".held-threads-parties-list")?.textContent).toBe(
     "k.huber@kanzlei.example, office@kanzlei.example",
   );
-  expect(all?.querySelector(".held-threads-parties-more")?.textContent).toBe(
+  expect(line?.querySelector(".held-threads-parties-more")?.textContent).toBe(
     "+5 more",
   );
+  // Folded, the same line is a column drawn only then, heading included.
+  const cell = folded.closest("td");
+  expect(cell?.getAttribute("data-fold")).toBe("only");
+  expect(cell?.textContent).toBe(
+    "k.huber@kanzlei.example, office@kanzlei.example+5 more",
+  );
+  expect(
+    screen.getByRole("columnheader", { name: en["heldThreads.colParties"] })
+      .className,
+  ).toBe("datatable-fold-only");
   expect(
     screen.queryByRole("link", { name: "office@kanzlei.example" }),
   ).toBeNull();
@@ -456,5 +464,7 @@ it.each([
   const { container } = renderCard([row]);
 
   expect(await screen.findByText(en["heldThreads.kind.legal"])).toBeTruthy();
-  expect(container.querySelector(".held-threads-parties")).toBeNull();
+  expect(
+    container.querySelector(".held-threads-parties, .held-threads-parties-all"),
+  ).toBeNull();
 });

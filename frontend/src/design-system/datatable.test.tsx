@@ -319,6 +319,37 @@ it("takes the title from the column that names it, and hides on request", () => 
   expect(foldPlaces(container)).toEqual(["hide", "title", "rest", "end"]);
 });
 
+const NOTE_COLUMN: DataTableColumn<DemoMember> = {
+  key: "note",
+  header: "Note",
+  fold: "only",
+  render: (row: DemoMember) => `Reached through ${row.email}`,
+};
+
+// A fact the title cell carries itself while there is room; only a folded row
+// needs it on a line of its own.
+it("draws a fold-only column in no table that cannot fold", () => {
+  const { container } = renderMembers(false, [...MEMBER_COLUMNS, NOTE_COLUMN]);
+  expect(screen.queryByText("Note")).toBeNull();
+  expect(screen.queryByText(/Reached through/)).toBeNull();
+  expect(container.querySelectorAll("tbody td")).toHaveLength(4);
+});
+
+it("marks a fold-only column's heading and cells alike in a folding table", () => {
+  const { container } = renderMembers(true, [...MEMBER_COLUMNS, NOTE_COLUMN]);
+  expect(foldPlaces(container)).toEqual([
+    "title",
+    "rest",
+    "rest",
+    "end",
+    "only",
+  ]);
+  expect(screen.getByText("Note").className).toBe("datatable-fold-only");
+  expect(screen.getByText(/Reached through/).className).toBe(
+    "datatable-fold-only",
+  );
+});
+
 it("titles a fold by its first unplaced column when none names one", () => {
   const { container } = renderMembers(true, [
     MEMBER_COLUMNS[3],
@@ -393,6 +424,20 @@ it("separates a folded caption's cells by space, never by a glyph", () => {
   const fold = css.slice(css.indexOf("@container table-fold"));
   expect(fold).not.toMatch(/content:\s*"[^"]/);
   expect(fold).toContain("column-gap: var(--space-3);");
+});
+
+// Unfolded the column is absent, so it spends no width; folded it is a line.
+it("draws a fold-only column only inside the fold", () => {
+  const css = datatableCss();
+  const at = css.indexOf("@container table-fold");
+  const unfolded =
+    /\.table-scroll-fold \.datatable-fold-only \{\s*display: none;\s*\}/;
+  expect(css.slice(0, at)).toMatch(unfolded);
+  const fold = css.slice(at);
+  expect(fold).toMatch(/th\.datatable-fold-only \{\s*display: table-cell;/);
+  expect(fold).toMatch(
+    /td\.datatable-fold-only \{\s*display: block;\s*flex-basis: 100%;/,
+  );
 });
 
 it("folds on the table's own width rather than the viewport's", () => {
