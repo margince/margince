@@ -55,7 +55,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			return created, patched
 		},
 		migration.ObjectCompany: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := companyCreateFrom(fields, "src")
+			in := companyCreateFrom(fields, importSourceSystem(""), "src")
 			up := companyUpdateFrom(fields)
 			created := map[string]bool{
 				"display_name":        in.DisplayName != "",
@@ -92,7 +92,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			return created, patched
 		},
 		migration.ObjectContact: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := contactCreateFrom(fields, "src")
+			in := contactCreateFrom(fields, importSourceSystem(""), "src")
 			up := contactUpdateFrom(fields)
 			created := map[string]bool{
 				"full_name":           in.FullName != "",
@@ -496,7 +496,7 @@ func TestCSVWritersRefuseARowForAnotherObject(t *testing.T) {
 // wire mappers refuse — so a client cannot pre-plant a row under a guessed
 // import id and have the store hand it back as already imported.
 func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
-	w := &csvWriters{object: migration.ObjectLead}
+	w := &csvWriters{object: migration.ObjectLead, sourceSystem: importSourceSystem("hubspot")}
 
 	stamp := w.provenanceOf("ada@lovelace.example")
 	if !strings.HasPrefix(stamp, provenance.ReservedSourceSystemPrefix) {
@@ -505,8 +505,8 @@ func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
 	if !strings.Contains(stamp, migration.ObjectLead) || !strings.Contains(stamp, "ada@lovelace.example") {
 		t.Fatalf("provenance %q does not name the object and the source row", stamp)
 	}
-	if !strings.HasPrefix(csvSourceSystem(), provenance.ReservedSourceSystemPrefix) {
-		t.Fatalf("source system %q is not reserved", csvSourceSystem())
+	if !strings.HasPrefix(importSourceSystem("hubspot"), provenance.ReservedSourceSystemPrefix) {
+		t.Fatalf("source system %q is not reserved", importSourceSystem("hubspot"))
 	}
 }
 

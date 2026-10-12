@@ -30,7 +30,7 @@ import (
 // record named by its email is worth having, and one named by nothing is not.
 // A row with neither is refused by the caller, which is the only shape that
 // names no contact at all.
-func contactCreateFrom(fields map[string]string, source string) contacts.CreateContactInput {
+func contactCreateFrom(fields map[string]string, sourceSystem, source string) contacts.CreateContactInput {
 	in := contacts.CreateContactInput{
 		// Recorded as the import it is. unknown_legacy is the honest answer
 		// where a door cannot say why a contact exists; here the door knows,
@@ -40,7 +40,6 @@ func contactCreateFrom(fields map[string]string, source string) contacts.CreateC
 		FullName:    contactFullName(fields),
 		Source:      source,
 	}
-	sourceSystem := csvSourceSystem()
 	in.SourceSystem = &sourceSystem
 	in.Author = authorFrom(fields)
 	in.FirstName = importString(fields, "first_name")

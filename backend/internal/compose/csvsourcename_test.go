@@ -6,6 +6,9 @@ package compose
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 func TestTheSuggestedSourceNameIsOneTheStageAccepts(t *testing.T) {
@@ -17,5 +20,17 @@ func TestTheSuggestedSourceNameIsOneTheStageAccepts(t *testing.T) {
 	}
 	if got := suggestedSourceName("pipedrive-export.zip"); got != "pipedrive-export" {
 		t.Errorf("got %q, want the stem", got)
+	}
+}
+
+func TestAnEmptySourceNameKeepsTheNamespaceEarlierRunsUsed(t *testing.T) {
+	if got := importSourceSystem(""); got != provenance.ReservedSourceSystemPrefix+migration.ConnectorCSV {
+		t.Fatalf("got %q: a single CSV re-uploaded after this change would stop finding what it landed", got)
+	}
+}
+
+func TestTwoSourceNamesAreTwoNamespaces(t *testing.T) {
+	if importSourceSystem("hubspot") == importSourceSystem("pipedrive") {
+		t.Fatal("ref 1 from two old CRMs would land on one record")
 	}
 }

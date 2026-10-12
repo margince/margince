@@ -31,7 +31,11 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 	}
 
 	runs := migration.NewRunStore(h.db)
-	writers := newCSVWriters(h.db, run.ID, run.Mapping)
+	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	// The reversal outlives the request deliberately, the same reason the
 	// commit does (ApproveImportRun): cancelling it when the browser goes
 	// away must not leave the run `undoing` with rows already reversed and

@@ -213,20 +213,18 @@ func (h importHandlers) stageRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	if len(mapping.Parts) > 0 {
-		return crmcontracts.ImportRun{}, httperr.Validation("parts", "not_yet",
-			"This server cannot stage a ZIP yet; upload one CSV at a time.")
-	}
-	object := mapping.Object
-	if err := refuseAuthorFromNonImporter(ctx, mapping.Fields); err != nil {
+	if err := refuseAuthorFromNonImporter(ctx, mapping); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
 	if err := h.contextTagIsApplicable(ctx, mapping.ContextTag); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
 
-	source, err := checkedSource(ctx, h.blobs, req.SourceRef, mapping)
+	source, skipped, err := bundleSourceFor(h.blobs, mapping, req.SourceRef, h.uploadLimit)
 	if err != nil {
+		return crmcontracts.ImportRun{}, importProblem(err)
+	}
+	if err := checkEveryPartsColumns(ctx, source, mapping); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
 
@@ -241,7 +239,11 @@ func (h importHandlers) stageRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
-	writers := newCSVWriters(h.db, run.ID, &mapping)
+	writers, err := newBundleWriters(ctx, h.db, run.ID, &mapping)
+	if err != nil {
+		failValidation(ctx, runs, run.ID, err)
+		return crmcontracts.ImportRun{}, err
+	}
 	report, err := migration.NewEngine(runs, writers).DryRun(ctx, source)
 	if err != nil {
 		// The run row already exists. Left alone it would sit in `validating`
@@ -250,12 +252,11 @@ func (h importHandlers) stageRun(
 		failValidation(ctx, runs, run.ID, err)
 		return crmcontracts.ImportRun{}, importProblem(err)
 	}
-	report, err = refinePrediction(ctx, source, writers, object, report)
+	report, err = predictEveryPart(ctx, source, skipped, writers, mapping, report)
 	if err != nil {
 		failValidation(ctx, runs, run.ID, err)
 		return crmcontracts.ImportRun{}, importProblem(err)
 	}
-	report = withSkippedLines(report, object, source.Skipped())
 	if err := runs.AwaitApproval(ctx, run.ID, report); err != nil {
 		// The same orphan the two branches above avoid: a run that cannot be
 		// parked for a human is a run in `validating` that neither approve nor
@@ -328,7 +329,18 @@ func (h importHandlers) commitRun(
 	if h.blobs == nil {
 		return crmcontracts.ImportRun{}, errNoObjectStore
 	}
-	if err := refuseAuthorFromNonImporter(ctx, run.Mapping.Fields); err != nil {
+	if err := refuseAuthorFromNonImporter(ctx, *run.Mapping); err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
+
+	// Built before the run is approved, so a run whose source or writers
+	// cannot be built is refused while it can still be approved again.
+	source, _, err := bundleSourceFor(h.blobs, *run.Mapping, run.SourceRef, h.uploadLimit)
+	if err != nil {
+		return crmcontracts.ImportRun{}, importProblem(err)
+	}
+	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping)
+	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
 
@@ -338,9 +350,6 @@ func (h importHandlers) commitRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
-	object := run.Mapping.Object
-	source := migration.NewCSVSource(h.blobs, run.SourceRef, object, run.Mapping.Fields, run.Mapping.SourceKey)
-	writers := newCSVWriters(h.db, approved.ID, run.Mapping)
 	// The commit outlives the request deliberately. Cancelling it when the
 	// browser goes away would leave the run `running` with rows already
 	// committed and nothing able to record the failure — a state neither

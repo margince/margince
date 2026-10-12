@@ -51,7 +51,7 @@ func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids
 	if id, ok := w.nativeIDs[externalID]; ok {
 		return id, true, nil
 	}
-	binding, found, err := w.identities.LookupBinding(ctx, csvSourceSystem(), object, externalID)
+	binding, found, err := w.identities.LookupBinding(ctx, w.sourceSystem, object, externalID)
 	if err != nil || !found {
 		return ids.UUID{}, false, err
 	}

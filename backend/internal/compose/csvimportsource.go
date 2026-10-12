@@ -22,9 +22,8 @@ func (h importHandlers) storeSource(ctx context.Context, body []byte, contentTyp
 		return "", fmt.Errorf("no workspace is bound to this request: %w", apperrors.ErrPermissionDenied)
 	}
 	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), importBlobKind, ids.NewV7().String())
-	// Declared before the bytes exist. This key is handed back to the client and only
-	// a submitted mapping makes it durable, so the ordinary outcome for an abandoned
-	// profile is an object nothing ever names — which until now stayed forever.
+	// Declared before the bytes exist. Only a submitted mapping makes this key
+	// durable, so the intent lets a sweep remove a profile nobody staged.
 	if err := migration.NewRunStore(h.db).RecordImportSourceIntent(ctx, key); err != nil {
 		return "", err
 	}

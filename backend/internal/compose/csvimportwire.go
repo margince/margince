@@ -258,22 +258,15 @@ func runOptionsFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMappi
 	}, nil
 }
 
-// checkedSource binds the run to its uploaded file and proves the mapping names
-// columns that file actually carries. Before anything is staged: a mapping the
-// file contradicts is a request fault, answered the way an unknown target is
-// rather than staged as a run whose every row drops a field.
-func checkedSource(
-	ctx context.Context, blobs blobstore.Store, sourceRef string, mapping migration.RunMapping,
-) (*migration.CSVSource, error) {
-	source := migration.NewCSVSource(blobs, sourceRef, mapping.Object, mapping.Fields, mapping.SourceKey)
+// checkPartColumns proves a part's mapping names columns its file actually
+// carries. It runs before anything is staged. A mapping the file contradicts is
+// a request fault, like an unknown target, and not a run whose rows drop a field.
+func checkPartColumns(ctx context.Context, source *migration.CSVSource, fields map[string]string) error {
 	header, err := source.Header(ctx)
 	if err != nil {
-		return nil, importProblem(err)
+		return importProblem(err)
 	}
-	if err := mappingNamesTheFilesColumns(mapping.Fields, header); err != nil {
-		return nil, err
-	}
-	return source, nil
+	return mappingNamesTheFilesColumns(fields, header)
 }
 
 // mappingNamesTheFilesColumns refuses a mapping naming a column this file's

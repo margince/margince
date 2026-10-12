@@ -57,8 +57,7 @@ func storedPrimaryDomain(current map[string]json.RawMessage) json.RawMessage {
 // comparison that can be made without inventing a type the file never declared.
 // An absent field renders empty, which no non-empty import value equals.
 
-func companyCreateFrom(fields map[string]string, source string) contacts.CreateCompanyInput {
-	sourceSystem := csvSourceSystem()
+func companyCreateFrom(fields map[string]string, sourceSystem, source string) contacts.CreateCompanyInput {
 	in := contacts.CreateCompanyInput{
 		DisplayName:  strings.TrimSpace(fields[fieldDisplayName]),
 		Source:       source,

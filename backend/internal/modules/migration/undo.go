@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -333,9 +334,9 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 	return run, rep, nil
 }
 
-// mapRowsForRun reads one page of the rows this run created, in a stable
-// order (the checkpoint's resume contract depends on it), skipping the
-// prefix a prior pass already processed.
+// mapRowsForRun reads one page of the rows this run created, past the prefix
+// a prior pass processed. The order is stable, as the checkpoint needs. Later
+// types come first, so a contact is archived before the company it names.
 func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int) ([]mapRow, error) {
 	var rows []mapRow
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -343,8 +344,8 @@ func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int)
 			SELECT object, native_id, created_at
 			  FROM import_record_map
 			 WHERE import_run_id = $1
-			 ORDER BY created_at, external_id
-			 OFFSET $2 LIMIT $3`, id, skip, limit)
+			 ORDER BY array_position($4::text[], object), created_at, external_id
+			 OFFSET $2 LIMIT $3`, id, skip, limit, reverseImportOrder())
 		if err != nil {
 			return fmt.Errorf("reading import run %s's created rows: %w", id, err)
 		}
@@ -468,4 +469,11 @@ func (s *RunStore) completeUndo(ctx context.Context, id RunID, rep UndoReport) e
 			map[string]any{auditFieldStatus: StatusUndone, "reversed_count": rep.ReversedCount, "kept_count": len(rep.Kept), "errored_count": len(rep.Errored)})
 		return err
 	})
+}
+
+// reverseImportOrder is ImportOrder backwards: the order an undo reverses types.
+func reverseImportOrder() []string {
+	reversed := slices.Clone(ImportOrder)
+	slices.Reverse(reversed)
+	return reversed
 }

@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func partsRequest(parts ...crmcontracts.ImportPartRequest) crmcontracts.CreateImportRunRequest {
@@ -234,5 +235,14 @@ func TestAPartsRequestWithATopLevelSourceKeyIsRefused(t *testing.T) {
 	var v *httperr.DetailedError
 	if !errors.As(err, &v) || v.Fields[0].Code != "one_shape" {
 		t.Fatalf("err = %v, want one_shape: a part carries its own source_key", err)
+	}
+}
+
+func TestARunWithTwoFilesOfOneTypeGetsNoWriters(t *testing.T) {
+	twice := migration.RunMapping{Parts: []migration.PartMapping{
+		{File: "a.csv", Object: migration.ObjectCompany}, {File: "b.csv", Object: migration.ObjectCompany},
+	}}
+	if _, err := newBundleWriters(t.Context(), nil, migration.RunID{}, &twice); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("err = %v, want a conflict rather than one file's writer silently replacing the other's", err)
 	}
 }

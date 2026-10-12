@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // csvWriters implements migration.Writers for a delimited upload.
@@ -40,6 +39,9 @@ type csvWriters struct {
 	identities *migration.RunStore
 	runID      migration.RunID
 	object     string
+	// sourceSystem is the namespace the run files its rows under, from its
+	// source name (importSourceSystem).
+	sourceSystem string
 	// onDuplicate is the run's answer for a row naming a record the estate
 	// already holds: "" or "create" lands it and files a review pair, "skip"
 	// leaves the incumbent alone. Read from the stored mapping, so the commit
@@ -73,9 +75,6 @@ type csvWriters struct {
 
 var _ migration.Writers = (*csvWriters)(nil)
 
-// newCSVWriters takes the run's mapping by pointer because a stored run may
-// carry none: the object and the duplicate policy then fall back to empty,
-// which is what every caller before this did by passing them separately.
 // skipReasonNaturalKeyTaken marks an imported row that could not land because
 // something else already holds its natural key.
 const skipReasonNaturalKeyTaken = "natural_key_already_taken"
@@ -85,11 +84,18 @@ const skipReasonNaturalKeyTaken = "natural_key_already_taken"
 // resolves.
 const skipReasonDuplicateEmail = "duplicate_email"
 
-func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.RunMapping) *csvWriters {
-	settled := migration.RunMapping{}
-	if mapping != nil {
-		settled = *mapping
-	}
+// runOptions is what a run decides for every part alike.
+type runOptions struct {
+	SourceName, OnDuplicate, ContextTag, OnBrokenLink string
+}
+
+// runOptionsOf reads the run-wide decisions off a stored mapping.
+func runOptionsOf(m migration.RunMapping) runOptions {
+	return runOptions{SourceName: m.SourceName, OnDuplicate: m.OnDuplicate, ContextTag: m.ContextTag, OnBrokenLink: m.OnBrokenLink}
+}
+
+// newCSVWriters builds the writer of one part: one object, one file.
+func newCSVWriters(db *database.DB, runID migration.RunID, part migration.PartMapping, run runOptions) *csvWriters {
 	return &csvWriters{
 		pool: db.Pool(),
 		// An imported contact can take a lead over, which carries the lead's
@@ -97,34 +103,26 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		contacts: contacts.NewStore(db).WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)),
-		tags:        collections.NewStore(db),
-		identities:  migration.NewRunStore(db),
-		runID:       runID,
-		object:      settled.Object,
-		onDuplicate: settled.OnDuplicate,
+		tags:         collections.NewStore(db),
+		identities:   migration.NewRunStore(db),
+		runID:        runID,
+		object:       part.Object,
+		sourceSystem: importSourceSystem(run.SourceName),
+		onDuplicate:  run.OnDuplicate,
 		// An unparseable id files nothing rather than failing the run. The wire
 		// refused the shapes a client can send, so what reaches here is a stored
 		// mapping — and a run that already passed its dry run must not die at
 		// commit over a word.
-		contextTag: parseContextTag(settled.ContextTag),
+		contextTag: parseContextTag(run.ContextTag),
 		nativeIDs:  map[string]ids.UUID{},
 		authors:    authorSeats{},
 	}
 }
 
-// csvSourceSystem namespaces the source_system imported rows carry. The
-// reserved prefix is refused at the wire mappers, so a client cannot pre-plant
-// a row under a guessed import id and have the store hand it back as already
-// existing; the engine-owned identity map remains the authority for "already
-// imported".
-func csvSourceSystem() string {
-	return provenance.ReservedSourceSystemPrefix + migration.ConnectorCSV
-}
-
 // provenanceOf is the imported row's source stamp: <source>:<object>:<id>, the
 // UC-E11-03 convention every importer writes.
 func (w *csvWriters) provenanceOf(externalID string) string {
-	return fmt.Sprintf("%s%s:%s:%s", provenance.ReservedSourceSystemPrefix, migration.ConnectorCSV, w.object, externalID)
+	return fmt.Sprintf("%s:%s:%s", w.sourceSystem, w.object, externalID)
 }
 
 // Updated reports how many rows this run rewrote, for the run report.
@@ -396,7 +394,7 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 var errImportReplayed = errors.New("import: the record replayed under its natural key")
 
 func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	in := leadCreateFrom(textFields(row.Fields), csvSourceSystem(), row.ExternalID, w.provenanceOf(row.ExternalID))
+	in := leadCreateFrom(textFields(row.Fields), w.sourceSystem, row.ExternalID, w.provenanceOf(row.ExternalID))
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
@@ -425,7 +423,7 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 //
 //nolint:dupl // createContact has the same SHAPE and not the same job: a
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	in := companyCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
+	in := companyCreateFrom(textFields(row.Fields), w.sourceSystem, w.provenanceOf(row.ExternalID))
 	if in.DisplayName == "" {
 		return migration.EnsureResult{Skipped: true, SkipReason: "the mapped display_name is empty, so the row names no company"}, nil
 	}
@@ -474,7 +472,7 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 		if id, err = create(tx); err != nil {
 			return err
 		}
-		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, csvSourceSystem(), w.object, externalID, id); err != nil {
+		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, externalID, id); err != nil {
 			return err
 		}
 		return w.fileUnderContextTag(ctx, tx, id)
