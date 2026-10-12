@@ -27,6 +27,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 	"time"
 
@@ -407,7 +408,8 @@ func twoFrozenForecasts(ctx context.Context, t *testing.T, e *Env) (ids.UUID, id
 	t.Helper()
 	store := forecasting.NewStore(compose.InstallationDB(e.Pool))
 	period, err := forecasting.ResolvePeriod(
-		forecasting.PeriodQuarter, time.Now().UTC(), 1, time.UTC)
+		forecasting.PeriodQuarter, time.Now().UTC(), 1, time.UTC,
+	)
 	if err != nil {
 		t.Fatalf("resolving the period the snapshots describe: %v", err)
 	}
@@ -502,6 +504,15 @@ func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Regi
 	invoked := map[string]bool{"create_record": true, "create_tag": true}
 	for _, call := range calls {
 		invoked[call.tool] = true
+	}
+	// A router answers as the target it picks, so it is held here when each of
+	// its targets is invoked or excused.
+	for _, spec := range registry.Specs() {
+		if targets, isRouter := registry.RouteTargets(spec.Name); isRouter {
+			invoked[spec.Name] = !slices.ContainsFunc(targets, func(target string) bool {
+				return !invoked[target] && !unreachableInThisLane.Waived(t, target)
+			})
+		}
 	}
 	for _, spec := range registry.Specs() {
 		excused := unreachableInThisLane.Waived(t, spec.Name)
