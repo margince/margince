@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 66 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 66 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 26630 |  |  | 81% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 26680 |  |  | 81% |  |  |  |
 
 ### `morning_brief`
 
@@ -167,7 +167,7 @@ listing once. Read a row as what that tool costs a menu.
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |
 | `update_record` | 581 |  |
-| `forecast_readings` | 552 |  |
+| `forecast_readings` | 574 |  |
 | `read_reporting` | 535 |  |
 | `query_workspace` | 530 |  |
 | `progress_deal` | 513 |  |
@@ -175,8 +175,8 @@ listing once. Read a row as what that tool costs a menu.
 | `change_lead_state` | 494 |  |
 | `resolve_entities` | 493 |  |
 | `change_tags` | 492 |  |
+| `forecast_movement` | 471 |  |
 | `search_records` | 456 |  |
-| `forecast_movement` | 443 |  |
 | `decide_approvals` | 429 |  |
 | `annotate_brief` | 417 | 2 scenarios |
 | `advance_project_phase` | 416 |  |

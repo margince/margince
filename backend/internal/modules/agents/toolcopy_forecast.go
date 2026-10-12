@@ -47,7 +47,8 @@ var forecastReadingsCopy = toolCopy{
 		"Empty means nothing was frozen for this population, which includes managed teams.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number — a total placed " +
 		"in the reader's own zone is a different total — and `eligible_count`, `priced_count` " +
-		"and `fx_missing_count` are the counts `coverage_note` is written from.",
+		"and `fx_missing_count` are the counts `coverage_note` is written from. Every `_minor` " +
+		"figure is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
 }
 
 var forecastMovementCopy = toolCopy{
@@ -68,7 +69,8 @@ var forecastMovementCopy = toolCopy{
 		"where it went.",
 	Retain: "`reopened_or_archived` carries a deal that left the population entirely — " +
 		"archived, or no longer visible to this caller — with its whole prior contribution, so " +
-		"no money disappears without a row that says where it went.",
+		"no money disappears without a row that says where it went. Every `_minor` figure is in " +
+		"minor units of forecast_readings' `base_currency`: 3100000 in EUR is EUR 31,000.",
 }
 
 var forecastInputChecksCopy = toolCopy{

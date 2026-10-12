@@ -10,16 +10,16 @@
   "totals": {
     "tools": 66,
     "resources": 9,
-    "tool_catalog_bytes": 216876,
+    "tool_catalog_bytes": 217075,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 55109,
+    "approx_wire_tokens_total": 55158,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 58060,
+      "description_bytes": 58259,
       "input_schema_bytes": 55380,
       "output_schema_bytes": 87281,
-      "description_plus_input_schema_bytes": 113440
+      "description_plus_input_schema_bytes": 113639
     }
   },
   "tools": {
@@ -4110,7 +4110,7 @@
           "readOnlyHint": true,
           "title": "What moved the forecast"
         },
-        "description": "Explain why a forecast changed between two points, as named causes that account for the whole difference. Opening plus every bucket equals closing, exactly, so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent: `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket; `model` means a probability the product re-scored. IT NEEDS TWO SNAPSHOT IDS, `from` then `to`, both from ONE forecast_readings read's `snapshots` so they share a period; none listed means nothing was frozen yet. Reading forecast_readings twice and subtracting is NOT the same answer and must not be reported as one: the difference between two reads is a number with no account of where it went. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Explain why a forecast changed between two points, as named causes that account for the whole difference. Opening plus every bucket equals closing, exactly, so the buckets are a complete account of the change and not a selection from it. A deal appears in exactly ONE bucket: one that both slipped and was repriced has moved for one reason as far as a reader is concerned, which is that it left. Two buckets are about the machinery rather than the business, and quoting them as sales movement is the mistake this classification exists to prevent: `definition` means the two snapshots were computed under different rules, and then the WHOLE difference is in that bucket; `model` means a probability the product re-scored. IT NEEDS TWO SNAPSHOT IDS, `from` then `to`, both from ONE forecast_readings read's `snapshots` so they share a period; none listed means nothing was frozen yet. Reading forecast_readings twice and subtracting is NOT the same answer and must not be reported as one: the difference between two reads is a number with no account of where it went. `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer visible to this caller — with its whole prior contribution, so no money disappears without a row that says where it went. Every `_minor` figure is in minor units of forecast_readings' `base_currency`: 3100000 in EUR is EUR 31,000. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -4314,7 +4314,7 @@
           "readOnlyHint": true,
           "title": "Read the forecast"
         },
-        "description": "Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask read_input_checks whether the inputs behind these numbers were read. `snapshots` lists this period's frozen states, newest first: the ids forecast_movement takes. Empty means nothing was frozen for this population, which includes managed teams. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer what a period is expected to close — `won`, `evidence`, `best_case` and `open`, plus `weighted` — under the installation's own fiscal calendar and base currency. `won` counts deals by the day they ACTUALLY closed, not the day they were expected to. `evidence` is committed pipeline whose close date somebody confirmed; a provisional date stays in `open` and out of `evidence`. `coverage_note` says what the totals do not cover and is absent only when they cover every eligible deal, so quoting a total without it reports a partial pipeline as a complete one. run_report's forecast report and a hand-summed query_workspace also produce a number, and NEITHER is the forecast: only this applies the fiscal calendar, the base currency conversion and the weighting. These figures also cannot be cited in a composed document — for a board-pack section or anything a reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask read_input_checks whether the inputs behind these numbers were read. `snapshots` lists this period's frozen states, newest first: the ids forecast_movement takes. Empty means nothing was frozen for this population, which includes managed teams. Quote `as_of`, `timezone` and `base_currency` with the number — a total placed in the reader's own zone is a different total — and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written from. Every `_minor` figure is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
