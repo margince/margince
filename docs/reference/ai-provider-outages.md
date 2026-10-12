@@ -61,6 +61,7 @@ does in this state.
 | `site_triage` | Website triage | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |
 | `stage_evidence_extract` | Stage evidence extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `summarize` | Record summary | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
+| `tag_suggest` | Tag suggestions | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `transcript` | Transcript reading | interactive | `cheap_cloud` → `premium` | not in use yet | — |
 | `transcript_propose` | Meeting follow-up extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `voice_build` | Voice DNA build | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |

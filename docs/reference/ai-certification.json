@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 46,
+    "sites": 47,
     "sites_best_current": 38,
     "sites_best_partial": 0,
     "sites_best_stale": 8,
-    "sites_absent": 0,
-    "scenarios": 175,
+    "sites_absent": 1,
+    "scenarios": 180,
     "records": 251,
     "bindings": 13,
     "self_judged_records": 0
@@ -711,6 +711,34 @@
           "cases_below_quality_bar": 2
         },
         {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "transcript_propose",
           "label": "Meeting follow-up extraction",
           "tier": "cheap_cloud",
@@ -828,7 +856,7 @@
         "supported_degraded": 5,
         "not_supported": 7
       },
-      "untested": 2,
+      "untested": 3,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1553,6 +1581,34 @@
           "cases_below_quality_bar": 1
         },
         {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "transcript_propose",
           "label": "Meeting follow-up extraction",
           "tier": "cheap_cloud",
@@ -1674,7 +1730,7 @@
         "supported_degraded": 7,
         "not_supported": 0
       },
-      "untested": 0,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2655,6 +2711,34 @@
           }
         },
         {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "transcript_propose",
           "label": "Meeting follow-up extraction",
           "tier": "cheap_cloud",
@@ -2820,7 +2904,7 @@
         "supported_degraded": 7,
         "not_supported": 0
       },
-      "untested": 0,
+      "untested": 1,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -3524,6 +3608,34 @@
           "cases_below_quality_bar": 6
         },
         {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "transcript_propose",
           "label": "Meeting follow-up extraction",
           "tier": "cheap_cloud",
@@ -3641,7 +3753,7 @@
         "supported_degraded": 5,
         "not_supported": 15
       },
-      "untested": 2,
+      "untested": 3,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -4345,6 +4457,34 @@
           "cases_below_quality_bar": 7
         },
         {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-oss-120b",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "transcript_propose",
           "label": "Meeting follow-up extraction",
           "tier": "cheap_cloud",
@@ -4462,7 +4602,7 @@
         "supported_degraded": 7,
         "not_supported": 7
       },
-      "untested": 1,
+      "untested": 2,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -5166,6 +5306,34 @@
           "cases_below_quality_bar": 4
         },
         {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "mistralai/ministral-14b-2512",
+              "env": "eu_hosted"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "transcript_propose",
           "label": "Meeting follow-up extraction",
           "tier": "cheap_cloud",
@@ -5283,7 +5451,7 @@
         "supported_degraded": 2,
         "not_supported": 15
       },
-      "untested": 1,
+      "untested": 2,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -5987,6 +6155,34 @@
           "cases_below_quality_bar": 7
         },
         {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "vllm",
+              "model": "mlx-community/Qwen3-14B-4bit",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "transcript_propose",
           "label": "Meeting follow-up extraction",
           "tier": "cheap_cloud",
@@ -6104,7 +6300,7 @@
         "supported_degraded": 1,
         "not_supported": 19
       },
-      "untested": 2,
+      "untested": 3,
       "unbound": 0,
       "unrecognised": 0
     }
@@ -6113,7 +6309,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 46,
+      "sites_shipped": 47,
       "sites_measured": 46,
       "ready": 39,
       "usable_with_care": 6,
@@ -6831,7 +7027,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 46,
+      "sites_shipped": 47,
       "sites_measured": 45,
       "ready": 27,
       "usable_with_care": 10,
@@ -7555,7 +7751,7 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 46,
+      "sites_shipped": 47,
       "sites_measured": 44,
       "ready": 28,
       "usable_with_care": 13,
@@ -8245,7 +8441,7 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 46,
+      "sites_shipped": 47,
       "sites_measured": 44,
       "ready": 9,
       "usable_with_care": 8,
@@ -8895,7 +9091,7 @@
     {
       "name": "GPT",
       "answer": "not_yet",
-      "sites_shipped": 46,
+      "sites_shipped": 47,
       "sites_measured": 43,
       "ready": 15,
       "usable_with_care": 17,
@@ -20213,6 +20409,48 @@
           }
         }
       ]
+    },
+    {
+      "task": "tag_suggest",
+      "site": "interest",
+      "key": "tag_suggest/interest",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_german_mail_shows_interest_against_an_english_description",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/tag_suggest/german_mail_01.yaml"
+        },
+        {
+          "name": "a_mention_or_our_own_footer_is_not_interest",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/tag_suggest/mention_is_not_interest_01.yaml"
+        },
+        {
+          "name": "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/tag_suggest/batch_two_tags_01.yaml"
+        },
+        {
+          "name": "instructions_inside_a_mail_tag_nothing",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/tag_suggest/instructions_in_the_mail_01.yaml"
+        },
+        {
+          "name": "interest_in_words_the_description_does_not_use",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/tag_suggest/other_words_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "transcript_propose",

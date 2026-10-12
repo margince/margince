@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 298 |
-| Columns | 3560 |
-| Foreign keys | 499 |
+| Tables | 299 |
+| Columns | 3563 |
+| Foreign keys | 500 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -42,7 +42,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 129 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 59 | 33 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 59 | 34 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 24 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
@@ -97,7 +97,7 @@ erDiagram
 | [assurance](assurance.md) | 7 |
 | [automation](automation.md) | 3 |
 | [capture](capture.md) | 22 |
-| [collections](collections.md) | 12 |
+| [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 36 |
@@ -129,7 +129,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 59 | 33 |
+| [`activity`](activities.md#activity) | activities | 59 | 34 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
@@ -390,6 +390,7 @@ erDiagram
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
 | [`tag`](collections.md#tag) | collections | 10 | 3 |
+| [`tag_interest_read`](collections.md#tag_interest_read) | collections | 3 | 0 |
 | [`tag_suggestion`](collections.md#tag_suggestion) | collections | 12 | 1 |
 | [`tag_suggestion_evidence`](collections.md#tag_suggestion_evidence) | collections | 4 | 0 |
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |

@@ -94,6 +94,7 @@ var divergentTasks = gatekit.Waive(map[string]string{
 	"growth_fit":     "shipped with the growth-fit feature and never reconciled upstream. #1277 half one",
 	"signal_extract": "shipped with material-event extraction and never reconciled upstream. #1277 half one",
 	"site_triage":    "shipped with the site-triage feature and never reconciled upstream. #1277 half one",
+	"tag_suggest":    "shipped with model tag suggestions and never reconciled upstream. #1277 half one",
 })
 
 // mirroredTiers and divergentTiers are the same pair for the tier vocabulary,

@@ -4,11 +4,11 @@
 package compose
 
 // The tag scout proposes a suggestible tag on the contact or company that a
-// captured mail, meeting, note or call is filed under. It fires on a phrase
-// from the tag's description (split on commas, semicolons and line breaks).
-// A phrase match is cheap and explainable, and it never mints a word. Private
-// mail counts, because collections shows each suggestion only to a reader who
-// may read every activity it cites.
+// captured mail, meeting, note or call is filed under. With a model bound, the
+// model reads each item against the tag descriptions (tagsuggestpass.go).
+// Without one, a phrase from the description (split on commas, semicolons and
+// line breaks) fires it. Private mail counts, because collections shows each
+// suggestion only to a reader who may read every activity it cites.
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -45,8 +46,8 @@ type tagScoutRow struct {
 	evidence   collections.TagSuggestionEvidence
 }
 
-// RunTagScout runs one pass inside the caller's transaction, as the system
-// principal the job binds.
+// RunTagScout runs one phrase-matching pass inside the caller's transaction,
+// as the system principal the job binds.
 func RunTagScout(ctx context.Context, tx pgx.Tx, now time.Time) (TagScoutPass, error) {
 	var pass TagScoutPass
 	var err error
@@ -54,9 +55,16 @@ func RunTagScout(ctx context.Context, tx pgx.Tx, now time.Time) (TagScoutPass, e
 		return pass, err
 	}
 	query, args := tagScoutSQL(now.Add(-tagScoutWindow), now)
+	pass.Considered, pass.Raised, err = raiseTagSuggestions(ctx, tx, tagScoutSuggestionCap, query, args...)
+	return pass, err
+}
+
+// raiseTagSuggestions reads (tag, record, activity) rows ordered by tag and
+// record, and records a suggestion per pair until budget pairs are considered.
+func raiseTagSuggestions(ctx context.Context, tx pgx.Tx, budget int, query string, args ...any) (considered, raised int, err error) {
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
-		return pass, fmt.Errorf("tag scout: reading the evidence: %w", err)
+		return 0, 0, fmt.Errorf("tag scout: reading the evidence: %w", err)
 	}
 	found, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (tagScoutRow, error) {
 		var r tagScoutRow
@@ -64,22 +72,22 @@ func RunTagScout(ctx context.Context, tx pgx.Tx, now time.Time) (TagScoutPass, e
 		return r, err
 	})
 	if err != nil {
-		return pass, fmt.Errorf("tag scout: scanning the evidence: %w", err)
+		return 0, 0, fmt.Errorf("tag scout: scanning the evidence: %w", err)
 	}
 	for _, draft := range tagScoutDrafts(found) {
-		if pass.Considered == tagScoutSuggestionCap {
+		if considered == budget {
 			break
 		}
-		pass.Considered++
-		raised, err := collections.RecordTagSuggestionTx(ctx, tx, draft)
+		considered++
+		ok, err := collections.RecordTagSuggestionTx(ctx, tx, draft)
 		if err != nil {
-			return pass, err
+			return considered, raised, err
 		}
-		if raised {
-			pass.Raised++
+		if ok {
+			raised++
 		}
 	}
-	return pass, nil
+	return considered, raised, nil
 }
 
 // tagScoutDrafts groups the rows, which arrive ordered by tag and record.
@@ -99,17 +107,19 @@ func tagScoutDrafts(found []tagScoutRow) []collections.TagSuggestionDraft {
 	return out
 }
 
+// tagScoutCitable is an activity the scout may read and cite: captured
+// correspondence that is live, unrestricted and not labelled noise. a names the
+// activity table.
+func tagScoutCitable(a string) string {
+	return a + `.kind IN ('email', 'meeting', 'note', 'call')
+	     AND ` + a + `.archived_at IS NULL AND ` + auth.ActivityAvailableClause(a) + `
+	     AND ` + a + `.capture_label IS DISTINCT FROM 'noise'`
+}
+
 // tagScoutSQL is the pass's one read. It pairs each suggestible tag's phrases
-// with the captured activities in the window that mention them. It keeps
-// records the tag may be proposed on, and evidence newer than the last decision.
+// with the captured activities in the window that mention them.
 func tagScoutSQL(since, now time.Time) (string, []any) {
 	args := []any{since, now, tagScoutItemCap}
-	candidate := func(entityType string) string {
-		return `(ev.entity_type = '` + entityType + `' AND ` +
-			collections.SuggestableTagClause(entityType, "ev.tag_id", "ev.record") +
-			` AND ev.occurred_at > coalesce(` + collections.TagSuggestionFloorExpr(entityType, "ev.tag_id", "ev.record") +
-			`, '-infinity'::timestamptz))`
-	}
 	query := `
 	WITH phrases AS (
 	  SELECT DISTINCT t.id AS tag_id, lower(btrim(phrase)) AS phrase
@@ -121,18 +131,29 @@ func tagScoutSQL(since, now time.Time) (string, []any) {
 	    FROM activity a
 	    JOIN activity_link l ON l.activity_id = a.id AND l.entity_type IN ('contact', 'company')
 	    JOIN phrases p ON position(p.phrase IN lower(coalesce(a.subject, '') || ' ' || coalesce(a.body, ''))) > 0
-	   WHERE a.kind IN ('email', 'meeting', 'note', 'call')
-	     AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     AND a.capture_label IS DISTINCT FROM 'noise'
+	   WHERE ` + tagScoutCitable("a") + `
 	     AND a.occurred_at > $1 AND a.occurred_at <= $2
-	), ranked AS (
+	), ` + tagScoutRankedSQL("$3")
+	return query, args
+}
+
+// tagScoutRankedSQL closes a query whose ev CTE pairs tags with cited
+// activities. It keeps records the tag may be proposed on and evidence newer
+// than the last decision, at most rankCap per tag and record, newest first.
+func tagScoutRankedSQL(rankCap string) string {
+	candidate := func(entityType string) string {
+		return `(ev.entity_type = '` + entityType + `' AND ` +
+			collections.SuggestableTagClause(entityType, "ev.tag_id", "ev.record") +
+			` AND ev.occurred_at > coalesce(` + collections.TagSuggestionFloorExpr(entityType, "ev.tag_id", "ev.record") +
+			`, '-infinity'::timestamptz))`
+	}
+	return `ranked AS (
 	  SELECT ev.*, row_number() OVER (PARTITION BY ev.tag_id, ev.entity_type, ev.record
 	                                  ORDER BY ev.occurred_at DESC, ev.activity_id) AS rank
 	    FROM ev
 	   WHERE ` + candidate("contact") + ` OR ` + candidate("company") + `
 	)
 	SELECT tag_id, entity_type, record, activity_id, occurred_at
-	  FROM ranked WHERE rank <= $3
+	  FROM ranked WHERE rank <= ` + rankCap + `
 	 ORDER BY tag_id, entity_type, record, occurred_at DESC, activity_id`
-	return query, args
 }

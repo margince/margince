@@ -170,7 +170,7 @@ because the set of states must be whole, and the compiler needs it.
 | Reason | Kinds | Why |
 |---|---|---|
 | Watched by the asker | `growth_fit`, `cold_start`, `corpus_ask` | Shown on the surface that asked. |
-| System sweep | `brief_ranking`, `capture_classify`, `capture_confidentiality_verdict`, `capture_counterparty_verdict`, `owed_verdict`, `propose_roles`, `rate_extract`, `request_settlement`, `signal_extract`, `stage_evidence_extract` | Background workspace work that belongs to no single user. |
+| System sweep | `brief_ranking`, `capture_classify`, `capture_confidentiality_verdict`, `capture_counterparty_verdict`, `owed_verdict`, `propose_roles`, `rate_extract`, `request_settlement`, `signal_extract`, `stage_evidence_extract`, `tag_suggest` | Background workspace work that belongs to no single user. |
 | The read tells itself | `site_extract`, `site_fact_extract`, `site_triage` | Removed; `site_read` is the occurrence. |
 | Reaches nobody, and would not be worth showing | `enrich` | No personal owner, and one row for a whole pass. |
 | A measure for operators | `cert_judge` | Grades this build's answers; not a rep's work. |
