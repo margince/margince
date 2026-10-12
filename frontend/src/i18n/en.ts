@@ -898,6 +898,7 @@ export const en = {
   "systemJob.notification_digest": "Notification digest",
   "systemJob.notification_mail": "Notification email",
   "systemJob.owed_verdict": "Owed reply check",
+  "systemJob.own_sent_mail_repair": "Sent mail correction",
   "systemJob.participant_backfill": "Mail participant fill-in",
   "systemJob.private_thread_strip": "Private thread removal",
   "systemJob.provider_recovery": "Enrichment provider recovery",

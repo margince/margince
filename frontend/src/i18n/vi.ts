@@ -895,6 +895,7 @@ export const vi = {
   "systemJob.notification_digest": "Bản tổng hợp thông báo",
   "systemJob.notification_mail": "Email thông báo",
   "systemJob.owed_verdict": "Kiểm tra thư cần trả lời",
+  "systemJob.own_sent_mail_repair": "Sửa thư đã gửi",
   "systemJob.participant_backfill": "Bổ sung bên tham gia thư",
   "systemJob.private_thread_strip": "Gỡ chuỗi thư riêng tư",
   "systemJob.provider_recovery": "Khôi phục nhà cung cấp bổ sung dữ liệu",

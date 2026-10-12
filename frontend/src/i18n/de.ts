@@ -918,6 +918,7 @@ export const de = {
   "systemJob.notification_digest": "Benachrichtigungsübersicht",
   "systemJob.notification_mail": "Benachrichtigungs-E-Mail",
   "systemJob.owed_verdict": "Prüfung offener Antworten",
+  "systemJob.own_sent_mail_repair": "Korrektur gesendeter E-Mails",
   "systemJob.participant_backfill": "Ergänzung der E-Mail-Teilnehmer",
   "systemJob.private_thread_strip": "Entfernen privater Threads",
   "systemJob.provider_recovery": "Wiederherstellung beim Anreicherungsdienst",
