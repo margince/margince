@@ -120,10 +120,10 @@ var firstResponseSQL = `
 // The audit row is the only record that the judgement was ever made, which is
 // what a rate over a window needs.
 //
-// The states are NAMED, and the earlier `IS NOT NULL` is the reason. Four verbs
-// write this column and two of them are UNDO — `picked_up` takes back a
-// not_mine, `sales_again` takes back a not_sales — so counting every non-null
-// value scored a rep who set a row aside and then thought better of it at TWO
+// The states are named, and the earlier `IS NOT NULL` is the reason. Several
+// verbs write this column and two of them are undo verbs. `picked_up` takes
+// back a reader state and `sales_again` takes back a not_sales. Counting every
+// non-null value scored a rep who set a row aside and then took it back at two
 // dispositions rather than none. The figure ran backwards for exactly the
 // behaviour it should reward, and read as more judgement the more of it was
 // withdrawn.
@@ -160,6 +160,10 @@ const dispositionsSQL = `
 	       count(*) FILTER (WHERE a.after->>'disposition' = $%[4]d)
 	  FROM audit_log a
 	  JOIN activity act ON act.id = a.entity_id
+	   -- Only a customer's inbound message is a disposition, whatever state
+	   -- rows or audit rows exist for other activities.
+	   AND act.kind IN ('` + kindEmail + `', '` + kindMessage + `')
+	   AND act.direction = '` + directionInbound + `'
 	 WHERE a.entity_type = 'activity'
 	   AND a.action = 'update'
 	   AND a.occurred_at >= $%[1]d
@@ -167,7 +171,8 @@ const dispositionsSQL = `
 	   AND %[5]s`
 
 // puttingDown is the set of verbs that PUT a row down, as against the two that
-// pick one back up.
+// pick one back up. `handled` is here and never in the reply median: it says
+// the row left the list without an email reply.
 //
 // A function rather than a package var so no caller can append to the answer
 // another caller is about to read — the shape every enumerated set in this tree
@@ -175,7 +180,7 @@ const dispositionsSQL = `
 // inside the writer, because a figure counting a state nothing writes is a
 // silent zero and reads exactly like a quiet fortnight.
 func puttingDown() []string {
-	return []string{stateSnoozed, stateNotMine, stateNotSales}
+	return []string{stateSnoozed, stateNotMine, stateHandled, stateNotSales}
 }
 
 // ResponseWindow reads both figures over one window.

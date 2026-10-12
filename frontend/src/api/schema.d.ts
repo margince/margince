@@ -4717,12 +4717,16 @@ export interface paths {
          *     judged had no way to leave, so it returned every morning and the count above it stayed
          *     wrong.
          *
-         *     THREE JUDGEMENTS, TWO REACHES.
+         *     FOUR JUDGEMENTS, TWO REACHES.
          *
          *     `not_sales` is a fact about the THREAD — recognizing the procurement newsletter settles
-         *     what the message is, for everybody. `snooze` and `not_mine` belong to the ONE READER who
-         *     set them: a rep putting a reply down until Thursday must not take it off the colleague who
-         *     owns the deal, and saying "not mine" is precisely saying somebody else must still see it.
+         *     what the message is, for everybody. `handled`, `snooze` and `not_mine` belong to the ONE
+         *     READER who set them: a rep putting a reply down until Thursday must not take it off the
+         *     colleague who owns the deal, and saying "not mine" is precisely saying somebody else must
+         *     still see it. The Worklist offers `not_mine` only on a row whose owner is not the reader.
+         *
+         *     `handled` names no moment and nothing lifts it: the reader dealt with the message another
+         *     way. The customer's next message is new work, so it comes back on its own.
          *
          *     A snooze names a moment still ahead and lifts on its own. `not_mine` names no moment: it
          *     stands until the reader picks the message back up, or until the record it is filed under
@@ -31167,11 +31171,12 @@ export interface components {
         };
         SetActivityDispositionRequest: {
             /**
-             * @description What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
-             *     `not_mine` bind only the caller.
+             * @description What the reader decided. `not_sales` binds the thread for everybody; `handled`,
+             *     `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
+             *     message another way; the customer's next message arrives as new work.
              * @enum {string}
              */
-            disposition: "snooze" | "not_mine" | "not_sales";
+            disposition: "handled" | "snooze" | "not_mine" | "not_sales";
             reopen_on?: components["schemas"]["ReopenCondition"];
             /**
              * Format: date-time
@@ -43488,11 +43493,12 @@ export interface components {
              */
             shown: number;
             /**
-             * @description Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
-             *     least alarming of the four: a snooze lifts on its own moment, so this includes
-             *     work that will come back without anybody remembering it. `not_mine` names no
-             *     moment, and lifts only when the reader picks the message back up or the record
-             *     it is filed under changes hands.
+             * @description Work this reader has snoozed, marked `not_mine` or marked `handled`. THEIR OWN
+             *     CHOICE, and the least alarming of the four: a snooze lifts on its own moment, so
+             *     this includes work that will come back without anybody remembering it. `not_mine`
+             *     names no moment, and lifts only when the reader picks the message back up or the
+             *     record it is filed under changes hands. `handled` lifts only when the reader picks
+             *     it back up.
              */
             set_aside: number;
             /**
@@ -43601,8 +43607,8 @@ export interface components {
              */
             median_minutes: number;
             /**
-             * @description How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
-             *     judged not sales.
+             * @description How many rows a reader put DOWN in the window — snoozed, marked not theirs,
+             *     marked done, or judged not sales. None of these is a reply sent.
              *
              *     Counted from the audit record rather than from what is set aside now. A snooze
              *     that lifted and a not_mine somebody withdrew leave no trace in the current
@@ -43881,7 +43887,7 @@ export interface components {
              *     Absent or empty means the row cannot be set aside — most sources answer
              *     through the surface that owns them and leave nothing to dispose of here.
              */
-            dispositions?: ("snooze" | "not_mine" | "not_sales")[];
+            dispositions?: ("handled" | "snooze" | "not_mine" | "not_sales")[];
             /**
              * @description The one verb this row is FOR, out of `actions`. The queue is ranked, so the
              *     reader arriving at a row should not have to weigh three equally-drawn

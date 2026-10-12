@@ -295,22 +295,11 @@ var waitingRepliesSQL = `
 	   -- get today's judgements over that day's messages, and nothing does.
 	   --
 	   -- A snooze lifts on whatever it named: its own moment, the counterparty
-	   -- writing back, or a meeting being over. The row comes back when that
-	   -- happens rather than waiting for somebody to remember it.
-	   --
-	   -- not_mine carries no moment and does not lift at all. Ending it when the
-	   -- linked record changes hands would be the kinder rule, and it is not
-	   -- implemented: a message reaches its owner through a contact, an
-	   -- company, a deal or a lead, so the re-arm is a consumer over four
-	   -- ownership events rather than a clause here. Until that exists the
-	   -- judgement stands until its reader withdraws it, and the contract says
-	   -- so rather than promising the re-arm.
-	   AND (%[20]s OR NOT EXISTS (
-	         SELECT 1 FROM activity_reader_state mine
-	          WHERE mine.activity_id = a.id
-	            AND mine.reader_id = $%[9]d
-	            AND (mine.state = 'not_mine'
-	              OR (mine.state = 'snoozed' AND NOT %[15]s))))
+	   -- writing back, or a meeting being over. not_mine lifts when the linked
+	   -- record changes hands, through the re-arm in notmineownership.go, which
+	   -- deletes the state row. handled lifts only by undo; the customer's next
+	   -- message is a new row with no state.
+	   AND (%[20]s OR NOT ` + readerSetAsideSQL("$%[9]d", "%[15]s") + `)
 	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
@@ -334,6 +323,21 @@ var waitingRepliesSQL = `
 	 HAVING ` + filedUnderALiveContactSQL + ` %[18]s
 	 ORDER BY a.occurred_at DESC
 	 LIMIT %[4]d`
+
+// readerSetAsideSQL is whether one reader has set message `a` aside: marked it
+// not theirs or handled, or snoozed it and the snooze has not lifted.
+//
+// Every read that hides set-aside work embeds this, so a new reader state is
+// added in one place. TestEveryReaderSetAsideReadIsTheSharedPredicate in
+// backend/gates holds that no other statement filters on the table.
+//
+// reader is the SQL naming the reader, and wake a messageSnoozeLiftedSQL.
+func readerSetAsideSQL(reader, wake string) string {
+	return `EXISTS (SELECT 1 FROM activity_reader_state mine
+	          WHERE mine.activity_id = a.id AND mine.reader_id = ` + reader + `
+	            AND (mine.state IN ('` + stateNotMine + `', '` + stateHandled + `')
+	              OR (mine.state = '` + stateSnoozed + `' AND NOT ` + wake + `)))`
+}
 
 // messageSnoozeLiftedSQL is whether a reader's snooze on one waiting message is
 // over, as a boolean expression the waiting query embeds.

@@ -144,8 +144,6 @@ func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg 
 	}
 	wake := messageSnoozeLiftedSQL(instant, backContent)
 	reader := arg(readerOrNobody(ctx))
-	disposition := fmt.Sprintf(`NOT EXISTS (SELECT 1 FROM activity_reader_state mine
- WHERE mine.activity_id = a.id AND mine.reader_id = $%d
- AND (mine.state = 'not_mine' OR (mine.state = 'snoozed' AND NOT %s)))`, reader, wake)
+	disposition := "NOT " + readerSetAsideSQL(fmt.Sprintf("$%d", reader), wake)
 	return append(where, "("+reviewableRequestSQL(instant)+")", "a.occurred_at <= "+instant, disposition), nil
 }

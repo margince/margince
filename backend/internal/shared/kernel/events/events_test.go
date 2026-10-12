@@ -139,6 +139,10 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// activity stream — which also carries captures and edits — the
 		// distinction is the whole point of the type.
 		"disposition_recorded": true,
+		// One reader marked a waiting message done. "handled" alone would read
+		// as the message being settled for everybody; "marked" says it is one
+		// reader's mark.
+		"marked_handled": true,
 		// Same shape and the same reason: "requested" alone would not say what
 		// was asked for, and a weekly plan's stream also carries its ordinary
 		// updates — the distinction is the point of the type, because this is

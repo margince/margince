@@ -12176,14 +12176,19 @@ export const en = {
   "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
   "worklist.disposition.snoozeFor": "Snooze duration",
   "worklist.disposition.snoozeUntil.reply": "Until they reply",
+  "worklist.disposition.verb.handled": "Done",
   "worklist.disposition.verb.not_mine": "Not mine",
+  "worklist.disposition.hint.not_mine":
+    "Removes it from your list only. The record keeps its owner. It comes back if the record changes hands.",
   "worklist.disposition.verb.not_sales": "Not a customer",
   "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
   "worklist.disposition.doneSnoozeUntil.reply":
     "Back on your list when they reply.",
+  "worklist.disposition.done.handled":
+    "Marked done for you. It comes back if they write again.",
   "worklist.disposition.done.not_mine":
-    "Removed from your list. The owner still sees it.",
+    "Removed from your list. It comes back if the record changes hands.",
   "worklist.disposition.done.not_sales": "Removed from every list.",
   "worklist.disposition.swipeCancel": "Keep",
   "worklist.disposition.menu": "Remove from list",

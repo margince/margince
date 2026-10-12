@@ -303,6 +303,7 @@ internal/modules/activities/dispositionsiblings_integration_test.go 1
 internal/modules/activities/emailrequestrequester_test.go 1
 internal/modules/activities/followupresolve_integration_test.go 3
 internal/modules/activities/followupsetting_integration_test.go 1
+internal/modules/activities/handled_integration_test.go 1
 internal/modules/activities/hiddenbacklog_integration_test.go 3
 internal/modules/activities/hiddenbacklogrows_integration_test.go 2
 internal/modules/activities/meetingfollowup_integration_test.go 1

@@ -11797,15 +11797,20 @@ export const vi = {
   "worklist.disposition.snoozeForDays_other": "Tạm hoãn {value} ngày",
   "worklist.disposition.snoozeFor": "Thời gian tạm hoãn",
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
+  "worklist.disposition.verb.handled": "Xong",
   "worklist.disposition.verb.not_mine": "Không phải việc của tôi",
+  "worklist.disposition.hint.not_mine":
+    "Chỉ gỡ khỏi danh sách của bạn. Bản ghi vẫn giữ người phụ trách. Việc này sẽ quay lại nếu bản ghi đổi người phụ trách.",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
   "worklist.disposition.doneSnooze_one": "Sẽ quay lại danh sách vào ngày mai.",
   "worklist.disposition.doneSnooze_other":
     "Sẽ quay lại danh sách sau {value} ngày.",
   "worklist.disposition.doneSnoozeUntil.reply":
     "Sẽ quay lại danh sách khi họ trả lời.",
+  "worklist.disposition.done.handled":
+    "Đã đánh dấu xong cho bạn. Việc này sẽ quay lại nếu họ viết tiếp.",
   "worklist.disposition.done.not_mine":
-    "Đã gỡ khỏi danh sách của bạn. Người phụ trách vẫn thấy việc này.",
+    "Đã gỡ khỏi danh sách của bạn. Việc này sẽ quay lại nếu bản ghi đổi người phụ trách.",
   "worklist.disposition.done.not_sales": "Đã gỡ khỏi mọi danh sách.",
   "worklist.disposition.swipeCancel": "Giữ lại",
   "worklist.disposition.menu": "Gỡ khỏi danh sách",

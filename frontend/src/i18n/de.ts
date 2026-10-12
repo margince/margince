@@ -12037,15 +12037,20 @@ export const de = {
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",
   "worklist.disposition.snoozeFor": "Dauer der Zurückstellung",
   "worklist.disposition.snoozeUntil.reply": "Bis zur Antwort",
+  "worklist.disposition.verb.handled": "Erledigt",
   "worklist.disposition.verb.not_mine": "Nicht zuständig",
+  "worklist.disposition.hint.not_mine":
+    "Entfernt den Eintrag nur von deiner Liste. Die Zuständigkeit bleibt. Wechselt sie, kommt der Eintrag zurück.",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
     "In {value} Tagen wieder auf deiner Liste.",
   "worklist.disposition.doneSnoozeUntil.reply":
     "Wieder auf deiner Liste, sobald eine Antwort kommt.",
+  "worklist.disposition.done.handled":
+    "Für dich erledigt. Bei einer neuen Nachricht kommt der Eintrag zurück.",
   "worklist.disposition.done.not_mine":
-    "Von deiner Liste entfernt. Wer zuständig ist, sieht den Eintrag weiterhin.",
+    "Von deiner Liste entfernt. Wechselt die Zuständigkeit, kommt der Eintrag zurück.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
   "worklist.disposition.swipeCancel": "Behalten",
   "worklist.disposition.menu": "Aus der Liste entfernen",

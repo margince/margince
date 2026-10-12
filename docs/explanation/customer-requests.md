@@ -43,7 +43,7 @@ asked and would not commit. That leaves the request owed and stops the pass from
 conversation again until someone writes on it again.
 
 Any user who completes the reminder linked to the evidence settles its source request. Marking a conversation as not sales removes it from request review. When a reader chooses
-snooze or `not_mine`, that changes their own queue, not what is owed for every user.
+snooze, `not_mine` or `handled`, that changes their own queue, not what is owed for every user.
 
 ## Whether a reply is still owed
 
@@ -84,7 +84,7 @@ verdict never takes out a request a human accepted. Mail from an obvious machine
 as a confirmed request.
 
 The waiting lane is the owed set, made smaller by queue rules. The rules are the horizon, the sales
-link, mail from colleagues' own company, and the snooze and `not_mine` choices of that reader. Each of
+link, mail from colleagues' own company, and the snooze, `not_mine` and `handled` choices of that reader. Each of
 those has its own number in `/worklist/hidden` too. So when a badge says a reply is owed and a lane does
 not show the row, there is always a counted reason.
 

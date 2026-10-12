@@ -739,9 +739,9 @@ export function waitingEmailRow(): WorklistItem {
     },
     move: { action: "draft_reply", activity_id: "mail-sonya" },
     actions: ["open"],
-    // Every way to put this row down, in the open: a waiting message can be
-    // deferred, handed back, or judged not to be a customer at all.
-    dispositions: ["snooze", "not_mine", "not_sales"],
+    // Every way to put this row down, in the open. A waiting message can be
+    // marked done, deferred, handed back, or judged not to be a customer.
+    dispositions: ["handled", "snooze", "not_mine", "not_sales"],
   };
 }
 

@@ -6,10 +6,10 @@ package activities
 // What the queue is NOT showing, and which rule is holding it back.
 //
 // The Worklist is designed to look finite: a rep works it to the bottom and the
-// day is done. Several rules make a waiting customer disappear from it. Three
-// are somebody's choice — `not_sales`, `not_mine`, `snooze`; one is a model's,
-// `informs_us`; the rest are nobody's, such as a message older than the horizon
-// or one with no link to a record the workspace sells to.
+// day is done. Several rules make a waiting customer disappear from it. Four
+// are somebody's choice: `not_sales`, `not_mine`, `snooze` and `handled`. One
+// is a model's, `informs_us`. The rest are nobody's, such as a message older
+// than the horizon or one with no link to a record the workspace sells to.
 //
 // Nothing watched whether any of that was hiding real work. A rep who marks
 // every hard reply `not_sales` produces a page identical to a rep with a clean
@@ -79,10 +79,9 @@ type HiddenBacklog struct {
 	// The figures below are differences between runs of this same query, so
 	// they are counted the same way and the proportions hold.
 	Shown int
-	// SetAside is work this reader has snoozed or marked not_mine. Their own
-	// choice, and the least alarming of the three — a snooze lifts on its own
-	// moment, so this figure includes work that will come back without anybody
-	// remembering it.
+	// SetAside is work this reader snoozed, marked not_mine or marked handled.
+	// Their own choice, and the least alarming of the three. A snooze lifts on
+	// its own moment, so this figure includes work that will come back by itself.
 	SetAside int
 	// NotSales is work somebody judged to be no business of the queue's. It
 	// hides the thread from the WHOLE workspace and does not lift, so it is the
@@ -215,10 +214,10 @@ type waitingRelaxation struct {
 	// reader is who is asking. Every reader-relative rule answers to them, the
 	// open request tasks assigned to somebody else included.
 	reader ids.UUID
-	// keepSetAside admits threads this reader snoozed or marked not_mine. A
-	// flag beside the reader, not a swap to the zero uuid: that spelling also
-	// means "any assignee" to the request-task rule, and hid every mail a
-	// colleague holds a request on from the relaxed read.
+	// keepSetAside admits threads this reader snoozed, marked not_mine or marked
+	// handled. It is a flag beside the reader, not a swap to the zero uuid. The
+	// zero uuid means "any assignee" to the request-task rule, and hid every
+	// mail a colleague holds a request on from the relaxed read.
 	keepSetAside bool
 	// keepNotSales admits threads somebody judged to be no sales business.
 	keepNotSales bool

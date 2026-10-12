@@ -392,7 +392,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 | `set_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `set_by` | `text` | yes |  |
 | `snoozed_until` | `timestamp with time zone` |  |  |
-| `state` | `text` | yes | One of `snoozed`, `not_mine`. |
+| `state` | `text` | yes | One of `snoozed`, `not_mine`, `handled`. |
 
 **Points at**
 
@@ -403,10 +403,10 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
-- `activity_reader_state_known`: `CHECK ((state = ANY (ARRAY['snoozed', 'not_mine'])))`
+- `activity_reader_state_known`: `CHECK ((state = ANY (ARRAY['snoozed', 'not_mine', 'handled'])))`
 - `activity_reader_state_reopen_known`: `CHECK (((reopen_on IS NULL) OR (reopen_on = ANY (ARRAY['time', 'reply', 'meeting']))))`
 - `activity_reader_state_reopen_ref_shaped`: `CHECK ((NOT ((reopen_ref IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'meeting')))))`
-- `activity_reader_state_shaped`: `CHECK ((((state = 'snoozed') AND (reopen_on IS NOT NULL) AND (NOT ((snoozed_until IS NOT NULL) IS DISTINCT FROM (reopen_on = 'time')))) OR ((state = 'not_mine') AND (snoozed_until IS NULL) AND (reopen_on IS NULL))))`
+- `activity_reader_state_shaped`: `CHECK ((((state = 'snoozed') AND (reopen_on IS NOT NULL) AND (NOT ((snoozed_until IS NOT NULL) IS DISTINCT FROM (reopen_on = 'time')))) OR ((state = ANY (ARRAY['not_mine', 'handled'])) AND (snoozed_until IS NULL) AND (reopen_on IS NULL) AND (reopen_ref IS NULL))))`
 
 **Indexes**
 
