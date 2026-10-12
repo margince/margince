@@ -406,11 +406,11 @@ func (r *crawlRun) skip(candURL string, reason crmcontracts.SiteReadSkipReason) 
 func stopReason(ctx context.Context, pages, maxPages, bytes, maxBytes int) *crmcontracts.SiteReadReportStoppedReason {
 	switch {
 	case ctx.Err() != nil:
-		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonDeadline)
+		return new(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonDeadline)
 	case pages >= maxPages:
-		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonPageCap)
+		return new(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonPageCap)
 	case bytes >= maxBytes:
-		return stoppedPtr(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonByteCap)
+		return new(crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonByteCap)
 	default:
 		return nil
 	}
@@ -450,8 +450,4 @@ func linkCandidates(links []string) []crawlCandidate {
 		cands = append(cands, crawlCandidate{url: link})
 	}
 	return cands
-}
-
-func stoppedPtr(reason crmcontracts.SiteReadReportStoppedReason) *crmcontracts.SiteReadReportStoppedReason {
-	return &reason
 }

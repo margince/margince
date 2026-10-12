@@ -33,14 +33,15 @@ func demoteForRelationshipPatch(ctx context.Context, tx pgx.Tx, current relation
 func patchRelationshipRow(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateRelationshipInput, capturedBy string) (relationshipRow, error) {
 	var args []any
 	arg := func(v any) string { args = append(args, v); return storekit.SQLf("$%d", len(args)) }
-	row, role, primary := arg(id), arg(in.Role), arg(in.IsCurrentPrimary)
+	row, primary := arg(id), arg(in.IsCurrentPrimary)
+	role := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::text, role) END", arg(in.ClearRole), arg(in.Role))
 	started := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::date, started_at) END", arg(in.ClearStartedAt), arg(in.StartedAt))
 	ended := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::date, ended_at) END", arg(in.ClearEndedAt), arg(in.EndedAt))
 	status := storekit.SQLf("coalesce(%s::text, employment_status)", arg(in.EmploymentStatus))
 	startPrecision := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::text, started_precision) END", arg(in.ClearStartedAt), arg(in.StartedPrecision))
 	endPrecision := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::text, ended_precision) END", arg(in.ClearEndedAt), arg(in.EndedPrecision))
 	captured := arg(capturedBy)
-	query := storekit.SQLf(`UPDATE relationship SET role=coalesce(%s,role), captured_by=%s,
+	query := storekit.SQLf(`UPDATE relationship SET role=%s, captured_by=%s,
  is_current_primary=coalesce(%s,is_current_primary) AND (kind<>'employment' OR %s),
  started_at=%s, ended_at=%s, employment_status=%s, started_precision=%s, ended_precision=%s
  WHERE id=%s RETURNING %s`, role, captured, primary, employment.IsCurrentSQL(ended, status, endPrecision), started, ended, status, startPrecision, endPrecision, row, relationshipColumns)

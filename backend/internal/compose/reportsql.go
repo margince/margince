@@ -93,6 +93,10 @@ type fetchedRows struct {
 	frame    reportFrame
 	// narrowed is reportOutcome.PopulationNarrowed.
 	narrowed string
+	// total is how many groups matched, which is more than len(rows) when the
+	// row limit cut the answer. The drill-through beside this one keeps the
+	// same figure for the same reason (derivationfetch.go).
+	total int
 }
 
 func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) (fetchedRows, error) {
@@ -128,16 +132,23 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			out.excluded = &n
 			where = append(where, maskClauses...)
 		}
-		sql, args, err := bindReportTokens(ctx, out.frame, reportSQL(spec, selects, where, groupBy), args)
+		// Bound separately from `args`, which stays the unbound slice the count
+		// below binds its own statement from. Binding appends a value per token
+		// the statement names, so a second bind over an already-bound slice
+		// numbers its placeholders past the values it just added.
+		sql, boundArgs, err := bindReportTokens(ctx, out.frame, reportSQL(spec, selects, where, groupBy), args)
 		if err != nil {
 			return err
 		}
-		pgRows, err := tx.Query(ctx, sql, args...)
+		pgRows, err := tx.Query(ctx, sql, boundArgs...)
 		if err != nil {
 			return fmt.Errorf("report %s: %w", report, err)
 		}
 		defer pgRows.Close()
-		out.rows, err = scanReportRows(pgRows, columns)
+		if out.rows, err = scanReportRows(pgRows, columns); err != nil {
+			return err
+		}
+		out.total, err = countReportGroups(ctx, tx, out.frame, spec, where, groupBy, selects, len(out.rows), args)
 		return err
 	})
 	if err != nil {
@@ -329,4 +340,53 @@ func bindReportTokens(
 		return "", nil, err
 	}
 	return sql, args, nil
+}
+
+// countReportGroups answers how many groups the report actually matched.
+//
+// A short page is its own total: the statement returned every group it found,
+// so counting again would cost a second pass over the same rows to learn what
+// len() already says. Only a FULL page can have been cut, and that is the one
+// case worth a query.
+//
+// It counts the grouped statement without its limit rather than counting the
+// underlying rows: the report's unit is the group, and a thousand groups over a
+// million deals is a thousand.
+func countReportGroups(
+	ctx context.Context, tx pgx.Tx, frame reportFrame, spec reportSpec,
+	where, groupBy, selects []string, shown int, args []any,
+) (int, error) {
+	if shown < reportRowLimit {
+		return shown, nil
+	}
+	// Without dimensions the statement yields one aggregate row, which no limit
+	// can cut.
+	if len(groupBy) == 0 {
+		return shown, nil
+	}
+	positions := make([]string, len(groupBy))
+	for i := range groupBy {
+		positions[i] = fmt.Sprint(i + 1)
+	}
+	// The dimension selects are the first len(groupBy) entries, which is what
+	// reportSQL's positional GROUP BY means by 1..n. Grouping the subquery by
+	// position keeps the two statements saying the same thing.
+	inner := fmt.Sprintf("SELECT %s FROM %s",
+		strings.Join(selects[:len(groupBy)], ", "), spec.fromClause())
+	// A report whose population needs no clause renders none, and a bare WHERE
+	// is a syntax error, which is why reportSQL writes the keyword inside
+	// this test rather than above it.
+	if len(where) > 0 {
+		inner += " WHERE " + strings.Join(where, " AND ")
+	}
+	inner += " GROUP BY " + strings.Join(positions, ", ")
+	sql, bound, err := bindReportTokens(ctx, frame, "SELECT count(*) FROM ("+inner+") g", args)
+	if err != nil {
+		return 0, err
+	}
+	var total int
+	if err := tx.QueryRow(ctx, sql, bound...).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count report groups: %w", err)
+	}
+	return total, nil
 }

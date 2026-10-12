@@ -72,6 +72,7 @@
 package extension
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"regexp"
@@ -79,8 +80,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // nameGrammar is the one spelling of the unit-name rule; the grammar in
@@ -170,7 +173,7 @@ type Version string
 // and whitespace framing have no honest reading there.
 func (v Version) Validate() error {
 	if v == "" {
-		return fmt.Errorf("extension version is empty — the boot inventory records it")
+		return errors.New("extension version is empty — the boot inventory records it")
 	}
 	if strings.TrimSpace(string(v)) != string(v) {
 		return fmt.Errorf("extension version %q carries surrounding whitespace", string(v))
@@ -196,7 +199,7 @@ type Description string
 // verbatim to an operator and written into the unit manifest.
 func (d Description) Validate() error {
 	if strings.TrimSpace(string(d)) == "" {
-		return fmt.Errorf("extension description is empty — the access screen lists the unit by it")
+		return errors.New("extension description is empty — the access screen lists the unit by it")
 	}
 	if strings.TrimSpace(string(d)) != string(d) {
 		return fmt.Errorf("extension description %q carries surrounding whitespace", string(d))
@@ -241,6 +244,15 @@ type Extension struct {
 	// At most one rule set per jurisdiction code across the composed set; two
 	// would be two answers, and the boot refuses them.
 	Messaging []messaging.Rules
+
+	// SubjectRights are the unit's data-subject-request deadlines. The same
+	// one-set-per-code rule as Messaging, and the code must be one of this
+	// unit's own Jurisdictions.
+	SubjectRights []subjectrights.Rules
+
+	// Documents are the compliance documents the unit ships for its
+	// jurisdictions. The admin page serves the selected jurisdiction's set.
+	Documents []compliancedocs.Document
 
 	// Tools are the governed agent tools the unit contributes: named
 	// operations running at a requested risk tier. Their tiers

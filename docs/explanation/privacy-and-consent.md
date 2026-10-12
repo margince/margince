@@ -327,15 +327,45 @@ an installation sets. `backend/gates/aicallsubject_test.go` is the census that k
 complete. Every model call in the tree either names its subject, says why it is about no single
 record, or is listed as owing one.
 
-## Jurisdiction retention floors
+## The installation's jurisdiction
 
-A retention action that destroys data must not break a legal floor. Packs for each jurisdiction are extensions
-(`extensions/de`), built in through the `ports/jurisdiction` seam; see
-[extensibility.md](extensibility.md). Core code never names a jurisdiction. The **`de`** (German) pack
+An installation runs under one jurisdiction, stored as `installation.country`. It comes from
+`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/de`, `extensions/vn`), built in through the
+`ports/jurisdiction` seam; see [extensibility.md](extensibility.md). Core code never names a
+jurisdiction.
+
+The selected pack decides three things: the retention floor, the messaging rules and the request
+deadlines. A pack compiled in but not selected applies nothing.
+
+- With no jurisdiction set, requests get one calendar month (GDPR Art. 12(3)). Messaging takes the
+  strict rules every jurisdiction shares. Retention keeps the longest floor of every compiled-in pack,
+  so a new release exposes no mail that was kept safe the day before.
+- A change to a weaker floor carries the old one. The change writes `privacy.retention_floor_carry`
+  in the same transaction. Mail sent or received before the change keeps the old floor until its window
+  closes. The carry is never lowered.
+- An owner's delete of captured mail, and a retention erase, check the floor in force again inside the
+  transaction that destroys. So a change between choosing and destroying cannot destroy mail the floor keeps.
+- Boot refuses a stored code with no compiled-in pack, in the api and in the worker.
+
+`privacy.ResolveFloorPolicy` resolves the floor once per decision. Every path that destroys data passes
+it down.
+
+### Request deadlines
+
+A pack may declare a deadline per request kind (`SubjectRights`), in calendar units or in hours. A kind
+it leaves out gets the GDPR month. The confirm link and a request filed by hand share one resolver.
+Each request stores the rule as `due_rule`, such as `gdpr` or `vn v1`.
+
+A request filed by hand may carry an earlier date, stored with `due_overridden`. A later date gets
+`422`. A row filed before this has a NULL `due_rule`.
+
+### Retention floors
+
+A retention action that destroys data must not break a legal floor. The **`de`** (German) pack
 declares GoBD retention classes.
 
-The retention check takes the longest built-in floor for business
-correspondence. It keeps outside business correspondence (a *Handelsbrief*) from being destroyed
+The retention check takes the selected pack's floor for business correspondence, or the longest
+built-in floor when no jurisdiction is set. It keeps outside business correspondence (a *Handelsbrief*) from being destroyed
 before that floor. An internal note or task is not correspondence and carries no floor. A fitness test
 pins that line (a 400-day email lives on; a note as old as that is erased).
 
@@ -380,6 +410,48 @@ a decision only a human makes: a named user who holds `activity.update`, with a 
 To keep data too long is something a privacy authority may question later, while destroyed data
 cannot come back. So the undo is narrow, and the database refuses what the writer refuses.
 
+## A website lead is told before it is kept
+
+A site read can name somebody on a company's team page. Accepting them as a lead
+also sends them the Art. 14 privacy notice, before any other message. It is the
+same `privacy_notice` controller mail a contact gets, in the installation's mail
+language. Its link opens the same disclosure page.
+
+- **One transaction.** Spending the approval, the lead's capture and the
+  staged notice commit together. When the notice cannot be given, the capture is
+  undone and the record of why commits in its place
+  (`sendArticle14Notice` in `internal/compose/siteleadnotice.go`). A failure of
+  the transaction itself commits nothing, so deciding again retries it.
+- **A published address is required.** Somebody whose page printed no address is
+  never kept.
+- **An address another lead holds keeps nothing.** The website's copy is not
+  stored and no merge is proposed. The existing lead is left as it is.
+- **A failed notice deletes the lead.** No address, a refused send or a hard bounce
+  deletes the lead, its notice mail and its captured original. The contact's entry
+  in the site read is removed, and the accepted proposal is emptied
+  (`privacy.EraseUntoldLeadTx`).
+- **A lead waits for its notice.** It cannot be made a contact, claimed, given
+  an owner, routed or merged until its notice has been sent for 72 hours without
+  a bounce. A website lead with no notice record is held too.
+- **Only the accept can make a website lead.** The website source
+  (`provenance.WebsiteLeadSource`) is reserved: no create request or import may
+  set it, and nothing changes it later. The notice and the erasure check the
+  proposal and the proof row the accept wrote, not the lead's own columns.
+- **The proof row names nobody.** `lead_privacy_notice` records the wording
+  version, the language, the delivery and the outcome. After a failure it is the
+  only record left, apart from rows under a statutory hold.
+
+A notice mail under a statutory hold stays until the hold ends. Ending a hold
+clears the delivery the same way an erasure does, which empties its recipients.
+
+The lane stays closed until a reviewed wording is named. `siteLeadNoticeReviewed`
+holds the `privacy_notice` version that passed legal review, and zero means none
+has. Staging, the check before a decision and the accept step all ask
+`siteLeadLaneRefusal`.
+`TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path
+stops calling the notice step. It also fails when the reviewed version is not the
+version the build sends.
+
 ## Where the code lives
 
 | | |
@@ -395,6 +467,7 @@ cannot come back. So the undo is narrow, and the database refuses what the write
 | Refused sends and who directed one | `internal/modules/consent/review.go`, `instruction.go`, `instructionconsume.go` (`communication_review`, `communication_instruction`) |
 | Withdrawal credentials | `internal/modules/consent/withdrawalcredential.go` (`withdrawal_credential`) |
 | Duties to tell | `internal/modules/consent/noticecase.go` (`privacy_notice_case`) |
+| A website lead's notice | `internal/modules/consent/leadnotice.go` (`lead_privacy_notice`), `internal/compose/siteleadnotice.go`, `internal/modules/privacy/erasure_untoldlead.go` |
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
 | The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
 | Cross-store agreement | `backend/gates/tableownership_test.go` |

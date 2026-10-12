@@ -53,7 +53,7 @@ The shell comes last in this group: it is the part users see most, and the safes
 
 1. **The ground tokens.** Move the light ladder to the new ground.
    `--bgPage` → `#f1f5f2`, a light green, and `--bgElevated` → the full colour behind a pane.
-   `--bgCard` and `--bgHover` sit one step apart, and `--bgSidebar` → the `glass` value.
+   `--bgInset` and `--bgHover` sit one step apart.
    Add `--pane`, `--paneEdge`, `--glowA` and `--glowB`.
    The last two are the glow in each corner, at `.06`/`.10` light and `.10`/`.20` dark.
 
@@ -143,7 +143,7 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 1. **The ground and glow.** `.app` draws `--bgPage` with a round glow at the top left and the top right, as a
    background.
    That is `--glowA` and `--glowB`; they are not an element, and not a motion.
-2. **Rail.** `glass` (`--bgSidebar` and `blur`) over the glow, a hairline on the right, no dark ground.
+2. **Rail.** `glass` (`--pane` and `blur`) over the glow, a hairline on the right, no dark ground.
    Closed, it stays **64px**. The 44px touch targets and the tooltip rule in `shell.css` depend on that width.
    Breaking them for the 52px of the mock costs too much. Open, it is 224px, not 252.
 

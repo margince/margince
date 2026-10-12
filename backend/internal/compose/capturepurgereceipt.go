@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // KeptBreakdown is the skipped count, by the reason each message survived.
@@ -62,7 +64,7 @@ type KeptBreakdown struct {
 // shown "commercial correspondence, six years" beside a zero would reasonably
 // read it as the rule that applied to their deletion, when in fact nothing of
 // theirs was a Handelsbrief.
-func keptBreakdown(subject capture.PurgeSubject) KeptBreakdown {
+func keptBreakdown(subject capture.PurgeSubject, policy privacy.FloorPolicy) KeptBreakdown {
 	kept := KeptBreakdown{
 		Held:                   len(subject.Held),
 		UnderStatute:           len(subject.UnderStatute),
@@ -70,9 +72,10 @@ func keptBreakdown(subject capture.PurgeSubject) KeptBreakdown {
 		UnderUndeterminedFloor: len(subject.UnderUndeterminedFloor),
 	}
 	if kept.UnderStatute > 0 {
-		name, keep, fromYearEnd := privacy.StatutoryFloorClass()
-		kept.StatutoryClass = name
-		kept.StatutoryFromYearEnd = fromYearEnd
+		class := policy.StrictestClass(time.Now())
+		keep := class.Keep
+		kept.StatutoryClass = string(class.Name)
+		kept.StatutoryFromYearEnd = class.Anchor == jurisdiction.AnchorCalendarYearEnd
 		// Only a whole-year period is reported. A class declared in months or
 		// days has no number this copy can say truthfully, and rounding it
 		// would tell somebody their mail is held for longer or shorter than it

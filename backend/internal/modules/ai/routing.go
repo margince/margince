@@ -5,10 +5,10 @@ package ai
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
-	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -250,13 +250,13 @@ func (p Profile) Valid() bool {
 
 func (cfg RoutingConfig) validate() error {
 	if cfg.Profile == "" {
-		return fmt.Errorf("ai: routing config: profile is required (eu_hosted | sovereign | cloud_frontier)")
+		return errors.New("ai: routing config: profile is required (eu_hosted | sovereign | cloud_frontier)")
 	}
 	if !cfg.Profile.Valid() {
 		return fmt.Errorf("ai: routing config: unknown profile %q", cfg.Profile)
 	}
 	if len(cfg.Tiers) == 0 {
-		return fmt.Errorf("ai: routing config: no tiers bound")
+		return errors.New("ai: routing config: no tiers bound")
 	}
 	// Every tier's routing faults are gathered before refusing, so an editor
 	// that sent several bad values hears about all of them at once.
@@ -278,7 +278,7 @@ func (cfg RoutingConfig) validate() error {
 		return err
 	}
 	if cfg.Embeddings.Provider == "" {
-		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
+		return errors.New("ai: routing config: embeddings lane has no provider")
 	}
 	if err := refuseDecisionOnlyProvider("the embeddings lane", cfg.Embeddings.Provider); err != nil {
 		return err
@@ -293,10 +293,10 @@ func (cfg RoutingConfig) validate() error {
 	// it from embeddingsBinding for the same reason, but the schema is editor
 	// tooling and cannot be the thing that holds this.
 	if cfg.Embeddings.Input != nil {
-		return fmt.Errorf("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
+		return errors.New("ai: routing config: the embeddings lane takes no `input` — it sends no attachments; declare it on the chat tier that reads documents")
 	}
 	if cfg.Embeddings.ThinkingLevel != "" {
-		return fmt.Errorf("ai: routing config: the embeddings lane takes no `thinking_level` — an embedding is one forward pass and does not think; declare it on a chat tier")
+		return errors.New("ai: routing config: the embeddings lane takes no `thinking_level` — an embedding is one forward pass and does not think; declare it on a chat tier")
 	}
 	if cfg.Profile == ProfileSovereign {
 		if !localProviders[cfg.Embeddings.Provider] {
@@ -347,7 +347,7 @@ func AllTiers() []Tier {
 	for tier := range knownTiers {
 		out = append(out, tier)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	slices.Sort(out)
 	return out
 }
 

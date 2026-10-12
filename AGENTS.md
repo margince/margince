@@ -70,7 +70,9 @@ word on what the product does now, so check it before a change of yours trusts a
 **Docs follow the writing rules.** Every Markdown page follows
 [docs/reference/docs-prose-style.md](docs/reference/docs-prose-style.md), and
 `backend/gates/docsprose_test.go` fails what a pattern can see. A count, default or path you write is
-one you checked in the code; history goes in git.
+one you checked in the code; history goes in git. A new page goes in the folder its one job
+names, in that page's table "One job per page". What a user of the app sees goes in `docs/handbook/`,
+never in `reference/` or `how-to/`, which are for those who build or run Margince.
 
 **A red `main` is claimed once.** Before you look into a failure that is not yours, run
 `gh pr list --state open --label "claim: main-red"` and read the bodies; each names the tests it
@@ -277,7 +279,7 @@ rules for good code P1–P5 (`idiomatic`, `small-focused`, `tests-as-spec`, `pr-
   state the invariant as it is now, and leave the history to git. T1 says
   `match the surrounding file's density`; read that as a level to come in under, not one to match.
   This tree is at 0.43 and the standard Go packages at 0.20, so to match the tree keeps its drift. `make comment-budget` holds
-  the diff at 1.0; `comment-density` holds the tree, which may go down and never up.
+  the diff at 1.0; `comment-density` and `comment-stats` hold the tree, which may go down and never up.
 - **Never hide an error** (T2): no `_ = f()`, no empty `catch`, no return you do not check. Errors go
   through the fixed error values in `apperrors`. Messages say what is wrong and what to do, and never
   show what is inside (no stack, SQL or table names to a client).
@@ -296,9 +298,9 @@ rules for good code P1–P5 (`idiomatic`, `small-focused`, `tests-as-spec`, `pr-
   the smallest diff that does the job?
 
 **The strict gate runs before every push.** `.githooks/pre-push` runs `craft static --strict` over the
-Go files this push changes against `origin/main`, in `backend/`, `extensions/`, `fixtures/` and
-`desktop/`. There are no old findings to waive: the tree has no findings, so code you touch must be
-clean.
+Go and TypeScript files this push changes against `origin/main`. The code checks read whole Go files
+and the tree has no findings, so code you touch must be clean. The comment checks read only the lines
+you add; the rules are in [docs-prose-style.md](docs/reference/docs-prose-style.md#comments-in-code).
 
 - `BLOCKER` and `MAJOR` both block; `MINOR` is advisory.
 - Size limits: 80 code lines per function and 500 per file; 160 and 1000 for `*_test.go`. A line that

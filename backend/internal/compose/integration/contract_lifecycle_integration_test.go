@@ -193,8 +193,7 @@ func TestATerminalContractDoesNotReopen(t *testing.T) {
 
 	_, err = e.Contracts.ChangeStatus(admin, id, contracts.StatusActive, nil)
 
-	var transition *contracts.InvalidStatusTransitionError
-	if !errors.As(err, &transition) {
+	if _, ok := errors.AsType[*contracts.InvalidStatusTransitionError](err); !ok {
 		t.Fatalf("reviving an expired contract: err = %v, want InvalidStatusTransitionError", err)
 	}
 }
@@ -384,13 +383,11 @@ func TestTwoConcurrentRenewalsLeaveOneSuccessor(t *testing.T) {
 	errs := make([]error, racers)
 	var wg sync.WaitGroup
 	for i := range racers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			results[i], errs[i] = e.Contracts.Renew(e.Admin(), predecessorID, contracts.CreateContractInput{
 				Title: fmt.Sprintf("MSA 2027 (%d)", i), ValueBasis: contracts.BasisTotal, Source: "manual",
 			}, nil)
-		}()
+		})
 	}
 	wg.Wait()
 

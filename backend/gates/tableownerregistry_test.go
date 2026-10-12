@@ -158,6 +158,8 @@ var tableOwners = map[string]string{
 	// compose's hourly deal_scout pass through deals.RecordSuggestionTx, and
 	// decided by a rep through the deals store.
 	"deal_suggestion":          "internal/modules/deals",
+	"tag_suggestion":           "internal/modules/collections",
+	"tag_suggestion_evidence":  "internal/modules/collections",
 	"deal_suggestion_evidence": "internal/modules/deals",
 	// The project is its own bounded context, superseding ADR-0073 — see
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
@@ -251,6 +253,7 @@ var tableOwners = map[string]string{
 	// relies on them lives.
 	"contact_acquisition_evidence": "internal/modules/contacts",
 	"privacy_notice_case":          "internal/modules/consent",
+	"lead_privacy_notice":          "internal/modules/consent",
 	"consent_text_version":         "internal/modules/consent",
 	"communication_decision":       "internal/modules/consent",
 	"communication_basis":          "internal/modules/consent",
@@ -369,6 +372,7 @@ var tableOwners = map[string]string{
 	"provider_connection_budget": "internal/modules/integrations",
 	"provider_run":               "internal/modules/integrations",
 	"provider_run_reservation":   "internal/modules/integrations",
+	"provider_run_category":      "internal/modules/integrations",
 	// The purchased VALUES, owned by contacts rather than by integrations
 	// (migration 0219 says so in the DDL): the domain decides what a claim
 	// means and how it renders, while integrations owns the run that bought

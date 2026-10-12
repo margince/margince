@@ -3,7 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 /**
  * Every pipeline, stages included, in the server's order.
@@ -20,12 +20,11 @@ export function usePipelines(enabled = true) {
     queryKey: ["pipelines", "all"],
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
       return data.data;
     },
   });

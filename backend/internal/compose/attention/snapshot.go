@@ -7,7 +7,10 @@ package attention
 
 import (
 	"context"
+	"log/slog"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // Snapshots composes a multi-statement read inside a single database snapshot.
@@ -64,4 +67,14 @@ func (s *Service) degradable(ctx context.Context, budget time.Duration, fn func(
 		return fn(ctx)
 	}
 	return s.snapshots.Degradable(ctx, budget, fn)
+}
+
+// laneFailureLevel is the level a lane the page named as unavailable is logged
+// at. A caller who left takes the lane's connection with them. That failure
+// sits below the level an operator sweeps for faults.
+func laneFailureLevel(ctx context.Context) slog.Level {
+	if httperr.CallerLeft(ctx) {
+		return slog.LevelDebug
+	}
+	return slog.LevelError
 }

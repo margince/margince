@@ -173,15 +173,10 @@ describe("LicenseCard", () => {
     render(<LicenseCard />);
 
     const rule = await waitFor(() => screen.getByText(/Read-only seats/));
-    const row = rule.closest(".settingrow");
-    if (!row) {
-      throw new Error("the seat rule is not a settings row's description");
-    }
-    // One row holds the label, the rule and the reading — the whole
-    // comparison, which is what makes it one reading.
-    expect(row.textContent).toContain("Seats");
     const reading = screen.getByText(ofGranted("9", "10"));
-    expect(row.contains(reading)).toBe(true);
+    // One reading holds the label and the figure: no settings row frames it.
+    expect(reading.closest(".stat-card")?.textContent).toContain("Seats");
+    expect(reading.closest(".settingrow")).toBeNull();
     expect(
       rule.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -223,8 +218,11 @@ describe("LicenseCard", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("No license configured")),
+      await waitFor(() => screen.getByText("This installation has no license")),
     ).toBeTruthy();
+    // Said once: the callout's title, with no standing line repeating it.
+    expect(screen.getAllByText(/no license/i)).toHaveLength(1);
+    expect(screen.getByText("12")).toBeTruthy();
     expect(screen.queryByRole("meter")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -275,8 +273,8 @@ describe("LicenseCard", () => {
         screen.getByText("This installation’s license was refused"),
       ),
     ).toBeTruthy();
-    expect(screen.getByText("License refused")).toBeTruthy();
-    expect(screen.queryByText("No license configured")).toBeNull();
+    expect(screen.getAllByText(/refused/i)).toHaveLength(1);
+    expect(screen.queryByText("This installation has no license")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -523,7 +521,7 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("No license configured")),
+      await waitFor(() => screen.getByText("This installation has no license")),
     ).toBeTruthy();
     expect(screen.queryByText("Licensed to")).toBeNull();
   });

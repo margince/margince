@@ -51,6 +51,7 @@ import {
   problemMessageOf,
   QueryGate,
   throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import { ThreadFold } from "./company/glance";
@@ -119,11 +120,11 @@ import {
   ListTable,
   listFetchLimit,
   useListQuery,
-  useOwnerChips,
   useTagChips,
 } from "./listquery";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
+import { useOwnerChips } from "./ownerdials";
 import { PartnerTab } from "./partners";
 import {
   type OpenReceipt,
@@ -191,21 +192,20 @@ async function fetchCompaniesPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Company>> {
-  const { data, error } = await api.GET("/companies", {
-    params: {
-      query: {
-        q: query.q || undefined,
-        sort: query.sort || undefined,
-        include_archived: query.includeArchived || undefined,
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        ...listQueryParams(query.filters),
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: {
+        query: {
+          q: query.q || undefined,
+          sort: query.sort || undefined,
+          include_archived: query.includeArchived || undefined,
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          ...listQueryParams(query.filters),
+        },
       },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {
@@ -276,8 +276,8 @@ export function CompaniesScreen() {
               label={t("create.company")}
               invalidate="companies"
               screen="companies"
-              create={(values, rows) =>
-                createCompany(values, rows, cf.toBody(values), t)
+              create={(values, rows, key) =>
+                createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
               fields={[...companyCreateFields, ...cf.formFields]}
@@ -726,13 +726,11 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   const companyQuery = useQuery({
     queryKey: ["company", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 
@@ -925,9 +923,6 @@ function useChronologySlots({
     kind: "company",
     recordId: company.id,
     filter,
-    // A narrowed read is a question about what was said, so the record's own
-    // edits stand down: they are not meetings, and not what the reader asked.
-    narrowed: hasTimelineFilters(filters),
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -985,29 +980,26 @@ function useChronologySlots({
         </>
       ),
       timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
-      // Every cut renders through the ONE chronicle: Changes draws the same
-      // change rows the All view interleaves and Conversations the same
-      // thread rows, so no cut is a second rendering of rows another cut
-      // already shows. The By-field reading and the put-back control live in
-      // the record's Full history (the header's overflow menu), the one
-      // surface that carries the restore write.
+      // Every cut renders through the one chronicle, so no cut is a second
+      // rendering of rows another cut shows. The By-field reading and the
+      // put-back control live in the record's Full history (the header's
+      // overflow menu), the one surface that carries the restore write.
       timelineNotice:
         chronologyNotice(
           filter === "conversations"
             ? "chronology.conversationsEmpty"
             : "co.timeline.empty",
+          filter,
+          history,
           {
-            // The two feeds are read together rather than per filter.
-            loading: loading || history.loading || timeline.isPending,
-            failed: failed || history.failed || timeline.isError,
+            loading: loading || timeline.isPending,
+            failed: failed || timeline.isError,
             // A narrowed read is the list's own and is assembled once it
             // answers; the unfiltered one is the 360's section.
             assembled: hasTimelineFilters(filters)
               ? timeline.isSuccess
               : Boolean(view?.activities),
-            filter,
           },
-          history.entries.length,
           t,
         ) ??
         // The Conversations cut narrows the chronicle to the exchanges

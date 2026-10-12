@@ -452,6 +452,9 @@ const (
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
+	AttachmentArchived                    SubscribableEventType = "attachment.archived"
+	AttachmentCreated                     SubscribableEventType = "attachment.created"
+	AttachmentUpdated                     SubscribableEventType = "attachment.updated"
 	AuditAppended                         SubscribableEventType = "audit.appended"
 	ColdstartAccepted                     SubscribableEventType = "coldstart.accepted"
 	ColdstartReadBackProposed             SubscribableEventType = "coldstart.read_back_proposed"
@@ -591,6 +594,12 @@ func (e SubscribableEventType) Valid() bool {
 	case ApprovalDecided:
 		return true
 	case ApprovalRequested:
+		return true
+	case AttachmentArchived:
+		return true
+	case AttachmentCreated:
+		return true
+	case AttachmentUpdated:
 		return true
 	case AuditAppended:
 		return true
@@ -1005,6 +1014,56 @@ type PublicEventApprovalRequested struct {
 
 	// TargetEntityType The polymorphic entity type the staged action targets.
 	TargetEntityType string `json:"target_entity_type"`
+}
+
+// PublicEventAttachmentArchived Payload for attachment.archived. A file was archived off a record.
+// Archiving is this subsystem's delete: the row and the stored bytes stay, and the file leaves every live listing. It carries the same shape as the other two so a subscriber routes all three the same way, and the same omissions for the same reasons.
+type PublicEventAttachmentArchived struct {
+	// ByteSize The stored size.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hung off.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hung off.
+	ParentType string `json:"parent_type"`
+}
+
+// PublicEventAttachmentCreated Payload for attachment.created. A file was uploaded against a record.
+// The attachment's own id is the envelope's `entity.id` and the uploader is its `actor`, so neither is repeated here.
+// No filename, and no content. A filename is text a stranger or a rep typed, and it can be the sensitive part by itself: "redundancy letter Weber.pdf" states a fact about a named human to every subscriber of the workspace. A subscriber that needs the name reads the attachment back through the API under its own reader's permissions, which is the rule the envelope follows for every record body.
+// An attachment that arrives with captured mail emits no event of its own. The mail's own activity.captured covers it, and a second event for one arrival would make one delivery look like two.
+type PublicEventAttachmentCreated struct {
+	// ByteSize The size counted while storing the bytes, not the length the upload declared. Null on a row stored before the column was counted, because the column is nullable and this mirrors it rather than inventing a zero.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hangs off. A subscriber routes on this rather than on the attachment.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hangs off. That record is also where the authority to change the file comes from (activity | contact | company | deal | lead | contract).
+	ParentType string `json:"parent_type"`
+}
+
+// PublicEventAttachmentUpdated Payload for attachment.updated. A file's metadata was edited: its category, title, document state, pinning, or which document it supersedes.
+// It carries which file changed and not what it now says. The omission is the one attachment.created makes: a title is typed text just as a filename is, so a delta carrying the new title would publish what the filename rule withholds. A subscriber that needs the current metadata reads the attachment back under its own permissions.
+type PublicEventAttachmentUpdated struct {
+	// ByteSize The stored size. A metadata edit does not change it.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none. A metadata edit does not change it.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hangs off.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hangs off.
+	ParentType string `json:"parent_type"`
 }
 
 // PublicEventAuditAppended Payload for audit.appended — not currently delivered: there is no emit site for this type, and none is planned for V1. It exists so the §5 catalog (events.Types()) is completely covered by a payload schema (the whole-catalog coverage gate), never carrying a subscribable type with no contract. An empty payload by design — the audit ledger row it would announce is workspace-level (its subject is resolved back under the receiver's own scope), so no record detail rides the event.
@@ -2523,6 +2582,18 @@ func (PublicEventApprovalRequested) EventType() string { return "approval.reques
 
 func (PublicEventApprovalRequested) EntityType() string { return "approval" }
 
+func (PublicEventAttachmentArchived) EventType() string { return "attachment.archived" }
+
+func (PublicEventAttachmentArchived) EntityType() string { return "attachment" }
+
+func (PublicEventAttachmentCreated) EventType() string { return "attachment.created" }
+
+func (PublicEventAttachmentCreated) EntityType() string { return "attachment" }
+
+func (PublicEventAttachmentUpdated) EventType() string { return "attachment.updated" }
+
+func (PublicEventAttachmentUpdated) EntityType() string { return "attachment" }
+
 func (PublicEventAuditAppended) EventType() string { return "audit.appended" }
 
 func (PublicEventAuditAppended) EntityType() string { return "audit" }
@@ -3037,6 +3108,9 @@ var PublicEventVersions = map[string]int{
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.requested":                        1,
+	"attachment.archived":                       1,
+	"attachment.created":                        1,
+	"attachment.updated":                        1,
 	"audit.appended":                            1,
 	"coldstart.accepted":                        1,
 	"coldstart.read_back_proposed":              1,

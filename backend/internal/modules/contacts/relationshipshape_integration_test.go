@@ -225,12 +225,11 @@ func TestAnEdgeCannotCarryAnEndpointItsKindDoesNotTake(t *testing.T) {
 	// on that instead — which is a pass for the wrong reason, and how the
 	// mutation check caught this fixture the first time.
 	contact := e.seedContact(ctx, t, "Jonas Petersen", nil, nil)
-	var shapeErr *RelationshipShapeError
 	_, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
 		Kind: employmentKind, ContactID: &contact, CompanyID: &employer,
 		CounterpartyCompanyID: &stranger,
 	})
-	if !errors.As(err, &shapeErr) {
+	if _, ok := errors.AsType[*RelationshipShapeError](err); !ok {
 		t.Errorf("an employment carrying a counterparty company answered %v, want a shape refusal — "+
 			"the row lands, and every reader that names \"the other end\" walks the columns in a "+
 			"fixed order and never mentions it", err)

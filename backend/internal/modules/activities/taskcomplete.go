@@ -27,7 +27,7 @@ import (
 func (s *Store) CompleteTask(ctx context.Context, id ids.ActivityID, settledAt time.Time) (bool, error) {
 	// Every attempt re-reads and re-asks: a task reopened between a skewed
 	// attempt and the next is a change after settledAt like any other.
-	for attempt := 0; attempt < completionAttempts; attempt++ {
+	for range completionAttempts {
 		current, err := s.GetActivity(ctx, id, storekit.LiveOnly)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil

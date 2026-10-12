@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { pickOption } from "../design-system/select-testing";
 import { SetupClaimScreen } from "./setupclaim";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -31,7 +32,10 @@ const meta: Meta<typeof SetupClaimScreen> = {
       </StoryProviders>
     ),
   ],
-  args: { onClaimed: () => {} },
+  args: {
+    onClaimed: () => {},
+    status: { claimable: true, jurisdictions: ["de", "vn"] },
+  },
 };
 export default meta;
 
@@ -56,6 +60,7 @@ async function fill(canvasElement: HTMLElement) {
     canvas.getByLabelText(/choose a password/i),
     "correct horse battery",
   );
+  await pickOption(user, canvas.getByLabelText(/jurisdiction/i), "Germany");
   return { canvas, user };
 }
 
@@ -126,3 +131,6 @@ export const AlreadyClaimed: Story = {
     await submitAgainst(canvasElement, 409);
   },
 };
+
+/** The ready form in the dark theme, the jurisdiction select included. */
+export const ReadyDark: Story = { ...Ready, globals: { theme: "dark" } };

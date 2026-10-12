@@ -83,7 +83,11 @@ const clientToolCeiling = 100
 // decide_duplicate raises it to 82. A card that offers "not the same" needs a
 // verb an agent may call, and the dismissal and its undo share one tool with a
 // decision, so the user gives up one slot of the client's 100 rather than two.
-const publishedToolCeiling = 82
+//
+// attach_document and list_documents raise it to 84. Without them an agent
+// handed a file can only save its text as a note; the user gives up two more
+// slots and keeps 16 of the client's 100 for other servers.
+const publishedToolCeiling = 84
 
 type mcpInfoFile struct {
 	Totals struct {

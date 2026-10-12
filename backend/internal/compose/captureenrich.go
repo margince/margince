@@ -66,6 +66,7 @@ const (
 var enrichFieldNames = map[string]bool{
 	fieldTitle: true, "phone": true, "linkedin": true, companyNameField: true,
 	"address": true, "website": true,
+	contacts.FieldFirstName: true, contacts.FieldLastName: true,
 }
 
 // signatureRepeatedFields hold a list. A signature listing a German, a
@@ -74,7 +75,7 @@ var enrichFieldNames = map[string]bool{
 var signatureRepeatedFields = map[string]bool{"phone": true}
 
 const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,
-linkedin, company_name, address, website. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
+linkedin, company_name, address, website, first_name, last_name. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized. A signature
 often lists several numbers (desk, mobile, one per country): emit one phone entry for EVERY
@@ -83,7 +84,13 @@ Emit address as the single line the signature prints it on. Emit website only fo
 company's own site; a social profile is never a website, and linkedin carries that one.
 The signature must be THE NAMED CONTACT'S OWN. A block naming somebody else — a colleague,
 a forwarded sender, a correspondent quoted underneath — states nothing about them, so emit
-no fields at all rather than the ones it happens to contain.`
+no fields at all rather than the ones it happens to contain.
+Emit first_name and last_name only from how this contact names THEMSELF: the name printed in
+their own signature block, or the one they sign off with above it. A company, a brand, a team
+or a department is never a name, so a block headed "Greven Ebusiness" or "Seven Mills
+Consulting" states no first_name and no last_name. Emit a name only when the lines show
+somebody naming themself. Emit the two halves together or not at all: a given name without
+the family name it belongs to would graft onto whichever surname the record already holds.`
 
 // signatureEnrichSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func signatureEnrichSystemFor(fence promptfence.Fence) string {
@@ -333,7 +340,8 @@ func signatureEnrichSchema() json.RawMessage {
 		map[string]schema.Node{
 			laneFields: schema.Array(schema.Object(
 				map[string]schema.Node{
-					extractionFieldKey: schema.Enum(fieldTitle, "phone", "linkedin", companyNameField, "address", "website").
+					extractionFieldKey: schema.Enum(fieldTitle, "phone", "linkedin", companyNameField, "address", "website",
+						contacts.FieldFirstName, contacts.FieldLastName).
 						Describe("phone once per number the signature lists; every other field at most once"),
 					"value":            schema.String(),
 					"evidence_snippet": schema.String(),
@@ -431,7 +439,7 @@ func signatureNamesContact(block string, cand contacts.SignatureCandidate) bool 
 	}) {
 		words[word] = true
 	}
-	for _, token := range strings.Fields(strings.ToLower(cand.FullName)) {
+	for token := range strings.FieldsSeq(strings.ToLower(cand.FullName)) {
 		token = strings.Trim(token, ".,;:()<>\"'")
 		if token != "" && words[token] {
 			return true

@@ -1,17 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  type RefObject,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { undoAction, useToast } from "../design-system/toast";
@@ -19,7 +14,7 @@ import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import "./dealfiles.css";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived
@@ -68,16 +63,14 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
   const query = useQuery({
     queryKey: dealDocumentsKey(dealId, showHidden),
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/documents", {
-        params: {
-          path: { id: dealId },
-          query: { limit: PAGE_LIMIT, include_hidden: showHidden },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/documents", {
+          params: {
+            path: { id: dealId },
+            query: { limit: PAGE_LIMIT, include_hidden: showHidden },
+          },
+        }),
+      );
     },
   });
   const files = query.data?.data ?? [];
@@ -158,7 +151,7 @@ function FileRow({
   const side = useRef<HTMLDivElement | null>(null);
   // A ref, not state: the dialog reads it as it closes, before a re-render.
   const deleted = useRef(false);
-  useFocusLeavesWithMenu(side, focusLanding);
+  useFocusHandoff(side, focusLanding);
   return (
     <PanelRow
       className={doc.hidden ? "deal-file deal-file-hidden" : "deal-file"}
@@ -229,22 +222,6 @@ function FileRow({
   );
 }
 
-// The menu hands focus back to its trigger, and a hide that drops the row
-// takes the trigger with it.
-function useFocusLeavesWithMenu(
-  menuSide: RefObject<HTMLElement | null>,
-  focusLanding: () => HTMLElement | null,
-) {
-  useLayoutEffect(() => {
-    const node = menuSide.current;
-    return () => {
-      if (node?.contains(document.activeElement)) {
-        focusLanding()?.focus();
-      }
-    };
-  }, [menuSide, focusLanding]);
-}
-
 // The row's verbs: a captured file can be hidden or shown again, an upload
 // deleted. The menu is its own component so the row stays readable.
 function FileMenu({
@@ -262,7 +239,7 @@ function FileMenu({
   const captured = doc.origin !== undefined;
   return (
     <OverflowMenu
-      label={t("files.rowActions", { name: doc.attachment.filename })}
+      label={t("table.rowActions", { name: doc.attachment.filename })}
     >
       {captured && !doc.hidden ? (
         <Button
@@ -309,15 +286,12 @@ function useFileVerbs(dealId: string, attachmentId: string) {
     toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
   const hide = useMutation({
     mutationFn: async () => {
-      const { error } = await api.PUT(
-        "/deals/{id}/documents/{attachmentId}/hide",
-        {
+      unwrap(
+        await api.PUT("/deals/{id}/documents/{attachmentId}/hide", {
           params: { path: { id: dealId, attachmentId } },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onError: sayRefused,
     onSuccess: async () => {
@@ -330,15 +304,12 @@ function useFileVerbs(dealId: string, attachmentId: string) {
   });
   const unhide = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE(
-        "/deals/{id}/documents/{attachmentId}/hide",
-        {
+      unwrap(
+        await api.DELETE("/deals/{id}/documents/{attachmentId}/hide", {
           params: { path: { id: dealId, attachmentId } },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onError: sayRefused,
     onSuccess: async () => {
@@ -348,12 +319,12 @@ function useFileVerbs(dealId: string, attachmentId: string) {
   });
   const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE("/attachments/{id}", {
-        params: { path: { id: attachmentId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.DELETE("/attachments/{id}", {
+          params: { path: { id: attachmentId } },
+        }),
+        t,
+      );
     },
     onSuccess: refresh,
   });

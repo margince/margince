@@ -18,7 +18,7 @@ import {
   useT,
 } from "../i18n";
 import { callsHrefFor } from "./aicalls";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./ai-settings.css";
 
 // What a provider, a tier or a host actually did, read from the call record
@@ -40,11 +40,11 @@ export function useCallStats(query: StatsQuery, enabled: boolean) {
     queryKey: ["ai-call-stats", query],
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/call-stats", {
-        params: { query },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/ai/call-stats", {
+          params: { query },
+        }),
+      );
     },
   });
 }
@@ -54,11 +54,11 @@ export function useTaskFlow(task: string, window: Window, enabled: boolean) {
     queryKey: ["ai-task-flow", task, window],
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/call-stats/flow", {
-        params: { query: { task, window } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/ai/call-stats/flow", {
+          params: { query: { task, window } },
+        }),
+      );
     },
   });
 }
@@ -83,7 +83,7 @@ export function useWindowLabels(): Record<Window, string> {
   };
 }
 
-/** The seven-day line under a provider on the Providers card. */
+/** The seven-day line under a provider; one with no calls draws nothing. */
 export function ProviderCallsLine({
   provider,
 }: Readonly<{ provider: string }>) {
@@ -94,8 +94,7 @@ export function ProviderCallsLine({
   const stats = useCallStats({ window: "7d", group: "provider" }, canSee);
   if (!canSee || !stats.data) return null;
   const row = stats.data.rows.find((r) => r.key === provider);
-  if (!row)
-    return <span className="t-caption">{t("aiFigures.line.none")}</span>;
+  if (!row) return null;
   return (
     <span className="t-caption">
       {t("aiFigures.line.prefix", {

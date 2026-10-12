@@ -164,7 +164,7 @@ func TestOperatedServicesDropsEveryNameThatIsNotAService(t *testing.T) {
 	}
 }
 
-func TestOperatedServicesReadsTheServiceLabels(t *testing.T) {
+func TestOperatedServicesReadsWhatADomainPublishes(t *testing.T) {
 	t.Parallel()
 	services := techprofile.OperatedServices("example.de", []string{
 		"shop.example.de", "karriere.example.de", "api.example.de",

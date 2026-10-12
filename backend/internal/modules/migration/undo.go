@@ -70,9 +70,12 @@ type ErroredRow struct {
 // UndoReport is the reversal outcome (IEM-WIRE-9). Every row this run
 // created lands in exactly one bucket.
 type UndoReport struct {
-	ReversedCount int          `json:"reversed_count"`
-	Kept          []KeptRow    `json:"kept,omitempty"`
-	Errored       []ErroredRow `json:"errored,omitempty"`
+	ReversedCount int `json:"reversed_count"`
+	// UpdatesNotReversed is how many ROWS the run corrected rather than
+	// created, which undo leaves corrected (undoupdates.go).
+	UpdatesNotReversed int          `json:"updates_not_reversed,omitempty"`
+	Kept               []KeptRow    `json:"kept,omitempty"`
+	Errored            []ErroredRow `json:"errored,omitempty"`
 }
 
 // mapRow is one import_record_map row this run created.
@@ -270,12 +273,14 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 		// but a caller retrying right after the first releases its lock
 		// must still see a consistent read-then-transition) do not both
 		// read `complete` and both start a fresh reversal.
+		var reportRaw []byte
 		row := tx.QueryRow(ctx, `
-			SELECT id, connector, status, checkpoint, undo_report
+			SELECT id, connector, status, checkpoint, undo_report, report
 			  FROM import_run
 			 WHERE id = $1
 			 FOR UPDATE`, id)
-		if err := row.Scan(&run.ID, &run.Connector, &run.Status, &run.Checkpoint, &undoReportRaw); err != nil {
+		if err := row.Scan(&run.ID, &run.Connector, &run.Status, &run.Checkpoint,
+			&undoReportRaw, &reportRaw); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
@@ -287,7 +292,11 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 		before := run.Status
 		switch run.Status {
 		case StatusComplete:
-			rep = UndoReport{}
+			updated, err := updatesInRun(reportRaw)
+			if err != nil {
+				return fmt.Errorf("reading import run %s's own report: %w", id, err)
+			}
+			rep = UndoReport{UpdatesNotReversed: updated}
 			run.Checkpoint = 0
 		case StatusUndoing:
 			if len(undoReportRaw) == 0 {

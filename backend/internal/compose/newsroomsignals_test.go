@@ -100,4 +100,13 @@ func TestDetectedAtDatesASignalByWhenItHappened(t *testing.T) {
 	if got := detectedAt(NewsroomItem{}, now); !got.Equal(now) {
 		t.Errorf("an undated item detected at %v, want the read %v", got, now)
 	}
+	// A date the read cannot believe falls back to the read too.
+	for _, unbelievable := range []time.Time{
+		now.Add(48 * time.Hour),
+		time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC),
+	} {
+		if got := detectedAt(NewsroomItem{Published: unbelievable}, now); !got.Equal(now) {
+			t.Errorf("an item dated %v detected at %v, want the read %v", unbelievable, got, now)
+		}
+	}
 }

@@ -28,6 +28,7 @@ import {
   reportingCompactAmount,
   reportingMoneyUnit,
 } from "./reporting.model";
+import { movementLabel } from "./reporting.movement";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
 import { ResultsSummary, TargetProgress } from "./reporting.summary";
 import "./reporting.css";
@@ -375,10 +376,7 @@ function ChartBody({
                 : [
                     {
                       ...point,
-                      label:
-                        point.key === "amount"
-                          ? t("reporting.valueChanges")
-                          : point.label,
+                      label: movementLabel(point.key, point.label, t),
                       value: point.value,
                       amount: compact(point.value),
                     },
@@ -396,7 +394,10 @@ function ChartBody({
                   label: t("reporting.opening"),
                   value: chart.opening,
                 },
-                ...chart.points,
+                ...chart.points.map((point) => ({
+                  ...point,
+                  label: movementLabel(point.key, point.label, t),
+                })),
                 {
                   key: "closing",
                   label: t("reporting.closing"),

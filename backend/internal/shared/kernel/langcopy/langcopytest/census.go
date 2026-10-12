@@ -97,7 +97,7 @@ func Census(t reporter, table any) {
 // map of them, and reports how many phrases it found.
 func censusField(t reporter, name string, field reflect.Value) int {
 	t.Helper()
-	if p, ok := field.Interface().(langcopy.Phrase); ok {
+	if p, ok := reflect.TypeAssert[langcopy.Phrase](field); ok {
 		censusEntry(t, name, p)
 		return 1
 	}
@@ -121,7 +121,7 @@ func censusMap(t reporter, prefix string, table reflect.Value) int {
 	phrases := 0
 	for _, key := range keys {
 		name := fmt.Sprintf("%s[%v]", prefix, key.Interface())
-		p, ok := table.MapIndex(key).Interface().(langcopy.Phrase)
+		p, ok := reflect.TypeAssert[langcopy.Phrase](table.MapIndex(key))
 		if !ok {
 			t.Errorf("%s is not a phrase, so this census says nothing about it", name)
 			continue

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api/client";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 /**
  * useContactGraph reads the local graph around one contact.
@@ -18,13 +18,11 @@ export function useContactGraph(id: string) {
   return useQuery({
     queryKey: ["contact-graph", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}/graph", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/contacts/{id}/graph", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }

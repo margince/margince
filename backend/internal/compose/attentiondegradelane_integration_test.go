@@ -123,8 +123,8 @@ func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *t
 	db := InstallationDB(e.Pool)
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now).
 		WithDealSuggestions(stuckSuggestions{
-			attentionDealSuggestions: attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())},
-			pool:                     e.Pool,
+			store: deals.NewStore(db, DealsInstallation()),
+			pool:  e.Pool,
 		}).
 		WithSnapshots(shortLaneBudget{attentionSnapshots{pool: e.Pool}})
 

@@ -50,6 +50,8 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 	in.PipelineID = idArg[ids.PipelineKind](params.PipelineId)
 	in.StageID = idArg[ids.StageKind](params.StageId)
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
+	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
+	in.Unassigned = params.Unassigned
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	in.ProjectID = idArg[ids.ProjectKind](params.ProjectId)
 	in.PartnerCompanyID = idArg[ids.CompanyKind](params.PartnerCompanyId)
@@ -137,6 +139,10 @@ func (h Handlers) UpdateDeal(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 
+	if err := refuseClosingFields(req); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	update := dealUpdateInput(req, ifVersion)
 	update.Clear = httperr.ClearedFields(r)
 	deal, err := h.store.UpdateDeal(r.Context(), pathID[ids.DealKind](id), update)

@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -45,7 +46,7 @@ func ValidateDecisionsLane(profile Profile, lane DecisionsConfig) error {
 			lane.Provider, strings.Join(DecisionProviders(), ", "))
 	}
 	if strings.TrimSpace(lane.Model) == "" {
-		return fmt.Errorf("ai: routing config: the decisions lane names no model")
+		return errors.New("ai: routing config: the decisions lane names no model")
 	}
 	if decisionHostMissing(lane.Provider, lane.BaseURL) {
 		return missingHostError{provider: d.name, reason: fmt.Sprintf("ai: routing config: the decisions lane binds %s, which has no default endpoint; set base_url "+

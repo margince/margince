@@ -18,7 +18,6 @@ import {
   ChronologyFilter,
   ChronologyFooter,
   hasChronologyFooter,
-  readsExchangesOnly,
   useRecordChronology,
 } from "./recordchronology";
 import { ConversationList, useChronologyCut } from "./recordconversations";
@@ -38,16 +37,13 @@ type Contact360 = components["schemas"]["Contact360"];
 // --- Timeline ---------------------------------------------------------------
 
 /**
- * ContactTimelineTab is the contact's ONE chronology: what was said to them and
- * what was changed about them, in one order, through the same
- * `useRecordChronology` the account page reads. They were two tabs for a
- * release, and a reader who wanted them in order had to interleave two lists
- * by hand.
+ * ContactTimelineTab is the contact's History, read through the same
+ * `useRecordChronology` every record page uses. All and Threads show what was
+ * said to them, and Changes what was changed about them.
  *
- * The activities half is the 360's own section — already fetched, and a PAGE:
- * when the server says there is more, the tab says so rather than letting a
- * cut list read as the whole ledger. The changes half is fetched here, and
- * only once the reader asks for it.
+ * The exchanges are the 360's own section, already fetched, and one page of
+ * it. When the server says there is more, the tab says so, so a cut list does
+ * not read as the whole ledger.
  */
 export function ContactTimelineTab({
   contactId,
@@ -87,9 +83,8 @@ export function ContactTimelineTab({
     kind: "contact",
     recordId: contactId,
     filter,
-    // A narrowed read is a question about what was said, so the record's own
-    // edits stand down: they are not meetings, and not what the reader asked.
-    narrowed: hasTimelineFilters(filters),
+    // RecordHistoryTab draws Changes here and pages its own feed.
+    changesInPanel: true,
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -163,33 +158,17 @@ export function ContactTimelineTab({
             loadingLabel={t("tab.timeline")}
             state={timelineState(
               view,
-              filter,
               chronology,
               timeline,
               hasTimelineFilters(filters),
               loading,
             )}
             emptyLabel={
-              filter === "activities"
+              filter === "all"
                 ? t("contact.timeline.empty")
                 : t(CHRONOLOGY_EMPTY_KEYS[filter])
             }
-            // Retrying the CHANGE feed, on the cuts that read one: a cut that
-            // never asked it a question would offer a retry for a read that is
-            // not the one that came up short.
-            detail={
-              readsExchangesOnly(filter)
-                ? undefined
-                : { onRetry: chronology.changes.refetch }
-            }
           >
-            {/* Half the chronology is missing and the other half is right
-                  here. Taking the exchanges away because the change feed fell
-                  over would serve nobody, and leaving the reader to take a
-                  partial record for a complete one is the failure this line
-                  exists to prevent. Above the rows, because a caveat under a
-                  list is read after the list it qualifies. */}
-            {chronology.changesUnread && <p>{t("state.failed")}</p>}
             <List
               groups={groupChronology(chronology.entries, timeline.hasNextPage)}
               zone={recordZone}

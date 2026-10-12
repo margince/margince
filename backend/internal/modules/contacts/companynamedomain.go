@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -70,7 +71,7 @@ func fileNameDomainTwins(ctx context.Context, tx pgx.Tx, claimant ids.CompanyID,
 	rows, err := tx.Query(ctx, `
 		SELECT id, display_name FROM company
 		 WHERE archived_at IS NULL AND NOT is_anchor AND id <> $1
-		   AND f_fold_apostrophes(lower(display_name)) LIKE '%' || $2 || '%'`,
+		   AND f_fold_apostrophes(lower(display_name)) LIKE '%' || `+storekit.EscapeLikeSQL("$2")+` || '%'`,
 		claimant, domain)
 	if err != nil {
 		return fmt.Errorf("contacts: reading companies named after a claimed domain: %w", err)

@@ -5,12 +5,12 @@ package ai
 
 import (
 	"context"
-	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // Subject is the record a model call is ABOUT, as the site that made the call
@@ -64,11 +64,7 @@ func SubjectOf(ctx context.Context) (Subject, bool) {
 // company name is not ASCII, and a byte cut through an umlaut is invalid UTF-8
 // that a JSON encoder replaces with a question mark in front of a reader.
 func boundedLabel(label string) string {
-	if utf8.RuneCountInString(label) <= railSubjectLabelBound {
-		return label
-	}
-	runes := []rune(label)
-	return string(runes[:railSubjectLabelBound])
+	return textcut.Runes(label, railSubjectLabelBound)
 }
 
 // stamp writes the subject onto a rail announcement, or leaves the fields

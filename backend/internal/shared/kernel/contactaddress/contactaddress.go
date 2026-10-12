@@ -56,3 +56,7 @@ package contactaddress
 // (backend/gates/reachableaddress_test.go) — a statement that picks an address
 // off contact_email and does not use this is a second answer, and fails there.
 const ReachableOrder = ` ORDER BY is_primary DESC, position, created_at, email`
+
+// ReachablePhoneOrder is the order a contact's live numbers are listed in: the
+// primary first, then by position. Callers filter archived rows themselves.
+const ReachablePhoneOrder = ` ORDER BY is_primary DESC, position, created_at`

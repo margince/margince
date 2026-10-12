@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states visit-notes.md is attached to the company record and shows on the Documents tab, directly satisfying the criterion that the file is stored as a document/attachment rather than as a note or activity.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer tells the reader that the meeting notes file (visit-notes.md) is now stored on Aachener Metallwerke's company record, as a file, document or attachment. Answer no if it says the notes were saved as a note, activity or timeline entry instead of as a file, or if it never says the notes file was stored.",
+  "answer": "Done: visit-notes.md is attached to Aachener Metallwerke GmbH and shows on the company's Documents tab."
+}

@@ -41,6 +41,9 @@ var sourceAnswersForTheActorOnly = map[crmcontracts.WorklistItemSource]bool{
 	crmcontracts.WorklistItemSource(sourceNotice): true,
 	"undelivered":                                 true,
 	sourceWeeklyCommitment:                        true,
+	// The reader's own sends, read only on their own day.
+	sourceAwaitingReply:   true,
+	sourceMeetingFollowUp: true,
 
 	// Record-bearing: a wider row scope reaches more of them, which is what
 	// `team` and `all` are for.
@@ -51,6 +54,7 @@ var sourceAnswersForTheActorOnly = map[crmcontracts.WorklistItemSource]bool{
 	sourceWaiting:        false,
 	sourceAtRisk:         false,
 	sourceDealSuggestion: false,
+	sourceTagSuggestion:  false,
 	sourceDuplicate:      false,
 	"dsr":                false,
 	sourceLeadResponse:   false,

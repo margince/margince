@@ -18,6 +18,7 @@ package integration
 // nothing here would change if a client ignored the flag entirely.
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -211,9 +212,7 @@ func companyWriterPermsFor(t *testing.T) principal.Permissions {
 	t.Helper()
 	perms := AccountRepPerms
 	perms.Objects = map[string]principal.ObjectGrant{}
-	for object, grant := range AccountRepPerms.Objects {
-		perms.Objects[object] = grant
-	}
+	maps.Copy(perms.Objects, AccountRepPerms.Objects)
 	perms.Objects["company"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return perms
 }

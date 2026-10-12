@@ -408,25 +408,6 @@ func (m *CallMeter) EnsureConfig(ctx context.Context, snap ConfigSnapshot) error
 // it to its own sentinel so the trace does not mislabel a successful call.
 var errMeteringFailed = errors.New("ai: metering failed")
 
-// The sentinels of an attempt a model answered. The health read keys on them to
-// tell a tier that responds from one that does not, so they are spelled once.
-// Held by: TestTheAnsweredErrorsClassifyToExactlyTheAnsweredSentinels (backend/internal/modules/ai/callstore_test.go)
-const (
-	sentinelMeteringFailed  = "metering_failed"
-	sentinelOutputWithheld  = "output_withheld"
-	sentinelRequestRejected = "request_rejected"
-)
-
-// sentinelTimeout is an attempt its deadline stopped: the model was asked and
-// did not answer in time. A failure like provider_error, named apart so an
-// admin can tell a slow host from a broken one and set the deadline by it.
-const sentinelTimeout = "timeout"
-
-// answeredSentinels are the sentinels the health read does not count as a
-// failure: metering_failed is an answer whose usage write failed, and the other
-// two are outcomes — the model was reached and decided.
-var answeredSentinels = []string{sentinelMeteringFailed, sentinelOutputWithheld, sentinelRequestRejected}
-
 // classifyError maps a completion terminal error to a short, stable code
 // for ai_call.error_sentinel. It never stores raw error text — that could
 // leak provider internals into the trace store; the code is enough to
@@ -468,6 +449,8 @@ func classifyError(err error) string {
 		return sentinelOutputWithheld
 	case errors.Is(err, model.ErrRequestRejected):
 		return sentinelRequestRejected
+	case errors.Is(err, ErrOutputRejected):
+		return sentinelOutputRejected
 	default:
 		return "provider_error"
 	}

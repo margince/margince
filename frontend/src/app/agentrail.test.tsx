@@ -247,7 +247,7 @@ function stubAgentRailApi(routes: FetchRoutes = {}) {
             data: [],
             page: emptyPage,
             payload_capture_enabled: false,
-            tasks: [],
+            ...{ tasks: [], task_options: [] },
           });
     }
     if (pathname.endsWith("/ai/usage")) {
@@ -766,7 +766,7 @@ describe("AgentRail", () => {
           data: [AI_CALL],
           page: emptyPage,
           payload_capture_enabled: false,
-          tasks: [AI_CALL.task],
+          ...{ tasks: [AI_CALL.task], task_options: [{ task: AI_CALL.task }] },
         }),
     });
     const { container } = render(ROUTE);

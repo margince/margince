@@ -209,7 +209,7 @@ func employmentStatements(decl ast.Decl, contacts helperScope) []string {
 // employment kind, so the report points at the statement rather than dumping
 // it.
 func firstEmploymentLine(sql string) string {
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if employmentKind.MatchString(line) {
 			return strings.TrimSpace(line)
 		}

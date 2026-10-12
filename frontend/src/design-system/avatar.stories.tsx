@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
 import { Avatar } from "./atoms";
+import { CellStack } from "./cellstack";
 import { Heading } from "./heading";
 
 // Most records never get a photo or a logo, so the monogram's mesh is what a
@@ -122,10 +123,10 @@ export const Gallery: Story = {
           {SAMPLES.map((sample) => (
             <span key={sample.name} className="avatar-row">
               <Avatar name={sample.name} identity={idOf(sample)} />
-              <span className="cell-stack">
+              <CellStack>
                 <span className="t-name">{sample.name}</span>
                 <span className="t-caption">{sample.meta}</span>
-              </span>
+              </CellStack>
             </span>
           ))}
         </div>
@@ -135,10 +136,10 @@ export const Gallery: Story = {
         {SAMPLES.slice(0, 6).map((sample) => (
           <div key={sample.name} style={header}>
             <Avatar name={sample.name} identity={idOf(sample)} size="xl" />
-            <span className="cell-stack">
+            <CellStack>
               <Heading size="large">{sample.name}</Heading>
               <span className="t-caption">{sample.meta}</span>
-            </span>
+            </CellStack>
           </div>
         ))}
       </section>

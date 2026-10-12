@@ -73,7 +73,7 @@
    had nothing for the state where neither is possible, so a disabled zone still
    lit up under the pointer and still read as an invitation. */
 .fdz:has(:disabled) {
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 /* The cursor has to go on the INPUT, not the zone. The input is absolutely
    positioned over the whole zone and sets `cursor: pointer` on itself, so it is

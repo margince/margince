@@ -41,8 +41,7 @@ func TestACursorFromTheRecencyOrderCannotResumeAnOpenAndDueRead(t *testing.T) {
 		OpenAndDueBy: &until,
 		Cursor:       &minted,
 	})
-	var mismatch *storekit.CursorSortMismatchError
-	if !errors.As(err, &mismatch) {
+	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); !ok {
 		t.Fatalf("resuming the due queue with a timeline cursor → %v, want a sort mismatch", err)
 	}
 }

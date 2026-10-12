@@ -12,8 +12,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const bookingLogoPath = "/v1/public/booking/company-logo"
@@ -63,4 +65,20 @@ func (h Handlers) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Req
 		return
 	}
 	h.streamLogoKey(w, r, crmcontracts.Id(brand.id.UUID), LogoWide, *brand.logoKey, "GetPublicBookingCompanyLogo", "no-cache", false)
+}
+
+// AnchorLogoKey is the object key of the workspace's own logo, empty when it
+// has none. The send path embeds that logo in a signature.
+func (s *Store) AnchorLogoKey(ctx context.Context) (string, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		return "", err
+	}
+	brand, err := s.readAnchorBrand(ctx)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return "", nil
+	}
+	if err != nil || brand.logoKey == nil {
+		return "", err
+	}
+	return *brand.logoKey, nil
 }

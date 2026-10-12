@@ -191,12 +191,7 @@ func cachedGrowthFitReaders(t *testing.T, e *apptest.AppEnv, companyID string) [
 }
 
 func namesMissingInput(missing []string, want string) bool {
-	for _, named := range missing {
-		if named == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(missing, want)
 }
 
 func createBareCompany(t *testing.T, e *apptest.AppEnv) string {

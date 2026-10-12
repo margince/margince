@@ -30,7 +30,7 @@ func TestSubjectRequestQueueIsTheAdminsAlone(t *testing.T) {
 	if _, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind:       "access",
 		SubjectRef: "subject@queue.test",
-		DueAt:      time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
+		DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	}); err != nil {
 		t.Fatalf("seeding a request the queue can hide: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestFilingASubjectRequestTakesTheQueuesOwnGate(t *testing.T) {
 	erasure := consent.CreateDSRInput{
 		Kind:       "erasure",
 		SubjectRef: ids.NewV7().String(),
-		DueAt:      time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
+		DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	}
 
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)

@@ -20,6 +20,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -35,13 +36,13 @@ func main() {
 	routingGo := flag.String("routing-go", "", "the Go file that embeds the routing $defs for GET /ai/routing/schema")
 	flag.Parse()
 	if *pkgDir == "" || *out == "" || *routingGo == "" {
-		fail(fmt.Errorf("gen-configschema needs -pkg, -out and -routing-go"))
+		fail(errors.New("gen-configschema needs -pkg, -out and -routing-go"))
 	}
 	docs, err := fieldDocs(*pkgDir)
 	if err != nil {
 		fail(err)
 	}
-	schema, err := buildSchema(reflect.TypeOf(deployconfig.Config{}), docs)
+	schema, err := buildSchema(reflect.TypeFor[deployconfig.Config](), docs)
 	if err != nil {
 		fail(err)
 	}

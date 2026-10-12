@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // OIDCProviderConfig is one external identity provider as the login screen and
@@ -127,26 +127,6 @@ const (
 	// is generous headroom for those, not an attempt to keep a longer value.
 	oidcLoggedErrorMaxLen = 64
 )
-
-// truncateForLog caps s to at most n bytes for a log/audit field a caller
-// controls — never used on a value already bounded by its own contract (a
-// UUID, an enum). It backs off to the nearest preceding UTF-8 rune boundary
-// rather than cutting at a raw byte index: this value is written to
-// system_log as jsonb text, and Postgres REJECTS invalid UTF-8 outright
-// (error 22021) — a mid-rune cut would fail that write silently (this is a
-// best-effort audit trail) and lose the very refusal record the split
-// exists to keep, precisely for the attacker-controlled multi-byte value
-// this function exists to bound.
-func truncateForLog(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	cut := n
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut]
-}
 
 // setLoginStateCookie/clearLoginStateCookie own the one cookie this flow
 // needs, right beside setSessionCookie (handlers.go) which already does the
@@ -369,7 +349,9 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	// e.g. access_denied. Checked here, now that the state above has proven
 	// this is genuinely the browser's own pending flow.
 	if params.Error != nil && *params.Error != "" {
-		fail(ctx, "provider error: "+truncateForLog(*params.Error, oidcLoggedErrorMaxLen), nil)
+		// A rune-safe cut, because Postgres refuses invalid UTF-8 in the
+		// system_log row and the refusal record would be lost.
+		fail(ctx, "provider error: "+textcut.Bytes(*params.Error, oidcLoggedErrorMaxLen), nil)
 		return
 	}
 

@@ -43,7 +43,7 @@ export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
   if (item.source === "notice_case") {
     return (
       <>
-        <NoticeDuty caseId={item.id} contactId={subject.id} />
+        <NoticeDuty item={item} contactId={subject.id} />
         <ContactContext id={subject.id} label={subject.label} />
       </>
     );

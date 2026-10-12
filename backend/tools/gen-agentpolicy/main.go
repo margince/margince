@@ -31,16 +31,11 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/tools/internal/oasnode"
 )
 
-// httpMethods maps every operation key the contract may carry onto the
-// method the chi router registers. mutating names the subset the
-// fail-closed drift-lint applies to.
-var httpMethods = map[string]string{
-	"get": "GET", "head": "HEAD", "options": "OPTIONS",
-	"post": "POST", "put": "PUT", "patch": "PATCH", "delete": "DELETE",
-}
-
+// mutating names the methods the fail-closed drift-lint applies to.
 var mutating = map[string]bool{"POST": true, "PUT": true, "PATCH": true, "DELETE": true}
 
 type policy struct {
@@ -51,6 +46,7 @@ type policy struct {
 	RecordType string // x-mcp-tool record_type ("" when the tool is not record-typed)
 	Tier       string // x-mcp-tool tier: auto_execute | confirmation_required | dynamic
 	Scope      string // x-mcp-tool scope: the passport cap the operation consumes
+	ServedBy   string // x-mcp-tool served_by: "registry" when the handler runs the tool itself
 }
 
 func main() {
@@ -110,7 +106,7 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 	var defects []string
 	for path, item := range paths {
 		for method, node := range item {
-			httpMethod, isOperation := httpMethods[method]
+			httpMethod, isOperation := oasnode.HTTPMethods[method]
 			if !isOperation {
 				continue // parameters, summary, and the other path-item keys
 			}
@@ -121,6 +117,7 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 					RecordType string `yaml:"record_type"`
 					Tier       string `yaml:"tier"`
 					Scope      string `yaml:"scope"`
+					ServedBy   string `yaml:"served_by"`
 				} `yaml:"x-mcp-tool"`
 				AgentAccess string `yaml:"x-agent-access"`
 			}
@@ -140,6 +137,7 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 				p.RecordType = op.MCPTool.RecordType
 				p.Tier = op.MCPTool.Tier
 				p.Scope = op.MCPTool.Scope
+				p.ServedBy = op.MCPTool.ServedBy
 				if p.Tool == "" || (p.Tier != "auto_execute" && p.Tier != "confirmation_required" && p.Tier != "dynamic") {
 					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool needs a verb and an auto_execute|confirmation_required|dynamic tier", httpMethod, path, op.OperationID))
 					continue
@@ -222,6 +220,7 @@ type agentPolicy struct {
 	RecordType agentRecordType // the record the operation targets; zero when it declares none
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
+	ServedBy   agentServedBy   // servedByRegistry: the handler's tool call admits it, not the gate
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated
@@ -229,8 +228,13 @@ type agentPolicy struct {
 var agentPolicies = map[string]agentPolicy{
 `)
 	for _, p := range policies {
-		fmt.Fprintf(&b, "\t%q: {Op: %q, Access: %q, Tool: %q, RecordType: %q, Tier: %q, Scope: %q},\n",
+		fmt.Fprintf(&b, "\t%q: {Op: %q, Access: %q, Tool: %q, RecordType: %q, Tier: %q, Scope: %q",
 			p.Route, p.Op, p.Access, p.Tool, p.RecordType, p.Tier, p.Scope)
+		// Written only where declared, so the marker stands out in the table.
+		if p.ServedBy != "" {
+			fmt.Fprintf(&b, ", ServedBy: %q", p.ServedBy)
+		}
+		b.WriteString("},\n")
 	}
 	b.WriteString("}\n")
 	return b.String()

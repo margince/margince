@@ -8,9 +8,6 @@ import (
 	"testing"
 )
 
-func fitScore(v int16) *int16    { return &v }
-func fitReason(v string) *string { return &v }
-
 // The A68/ADR-0053 partner-fit override pair (formulas §17) — the exact
 // sibling of the lead-score pair: a human score demands a written reason,
 // the machine value survives in Computed while the override is in force,
@@ -26,8 +23,8 @@ type fitOverrideCase struct {
 }
 
 var (
-	noOverride = partnerFitState{Score: fitScore(40)}
-	overridden = partnerFitState{Score: fitScore(90), Computed: fitScore(40), OverrideReason: fitReason("strategic account")}
+	noOverride = partnerFitState{Score: new(int16(40))}
+	overridden = partnerFitState{Score: new(int16(90)), Computed: new(int16(40)), OverrideReason: new("strategic account")}
 )
 
 func runFitOverrideCases(t *testing.T, cases []fitOverrideCase) {
@@ -36,8 +33,7 @@ func runFitOverrideCases(t *testing.T, cases []fitOverrideCase) {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := applyPartnerFitOverride(tc.current, tc.score, tc.reason)
 			if tc.wantRequire {
-				var require *PartnerFitOverrideReasonRequiredError
-				if !errors.As(err, &require) {
+				if _, ok := errors.AsType[*PartnerFitOverrideReasonRequiredError](err); !ok {
 					t.Fatalf("expected PartnerFitOverrideReasonRequiredError, got %v", err)
 				}
 				return
@@ -55,36 +51,36 @@ func TestApplyPartnerFitOverrideSetGestures(t *testing.T) {
 		{
 			name:        "setting a score without a reason is rejected",
 			current:     noOverride,
-			score:       fitScore(90),
+			score:       new(int16(90)),
 			wantRequire: true,
 		},
 		{
 			name:        "a whitespace-only reason is no reason",
 			current:     noOverride,
-			score:       fitScore(90),
-			reason:      fitReason("   "),
+			score:       new(int16(90)),
+			reason:      new("   "),
 			wantRequire: true,
 		},
 		{
 			name:    "first override retains the machine value in Computed",
 			current: noOverride,
-			score:   fitScore(90),
-			reason:  fitReason("strategic account"),
-			want:    partnerFitState{Score: fitScore(90), Computed: fitScore(40), OverrideReason: fitReason("strategic account")},
+			score:   new(int16(90)),
+			reason:  new("strategic account"),
+			want:    partnerFitState{Score: new(int16(90)), Computed: new(int16(40)), OverrideReason: new("strategic account")},
 		},
 		{
 			name:    "overriding a never-scored partner retains no machine value",
 			current: partnerFitState{},
-			score:   fitScore(75),
-			reason:  fitReason("founder referral"),
-			want:    partnerFitState{Score: fitScore(75), Computed: nil, OverrideReason: fitReason("founder referral")},
+			score:   new(int16(75)),
+			reason:  new("founder referral"),
+			want:    partnerFitState{Score: new(int16(75)), Computed: nil, OverrideReason: new("founder referral")},
 		},
 		{
 			name:    "re-overriding keeps the retained machine value, not the old human one",
 			current: overridden,
-			score:   fitScore(95),
-			reason:  fitReason("expanded to second region"),
-			want:    partnerFitState{Score: fitScore(95), Computed: fitScore(40), OverrideReason: fitReason("expanded to second region")},
+			score:   new(int16(95)),
+			reason:  new("expanded to second region"),
+			want:    partnerFitState{Score: new(int16(95)), Computed: new(int16(40)), OverrideReason: new("expanded to second region")},
 		},
 	})
 }
@@ -94,25 +90,25 @@ func TestApplyPartnerFitOverrideClearAndAmendGestures(t *testing.T) {
 		{
 			name:    "clearing the reason restores the retained machine value",
 			current: overridden,
-			reason:  fitReason(""),
-			want:    partnerFitState{Score: fitScore(40)},
+			reason:  new(""),
+			want:    partnerFitState{Score: new(int16(40))},
 		},
 		{
 			name:    "clearing with no override in force is a no-op",
 			current: noOverride,
-			reason:  fitReason(""),
+			reason:  new(""),
 			want:    noOverride,
 		},
 		{
 			name:    "amending the reason keeps score and retained value",
 			current: overridden,
-			reason:  fitReason("strategic account, renewed"),
-			want:    partnerFitState{Score: fitScore(90), Computed: fitScore(40), OverrideReason: fitReason("strategic account, renewed")},
+			reason:  new("strategic account, renewed"),
+			want:    partnerFitState{Score: new(int16(90)), Computed: new(int16(40)), OverrideReason: new("strategic account, renewed")},
 		},
 		{
 			name:        "a reason with no score and no override sets nothing",
 			current:     noOverride,
-			reason:      fitReason("orphan note"),
+			reason:      new("orphan note"),
 			wantRequire: true,
 		},
 		{
@@ -148,7 +144,7 @@ func assertInt16Ptr(t *testing.T, field string, got, want *int16) {
 // The override reason is stored trimmed: audit text carries the words,
 // never the caller's incidental whitespace.
 func TestApplyPartnerFitOverrideTrimsTheReason(t *testing.T) {
-	got, err := applyPartnerFitOverride(partnerFitState{}, fitScore(80), fitReason("  co-sell momentum  "))
+	got, err := applyPartnerFitOverride(partnerFitState{}, new(int16(80)), new("  co-sell momentum  "))
 	if err != nil {
 		t.Fatalf("applyPartnerFitOverride: %v", err)
 	}

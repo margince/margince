@@ -78,7 +78,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 	}
 
 	// A rep (read-only) cannot toggle it.
-	if _, err := store.Update(rep, capturemod.SettingsPatch{AutoEnrich: integration.BoolPtr(false)}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.Update(rep, capturemod.SettingsPatch{AutoEnrich: new(false)}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("rep update err = %v, want permission denied", err)
 	}
 	if auditCount() != 0 {
@@ -86,7 +86,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 	}
 
 	// Admin turns it off — one audit row, the new value returned and readable.
-	updated, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrich: integration.BoolPtr(false)})
+	updated, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrich: new(false)})
 	if err != nil {
 		t.Fatalf("admin update: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 	}
 
 	// An idempotent update (same value) is a no-op: no second audit row.
-	if _, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrich: integration.BoolPtr(false)}); err != nil {
+	if _, err := store.Update(admin, capturemod.SettingsPatch{AutoEnrich: new(false)}); err != nil {
 		t.Fatalf("idempotent update: %v", err)
 	}
 	if auditCount() != 1 {

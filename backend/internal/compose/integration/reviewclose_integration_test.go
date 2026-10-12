@@ -212,7 +212,6 @@ func TestErasingTheRecipientEndsTheReviewAndItsCard(t *testing.T) {
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind":        "erasure",
 		"subject_ref": c.contactID,
-		"due_at":      time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339),
 	}, nil, &request); status != http.StatusCreated {
 		t.Fatalf("opening the erasure case → %d, want 201", status)
 	}

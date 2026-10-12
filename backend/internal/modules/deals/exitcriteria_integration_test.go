@@ -487,3 +487,94 @@ func (e *configEnv) asDealArchiver() context.Context {
 		},
 	})
 }
+
+// A stage cannot stop meaning what its deals were decided under.
+//
+// The sibling case was refused already: an open stage with undecided deals
+// cannot become terminal. This is the direction that was not. A won stage could become
+// lost or open while the deals in it stayed won, so the same deal read won from
+// its own status and lost from the stage it sits in.
+func TestAStageHoldingDecidedDealsCannotChangeWhatItMeans(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		decided, wanted StageSemantic
+	}{
+		{"a won stage cannot become lost", SemanticWon, SemanticLost},
+		{"a won stage cannot reopen", SemanticWon, SemanticOpen},
+		{"a lost stage cannot become won", SemanticLost, SemanticWon},
+		{"a lost stage cannot reopen", SemanticLost, SemanticOpen},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupConfigEnv(t)
+			ctx := e.as()
+			stage := e.seedStage(ctx, t, "Negotiation "+tc.name, 60)
+			deal := seedDealInStage(t, e, stage)
+
+			// The deal is decided first, which is the only order the two guards
+			// allow together: the sibling refuses closing a stage that still
+			// holds an open deal, so the stage can only follow the deal into a
+			// terminal state. That is also how the estate reaches this shape in
+			// practice.
+			decideDeal(t, e, deal, tc.decided)
+			decided := string(tc.decided)
+			if _, err := e.store.UpdateStage(ctx, stage, UpdateStageInput{Semantic: &decided}); err != nil {
+				t.Fatalf("closing the stage as %s: %v", tc.decided, err)
+			}
+
+			wanted := string(tc.wanted)
+			_, err := e.store.UpdateStage(ctx, stage, UpdateStageInput{Semantic: &wanted})
+			if err == nil {
+				t.Fatalf("the stage became %s while it still held a %s deal", tc.wanted, tc.decided)
+			}
+			var parse *values.ParseError
+			if !errors.As(err, &parse) || parse.Code != codeStageHoldsDecidedDeals {
+				t.Fatalf("the refusal is %v, which does not name the decided deals it is about", err)
+			}
+			if got := storedStageSemantic(t, e, stage); got != tc.decided {
+				t.Errorf("the stage now reads %s, so the refusal did not leave it alone", got)
+			}
+		})
+	}
+}
+
+// An empty stage is free to change: the guard is about the deals in it, not
+// about the stage having once been terminal.
+func TestAnEmptyTerminalStageCanChangeWhatItMeans(t *testing.T) {
+	e := setupConfigEnv(t)
+	ctx := e.as()
+	stage := e.seedStage(ctx, t, "Negotiation empty", 60)
+	won := string(SemanticWon)
+	if _, err := e.store.UpdateStage(ctx, stage, UpdateStageInput{Semantic: &won}); err != nil {
+		t.Fatalf("closing the stage as won: %v", err)
+	}
+	lost := string(SemanticLost)
+	if _, err := e.store.UpdateStage(ctx, stage, UpdateStageInput{Semantic: &lost}); err != nil {
+		t.Fatalf("an empty won stage refused to become lost: %v", err)
+	}
+}
+
+// decideDeal sets the deal's own status, which is what the stage's semantic is
+// being flipped out from under. Written directly rather than through the close
+// path: that path runs the evidence gate, and what this guard counts is the
+// status column the gate eventually writes.
+func decideDeal(t *testing.T, e *configEnv, deal ids.DealID, semantic StageSemantic) {
+	t.Helper()
+	status := string(DealWon)
+	// A lost deal carries its reason, which deal_lost_reason requires and
+	// deal_lost_reason_only_when_lost refuses on anything else. The fixture
+	// obeys the same pair production does.
+	var reason *string
+	if semantic == SemanticLost {
+		status = string(DealLost)
+		lost := "undercut on price"
+		reason = &lost
+	}
+	if err := e.store.Tx(e.as(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.as(),
+			`UPDATE deal SET status = $2, lost_reason = $3, closed_at = now() WHERE id = $1`,
+			deal, status, reason)
+		return err
+	}); err != nil {
+		t.Fatalf("deciding the deal as %s: %v", status, err)
+	}
+}

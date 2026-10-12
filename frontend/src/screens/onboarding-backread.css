@@ -46,7 +46,7 @@
   min-height: 44px;
   padding: var(--space-3);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .ob-backread-estimate {

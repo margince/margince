@@ -85,7 +85,7 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	starts := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
 	contract, err := store.CreateContract(owner, contracts.CreateContractInput{
 		CompanyID:  ids.From[ids.CompanyKind](company),
-		DealID:     idPtr(ids.From[ids.DealKind](deal)),
+		DealID:     new(ids.From[ids.DealKind](deal)),
 		Title:      "Framework agreement",
 		StartsOn:   &starts,
 		ValueBasis: "total",
@@ -97,7 +97,7 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 	id := ids.From[ids.ContractKind](ids.UUID(contract.Id))
 	retitle := func() error {
 		title := "Rewritten by a reader"
-		_, err := store.UpdateContract(holder, id, crmcontracts.UpdateContractRequest{Title: &title}, nil)
+		_, err := store.UpdateContract(holder, id, crmcontracts.UpdateContractRequest{Title: &title}, nil, nil)
 		return err
 	}
 
@@ -167,7 +167,7 @@ func TestAReadShareOfARecordCannotDecideAChangeStagedAgainstIt(t *testing.T) {
 	if _, err := svc.Get(holder, staged); err != nil {
 		t.Fatalf("a write share does not open the staged change: %v", err)
 	}
-	if _, err := svc.Decide(holder, staged, false, StrPtr("not now")); err != nil {
+	if _, err := svc.Decide(holder, staged, false, new("not now")); err != nil {
 		t.Fatalf("deciding under a write share → %v, want allowed", err)
 	}
 }
@@ -190,17 +190,17 @@ func TestAReadShareCannotRevokeSomebodyElsesShare(t *testing.T) {
 	colleagues := grantIDsFor(t, e, contact, e.Rep2)
 	mine := grantIDsFor(t, e, contact, e.Rep1)
 
-	if err := svc.RevokeRecordGrant(holder, colleagues); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := svc.RevokeRecordGrant(holder, colleagues, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a read-share holder revoking a colleague's write share → %v, want permission-denied", err)
 	}
 	// Declining your OWN share is not authority over the record and stays
 	// possible — it is the only way out from under a share nobody asked for.
-	if err := svc.RevokeRecordGrant(holder, mine); err != nil {
+	if err := svc.RevokeRecordGrant(holder, mine, nil); err != nil {
 		t.Fatalf("declining one's own share → %v, want allowed", err)
 	}
 	// And the owner, who does hold write authority, can still take the other
 	// one away — so the refusal above is the rule and not a broken revoke.
-	if err := svc.RevokeRecordGrant(owner, colleagues); err != nil {
+	if err := svc.RevokeRecordGrant(owner, colleagues, nil); err != nil {
 		t.Fatalf("the owner revoking a share → %v, want allowed", err)
 	}
 }
@@ -225,7 +225,7 @@ func TestAReadOnlySeatCanStillDeclineItsOwnShare(t *testing.T) {
 		VALUES ($1, $2, 'Unwanted Share', 'manual', 'human:x')`, contact, e.Rep3)
 	shareRecord(owner, t, e, "contact", contact, e.Rep1, "read")
 
-	if err := svc.RevokeRecordGrant(readOnly, grantIDsFor(t, e, contact, e.Rep1)); err != nil {
+	if err := svc.RevokeRecordGrant(readOnly, grantIDsFor(t, e, contact, e.Rep1), nil); err != nil {
 		t.Fatalf("a read-only seat declining its own share → %v, want allowed", err)
 	}
 }

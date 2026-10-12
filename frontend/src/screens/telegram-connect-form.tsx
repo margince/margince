@@ -9,7 +9,7 @@ import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { statusLabel, statusTone } from "./connector-status";
 import "./common.css";
 
@@ -50,22 +50,20 @@ export function TelegramConnectForm({
   const connect = useMutation({
     mutationFn: async (token: string): Promise<ChannelConnection> => {
       if (connection) {
-        const { data, error } = await api.PATCH("/channel-connections/{id}", {
-          params: { path: { id: connection.id } },
-          body: { botToken: token },
-        });
-        if (error) {
-          throwProblem(error, t);
-        }
-        return data;
+        return unwrap(
+          await api.PATCH("/channel-connections/{id}", {
+            params: { path: { id: connection.id } },
+            body: { botToken: token },
+          }),
+          t,
+        );
       }
-      const { data, error } = await api.POST("/channel-connections", {
-        body: { provider: "telegram", botToken: token },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/channel-connections", {
+          body: { provider: "telegram", botToken: token },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       // Never claim a connection the server did not confirm: the list is

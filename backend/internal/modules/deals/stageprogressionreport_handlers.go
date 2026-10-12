@@ -29,6 +29,10 @@ func (h Handlers) GetStageAutomationReport(
 	if params.WindowDays != nil {
 		days = *params.WindowDays
 	}
+	if err := checkWindowDays(days); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	rates, err := h.store.ReadStageAutomationReport(r.Context(),
 		ids.From[ids.PipelineKind](ids.UUID(params.PipelineId)),
 		time.Duration(days)*24*time.Hour)

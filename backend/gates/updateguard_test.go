@@ -91,7 +91,7 @@ func versionedTables(t *testing.T) map[string]bool {
 				return err
 			}
 			current := ""
-			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
+			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					current = m[1]
 					continue
@@ -121,6 +121,7 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
 	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/collections:ArchiveSavedView":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
@@ -160,7 +161,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/integrations:markSkipped":            "a run skipped before it ran, under the lock the selector took to decide that",
 	"internal/modules/privacy:Update":                      "the retention policy is read FOR UPDATE by the caller that edits it",
 	"internal/modules/integrations:bumpClaimAttempt":       "attempt_count = attempt_count + 1 is the read and the write in one statement, so the database orders two bumps and no count is read into Go to be written back; the backoff that follows is computed from the returned value",
-	"internal/modules/activities:ArchiveAttachment":        "archived_at = now() with no state derived from a pre-read, and an attachment archived twice is archived",
 	"internal/modules/capture:stamp":                       "parts_slimmed_at = now() records that the sweep considered the row and changes nothing else, so two sweeps stamping it write the same fact",
 	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
 	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
@@ -193,6 +193,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// storekit.LockRow.
 	"internal/modules/activities:SetAudience":              "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/activities:RefuseArchiveActivity":    "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above; this self-touch (SET archived_at = archived_at) never commits, since the trigger it deliberately provokes refuses every write to the held row it runs against",
+	"internal/modules/contacts:DemoteLead":                 "the lead is held FOR UPDATE by lockContactThenLead, which takes the contact first and then the lead, one hop past what this witness's AST walk follows",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, from before this function runs — the guard is the caller's lock, held across the whole transaction, not a second one taken here; this witness's AST walk sees neither the caller's lockActivityForWrite (a second hop) nor that this function is only ever reached under it",
 	// This IS a compare-and-set write; what this gate cannot see is the shape it
 	// checks the outcome in. It witnesses RowsAffected on a tx.Exec, and this

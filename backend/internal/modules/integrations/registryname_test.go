@@ -14,6 +14,7 @@ package integrations
 // far from the author who chose the name.
 
 import (
+	"maps"
 	"strings"
 	"testing"
 	"time"
@@ -115,9 +116,7 @@ type pricedInAnUndeclaredPool struct {
 func (p pricedInAnUndeclaredPool) Descriptor() provider.Descriptor {
 	d := p.Adapter.Descriptor()
 	priced := make(map[provider.Category]map[provider.Pool]int, len(d.CostTable))
-	for category, cost := range d.CostTable {
-		priced[category] = cost
-	}
+	maps.Copy(priced, d.CostTable)
 	priced[d.Categories[0]] = map[provider.Pool]int{"ghost_pool": 1}
 	d.CostTable = priced
 	return d

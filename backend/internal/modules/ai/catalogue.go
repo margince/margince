@@ -17,6 +17,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -89,7 +90,7 @@ func parseNonEmptyOpenRouter(body []byte) ([]openRouterModel, error) {
 		return nil, err
 	}
 	if len(models) == 0 {
-		return nil, fmt.Errorf("ai model catalogue: openrouter answered with no models")
+		return nil, errors.New("ai model catalogue: openrouter answered with no models")
 	}
 	return models, nil
 }

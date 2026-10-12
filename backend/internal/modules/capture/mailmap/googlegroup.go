@@ -43,7 +43,7 @@ func googleGroupSender(header mail.Header) ([]*mail.Address, bool) {
 // every post, which says the GROUP is a list and nothing about the author; only
 // a link to somewhere else marks the post itself as bulk mail.
 func groupListUnsubscribe(value string) bool {
-	for _, link := range strings.Split(value, ",") {
+	for link := range strings.SplitSeq(value, ",") {
 		link = strings.Trim(strings.TrimSpace(link), "<>")
 		if link == "" {
 			continue

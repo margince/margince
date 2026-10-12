@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"slices"
 	"strings"
 )
 
@@ -37,7 +38,7 @@ type TrustedProxies struct {
 // error and never a silent reading.
 func ParseTrustedProxies(raw string) (TrustedProxies, error) {
 	var out TrustedProxies
-	for _, field := range strings.Split(raw, ",") {
+	for field := range strings.SplitSeq(raw, ",") {
 		field = strings.TrimSpace(field)
 		if field == "" {
 			continue
@@ -134,10 +135,16 @@ func ResolveClientIP(trusted TrustedProxies, next http.Handler) http.Handler {
 	})
 }
 
+// FromTrustedPeer reports whether the request's direct peer is a trusted
+// proxy, the only sender whose X-Forwarded-* headers this process believes.
+func (t TrustedProxies) FromTrustedPeer(r *http.Request) bool {
+	addr, err := netip.ParseAddr(peerHost(r))
+	return err == nil && t.contains(addr)
+}
+
 func (t TrustedProxies) resolve(r *http.Request) string {
 	peer := peerHost(r)
-	addr, err := netip.ParseAddr(peer)
-	if err != nil || !t.contains(addr) {
+	if !t.FromTrustedPeer(r) {
 		return peer
 	}
 	// Every X-Forwarded-For line, in order: a proxy that adds a second header
@@ -148,8 +155,8 @@ func (t TrustedProxies) resolve(r *http.Request) string {
 		hops = append(hops, strings.Split(line, ",")...)
 	}
 	client := peer
-	for i := len(hops) - 1; i >= 0; i-- {
-		hop, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
+	for _, hop := range slices.Backward(hops) {
+		hop, err := netip.ParseAddr(strings.TrimSpace(hop))
 		if err != nil {
 			return peer
 		}

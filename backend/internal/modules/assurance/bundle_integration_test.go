@@ -30,7 +30,7 @@ import (
 func TestBundlingTheSameFindingTwiceIsANoOp(t *testing.T) {
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
-	exception := e.seedException(t, "bundle-once", ids.NewV7())
+	exception := e.seedException(t, "bundle-once", e.seedDealSubject(t))
 	task := e.seedTask(t, "Fix the pipeline data")
 
 	first, err := e.store.BundleException(e.as(), BundleInput{
@@ -61,7 +61,7 @@ func TestBundlingTheSameFindingTwiceIsANoOp(t *testing.T) {
 func TestFindingsAboutOneDealShareOneTask(t *testing.T) {
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
-	deal := ids.NewV7()
+	deal := e.seedDealSubject(t)
 	task := e.seedTask(t, "Fix this deal")
 
 	for _, key := range []string{"missing-close-date", "stale-amount", "no-owner"} {
@@ -100,7 +100,7 @@ func TestAClosedCycleBundlesNothing(t *testing.T) {
 	if err := e.store.CloseCycle(e.as(), cycle); err != nil {
 		t.Fatalf("closing the cycle: %v", err)
 	}
-	exception := e.seedException(t, "after-the-bell", ids.NewV7())
+	exception := e.seedException(t, "after-the-bell", e.seedDealSubject(t))
 	task := e.seedTask(t, "Too late")
 
 	applied, err := e.store.BundleException(e.as(), BundleInput{
@@ -174,7 +174,7 @@ func TestClosingACycleTwiceIsRefused(t *testing.T) {
 func TestTheBundledRowCarriesTheExceptionsOwnSubject(t *testing.T) {
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
-	deal := ids.NewV7()
+	deal := e.seedDealSubject(t)
 	exception := e.seedException(t, "subject-is-derived", deal)
 	task := e.seedTask(t, "The deal's task")
 
@@ -253,6 +253,17 @@ func (e *scanEnv) seedException(t *testing.T, key string, subject ids.UUID) ids.
 	return id
 }
 
+// seedDealSubject writes the deal an exception is about: the task item's
+// subject key refuses an id that names no row.
+func (e *scanEnv) seedDealSubject(t *testing.T) ids.UUID {
+	t.Helper()
+	deal, err := ids.Parse(e.seedDeal(t))
+	if err != nil {
+		t.Fatalf("reading the seeded deal's id: %v", err)
+	}
+	return deal
+}
+
 // seedTask writes the activity a bundle files findings under. In production the
 // caller mints it through LogActivityTx; this module reaches for no sibling, so
 // the fixture supplies the id the same way a caller would.
@@ -299,7 +310,7 @@ func (e *scanEnv) taskCount(t *testing.T, cycle ids.UUID) int {
 func TestASubjectCannotAcquireASecondTaskInOneCycle(t *testing.T) {
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
-	deal := ids.NewV7()
+	deal := e.seedDealSubject(t)
 	first := e.seedTask(t, "The deal's task")
 	second := e.seedTask(t, "A second task for the same deal")
 

@@ -45,6 +45,19 @@ import (
 // refusal that holds when a caller ignores it.
 const nudgeDismissalMaxDays = 90
 
+// NudgeDaysError is the 422 for a span outside 1 to nudgeDismissalMaxDays, the
+// range the contract publishes as the field's minimum and maximum.
+type NudgeDaysError struct{ Days int }
+
+func (e *NudgeDaysError) Error() string {
+	return fmt.Sprintf("a nudge dismissal runs 1 to %d days, not %d", nudgeDismissalMaxDays, e.Days)
+}
+
+// FieldFault names the request field for httperr's 422.
+func (e *NudgeDaysError) FieldFault() (field, code, message string) {
+	return "days", "out_of_range", e.Error()
+}
+
 // DismissRelationshipNudge sets a lapsed contact aside for this reader.
 //
 // Re-dismissing replaces the moment rather than refusing: a rep who set someone
@@ -56,9 +69,7 @@ func (s *Store) DismissRelationshipNudge(
 		return err
 	}
 	if days < 1 || days > nudgeDismissalMaxDays {
-		return fmt.Errorf(
-			"contacts: a nudge dismissal runs 1 to %d days, not %d: %w",
-			nudgeDismissalMaxDays, days, apperrors.ErrInvalidArgument)
+		return &NudgeDaysError{Days: days}
 	}
 	reader, err := humanReader(ctx)
 	if err != nil {

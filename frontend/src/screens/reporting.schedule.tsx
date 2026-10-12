@@ -13,7 +13,7 @@ import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
 import { INTL_LOCALE } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import type { ReportingReport } from "./reporting.model";
 
 type Schedule = components["schemas"]["ReportingSchedule"];
@@ -47,9 +47,7 @@ export function ReportingScheduleDialog({
   const readiness = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const ready = readiness.data?.schedule_ready === true;

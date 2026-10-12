@@ -231,7 +231,7 @@ func hostnamesUnder(entries []crtShEntry, domain string) []string {
 	for _, entry := range entries {
 		// One entry's name_value carries every SAN on the certificate,
 		// newline-separated.
-		for _, raw := range strings.Split(entry.NameValue, "\n") {
+		for raw := range strings.SplitSeq(entry.NameValue, "\n") {
 			name := strings.ToLower(strings.TrimSpace(raw))
 			if name == "" || strings.HasPrefix(name, "*") || seen[name] {
 				continue

@@ -98,8 +98,9 @@ func TestRegisterExtensionsAppliesDeclaredCapabilities(t *testing.T) {
 func TestRegisterExtensionsAppliesDeclaredMessagingRules(t *testing.T) {
 	const replyWindow = 9 * 24 * time.Hour
 	err := RegisterExtensions(composableAll([]extension.Extension{{
-		Name:    "msg-ok",
-		Version: "0.0.1",
+		Name:          "msg-ok",
+		Version:       "0.0.1",
+		Jurisdictions: []jurisdiction.Pack{fakePack{code: "zw"}},
 		Messaging: []messagingrules.Rules{{
 			Jurisdiction: "zw",
 			Version:      1,
@@ -137,10 +138,11 @@ func TestRegisterExtensionsAppliesDeclaredMessagingRules(t *testing.T) {
 // nothing about the registry, which is the shape this must not take.
 func TestNoMessagingRulesApplyWhenTheSetIsInvalid(t *testing.T) {
 	err := RegisterExtensions(composableAll([]extension.Extension{{
-		Name:      "undeclared-job-msg",
-		Version:   "0.0.1",
-		Messaging: []messagingrules.Rules{{Jurisdiction: "zp", Version: 1}},
-		Jobs:      []extension.Job{{Name: "refresh", Handle: noopTick}},
+		Name:          "undeclared-job-msg",
+		Version:       "0.0.1",
+		Jurisdictions: []jurisdiction.Pack{fakePack{code: "zp"}},
+		Messaging:     []messagingrules.Rules{{Jurisdiction: "zp", Version: 1}},
+		Jobs:          []extension.Job{{Name: "refresh", Handle: noopTick}},
 	}}), nil, nil)
 	// The MESSAGE, not merely an error. Asked as "did it fail", this would pass
 	// on a refusal from any of the five steps — including one that fired before

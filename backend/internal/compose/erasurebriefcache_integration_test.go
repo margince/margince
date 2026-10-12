@@ -76,7 +76,7 @@ func TestAnonymisingAContactDestroysTheCachedBriefToo(t *testing.T) {
 	cacheABrief(t, e, bystander, "fp-1")
 
 	service := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if _, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule); err != nil {
+	if _, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule, anonymiseAsChosen); err != nil {
 		t.Fatalf("AnonymiseContacts → %v", err)
 	}
 	if n := cachedBriefs(t, e, subject); n != 0 {
@@ -272,7 +272,7 @@ func TestAnUndestroyableCachedBriefStopsTheWholeErasure(t *testing.T) {
 	}
 
 	service := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if _, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule); err == nil {
+	if _, err := service.AnonymiseContacts(e.Admin(), []ids.UUID{subject}, privacy.PurgeOwnerRule, anonymiseAsChosen); err == nil {
 		t.Error("the anonymise reported success though the cached brief could not be destroyed")
 	}
 	if name := contactName(t, e, subject); name != "Briefed Subject" {

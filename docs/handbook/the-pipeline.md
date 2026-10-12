@@ -279,6 +279,12 @@ category**. Margince marks a Commit or Best case deal Slipped when its close dat
 has passed, is missing, or is still only a guess. Nobody sets it; it is what the
 dates say.
 
+## Close dates Margince sets
+
+Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its future date, and its forecast category drops one step. The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks, and is at least 7 days away. With fewer than 20 won deals, Margince uses 14 days per stage.
+
+A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Changes made for you** on **Home**, to accept or undo; see [Your day](your-day.md#changes-made-for-you). To stop these changes on your deals, see [Approvals](approvals.md).
+
 ## Reading the numbers
 
 The deals board in Margince loads 100 deals at a time. But the totals at the top
@@ -322,17 +328,21 @@ days. It counts how many ideas someone **Reviewed**, how many are **Still
 open**, and how many **Expired**. An expired idea is one nobody answered in time; it does
 not count as a no.
 
-The reviewed ones are split into **Accepted as proposed**, **Accepted after edits**,
-**Rejected**, and **Undone or corrected**. That last one is a move that was
-undone, or whose evidence they marked wrong. Those four are shown as a share of
-what was reviewed.
+The reviewed ones are split into **Accepted** (as proposed), **Edited**
+(accepted after edits), **Rejected**, and **Undone or corrected**. That last
+one is a move that was undone, or whose evidence they marked wrong. Those four
+are shown as a share of what was reviewed.
 
 It also reports **Days observed**, from the first reviewed idea to the last. It
 says why that counts: "A good rate from one afternoon is not a track record."
 
+The table shows the reviewed count and the four shares. A stage move's details
+show **Still open**, **Expired** and **Days observed**. They also show how often
+each kind of evidence, such as a signed document, was accepted as proposed.
+
 ### How do I set up stage automation?
 To let Margince move deals between stages by itself, open **Settings** → **Stage automation** (in the **Sales** group). Switch a stage move on under **Transition rules**.
-1. Pick the pipeline and read each stage move's record: **Reviewed**, **Accepted as proposed**, **Rejected**, **Undone or corrected**, **Days observed**.
+1. Pick the pipeline and read each stage move's record. Check **Reviewed**, **Accepted**, **Rejected** and **Undone or corrected**, then **Days observed** in its details.
 2. Under **Transition rules**, turn on the stage move you trust.
 
 Nothing moves at once. Margince keeps suggesting moves for you to check until the record is good enough, then moves deals and tells you after. Changing a rule needs permission to edit pipelines. Also called: automatic stage moves, pipeline automation.

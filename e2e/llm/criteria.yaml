@@ -478,3 +478,36 @@ cases:
         The user says the flagged record is a different contact, so the pair is
         dismissed with decide_duplicate rather than merged, and the answer says
         they were kept apart.
+  case57_put_it_on_the_file:
+    1:
+      name: A file handed over is kept as a file
+      statement: >-
+        The notes the user gave land on the company's Documents tab as the same
+        bytes, and the answer says they are there.
+    2:
+      name: The file is not retyped as a note
+      statement: >-
+        No note or activity carries the file's text, and the answer does not act
+        on what the file says when it was only asked to keep it.
+    3:
+      name: A refused kind of file is reported, not worked around
+      statement: >-
+        The SVG logo is refused by the attachment store, and the answer says so
+        instead of keeping it under another name or as a note.
+  case58_quiet_for_three_weeks:
+    1:
+      name: The window the user named is the window asked
+      statement: >-
+        Three weeks reaches the tool as 21 days, so the 45-day deal is in the
+        answer and is not described as past the product's sixty-day line.
+  case59_file_it_on_the_meeting_and_the_contract:
+    1:
+      name: The file is kept on the meeting it came from
+      statement: >-
+        The signed PDF lands on the signing meeting as the same bytes, and the
+        answer says it is there rather than on the project or the company.
+    2:
+      name: The file is filed against its contract
+      statement: >-
+        The same file carries the contract it is paper for, so finance finds it
+        from the contract, and the answer says so.

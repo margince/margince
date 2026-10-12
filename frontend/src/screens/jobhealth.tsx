@@ -25,7 +25,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { formatWaitedFor, HealthCard } from "./healthcard";
 import { DeadWorkCallout } from "./jobhealthdead";
 import "./jobhealth.css";
@@ -346,10 +346,7 @@ export function JobHealthCard() {
     queryKey: ["job-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/admin/job-health");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/admin/job-health"));
       // The contract makes all three required (JobHealth), so a body missing
       // one is not a thin report — it is a report this card cannot read, and
       // the check belongs at the boundary where the wire stops being trusted

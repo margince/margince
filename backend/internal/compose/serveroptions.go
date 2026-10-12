@@ -149,7 +149,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
 		// Erasure must reach the attachment bytes, not only the rows, so the
 		// DSR erase path gets a blob-aware eraser (Art. 17).
-		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithBlobstore(store))
+		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithBlobstore(store))
 		// The controller's release on the retention surface is an erasure too,
 		// and reaches the same bytes.
 		s.privacyHandlers = s.privacyHandlers.WithBlobstore(store)
@@ -385,6 +385,13 @@ func WithPublicBaseURL(base string) Option {
 		s.publicOrigin = s.originStatus
 		s.rebuildToolRegistry(pool)
 	}
+}
+
+// WithAPIBaseURL sets the API's own external base, for a deployment that
+// serves the API on a different origin than the SPA. Where a passport calls
+// the API is read from it first (agentAPIOrigin).
+func WithAPIBaseURL(base string) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.apiBaseURL = base }
 }
 
 // WithDelivery wires the machinery an accepted send is staged for

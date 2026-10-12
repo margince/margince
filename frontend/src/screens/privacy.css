@@ -1,66 +1,17 @@
-/* ConsentPurposesCard's registry + PrivacyInboxCard's queue, both of which sit
- * in a `SettingRow` now, plus the two dialog bodies. Layout + token colours only
- * (ds-purity) — the form/field primitives themselves come from atoms.css, the
- * row language from settingrow.css, and every gap here reads the --space-*
- * scale so this sheet cannot drift a step away from the card it sits in. */
+/* The privacy page's own layout: tokens only, every gap on the --space-* scale. */
 
-/* The registry as a set: one badge per purpose, wrapping across the row's full
- * width rather than running the card sideways. */
-.purpose-badges {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+/* A subject reference or a purpose key is often one unbroken string. */
+.privacy-wrap {
+  overflow-wrap: anywhere;
 }
 
-/* The queue inside its stacked row: the facet bar, the rows and the pager are
- * one block, so they stack in the row's full width instead of the row's flex
- * line putting them side by side. */
-.dsr-queue {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-width: 0;
-}
-
-.dsr-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.dsr-row {
-  display: flex;
-  flex-direction: column;
-}
-
-/* The summary toggle carries a kind badge, a subject reference, a status
- * badge, a due date and (sometimes) an overdue badge — five nowrap children in
- * one flex line. Without wrapping, that line has no width it can shrink to: it
- * pushed the card's own scroll width past the viewport on a phone, so the whole
- * settings column scrolled sideways to show one request's badges. */
-.dsr-row-toggle {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  width: 100%;
-  justify-content: flex-start;
-  text-align: left;
-}
-
-/* The deadline, and the overdue mark that qualifies it, at the row's right edge
- * — the same two anchors every settings row keeps: what this request IS on the
- * left, when it is DUE on the right. Left-packed, the five children stopped
- * about 245px short of the card's inner edge and the whole inbox read as a
- * left-aligned block in a card twice its width. Wrapping still saves the phone
- * case: on a second line the push simply has nothing left to push against. */
+/* A deadline and the overdue mark that qualifies it, wrapping as one. */
 .dsr-due {
-  margin-left: auto;
-}
-
-.dsr-expanded {
-  margin-top: var(--space-2);
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-2);
 }
 
 .dsr-actions {

@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CustomFieldsAdmin, FieldBuilder, FieldTable } from "./customfields";
+import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
 import {
   installFetchStub,
   jsonResponse,
@@ -18,7 +18,6 @@ import {
 // refusal variants drive it there with `play` before the frame is taken — a
 // story that only mounted the default builder three times captured the same
 // screenshot three times and proved nothing about any of the three branches.
-// FieldTable is fully prop-driven, so its states are pinned by fixtures.
 const meta: Meta = {
   title: "Settings/Sales/Fields/Custom fields",
   parameters: { layout: "padded" },
@@ -180,95 +179,6 @@ export const BuilderRefusal: Story = {
   },
 };
 
-export const TableWithFields: Story = {
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="deal"
-        fields={dealFields}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
-// The field table at 390px. Every row carries a fully-qualified key
-// (`deal.cf_deal_stage_reason`) next to a type, a version and its rename/archive
-// verbs — a long unbreakable identifier in an identity column beside an actions
-// column, which is the pairing that makes a table stop fitting. The table is
-// supposed to scroll inside the card; this says whether it does.
-export const TableWithFieldsPhone: Story = {
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="deal"
-        fields={dealFields}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
-export const EmptyObject: Story = {
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="contact"
-        fields={[]}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
-export const Retired: Story = {
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="deal"
-        fields={[
-          field({
-            label: "Legacy priority",
-            slug: "legacy_priority",
-            column_name: "cf_legacy_priority",
-            status: "retired",
-          }),
-        ]}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
-export const NoPermission: Story = {
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="deal"
-        fields={[field()]}
-        canEdit={false}
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
 // The whole card, in the row language the settings page speaks: the object
 // picker answers its row from the right column, the field table is the subject
 // so it takes the full width, and the builder — several inputs confirmed
@@ -282,6 +192,8 @@ const CARD_ROUTES = {
   ),
   "GET /custom-fields": () => jsonResponse({ data: dealFields }),
   "GET /audit-log": () => jsonResponse({ data: [] }),
+  "GET /users/names": () =>
+    jsonResponse({ data: [{ id: "admin-user", display_name: "Anna Weber" }] }),
 };
 
 export const CardRows: Story = {
@@ -344,9 +256,42 @@ export const CardRenameDialog: Story = {
   },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    const [edit] = await body.findAllByRole("button", { name: "Edit label" });
-    await userEvent.click(edit);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Actions for Renewal date" }),
+    );
+    await userEvent.click(
+      await body.findByRole("button", { name: "Edit label" }),
+    );
     await body.findByRole("dialog", { name: "Edit label" });
+  },
+};
+
+// An object with no fields yet: the empty sentence sits in the card body.
+export const CardEmpty: Story = {
+  render: () => {
+    installFetchStub({
+      ...CARD_ROUTES,
+      "GET /custom-fields": () => jsonResponse({ data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <CustomFieldsAdmin />
+      </StoryProviders>
+    );
+  },
+};
+
+// At a phone width the field table folds each row onto two lines.
+export const CardRowsPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    installFetchStub(CARD_ROUTES);
+    return (
+      <StoryProviders>
+        <CustomFieldsAdmin />
+      </StoryProviders>
+    );
   },
 };
 

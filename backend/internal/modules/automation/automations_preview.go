@@ -15,6 +15,7 @@ package automation
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -31,7 +32,7 @@ import (
 // reporting query.
 const (
 	previewDefaultWindowDays = 30
-	previewMaxWindowDays     = 365
+	previewMaxWindowDays     = 90
 	previewSampleLimit       = 5
 )
 
@@ -112,9 +113,7 @@ func previewDefs() map[string]previewDef {
 	for _, group := range []map[string]previewDef{
 		leadPreviewDefs(), dealPreviewDefs(), activityPreviewDefs(), unsupportedPreviewDefs(),
 	} {
-		for key, def := range group {
-			defs[key] = def
-		}
+		maps.Copy(defs, group)
 	}
 	return defs
 }

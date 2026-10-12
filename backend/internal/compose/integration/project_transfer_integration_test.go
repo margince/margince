@@ -89,7 +89,7 @@ func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testi
 	// The move is readable where a single update's would be: the moved
 	// project's field history names the owner that was and the owner that is.
 	history, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "project", EntityID: first.ID.UUID, Field: StrPtr("owner_id"),
+		EntityType: "project", EntityID: first.ID.UUID, Field: new("owner_id"),
 	})
 	if err != nil {
 		t.Fatalf("field history of a moved project: %v", err)
@@ -170,19 +170,17 @@ func TestTransferProjectOwnershipRefusesAReceiverWhoCannotOwn(t *testing.T) {
 		t.Fatalf("deactivate Rep3: %v", err)
 	}
 
-	var notActive *projects.OwnerNotActiveError
 	_, err := e.Projects.TransferProjectOwnership(e.Admin(), projects.TransferProjectOwnershipInput{
 		FromOwnerID: ids.From[ids.UserKind](e.Rep1), ToOwnerID: ids.From[ids.UserKind](e.Rep3),
 	})
-	if !errors.As(err, &notActive) {
+	if _, ok := errors.AsType[*projects.OwnerNotActiveError](err); !ok {
 		t.Errorf("transfer to a deactivated user → %v, want OwnerNotActiveError", err)
 	}
 
-	var sameOwner *projects.SameOwnerError
 	_, err = e.Projects.TransferProjectOwnership(e.Admin(), projects.TransferProjectOwnershipInput{
 		FromOwnerID: ids.From[ids.UserKind](e.Rep1), ToOwnerID: ids.From[ids.UserKind](e.Rep1),
 	})
-	if !errors.As(err, &sameOwner) {
+	if _, ok := errors.AsType[*projects.SameOwnerError](err); !ok {
 		t.Errorf("transfer to the same user → %v, want SameOwnerError", err)
 	}
 	assertOwner(t, e, project.ID, e.Rep1, "a refused transfer moves nothing")

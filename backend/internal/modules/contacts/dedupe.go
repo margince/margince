@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -357,7 +358,7 @@ func candidateSharesDomain(c ContactCandidate, domain string) bool {
 
 // normalizeEmail matches how contact_email stores the address: the insert
 // path lowercases on write, so the exact tier compares like for like.
-func normalizeEmail(e string) string { return strings.ToLower(strings.TrimSpace(e)) }
+func normalizeEmail(e string) string { return correspondence.Fold(e) }
 
 // normalizeDomain matches company_domain's storage contract:
 // lowercase only — never unaccent, or münich.example would collide with

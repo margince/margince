@@ -112,6 +112,11 @@ func TestTheConnectedDateToleratesEveryShippedFormat(t *testing.T) {
 	if len(got.parsed) != 1 || got.parsed[0].connectedOn != nil {
 		t.Errorf("an unreadable date lost the connection or invented one: %+v", got.parsed)
 	}
+	// A date outside the storable range is read as no date, and keeps the row.
+	got = parse(t, "First Name,Last Name,Connected On\nDana,Buyer,9999-12-31\n")
+	if len(got.parsed) != 1 || got.parsed[0].connectedOn != nil {
+		t.Errorf("a date no zone can render lost the connection or was kept: %+v", got.parsed)
+	}
 }
 
 func TestAFileThatIsNotAnExportIsRefusedWithAReason(t *testing.T) {

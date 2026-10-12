@@ -64,8 +64,7 @@ const verdictRetryBackoff = 30 * time.Minute
 // a budget stop keeps the fixed spacing, because its window boundary is a
 // month away and one pass must not park work that long.
 func deferralBackoff(err error) time.Duration {
-	var down *ai.ProviderDownError
-	if errors.As(err, &down) {
+	if down, ok := errors.AsType[*ai.ProviderDownError](err); ok {
 		return max(time.Until(down.RetryAfter), 0)
 	}
 	return verdictRetryBackoff

@@ -95,6 +95,8 @@ func base(
 		// client came to interpolate an identity into a sentence.
 		CauseLabel: item.CauseLabel,
 		Subject:    item.Subject,
+		// Carried so the worklist's duty dialog shows what the deadline rests on.
+		Acquisition: item.Acquisition,
 		// The row the card's own verbs write to, forwarded like every other fact
 		// the lane already resolved. A worklist row that offers `complete` and
 		// then cannot pin the write is the last-write-wins this field ends.

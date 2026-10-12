@@ -17,7 +17,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -116,17 +115,6 @@ func (h Handlers) draftForActivity(ctx context.Context, anchor ids.UUID, activit
 		subject, body, err := h.emailDrafter.DraftEmail(ctx, anchor, intent)
 		return DraftResult{Subject: subject, Body: body}, err
 	}
-	answering := DraftContext{
-		Band:      convstate.BandFresh,
-		Threaded:  IsMailThread(activity.Kind, activity.Direction),
-		Recipient: h.store.GreetingName(ctx, ids.From[ids.ActivityKind](anchor)),
-	}
-	if activity.Subject != nil {
-		answering.Topic = *activity.Subject
-	}
-	if activity.Body != nil {
-		answering.Body = *activity.Body
-	}
-	subject, body := DeterministicEmailDraft(answering, intent)
+	subject, body := h.store.FloorDraft(ctx, anchor, activity, intent)
 	return DraftResult{Subject: subject, Body: body}, nil
 }

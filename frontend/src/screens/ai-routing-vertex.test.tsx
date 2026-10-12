@@ -184,7 +184,7 @@ async function openLane(
   testId: string,
 ) {
   const lane = await screen.findByTestId(testId);
-  await user.click(within(lane).getByRole("button", { name: /^edit$/i }));
+  await user.click(within(lane).getByRole("button", { name: /^edit\b/i }));
   return screen.findByRole("dialog");
 }
 

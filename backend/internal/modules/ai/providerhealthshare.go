@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"sort"
 	"sync"
 	"time"
@@ -69,9 +70,7 @@ func (b *providerBook) maintain(ctx context.Context, every time.Duration) {
 func (b *providerBook) reconcile(ctx context.Context) {
 	b.mu.Lock()
 	trackers := make(map[string]*providerTracker, len(b.trackers))
-	for name, t := range b.trackers {
-		trackers[name] = t
-	}
+	maps.Copy(trackers, b.trackers)
 	b.mu.Unlock()
 	unhealthy := false
 	for _, t := range trackers {

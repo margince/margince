@@ -148,7 +148,7 @@ func cjkNameForMatching(s string) (string, bool) {
 	if !carriesCJKForm(name) {
 		return "", false
 	}
-	for stripped := 0; stripped < cjkMaxFormsStripped; stripped++ {
+	for range cjkMaxFormsStripped {
 		longest := ""
 		for _, form := range cjkLegalForms {
 			if len(form) <= len(longest) {

@@ -4,7 +4,7 @@ import type { components } from "../api/schema";
 import { Select } from "../design-system/select";
 import { SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { useTagVocabulary } from "./tags.queries";
 
 // The word a connector files what it captures under.
@@ -77,13 +77,12 @@ function useSetConnectorContextTag(provider: CaptureConnection["provider"]) {
     // reading render state would answer with whatever the previous render held
     // (frontend/AGENTS.md, mutation-variable-coverage).
     mutationFn: async (tagID: string | null) => {
-      const { error } = await api.PUT("/connectors/{provider}/context-tag", {
-        params: { path: { provider } },
-        body: { tag_id: tagID },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/connectors/{provider}/context-tag", {
+          params: { path: { provider } },
+          body: { tag_id: tagID },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["connectors"] });

@@ -82,6 +82,7 @@ export const Dragover: Story = {
 /** Live, so the hover and focus rings can be judged against the dragover state
  * they share a border colour with. */
 export const Interactive: Story = {
+  // biome-ignore lint/style/useConsistentObjectDefinitions: the name marks a component, which the hooks rule needs
   render: function Interactive() {
     const [file, setFile] = useState<File | undefined>();
     return (

@@ -197,7 +197,7 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 // produce.
 func namesAKeyBelowATopLevelField(path string) bool {
 	named := 0
-	for _, segment := range strings.Split(path, ".") {
+	for segment := range strings.SplitSeq(path, ".") {
 		if _, isIndex := strconv.Atoi(segment); isIndex != nil {
 			named++
 		}
@@ -273,8 +273,7 @@ func structTypeOf(into any) reflect.Type {
 // promoted field is a real field, and reporting it as a catch-all key would
 // describe the wrong shape.
 func fieldByJSONName(t reflect.Type, name string) (reflect.StructField, bool) {
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		wire, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 		if wire == name && wire != "" && wire != "-" {
 			return field, true

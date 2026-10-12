@@ -35,6 +35,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -54,7 +55,7 @@ const (
 // rawMessageType is the one self-marshalling type the walk looks THROUGH rather
 // than at: it holds an already-encoded document, so its schema is that
 // document's, which this surface cannot know.
-var rawMessageType = reflect.TypeOf(json.RawMessage(nil))
+var rawMessageType = reflect.TypeFor[json.RawMessage]()
 
 // schemaFor renders T's JSON Schema, ONCE per type for the life of the process.
 //
@@ -120,6 +121,11 @@ type jsonSchema struct {
 	// Format carries the semantic a caller needs and Go's type does not have:
 	// a uuid is a string, and a caller told only "string" will invent one.
 	Format string `json:"format,omitempty"`
+	// Enum, Minimum and Maximum come from a field's `enum`, `minimum` and
+	// `maximum` tags, which Invoke then holds a call to.
+	Enum    []string `json:"enum,omitempty"`
+	Minimum *float64 `json:"minimum,omitempty"`
+	Maximum *float64 `json:"maximum,omitempty"`
 	// Description is carried only where a field's own type cannot say it.
 	Description string                 `json:"description,omitempty"`
 	Properties  map[string]*jsonSchema `json:"properties,omitempty"`
@@ -188,8 +194,8 @@ func textual(t reflect.Type) bool {
 }
 
 var (
-	jsonMarshaler = reflect.TypeOf((*json.Marshaler)(nil)).Elem()
-	textMarshaler = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	jsonMarshaler = reflect.TypeFor[json.Marshaler]()
+	textMarshaler = reflect.TypeFor[encoding.TextMarshaler]()
 )
 
 // idFormat is the `format` an id-shaped string carries. Derived the same way:
@@ -278,6 +284,18 @@ func describeStruct(t reflect.Type) (*jsonSchema, error) {
 		if err != nil {
 			return fmt.Errorf("%s.%s: %w", t.Name(), field.Name, err)
 		}
+		if words, ok := field.Tag.Lookup("enum"); ok {
+			schema.Enum = strings.Split(words, ",")
+		}
+		for tag, target := range map[string]**float64{"minimum": &schema.Minimum, "maximum": &schema.Maximum} {
+			bound, set, err := tagBound(field, tag)
+			if err != nil {
+				return err
+			}
+			if set {
+				*target = &bound
+			}
+		}
 		out.Properties[name] = schema
 		if !optional {
 			required = append(required, name)
@@ -294,13 +312,25 @@ func describeStruct(t reflect.Type) (*jsonSchema, error) {
 	return out, nil
 }
 
+// tagBound reads a numeric `minimum` or `maximum` tag, nil when absent.
+func tagBound(field reflect.StructField, tag string) (bound float64, set bool, err error) {
+	raw, ok := field.Tag.Lookup(tag)
+	if !ok {
+		return 0, false, nil
+	}
+	bound, err = strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return 0, false, fmt.Errorf("%s: the %s tag %q is not a number", field.Name, tag, raw)
+	}
+	return bound, true, nil
+}
+
 // eachWireField visits the fields a struct puts on the wire, flattening
 // embedded ones exactly as encoding/json does: an anonymous struct field with no
 // json tag contributes its OWN fields at this level, which is what
 // UpdateWithStagedApprovalResult relies on to answer as a record plus a note.
 func eachWireField(t reflect.Type, visit func(name string, optional bool, field reflect.StructField) error) error {
-	for i := range t.NumField() {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		tag := field.Tag.Get("json")
 		if tag == "-" {
 			continue

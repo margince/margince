@@ -94,10 +94,8 @@ func replayable(resp model.Response) bool {
 	return resp.FinishReason != model.FinishReasonLength && strings.TrimSpace(resp.Text) != ""
 }
 
-// forget drops one request's cached completion. The structured-output
-// pipeline calls this when a response fails validation: an invalid answer
-// must never be replayed to a future identical request — the retry's whole
-// value is a fresh roll of the model.
+// forget drops one request's cached completion, for Router.Reject: an answer a
+// caller refused must never be replayed to a future identical request.
 func (c *resultCache) forget(key string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

@@ -184,17 +184,22 @@ func (s *Store) UpdateDocument(ctx context.Context, roomID ids.DealRoomID, id id
 		if in.Position != nil {
 			p.Set("position", current.Position, *in.Position)
 		}
-		if !p.Empty() {
-			if err := p.ApplyGuarded(ctx, tx, documentObject, id.UUID, in.IfVersion); err != nil {
+		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, documentObject, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			auditID, err := storekit.Audit(ctx, tx, "update", documentObject, id.UUID, p.Before(), p.After())
-			if err != nil {
-				return fmt.Errorf("audit deal room document update: %w", err)
-			}
-			if err := emitRoomChanged(ctx, tx, roomID, room.DealId, auditID, "documents"); err != nil {
-				return err
-			}
+			out, err = readDocument(ctx, tx, roomID, id)
+			return err
+		}
+		if err := p.ApplyGuarded(ctx, tx, documentObject, id.UUID, in.IfVersion); err != nil {
+			return err
+		}
+		auditID, err := storekit.Audit(ctx, tx, "update", documentObject, id.UUID, p.Before(), p.After())
+		if err != nil {
+			return fmt.Errorf("audit deal room document update: %w", err)
+		}
+		if err := emitRoomChanged(ctx, tx, roomID, room.DealId, auditID, "documents"); err != nil {
+			return err
 		}
 		out, err = readDocument(ctx, tx, roomID, id)
 		return err

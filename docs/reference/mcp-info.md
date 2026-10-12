@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 82 |
+| Tools | 84 |
 | Resources | 9 |
-| Tool catalog | 251.9 KB |
+| Tool catalog | 258.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 65370 |
+| Approx. wire tokens | 66945 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 109.6 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 65.7 KB | 26% | Yes, every step |
-| Input schemas | 56.7 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 19.8 KB | 7% | Partly |
-| **Description + input schema** | **122.5 KB** | **48%** | **the recurring cost** |
+| Output schemas | 112.4 KB | 43% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 67.1 KB | 26% | Yes, every step |
+| Input schemas | 58.3 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 20.3 KB | 7% | Partly |
+| **Description + input schema** | **125.4 KB** | **48%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -52,7 +52,7 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (82)
+### Tools (84)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -62,6 +62,7 @@ descriptions and input schemas are what each step pays for.
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.7 KB |
+| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.2 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
@@ -71,7 +72,7 @@ descriptions and input schemas are what each step pays for.
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
-| [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
+| [`create_tag`](#create_tag) | Create a tag |  |  | 2.0 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.1 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
@@ -85,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`describe_report_vocabulary`](#describe_report_vocabulary) | Describe the report vocabulary | yes |  | 2.5 KB |
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 2.0 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
-| [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
+| [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.7 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
@@ -97,11 +98,12 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 3.0 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.5 KB |
+| [`list_documents`](#list_documents) | List a record's documents | yes |  | 2.3 KB |
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.4 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.7 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 4.0 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 4.1 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
@@ -118,7 +120,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 4.0 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
-| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
+| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.3 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
@@ -135,7 +137,7 @@ descriptions and input schemas are what each step pays for.
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.6 KB |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 3.9 KB |
 | [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.1 KB |
-| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.3 KB |
+| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.5 KB |
 | [`who_knows`](#who_knows) | Who knows this contact | yes |  | 2.2 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
 
@@ -1287,6 +1289,216 @@ immediately; requires passport scope "read".)
         "deals",
         "deals_scanned",
         "truncated"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### attach_document
+
+**Attach a file to a record**
+
+```text
+Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the
+record's Documents tab, or on one activity such as the meeting it came from — use it whenever the
+user wants a file kept on a record, and never save a file's text as a note instead. Up to 6.2 MB per
+file, or less where the workspace sets a smaller upload limit. Common document, image and email
+formats are accepted; any other kind is refused, and the refusal names the accepted ones. Tell the
+user about a refused file; never rename, convert or zip it to get it accepted. The file is stored,
+not read. It is filed against a contract only when you name contract_id; read_project_360 lists a
+project's contracts with their ids. Use log_activity for what was said about the file, linked to the
+same record. Keep attachment_id to name the file to the user. (Governance: runs immediately;
+requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "content_base64": {
+      "description": "The whole file, standard base64 with = padding",
+      "type": "string"
+    },
+    "content_type": {
+      "description": "The file's media type, e.g. application/pdf",
+      "type": "string"
+    },
+    "contract_id": {
+      "description": "The agreement this file is paper for, when it is one",
+      "format": "uuid",
+      "type": "string"
+    },
+    "entity_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "entity_type": {
+      "enum": [
+        "company",
+        "contact",
+        "deal",
+        "lead",
+        "project",
+        "activity"
+      ],
+      "type": "string"
+    },
+    "filename": {
+      "description": "The file's name, with its extension",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "filename",
+    "content_type",
+    "content_base64"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "attachment_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "byte_size": {
+          "type": "integer"
+        },
+        "captured_by": {
+          "type": "string"
+        },
+        "checksum": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "contract_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "entity_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attachment_id",
+        "byte_size",
+        "captured_by",
+        "checksum",
+        "content_type",
+        "created_at",
+        "entity_id",
+        "entity_type",
+        "filename"
       ],
       "type": "object"
     },
@@ -3679,6 +3891,9 @@ passport scope "write".)
       ],
       "type": "string"
     },
+    "description": {
+      "type": "string"
+    },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
@@ -5919,9 +6134,9 @@ Draft a follow-up for each deal in a segment at once — today only the slipping
 each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only
 for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One
 call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific
-conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft
-comes back with its deal_id and draft_activity_id — those are how a human finds the drafts to
-review. (Governance: runs immediately; requires passport scope "draft".)
+conversation; this tool answers "chase everything that is slipping" or "that has gone quiet", not
+"reply to this". Each draft comes back with its deal_id and draft_activity_id — those are how a
+human finds the drafts to review. (Governance: runs immediately; requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>
@@ -8183,6 +8398,209 @@ is_agent seat. (Governance: runs immediately; requires passport scope "read".)
 
 </details>
 
+### list_documents
+
+**List a record's documents**
+
+```text
+List the files stored on a company, contact, deal, lead, project or activity, newest first: name,
+type, size, who added them and the contract each is filed against. It lists and never returns a
+file's contents. Check it before attaching a file again, so the record does not carry the same file
+twice. Keep next_cursor to read the next page. (Governance: runs immediately; requires passport
+scope "read".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "cursor": {
+      "description": "next_cursor from a previous page",
+      "type": "string"
+    },
+    "entity_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "entity_type": {
+      "enum": [
+        "company",
+        "contact",
+        "deal",
+        "lead",
+        "project",
+        "activity"
+      ],
+      "type": "string"
+    },
+    "limit": {
+      "maximum": 50,
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "documents": {
+          "items": {
+            "properties": {
+              "attachment_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "byte_size": {
+                "type": "integer"
+              },
+              "captured_by": {
+                "type": "string"
+              },
+              "checksum": {
+                "type": "string"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "contract_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "entity_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "entity_type": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "attachment_id",
+              "byte_size",
+              "captured_by",
+              "checksum",
+              "content_type",
+              "created_at",
+              "entity_id",
+              "entity_type",
+              "filename"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "next_cursor": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "documents"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### list_input_checks
 
 **What the forecast's inputs still need**
@@ -8975,8 +9393,9 @@ company and the deal it is for. It writes history and changes nothing else: no d
 updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a
 second call — relink_activity — which waits for the user's yes when it files under a project.
 Use progress_deal when the same event also moves a deal, so move and note are one act; create_task
-for something still owed. Keep the activity id — draft_email, send_email and send_message identify
-a conversation by it. (Governance: runs immediately; requires passport scope "write".)
+for something still owed; attach_document for a file, whose text never goes into a note. Keep the
+activity id — draft_email, send_email and send_message identify a conversation by it. (Governance:
+runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -10576,6 +10995,12 @@ runs immediately; requires passport scope "read".)
           "format": "uuid",
           "type": "string"
         },
+        "sections_omitted": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "stakeholders": {
           "items": {
             "properties": {
@@ -10612,6 +11037,7 @@ runs immediately; requires passport scope "read".)
         "open_commitments",
         "phase",
         "project_id",
+        "sections_omitted",
         "stakeholders"
       ],
       "type": "object"
@@ -12401,6 +12827,9 @@ immediately; requires passport scope "read".)
                 },
                 "status": {
                   "type": "string"
+                },
+                "updates_not_reversed": {
+                  "type": "integer"
                 }
               },
               "required": [
@@ -13758,9 +14187,21 @@ schedules in Analytics. (Governance: runs immediately; requires passport scope "
       "type": "string"
     },
     "limit": {
+      "maximum": 100,
+      "minimum": 1,
       "type": "integer"
     },
     "mode": {
+      "enum": [
+        "catalog",
+        "evaluate",
+        "reports",
+        "report",
+        "editions",
+        "edition",
+        "evidence",
+        "compare"
+      ],
       "type": "string"
     },
     "reference": {
@@ -17468,8 +17909,8 @@ from their own fields — a deal nobody can point at a reason for is absent rath
 and it is scoped to the deals the caller may see. Use run_report for the pipeline as a whole
 (totals, counts, breakdowns), and at_risk_relationships when the question is who a deal rests on
 rather than whether it is moving. Keep each deal_id if you intend to act; draft_follow_ups_for works
-over this same ranked set without you re-deriving it. (Governance: runs immediately; requires
-passport scope "read".)
+over this same ranked set at the default quiet_days without you re-deriving it. (Governance: runs
+immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -17481,6 +17922,13 @@ passport scope "read".)
     "limit": {
       "description": "Cap the ranked set; omit for the full evidenced set",
       "maximum": 50,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "quiet_days": {
+      "default": 60,
+      "description": "Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold",
+      "maximum": 365,
       "minimum": 1,
       "type": "integer"
     }

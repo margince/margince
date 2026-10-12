@@ -74,8 +74,7 @@ func TestTheBulkToolRefusesArgumentsOfTheOtherMode(t *testing.T) {
 		`{"mode":"rollback"}`,
 	} {
 		_, err := bulkUpdateRecords{changer: &recordingChanger{}}.Handle(context.Background(), json.RawMessage(args))
-		var bad *BadArgsError
-		if !errors.As(err, &bad) {
+		if _, ok := errors.AsType[*BadArgsError](err); !ok {
 			t.Errorf("%s → %v, want a bad-arguments refusal", args, err)
 		}
 	}

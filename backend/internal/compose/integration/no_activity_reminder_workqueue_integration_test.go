@@ -151,7 +151,7 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 	taskID := reminderTaskID(t, e, dealID)
 
 	samCtx := e.As(sam, []ids.UUID{e.Team1}, repPermsWithActivity())
-	samTasks, _, err := e.Activities.ListActivities(samCtx, activities.ListActivitiesInput{Kind: StrPtr("task")})
+	samTasks, _, err := e.Activities.ListActivities(samCtx, activities.ListActivitiesInput{Kind: new("task")})
 	if err != nil {
 		t.Fatalf("Sam listing his own tasks: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 	// holding the deal grant. The queue is scoped by the linked records,
 	// not by who authored the automation.
 	strangerCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, repPermsWithActivity())
-	strangerTasks, _, err := e.Activities.ListActivities(strangerCtx, activities.ListActivitiesInput{Kind: StrPtr("task")})
+	strangerTasks, _, err := e.Activities.ListActivities(strangerCtx, activities.ListActivitiesInput{Kind: new("task")})
 	if err != nil {
 		t.Fatalf("an unrelated rep listing tasks: %v", err)
 	}

@@ -196,8 +196,8 @@ func TestVerdictFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	// are the only thing the two share.
 	given := map[string]bool{}
 	rowType := reflect.TypeFor[capture.PendingCounterparty]()
-	for i := range rowType.NumField() {
-		given[strings.ToLower(strings.ReplaceAll(rowType.Field(i).Name, "_", ""))] = true
+	for field := range rowType.Fields() {
+		given[strings.ToLower(strings.ReplaceAll(field.Name, "_", ""))] = true
 	}
 	if len(given) == 0 {
 		t.Fatal("no fields found on the ledger row — this census read nothing and would " +

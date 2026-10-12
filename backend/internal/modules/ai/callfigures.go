@@ -15,6 +15,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -74,9 +75,9 @@ type CallStatsRow struct {
 	Unpriced     int64
 }
 
-// failedAttemptSQL is whether the ai_call row aliased alias failed: it carries
-// a sentinel that is not an answer. The sentinel list is bound at answeredArg,
-// from answeredSentinels, so the SQL never spells the list itself.
+// failedAttemptSQL is whether the ai_call row aliased alias failed. It carries a
+// sentinel outside the list bound at answeredArg, so the SQL never spells the
+// list itself.
 func failedAttemptSQL(alias string, answeredArg int) string {
 	return fmt.Sprintf(`(%[1]s.error_sentinel IS NOT NULL AND %[1]s.error_sentinel <> '' AND NOT %[1]s.error_sentinel = ANY($%[2]d))`, alias, answeredArg)
 }
@@ -98,14 +99,16 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", len(args)-1, len(args))
 	// A row with no tier is a call refused before any rung ran, not an attempt.
 	where := "ac.occurred_at >= $1 AND NOT ac.cache_hit AND ac.tier <> ''"
+	var whereSb101 strings.Builder
 	for _, f := range []struct{ column, value string }{
 		{"ac.provider", q.Filter.Provider}, {"ac.model_id", q.Filter.Model}, {"ac.tier", q.Filter.Tier}, {"ac.task", string(q.Filter.Task)},
 	} {
 		if f.value != "" {
 			args = append(args, f.value)
-			where += fmt.Sprintf(" AND %s = $%d", f.column, len(args))
+			fmt.Fprintf(&whereSb101, " AND %s = $%d", f.column, len(args))
 		}
 	}
+	where += whereSb101.String()
 	sql := storekit.SQLf(`
 		SELECT %[1]s AS key,
 		       count(*),
@@ -171,13 +174,13 @@ type TaskFlow struct {
 
 // TaskFlow reads task's route over the window: the decision step first, then
 // each tier in ladder order. Unanswered counts the logical calls whose last
-// attempt failed.
+// attempt served the caller nothing, a refused or withheld answer included.
 func (s *CallReadStore) TaskFlow(ctx context.Context, task Task, window time.Duration) (TaskFlow, error) {
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return TaskFlow{}, err
 	}
 	flow := TaskFlow{Steps: []FlowStep{}}
-	args := []any{string(task), s.now().Add(-window), answeredSentinels}
+	args := []any{string(task), s.now().Add(-window), servedSentinels}
 	failed := failedAttemptSQL("ac", len(args))
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `
@@ -198,7 +201,7 @@ func (s *CallReadStore) TaskFlow(ctx context.Context, task Task, window time.Dur
 	return flow, nil
 }
 
-// flowSteps reads with TaskFlow's arguments: $1 task, $2 since, and the answered
+// flowSteps reads with TaskFlow's arguments: $1 task, $2 since, and the served
 // sentinels that failed binds.
 func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, args []any, failed string) ([]FlowStep, error) {
 	found, err := tx.Query(ctx, `

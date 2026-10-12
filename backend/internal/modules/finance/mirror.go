@@ -282,12 +282,10 @@ func deriveValues(
 	inv SourceInvoice, now time.Time, rowIDs map[string]ids.UUID,
 	creditedAgainst int64, base string,
 ) invoiceValues {
-	open := inv.GrossMinor - inv.PaidMinor
-	if open < 0 {
+	open := max(inv.GrossMinor-inv.PaidMinor,
 		// Overpaid. Nothing owed rather than a negative balance, which would
 		// read as us owing them.
-		open = 0
-	}
+		0)
 	if inv.CreditsExternalID != "" {
 		// A credit note is money going the other way. Left with its gross as
 		// an open balance it would inflate receivables by the amount it was

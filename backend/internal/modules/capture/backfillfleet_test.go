@@ -22,7 +22,7 @@ func TestBackfillStatusesAreTheColumnsConstraint(t *testing.T) {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
 	var check string
-	for _, line := range strings.Split(string(catalog), "\n") {
+	for line := range strings.SplitSeq(string(catalog), "\n") {
 		if strings.HasPrefix(line, "public.capture_backfill.capture_backfill_status_check ") {
 			check = line
 		}

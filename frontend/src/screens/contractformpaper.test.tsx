@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { ACCEPTED_ATTACHMENT_ATTR } from "./attachmentupload";
 import { ProblemError } from "./common";
 import { ContractForm } from "./contractform";
 import { paperState } from "./contractpaper";
@@ -312,6 +313,14 @@ describe("the signed document on the contract form", () => {
     expect(
       screen.queryByText("Drop a file here or click to choose"),
     ).toBeNull();
+  });
+
+  it("offers only the kinds of file the server will keep", async () => {
+    stub([]);
+    show(<ContractForm companyId="o-1" open onClose={() => {}} />);
+
+    const picker = await screen.findByLabelText("Signed document");
+    expect(picker.getAttribute("accept")).toBe(ACCEPTED_ATTACHMENT_ATTR);
   });
 
   it("asks for nothing when the agreement is being created", async () => {

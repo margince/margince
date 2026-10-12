@@ -67,7 +67,7 @@ func TestMonthlyEquivalentAnswersTheSharedCorpus(t *testing.T) {
 // rather than restated as more cases.
 func TestAnExactMonthlyReadingMultipliesBackToTheYear(t *testing.T) {
 	t.Parallel()
-	for annual := int64(0); annual < 500; annual++ {
+	for annual := range int64(500) {
 		monthly, approximate := MonthlyEquivalent(annual)
 		exact := monthly*12 == annual
 		if exact == approximate {

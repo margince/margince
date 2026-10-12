@@ -83,11 +83,15 @@ func (s *Store) GetProjectTx(ctx context.Context, tx pgx.Tx, id ids.ProjectID, a
 
 // ListProjectsInput is one filtered, sorted, cursor-paginated list read.
 type ListProjectsInput struct {
-	Cursor          *string
-	Limit           *int
-	Query           *string
-	CompanyID       *ids.CompanyID
-	OwnerID         *ids.UserID
+	Cursor    *string
+	Limit     *int
+	Query     *string
+	CompanyID *ids.CompanyID
+	OwnerID   *ids.UserID
+	// OwnerTeamID and Unassigned are the other two owner dials; with OwnerID
+	// they are one predicate, storekit.OwnershipClause.
+	OwnerTeamID     *ids.TeamID
+	Unassigned      *bool
 	Phase           *string
 	Key             *string
 	IncludeArchived bool
@@ -123,11 +127,7 @@ var projectListFields = map[string]storekit.SortField{
 	"last_activity_at":  storekit.Column(storekit.KindTimestamp),
 	projectNameField:    storekit.Column(fieldcatalog.TypeText),
 	targetEndDateColumn: storekit.Column(fieldcatalog.TypeDate),
-	// The Owner header has offered this sort for as long as the list has drawn
-	// the column, and the server refused it: `project.owner_id` is a column of
-	// the row like any other, so the refusal was the vocabulary's omission
-	// rather than anything about the field.
-	filterOwnerID: storekit.Column(storekit.KindUUID),
+	filterOwnerID:       storekit.OwnerNameSort(projectObject),
 	// The Phase header, by how LIVE the work is rather than by the word.
 	// phaseRank is the account page's own arrangement, read here so the two
 	// surfaces cannot disagree about which phase comes first.
@@ -189,7 +189,10 @@ func (s *Store) ListProjects(ctx context.Context, in ListProjectsInput) ([]crmco
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where := appendProjectFilters(pre.Where(), in, pre.Arg)
+	where, err := appendProjectFilters(pre.Where(), in, pre.Arg)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
 
 	return storekit.RunListPage(ctx, s, pre, projectObject, projectColumns, active, where, scanProjectPage,
 		func(p crmcontracts.Project) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) },
@@ -222,7 +225,7 @@ func scanProjectPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storek
 
 // appendProjectFilters translates the caller's list filters into WHERE
 // clauses (the cf_ filters and the keyset cursor stay in ListProjects).
-func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) int) []string {
+func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) int) ([]string, error) {
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
@@ -238,8 +241,12 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL)`,
 			arg(*in.CompanyID)))
 	}
-	if in.OwnerID != nil {
-		where = append(where, storekit.SQLf("owner_id = $%d", arg(*in.OwnerID)))
+	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
+	if err != nil {
+		return nil, err
+	}
+	if ownership != "" {
+		where = append(where, ownership)
 	}
 	if in.Phase != nil {
 		where = append(where, storekit.SQLf("phase = $%d", arg(*in.Phase)))
@@ -250,7 +257,7 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 	if in.Key != nil {
 		where = append(where, storekit.SQLf("lower(key) = lower($%d)", arg(*in.Key)))
 	}
-	return where
+	return where, nil
 }
 
 // A var rather than a const: the seat-name subselect is built by a function.

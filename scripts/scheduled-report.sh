@@ -389,6 +389,21 @@ elif [[ "${CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the frontend suite's verdict depends on the calendar"
 fi
 
+if [[ "${TREND_RESULT:-}" = "failure" ]]; then
+  report "the weekly slop trend could not run" "priority: low,area: ci-tests,bug" \
+"\`make slop-trend\` failed on the scheduled run: $RUN_URL
+
+The trend is a report, so it fails only when it cannot measure: craft did not
+download, the frontend packages did not install, the TypeScript compiler was not
+found, or a \`craft stats\` run read under 10,000 files. The step log names which.
+Until it runs again, nothing records whether the old comments are improving.
+
+Reproduce locally with \`make slop-trend\`."\
+    || unreported=1
+elif [[ "${TREND_RESULT:-}" = "success" ]]; then
+  resolve "the weekly slop trend could not run"
+fi
+
 if [[ "${CACHE_RESULT:-}" = "failure" ]]; then
   report "the Actions build-cache reaper is failing" "priority: normal,area: ci-tests,bug" \
 "\`scripts/reap-build-caches.sh\` failed on the scheduled run: $RUN_URL

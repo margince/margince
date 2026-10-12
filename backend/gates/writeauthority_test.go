@@ -69,6 +69,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"maps"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -99,6 +100,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/collections:recordArm":            "the reader row scope over the record a tag suggestion names, which decides whether the caller may SEE the suggestion; it changes no record. Accepting or dismissing then asks auth.EnsureWritableLive on that record in the same transaction (openTagSuggestionForDecision) before anything is written",
 	"internal/modules/activities:hiddenProjects":        "decides which of the projects a filing names the caller may SEE, so a project out of their sight is shown unnamed and the undo refuses rather than leave a link it cannot remove. It changes no project; the undo's own row gate is the activity's writable probe taken under the lock",
 	"internal/modules/collections:recordScope":          "the reader row scope over member records, which counts and pages the Shortlist members THIS READER may see, for the list a list change answers with; it changes no member record. A membership change never changes the record it adds or removes either — it needs list authority over the list, and a read probe of the member (EnsureLinkTarget) so a list cannot name a record its curator cannot see",
 	"internal/modules/contacts:recordEmploymentOutcome": "reads the previous COMPANY reference for an audit before-image; it never changes that company. The mutation updates the contact-owned resolution ledger and relationship provenance, after ApplyEmploymentImport holds the writable live CONTACT. A read-only company grant is sufficient to retain its identity in this evidence trail",
@@ -412,9 +414,7 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 		if dirConsts[dir] == nil {
 			dirConsts[dir] = map[string]string{}
 		}
-		for name, value := range packageStringConsts(src) {
-			dirConsts[dir][name] = value
-		}
+		maps.Copy(dirConsts[dir], packageStringConsts(src))
 	}
 	// The statements each package holds in its package-level vars and consts,
 	// read once per package. A statement hoisted out of a function body is
@@ -756,8 +756,8 @@ func endsAtVerb(text string, at int) bool {
 // name a statement this pass could not read.
 func firstLineFrom(text string, at int) string {
 	rest := text[at:]
-	if nl := strings.IndexByte(rest, '\n'); nl >= 0 {
-		return rest[:nl]
+	if before, _, ok := strings.Cut(rest, "\n"); ok {
+		return before
 	}
 	return rest
 }
@@ -768,9 +768,7 @@ func firstLineFrom(text string, at int) string {
 // it cannot tell which was meant and must not drop either's edges.
 func visibleWriteAuthorityFns(byReceiver map[string]map[string]*writeAuthorityFn, recv string) map[string]*writeAuthorityFn {
 	fns := make(map[string]*writeAuthorityFn, len(byReceiver[""])+len(byReceiver[recv]))
-	for name, info := range byReceiver[""] {
-		fns[name] = info
-	}
+	maps.Copy(fns, byReceiver[""])
 	for name, info := range byReceiver[recv] {
 		pkgLevel, both := fns[name]
 		if !both {

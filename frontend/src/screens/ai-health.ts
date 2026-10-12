@@ -3,7 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 // Whether the model lanes are answering.
 //
@@ -20,9 +20,7 @@ export function useAiHealth(canSee: boolean) {
     queryKey: ["ai-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/health");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/ai/health"));
     },
     // The question is whether it is answering NOW, so a reader who leaves this
     // page open watches it rather than reading a snapshot from when they

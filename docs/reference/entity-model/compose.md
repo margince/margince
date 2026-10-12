@@ -171,7 +171,7 @@ The 38 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## analytics_share
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -182,6 +182,8 @@ The 38 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scope_id` | `uuid` |  |  |
 | `scope_kind` | `text` | yes | One of `workspace`, `team`, `owner`. |
+| `scope_team_id` | `uuid`, generated as `CASE WHEN (scope_kind = 'team'::text) THEN scope_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
+| `scope_user_id` | `uuid`, generated as `CASE WHEN (scope_kind = 'owner'::text) THEN scope_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
 | `snapshot_id` | `uuid` |  | Points at `forecast_snapshot.id`. |
 | `target` | `text` | yes |  |
 | `token_hash` | `text` | yes |  |
@@ -195,6 +197,8 @@ The 38 tables owned by `compose`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `created_by` | `app_user` | deleting the parent deletes this row |
+| `scope_team_id` | `team` | deleting the parent deletes this row |
+| `scope_user_id` | `app_user` | deleting the parent deletes this row |
 | `snapshot_id` | `forecast_snapshot` | deleting the parent deletes this row |
 
 **Rules**
@@ -203,6 +207,7 @@ The 38 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `analytics_share_kind_check`: `CHECK ((kind = ANY (ARRAY['live', 'snapshot'])))`
 - `analytics_share_scope_id_matches_kind`: `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `analytics_share_scope_kind_check`: `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
+- `analytics_share_scope_shape`: `CHECK (((scope_id IS NULL) OR (num_nonnulls(scope_team_id, scope_user_id) = 1)))`
 - `analytics_share_snapshot_matches_kind`: `CHECK (((kind = 'snapshot') = (snapshot_id IS NOT NULL)))`
 - `analytics_share_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_analytics_share_token`: `UNIQUE (token_hash)`
@@ -211,6 +216,8 @@ The 38 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 - `analytics_share_pkey`: `unique, btree (id)`
 - `idx_analytics_share_creator`: `btree (created_by, created_at DESC)`
+- `idx_analytics_share_scope_team`: `btree (scope_team_id) WHERE (scope_team_id IS NOT NULL)`
+- `idx_analytics_share_scope_user`: `btree (scope_user_id) WHERE (scope_user_id IS NOT NULL)`
 - `idx_analytics_share_snapshot`: `btree (snapshot_id)`
 - `uq_analytics_share_token`: `unique, btree (token_hash)`
 

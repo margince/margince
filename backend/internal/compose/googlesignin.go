@@ -194,7 +194,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// them: RedirectBase is this deployment's own externally-reachable
 		// origin. What an incomplete config withholds is the ROUTE, not the URL
 		// the route will answer on once the operator finishes.
-		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
+		if base := apiV1Base(cfg.RedirectBase); base != "" {
 			s.addRedirectURI(capture.AppProviderGoogle, crmcontracts.ConnectorAppRedirectUriPurposeSignIn,
 				identity.SignInRedirectURI(base, googleProviderKey))
 		}
@@ -210,7 +210,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 			config: identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel},
 			source: source.provider,
 		}, identity.OIDCRoutes{
-			RedirectBase: signInRedirectBase(cfg.RedirectBase),
+			RedirectBase: apiV1Base(cfg.RedirectBase),
 			PostLoginURL: cfg.PostLoginURL,
 			FailureURL:   cfg.FailureURL,
 		}, cfg.StateKey)

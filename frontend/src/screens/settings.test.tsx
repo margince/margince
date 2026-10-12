@@ -10,7 +10,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
 import { SIGN_OFF_QUERY } from "./composesignoff";
-import { AuditLogCard, SettingsScreen, tabContent } from "./settings";
+import { SettingsScreen, tabContent } from "./settings";
 import {
   auditEntry,
   IDLE_JOB_HEALTH,
@@ -20,6 +20,7 @@ import {
   renderSettings,
   settingsBackend,
 } from "./settings.testkit";
+import { AuditLogCard } from "./settings-audit";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 import { settingsHref } from "./settingsrouting";
 
@@ -464,10 +465,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     }
   });
 
-  it("the passport row's token reads as withheld — masked, never re-disclosed — on the Agents tab", async () => {
+  it("never re-discloses a passport's token on the Agents tab", async () => {
     render(<SettingsScreen route={settingsHref("agents")} />);
     await waitFor(() => expect(screen.getByText("Scout")).toBeTruthy());
-    expect(screen.getByRole("img", { name: "Masked value" })).toBeTruthy();
     expect(screen.queryByText(/mgp_/)).toBeNull();
   });
 

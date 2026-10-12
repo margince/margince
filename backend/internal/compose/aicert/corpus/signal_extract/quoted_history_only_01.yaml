@@ -1,0 +1,26 @@
+name: a_promise_seen_only_in_quoted_history
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - direction: inbound
+    subject: 'Re: Security questionnaire'
+    sent: '2026-09-02'
+    body: |
+      Thanks Anna, noted.
+
+      Tom
+
+      On Mon, 1 Sep 2026 at 09:00, Anna <anna@example.com> wrote:
+      > Hi Tom,
+      > we will deliver the completed security questionnaire by 25 September.
+      > Anna
+expect:
+  outcome: accepted
+  answer: []
+  judge: none
+  judge_none_reason: >
+    The only promise is in the history the reply quotes, and its own message is
+    not in the conversation. Tom's words promise nothing, so the right answer is
+    no event, and the check fails any event the reply reports.

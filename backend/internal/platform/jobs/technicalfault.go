@@ -33,6 +33,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"slices"
 	"syscall"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -172,12 +173,7 @@ func providerStatusIn(statuses ...int) func(error) bool {
 		if !errors.As(err, &provider) {
 			return false
 		}
-		for _, s := range statuses {
-			if provider.Status == s {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(statuses, provider.Status)
 	}
 }
 

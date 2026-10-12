@@ -231,9 +231,9 @@ sign_in_as_admin
 # would be all of that spelled a second time, drifting from the writer that
 # owns it.
 #
-# The identity is the one frontend/e2e/seed.ts serves its mocked lane, so the
-# specs that sign into a real stack (brief.spec.ts) and the specs that mock
-# (ac.spec.ts) describe the same installation instead of two.
+# The identity is the one frontend/e2e/mockapi/session.ts serves its mocked
+# lane, so the specs that sign into a real stack (brief.spec.ts) and the specs
+# that mock (ac.spec.ts) describe the same installation instead of two.
 #
 # The semantic pair rides along because the server requires it of a submission
 # without a complete legal block, and a company saved without it reads back

@@ -215,9 +215,8 @@ The app shell is **glass over the light page**, as
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark rail group in `tokens.css` (`--bgRail`, `--railTop`,
-`--railBottom`, `--railIcon`, `--railIconHover`, `--railIconActive`,
-`--railHover`, `--railActive`, `--overlayScrim`) is for the dark green field
+The dark rail group in `tokens.css` (`--bgRail`, `--railIconActive`,
+`--overlayScrim`) is for the dark green field
 only. Its comment says it has no theme, `white-alpha` in both themes, which is
 correct for that field. That field is the tooltips the small rail shows, the bar
 of the client surface, and the surfaces for the web site and the deck. A new
@@ -353,10 +352,10 @@ even if the test tree breaks.
 | Render UAT | `make fe-uat` → `frontend/scripts/fe-uat.mjs` | a changed component with no story beside it, a changed story the build does not register, or a render that fails when run with no screen. It is **outside** `make check`: it is the UAT lane for the frontend alone, and it writes its result to `.tmp/fe-uat/manifest.json` |
 | Screen checks | `make frontend-e2e` → `frontend/e2e/` | Playwright cases named for their AC, axe at WCAG 2.2 AA, and the `390px` `no-horizontal-scroll` sweep. The speed budget is the one in `make bench-mobile`: a `p95` over many runs, because one clock reading in a shared lane measures the machine it runs on |
 
-The `craft static` hook the backend runs before a push does **not** cover
-`frontend/`. The frontend lane is separate from the Go merge gate and needs Node
-and pnpm. Run `make check-fe` (or `make frontend-check`) before pushing a
-frontend change.
+`craft static`, in the push hook and in CI, reads only the comment lines a
+change adds to a `frontend/` file. The frontend lane is separate from the Go
+merge gate and needs Node and pnpm. Run `make check-fe` (or
+`make frontend-check`) before pushing a frontend change.
 
 ## Where to look first
 

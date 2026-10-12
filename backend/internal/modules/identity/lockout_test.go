@@ -16,8 +16,6 @@ var lockoutEpoch = time.Date(2026, 7, 8, 12, 0, 0, 0, time.UTC)
 
 func at(d time.Duration) time.Time { return lockoutEpoch.Add(d) }
 
-func lockedUntil(t time.Time) *time.Time { return &t }
-
 func TestLockoutFailFoldsPerFormulas27(t *testing.T) {
 	cases := map[string]struct {
 		state           lockoutState
@@ -49,7 +47,7 @@ func TestLockoutFailFoldsPerFormulas27(t *testing.T) {
 			state:           lockoutState{FailedCount: 4, LastFailure: at(0)},
 			now:             at(5 * time.Minute),
 			wantCount:       5,
-			wantLockedUntil: lockedUntil(at(5*time.Minute + lockoutDuration)),
+			wantLockedUntil: new(at(5*time.Minute + lockoutDuration)),
 		},
 		"a stale streak of four never locks on the next failure": {
 			state:     lockoutState{FailedCount: 4, LastFailure: at(-time.Hour)},
@@ -59,7 +57,7 @@ func TestLockoutFailFoldsPerFormulas27(t *testing.T) {
 		"a failure after the lock expired restarts, not re-locks": {
 			state: lockoutState{
 				FailedCount: 5, LastFailure: at(0),
-				LockedUntil: lockedUntil(at(lockoutDuration)),
+				LockedUntil: new(at(lockoutDuration)),
 			},
 			now:       at(lockoutDuration + 2*time.Minute),
 			wantCount: 1,
@@ -93,10 +91,10 @@ func TestLockoutLockedIsStrictlyBeforeLockedUntil(t *testing.T) {
 		want  bool
 	}{
 		"no lock set":                {lockoutState{FailedCount: 4}, at(0), false},
-		"inside the lock window":     {lockoutState{LockedUntil: lockedUntil(at(15 * time.Minute))}, at(14 * time.Minute), true},
-		"at the expiry instant":      {lockoutState{LockedUntil: lockedUntil(at(15 * time.Minute))}, at(15 * time.Minute), false},
-		"after the lock expired":     {lockoutState{LockedUntil: lockedUntil(at(15 * time.Minute))}, at(16 * time.Minute), false},
-		"one nanosecond before open": {lockoutState{LockedUntil: lockedUntil(at(15 * time.Minute))}, at(15*time.Minute - time.Nanosecond), true},
+		"inside the lock window":     {lockoutState{LockedUntil: new(at(15 * time.Minute))}, at(14 * time.Minute), true},
+		"at the expiry instant":      {lockoutState{LockedUntil: new(at(15 * time.Minute))}, at(15 * time.Minute), false},
+		"after the lock expired":     {lockoutState{LockedUntil: new(at(15 * time.Minute))}, at(16 * time.Minute), false},
+		"one nanosecond before open": {lockoutState{LockedUntil: new(at(15 * time.Minute))}, at(15*time.Minute - time.Nanosecond), true},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

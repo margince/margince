@@ -28,7 +28,7 @@
 }
 .select-control:disabled {
   cursor: not-allowed;
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 /* The face never pushes the chevron out of the control: a long label ellipsizes
    inside the field rather than widening it, which is what a native select does

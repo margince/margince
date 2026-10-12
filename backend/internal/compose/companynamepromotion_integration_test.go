@@ -76,7 +76,7 @@ func seedDossierName(t *testing.T, e *integration.Env, company ids.UUID, legalNa
 	t.Helper()
 	e.WsExec(t, `
 		INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'agent:siteread')`,
+		VALUES ($1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'connector:siteread')`,
 		company, legalName)
 }
 
@@ -211,7 +211,7 @@ func TestCompanyNamePromotionReachesCandidatesBeyondTheFirstPage(t *testing.T) {
 
 	// Fill more than one page with companies that can never resolve: one
 	// signature each, so every pass stages an offer and moves nothing.
-	for i := 0; i < companyNamePromotionPageSize; i++ {
+	for range companyNamePromotionPageSize {
 		stuck := seedProvisionalCompany(t, e, "Stuck", "domain")
 		seedSigningEmployee(t, e, stuck, "Lone Signer", "Stuck Holdings")
 	}

@@ -8,7 +8,7 @@ import { Badge, Button, Card, Disclosure } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, unwrap } from "./common";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
 import "./voice-dna.css";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -32,12 +32,11 @@ export function useVoiceVersions(profileId: string | undefined) {
     queryKey: ["voice-versions", profileId],
     enabled: Boolean(profileId),
     queryFn: async (): Promise<VoiceProfileVersion[]> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/versions", {
-        params: { path: { id: profileId as string } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/voice-profiles/{id}/versions", {
+          params: { path: { id: profileId as string } },
+        }),
+      );
       return data.data;
     },
   });
@@ -153,15 +152,14 @@ function CandidateBanner({
         action === "apply"
           ? ("/voice-profiles/{id}/versions/{profileVersion}/apply" as const)
           : ("/voice-profiles/{id}/versions/{profileVersion}/reject" as const);
-      const { error: err } = await api.POST(path, {
-        params: {
-          path: { id: profileId, profileVersion: candidate.profile_version },
-          header: { "If-Match": String(candidate.version) },
-        },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(
+        await api.POST(path, {
+          params: {
+            path: { id: profileId, profileVersion: candidate.profile_version },
+            header: { "If-Match": String(candidate.version) },
+          },
+        }),
+      );
     },
     onSuccess: () => {
       setError(null);
@@ -249,15 +247,14 @@ export function VoiceHistory({
   const versions = useQuery({
     queryKey: ["voice-versions", profileId, versionCursor ?? ""],
     queryFn: async (): Promise<VersionsPage> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/versions", {
-        params: {
-          path: { id: profileId },
-          query: versionCursor ? { cursor: versionCursor } : {},
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/voice-profiles/{id}/versions", {
+          params: {
+            path: { id: profileId },
+            query: versionCursor ? { cursor: versionCursor } : {},
+          },
+        }),
+      );
       setAllVersions((prev) => mergeById(prev, data.data));
       return { items: data.data, next: data.page.next_cursor ?? null };
     },
@@ -265,13 +262,11 @@ export function VoiceHistory({
   const learning = useQuery({
     queryKey: ["voice-learning", profileId],
     queryFn: async (): Promise<VoiceLearningSummary> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/learning", {
-        params: { path: { id: profileId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/voice-profiles/{id}/learning", {
+          params: { path: { id: profileId } },
+        }),
+      );
     },
   });
 
@@ -345,15 +340,14 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
   const deltas = useQuery({
     queryKey: ["voice-deltas", profileId, deltaCursor ?? ""],
     queryFn: async (): Promise<DeltasPage> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/deltas", {
-        params: {
-          path: { id: profileId },
-          query: deltaCursor ? { cursor: deltaCursor } : {},
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/voice-profiles/{id}/deltas", {
+          params: {
+            path: { id: profileId },
+            query: deltaCursor ? { cursor: deltaCursor } : {},
+          },
+        }),
+      );
       setAllDeltas((prev) => mergeById(prev, data.data));
       return { items: data.data, next: data.page.next_cursor ?? null };
     },
@@ -409,17 +403,16 @@ function VersionRow({
   const [error, setError] = useState<string | null>(null);
   const rollback = useMutation({
     mutationFn: async () => {
-      const { error: err } = await api.POST(
-        "/voice-profiles/{id}/versions/{profileVersion}/rollback",
-        {
-          params: {
-            path: { id: profileId, profileVersion: version.profile_version },
+      unwrap(
+        await api.POST(
+          "/voice-profiles/{id}/versions/{profileVersion}/rollback",
+          {
+            params: {
+              path: { id: profileId, profileVersion: version.profile_version },
+            },
           },
-        },
+        ),
       );
-      if (err) {
-        throwProblem(err);
-      }
     },
     onSuccess: () => {
       setError(null);

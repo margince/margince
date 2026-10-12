@@ -58,6 +58,11 @@ func refusePatch(ctx context.Context, tx pgx.Tx, current relationshipRow, in Upd
 			return err
 		}
 	}
+	if in.ClearRole {
+		if err := refuseRoleClear(current.Kind); err != nil {
+			return err
+		}
+	}
 	if in.IfVersion != nil && *in.IfVersion != current.Version {
 		return apperrors.ErrVersionSkew
 	}

@@ -949,6 +949,9 @@ public.analytics_share.analytics_share_kind_check CHECK ((kind = ANY (ARRAY['liv
 public.analytics_share.analytics_share_pkey PRIMARY KEY (id)
 public.analytics_share.analytics_share_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.analytics_share.analytics_share_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
+public.analytics_share.analytics_share_scope_shape CHECK (((scope_id IS NULL) OR (num_nonnulls(scope_team_id, scope_user_id) = 1)))
+public.analytics_share.analytics_share_scope_team_id_fkey FOREIGN KEY (scope_team_id) REFERENCES team(id) ON DELETE CASCADE NOT VALID
+public.analytics_share.analytics_share_scope_user_id_fkey FOREIGN KEY (scope_user_id) REFERENCES app_user(id) ON DELETE CASCADE NOT VALID
 public.analytics_share.analytics_share_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
 public.analytics_share.analytics_share_snapshot_matches_kind CHECK (((kind = 'snapshot'::text) = (snapshot_id IS NOT NULL)))
 public.analytics_share.analytics_share_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -961,6 +964,16 @@ public.analytics_share.kind text NOT NULL gen=- def=-
 public.analytics_share.revoked_at timestamp with time zone gen=- def=-
 public.analytics_share.scope_id uuid gen=- def=-
 public.analytics_share.scope_kind text NOT NULL gen=- def=-
+public.analytics_share.scope_team_id uuid gen=s def=
+CASE
+    WHEN (scope_kind = 'team'::text) THEN scope_id
+    ELSE NULL::uuid
+END
+public.analytics_share.scope_user_id uuid gen=s def=
+CASE
+    WHEN (scope_kind = 'owner'::text) THEN scope_id
+    ELSE NULL::uuid
+END
 public.analytics_share.snapshot_id uuid gen=- def=-
 public.analytics_share.target text NOT NULL gen=- def=-
 public.analytics_share.token_hash text NOT NULL gen=- def=-
@@ -996,6 +1009,7 @@ public.app_user.greeting_name text gen=- def=-
 public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
 public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
+public.app_user.last_active_at timestamp with time zone gen=- def=-
 public.app_user.locale text gen=- def=-
 public.app_user.locked_until timestamp with time zone gen=- def=-
 public.app_user.morning_brief_delivery text gen=- def=-
@@ -1221,16 +1235,47 @@ public.assurance_task_item.assurance_task_item_once UNIQUE (exception_id, cycle_
 public.assurance_task_item.assurance_task_item_one_task_per_subject EXCLUDE USING gist (cycle_id WITH =, subject_kind WITH =, subject_id WITH =, task_activity_id WITH <>)
 public.assurance_task_item.assurance_task_item_pkey PRIMARY KEY (id)
 public.assurance_task_item.assurance_task_item_state CHECK ((state = ANY (ARRAY['open'::text, 'resolved'::text, 'dismissed'::text])))
+public.assurance_task_item.assurance_task_item_subject_contract_id_bound CHECK ((subject_unkeyed OR (NOT (subject_contract_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'contract'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+public.assurance_task_item.assurance_task_item_subject_contract_id_fkey FOREIGN KEY (subject_contract_id) REFERENCES contract(id) ON DELETE CASCADE
+public.assurance_task_item.assurance_task_item_subject_deal_id_bound CHECK ((subject_unkeyed OR (NOT (subject_deal_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'deal'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+public.assurance_task_item.assurance_task_item_subject_deal_id_fkey FOREIGN KEY (subject_deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.assurance_task_item.assurance_task_item_subject_kind CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
+public.assurance_task_item.assurance_task_item_subject_offer_id_bound CHECK ((subject_unkeyed OR (NOT (subject_offer_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'offer'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+public.assurance_task_item.assurance_task_item_subject_offer_id_fkey FOREIGN KEY (subject_offer_id) REFERENCES offer(id) ON DELETE CASCADE
+public.assurance_task_item.assurance_task_item_subject_shape CHECK ((subject_unkeyed OR (num_nonnulls(subject_deal_id, subject_signal_id, subject_offer_id, subject_contract_id) = 1)))
+public.assurance_task_item.assurance_task_item_subject_signal_id_bound CHECK ((subject_unkeyed OR (NOT (subject_signal_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'signal'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+public.assurance_task_item.assurance_task_item_subject_signal_id_fkey FOREIGN KEY (subject_signal_id) REFERENCES signal(id) ON DELETE CASCADE
 public.assurance_task_item.assurance_task_item_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.assurance_task_item.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_task_item.cycle_id uuid NOT NULL gen=- def=-
 public.assurance_task_item.exception_id uuid NOT NULL gen=- def=-
 public.assurance_task_item.id uuid NOT NULL gen=- def=uuidv7()
 public.assurance_task_item.state text NOT NULL gen=- def='open'::text
+public.assurance_task_item.subject_contract_id uuid gen=- def=-
+public.assurance_task_item.subject_deal_id uuid gen=- def=-
 public.assurance_task_item.subject_id uuid NOT NULL gen=- def=-
 public.assurance_task_item.subject_kind text NOT NULL gen=- def=-
+public.assurance_task_item.subject_offer_id uuid gen=- def=-
+public.assurance_task_item.subject_signal_id uuid gen=- def=-
+public.assurance_task_item.subject_unkeyed boolean NOT NULL gen=- def=false
 public.assurance_task_item.task_activity_id uuid NOT NULL gen=- def=-
+public.assurance_task_item.trg_assurance_task_item_subject_keys CREATE TRIGGER trg_assurance_task_item_subject_keys BEFORE INSERT OR UPDATE ON public.assurance_task_item FOR EACH ROW EXECUTE FUNCTION trg_assurance_task_item_subject_keys()
 public.assurance_task_item_by_task CREATE INDEX assurance_task_item_by_task ON public.assurance_task_item USING btree (task_activity_id)
 public.assurance_task_item_once CREATE UNIQUE INDEX assurance_task_item_once ON public.assurance_task_item USING btree (exception_id, cycle_id)
 public.assurance_task_item_one_task_per_subject CREATE INDEX assurance_task_item_one_task_per_subject ON public.assurance_task_item USING gist (cycle_id, subject_kind, subject_id, task_activity_id)
@@ -1955,6 +2000,7 @@ public.comms_outbound.html_body text gen=- def=-
 public.comms_outbound.id uuid NOT NULL gen=- def=-
 public.comms_outbound.in_reply_to text gen=- def=-
 public.comms_outbound.inflight_at timestamp with time zone gen=- def=-
+public.comms_outbound.inline_logo_key text gen=- def=-
 public.comms_outbound.instruction_id uuid gen=- def=-
 public.comms_outbound.link_id uuid gen=- def=-
 public.comms_outbound.list_unsubscribe text gen=- def=-
@@ -2364,7 +2410,7 @@ public.company_fact.company_fact_field_vocab CHECK ((((category = 'company'::tex
 public.company_fact.company_fact_pkey PRIMARY KEY (id)
 public.company_fact.company_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
 public.company_fact.company_fact_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
-public.company_fact.company_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text])))
+public.company_fact.company_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text])))
 public.company_fact.company_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL))))
 public.company_fact.company_fact_value_key_cardinality CHECK ((((category = 'company'::text) AND (field <> 'location'::text) AND (value_key = ''::text)) OR ((category = 'company'::text) AND (field = 'location'::text) AND (value_key <> ''::text)) OR ((category = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text])) AND (value_key <> ''::text))))
 public.company_fact.company_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
@@ -2538,7 +2584,7 @@ public.company_profile_field.company_profile_field_company_fkey FOREIGN KEY (com
 public.company_profile_field.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
 public.company_profile_field.company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text])))
 public.company_profile_field.company_profile_field_pkey PRIMARY KEY (id)
-public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
+public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
 public.company_profile_field.company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
 public.company_profile_field.company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_profile_field.company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
@@ -2660,11 +2706,14 @@ public.confirm_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd
 public.confirm_token.confirm_token_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
 public.confirm_token.confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text, 'privacy_notice'::text])))
+public.confirm_token.confirm_token_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.confirm_token.confirm_token_lead_is_only_told CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice'::text)))
+public.confirm_token.confirm_token_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.confirm_token.confirm_token_pkey PRIMARY KEY (id)
 public.confirm_token.confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.confirm_token.confirm_token_purpose_is_consents CHECK (((kind = 'consent_confirmation'::text) = (purpose_id IS NOT NULL)))
 public.confirm_token.consumed_at timestamp with time zone gen=- def=-
-public.confirm_token.contact_id uuid NOT NULL gen=- def=-
+public.confirm_token.contact_id uuid gen=- def=-
 public.confirm_token.delivered_to text NOT NULL gen=- def=-
 public.confirm_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.confirm_token.fetch_count integer NOT NULL gen=- def=0
@@ -2672,6 +2721,7 @@ public.confirm_token.first_fetched_at timestamp with time zone gen=- def=-
 public.confirm_token.id uuid NOT NULL gen=- def=uuidv7()
 public.confirm_token.issued_at timestamp with time zone NOT NULL gen=- def=now()
 public.confirm_token.kind text NOT NULL gen=- def='record_confirmation'::text
+public.confirm_token.lead_id uuid gen=- def=-
 public.confirm_token.opened_at timestamp with time zone gen=- def=-
 public.confirm_token.purpose_id uuid gen=- def=-
 public.confirm_token.question_key text gen=- def=-
@@ -3007,7 +3057,7 @@ public.contact_profile_field.confidence numeric(4,3) gen=- def=-
 public.contact_profile_field.contact_id uuid NOT NULL gen=- def=-
 public.contact_profile_field.contact_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
 public.contact_profile_field.contact_profile_field_contact_fk FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.contact_profile_field.contact_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text])))
+public.contact_profile_field.contact_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text, 'first_name'::text, 'last_name'::text])))
 public.contact_profile_field.contact_profile_field_pkey PRIMARY KEY (id)
 public.contact_profile_field.contact_profile_field_value_key_cardinality CHECK (((field = 'phone'::text) = (value_key <> ''::text)))
 public.contact_profile_field.contact_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -3204,6 +3254,8 @@ public.data_subject_request.data_subject_request_status_check CHECK ((status = A
 public.data_subject_request.dsr_assignee_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.data_subject_request.dsr_resolution_shape CHECK (((status <> ALL (ARRAY['fulfilled'::text, 'rejected'::text])) OR (resolution IS NOT NULL)))
 public.data_subject_request.due_at timestamp with time zone NOT NULL gen=- def=-
+public.data_subject_request.due_overridden boolean NOT NULL gen=- def=false
+public.data_subject_request.due_rule text gen=- def=-
 public.data_subject_request.id uuid NOT NULL gen=- def=uuidv7()
 public.data_subject_request.kind text NOT NULL gen=- def=-
 public.data_subject_request.receipt_reference text gen=- def=-
@@ -3757,6 +3809,8 @@ public.email_signature.email_signature_pkey PRIMARY KEY (id)
 public.email_signature.email_signature_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.email_signature.id uuid NOT NULL gen=- def=uuidv7()
 public.email_signature.owner_id uuid NOT NULL gen=- def=-
+public.email_signature.phone text NOT NULL gen=- def=''::text
+public.email_signature.title text NOT NULL gen=- def=''::text
 public.email_signature.trg_email_signature_updated CREATE TRIGGER trg_email_signature_updated BEFORE UPDATE ON public.email_signature FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.email_signature.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.email_signature.version bigint NOT NULL gen=- def=1
@@ -4082,6 +4136,7 @@ public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-
 public.forecast_contribution.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_contribution.in_best_case boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_evidence boolean NOT NULL gen=- def=false
+public.forecast_contribution.in_lost boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
@@ -4232,6 +4287,8 @@ public.idx_alink_deal CREATE INDEX idx_alink_deal ON public.activity_link USING 
 public.idx_alink_lead CREATE INDEX idx_alink_lead ON public.activity_link USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.idx_alink_project CREATE INDEX idx_alink_project ON public.activity_link USING btree (project_id) WHERE (project_id IS NOT NULL)
 public.idx_analytics_share_creator CREATE INDEX idx_analytics_share_creator ON public.analytics_share USING btree (created_by, created_at DESC)
+public.idx_analytics_share_scope_team CREATE INDEX idx_analytics_share_scope_team ON public.analytics_share USING btree (scope_team_id) WHERE (scope_team_id IS NOT NULL)
+public.idx_analytics_share_scope_user CREATE INDEX idx_analytics_share_scope_user ON public.analytics_share USING btree (scope_user_id) WHERE (scope_user_id IS NOT NULL)
 public.idx_analytics_share_snapshot CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
@@ -4250,6 +4307,10 @@ public.idx_assurance_exception_owner CREATE INDEX idx_assurance_exception_owner 
 public.idx_assurance_exception_subject CREATE INDEX idx_assurance_exception_subject ON public.assurance_exception USING btree (subject_kind, subject_id)
 public.idx_assurance_resolution_exception CREATE INDEX idx_assurance_resolution_exception ON public.assurance_resolution USING btree (exception_id, created_at DESC)
 public.idx_assurance_run_as_of CREATE INDEX idx_assurance_run_as_of ON public.assurance_run USING btree (as_of DESC)
+public.idx_assurance_task_item_subject_contract CREATE INDEX idx_assurance_task_item_subject_contract ON public.assurance_task_item USING btree (subject_contract_id) WHERE (subject_contract_id IS NOT NULL)
+public.idx_assurance_task_item_subject_deal CREATE INDEX idx_assurance_task_item_subject_deal ON public.assurance_task_item USING btree (subject_deal_id) WHERE (subject_deal_id IS NOT NULL)
+public.idx_assurance_task_item_subject_offer CREATE INDEX idx_assurance_task_item_subject_offer ON public.assurance_task_item USING btree (subject_offer_id) WHERE (subject_offer_id IS NOT NULL)
+public.idx_assurance_task_item_subject_signal CREATE INDEX idx_assurance_task_item_subject_signal ON public.assurance_task_item USING btree (subject_signal_id) WHERE (subject_signal_id IS NOT NULL)
 public.idx_attachment_entity CREATE INDEX idx_attachment_entity ON public.attachment USING btree (entity_type, entity_id) WHERE (archived_at IS NULL)
 public.idx_attachment_extraction_activity_live CREATE INDEX idx_attachment_extraction_activity_live ON public.attachment_extraction USING btree (activity_announced_at NULLS FIRST) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.idx_attachment_extraction_activity_settled CREATE INDEX idx_attachment_extraction_activity_settled ON public.attachment_extraction USING btree (finished_at DESC) WHERE (status = ANY (ARRAY['done'::text, 'failed'::text]))
@@ -4458,6 +4519,11 @@ public.idx_record_assignment_deal CREATE INDEX idx_record_assignment_deal ON pub
 public.idx_record_assignment_project CREATE INDEX idx_record_assignment_project ON public.record_assignment USING btree (project_id)
 public.idx_record_assignment_team CREATE INDEX idx_record_assignment_team ON public.record_assignment USING btree (team_id) WHERE ((team_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_record_assignment_user CREATE INDEX idx_record_assignment_user ON public.record_assignment USING btree (user_id) WHERE ((user_id IS NOT NULL) AND (archived_at IS NULL))
+public.idx_record_grant_company CREATE INDEX idx_record_grant_company ON public.record_grant USING btree (company_id) WHERE (company_id IS NOT NULL)
+public.idx_record_grant_contact CREATE INDEX idx_record_grant_contact ON public.record_grant USING btree (contact_id) WHERE (contact_id IS NOT NULL)
+public.idx_record_grant_deal CREATE INDEX idx_record_grant_deal ON public.record_grant USING btree (deal_id) WHERE (deal_id IS NOT NULL)
+public.idx_record_grant_lead CREATE INDEX idx_record_grant_lead ON public.record_grant USING btree (lead_id) WHERE (lead_id IS NOT NULL)
+public.idx_record_grant_project CREATE INDEX idx_record_grant_project ON public.record_grant USING btree (project_id) WHERE (project_id IS NOT NULL)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
 public.idx_rel_employer_contacts CREATE INDEX idx_rel_employer_contacts ON public.relationship USING btree (company_id, contact_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
 public.idx_rel_history_company CREATE INDEX idx_rel_history_company ON public.relationship USING btree (company_id)
@@ -4499,6 +4565,12 @@ public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
 public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
+public.idx_tag_suggestion_company CREATE INDEX idx_tag_suggestion_company ON public.tag_suggestion USING btree (company_id, tag_id, decided_at) WHERE (company_id IS NOT NULL)
+public.idx_tag_suggestion_contact CREATE INDEX idx_tag_suggestion_contact ON public.tag_suggestion USING btree (contact_id, tag_id, decided_at) WHERE (contact_id IS NOT NULL)
+public.idx_tag_suggestion_decided_by CREATE INDEX idx_tag_suggestion_decided_by ON public.tag_suggestion USING btree (decided_by) WHERE (decided_by IS NOT NULL)
+public.idx_tag_suggestion_evidence_activity CREATE INDEX idx_tag_suggestion_evidence_activity ON public.tag_suggestion_evidence USING btree (activity_id)
+public.idx_tag_suggestion_open CREATE INDEX idx_tag_suggestion_open ON public.tag_suggestion USING btree (created_at DESC, id DESC) WHERE (state = 'open'::text)
+public.idx_tag_suggestion_tag CREATE INDEX idx_tag_suggestion_tag ON public.tag_suggestion USING btree (tag_id)
 public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id)
 public.idx_team_membership_user CREATE INDEX idx_team_membership_user ON public.team_membership USING btree (user_id)
 public.idx_team_weekly_review_rep_review CREATE INDEX idx_team_weekly_review_rep_review ON public.team_weekly_review_rep USING btree (team_weekly_review_id, display_name)
@@ -4598,10 +4670,12 @@ public.intro_request_for_contact CREATE INDEX intro_request_for_contact ON publi
 public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
 public.intro_request_pkey CREATE UNIQUE INDEX intro_request_pkey ON public.intro_request USING btree (id)
 public.ix_confirm_token_contact CREATE INDEX ix_confirm_token_contact ON public.confirm_token USING btree (contact_id)
+public.ix_confirm_token_lead CREATE INDEX ix_confirm_token_lead ON public.confirm_token USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.ix_contact_confirm_submission_contact CREATE INDEX ix_contact_confirm_submission_contact ON public.contact_confirm_submission USING btree (contact_id)
 public.ix_contact_confirm_submission_open CREATE INDEX ix_contact_confirm_submission_open ON public.contact_confirm_submission USING btree (submitted_at) WHERE (resolved_at IS NULL)
 public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
+public.ix_lead_privacy_notice_approval CREATE INDEX ix_lead_privacy_notice_approval ON public.lead_privacy_notice USING btree (approval_id) WHERE (approval_id IS NOT NULL)
 public.knowledge_chunk acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.knowledge_chunk.archived_at timestamp with time zone gen=- def=-
 public.knowledge_chunk.chunk_hash text NOT NULL gen=- def=-
@@ -4690,7 +4764,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
        AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE d.company_id = cid
     UNION ALL
-    -- Filed against a contact it currently employs.
+    -- Filed against a contact it currently employs, sent while they worked there.
     SELECT max(a.occurred_at)
       FROM relationship r
       JOIN activity_link l ON l.contact_id = r.contact_id
@@ -4700,6 +4774,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
        AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE r.company_id = cid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
+       AND coalesce(r.started_at::timestamp AT TIME ZONE 'UTC', r.first_observed_at, a.occurred_at) <= a.occurred_at
   ) arms
 
 public.last_activity_of_contact(cid uuid) secdef=false cfg=- acl=- 
@@ -4777,6 +4852,7 @@ public.lead.legal_hold boolean NOT NULL gen=- def=false
 public.lead.linkedin_url text gen=- def=-
 public.lead.merged_into_id uuid gen=- def=-
 public.lead.owner_id uuid gen=- def=-
+public.lead.phone text gen=- def=-
 public.lead.project_id uuid gen=- def=-
 public.lead.promoted_at timestamp with time zone gen=- def=-
 public.lead.promoted_contact_id uuid gen=- def=-
@@ -4811,6 +4887,7 @@ public.lead_disqualify_reason.system boolean NOT NULL gen=- def=false
 public.lead_disqualify_reason.trg_lead_disqualify_reason_updated CREATE TRIGGER trg_lead_disqualify_reason_updated BEFORE UPDATE ON public.lead_disqualify_reason FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.lead_disqualify_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_disqualify_reason.version bigint NOT NULL gen=- def=1
+public.lead_disqualify_reason_label_once CREATE UNIQUE INDEX lead_disqualify_reason_label_once ON public.lead_disqualify_reason USING btree (lower(btrim(label)))
 public.lead_disqualify_reason_pkey CREATE UNIQUE INDEX lead_disqualify_reason_pkey ON public.lead_disqualify_reason USING btree (id)
 public.lead_manual_signal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead_manual_signal.band text NOT NULL gen=- def=-
@@ -4837,6 +4914,27 @@ public.lead_manual_signal.superseded_at timestamp with time zone gen=- def=-
 public.lead_manual_signal.superseded_by text gen=- def=-
 public.lead_manual_signal_pkey CREATE UNIQUE INDEX lead_manual_signal_pkey ON public.lead_manual_signal USING btree (id)
 public.lead_pkey CREATE UNIQUE INDEX lead_pkey ON public.lead USING btree (id)
+public.lead_privacy_notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.lead_privacy_notice.approval_id uuid gen=- def=-
+public.lead_privacy_notice.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.lead_privacy_notice.delivery_id uuid gen=- def=-
+public.lead_privacy_notice.failed_at timestamp with time zone gen=- def=-
+public.lead_privacy_notice.failure text gen=- def=-
+public.lead_privacy_notice.id uuid NOT NULL gen=- def=uuidv7()
+public.lead_privacy_notice.lead_id uuid gen=- def=-
+public.lead_privacy_notice.lead_privacy_notice_approval_id_fkey FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE SET NULL
+public.lead_privacy_notice.lead_privacy_notice_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE SET NULL
+public.lead_privacy_notice.lead_privacy_notice_failed_shape CHECK (((state = 'failed'::text) = ((failure IS NOT NULL) AND (failed_at IS NOT NULL))))
+public.lead_privacy_notice.lead_privacy_notice_failure CHECK (((failure IS NULL) OR (failure = ANY (ARRAY['no_address'::text, 'collision'::text, 'refused'::text, 'bounced'::text]))))
+public.lead_privacy_notice.lead_privacy_notice_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE SET NULL
+public.lead_privacy_notice.lead_privacy_notice_pkey PRIMARY KEY (id)
+public.lead_privacy_notice.lead_privacy_notice_state CHECK ((state = ANY (ARRAY['queued'::text, 'failed'::text])))
+public.lead_privacy_notice.locale text gen=- def=-
+public.lead_privacy_notice.queued_at timestamp with time zone gen=- def=-
+public.lead_privacy_notice.state text NOT NULL gen=- def=-
+public.lead_privacy_notice.template_key text NOT NULL gen=- def=-
+public.lead_privacy_notice.template_version integer NOT NULL gen=- def=-
+public.lead_privacy_notice_pkey CREATE UNIQUE INDEX lead_privacy_notice_pkey ON public.lead_privacy_notice USING btree (id)
 public.lead_score_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead_score_history.computed_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_score_history.factors jsonb NOT NULL gen=- def=-
@@ -4982,6 +5080,7 @@ public.list_member_event.list_member_event_entity_type_check CHECK ((entity_type
 public.list_member_event.list_member_event_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_member_event.list_member_event_pkey PRIMARY KEY (id)
 public.list_member_event.list_member_event_reason_check CHECK ((reason = ANY (ARRAY['chosen'::text, 'bulk'::text, 'record_archived'::text, 'record_restored'::text, 'evaluated'::text, 'filter_changed'::text, 'automation'::text])))
+public.list_member_event.member_note text gen=- def=-
 public.list_member_event.note text gen=- def=-
 public.list_member_event.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.list_member_event.reason text NOT NULL gen=- def=-
@@ -5420,6 +5519,7 @@ public.partner.margin_tier text gen=- def=-
 public.partner.next_step text gen=- def=-
 public.partner.next_step_due_at date gen=- def=-
 public.partner.partner_cert_status_check CHECK ((cert_status = ANY (ARRAY['applied'::text, 'certified'::text, 'suspended'::text])))
+public.partner.partner_certified_staff_check CHECK ((certified_staff >= 0))
 public.partner.partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.partner.partner_company_id_key UNIQUE (company_id)
 public.partner.partner_fit_override_reason text gen=- def=-
@@ -5769,7 +5869,7 @@ public.provider_run.provider_run_contact_id_fkey FOREIGN KEY (contact_id) REFERE
 public.provider_run.provider_run_external_correlation_id_key UNIQUE (external_correlation_id)
 public.provider_run.provider_run_pkey PRIMARY KEY (id)
 public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id)
-public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text, 'no_identifiers'::text]))))
+public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text, 'no_identifiers'::text, 'category_in_flight'::text]))))
 public.provider_run.provider_run_skip_reason_shape CHECK (((state = 'skipped'::text) = (skip_reason IS NOT NULL)))
 public.provider_run.provider_run_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text, 'no_match'::text, 'skipped'::text, 'submission_unknown'::text, 'failed'::text, 'cancelled'::text])))
 public.provider_run.provider_run_subject_identity UNIQUE (id, contact_id, provider)
@@ -5782,14 +5882,30 @@ public.provider_run.skip_reason text gen=- def=-
 public.provider_run.state text NOT NULL gen=- def=-
 public.provider_run.subject_kind text NOT NULL gen=- def=-
 public.provider_run.submitted_at timestamp with time zone gen=- def=-
+public.provider_run.trg_provider_run_release_categories CREATE TRIGGER trg_provider_run_release_categories BEFORE UPDATE OF state, contact_id ON public.provider_run FOR EACH ROW WHEN (((new.state <> ALL (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'submission_unknown'::text])) OR (new.contact_id IS NULL))) EXECUTE FUNCTION provider_run_release_categories()
 public.provider_run.trg_provider_run_updated CREATE TRIGGER trg_provider_run_updated BEFORE UPDATE ON public.provider_run FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.provider_run.trigger text NOT NULL gen=- def=-
 public.provider_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.provider_run_category acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.provider_run_category.category text NOT NULL gen=- def=-
+public.provider_run_category.contact_id uuid NOT NULL gen=- def=-
+public.provider_run_category.provider text NOT NULL gen=- def=-
+public.provider_run_category.provider_run_category_one_live_buyer UNIQUE (contact_id, provider, category)
+public.provider_run_category.provider_run_category_pkey PRIMARY KEY (run_id, contact_id, provider, category)
+public.provider_run_category.provider_run_category_run_fkey FOREIGN KEY (run_id, contact_id, provider) REFERENCES provider_run(id, contact_id, provider) ON UPDATE CASCADE ON DELETE CASCADE
+public.provider_run_category.run_id uuid NOT NULL gen=- def=-
+public.provider_run_category_one_live_buyer CREATE UNIQUE INDEX provider_run_category_one_live_buyer ON public.provider_run_category USING btree (contact_id, provider, category)
+public.provider_run_category_pkey CREATE UNIQUE INDEX provider_run_category_pkey ON public.provider_run_category USING btree (run_id, contact_id, provider, category)
 public.provider_run_contact_history CREATE INDEX provider_run_contact_history ON public.provider_run USING btree (contact_id, provider, created_at DESC) WHERE (subject_kind = 'contact'::text)
 public.provider_run_due CREATE INDEX provider_run_due ON public.provider_run USING btree (state, next_attempt_at) WHERE (state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text]))
 public.provider_run_external_correlation_id_key CREATE UNIQUE INDEX provider_run_external_correlation_id_key ON public.provider_run USING btree (external_correlation_id)
 public.provider_run_one_live_contact_fingerprint CREATE UNIQUE INDEX provider_run_one_live_contact_fingerprint ON public.provider_run USING btree (contact_id, provider, input_fingerprint) WHERE ((subject_kind = 'contact'::text) AND (state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'submission_unknown'::text])))
 public.provider_run_pkey CREATE UNIQUE INDEX provider_run_pkey ON public.provider_run USING btree (id)
+public.provider_run_release_categories() secdef=false cfg=- acl=- 
+BEGIN
+  DELETE FROM provider_run_category WHERE run_id = OLD.id;
+  RETURN NEW;
+END 
 public.provider_run_reservation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.provider_run_reservation.actual_credits integer gen=- def=-
 public.provider_run_reservation.pool text NOT NULL gen=- def=-
@@ -5843,14 +5959,45 @@ public.record_assignment.version bigint NOT NULL gen=- def=1
 public.record_assignment_pkey CREATE UNIQUE INDEX record_assignment_pkey ON public.record_assignment USING btree (id)
 public.record_grant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.record_grant.access text NOT NULL gen=- def=-
+public.record_grant.company_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'company'::text) THEN record_id
+    ELSE NULL::uuid
+END
+public.record_grant.contact_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'contact'::text) THEN record_id
+    ELSE NULL::uuid
+END
 public.record_grant.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.record_grant.deal_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'deal'::text) THEN record_id
+    ELSE NULL::uuid
+END
 public.record_grant.expires_at timestamp with time zone gen=- def=-
 public.record_grant.granted_by uuid NOT NULL gen=- def=-
 public.record_grant.id uuid NOT NULL gen=- def=uuidv7()
+public.record_grant.lead_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'lead'::text) THEN record_id
+    ELSE NULL::uuid
+END
+public.record_grant.project_id uuid gen=s def=
+CASE
+    WHEN (record_type = 'project'::text) THEN record_id
+    ELSE NULL::uuid
+END
 public.record_grant.reason text gen=- def=-
 public.record_grant.record_grant_access_check CHECK ((access = ANY (ARRAY['read'::text, 'write'::text])))
+public.record_grant.record_grant_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE NOT VALID
+public.record_grant.record_grant_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE NOT VALID
+public.record_grant.record_grant_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE NOT VALID
 public.record_grant.record_grant_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.record_grant.record_grant_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE NOT VALID
 public.record_grant.record_grant_pkey PRIMARY KEY (id)
+public.record_grant.record_grant_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE NOT VALID
+public.record_grant.record_grant_record_shape CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = 1))
 public.record_grant.record_grant_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.record_grant.record_grant_subject_type_check CHECK ((subject_type = ANY (ARRAY['user'::text, 'team'::text])))
 public.record_grant.record_grant_unique UNIQUE (record_type, record_id, subject_type, subject_id)
@@ -5909,6 +6056,7 @@ public.relationship.deal_id uuid gen=- def=-
 public.relationship.employment_status text gen=- def=-
 public.relationship.ended_at date gen=- def=-
 public.relationship.ended_precision text gen=- def=-
+public.relationship.first_observed_at timestamp with time zone gen=- def=-
 public.relationship.id uuid NOT NULL gen=- def=uuidv7()
 public.relationship.is_current_primary boolean NOT NULL gen=- def=false
 public.relationship.kind text NOT NULL gen=- def=-
@@ -6151,6 +6299,7 @@ public.retention_policy.object_type text NOT NULL gen=- def=-
 public.retention_policy.retain_days integer NOT NULL gen=- def=-
 public.retention_policy.retention_policy_action_check CHECK ((action = ANY (ARRAY['archive'::text, 'anonymize'::text, 'erase'::text])))
 public.retention_policy.retention_policy_pkey PRIMARY KEY (id)
+public.retention_policy.retention_policy_retain_days_check CHECK (((retain_days >= 1) AND (retain_days <= 36500)))
 public.retention_policy.retention_policy_unique UNIQUE NULLS NOT DISTINCT (object_type, category)
 public.retention_policy_pkey CREATE UNIQUE INDEX retention_policy_pkey ON public.retention_policy USING btree (id)
 public.retention_policy_unique CREATE UNIQUE INDEX retention_policy_unique ON public.retention_policy USING btree (object_type, category) NULLS NOT DISTINCT
@@ -6707,13 +6856,49 @@ public.tag.description text gen=- def=-
 public.tag.id uuid NOT NULL gen=- def=uuidv7()
 public.tag.name text NOT NULL gen=- def=-
 public.tag.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
+public.tag.suggestible boolean NOT NULL gen=- def=false
 public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text, 'sky'::text, 'violet'::text, 'lime'::text, 'orange'::text]))))
 public.tag.tag_pkey PRIMARY KEY (id)
+public.tag.tag_suggestible_is_described CHECK (((NOT suggestible) OR ((description IS NOT NULL) AND (btrim(description) <> ''::text))))
 public.tag.tag_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.tag.trg_tag_updated CREATE TRIGGER trg_tag_updated BEFORE UPDATE ON public.tag FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.tag.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.tag.version bigint NOT NULL gen=- def=1
 public.tag_pkey CREATE UNIQUE INDEX tag_pkey ON public.tag USING btree (id)
+public.tag_suggestion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.tag_suggestion.captured_by text NOT NULL gen=- def=-
+public.tag_suggestion.company_id uuid gen=- def=-
+public.tag_suggestion.contact_id uuid gen=- def=-
+public.tag_suggestion.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.tag_suggestion.decided_at timestamp with time zone gen=- def=-
+public.tag_suggestion.decided_by uuid gen=- def=-
+public.tag_suggestion.evidence_count integer NOT NULL gen=- def=-
+public.tag_suggestion.evidence_through timestamp with time zone NOT NULL gen=- def=-
+public.tag_suggestion.id uuid NOT NULL gen=- def=uuidv7()
+public.tag_suggestion.state text NOT NULL gen=- def='open'::text
+public.tag_suggestion.tag_id uuid NOT NULL gen=- def=-
+public.tag_suggestion.tag_suggestion_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.tag_suggestion.tag_suggestion_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.tag_suggestion.tag_suggestion_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.tag_suggestion.tag_suggestion_decided_shape CHECK (((state = 'open'::text) = (decided_at IS NULL)))
+public.tag_suggestion.tag_suggestion_evidence_count_check CHECK ((evidence_count > 0))
+public.tag_suggestion.tag_suggestion_one_record CHECK (((contact_id IS NULL) <> (company_id IS NULL)))
+public.tag_suggestion.tag_suggestion_pkey PRIMARY KEY (id)
+public.tag_suggestion.tag_suggestion_state_check CHECK ((state = ANY (ARRAY['open'::text, 'accepted'::text, 'dismissed'::text, 'superseded'::text])))
+public.tag_suggestion.tag_suggestion_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
+public.tag_suggestion.trg_tag_suggestion_updated CREATE TRIGGER trg_tag_suggestion_updated BEFORE UPDATE ON public.tag_suggestion FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.tag_suggestion.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.tag_suggestion_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.tag_suggestion_evidence.activity_id uuid NOT NULL gen=- def=-
+public.tag_suggestion_evidence.id uuid NOT NULL gen=- def=uuidv7()
+public.tag_suggestion_evidence.occurred_at timestamp with time zone NOT NULL gen=- def=-
+public.tag_suggestion_evidence.suggestion_id uuid NOT NULL gen=- def=-
+public.tag_suggestion_evidence.tag_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.tag_suggestion_evidence.tag_suggestion_evidence_pkey PRIMARY KEY (id)
+public.tag_suggestion_evidence.tag_suggestion_evidence_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES tag_suggestion(id) ON DELETE CASCADE
+public.tag_suggestion_evidence.uq_tag_suggestion_evidence UNIQUE (suggestion_id, activity_id)
+public.tag_suggestion_evidence_pkey CREATE UNIQUE INDEX tag_suggestion_evidence_pkey ON public.tag_suggestion_evidence USING btree (id)
+public.tag_suggestion_pkey CREATE UNIQUE INDEX tag_suggestion_pkey ON public.tag_suggestion USING btree (id)
 public.taggable acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.taggable.assigned_at timestamp with time zone NOT NULL gen=- def=now()
 public.taggable.assigned_by uuid gen=- def=-
@@ -6915,6 +7100,21 @@ BEGIN
   RETURN NULL;
 END;
 
+public.trg_assurance_task_item_subject_keys() secdef=false cfg=- acl=- 
+BEGIN
+	IF TG_OP = 'INSERT' THEN
+		NEW.subject_unkeyed := false;
+	ELSE
+		NEW.subject_unkeyed := OLD.subject_unkeyed;
+	END IF;
+	IF NOT NEW.subject_unkeyed THEN
+		NEW.subject_deal_id     := CASE WHEN NEW.subject_kind = 'deal'     THEN NEW.subject_id END;
+		NEW.subject_signal_id   := CASE WHEN NEW.subject_kind = 'signal'   THEN NEW.subject_id END;
+		NEW.subject_offer_id    := CASE WHEN NEW.subject_kind = 'offer'    THEN NEW.subject_id END;
+		NEW.subject_contract_id := CASE WHEN NEW.subject_kind = 'contract' THEN NEW.subject_id END;
+	END IF;
+	RETURN NEW;
+END 
 public.trg_deal_last_activity() secdef=false cfg=- acl=- 
 BEGIN
   PERFORM move_last_activity('company', OLD.company_id);
@@ -6994,6 +7194,8 @@ public.uq_forecast_snapshot_period_close_workspace CREATE UNIQUE INDEX uq_foreca
 public.uq_lead_email_dedupe CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.lead USING btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))
 public.uq_lead_from_contact_live CREATE UNIQUE INDEX uq_lead_from_contact_live ON public.lead USING btree (from_contact_id) WHERE ((from_contact_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL)
+public.uq_lead_privacy_notice_delivery CREATE UNIQUE INDEX uq_lead_privacy_notice_delivery ON public.lead_privacy_notice USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
+public.uq_lead_privacy_notice_lead CREATE UNIQUE INDEX uq_lead_privacy_notice_lead ON public.lead_privacy_notice USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
 public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)
@@ -7027,6 +7229,9 @@ public.uq_site_read_onboarding_inflight CREATE UNIQUE INDEX uq_site_read_onboard
 public.uq_site_read_triage_inflight CREATE UNIQUE INDEX uq_site_read_triage_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'domain_triage'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])))
 public.uq_stage_position CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL)
 public.uq_tag_name CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name)) WHERE (archived_at IS NULL)
+public.uq_tag_suggestion_evidence CREATE UNIQUE INDEX uq_tag_suggestion_evidence ON public.tag_suggestion_evidence USING btree (suggestion_id, activity_id)
+public.uq_tag_suggestion_open_company CREATE UNIQUE INDEX uq_tag_suggestion_open_company ON public.tag_suggestion USING btree (tag_id, company_id) WHERE ((state = 'open'::text) AND (company_id IS NOT NULL))
+public.uq_tag_suggestion_open_contact CREATE UNIQUE INDEX uq_tag_suggestion_open_contact ON public.tag_suggestion USING btree (tag_id, contact_id) WHERE ((state = 'open'::text) AND (contact_id IS NOT NULL))
 public.uq_team_weekly_review_outlook_period CREATE UNIQUE INDEX uq_team_weekly_review_outlook_period ON public.team_weekly_review_outlook USING btree (team_weekly_review_id, period_kind)
 public.uq_team_weekly_review_rep CREATE UNIQUE INDEX uq_team_weekly_review_rep ON public.team_weekly_review_rep USING btree (team_weekly_review_id, user_id)
 public.uq_team_weekly_review_team_week CREATE UNIQUE INDEX uq_team_weekly_review_team_week ON public.team_weekly_review USING btree (team_id, local_week_start)
@@ -7618,6 +7823,7 @@ public.workflow_run.trigger_event uuid NOT NULL gen=- def=-
 public.workflow_run.workflow_run_pkey PRIMARY KEY (id)
 public.workflow_run.workflow_run_status_check CHECK ((status = ANY (ARRAY['applied'::text, 'skipped'::text, 'failed'::text, 'requires_approval'::text, 'blocked'::text])))
 public.workflow_run.workflow_run_unique UNIQUE (handler, idempotency_key)
+public.workflow_run_by_automation CREATE INDEX workflow_run_by_automation ON public.workflow_run USING btree (handler, "right"(idempotency_key, 36), created_at DESC, id DESC) WHERE (status <> 'skipped'::text)
 public.workflow_run_pkey CREATE UNIQUE INDEX workflow_run_pkey ON public.workflow_run USING btree (id)
 public.workflow_run_troubled CREATE INDEX workflow_run_troubled ON public.workflow_run USING btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed'::text, 'blocked'::text]))
 public.workflow_run_unique CREATE UNIQUE INDEX workflow_run_unique ON public.workflow_run USING btree (handler, idempotency_key)

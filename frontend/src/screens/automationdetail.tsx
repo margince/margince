@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Ban, Check, Clock, Minus, X } from "lucide-react";
-import { type ReactElement, type ReactNode, useState } from "react";
+import { Ban, Check, Clock, type LucideIcon, Minus, X } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import {
@@ -18,7 +18,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { LoadMoreButton, QueryStates, throwProblem } from "./common";
+import { LoadMoreButton, QueryStates, unwrap } from "./common";
 // The shapes this file draws. Imported here rather than left to the caller:
 // the row that folds these open lives in another sheet, and a story or a test
 // that mounts one panel alone would otherwise render it unstyled.
@@ -31,54 +31,42 @@ import "./automationdetail.css";
 type AutomationRun = components["schemas"]["AutomationRun"];
 type Outcome = AutomationRun["outcome"];
 
-// Outcome → tone + glyph + label, TOTAL over the five-value enum. The explicit
-// ReactElement return type is what makes the exhaustiveness real: if the
-// contract grows a sixth outcome, the missing arm's implicit `undefined` return
-// no longer satisfies ReactElement, so THIS function fails to compile — a new
-// outcome cannot ship as a silent "unknown" badge to an operator.
-export function OutcomeBadge({
-  outcome,
-}: Readonly<{ outcome: Outcome }>): ReactElement {
+// Outcome → tone, glyph and word. A Record over the enum stops compiling when
+// the contract adds an outcome, so a new one cannot ship as a blank badge.
+export const OUTCOME_LOOK: Readonly<
+  Record<
+    Outcome,
+    Readonly<{
+      tone: "success" | "warning" | "danger";
+      icon: LucideIcon;
+      word: MessageKey;
+    }>
+  >
+> = {
+  fired: { tone: "success", icon: Check, word: "auto.runs.outcomeFired" },
+  failed: { tone: "danger", icon: X, word: "auto.runs.outcomeFailed" },
+  blocked: { tone: "warning", icon: Ban, word: "auto.runs.outcomeBlocked" },
+  skipped: { tone: "warning", icon: Minus, word: "auto.runs.outcomeSkipped" },
+  queued_for_approval: {
+    tone: "warning",
+    icon: Clock,
+    word: "auto.runs.outcomeQueued",
+  },
+};
+
+export function OutcomeBadge({ outcome }: Readonly<{ outcome: Outcome }>) {
   const t = useT();
-  switch (outcome) {
-    case "fired":
-      return (
-        <Badge tone="success">
-          <Check size={12} aria-hidden /> {t("auto.runs.outcomeFired")}
-        </Badge>
-      );
-    case "failed":
-      return (
-        <Badge tone="danger">
-          <X size={12} aria-hidden /> {t("auto.runs.outcomeFailed")}
-        </Badge>
-      );
-    case "blocked":
-      return (
-        <Badge tone="danger">
-          <Ban size={12} aria-hidden /> {t("auto.runs.outcomeBlocked")}
-        </Badge>
-      );
-    case "skipped":
-      return (
-        <Badge tone="warning">
-          <Minus size={12} aria-hidden /> {t("auto.runs.outcomeSkipped")}
-        </Badge>
-      );
-    case "queued_for_approval":
-      return (
-        <Badge tone="warning">
-          <Clock size={12} aria-hidden /> {t("auto.runs.outcomeQueued")}
-        </Badge>
-      );
-  }
+  const look = OUTCOME_LOOK[outcome];
+  return (
+    <Badge tone={look.tone} icon={look.icon}>
+      {t(look.word)}
+    </Badge>
+  );
 }
 
-// failed/blocked read as an error (danger); skipped/queued as an advisory
-// (warning) — the reason line tone matches its badge so the row reads honestly
-// at a glance.
+// The reason line reads in its badge's tone, so a run's row reads one way.
 function reasonColor(outcome: Outcome): string {
-  return outcome === "failed" || outcome === "blocked"
+  return OUTCOME_LOOK[outcome].tone === "danger"
     ? "var(--dangerText)"
     : "var(--warningText)";
 }
@@ -177,20 +165,18 @@ export function AutomationRuns({
     queryKey: ["automation-runs", automationId, outcome ?? ""],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/automations/{id}/runs", {
-        params: {
-          path: { id: automationId },
-          query: {
-            limit: 20,
-            ...(pageParam ? { cursor: pageParam } : {}),
-            ...(outcome ? { outcome } : {}),
+      return unwrap(
+        await api.GET("/automations/{id}/runs", {
+          params: {
+            path: { id: automationId },
+            query: {
+              limit: 20,
+              ...(pageParam ? { cursor: pageParam } : {}),
+              ...(outcome ? { outcome } : {}),
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
@@ -280,14 +266,12 @@ export function AutomationPreview({
   const query = useQuery({
     queryKey: ["automation-preview", automationId, windowDays],
     queryFn: async (): Promise<AutomationPreviewResult> => {
-      const { data, error } = await api.POST("/automations/{id}/preview", {
-        params: { path: { id: automationId } },
-        body: { window_days: Number(windowDays) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/automations/{id}/preview", {
+          params: { path: { id: automationId } },
+          body: { window_days: Number(windowDays) },
+        }),
+      );
     },
   });
 

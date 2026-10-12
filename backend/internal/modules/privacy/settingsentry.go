@@ -50,5 +50,5 @@ var RetainOnly = settings.Define[bool](
 // Definitions is privacy's contribution to the settings registry; compose
 // concatenates each module's list.
 func Definitions() []settings.Definition {
-	return []settings.Definition{RetainOnly}
+	return []settings.Definition{RetainOnly, RetentionFloorCarry}
 }

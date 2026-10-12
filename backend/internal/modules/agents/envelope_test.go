@@ -15,6 +15,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -538,12 +539,7 @@ func warningNamed(env Envelope, code string) (Warning, bool) {
 }
 
 func slicesContains(haystack []string, needle string) bool {
-	for _, candidate := range haystack {
-		if candidate == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 // readingAgent is the caller these tests dispatch as; how much of the workspace

@@ -20,7 +20,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { showsAMessage } from "./activitykeys";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 type ThreadAudienceOutcome = components["schemas"]["ThreadAudienceOutcome"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
@@ -65,14 +65,12 @@ export function useThreadAudience(options: {
     // belongs to the render the reader saw rather than to whatever the
     // component last held (frontend/AGENTS.md, mutation-variable-coverage).
     mutationFn: async (variables: { threadKey: string; share: boolean }) => {
-      const { data, error } = await api.POST(
-        "/activities/threads/{thread_key}/audience",
-        {
+      const data = unwrap(
+        await api.POST("/activities/threads/{thread_key}/audience", {
           params: { path: { thread_key: variables.threadKey } },
           body: { share: variables.share },
-        },
+        }),
       );
-      if (error) throwProblem(error);
       return { threadKey: variables.threadKey, outcome: data ?? null };
     },
     onSuccess: (result) => {
@@ -112,17 +110,17 @@ export function useMessageAudience(options: {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (variables: MessageAudienceVariables) => {
-      const { data, error } = await api.PATCH("/activities/{id}/audience", {
-        params: {
-          path: { id: variables.activityId },
-          ...ifMatch(requireVersion(variables.version)),
-        },
-        body: variables.members
-          ? { audience: variables.audience, members: variables.members }
-          : { audience: variables.audience },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.PATCH("/activities/{id}/audience", {
+          params: {
+            path: { id: variables.activityId },
+            ...ifMatch(requireVersion(variables.version)),
+          },
+          body: variables.members
+            ? { audience: variables.audience, members: variables.members }
+            : { audience: variables.audience },
+        }),
+      );
     },
     onSuccess: () => {
       for (const queryKey of options.invalidate()) {

@@ -105,6 +105,20 @@ var shareableTables = map[string]bool{
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 }
 
+// actsForTheInstallation reports whether an actor reads an owner-private row.
+// It is the one widening capture privacy admits.
+//
+// A system job qualifies by construction, and so does a connector with no
+// human behind it. Such a run buys for the installation, not for a colleague.
+// Withholding the row protects nobody and loses the write. Object RBAC and
+// grants are untouched.
+func actsForTheInstallation(p principal.Principal) bool {
+	if p.Type == principal.PrincipalSystem {
+		return true
+	}
+	return p.Type == principal.PrincipalConnector && p.OnBehalfOf.IsZero()
+}
+
 // ownerPrivateTables carry capture privacy (migration 0095): a row is either
 // 'workspace' — everyone in the workspace, the default — or 'owner', the
 // capturing user's alone until a human edit or approval promotes it. Connector
@@ -223,9 +237,9 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 	case ownerScoped:
 		scope = OwnerPredicate(p, arg)
 	}
-	// The system principal is trusted by construction and reads both
-	// arms away; an unbounded human still faces capture privacy.
-	private := bool(capture) && ownerPrivateTables[table] && p.Type != principal.PrincipalSystem
+	// An actor with no human behind it reads both arms away; an unbounded
+	// human still faces capture privacy.
+	private := bool(capture) && ownerPrivateTables[table] && !actsForTheInstallation(p)
 	// An actor who reads every row needs no grant arm to see a shareable
 	// row — unless capture privacy just took it away from them again.
 	shareable := shareableTables[table] && (!everyRow || private)

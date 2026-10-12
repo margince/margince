@@ -97,7 +97,7 @@
    padded and never stretched. */
 .avatar-has-logo {
   position: relative;
-  background: var(--bgCard);
+  background: var(--bgInset);
   color: var(--textSecondary);
 }
 

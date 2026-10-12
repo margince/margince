@@ -93,7 +93,7 @@ func acmeDeepBrain() laneFake {
 func newDeepReadTestWorker(e *integration.Env, site *fakeSite, brain completer) (*siteDeepReadWorker, *approvals.Service) {
 	svc := approvals.NewService(e.DB())
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, e.Contacts))
-	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(e.Pool, CaptureConfig{})))
+	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(e.Pool, CaptureConfig{}), e.Pool, &siteLeadNoticeLane{}))
 	return &siteDeepReadWorker{
 		pool:      e.Pool,
 		contacts:  e.Contacts,

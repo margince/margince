@@ -6,16 +6,18 @@
 
 ## The rule
 
-On every tagged release, before the tag goes public, update the LICENSE
-`Parameters` block and nothing else in the file:
+Every tagged release carries its own values in the LICENSE `Parameters` block, set before the tag
+goes public:
 
-1. **Change Date** = the date the release goes public + 2 years, ISO format
-   (`YYYY-MM-DD`).
-2. The **Licensed Work** line adds the version name, for example
-   `Licensed Work: Margince CRM v1.3.0`.
+- **Change Date** is the date the release goes public + 2 years, ISO format
+  (`YYYY-MM-DD`).
+- The **Licensed Work** line names the version, for example
+  `Licensed Work: Margince CRM v1.3.0`.
 
 All text from the first `---` line after the `Parameters` block to the end of
 the file is the fixed BUSL-1.1 body. Never change it (BUSL Covenant 4).
+
+The release step that sets them is in [Cut a release](../how-to/cut-a-release.md).
 
 ## What counts as a "Release"
 

@@ -31,6 +31,8 @@ func (h Handlers) ListProjects(w http.ResponseWriter, r *http.Request, params cr
 	}
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
+	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
+	in.Unassigned = params.Unassigned
 	if params.Phase != nil {
 		phase := string(*params.Phase)
 		in.Phase = &phase

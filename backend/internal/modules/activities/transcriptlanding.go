@@ -80,8 +80,7 @@ func (s *Store) readTranscriptOnLanding(
 // asks for a reading and nothing else, so 422 is the honest answer there and
 // this path does not touch it. Landing only offers one.
 func skipARefusedReading(err error) error {
-	var tooLong *TranscriptTooLongError
-	if errors.As(err, &tooLong) {
+	if _, ok := errors.AsType[*TranscriptTooLongError](err); ok {
 		return nil
 	}
 	return err

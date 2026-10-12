@@ -197,6 +197,6 @@ export const ReverseStale: Story = {
   }),
   play: async ({ canvasElement }) => {
     const page = await reverse(canvasElement, "Duplicate accrual");
-    await page.findByText(en["edit.versionSkew"]);
+    await page.findByText(en["common.versionSkew"]);
   },
 };

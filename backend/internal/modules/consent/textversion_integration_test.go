@@ -127,8 +127,7 @@ func TestRepublishingChangedWordingIsRefused(t *testing.T) {
 		t.Fatal("republishing v1 with different words was accepted: the proof rows naming v1 " +
 			"would now resolve to wording those subjects never saw")
 	}
-	var invalid *ValidationError
-	if errors.As(err, &invalid) {
+	if invalid, ok := errors.AsType[*ValidationError](err); ok {
 		t.Errorf("refused as a validation error on %q; this is a conflict with what is already "+
 			"published, not a malformed request", invalid.Field)
 	}

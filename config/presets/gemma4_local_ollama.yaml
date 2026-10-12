@@ -20,7 +20,7 @@
 #
 # The committed records cover every shipped task this binding can carry, 28
 # of 29 (all but document_extract, below): 8 certified, 6 usable with care, 14
-# not supported. docs/reference/ollama-self-hosting.md section 4 lists them.
+# not supported. docs/explanation/ollama-self-hosting.md section 4 lists them.
 #
 # WHY 12b ON EVERY TIER. Sized for a 24GB Apple-silicon machine, the smallest
 # this preset is meant to run on, with Ollama 0.34 (its server log reports

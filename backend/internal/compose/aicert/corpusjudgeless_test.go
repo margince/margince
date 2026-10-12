@@ -15,6 +15,7 @@ package aicert_test
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -133,9 +134,7 @@ func judgelessProofs() map[string]judgelessProof {
 		verdictProofs(), confidentialityProofs(), agentLoopProofs(), gradingProofs(),
 		extractionProofs(), emptyAnswerProofs(), stageClaimProofs(),
 	} {
-		for name, proof := range set {
-			proofs[name] = proof
-		}
+		maps.Copy(proofs, set)
 	}
 	return proofs
 }
@@ -373,6 +372,10 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		},
 		"nothing_material_was_said": {
 			correct: noEvent, wrong: event("commitment_made", 1, "Reading through this afternoon."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_promise_seen_only_in_quoted_history": {
+			correct: noEvent, wrong: event("commitment_made", 1, "Thanks Anna, noted."),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 	}

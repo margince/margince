@@ -29,11 +29,6 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 	return h
 }
 
-// ErrBlobstoreUnconfigured reports that this process role wired no object
-// store, so the attachment endpoints are not available here (the handler
-// maps it to 501). A role opts in with Store.WithBlobstore.
-var ErrBlobstoreUnconfigured = errors.New("activities: no object store configured")
-
 const attachmentColumns = `at.id, at.entity_type, at.entity_id, at.filename,
 	at.content_type, at.byte_size, at.checksum, at.source, at.captured_by, at.created_at,
 	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.company_id,
@@ -243,27 +238,6 @@ func (s *Store) GetAttachmentMeta(ctx context.Context, id ids.UUID) (crmcontract
 		return nil
 	})
 	return out, err
-}
-
-// ArchiveAttachment soft-deletes the row (identical to the module's other
-// archive verbs). The object bytes are deliberately retained: authoritative
-// byte-erasure is the Art. 17 path, matching how every archived record's data
-// persists until erasure. Authority inherits from the parent (Update + row
-// scope). Archived/invisible reads as ErrNotFound.
-func (s *Store) ArchiveAttachment(ctx context.Context, id ids.UUID) error {
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		entityType, err := resolveAttachmentParent(ctx, tx, id, principal.ActionUpdate)
-		if err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `UPDATE attachment SET archived_at = now() WHERE id = $1`, id); err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "archive", "attachment", id, nil, map[string]any{
-			fieldEntityType: entityType,
-		})
-		return err
-	})
 }
 
 // ListAttachments returns the live attachments hung off one entity, newest

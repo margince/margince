@@ -275,7 +275,7 @@ func replacePage(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, page handboo
 		return fmt.Errorf("update the handbook page: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "knowledge_document", prior.id,
-		map[string]any{"checksum": prior.checksum},
+		map[string]any{checksumKey: prior.checksum},
 		pageImage(corpusID, page.Filename, size)); err != nil {
 		return fmt.Errorf("audit the replaced handbook page: %w", err)
 	}

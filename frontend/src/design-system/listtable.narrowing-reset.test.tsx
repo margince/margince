@@ -9,7 +9,7 @@ afterEach(cleanup);
 const COLUMNS = [
   { key: "id", header: "Name", cell: (row: { id: string }) => row.id },
 ];
-const ROWS = Array.from({ length: 60 }, (_, at) => ({ id: `r-${at}` }));
+const ROWS = Array.from({ length: 150 }, (_, at) => ({ id: `r-${at}` }));
 
 function Grid({
   page,

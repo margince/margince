@@ -18,6 +18,7 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -59,10 +60,8 @@ func matchesErrorText(n ast.Node) (verb string, found bool) {
 		}
 		switch sel.Sel.Name {
 		case "Contains", "HasPrefix", "HasSuffix", "EqualFold":
-			for _, arg := range node.Args {
-				if errorTextCall(arg) {
-					return "strings." + sel.Sel.Name, true
-				}
+			if slices.ContainsFunc(node.Args, errorTextCall) {
+				return "strings." + sel.Sel.Name, true
 			}
 		}
 	case *ast.BinaryExpr:

@@ -39,11 +39,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 const canonical: Record<string, string> = {
   "--bgPage": "#f1f5f2",
-  "--bgSidebar": "#e6eae7",
   "--bgElevated": "#fbfcfb",
-  "--bgCard": "#eaedeb",
+  "--bgInset": "#eaedeb",
   "--bgHover": "#edf0ee",
-  "--bgSidebarHover": "#dde1de",
   "--accent": "#0B7A53",
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
@@ -178,14 +176,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     );
   });
 
-  // The surface ladder is a set of RELATIONS, not five independent colours, and
-  // every one of them is load-bearing: the rail recedes below the page, a card
-  // rises above it, a rail row's hover moves AWAY from the plate its active
-  // sibling wears. A retune that keeps all five values plausible and inverts one
-  // pair breaks a state the eye reads without breaking anything a value test can
-  // see — hover and active becoming the same gesture, or chrome climbing in
-  // front of the content it frames. So the ordering is asserted rather than the
-  // values, in BOTH themes, from the sheet itself.
+  // The surface ladder is a set of relations, not four independent colours, and
+  // every one of them carries weight: a card well sits below the page ground,
+  // and the elevated surface sits above it. A retune that keeps all four values
+  // plausible and inverts one pair breaks a state the eye reads without
+  // breaking anything a value test can see. So the ordering is asserted rather
+  // than the values, in both themes, from the sheet itself.
   //
   // Dark is not a mirror of light and must not be asserted as one: on a dark
   // ground every surface lifts toward the light, so the ladder runs the other
@@ -193,28 +189,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   // states its own expected order, and both are checked the same way.
   describe("the surface ladder holds its order", () => {
     // Darkest first, as measured. The two themes are deliberately DIFFERENT
-    // sequences: light recesses the rail's hover below its ground while dark
-    // lifts it above, because a dark surface has only one direction to move in.
-    // What both share is the invariant the rail's states depend on — hover on
-    // one side of the rail's ground and the active plate (--bgElevated) on the
-    // other, so the two states never converge.
+    // sequences: light lifts from the card well up to the elevated surface,
+    // while dark puts the page lowest and lifts every other ground above it,
+    // because a dark surface has only one direction to move in.
     const ladders = {
-      light: [
-        "--bgSidebarHover",
-        "--bgSidebar",
-        "--bgCard",
-        "--bgHover",
-        "--bgPage",
-        "--bgElevated",
-      ],
-      dark: [
-        "--bgSidebar",
-        "--bgSidebarHover",
-        "--bgPage",
-        "--bgElevated",
-        "--bgCard",
-        "--bgHover",
-      ],
+      light: ["--bgInset", "--bgHover", "--bgPage", "--bgElevated"],
+      dark: ["--bgPage", "--bgElevated", "--bgInset", "--bgHover"],
     };
 
     for (const [theme, rungs] of Object.entries(ladders)) {
@@ -263,17 +243,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       ];
       // Per ground, the roles that can actually be read on it — not a cross
       // product. A ground that carries less than everything is the reason this
-      // is a map: a hovered RAIL row sets its own ink to --textPrimary
-      // (app/shell.css), so an accent label never lands on --bgSidebarHover,
-      // and asserting it does would force that rung lighter than the rail it
-      // has to stay darker than.
+      // is a map: the status fills and tints below carry only their own ink.
       const carries: Record<string, string[]> = {
         "--bgPage": prose,
         "--bgElevated": prose,
-        "--bgCard": prose,
+        "--bgInset": prose,
         "--bgHover": prose,
-        "--bgSidebar": prose,
-        "--bgSidebarHover": ["--textPrimary", "--accentText"],
         // A FILLED control or a primary badge is a ground too, its label read
         // on the fill, and so is the opaque Surface a soft badge letters on.
         // A state's fill is its TEXT token, never its base: no one ink sits on
@@ -312,10 +287,6 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // the same tint over a card are two different colours behind the same text,
     // and the second one is always the worse. So each tinted pair is measured
     // COMPOSITED, over every ground the tint can be painted on.
-    //
-    // The rail is exempt at 4.5 and held to 3:1 instead: the only things wearing
-    // an accent tint on the rail are a 26px figure and a glyph, which is where
-    // 1.4.3's large-text allowance and 1.4.11's non-text floor apply.
     it("tinted chips clear AA over every ground they composite on", () => {
       // Every family that tints, each paired with the ink its tint needs: a
       // family left off this list is a contrast pair nothing measures.
@@ -328,7 +299,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
       ] as const;
-      const grounds = ["--bgPage", "--bgElevated", "--bgCard", "--bgHover"];
+      const grounds = ["--bgPage", "--bgElevated", "--bgInset", "--bgHover"];
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
         for (const [role, tint] of pairs) {
@@ -342,41 +313,10 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
               );
             }
           }
-          const onRail = composite(pal[tint], pal["--bgSidebar"]);
-          const railRatio = contrastOf(pal[role], onRail);
-          if (railRatio < 3) {
-            failures.push(
-              `${theme}: ${role} on ${tint} over --bgSidebar = ` +
-                `${railRatio.toFixed(2)}:1, needs 3:1 (large text / glyph)`,
-            );
-          }
         }
       }
       expect(failures.join("\n")).toBe("");
     });
-
-    // The rail's hover and its active plate are the pair a reader actually
-    // decodes, so the step between them is asserted as a MAGNITUDE and not only
-    // as an order: two rungs one hair apart pass an ordering test and look
-    // identical on a screen. 1.1:1 is the floor the ladder's own prose claims.
-    for (const theme of ["light", "dark"] as const) {
-      it(`${theme}: hover and the active plate are visibly apart`, () => {
-        const block =
-          theme === "light"
-            ? light
-            : { ...light, ...parseBlock(tokenDecls, '[data-theme="dark"]') };
-        const contrast = (a: string, b: string) => {
-          const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-          return (hi + 0.05) / (lo + 0.05);
-        };
-        expect(
-          contrast(block["--bgSidebarHover"], block["--bgElevated"]),
-        ).toBeGreaterThan(1.1);
-        expect(
-          contrast(block["--bgSidebarHover"], block["--bgSidebar"]),
-        ).toBeGreaterThan(1.05);
-      });
-    }
   });
 
   // The material overlays are the ONLY non-canon literals in this file, and they
@@ -403,8 +343,6 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     it("pins the dark grounds the ladder is measured from", () => {
       const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
       expect(normalize(dark["--bgPage"])).toBe("#0c1311");
-      expect(normalize(dark["--bgSidebar"])).toBe("#030504");
-      expect(normalize(dark["--bgSidebarHover"])).toBe("#0a100e");
     });
 
     // The two neutrals, pinned in dark because dark is where they diverge most

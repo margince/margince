@@ -15,8 +15,9 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack } from "./booking-common";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { useSchedulingProfile } from "./scheduling-profile-query";
+import "./booking-profile.css";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
@@ -74,11 +75,11 @@ function ProfileForm({
     ) => {
       const latest = await api.GET("/scheduling/profile");
       if (latest.error) throwProblem(latest.error);
-      const { data, error } = await api.PUT("/scheduling/profile", {
-        body: { ...latest.data, ...value },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.PUT("/scheduling/profile", {
+          body: { ...latest.data, ...value },
+        }),
+      );
     },
     onSuccess: (value) => client.setQueryData(["scheduling-profile"], value),
   });
@@ -193,11 +194,13 @@ function BookingIdentity({ profile }: Readonly<{ profile: Profile }>) {
           key: "company",
           term: t("scheduling.brand"),
           value: company ? (
-            <CompanyLogo
-              name={company}
-              src={profile.logo_url}
-              fallback={company}
-            />
+            <span className="booking-brand-mark">
+              <CompanyLogo
+                name={company}
+                src={profile.logo_url}
+                fallback={company}
+              />
+            </span>
           ) : (
             t("field.unset")
           ),

@@ -106,6 +106,9 @@ func (s *Store) updateContactInTx(
 	}
 	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
 	if p.Empty() {
+		if err := storekit.EnsureIfMatch(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
+			return out, err
+		}
 		return current, nil
 	}
 

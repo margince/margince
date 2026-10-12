@@ -191,8 +191,8 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterIntentTools(r, inertRetriever{}, nil, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
-		func(context.Context) ([]SlippingDeal, error) { return nil, nil },
-		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", nil })
+		func(context.Context, int) ([]SlippingDeal, error) { return nil, nil },
+		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", nil }, testStalledDays)
 	RegisterCommitmentTool(r, func(context.Context, CommitmentQuery) (CommitmentSweep, error) {
 		return CommitmentSweep{}, nil
 	})
@@ -239,6 +239,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterDocumentTools(r, &fakeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})

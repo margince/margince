@@ -17,7 +17,7 @@ import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 
 // What the classifier decided about each sender this mailbox brought in, and
@@ -100,13 +100,12 @@ function useSetDecision() {
       address: string;
       decision: "business" | "keep_out";
     }) => {
-      const { error } = await api.PUT("/capture/senders/{address}/decision", {
-        params: { path: { address: vars.address } },
-        body: { decision: vars.decision },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/capture/senders/{address}/decision", {
+          params: { path: { address: vars.address } },
+          body: { decision: vars.decision },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capture-senders"] });
@@ -121,13 +120,11 @@ function useWithdrawDecision() {
   const t = useT();
   return useMutation({
     mutationFn: async (address: string) => {
-      const { error } = await api.DELETE(
-        "/capture/senders/{address}/decision",
-        { params: { path: { address } } },
+      unwrap(
+        await api.DELETE("/capture/senders/{address}/decision", {
+          params: { path: { address } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capture-senders"] });

@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -70,6 +71,10 @@ const (
 	// maxDraftAddresses bounds each address line. A composer holds a handful;
 	// the ceiling stops a caller parking a mailing list in a row nothing reads.
 	maxDraftAddresses = 100
+	// maxDraftSubject and maxDraftAddress are the contract's caps (RFC 5322's
+	// line and mailbox lengths), counted in characters.
+	maxDraftSubject = 998
+	maxDraftAddress = 320
 )
 
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
@@ -381,6 +386,14 @@ func validateDraft(anchor MailDraftAnchor, content MailDraftContent) error {
 		if len(line.addresses) > maxDraftAddresses {
 			return &InvalidMailDraftError{Field: line.field, Reason: fmt.Sprintf("holds more than %d addresses", maxDraftAddresses)}
 		}
+		for _, addr := range line.addresses {
+			if utf8.RuneCountInString(addr) > maxDraftAddress {
+				return &InvalidMailDraftError{Field: line.field, Reason: fmt.Sprintf("holds an address longer than %d characters", maxDraftAddress)}
+			}
+		}
+	}
+	if utf8.RuneCountInString(content.Subject) > maxDraftSubject {
+		return &InvalidMailDraftError{Field: fieldSubject, Reason: fmt.Sprintf("is longer than %d characters", maxDraftSubject)}
 	}
 	return nil
 }

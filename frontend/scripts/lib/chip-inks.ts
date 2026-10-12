@@ -12,7 +12,7 @@ export const chipInks: readonly string[] = [
   // --textSecondary is deliberately absent: no rule in the tree paints --bgChip
   // under it today, and chipfill.test.ts is what makes that a fact rather than a
   // hope — the day one does, that gate fails until this list grows, and growing
-  // it re-arms the dark pair it would then have to clear (4.40:1 over --bgCard,
+  // it re-arms the dark pair it would then have to clear (4.40:1 over --bgInset,
   // 4.09:1 over --bgHover).
   "--textPrimary",
   "--tealText",

@@ -33,8 +33,6 @@ func day(t *testing.T, m time.Month, d int) *time.Time {
 // testYear is the year every fixture below sits in.
 const testYear = 2026
 
-func minor(v int64) *int64 { return &v }
-
 // A deal in the period, priced, converted, confirmed and committed — the shape
 // every case below varies ONE field of, so what a case proves is that field.
 func healthyDeal(t *testing.T) Deal {
@@ -42,9 +40,9 @@ func healthyDeal(t *testing.T) Deal {
 	return Deal{
 		ID:                "d1",
 		Owner:             "u1",
-		AmountMinor:       minor(100_000),
+		AmountMinor:       new(int64(100_000)),
 		Currency:          "EUR",
-		BaseMinor:         minor(100_000),
+		BaseMinor:         new(int64(100_000)),
 		ExpectedCloseDate: day(t, time.May, 20),
 		Category:          CategoryCommit,
 		StageProbability:  50,
@@ -237,8 +235,8 @@ func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 			if amount < 0 {
 				amount = -amount
 			}
-			deal.AmountMinor = minor(amount)
-			deal.BaseMinor = minor(amount)
+			deal.AmountMinor = new(amount)
+			deal.BaseMinor = new(amount)
 			deal.StageProbability = rng.Intn(101)
 			switch rng.Intn(4) {
 			case 0:
@@ -501,5 +499,28 @@ func TestTheCoverageNoteAgreesWithACountAboveOne(t *testing.T) {
 	assertCoverageFractionIsTheMoneysOwn(t, readings, note)
 	if !strings.Contains(note, "4 deals carry no amount") {
 		t.Errorf("four unpriced deals were not reported as four:\n%s", note)
+	}
+}
+
+func TestALostDealIsNotPipelineInAnyReadingOrCount(t *testing.T) {
+	t.Parallel()
+	period := testPeriod(t)
+	asOf := *day(t, time.May, 14)
+	lost := healthyDeal(t)
+	lost.Lost = true
+
+	got, err := Compute(period, asOf, []Deal{healthyDeal(t), lost})
+	if err != nil {
+		t.Fatalf("computing: %v", err)
+	}
+	if got.OpenMinor != 100_000 || got.EvidenceMinor != 100_000 || got.BestCaseMinor != 100_000 || got.WeightedMinor != 50_000 {
+		t.Errorf("readings = open %d evidence %d best %d weighted %d, want the lost deal in none of them",
+			got.OpenMinor, got.EvidenceMinor, got.BestCaseMinor, got.WeightedMinor)
+	}
+	if got.EligibleCount != 1 || got.PricedCount != 1 || got.ConfirmedDateCount != 1 {
+		t.Errorf("counts = eligible %d priced %d confirmed %d, want 1 each", got.EligibleCount, got.PricedCount, got.ConfirmedDateCount)
+	}
+	if len(got.Contributions) != 2 {
+		t.Errorf("contributions = %d, want the lost deal's row kept for the snapshot", len(got.Contributions))
 	}
 }

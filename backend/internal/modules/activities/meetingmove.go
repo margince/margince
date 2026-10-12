@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // auditFieldOccurredAt and auditFieldDuration are the audit image's keys for the
@@ -39,7 +40,8 @@ const (
 //
 // The same row rules as a cancellation, under the row's own lock: only a
 // meeting, only a live and unrestricted one. A start the calendar could not
-// state (zero) moves nothing — the stored start is better than capture time.
+// state (zero), or one outside the storable range, moves nothing: the stored
+// start is better than capture time.
 //
 // A provider issues one event id to every calendar holding the event, so a
 // second connection presenting it is ordinarily the same meeting on another
@@ -62,7 +64,7 @@ func MoveCapturedMeetingFor(holds SeatStanding) func(
 func moveCapturedMeetingTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, start time.Time, duration *int, holds SeatStanding,
 ) (bool, error) {
-	if start.IsZero() {
+	if start.IsZero() || !datasource.InstantInRange(start) {
 		return false, nil
 	}
 	var storedStart time.Time

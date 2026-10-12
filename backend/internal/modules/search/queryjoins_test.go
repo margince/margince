@@ -152,9 +152,7 @@ func TestAnActivityTraversesToEveryRecordItLinks(t *testing.T) {
 // reason a hop can be trusted to compile.
 func TestAJoinHopIsPublishedOnlyWhenBothColumnsAreThere(t *testing.T) {
 	narrowed := map[string][]StoredColumn{}
-	for table, columns := range joinSchema {
-		narrowed[table] = columns
-	}
+	maps.Copy(narrowed, joinSchema)
 	// The employment edge, with the far side taken away.
 	narrowed["relationship"] = columnsOf("id:uuid", "kind", "contact_id:uuid",
 		"archived_at:timestamp with time zone", "ended_at:date")

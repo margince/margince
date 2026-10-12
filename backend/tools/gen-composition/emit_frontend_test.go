@@ -159,7 +159,7 @@ func TestFrontendRegistryEscapesDeclaredText(t *testing.T) {
 	}
 	// The literal must stay on ONE line — an unescaped newline would make the
 	// emitted file a syntax error at best and a second statement at worst.
-	for _, line := range strings.Split(got, "\n") {
+	for line := range strings.SplitSeq(got, "\n") {
 		if strings.Contains(line, "fetch") && !strings.HasPrefix(strings.TrimSpace(line), "title:") {
 			t.Fatalf("the hostile string escaped its own literal on line %q", line)
 		}
@@ -240,7 +240,7 @@ func TestEmitsAComposedFrontendWorkspace(t *testing.T) {
 	// The host SPA must NOT be a member: pnpm installs beside each member, so a
 	// workspace naming ../../../frontend would write the same frontend/node_modules
 	// the root workspace owns and installs with --frozen-lockfile.
-	for _, line := range strings.Split(string(ws), "\n") {
+	for line := range strings.SplitSeq(string(ws), "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "- ") && strings.HasSuffix(strings.TrimSpace(line), "/frontend") &&
 			!strings.Contains(line, "/extensions/") {
 			t.Errorf("the host SPA is a member (%q) — its node_modules is the root workspace's to own", strings.TrimSpace(line))
@@ -281,7 +281,7 @@ func TestTheWorkspaceNamesOnlyTheUnitsItWasGiven(t *testing.T) {
 		t.Fatal(err)
 	}
 	var members int
-	for _, line := range strings.Split(string(ws), "\n") {
+	for line := range strings.SplitSeq(string(ws), "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "- ") {
 			members++
 		}
@@ -363,7 +363,7 @@ func TestNoOverrideTargetClimbsOutOfTheWorkspace(t *testing.T) {
 		t.Fatalf("the emitted workspace declares no overrides:\n%s", ws)
 	}
 	var checked int
-	for _, line := range strings.Split(overrides, "\n") {
+	for line := range strings.SplitSeq(overrides, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

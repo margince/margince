@@ -168,15 +168,15 @@ func TestCompanyComputed_GatedVisible_RealValueMatchesDirectViewRead(t *testing.
 	// The two deals are EUR against a EUR base, so the rollup view converts
 	// them by the same-currency shortcut and needs no rate loaded.
 	_, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "D1", AmountMinor: Int64Ptr(100000), Currency: StrPtr("EUR"),
-		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		Name: "D1", AmountMinor: new(int64(100000)), Currency: new("EUR"),
+		PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(companyID)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "D2", AmountMinor: Int64Ptr(250000), Currency: StrPtr("EUR"),
-		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		Name: "D2", AmountMinor: new(int64(250000)), Currency: new("EUR"),
+		PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(companyID)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -256,8 +256,8 @@ func TestCompanyComputed_SomeDealsUnpriceable_RefusesTheShortTotal(t *testing.T)
 		{5_000_000, "JPY"}, // cannot: no rate is loaded for the pair
 	} {
 		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: "Deal", AmountMinor: Int64Ptr(deal.amount), Currency: StrPtr(deal.currency),
-			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+			Name: "Deal", AmountMinor: new(deal.amount), Currency: new(deal.currency),
+			PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(companyID)), Source: "manual",
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -293,8 +293,8 @@ func TestCompanyComputed_OpenDealsInTheBaseCurrency_ReportTheirTotal(t *testing.
 
 	for _, amount := range []int64{75_000, 125_000} {
 		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: "Open deal", AmountMinor: Int64Ptr(amount), Currency: StrPtr("EUR"),
-			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+			Name: "Open deal", AmountMinor: new(amount), Currency: new("EUR"),
+			PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(companyID)), Source: "manual",
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -336,8 +336,8 @@ func TestCompanyComputed_OpenDealsWithNoUsableRate_AwaitingFX(t *testing.T) {
 
 	for _, amount := range []int64{75000, 125000} {
 		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: "Unpriced deal", AmountMinor: Int64Ptr(amount), Currency: StrPtr("JPY"),
-			PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+			Name: "Unpriced deal", AmountMinor: new(amount), Currency: new("JPY"),
+			PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(companyID)), Source: "manual",
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -428,10 +428,6 @@ func TestCompanyComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire(t *tes
 	}
 }
 
-// companyIDPtr matches Int64Ptr/StrPtr's convention (companyrollup_integration_test.go
-// / authz_integration_test.go): the *ids.CompanyID CreateDealInput wants.
-func companyIDPtr(id ids.CompanyID) *ids.CompanyID { return &id }
-
 // TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord
 // is the case that took a whole company record down.
 //
@@ -480,11 +476,11 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 		{"Ordinary deal", 125_000, "EUR"},
 	} {
 		in := deals.CreateDealInput{
-			Name: deal.name, AmountMinor: Int64Ptr(deal.amount),
+			Name: deal.name, AmountMinor: new(deal.amount),
 			PipelineID: pipeline, StageID: open,
-			CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+			CompanyID: new(companyIDOf(companyID)), Source: "manual",
 		}
-		in.Currency = StrPtr(deal.currency)
+		in.Currency = new(deal.currency)
 		if _, err := e.Deals.CreateDeal(e.Admin(), in); err != nil {
 			t.Fatalf("seeding %s: %v", deal.name, err)
 		}
@@ -558,8 +554,8 @@ func TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testi
 		dealCount = 1025
 	)
 	first, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Large deal", AmountMinor: Int64Ptr(perDeal), Currency: StrPtr("EUR"),
-		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(companyID)), Source: "manual",
+		Name: "Large deal", AmountMinor: new(perDeal), Currency: new("EUR"),
+		PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(companyID)), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding a large deal: %v", err)

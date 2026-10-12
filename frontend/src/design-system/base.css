@@ -359,7 +359,7 @@
   box-shadow: none;
 }
 .iconbtn:active:not(:disabled, [aria-disabled="true"]) {
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .btn:disabled {
@@ -382,7 +382,7 @@
 
    Uniform OPACITY rather than a swapped ground or a grayscaled mark, and both
    alternatives are worse for a reason worth keeping: a background swap inverts
-   in dark, where `--bgCard` sits LIGHTER than `--bgElevated`, so the dead
+   in dark, where `--bgInset` sits LIGHTER than `--bgElevated`, so the dead
    control would become the prominent one, while opacity recedes against
    whatever the theme put behind it. And `filter: grayscale()` would recolour
    another company's logo, which is precisely what `provider-mark.tsx`'s named
@@ -643,7 +643,7 @@ kbd {
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgInset);
   font-family: var(--fontFamilyMono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

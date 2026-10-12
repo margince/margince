@@ -86,7 +86,7 @@ func AccountStrengthFor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 		// account with no contacts they may read, so the roll-up is dormant
 		// with nobody behind it. Refusing here instead would newly 403 a
 		// route that has answered this shape since it shipped.
-		return AccountStrength{RelationshipStrength: RelationshipStrength{Bucket: bucketNone}}, nil
+		return AccountStrength{Bucket: bucketNone}, nil
 	}
 	if err != nil {
 		return AccountStrength{}, err
@@ -104,8 +104,8 @@ func AccountStrengthFor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 // of a zero would invent a relationship that does not exist.
 func FoldAccountStrength(contacts []ContactStrength) AccountStrength {
 	out := AccountStrength{
-		RelationshipStrength: RelationshipStrength{Bucket: bucketNone},
-		ContactCount:         len(contacts),
+		Bucket:       bucketNone,
+		ContactCount: len(contacts),
 	}
 	for i := range contacts {
 		c := contacts[i]

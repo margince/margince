@@ -236,9 +236,7 @@ func TestTheHeldSnapshotIsReplacedAtomically(t *testing.T) {
 	stop := make(chan struct{})
 	var readers sync.WaitGroup
 	for range 4 {
-		readers.Add(1)
-		go func() {
-			defer readers.Done()
+		readers.Go(func() {
 			for {
 				select {
 				case <-stop:
@@ -251,7 +249,7 @@ func TestTheHeldSnapshotIsReplacedAtomically(t *testing.T) {
 					_, _ = p.served(CreateFollowupsURI)
 				}
 			}
-		}()
+		})
 	}
 	for i := range 20 {
 		tier.answer(CreateFollowupsURI, ok(strings.Replace(documentFor(CreateFollowupsURI),
@@ -740,7 +738,7 @@ func TestTheBootWarningDoesNotNameAViewItIsServing(t *testing.T) {
 // saying the boot did not log one.
 func summaryLine(t *testing.T, logged string) string {
 	t.Helper()
-	for _, line := range strings.Split(logged, "\n") {
+	for line := range strings.SplitSeq(logged, "\n") {
 		if strings.Contains(line, "some views are not served") {
 			return line
 		}

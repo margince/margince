@@ -114,7 +114,7 @@ func TestDescribingAnUndescribableTypeIsAnError(t *testing.T) {
 // reflectTypeOfChan is a type encoding/json cannot render at all — the check
 // above needs one, and naming it here keeps the reflect import out of the test
 // body where it would read as part of the assertion.
-func reflectTypeOfChan() reflect.Type { return reflect.TypeOf(make(chan int)) }
+func reflectTypeOfChan() reflect.Type { return reflect.TypeFor[chan int]() }
 
 // The checker's own failure modes, which a result reaching them means this
 // server published something it cannot itself read.

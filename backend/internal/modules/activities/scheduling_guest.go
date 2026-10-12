@@ -116,7 +116,7 @@ func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, p
 	if intent != nil {
 		intent.Marketing = marketing
 	}
-	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, invitationIntent{Public: intent})
+	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, invitationIntent{Public: intent, DescriptionFromBooker: true})
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

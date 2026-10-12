@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -267,10 +268,8 @@ func declaresATest(file *ast.File) bool {
 
 func requireDeclaredValue(t *testing.T, path, field, value string, allowed []string) {
 	t.Helper()
-	for _, ok := range allowed {
-		if value == ok {
-			return
-		}
+	if slices.Contains(allowed, value) {
+		return
 	}
 	t.Errorf("%s declares %s %q, which is not one of %s. Adding a value here means adding its "+
 		"section to docs/reference/gate-patterns.md too — a shape with nothing to read is a label.",

@@ -306,7 +306,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	var offerNumber string
 	var revision int
 	var status string
-	var buyerSnapshot, issuerSnapshot *map[string]interface{}
+	var buyerSnapshot, issuerSnapshot *map[string]any
 	var validUntil, fxRateDate *time.Time
 	var netMinor, taxMinor, grossMinor int64
 	var capturedBy string
@@ -360,7 +360,7 @@ func readOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]crmc
 		var id ids.UUID
 		var productID *ids.UUID
 		var quantity, discount, taxRate string
-		var evidence *map[string]interface{}
+		var evidence *map[string]any
 		var priceGrounded bool
 		var version int64
 		var billingModel *string

@@ -53,6 +53,17 @@ var boundedButWhole = gatekit.Waive(map[string]string{
 		"to the reader's last brief cutoff, so its bound cuts a period a reader has already been " +
 		"shown rather than a backlog that accumulates. The contract says a cursor arrives with " +
 		"the lane that needs one, which is the sentence this gate exists to doubt; issue 5730",
+	"listSlippingDeals (/deals/slipping)": "the ranked answer of whats_slipping_this_week, served " +
+		"by the tool itself: `limit` keeps the worst N, and omitting it returns every deal the " +
+		"tool evidenced. Continuing past the tool's own scan bound would need a cursor on the " +
+		"tool first, and both doors would then take it",
+	"listOpenCommitments (/commitments)": "the answer of review_commitments, served by the tool " +
+		"itself: `limit` keeps the most overdue N, up to the tool's ceiling of 50, and the answer " +
+		"says nothing of a rest because the tool has no cursor. A cursor goes on the tool first, " +
+		"and both doors would then take it",
+	"searchContext (/context-search)": "a ranking, served by search_context itself: `limit` cuts " +
+		"an ordering by relevance, not a match set, and the answer's `coverage` never claims " +
+		"complete_exact. A question with a whole answer belongs to POST /workspace-queries",
 	"listCommunicationReviews (/communication-reviews)": "a reviewer's queue with the defect this " +
 		"gate was written for, unfixed: oldest first, bounded at 100, no cursor. Fixing it here " +
 		"would multiply a paging change across a module this one does not touch; issue 5730",

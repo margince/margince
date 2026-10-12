@@ -45,11 +45,9 @@ func TestACatalogReadInFlightIsJoinedNotRepeated(t *testing.T) {
 	failures := make([]error, 3)
 	var wg sync.WaitGroup
 	for i := range answers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			answers[i], failures[i] = facts.get(context.Background(), ask)
-		}()
+		})
 	}
 	close(release)
 	wg.Wait()

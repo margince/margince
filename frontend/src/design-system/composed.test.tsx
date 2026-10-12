@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatMoneyCompact, MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
@@ -235,22 +235,27 @@ describe("DealCard + PipelineBoard", () => {
     expect(opened).toEqual(["d1"]);
   });
 
-  // A middle-click arrives as an auxclick, which a link does not follow when it
-  // is dispatched, so the mark hands the middle button on as a click instead.
-  it("hands the middle button on to the deal's link, and no other", () => {
-    const buttons: number[] = [];
+  // A middle-click arrives as an auxclick. The mark opens the deal's address in
+  // a new tab from it, because a dispatched button-1 click can leave that tab blank.
+  it("opens the deal in a new tab on the middle button, and on no other", () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
     render(
       <DealCard
         deal={{ ...deal, owner: { id: "u-1", name: "Ada Lindqvist" } }}
         href="#/deals/d1"
         zone="Europe/Berlin"
-        onOpen={(_opened, event) => buttons.push(event.button)}
       />,
     );
     const mark = screen.getByRole("img", { name: "Ada Lindqvist" });
     fireEvent(mark, new MouseEvent("auxclick", { bubbles: true, button: 2 }));
     fireEvent(mark, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
-    expect(buttons).toEqual([1]);
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(
+      expect.stringMatching(/#\/deals\/d1$/),
+      "_blank",
+      "noopener",
+    );
+    open.mockRestore();
   });
 
   it("draws no company slot at all for a deal that names none", () => {

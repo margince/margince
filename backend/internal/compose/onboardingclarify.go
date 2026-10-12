@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // onboardingClarifyOptionLimit mirrors the contract's options maxItems:
@@ -193,10 +194,10 @@ func entityClarifies(read contacts.SiteRead, locale string) []crmcontracts.Onboa
 		name, nameOK := plausibleClarifyValue(entity.Name, clarifyNameMaxRunes, false)
 		address, addressOK := plausibleClarifyValue(entity.RegisteredAddress, clarifyAddressMaxRunes, true)
 		if !nameOK && strings.TrimSpace(entity.Name) != "" {
-			dropped = append(dropped, boundedRunes(entity.Name, clarifyNameMaxRunes))
+			dropped = append(dropped, textcut.Runes(entity.Name, clarifyNameMaxRunes))
 		}
 		if !addressOK && strings.TrimSpace(entity.RegisteredAddress) != "" {
-			dropped = append(dropped, boundedRunes(entity.RegisteredAddress, clarifyAddressMaxRunes))
+			dropped = append(dropped, textcut.Runes(entity.RegisteredAddress, clarifyAddressMaxRunes))
 		}
 		if nameOK && !seenName[name] {
 			seenName[name] = true

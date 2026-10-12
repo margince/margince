@@ -39,6 +39,8 @@ type outboundMessage struct {
 	// alternatives of one message that disagreed would be two messages, and the
 	// recipient's client decides which one they read.
 	htmlBody string
+	// inlineLogoKey is the stored logo htmlBody embeds, empty when none.
+	inlineLogoKey string
 	// fromName is who the recipient sees this is from. Resolved at send time
 	// from the authenticated sender rather than at transmit, so a rename
 	// between attempts cannot change a message already in flight.
@@ -115,6 +117,7 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 		Subject:        m.in.Subject,
 		Body:           m.body,
 		HTMLBody:       m.htmlBody,
+		InlineLogoKey:  m.inlineLogoKey,
 		FromName:       m.fromName,
 		Attachments:    m.files,
 		ConsentPurpose: m.in.ConsentPurpose,

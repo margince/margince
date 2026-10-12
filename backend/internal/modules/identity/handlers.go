@@ -137,6 +137,9 @@ type Handlers struct {
 	// controls via Host/X-Forwarded-Proto and which an OAuth audience
 	// decision must not depend on.
 	mcpResource string
+	// agentAPIBase answers where a passport calls the API, for the Settings
+	// card's snippet. Nil answers "".
+	agentAPIBase func(*http.Request) string
 
 	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
 	// and /callback (WithOIDCProviders). Absent from oidcProviders means the
@@ -246,6 +249,13 @@ func (h Handlers) WithPasswordReset(m mailer.Mailer) Handlers {
 func (h Handlers) WithAgentGrants(store agentgrant.Store, agents []string) Handlers {
 	h.agentGrants = store
 	h.grantableAgents = slices.Clone(agents)
+	return h
+}
+
+// WithAgentAPIBase binds the answer to where a passport calls the API, which
+// GET /passports reports so the card and the skill bundle name one address.
+func (h Handlers) WithAgentAPIBase(base func(*http.Request) string) Handlers {
+	h.agentAPIBase = base
 	return h
 }
 

@@ -8,6 +8,7 @@ import (
 	"go/ast"
 	"go/types"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -246,12 +247,7 @@ func TestTheShippedAgentsAreNarrowerThanTheirScopesAllow(t *testing.T) {
 }
 
 func containsName(names []string, want string) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
 
 // The wire declares an `awaiting_approval` state, the store puts it in the

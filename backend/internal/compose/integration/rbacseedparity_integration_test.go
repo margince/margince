@@ -366,7 +366,7 @@ func markerWrites(t *testing.T, writes []permissionWrite) markerStamps {
 	t.Helper()
 	out := markerStamps{replayed: true, versions: map[string]bool{}}
 	for _, write := range writes {
-		version := strings.SplitN(write.name, "_", 2)[0]
+		version, _, _ := strings.Cut(write.name, "_")
 		for _, statement := range write.statements {
 			for _, match := range markerWritePattern.FindAllStringSubmatch(statement, -1) {
 				if match[1] != version {

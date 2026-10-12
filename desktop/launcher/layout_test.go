@@ -187,17 +187,17 @@ func TestConfiguredAdminEmailReadsTheInstallationsOwnAddress(t *testing.T) {
 func TestConfiguredAdminEmailFallsBackRatherThanFailing(t *testing.T) {
 	for name, yaml := range map[string]*string{
 		"no file at all":             nil,
-		"no bootstrap_admin block":   ptr("version: 1\n\nworkspace:\n  name: Margince\n"),
-		"the block names no email":   ptr("bootstrap_admin:\n  display_name: Owner\n"),
-		"the email is commented out": ptr("bootstrap_admin:\n  # email: admin@demo.test\n"),
-		"the value is empty":         ptr("bootstrap_admin:\n  email:\n"),
+		"no bootstrap_admin block":   new("version: 1\n\nworkspace:\n  name: Margince\n"),
+		"the block names no email":   new("bootstrap_admin:\n  display_name: Owner\n"),
+		"the email is commented out": new("bootstrap_admin:\n  # email: admin@demo.test\n"),
+		"the value is empty":         new("bootstrap_admin:\n  email:\n"),
 		// bootstrap_admin.contact.email is not bootstrap_admin.email. Announcing
 		// a nested address would name an account nothing bootstrapped.
-		"only a nested email": ptr("bootstrap_admin:\n  contact:\n    email: ops@demo.test\n"),
+		"only a nested email": new("bootstrap_admin:\n  contact:\n    email: ops@demo.test\n"),
 		// A double-quoted scalar may carry YAML escapes, and decoding them is a
 		// parser's job. Returning the literal would announce an address nothing
 		// bootstrapped, so an escaped value is declined.
-		"a double-quoted value carrying an escape": ptr(
+		"a double-quoted value carrying an escape": new(
 			"bootstrap_admin:\n  email: \"admin\\u0040demo.test\"\n"),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -214,8 +214,6 @@ func TestConfiguredAdminEmailFallsBackRatherThanFailing(t *testing.T) {
 		})
 	}
 }
-
-func ptr(s string) *string { return &s }
 
 // The bus credential is minted once and READ BACK on every later start, which
 // is the opposite of the admin password beside it.

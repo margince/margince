@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -72,11 +72,11 @@ export function useChannelReachable(
   const contact = useQuery({
     queryKey: ["contact", contactId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}", {
-        params: { path: { id: contactId as string } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/contacts/{id}", {
+          params: { path: { id: contactId as string } },
+        }),
+      );
     },
     enabled: isChannel && contactId != null,
   });

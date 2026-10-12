@@ -286,7 +286,7 @@ export const CHANGED_ELSEWHERE = {
 export async function openEditor(
   user: ReturnType<typeof userEvent.setup>,
   testId: string,
-  verb: RegExp = /^edit$/i,
+  verb: RegExp = /^edit\b/i,
 ) {
   const lane = await screen.findByTestId(testId);
   await user.click(within(lane).getByRole("button", { name: verb }));

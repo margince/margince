@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -131,10 +132,8 @@ const (
 // refuseUnimportableObject holds `object` to the vocabulary, naming the whole
 // of it rather than saying the value is invalid.
 func refuseUnimportableObject(object string) error {
-	for _, allowed := range importObjectEnum {
-		if object == allowed {
-			return nil
-		}
+	if slices.Contains(importObjectEnum, object) {
+		return nil
 	}
 	// The caller's word in Cause, which is bounded and escaped, and the set in
 	// Guidance, which is ours. Both in Cause meant the vocabulary shared a

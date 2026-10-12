@@ -160,7 +160,7 @@ func replyVerdictsFromMigration(t *testing.T) []string {
 // then compares words that were never in the catalog.
 func splitCatalogTokens(body string) []string {
 	var out []string
-	for _, part := range strings.Split(body, ",") {
+	for part := range strings.SplitSeq(body, ",") {
 		token := strings.TrimSuffix(strings.TrimSpace(part), "::text")
 		out = append(out, strings.Trim(token, "'"))
 	}

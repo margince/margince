@@ -13,7 +13,7 @@ package events
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -31,7 +31,7 @@ const batchStream = "gw:events:crm:contact"
 func (e *busEnv) stageBurst(t *testing.T, n int) []kevents.Envelope {
 	t.Helper()
 	envs := make([]kevents.Envelope, 0, n)
-	for i := 0; i < n; i++ {
+	for range n {
 		envs = append(envs, e.stage(t, "contact.updated", ids.NewV7()))
 	}
 	for {
@@ -103,7 +103,7 @@ func TestAFailedBatchFallsBackToOneEntryAtATime(t *testing.T) {
 		return nil
 	}, testLogger()).WithBatch(func(context.Context, []kevents.Envelope) error {
 		batches.Add(1)
-		return fmt.Errorf("simulated batch failure")
+		return errors.New("simulated batch failure")
 	})
 	s.block = 100 * time.Millisecond
 
@@ -135,7 +135,7 @@ func TestTheBatchDedupeAndThePerEventDedupeShareTheirMarks(t *testing.T) {
 	fail := true
 	batch := DedupeBatch(e.rdb, group, func(_ context.Context, fresh []kevents.Envelope) error {
 		if fail {
-			return fmt.Errorf("transient effect failure")
+			return errors.New("transient effect failure")
 		}
 		for _, env := range fresh {
 			got = append(got, env.EventID)

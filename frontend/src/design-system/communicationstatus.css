@@ -51,7 +51,7 @@
   position: absolute;
   inset-block-end: -2px;
   inset-inline-start: 10px;
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: 50%;
   /* The squircle the token layer gives every corner draws a circle as a
    * lozenge. A cue this small has to read as a dot. */

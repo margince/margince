@@ -5,7 +5,7 @@ package compose
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"math"
 	"time"
 
@@ -133,7 +133,7 @@ func movementDeltaFacts(deltas []forecasting.DealDelta, before, after []forecast
 func projectMovement(chart crmcontracts.ReportingChart, movement forecasting.Movement, facts []reporting.Fact, opening, closing reportingCapture) (crmcontracts.ReportingChart, error) {
 	for _, value := range []int64{movement.OpeningMinor, movement.ClosingMinor} {
 		if value > reportingExactInteger || value < -reportingExactInteger {
-			return chart, fmt.Errorf("captured movement exceeds exact reporting range")
+			return chart, errors.New("captured movement exceeds exact reporting range")
 		}
 	}
 	chart.ContextId = "movement"
@@ -156,7 +156,7 @@ func projectMovement(chart crmcontracts.ReportingChart, movement forecasting.Mov
 		}
 		value := float64(bucket.AmountMinor)
 		if math.Abs(value) > float64(reportingExactInteger) {
-			return chart, fmt.Errorf("movement bucket exceeds exact reporting range")
+			return chart, errors.New("movement bucket exceeds exact reporting range")
 		}
 		group := bucket.Name
 		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: group, Label: group, Value: &value, Status: "ok", Evidence: &crmcontracts.ReportingEvidenceRef{Metric: reportingOpenPipeline, ContextId: "movement_delta", GroupKey: &group}})

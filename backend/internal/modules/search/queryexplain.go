@@ -17,7 +17,8 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // explainPlan renders one validated plan as a sentence.
@@ -171,23 +172,5 @@ func (b *echoBudget) spend(fragment string) string {
 		return fragment
 	}
 	b.left -= allowed
-	return truncateRunes(fragment, allowed) + "…(" + strconv.Itoa(len(fragment)) + " bytes)"
-}
-
-// truncateRunes cuts at a rune boundary. Cutting by bytes can split a multibyte
-// character, and the invalid trailing byte that leaves is replaced with U+FFFD
-// on the way out — so the sentence would end in a character the caller never
-// wrote, in a field whose whole job is to report their query faithfully.
-func truncateRunes(fragment string, limit int) string {
-	if limit <= 0 {
-		return ""
-	}
-	if len(fragment) <= limit {
-		return fragment
-	}
-	cut := limit
-	for cut > 0 && !utf8.RuneStart(fragment[cut]) {
-		cut--
-	}
-	return fragment[:cut]
+	return textcut.Bytes(fragment, allowed) + "…(" + strconv.Itoa(len(fragment)) + " bytes)"
 }

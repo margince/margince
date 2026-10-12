@@ -6,6 +6,7 @@ accept
 access
 account
 accountable
+act
 action
 add
 admin
@@ -19,6 +20,7 @@ all
 already
 also
 an
+and
 answer
 app
 approval
@@ -65,6 +67,7 @@ chat
 check
 checksum
 choose
+chose
 claim
 click
 client
@@ -105,6 +108,7 @@ date
 deal
 decide
 declare
+default
 defer
 delivery
 demo
@@ -165,6 +169,7 @@ generate
 get
 give
 go
+good
 grade
 green
 guide
@@ -179,6 +184,7 @@ have
 help
 here
 history
+hold
 holds
 hole
 hook
@@ -224,11 +230,13 @@ list
 local
 log
 look
+lookup
 machine
 mail
 mailbox
 maintain
 make
+maker
 many
 map
 mark
@@ -246,6 +254,7 @@ mode
 model
 module
 money
+month
 more
 morning
 most
@@ -266,10 +275,13 @@ now
 number
 of
 off
+offers
 old
+older
 on
 once
 one
+only
 open
 or
 order
@@ -336,6 +348,7 @@ record
 red
 reference
 refuse
+region
 register
 release
 remove
@@ -376,6 +389,7 @@ security
 see
 send
 separate
+september
 sequence
 serious
 serve
@@ -471,7 +485,9 @@ until
 up
 us
 use
+user
 user's
+users
 value
 version
 vulnerability

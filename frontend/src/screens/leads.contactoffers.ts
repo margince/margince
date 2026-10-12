@@ -7,7 +7,7 @@
 // splits them in two.
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import type { CreateField } from "./create";
 import type { NameOffer, NameOffers } from "./create.offered";
 
@@ -27,12 +27,11 @@ export function leadFillsFrom(contact: Contact): Record<string, string> {
 
 /** The contacts matching what was typed, at most ten. */
 export async function searchContacts(query: string): Promise<Contact[]> {
-  const { data, error } = await api.GET("/contacts", {
-    params: { query: { q: query, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: { query: { q: query, limit: 10 } },
+    }),
+  );
   return data.data;
 }
 

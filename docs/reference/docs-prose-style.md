@@ -104,7 +104,8 @@ least three words. A name is a proper name, an acronym or a code identifier. An 
 technical one such as `schema`, goes in a word list, so it counts against the cap. Names the pages used
 before they joined the bar sit in the glossary's last section without a meaning; after that, the section
 only shrinks. A general word also covers its regular forms, so a page may write `deals` or `connected`
-when the list holds `deal` and `connect`. An irregular form such as `built` is listed as it is spelled. A
+when the list holds `deal` and `connect`. A form counts only when what is left is a real stem: `thing` is not `the`, `band` is not `ban`, and
+`older` is listed on its own, since a short stem cannot tell `old` + `er` from `off` + `er`. An irregular form such as `built` is listed as it is spelled. A
 glossary term matches only as written. Inline code is not checked, nor is link text
 that contains a `.` or a `/`, such as a path or a host. A bold UI label and a quoted screen message are not
 checked either: they must match the screen word for word, so they count as names.
@@ -127,11 +128,18 @@ Kubernetes, React, Go and Terraform each stay under 1,000 words.
 ## Comments in code
 
 A comment line that a change adds to Go or TypeScript has no em dashes, none
-of the banned words, no capitals for emphasis, no "X is not Y. It is Z." and no change history.
-`make comment-prose` checks the diff against `origin/main` in the pre-push hook and in CI. Comments a change
-does not touch are left alone, so the tree improves file by file. Directives such as `//go:build` and
-`//nolint` are not judged, and a line that must keep a form carries `prose:allow <rule> <reason>`. The word
-pool does not apply to comments, which are full of identifiers.
+of the banned words, no capitals for emphasis, no "X is not Y. It is Z." and no change history. It
+uses the plain word where one exists: "use", not "utilize"; "to", not "in order to".
+No sentence in it runs over 25 words, and it cites no section of a document a reader cannot open, such
+as `ADR-0091 §8`. A bare decision number may stay as a label.
+
+`craft static` checks these on the lines added since `origin/main`, in the pre-push hook and in CI
+(`make craft-static`). It also notes, without blocking, a comment block over 6 lines and a Go function
+whose comments run over 6 lines and outnumber its code lines. Comments a change does not touch are left alone, so the tree improves
+file by file, and `make comment-stats` fails a change that makes the whole tree's numbers worse.
+Directives such as `//go:build` and `//nolint` are not judged. A line that must keep a form carries
+`//craft:ignore <check> <reason>` on the line above, and `craft words` prints the word lists. The
+plain-page word lists do not apply to comments, which are full of identifiers.
 
 ## Renaming a term
 

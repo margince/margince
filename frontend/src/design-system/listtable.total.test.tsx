@@ -84,4 +84,19 @@ describe("the count line", () => {
     expect(screen.getAllByText(/no rows/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/loaded so far/)).toBeNull();
   });
+
+  it("says an empty list's zero once, in its body, and keeps the order above it", () => {
+    render(
+      <ListTable
+        rows={[]}
+        columns={[{ ...columns[0], sort: "name" }]}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "name", onChange: () => {} }}
+      />,
+    );
+    expect(screen.getAllByText(/No rows yet/)).toHaveLength(1);
+    expect(screen.getByRole("table").textContent).toContain("No rows yet.");
+    expect(screen.getByText("Sorted by Name")).toBeTruthy();
+  });
 });

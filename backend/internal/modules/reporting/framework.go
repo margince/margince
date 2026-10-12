@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func (s *Service) framework(ctx context.Context, tx pgx.Tx) (crmcontracts.ReportingFramework, error) {
@@ -88,7 +90,7 @@ func (s *Service) PublishFramework(ctx context.Context, version int64, in crmcon
 }
 
 func validateFrameworkInput(in crmcontracts.ReportingFrameworkInput) error {
-	if strings.TrimSpace(in.Reason) == "" || len(in.Reason) > 1000 || len(in.CaptureContexts) > 20 {
+	if !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 || len(in.CaptureContexts) > 20 {
 		return invalid("supply a reason and at most twenty capture contexts")
 	}
 	if in.Template != reportingSales && in.Template != "sdr" {

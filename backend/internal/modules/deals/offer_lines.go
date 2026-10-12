@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ProductCurrencyMismatchError maps to 422: a line snapshots its price
@@ -114,18 +115,23 @@ func insertOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, offerC
 	if err != nil {
 		return err
 	}
-	if defaults.Description == nil || *defaults.Description == "" {
+	if defaults.Description == nil || !values.HasVisibleText(*defaults.Description) {
 		return &RequiredFieldError{Field: "description"}
 	}
 	if defaults.Price == nil {
 		return &RequiredFieldError{Field: "unit_price_minor"}
 	}
+	if err := checkLinePosition(in.Position); err != nil {
+		return err
+	}
 	unitVal, discount, tax := normalizeLineDefaults(defaults.Unit, in.DiscountPct, defaults.TaxRate)
-	// Validate the money math before the row lands: a malformed decimal
-	// or a nonsense quantity answers 422 here, not a CHECK 500 later.
-	if _, err := LineTotals(OfferLineInput{
-		Quantity: in.Quantity, UnitPriceMinor: *defaults.Price, DiscountPct: discount, TaxRate: tax,
-	}); err != nil {
+	line := OfferLineInput{Quantity: in.Quantity, UnitPriceMinor: *defaults.Price, DiscountPct: discount, TaxRate: tax}
+	// Validate the figures before the row lands: a number out of range or a
+	// malformed decimal answers 422 naming it here, not a CHECK 500 later.
+	if err := checkLineFigures(line); err != nil {
+		return err
+	}
+	if _, err := LineTotals(line); err != nil {
 		return err
 	}
 	// The classification is settled here, before the row lands, so a
@@ -253,8 +259,15 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
 		return crmcontracts.Offer{}, err
 	}
+	in, err := requireLineWords(in)
+	if err != nil {
+		return crmcontracts.Offer{}, err
+	}
+	if err := checkLinePosition(in.Position); err != nil {
+		return crmcontracts.Offer{}, err
+	}
 	var out crmcontracts.Offer
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		current, _, err := visibleOfferLocked(ctx, tx, offerID, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -269,7 +282,10 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		}
 
 		sets, args, lineBefore, lineAfter, line := buildOfferLinePatch(lineID, in, curPosition, curDescription, curUnit, line)
-		// Validate the resulting line's math up front (422, not a CHECK 500).
+		// Validate the resulting line's figures and math up front (422, not a CHECK 500).
+		if err := checkLineFigures(line); err != nil {
+			return err
+		}
 		if _, err := LineTotals(line); err != nil {
 			return err
 		}

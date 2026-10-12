@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ensureAssigneeCanHoldWork checks a client-supplied user reference before it
@@ -36,7 +37,7 @@ import (
 // afterwards.
 func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
 	return ensureSeatHoldsWork(ctx, tx, assigneeID,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND status = 'active' AND archived_at IS NULL`)
+		`SELECT is_agent FROM app_user WHERE id = $1 AND `+workforce.LiveMemberSQL(""))
 }
 
 // ensureNewTaskAssignee is ensureAssigneeCanHoldWork for a task being CREATED,
@@ -47,11 +48,10 @@ func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.U
 // ensureAssigneeCanHoldWork, so nothing is re-routed to a seat nobody answers.
 func ensureNewTaskAssignee(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
 	return ensureSeatHoldsWork(ctx, tx, assigneeID,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND status IN ('active', 'invited') AND archived_at IS NULL`)
+		`SELECT is_agent FROM app_user WHERE id = $1 AND `+workforce.ActivatableMemberSQL(""))
 }
 
-// ensureSeatHoldsWork runs one of the two seat questions above. Each is spelled
-// out whole, so the liveness gate reads both halves of every statement.
+// ensureSeatHoldsWork runs one of the two seat questions above.
 func ensureSeatHoldsWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID, seatSQL string) error {
 	if assigneeID == nil {
 		return nil
@@ -93,8 +93,7 @@ func SeatCanHoldAutomaticWork(ctx context.Context, tx pgx.Tx, seat ids.UserID) (
 		// error for a caller who is deciding rather than asserting.
 		return false, nil
 	}
-	var agent *AgentAssigneeError
-	if errors.As(err, &agent) {
+	if _, ok := errors.AsType[*AgentAssigneeError](err); ok {
 		return false, nil
 	}
 	return false, err

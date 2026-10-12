@@ -643,8 +643,7 @@ func TestACapturedRowRefusesTheDirectWriteAndAManualWideningDoesNotStand(t *test
 	})
 	_, err := store.SetAudience(ctx, ids.From[ids.ActivityKind](activityID),
 		activities.SetAudienceInput{Audience: "workspace"})
-	var captured *activities.CapturedAudienceError
-	if !errors.As(err, &captured) {
+	if _, ok := errors.AsType[*activities.CapturedAudienceError](err); !ok {
 		t.Fatalf("SetAudience on a captured row returned %v, want a *CapturedAudienceError", err)
 	}
 
