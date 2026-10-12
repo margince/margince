@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ArrowLeft, Check, PenLine, RefreshCw, Send, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
@@ -92,18 +97,20 @@ function useBuyerCompanyPreview(buyerCompanyId: string | null, open: boolean) {
   const [override, setOverride] = useState<RecordPickerCandidate | null>(null);
   const existingQuery = useQuery({
     queryKey: ["company", "ref", buyerCompanyId],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/companies/{id}", {
-          params: { path: { id: buyerCompanyId ?? "" } },
-        }),
-      );
-      return {
-        id: buyerCompanyId ?? "",
-        name: data.display_name ?? "",
-      } satisfies RecordPickerCandidate;
-    },
-    enabled: Boolean(buyerCompanyId) && open,
+    queryFn: buyerCompanyId
+      ? async () => {
+          const data = unwrap(
+            await api.GET("/companies/{id}", {
+              params: { path: { id: buyerCompanyId } },
+            }),
+          );
+          return {
+            id: buyerCompanyId,
+            name: data.display_name ?? "",
+          } satisfies RecordPickerCandidate;
+        }
+      : skipToken,
+    enabled: open,
     staleTime: 60_000,
   });
   const buyerCompany =

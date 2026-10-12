@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
@@ -64,14 +64,16 @@ export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
     // ["deal-offers", id]; sharing it would let this one-row response stand in
     // for that list and leave the deal screen showing a single offer.
     queryKey: ["deal-latest-offer", leading?.deal_id],
-    enabled: Boolean(leading) && mayRead,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/deals/{id}/offers", {
-          params: { path: { id: leading?.deal_id ?? "" }, query: { limit: 1 } },
-        }),
-      );
-    },
+    enabled: mayRead,
+    queryFn: leading
+      ? async () => {
+          return unwrap(
+            await api.GET("/deals/{id}/offers", {
+              params: { path: { id: leading.deal_id }, query: { limit: 1 } },
+            }),
+          );
+        }
+      : skipToken,
   });
   const offer = offers.data?.data?.[0];
   if (!leading || !offer) {
