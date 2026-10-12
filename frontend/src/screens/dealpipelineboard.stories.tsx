@@ -123,6 +123,7 @@ const openSummary: Story["play"] = async ({ canvasElement }) => {
   const [first] = await canvas.findAllByRole("button", {
     name: /^Deal summary:/,
   });
+  if (!first) throw new Error("the board drew no deal summary");
   await userEvent.click(first);
   const page = within(canvasElement.ownerDocument.body);
   await expect(

@@ -320,7 +320,8 @@ const FORECAST_LABELS: Record<string, MessageKey> = {
 };
 
 function forecastLabel(value: string, t: (key: MessageKey) => string): string {
-  return Object.hasOwn(FORECAST_LABELS, value)
-    ? t(FORECAST_LABELS[value])
-    : value.replaceAll("_", " ");
+  const key = Object.hasOwn(FORECAST_LABELS, value)
+    ? FORECAST_LABELS[value]
+    : undefined;
+  return key === undefined ? value.replaceAll("_", " ") : t(key);
 }

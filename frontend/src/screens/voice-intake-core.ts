@@ -213,10 +213,13 @@ function problemCodes(problem: unknown): string[] {
 
 // The refusal category a 422 names, or null when no code here recognizes it.
 export function refusalOf(problem: unknown): RefusalReason | null {
-  const known = problemCodes(problem).find(
-    (code) => refusalReasons[code] !== undefined,
-  );
-  return known === undefined ? null : refusalReasons[known];
+  for (const code of problemCodes(problem)) {
+    const reason = refusalReasons[code];
+    if (reason !== undefined) {
+      return reason;
+    }
+  }
+  return null;
 }
 
 /** What one intake attempt ended as. Every path a source can take terminates in

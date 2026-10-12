@@ -243,10 +243,10 @@ export function DeckStack({
         keys exist at all.
       */}
       <div className="ddeck-plate">
-        {Array.from({ length: peeks }, (_, index) => (
+        {waiting.slice(1, 1 + peeks).map((peek, index) => (
           <div
             className="ddeck-peek"
-            key={waiting[index + 1].id}
+            key={peek.id}
             data-depth={index + 1}
             aria-hidden="true"
           />

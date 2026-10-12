@@ -102,7 +102,7 @@ export const VerbsOpen: Story = {
     const [first] = await canvas.findAllByRole("button", {
       name: "More actions",
     });
-    await userEvent.click(first);
+    if (first) await userEvent.click(first);
   },
 };
 

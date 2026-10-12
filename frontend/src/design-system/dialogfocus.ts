@@ -73,12 +73,12 @@ function firstControlIn(dialog: HTMLElement | null): HTMLElement | null {
 // can operate a surface the dialog is covering.
 function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
   const stops = focusableWithin(dialog);
-  if (stops.length === 0) {
+  const [first] = stops;
+  const last = stops.at(-1);
+  if (first === undefined || last === undefined) {
     event.preventDefault();
     return;
   }
-  const first = stops[0];
-  const last = stops[stops.length - 1];
   const active = document.activeElement;
   // Focus already outside the dialog is the case both directions have to
   // catch, not just Shift+Tab: it happens whenever something on the page

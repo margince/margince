@@ -1229,7 +1229,8 @@ export function AgentRail({
   // about the same thing, and an amber orb captioned "Loading pipeline"
   // tells a reader the pipeline is the fault.
   const holdsFault = state === "warning" || state === "error";
-  const shown = ticker.length > 0 && !holdsFault ? plain(ticker[0].said) : line;
+  const [latest] = ticker;
+  const shown = latest !== undefined && !holdsFault ? plain(latest.said) : line;
   const ring = importRing(state, signals.capture);
   return (
     <section

@@ -65,7 +65,7 @@ function draw(hash: number, salt: number): number {
 export function allowedArcs(): readonly (readonly [number, number])[] {
   const bands = [...FORBIDDEN_HUES].sort((a, b) => a.from - b.from);
   return bands.map((band, i) => {
-    const next = bands[(i + 1) % bands.length];
+    const next = bands[(i + 1) % bands.length] ?? band;
     const end = i + 1 < bands.length ? next.from : next.from + 360;
     return [band.to, end] as const;
   });
@@ -89,7 +89,7 @@ export function huesAt(
   const arcs = allowedArcs();
   const total = arcs.reduce((sum, [from, to]) => sum + (to - from), 0);
   let along = position * total;
-  let [start, end] = arcs[arcs.length - 1];
+  let [start, end] = arcs.at(-1) ?? ([0, 360] as const);
   let hueA = end;
   for (const [from, to] of arcs) {
     if (along < to - from) {

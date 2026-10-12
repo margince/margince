@@ -170,7 +170,7 @@ export function ProviderRecentCalls({
 }: Readonly<{ provider: string; broker: boolean }>) {
   const t = useT();
   const canSee = useCan("ai_diagnostics", "read");
-  const groupings: Grouping[] = broker
+  const groupings: readonly [Grouping, ...Grouping[]] = broker
     ? ["host", "model", "tier"]
     : ["model", "tier"];
   // Unchosen follows the broker as the host becomes known.

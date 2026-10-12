@@ -588,12 +588,9 @@ export function VoiceResultScene({
 }
 
 // The sample: a real draft in a card of its own. `drafts` is every sample
-// the build kept; "Another scenario" cycles them locally (no server round
-// trip — they are all already in hand), and disappears once there is only
-// one to show, rather than offering a control with nothing to switch to.
-// The header block shows only Subject: `VoiceSampleDraft` carries no To/From,
-// and inventing either would be exactly the fabricated data this redesign
-// keeps refusing to show.
+// the build kept. "Another scenario" cycles them locally, since all are in
+// hand, and hides when only one is left. The header shows only Subject:
+// `VoiceSampleDraft` has no To/From.
 function VoiceSampleCard({
   drafts,
   why,
@@ -604,6 +601,9 @@ function VoiceSampleCard({
   const t = useT();
   const [index, setIndex] = useState(0);
   const sample = drafts[index % drafts.length];
+  if (sample === undefined) {
+    return null;
+  }
   return (
     <div className="ob-voice-result-card">
       <div className="ob-voice-sample-head">

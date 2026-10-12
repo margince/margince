@@ -186,7 +186,8 @@ export const OneRowEdited: Story = {
     const canvas = within(canvasElement);
     await askInWords(canvas);
     await canvas.findByText("Keep all");
-    await userEvent.type(canvas.getAllByLabelText("Value")[0], " and Austria");
+    const [value] = canvas.getAllByLabelText("Value");
+    if (value) await userEvent.type(value, " and Austria");
   },
 };
 

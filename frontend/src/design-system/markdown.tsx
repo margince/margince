@@ -232,7 +232,7 @@ type MarkAttr = { "data-markdown-mark"?: string };
 const HEADINGS = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
 
 function renderHeading(level: number, run: Run): ReactNode {
-  const Tag = HEADINGS[Math.min(Math.max(level, 1), 6) - 1];
+  const Tag = HEADINGS[Math.min(Math.max(level, 1), 6) - 1] ?? "h6";
   return <Tag>{renderRun(run)}</Tag>;
 }
 

@@ -264,7 +264,7 @@ function RoomBody({
   );
 }
 
-const ACCESS_TITLE: Record<string, MessageKey> = {
+const ACCESS_TITLE: Record<"paused" | "expired", MessageKey> = {
   paused: "buyer.pausedTitle",
   expired: "buyer.expiredTitle",
 };

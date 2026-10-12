@@ -16,7 +16,10 @@ export const Retired: StoryObj = {
     );
   },
   render: () => {
-    const target = reportingTargets[0];
+    const [target] = reportingTargets;
+    if (!target) {
+      throw new Error("the reporting scenarios hold no target to draw");
+    }
     installFetchStub({
       ...reportingStoryRoutes(),
       [`GET /analytics/targets/${target.id}`]: () =>

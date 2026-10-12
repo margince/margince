@@ -102,7 +102,7 @@ export function CompanyDetails({
                 opened,
               ).domains ?? []
             ).map((domain) => ({
-              domain: domain.domain,
+              domain: domain.domain ?? "",
               is_primary: domain.is_primary === "true",
             })),
           ),

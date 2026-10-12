@@ -246,7 +246,7 @@ export function ProductsAdmin() {
     return unwrap(
       await api.POST("/products", {
         body: {
-          name: values.name.trim(),
+          name: (values.name ?? "").trim(),
           sku: values.sku?.trim() || null,
           description: values.description?.trim() || null,
           unit: values.unit?.trim() || null,

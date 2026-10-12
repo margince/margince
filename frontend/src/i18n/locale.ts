@@ -34,7 +34,7 @@ export function detectLocale(
     (globalThis.navigator?.language ? [globalThis.navigator.language] : []),
 ): Locale {
   for (const tag of languages) {
-    const base = tag.toLowerCase().split("-")[0];
+    const [base = ""] = tag.toLowerCase().split("-");
     if (isLocale(base)) {
       return base;
     }

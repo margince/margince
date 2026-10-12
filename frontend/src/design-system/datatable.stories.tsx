@@ -390,6 +390,7 @@ export const FoldedRecordsPhone: Story = {
     await expect(head?.height).toBeLessThanOrEqual(1);
     for (const row of canvasElement.querySelectorAll("tbody tr")) {
       const [title] = cellBox(row, '[data-fold="title"]');
+      if (title === undefined) throw new Error("a folded row drew no title");
       for (const end of cellBox(row, '[data-fold="end"]')) {
         await expect(end.top).toBeLessThan(title.bottom);
         await expect(end.left).toBeGreaterThanOrEqual(title.right);
@@ -401,7 +402,7 @@ export const FoldedRecordsPhone: Story = {
       for (const [index, rest] of rests.entries()) {
         const before = rests[index - 1];
         if (before && rest.top >= before.bottom) {
-          await expect(rest.left).toBe(rests[0].left);
+          await expect(rest.left).toBe(rests[0]?.left);
         }
       }
     }
@@ -416,6 +417,7 @@ export const FoldedRecordsWide: Story = {
     const head = canvasElement.querySelector("thead")?.getBoundingClientRect();
     await expect(head?.height).toBeGreaterThan(1);
     const [row] = canvasElement.querySelectorAll("tbody tr");
+    if (row === undefined) throw new Error("the members table drew no row");
     const tops = cellBox(row, "td").map((cell) => Math.round(cell.top));
     await expect(new Set(tops).size).toBe(1);
     const heading = canvasElement.querySelector("th");
@@ -564,8 +566,11 @@ export const PinnedFirstColumn: Story = {
     box.scrollLeft = box.scrollWidth;
     await waitFor(() => expect(box.scrollLeft).toBeGreaterThan(0));
     const edge = box.getBoundingClientRect().left;
-    const [row] = box.querySelectorAll("tbody tr");
-    const [first, second] = row.querySelectorAll("td");
+    const [first, second] =
+      box.querySelector("tbody tr")?.querySelectorAll("td") ?? [];
+    if (first === undefined || second === undefined) {
+      throw new Error("the pinned table drew no first row");
+    }
     await expect(Math.round(first.getBoundingClientRect().left)).toBe(
       Math.round(edge),
     );

@@ -98,7 +98,10 @@ export const WithPayloads: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const table = await canvas.findByRole("table", { name: "Messages" });
-    await userEvent.hover(within(table).getAllByRole("row")[1]);
+    const [, firstMessage] = within(table).getAllByRole("row");
+    if (!firstMessage)
+      throw new Error("the Messages table shows no message row");
+    await userEvent.hover(firstMessage);
     await expect(table).toBeVisible();
   },
 };

@@ -444,14 +444,14 @@ export function swipeActions(
 ) {
   const side = (which: "start" | "end") => {
     const here = offered.filter((one) => SWIPE_SIDES[one] === which);
-    if (here.length === 0) {
-      return undefined;
-    }
     // Repeated swipes WALK the side rather than restaging the same judgement,
     // so a direction carrying two of them reaches both. Modulo rather than a
     // stop at the end: a reader who has swiped past what they wanted gets it
     // again on the next flick instead of a direction that stops answering.
     const one = here[walked[which] % here.length];
+    if (one === undefined) {
+      return undefined;
+    }
     return {
       label: t(`worklist.disposition.verb.${one}` as const),
       onAct: () => put(one),

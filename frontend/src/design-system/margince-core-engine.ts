@@ -64,6 +64,8 @@ type Dials = {
 /** Close enough that another frame would not change a pixel. */
 const SETTLED = 1e-4;
 
+const CHANNELS = [0, 1, 2] as const;
+
 /**
  * The ribbon and body palettes, in the order the shader's uWork and uBody
  * arrays expect. The AI hue opens the ribbon run, amber sits in the middle as
@@ -118,7 +120,7 @@ function step(dials: Dials, target: CoreBehaviour): boolean {
   dials.pulse = ease(dials.pulse, target.pulse, EASE.pulse);
   dials.ingest = ease(dials.ingest, target.ingest, EASE.ingest);
   dials.tint = ease(dials.tint, target.tint, EASE.tint);
-  for (let i = 0; i < 3; i++) {
+  for (const i of CHANNELS) {
     dials.tintCol[i] = ease(dials.tintCol[i], target.tintCol[i], EASE.tintCol);
   }
   return (
@@ -127,8 +129,8 @@ function step(dials: Dials, target: CoreBehaviour): boolean {
     Math.abs(dials.pulse - target.pulse) > SETTLED ||
     Math.abs(dials.ingest - target.ingest) > SETTLED ||
     Math.abs(dials.tint - target.tint) > SETTLED ||
-    dials.tintCol.some(
-      (channel, i) => Math.abs(channel - target.tintCol[i]) > SETTLED,
+    CHANNELS.some(
+      (i) => Math.abs(dials.tintCol[i] - target.tintCol[i]) > SETTLED,
     )
   );
 }

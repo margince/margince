@@ -41,7 +41,7 @@ const lead = member("0a02", "Sam Lead", {
   can_change: true,
   change_reasons: [{ code: "same_team_as_owner" }],
 });
-const colleagues = [
+const colleagues: [Member, Member, Member] = [
   lead,
   member("0a03", "Kim Rep", {}),
   member("0a04", "Noor Rep", {}),

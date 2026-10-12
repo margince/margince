@@ -58,10 +58,10 @@ export const LongStageNames: Story = {
                   ...chart,
                   points: chart.points.map((point, index) => ({
                     ...point,
-                    label: [
-                      "Procurement, legal and security approval",
-                      "Technical pilot and stakeholder alignment",
-                    ][index % 2],
+                    label:
+                      index % 2 === 0
+                        ? "Procurement, legal and security approval"
+                        : "Technical pilot and stakeholder alignment",
                   })),
                 }
               : chart,

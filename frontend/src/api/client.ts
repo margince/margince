@@ -294,7 +294,7 @@ const MODEL_ROUTE_MATCHERS: readonly (readonly [
   path: RegExp,
   wait: ModelWait,
 ])[] = Object.entries(MODEL_ROUTES).map(([route, wait]) => {
-  const [method, template] = route.split(" ", 2);
+  const [method = "", template = ""] = route.split(" ", 2);
   const pattern = template
     .split("/")
     .map((segment) =>

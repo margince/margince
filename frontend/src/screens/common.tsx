@@ -518,7 +518,7 @@ const EXTENSION_MARKER = "ext";
  * from this one, so there is no nicer label to look up here yet.
  */
 function connectorLabel(rest: string): string {
-  const [head, ...tail] = rest.split(":");
+  const [head = "", ...tail] = rest.split(":");
   return head === EXTENSION_MARKER ? (tail[0] ?? "") : head;
 }
 

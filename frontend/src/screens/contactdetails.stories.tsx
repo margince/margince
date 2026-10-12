@@ -288,9 +288,10 @@ async function expectHandlesInColumn(
   for (const [index, handle] of handles.entries()) {
     await expectHandlePlaced(handle, index, placement, floor);
   }
-  const first = handles[0].firstElementChild?.getBoundingClientRect();
-  const firstKind = handles[0]
-    .querySelector(".t-caption")
+  const [firstHandle] = handles;
+  const first = firstHandle?.firstElementChild?.getBoundingClientRect();
+  const firstKind = firstHandle
+    ?.querySelector(".t-caption")
     ?.getBoundingClientRect();
   await expect(first?.height).toBeGreaterThan((firstKind?.height ?? 0) * 1.5);
 }

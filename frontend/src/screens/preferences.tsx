@@ -170,7 +170,11 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
         await api.PUT("/public/preferences/{token}", {
           params: { path: { token } },
           body: {
-            choices: toChoices(purposes, choices, (key) => wordingByKey[key]),
+            choices: toChoices(
+              purposes,
+              choices,
+              (key) => wordingByKey[key] ?? "",
+            ),
           },
         }),
       );
@@ -345,7 +349,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
             key={purpose.key}
             purpose={purpose}
             on={rowIsOn(purpose, draft)}
-            wording={wordingByKey[purpose.key]}
+            wording={wordingByKey[purpose.key] ?? ""}
             t={t}
             disabled={writePending}
             mayGrant={mayGrant}

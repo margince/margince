@@ -185,7 +185,7 @@ export function useRecordTimeline(
     // admin moved it, and the rows it returns are cut at day boundaries that
     // have moved with it.
     queryKey: [
-      ...entityTimelineKeys(entityType, id)[0],
+      ...(entityTimelineKeys(entityType, id)[0] ?? []),
       filters,
       // `seeded` as well as the edge, and NOT because the edge is usually
       // enough. A seed whose page is the whole history has no next cursor, so

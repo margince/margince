@@ -94,7 +94,8 @@ export function AgendaSummary({
   const plural = usePlural();
   const { locale } = useLocale();
   const rows = agendaRows(review);
-  if (rows.length === 0) {
+  const [first] = rows;
+  if (first === undefined) {
     return null;
   }
   return (
@@ -104,7 +105,7 @@ export function AgendaSummary({
     >
       {plural("teamweekly.agenda.summary", rows.length, {
         count: formatNumber(rows.length, locale),
-        first: rows[0].display_name,
+        first: first.display_name,
       })}
     </p>
   );

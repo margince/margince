@@ -138,7 +138,7 @@ export function parseAuthorizationRule(rule: string): AuthorizationRule {
   if (!match) {
     return { kind: "raw", text: rule };
   }
-  const [, roles, object, action, scope] = match;
+  const [, roles = "", object = "", action = "", scope = ""] = match;
   return {
     kind: "policy",
     roles: roles.split(",").filter(Boolean),

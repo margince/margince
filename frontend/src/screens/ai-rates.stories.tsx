@@ -150,7 +150,8 @@ export const UnpricedReceipt: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const receipts = await canvas.findAllByRole("button", { name: "Evidence" });
-    await userEvent.click(receipts[0]);
+    const [receipt] = receipts;
+    if (receipt) await userEvent.click(receipt);
   },
 };
 

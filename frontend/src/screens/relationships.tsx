@@ -46,11 +46,8 @@ type CreateRelationshipRequest =
 // Which 360 this tab is rendered from — fixes which side of the edge is
 // "this record" and which is the picked "other side".
 //
-// A deal is a scope of its own, not a counterparty of somebody else's: a
-// deal_stakeholder edge was creatable only from the CONTACT's side, so adding a
-// champion to a deal meant knowing which contact to open first, and a deal
-// nobody had thought to name from a contact page had no stakeholder surface at
-// all. `GET /relationships` filters on deal_id for exactly this reading.
+// A deal is a scope of its own, so its stakeholders are added from the deal
+// page. `GET /relationships` filters on deal_id for this reading.
 export type RelationshipScope =
   | { contact_id: string }
   | { company_id: string }
@@ -193,7 +190,9 @@ export type EdgeOption = {
 // employment (→company) and deal_stakeholder (→deal); a company anchors employment
 // (→contact) and the three company↔company kinds (→counterparty company). Offering the
 // rest would only earn an endpoint-shape 422.
-export function edgeOptions(scope: RelationshipScope): EdgeOption[] {
+export function edgeOptions(
+  scope: RelationshipScope,
+): [EdgeOption, ...EdgeOption[]] {
   // A deal anchors its stakeholders and nothing else — employment is a fact
   // about a contact and a company, and the company↔company kinds name no deal.
   if ("deal_id" in scope) {
@@ -300,12 +299,15 @@ export function AddRelationshipAction({
   const options = only
     ? all.filter((option) => option.kind === only.kind)
     : all;
+  const defaultOption = options[0] ?? all[0];
   const scopeWords = scopeCopy(scope);
   const copy = only
     ? { ...scopeWords, add: only.label, singleKind: true }
     : scopeWords;
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<CreatableRelationshipKind>(options[0].kind);
+  const [kind, setKind] = useState<CreatableRelationshipKind>(
+    defaultOption.kind,
+  );
   const [role, setRole] = useState("");
   const [startedAt, setStartedAt] = useState("");
   const [term, setTerm] = useState("");
@@ -317,7 +319,7 @@ export function AddRelationshipAction({
   const [searchFailure, setSearchFailure] = useState<unknown>(null);
   // Kind fixes the picked endpoint; a stale kind can't outlive its scope
   // because the tab remounts per record, so the first option is always valid.
-  const endpoint = options.find((o) => o.kind === kind) ?? options[0];
+  const endpoint = options.find((o) => o.kind === kind) ?? defaultOption;
   const entity = endpoint.entity;
 
   useEffect(() => {
@@ -397,7 +399,7 @@ export function AddRelationshipAction({
 
   function close() {
     setOpen(false);
-    setKind(options[0].kind);
+    setKind(defaultOption.kind);
     setRole("");
     setStartedAt("");
     setTerm("");
@@ -530,12 +532,8 @@ export const relationshipEditFields: CreateField[] = [
   { key: "ended_at", label: "rel.endedAt", type: "date" },
 ];
 
-// UpdateRelationshipRequest fields are nullable, but the backend applies them
-// via coalesce($n, col) (backend/internal/modules/contacts/relationship.go):
-// null means KEEP the stored value, never clear it. So role, started_at and
-// ended_at can be set or changed here while an emptied one stays as it was —
-// clearing needs the server to tell omit from explicit-null first. `orNull`
-// still keeps an empty string off the wire.
+// The backend applies update fields via coalesce($n, col), so null keeps the
+// stored value and an emptied field stays as it was. `orNull` keeps "" off the wire.
 export function orNull(value: unknown): string | null {
   const text = typeof value === "string" ? value.trim() : "";
   return text.length > 0 ? text : null;
