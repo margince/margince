@@ -17,15 +17,25 @@ const (
 	importRunListMax     = 50
 )
 
-// ListImportRuns answers the newest CSV runs for the Data import page. The
+// ListImportRuns answers one page of CSV runs for the Data import page. The
 // store takes the import_run read grant before it touches the database.
 func (h importHandlers) ListImportRuns(w http.ResponseWriter, r *http.Request, params crmcontracts.ListImportRunsParams) {
-	runs, err := migration.NewRunStore(h.db).ListStaged(r.Context(), importRunListLimit(params.Limit))
+	cursor := ""
+	if params.Cursor != nil {
+		cursor = *params.Cursor
+	}
+	runs, page, err := migration.NewRunStore(h.db).ListStaged(r.Context(), cursor, importRunListLimit(params.Limit))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.ImportRunList{Data: make([]crmcontracts.ImportRun, 0, len(runs))}
+	out := crmcontracts.ImportRunList{
+		Data: make([]crmcontracts.ImportRun, 0, len(runs)),
+		Page: crmcontracts.PageInfo{HasMore: page.HasMore},
+	}
+	if page.NextCursor != "" {
+		out.Page.NextCursor = &page.NextCursor
+	}
 	for _, run := range runs {
 		out.Data = append(out.Data, toContractImportRun(run))
 	}

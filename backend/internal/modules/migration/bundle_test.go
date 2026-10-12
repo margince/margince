@@ -117,7 +117,11 @@ func TestAnEntryThatLiesAboutItsSizeStopsAtTheDeclaredSize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer rc.Close()
+	defer func() {
+		if err := rc.Close(); err != nil {
+			t.Errorf("closing the entry: %v", err)
+		}
+	}()
 	if _, err := io.ReadAll(rc); !errors.Is(err, ErrBundleRefused) {
 		t.Fatalf("reading a lying entry: err = %v, want ErrBundleRefused", err)
 	}

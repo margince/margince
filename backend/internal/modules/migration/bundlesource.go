@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -97,9 +98,7 @@ func (b *BundleSource) Counts(ctx context.Context) (map[string]int, error) {
 		if err != nil {
 			return nil, err
 		}
-		for object, n := range counts {
-			out[object] = n
-		}
+		maps.Copy(out, counts)
 	}
 	return out, nil
 }

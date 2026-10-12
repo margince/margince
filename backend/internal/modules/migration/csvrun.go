@@ -271,18 +271,30 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 	return run, nil
 }
 
-// ListStaged reads the newest CSV runs, each as GetStaged reads one. The
-// flip's own runs are left out: they carry no mapping this surface describes.
-func (s *RunStore) ListStaged(ctx context.Context, limit int) ([]Run, error) {
+// ListStaged reads one page of CSV runs, newest first, each as GetStaged reads
+// one. The flip's own runs are left out: they carry no mapping this surface
+// describes. An empty cursor starts at the newest run.
+func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]Run, storekit.Page, error) {
+	// The exported name, not the alias: the grant-reachability census resolves
+	// only a literal-valued constant.
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
-		return nil, err
+		return nil, storekit.Page{}, err
 	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where := storekit.SQLf(`connector = $%d`, arg(ConnectorCSV))
+	if cursor != "" {
+		after, err := storekit.DecodeCursor(cursor)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		where += storekit.SQLf(` AND (created_at, id) < ($%d, $%d)`, arg(after.CreatedAt), arg(after.ID))
+	}
+	query := `SELECT ` + stagedColumns + ` FROM import_run WHERE ` + where +
+		storekit.SQLf(` ORDER BY created_at DESC, id DESC LIMIT $%d`, arg(limit+1))
 	runs := []Run{}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT `+stagedColumns+`
-			  FROM import_run WHERE connector = $1
-			 ORDER BY created_at DESC, id DESC LIMIT $2`, ConnectorCSV, limit)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("listing import runs: %w", err)
 		}
@@ -297,9 +309,18 @@ func (s *RunStore) ListStaged(ctx context.Context, limit int) ([]Run, error) {
 		return rows.Err()
 	})
 	if err != nil {
-		return nil, err
+		return nil, storekit.Page{}, err
 	}
-	return runs, nil
+	if len(runs) <= limit {
+		return runs, storekit.Page{}, nil
+	}
+	runs = runs[:limit]
+	last := runs[limit-1]
+	next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	return runs, storekit.Page{HasMore: true, NextCursor: next}, nil
 }
 
 // stagedColumns is what scanStaged reads, in its order.

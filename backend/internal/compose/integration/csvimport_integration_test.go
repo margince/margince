@@ -20,6 +20,7 @@ import (
 	"context"
 	"maps"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -939,19 +940,33 @@ func duplicatesSaid(report importReportDTO) string {
 	return strconv.Itoa(*report.Disposition.Duplicates)
 }
 
-func TestRecentImportsListsTheRunsNewestFirst(t *testing.T) {
+func TestRecentImportsListsTheRunsNewestFirstAcrossPages(t *testing.T) {
 	e := setupImportApp(t)
 	first, _ := uploadCSV(t, e, "lead", prospectCSV)
-	createRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
+	oldest, _ := createRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
 	second, _ := uploadCSV(t, e, "lead", prospectCSV)
 	newest, _ := createRunWithMapping(t, e, "lead", second.SourceRef, second.SuggestedMapping)
-	var list struct {
+	type runPage struct {
 		Data []importRunDTO `json:"data"`
+		Page struct {
+			NextCursor *string `json:"next_cursor"`
+			HasMore    bool    `json:"has_more"`
+		} `json:"page"`
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/imports?limit=5", nil, nil, &list); status != http.StatusOK {
-		t.Fatalf("list → %d", status)
+	var one runPage
+	if status := e.Call(t, http.MethodGet, "/v1/imports?limit=1", nil, nil, &one); status != http.StatusOK {
+		t.Fatalf("page one → %d", status)
 	}
-	if len(list.Data) != 2 || list.Data[0].ID != newest.ID {
-		t.Fatalf("list = %+v, want two runs with %s first", list.Data, newest.ID)
+	if len(one.Data) != 1 || one.Data[0].ID != newest.ID || one.Data[0].Object != "lead" ||
+		!one.Page.HasMore || one.Page.NextCursor == nil {
+		t.Fatalf("page one = %+v, want %s with its object and a cursor to more", one, newest.ID)
+	}
+	var two runPage
+	path := "/v1/imports?limit=1&cursor=" + url.QueryEscape(*one.Page.NextCursor)
+	if status := e.Call(t, http.MethodGet, path, nil, nil, &two); status != http.StatusOK {
+		t.Fatalf("page two → %d", status)
+	}
+	if len(two.Data) != 1 || two.Data[0].ID != oldest.ID || two.Page.HasMore {
+		t.Fatalf("page two = %+v, want %s and the end of the list", two, oldest.ID)
 	}
 }

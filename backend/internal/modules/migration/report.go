@@ -89,7 +89,8 @@ type ObjectReport struct {
 	Duplicated    int      `json:"duplicated,omitempty"`
 	Disclosures   []string `json:"disclosures,omitempty"`
 	// Warnings are rows that land with something reported about them, such as
-	// a dropped link. Not skips, so they never count in Skipped.
+	// a dropped link. Not skips, so they never count in Skipped. The dry run and
+	// the commit both list a row's warning; the report names it once.
 	Warnings []SkippedRow `json:"warnings,omitempty"`
 }
 
@@ -216,11 +217,9 @@ func (r Report) mergedWith(next Report) Report {
 		into.WillDuplicate += or.WillDuplicate
 		into.Duplicated += or.Duplicated
 		into.Disclosures = append(into.Disclosures, or.Disclosures...)
-		// Warnings replace, as edges do: the dry run and the commit walk the
-		// same rows, so adding their warnings would name each one twice.
-		if len(or.Warnings) > 0 {
-			into.Warnings = or.Warnings
-		}
+		// Warnings add as skips do: the row walk has a checkpoint, so a resume
+		// never repeats the warnings of the rows before it.
+		into.Warnings = append(into.Warnings, or.Warnings...)
 		if or.File != "" {
 			into.File = or.File
 		}

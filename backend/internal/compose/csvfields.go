@@ -215,9 +215,9 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
-		// `id` names the record and the employer column names an edge; neither is
-		// a value the record holds (isNonFieldTarget). The author is written on
-		// create only (isCreateOnlyTarget).
+		// `id`, `ref` and the employer column are not values the record holds
+		// (isNonFieldTarget). The author is written on create only
+		// (isCreateOnlyTarget).
 		if isNonFieldTarget(field) || isCreateOnlyTarget(field) {
 			continue
 		}

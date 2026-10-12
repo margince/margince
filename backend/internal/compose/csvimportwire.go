@@ -37,9 +37,9 @@ import (
 // file. A request with both shapes or neither is refused.
 func stagedMappingFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMapping, error) {
 	single := req.Object != nil || req.Mapping != nil
-	if single == (req.Parts != nil) {
+	if single == (req.Parts != nil) || (req.Parts != nil && req.SourceKey != nil) {
 		return migration.RunMapping{}, httperr.Validation("parts", "one_shape",
-			"Send either object and mapping for one CSV, or parts for a ZIP.")
+			"Send either object, mapping and source_key for one CSV, or parts for a ZIP.")
 	}
 	m, err := runOptionsFrom(req)
 	if err != nil {
@@ -57,27 +57,43 @@ func stagedMappingFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMa
 		m.Object, m.Fields, m.SourceKey = part.Object, part.Fields, part.SourceKey
 		return m, nil
 	}
-	if len(*req.Parts) == 0 {
-		return migration.RunMapping{}, httperr.Validation("parts", "empty", "Name at least one file of the ZIP to import.")
+	m.Parts, err = partsMappingFrom(*req.Parts)
+	if err != nil {
+		return migration.RunMapping{}, err
 	}
-	fileOf := map[string]string{}
-	for _, p := range *req.Parts {
+	return m, nil
+}
+
+// partsMappingFrom validates a ZIP's parts: each names its own file and its own
+// object, and each mapping holds as a single CSV's would.
+func partsMappingFrom(requested []crmcontracts.ImportPartRequest) ([]migration.PartMapping, error) {
+	if len(requested) == 0 {
+		return nil, httperr.Validation("parts", "empty", "Name at least one file of the ZIP to import.")
+	}
+	fileOf, named := map[string]string{}, map[string]bool{}
+	parts := make([]migration.PartMapping, 0, len(requested))
+	for _, p := range requested {
+		if strings.TrimSpace(p.File) == "" || named[p.File] {
+			return nil, httperr.Validation("parts", "file_name",
+				fmt.Sprintf("Each part names a different file of the ZIP; %q is blank or named twice.", p.File))
+		}
+		named[p.File] = true
 		object := string(p.Object)
 		if other, taken := fileOf[object]; taken {
 			// Two files of one type would land under one source key namespace,
 			// and which file's row won a shared id would be read order.
-			return migration.RunMapping{}, httperr.Validation("parts", "duplicate_object",
+			return nil, httperr.Validation("parts", "duplicate_object",
 				fmt.Sprintf("%q and %q are both %s files; a ZIP imports one file per type.", other, p.File, object))
 		}
 		fileOf[object] = p.File
 		part, err := partMappingFrom(object, p.Mapping, p.SourceKey)
 		if err != nil {
-			return migration.RunMapping{}, err
+			return nil, err
 		}
 		part.File = p.File
-		m.Parts = append(m.Parts, part)
+		parts = append(parts, part)
 	}
-	return m, nil
+	return parts, nil
 }
 
 // sourceNamePattern is the contract's pattern for `source_name`.
@@ -338,28 +354,6 @@ func importProblem(err error) error {
 	default:
 		return err
 	}
-}
-
-// withSkippedLines folds the source's own disclosures into the object's report:
-// a row the source could not deliver never reached the writer, so nothing else
-// in the report would ever mention it.
-func withSkippedLines(report migration.Report, object string, skipped []migration.SkippedLine) migration.Report {
-	if len(skipped) == 0 {
-		return report
-	}
-	for i := range report.Objects {
-		if report.Objects[i].Object != object {
-			continue
-		}
-		for _, s := range skipped {
-			report.Objects[i].Skipped = append(report.Objects[i].Skipped, migration.SkippedRow{
-				ExternalID: fmt.Sprintf("line %d", s.Line),
-				Line:       s.Line,
-				Reason:     s.Reason,
-			})
-		}
-	}
-	return report
 }
 
 func toContractColumns(p migration.Profile) []crmcontracts.ImportColumn {

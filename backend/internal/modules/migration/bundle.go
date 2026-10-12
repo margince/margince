@@ -38,7 +38,7 @@ var zipSignature = []byte("PK\x03\x04")
 
 // bundleFileObjects maps a file's base name, lower-cased and without ".csv", to
 // the object it imports. Both the plural the template writes and the singular
-// a person types are accepted.
+// someone types are accepted.
 var bundleFileObjects = map[string]string{
 	"companies": ObjectCompany, "company": ObjectCompany,
 	"contacts": ObjectContact, "contact": ObjectContact,
@@ -176,11 +176,15 @@ type sizeGuard struct {
 
 func (g *sizeGuard) Read(p []byte) (int, error) {
 	n, err := g.rc.Read(p)
-	if uint64(n) > g.left {
+	var read uint64
+	if n > 0 {
+		read = uint64(n)
+	}
+	if read > g.left {
 		g.left = 0
 		return 0, fmt.Errorf("%w: %s is larger than it says", ErrBundleRefused, g.entry)
 	}
-	g.left -= uint64(n)
+	g.left -= read
 	if errors.Is(err, zip.ErrFormat) || errors.Is(err, zip.ErrChecksum) {
 		return n, fmt.Errorf("%w: %s is damaged", ErrBundleRefused, g.entry)
 	}

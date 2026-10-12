@@ -168,24 +168,71 @@ func TestAZipReportCountsEachPartAndNamesTheFileOfEveryIssue(t *testing.T) {
 	}
 }
 
-// Compose holds this test because a module may not import the contract package.
+// Compose holds this test because a module may not import the contract
+// package. The contract side is read from crm.yaml, so a kind added on either
+// side alone fails here.
 func TestEveryProblemKindIsAContractValueAndBack(t *testing.T) {
+	schema, ok := loadContract(t).Components.Schemas["ImportProblemKind"]
+	if !ok || schema.Value == nil || len(schema.Value.Enum) == 0 {
+		t.Fatal("crm.yaml declares no ImportProblemKind enum")
+	}
 	var contract []string
-	for _, k := range []crmcontracts.ImportProblemKind{
-		crmcontracts.ImportProblemKindBrokenLink, crmcontracts.ImportProblemKindDroppedLink,
-		crmcontracts.ImportProblemKindInvalidValue, crmcontracts.ImportProblemKindUnknownOwner,
-		crmcontracts.ImportProblemKindNewTag, crmcontracts.ImportProblemKindDuplicate,
-		crmcontracts.ImportProblemKindPermission, crmcontracts.ImportProblemKindUnusableRow,
-	} {
-		if !k.Valid() {
-			t.Fatalf("%q is not valid in the generated enum", k)
+	for _, v := range schema.Value.Enum {
+		kind, isText := v.(string)
+		if !isText {
+			t.Fatalf("ImportProblemKind value %v is not text", v)
 		}
-		contract = append(contract, string(k))
+		contract = append(contract, kind)
 	}
 	got := migration.ProblemKinds()
 	slices.Sort(got)
 	slices.Sort(contract)
 	if !slices.Equal(got, contract) {
 		t.Fatalf("migration kinds %v, contract kinds %v", got, contract)
+	}
+}
+
+// The dry run and the commit each list a row's warning, and the report names it
+// once. A warning keyed like a skip of the same row is still named.
+func TestAWarningIsNamedOnceAndNeverFoldedOntoASkip(t *testing.T) {
+	run := zipRun()
+	contacts := &run.Report.Objects[1]
+	contacts.Warnings = append(contacts.Warnings, contacts.Warnings[0], migration.SkippedRow{
+		ExternalID: "P-3", Line: 4, Reason: "owner unknown", Kind: migration.ProblemUnknownOwner,
+	})
+	out := toContractImportReport(run)
+	if len(out.Issues) != 3 {
+		t.Fatalf("issues = %+v, want the skip, the warning once, and the warning on the skipped row", out.Issues)
+	}
+	if out.Disposition.Skipped != 1 {
+		t.Errorf("skipped = %d, want 1: warnings count nowhere", out.Disposition.Skipped)
+	}
+}
+
+func TestAPartsRequestNamingAFileTwiceOrNoneIsRefused(t *testing.T) {
+	lead := crmcontracts.ImportPartRequest{File: "a.csv", Object: crmcontracts.ImportObjectLead, Mapping: map[string]string{"email": "email"}}
+	company := crmcontracts.ImportPartRequest{File: "a.csv", Object: crmcontracts.ImportObjectCompany, Mapping: map[string]string{"name": "display_name"}}
+	blank := company
+	blank.File = " "
+	for name, req := range map[string]crmcontracts.CreateImportRunRequest{
+		"repeated": partsRequest(lead, company),
+		"blank":    partsRequest(lead, blank),
+	} {
+		_, err := stagedMappingFrom(req)
+		var v *httperr.DetailedError
+		if !errors.As(err, &v) || v.Fields[0].Code != "file_name" {
+			t.Errorf("%s: err = %v, want a file_name refusal", name, err)
+		}
+	}
+}
+
+func TestAPartsRequestWithATopLevelSourceKeyIsRefused(t *testing.T) {
+	req := partsRequest(crmcontracts.ImportPartRequest{File: "a.csv", Object: crmcontracts.ImportObjectLead, Mapping: map[string]string{"email": "email"}})
+	key := "email"
+	req.SourceKey = &key
+	_, err := stagedMappingFrom(req)
+	var v *httperr.DetailedError
+	if !errors.As(err, &v) || v.Fields[0].Code != "one_shape" {
+		t.Fatalf("err = %v, want one_shape: a part carries its own source_key", err)
 	}
 }

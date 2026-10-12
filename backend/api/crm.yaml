@@ -27446,9 +27446,11 @@ paths:
         source name, its parts and its state. Only `csv` runs are listed; the
         flip's own runs carry no mapping this surface can describe.
 
-        Gated on reading `import_run`, the same grant that reads one run.
+        Gated on reading `import_run`, the same grant that reads one run. A
+        `limit` outside 1..50 is clamped to the nearest bound, not refused.
       parameters:
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: OK
@@ -27457,7 +27459,7 @@ paths:
               schema: { $ref: '#/components/schemas/ImportRunList' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }   # a cursor this server did not mint
     post:
       tags: [Import]
       operationId: createImportRun
@@ -32973,8 +32975,9 @@ components:
     CreateImportRunRequest:
       type: object
       description: |
-        Exactly one of two shapes: `object` and `mapping` for one CSV, or
-        `parts` for a ZIP. Both or neither is refused.
+        Exactly one of two shapes: `object` and `mapping` (and optionally
+        `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
+        `source_key`. Both or neither is refused.
       required: [connector, source_ref]
       properties:
         connector:  { type: string, enum: [csv], description: 'The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).' }
@@ -33175,7 +33178,7 @@ components:
       description: One file's slice of a run's report.
       required: [file, object, rows_read, disposition]
       properties:
-        file:        { type: string }
+        file:        { type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.' }
         object:      { $ref: '#/components/schemas/ImportObject' }
         rows_read:   { type: integer, minimum: 0 }
         disposition: { $ref: '#/components/schemas/ImportRunDisposition' }
@@ -33305,17 +33308,18 @@ components:
       type: object
       required: [file, object, row_count]
       properties:
-        file:      { type: string }
+        file:      { type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.' }
         object:    { $ref: '#/components/schemas/ImportObject' }
         row_count: { type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.' }
 
     ImportRunList:
       type: object
-      required: [data]
+      required: [data, page]
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/ImportRun' }
+        page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- error (RFC 7807) ----
     NoticeKind:

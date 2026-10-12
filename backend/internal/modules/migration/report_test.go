@@ -59,9 +59,9 @@ func TestAnUncountedReportIsOneWalk(t *testing.T) {
 	}
 }
 
-// The dry run and the commit walk the same rows, so a warning both find is one
-// warning. A later attempt that found none keeps the earlier list.
-func TestWarningsTakeTheLaterAttemptsListWhenItHasOne(t *testing.T) {
+// A resume walks only the rows after its checkpoint, so the warnings of the
+// rows before it must survive the fold.
+func TestAResumedRunKeepsTheWarningsOfRowsBeforeTheCheckpoint(t *testing.T) {
 	warned := func(ids ...string) Report {
 		or := ObjectReport{Object: ObjectContact, File: "contacts.csv"}
 		for _, id := range ids {
@@ -69,12 +69,13 @@ func TestWarningsTakeTheLaterAttemptsListWhenItHasOne(t *testing.T) {
 		}
 		return Report{Objects: []ObjectReport{or}}
 	}
-	both := warned("P-1").mergedWith(warned("P-1"))
-	if got := both.Objects[0].Warnings; len(got) != 1 || got[0].ExternalID != "P-1" {
-		t.Errorf("warnings = %+v, want P-1 once", got)
+	died := warned("P-1", "P-2")
+	resumed := died.mergedWith(warned("P-7"))
+	got := resumed.Objects[0]
+	if len(got.Warnings) != 3 || got.Warnings[0].ExternalID != "P-1" || got.Warnings[2].ExternalID != "P-7" {
+		t.Errorf("warnings = %+v, want P-1 and P-2 from before the checkpoint, then P-7", got.Warnings)
 	}
-	kept := warned("P-1").mergedWith(Report{Objects: []ObjectReport{{Object: ObjectContact}}})
-	if got := kept.Objects[0]; len(got.Warnings) != 1 || got.File != "contacts.csv" {
-		t.Errorf("object = %+v, want the earlier warning and file kept", got)
+	if got.File != "contacts.csv" {
+		t.Errorf("file = %q, want contacts.csv kept", got.File)
 	}
 }

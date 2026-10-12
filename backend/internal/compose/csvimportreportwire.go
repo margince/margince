@@ -13,6 +13,7 @@ package compose
 // history held them together.
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 
@@ -42,7 +43,9 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	// attempt keeps what the earlier one already achieved.
 	committed := run.Status == migration.StatusComplete || run.Status == migration.StatusFailed ||
 		run.Status == migration.StatusUndoing || run.Status == migration.StatusUndone
-	seen := map[string]bool{}
+	// Warnings fold apart from skips, so a row's warning is never taken for
+	// that row's skip.
+	seen, seenWarnings := map[string]bool{}, map[string]bool{}
 	duplicates := 0
 	parts := make([]crmcontracts.ImportPartReport, 0, len(run.Report.Objects))
 	for _, o := range run.Report.Objects {
@@ -68,7 +71,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		appendIssues(&out.Issues, seen, o, o.Collisions)
 		// A warning is a row that lands with something to say about it, so it
 		// is named the same way and counted nowhere.
-		appendIssues(&out.Issues, seen, o, o.Warnings)
+		appendIssues(&out.Issues, seenWarnings, o, o.Warnings)
 	}
 	out.Parts = &parts
 
@@ -329,4 +332,26 @@ func toContractUndoReport(id migration.RunID, status string, rep migration.UndoR
 		out.UpdatesNotReversed = &rep.UpdatesNotReversed
 	}
 	return out
+}
+
+// withSkippedLines folds the source's own disclosures into the object's report:
+// a row the source could not deliver never reached the writer, so nothing else
+// in the report would ever mention it.
+func withSkippedLines(report migration.Report, object string, skipped []migration.SkippedLine) migration.Report {
+	if len(skipped) == 0 {
+		return report
+	}
+	for i := range report.Objects {
+		if report.Objects[i].Object != object {
+			continue
+		}
+		for _, s := range skipped {
+			report.Objects[i].Skipped = append(report.Objects[i].Skipped, migration.SkippedRow{
+				ExternalID: fmt.Sprintf("line %d", s.Line),
+				Line:       s.Line,
+				Reason:     s.Reason,
+			})
+		}
+	}
+	return report
 }

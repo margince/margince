@@ -21,7 +21,7 @@ var byteOrderMark = []byte{0xEF, 0xBB, 0xBF}
 // sniffWindow bounds how much of the header line is read to choose a delimiter.
 const sniffWindow = 64 << 10
 
-// newRecordReader is the one reader the profile and the walk share, so the
+// newRecordReader is the reader both the profile and the walk use, so the
 // columns a mapping is written against are the columns a run reads.
 func newRecordReader(r io.Reader) (*csv.Reader, error) {
 	buffered := bufio.NewReaderSize(r, sniffWindow)

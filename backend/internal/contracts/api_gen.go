@@ -32408,8 +32408,9 @@ type CreateDealRoomRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CreateImportRunRequest Exactly one of two shapes: `object` and `mapping` for one CSV, or
-// `parts` for a ZIP. Both or neither is refused.
+// CreateImportRunRequest Exactly one of two shapes: `object` and `mapping` (and optionally
+// `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
+// `source_key`. Both or neither is refused.
 type CreateImportRunRequest struct {
 	// Connector The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
 	Connector CreateImportRunRequestConnector `json:"connector"`
@@ -35983,7 +35984,9 @@ type ImportPartProfile struct {
 type ImportPartReport struct {
 	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
 	Disposition ImportRunDisposition `json:"disposition"`
-	File        string               `json:"file"`
+
+	// File The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`.
+	File string `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -36165,10 +36168,12 @@ type ImportRunLinks struct {
 // ImportRunList defines model for ImportRunList.
 type ImportRunList struct {
 	Data []ImportRun `json:"data"`
+	Page PageInfo    `json:"page"`
 }
 
 // ImportRunPart defines model for ImportRunPart.
 type ImportRunPart struct {
+	// File The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`.
 	File string `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
@@ -52945,6 +52950,16 @@ type ListFxRatesParams struct {
 // ListImportRunsParams defines parameters for ListImportRuns.
 type ListImportRunsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
@@ -94380,6 +94395,19 @@ func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}

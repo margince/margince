@@ -18911,7 +18911,8 @@ export interface paths {
          *     source name, its parts and its state. Only `csv` runs are listed; the
          *     flip's own runs carry no mapping this surface can describe.
          *
-         *     Gated on reading `import_run`, the same grant that reads one run.
+         *     Gated on reading `import_run`, the same grant that reads one run. A
+         *     `limit` outside 1..50 is clamped to the nearest bound, not refused.
          */
         get: operations["listImportRuns"];
         put?: never;
@@ -23079,8 +23080,9 @@ export interface components {
          */
         ImportProblemKind: "broken_link" | "dropped_link" | "invalid_value" | "unknown_owner" | "new_tag" | "duplicate" | "permission" | "unusable_row";
         /**
-         * @description Exactly one of two shapes: `object` and `mapping` for one CSV, or
-         *     `parts` for a ZIP. Both or neither is refused.
+         * @description Exactly one of two shapes: `object` and `mapping` (and optionally
+         *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
+         *     `source_key`. Both or neither is refused.
          */
         CreateImportRunRequest: {
             /**
@@ -23267,6 +23269,7 @@ export interface components {
         };
         /** @description One file's slice of a run's report. */
         ImportPartReport: {
+            /** @description The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`. */
             file: string;
             object: components["schemas"]["ImportObject"];
             rows_read: number;
@@ -23376,6 +23379,7 @@ export interface components {
             updated_at: string;
         };
         ImportRunPart: {
+            /** @description The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`. */
             file: string;
             object: components["schemas"]["ImportObject"];
             /** @description Rows the file holds, once a dry run has read it; 0 before. */
@@ -23383,6 +23387,7 @@ export interface components {
         };
         ImportRunList: {
             data: components["schemas"]["ImportRun"][];
+            page: components["schemas"]["PageInfo"];
         };
         /**
          * @description What a coaching notice is about. A closed vocabulary, because a notice addressed to a
@@ -73007,6 +73012,17 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;

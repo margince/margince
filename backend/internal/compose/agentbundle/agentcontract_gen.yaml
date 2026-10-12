@@ -9144,8 +9144,9 @@ components:
     CreateImportRunRequest:
       type: object
       description: |-
-        Exactly one of two shapes: `object` and `mapping` for one CSV, or
-        `parts` for a ZIP. Both or neither is refused.
+        Exactly one of two shapes: `object` and `mapping` (and optionally
+        `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
+        `source_key`. Both or neither is refused.
       required: [connector, source_ref]
       properties:
         connector: {type: string, enum: [csv], description: 'The source kind. The Salesforce connector runs the same engine and arrives with its own ticket.'}
@@ -9268,7 +9269,7 @@ components:
       description: One file's slice of a run's report.
       required: [file, object, rows_read, disposition]
       properties:
-        file: {type: string}
+        file: {type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.'}
         object: {$ref: '#/components/schemas/ImportObject'}
         rows_read: {type: integer, minimum: 0}
         disposition: {$ref: '#/components/schemas/ImportRunDisposition'}
@@ -9381,7 +9382,7 @@ components:
       type: object
       required: [file, object, row_count]
       properties:
-        file: {type: string}
+        file: {type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.'}
         object: {$ref: '#/components/schemas/ImportObject'}
         row_count: {type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.'}
     Problem:
