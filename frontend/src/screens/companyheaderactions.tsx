@@ -11,7 +11,8 @@ import { ListPopover } from "../design-system/listpopover";
 import { useT } from "../i18n";
 import { useMe } from "./common";
 import { ComposeModal } from "./compose";
-import { LogActivityAction, searchCompanyContacts } from "./logactivity";
+import { LogActivityAction } from "./logactivity";
+import { searchCompanyContacts } from "./meetingattendees";
 import { EmailVerb } from "./recordemail";
 
 // The account header's verbs, in the shape every record page draws them:

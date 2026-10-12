@@ -21,10 +21,6 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
-import {
-  RecordPicker,
-  type RecordPickerCandidate,
-} from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { calendarDay } from "../format/calendarday";
 import { useT } from "../i18n";
@@ -32,12 +28,15 @@ import {
   type ActivityDraft,
   activityRequestBody,
   KINDS_WITH_A_CONTACT,
+  type MeetingAttendees,
+  NO_ATTENDEES,
 } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
 import { loggedActivityKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
 import { unwrap, useMe } from "./common";
 import "./logactivity.css";
+import { MeetingAttendeeFields } from "./meetingattendees";
 
 // Log an activity from a 360: the logActivity POST, linked to the record being
 // viewed, source=manual. Success invalidates every read of this record's
@@ -87,28 +86,6 @@ function freshDraft(
   return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }
 
-// The company's own contacts, narrowed by what the reader typed.
-//
-// Scoped to the company rather than searching every contact in the installation:
-// the question is who from THIS account was in the room, and an unscoped search
-// would offer contacts of other companies as equally likely answers to it.
-export async function searchCompanyContacts(
-  companyID: string,
-  q: string,
-): Promise<RecordPickerCandidate[]> {
-  const data = unwrap(
-    await api.GET("/contacts", {
-      params: { query: { company_id: companyID, q, limit: 20 } },
-    }),
-  );
-  return data.data.map((contact) => ({
-    id: contact.id,
-    // full_name, which the contract documents as always present. display_name
-    // belongs to a USER; a contact has neither the field nor a fallback for it.
-    name: contact.full_name,
-  }));
-}
-
 /**
  * LogActivityForm is the composer itself, without a frame, so the same fields
  * serve the standing card on the contact and deal screens and the drawer the
@@ -156,11 +133,11 @@ export function LogActivityForm({
     }
   }
   const [fileError, setFileError] = useState<string | null>(null);
-  // Who was in the room. Only ever asked on a company, and only for the kinds
-  // that are with a contact — see KINDS_WITH_A_CONTACT.
-  const [attendee, setAttendee] = useState<RecordPickerCandidate | null>(null);
-  const needsAttendee =
-    entityType === "company" && KINDS_WITH_A_CONTACT.has(draft.kind);
+  // Who was in the room, asked for the kinds that are with a contact (see
+  // KINDS_WITH_A_CONTACT). Only a company page cannot send one without a name.
+  const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
+  const asksAttendees = KINDS_WITH_A_CONTACT.has(draft.kind);
+  const needsAttendee = entityType === "company" && asksAttendees;
   // The same test activityRequestBody sends source_system on.
   const transcript = draft.kind === "meeting" && draft.asTranscript;
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
@@ -179,7 +156,7 @@ export function LogActivityForm({
     mutationFn: async (input: {
       draft: ActivityDraft;
       zone: string;
-      attendee: RecordPickerCandidate | null;
+      attendees: MeetingAttendees;
       idempotencyKey: string;
     }) => {
       return unwrap(
@@ -190,7 +167,7 @@ export function LogActivityForm({
             entityType,
             entityId,
             input.zone,
-            input.attendee,
+            input.attendees,
           ),
         }),
         t,
@@ -201,12 +178,12 @@ export function LogActivityForm({
         input.draft.kind,
         entityType,
         entityId,
-        input.attendee?.id,
+        input.attendees.contacts.map((contact) => contact.id),
       )) {
         queryClient.invalidateQueries({ queryKey });
       }
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
-      setAttendee(null);
+      setAttendees(NO_ATTENDEES);
       renewKey();
       onLogged?.();
     },
@@ -228,7 +205,8 @@ export function LogActivityForm({
       // filing a meeting against somebody who was not there is worse.
       disabled={
         !log.isPending &&
-        (!draft.subject.trim() || (needsAttendee && !attendee))
+        (!draft.subject.trim() ||
+          (needsAttendee && attendees.contacts.length === 0))
       }
       pending={log.isPending}
       busyLabel={t("log.saving")}
@@ -242,7 +220,7 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={singlePress((event) => {
         event.preventDefault();
-        log.mutate({ draft, zone: recordZone, attendee, idempotencyKey });
+        log.mutate({ draft, zone: recordZone, attendees, idempotencyKey });
       })}
     >
       <div className="form-row">
@@ -312,12 +290,12 @@ export function LogActivityForm({
           is with a contact and the server refuses one filed against a company,
           so on a company this is the field that decides whether the entry can
           be sent at all — not a refinement of one that could. */}
-      {needsAttendee && (
-        <RecordPicker
-          label={t("log.attendee")}
-          searchTargets={(q) => searchCompanyContacts(entityId, q)}
-          selected={attendee}
-          onPick={setAttendee}
+      {asksAttendees && (
+        <MeetingAttendeeFields
+          entityType={entityType}
+          entityId={entityId}
+          value={attendees}
+          onChange={setAttendees}
           disabled={log.isPending}
         />
       )}

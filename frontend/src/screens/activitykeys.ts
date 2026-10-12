@@ -124,25 +124,29 @@ const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
 };
 
 // What a logged activity makes stale: the record's timeline, or its task reads.
-// A meeting also reaches the attendee's own timeline, because the company page
-// only sees it through the employer walk.
+// A meeting also reaches each attendee's timeline, and their employer's through
+// the employer walk. The form does not know those employers, so every company
+// timeline is refreshed by prefix.
 export function loggedActivityKeys(
   kind: string,
   entityType: EntityKind,
   entityId: string,
-  attendeeId?: string,
+  attendeeIds: readonly string[] = [],
 ): QueryKey[] {
   return [
     ...(kind === "task"
       ? taskWriteKeys(entityType, entityId)
       : entityTimelineKeys(entityType, entityId)),
-    ...(attendeeId ? entityTimelineKeys("contact", attendeeId) : []),
+    ...attendeeIds.flatMap((id) => entityTimelineKeys("contact", id)),
+    ...(attendeeIds.length > 0 ? EVERY_COMPANY_TIMELINE : []),
   ];
 }
 
-// A task is also a row in the standing work queue, which is keyed per workspace
-// rather than per record — so completing or logging one has to reach further
-// than the record's own timeline.
+const EVERY_COMPANY_TIMELINE: QueryKey[] = [
+  ["activities", "company"],
+  ["company360"],
+];
+
 export const TASK_QUEUE_KEY: QueryKey = ["tasks"];
 
 export function taskWriteKeys(
