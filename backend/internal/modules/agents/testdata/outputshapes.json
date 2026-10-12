@@ -8467,6 +8467,7 @@
       "warnings"
     ]
   },
+  "read_import": null,
   "read_import_report": {
     "type": "object",
     "properties": {
@@ -8847,6 +8848,7 @@
       "warnings"
     ]
   },
+  "read_input_checks": null,
   "read_lists": {
     "type": "object",
     "properties": {

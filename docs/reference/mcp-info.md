@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 70 |
+| Tools | 67 |
 | Resources | 9 |
-| Tool catalog | 224.6 KB |
+| Tool catalog | 215.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 58382 |
+| Approx. wire tokens | 55918 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 95.4 KB | 42% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 58.5 KB | 26% | Yes, every step |
-| Input schemas | 53.8 KB | 23% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.9 KB | 7% | Partly |
-| **Description + input schema** | **112.3 KB** | **49%** | **the recurring cost** |
+| Output schemas | 88.4 KB | 41% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 56.8 KB | 26% | Yes, every step |
+| Input schemas | 53.6 KB | 24% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.1 KB | 7% | Partly |
+| **Description + input schema** | **110.4 KB** | **51%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -52,7 +52,7 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (70)
+### Tools (67)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -73,7 +73,6 @@ descriptions and input schemas are what each step pays for.
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
-| [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.1 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 3.0 KB |
 | [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
@@ -81,7 +80,6 @@ descriptions and input schemas are what each step pays for.
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.7 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
-| [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
 | [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.2 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
@@ -90,7 +88,6 @@ descriptions and input schemas are what each step pays for.
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.5 KB |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 2.3 KB |
-| [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.4 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.7 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 4.1 KB |
@@ -103,8 +100,8 @@ descriptions and input schemas are what each step pays for.
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.2 KB |
-| [`read_import_report`](#read_import_report) | Read an import report | yes |  | 3.0 KB |
-| [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.5 KB |
+| [`read_import`](#read_import) | Read an import run | yes |  | 752 B |
+| [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 1.5 KB |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 4.0 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
@@ -2710,10 +2707,10 @@ Write a checked import into the workspace. The dry run is the check; this commit
 Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is
 always a report first. This cannot be undone from here — undoing an import needs the web app. A
 request to get a file in is not a review of it: unless the asker says they have already been through
-these rows, show the counts and the mapping and wait for their go-ahead. read_import_report first:
-numbers nobody read are not a check. Report what landed from read_import_report once this answers
-— the counts and the mapping the run used, each column by the field it went to. (Governance: runs
-immediately; requires passport scope "write".)
+these rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the
+report first: numbers nobody read are not a check. Report what landed from read_import's report once
+this answers — the counts and the mapping the run used, each column by the field it went to.
+(Governance: runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3759,157 +3756,6 @@ reminder, no deal move; unlinked, it sits on no timeline. log_activity is for wh
         "fields",
         "id",
         "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### data_coverage
-
-**How current the sources are**
-
-```text
-Answer how much of what is going on this workspace can actually SEE — which connectors the nightly
-check could read, and how far back each reaches. Needs the data_coverage grant, which operators hold
-and sellers do not — a refusal here is a seat boundary, not a missing run. Only a `checked` source
-carries a date; on any other state nothing was read, and a quiet week is indistinguishable from a
-broken connector until somebody looks. forecast_input_checks and list_input_checks answer what the
-check FOUND, and both are silent on whether it could look — a clean set of findings over sources
-nobody opened reads as good news and is not. Ask this one when the question is whether to trust the
-other two. (Governance: runs immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "as_of": {
-          "type": "string"
-        },
-        "run_id": {
-          "type": "string"
-        },
-        "sources": {
-          "items": {
-            "properties": {
-              "checked_through": {
-                "type": "string"
-              },
-              "source": {
-                "type": "string"
-              },
-              "state": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "source",
-              "state"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "as_of",
-        "run_id",
-        "sources"
       ],
       "type": "object"
     },
@@ -5202,176 +5048,6 @@ requires passport scope "enrich".)
 
 </details>
 
-### forecast_input_checks
-
-**What the forecast's inputs were checked against**
-
-```text
-Answer whether the forecast's inputs are sound enough to quote — a verdict, and how much of the
-pipeline last night's check reached. A forecast is only as good as its inputs, and the failures are
-mundane: a close date that went by, an amount that disagrees with the offer that was sent, a deal
-nobody has heard from in ninety days. `checks_incomplete` is NOT a worse `needs_review` — one says
-the pipeline has problems, the other says we could not look, and reporting the first when the second
-is true tells somebody their pipeline is sound when nobody read the mailbox. This is the VERDICT.
-list_input_checks is the findings themselves, one row per problem, when the question is what to go
-and fix. data_coverage is the third question and the one this cannot answer: whether the CONNECTORS
-were readable at all, which is what makes a clean verdict trustworthy rather than merely clean. Read
-`readiness` before quoting any forecast figure. `sources` says why: each carries the state the run
-reached, and only a `checked` source has a date — an absent or unread source means the run could
-not confirm anything from it, which is different from finding nothing there. `eligible_deals` is how
-much there was to check. (Governance: runs immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "as_of": {
-          "type": "string"
-        },
-        "eligible_deals": {
-          "type": "integer"
-        },
-        "eligible_signals": {
-          "type": "integer"
-        },
-        "readiness": {
-          "type": "string"
-        },
-        "run_id": {
-          "type": "string"
-        },
-        "sources": {
-          "items": {
-            "properties": {
-              "checked_through": {
-                "type": "string"
-              },
-              "source": {
-                "type": "string"
-              },
-              "state": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "source",
-              "state"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "status": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "as_of",
-        "eligible_deals",
-        "run_id",
-        "sources",
-        "status"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### forecast_movement
 
 **What moved the forecast**
@@ -5609,12 +5285,12 @@ forecast report and a hand-summed query_workspace also produce a number, and NEI
 forecast: only this applies the fiscal calendar, the base currency conversion and the weighting.
 These figures also cannot be cited in a composed document — for a board-pack section or anything a
 reader keeps, run_analytics_query with save and compose_analytics_report from the run id. Ask
-forecast_input_checks whether the inputs behind these numbers were read. `snapshots` lists this
-period's frozen states, newest first: the ids forecast_movement takes. Empty means nothing was
-frozen for this population, which includes managed teams. Quote `as_of`, `timezone` and
-`base_currency` with the number — a total placed in the reader's own zone is a different total —
-and `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is
-written from. (Governance: runs immediately; requires passport scope "read".)
+read_input_checks whether the inputs behind these numbers were read. `snapshots` lists this period's
+frozen states, newest first: the ids forecast_movement takes. Empty means nothing was frozen for
+this population, which includes managed teams. Quote `as_of`, `timezone` and `base_currency` with
+the number — a total placed in the reader's own zone is a different total — and
+`eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written
+from. (Governance: runs immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -6922,181 +6598,6 @@ scope "read".)
       },
       "required": [
         "documents"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### list_input_checks
-
-**What the forecast's inputs still need**
-
-```text
-List the open input problems behind the forecast, most material first, so they can be fixed. A close
-date that went by, or an amount that disagrees with the offer that was sent, makes a total wrong
-without making the arithmetic wrong. Scoped to what this caller can open, with no count of what was
-withheld — a count of what somebody may not read is itself a statement about how much there is.
-forecast_input_checks answers the VERDICT — whether the numbers are quotable at all — which is
-the question before this one and the cheaper call. data_coverage answers whether the sources were
-readable, which an empty list here cannot distinguish from a clean pipeline. `affected_minor` absent
-means the money at stake cannot be said, not that nothing is at stake. (Governance: runs
-immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "data": {
-          "items": {
-            "properties": {
-              "affected_minor": {
-                "type": "integer"
-              },
-              "claim": {
-                "type": "object"
-              },
-              "currency": {
-                "type": "string"
-              },
-              "first_seen_at": {
-                "type": "string"
-              },
-              "id": {
-                "type": "string"
-              },
-              "last_seen_at": {
-                "type": "string"
-              },
-              "observed": {
-                "type": "object"
-              },
-              "severity": {
-                "type": "string"
-              },
-              "subject_id": {
-                "type": "string"
-              },
-              "subject_kind": {
-                "type": "string"
-              },
-              "type": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "claim",
-              "first_seen_at",
-              "id",
-              "last_seen_at",
-              "observed",
-              "severity",
-              "subject_id",
-              "subject_kind",
-              "type"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "data"
       ],
       "type": "object"
     },
@@ -10520,338 +10021,36 @@ passport scope "read".)
 
 </details>
 
-### read_import_report
-
-**Read an import report**
-
-```text
-What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts
-are what the user weighs before committing. Same shape before and after. (Governance: runs
-immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "run_id": {
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "required": [
-    "run_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "report": {
-          "properties": {
-            "disposition": {
-              "properties": {
-                "created": {
-                  "type": "integer"
-                },
-                "duplicates": {
-                  "type": "integer"
-                },
-                "skipped": {
-                  "type": "integer"
-                },
-                "unchanged": {
-                  "type": "integer"
-                },
-                "updated": {
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "created",
-                "skipped",
-                "unchanged",
-                "updated"
-              ],
-              "type": "object"
-            },
-            "estimated_duration_seconds": {
-              "type": "integer"
-            },
-            "issues": {
-              "items": {
-                "properties": {
-                  "column": {
-                    "type": "string"
-                  },
-                  "line": {
-                    "type": "integer"
-                  },
-                  "reason": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "line",
-                  "reason"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "links": {
-              "properties": {
-                "applied": {
-                  "type": "integer"
-                },
-                "offered": {
-                  "type": "integer"
-                },
-                "unresolved": {
-                  "items": {
-                    "properties": {
-                      "from": {
-                        "type": "string"
-                      },
-                      "reason": {
-                        "type": "string"
-                      },
-                      "to": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "from",
-                      "reason",
-                      "to"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              },
-              "required": [
-                "applied",
-                "offered"
-              ],
-              "type": "object"
-            },
-            "mapping": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            "rows_read": {
-              "type": "integer"
-            },
-            "run_id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "source_key_used": {
-              "type": "string"
-            },
-            "status": {
-              "type": "string"
-            },
-            "undo": {
-              "properties": {
-                "errored": {
-                  "items": {
-                    "properties": {
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "object": {
-                        "type": "string"
-                      },
-                      "reason": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "object",
-                      "reason"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "kept": {
-                  "items": {
-                    "properties": {
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "object": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "object"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "reversed_count": {
-                  "type": "integer"
-                },
-                "run_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string"
-                },
-                "updates_not_reversed": {
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "errored",
-                "kept",
-                "reversed_count",
-                "run_id",
-                "status"
-              ],
-              "type": "object"
-            }
-          },
-          "required": [
-            "disposition",
-            "issues",
-            "rows_read",
-            "run_id",
-            "source_key_used",
-            "status"
-          ],
-          "type": "object"
-        }
-      },
-      "required": [
-        "report"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### read_import_run
+### read_import
 
 **Read an import run**
 
 ```text
-Where one import got to: awaiting approval, running, done, or stopped. A stopped run names the row
-it stopped at and can resume there. (Governance: runs immediately; requires passport scope "read".)
+Read one import run by run_id. run: where it got to — awaiting approval, running, done, or stopped
+at a named row it can resume from. report: what it will do or did — rows created, updated, failed,
+unusable, duplicates — in the same shape before and after the commit. The report's counts are what
+the user weighs before committing. (Governance: runs immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
 
 ```json
 {
-  "additionalProperties": false,
   "properties": {
     "run_id": {
       "format": "uuid",
       "type": "string"
+    },
+    "view": {
+      "enum": [
+        "report",
+        "run"
+      ],
+      "type": "string"
     }
   },
   "required": [
+    "view",
     "run_id"
   ],
   "type": "object"
@@ -10860,112 +10059,42 @@ it stopped at and can resume there. (Governance: runs immediately; requires pass
 
 </details>
 
-<details><summary>Output schema</summary>
+### read_input_checks
+
+**Can the forecast's inputs be trusted**
+
+```text
+Answer whether the forecast's inputs can be trusted, in three views. summary: the verdict —
+whether the numbers are sound enough to quote — and how much of the pipeline last night's check
+reached. exceptions: the open input problems themselves, most material first — a close date that
+went by, an amount that disagrees with the sent offer, a deal nobody has heard from in ninety days.
+sources: which connectors the nightly check could read at all, and how far back each reaches.
+`checks_incomplete` is NOT a worse `needs_review`: one says the pipeline has problems, the other
+says nobody could look. exceptions is scoped to what you can open, and an empty list cannot be told
+apart from a clean pipeline — sources is what tells them apart. sources needs a coverage grant
+that operators hold and sellers do not, so a refusal there is a seat boundary, not a missing run.
+Read summary's `readiness` before quoting any forecast figure. Only a `checked` source carries a
+date; any other state means nothing was read from it. In exceptions, `affected_minor` absent means
+the money at stake cannot be said, not that nothing is. (Governance: runs immediately; requires
+passport scope "read".)
+```
+
+<details><summary>Input schema</summary>
 
 ```json
 {
   "properties": {
-    "data": {
-      "properties": {
-        "checkpoint": {
-          "type": "integer"
-        },
-        "error": {
-          "type": "string"
-        },
-        "object": {
-          "type": "string"
-        },
-        "run_id": {
-          "type": "string"
-        },
-        "state": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "checkpoint",
-        "object",
-        "run_id",
-        "state"
+    "view": {
+      "enum": [
+        "exceptions",
+        "sources",
+        "summary"
       ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
       "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
     }
   },
   "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
+    "view"
   ],
   "type": "object"
 }

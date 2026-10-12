@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 88,
+    "tools": 90,
     "system_frame_tokens": 586,
-    "tokens": 31272,
+    "tokens": 31728,
     "median_tool_tokens": 298,
-    "mean_tool_tokens": 355
+    "mean_tool_tokens": 352
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 88,
+      "of_served_tools": 90,
       "tokens": 3810,
       "listing_tokens": 1913,
       "step_schema_tokens": 1311,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 88,
+      "of_served_tools": 90,
       "tokens": 5292,
       "listing_tokens": 2818,
       "step_schema_tokens": 1888,
@@ -140,7 +140,7 @@
     },
     {
       "name": "forecast_readings",
-      "tokens": 553
+      "tokens": 552
     },
     {
       "name": "read_reporting",
@@ -251,6 +251,10 @@
       "tokens": 324
     },
     {
+      "name": "read_input_checks",
+      "tokens": 322
+    },
+    {
       "name": "demote_lead",
       "tokens": 317
     },
@@ -320,7 +324,7 @@
     },
     {
       "name": "commit_import",
-      "tokens": 236
+      "tokens": 239
     },
     {
       "name": "decide_approval_bundle",
@@ -417,6 +421,10 @@
     {
       "name": "get_record_tags",
       "tokens": 144
+    },
+    {
+      "name": "read_import",
+      "tokens": 131
     },
     {
       "name": "whoami",

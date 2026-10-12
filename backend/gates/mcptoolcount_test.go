@@ -101,7 +101,10 @@ const clientToolCeiling = 100
 // advance_deal and relink_thread are no longer offered, which lowers it to 70:
 // progress_deal takes every argument the bare move takes, and relink_thread
 // refuses every call over MCP in favour of relink_activities.
-const publishedToolCeiling = 70
+//
+// read_input_checks fronts the three answers on the forecast's inputs, and
+// read_import the two reads of an import run, lowering it to 67.
+const publishedToolCeiling = 67
 
 type mcpInfoFile struct {
 	Totals struct {

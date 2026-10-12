@@ -32,8 +32,7 @@ may_call:
   # run that reports the import as done — so permitting the tool that does it
   # would license the very act the case exists to catch. The commit follow-through
   # is case 10's subject, with its own goal and its own fixture.
-  - read_import_run
-  - read_import_report
+  - read_import
   - query_workspace
   - search_records
 

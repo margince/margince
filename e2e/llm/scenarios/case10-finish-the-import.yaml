@@ -50,11 +50,10 @@ prompt: |
 
 must_call:
   - preview_import
-  - read_import_report
+  - read_import
   - commit_import
 may_call:
   # Where the run got to. Permitted and not required — see the header.
-  - read_import_run
   # Confirming the companies are really there afterwards is a reasonable thing
   # to do and a different way to answer the same question; neither is the test.
   - search_records
@@ -72,6 +71,7 @@ may_call:
 # run_id is not pinned: it is minted by the preview inside the run itself, so
 # there is nothing a scenario file could compare it to.
 must_call_with:
+  - read_import.view=report
   - preview_import.object=company
 
 must_mention:

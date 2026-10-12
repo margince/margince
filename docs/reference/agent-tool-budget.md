@@ -55,9 +55,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 88 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 88 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 88 |  | 31272 |  |  | 95% |  |  |  |
+| `morning_brief` | 5 | 5 of 90 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 90 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 90 |  | 31728 |  |  | 96% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 298 tokens, mean 355, across 88 served tools.
+Median 298 tokens, mean 352, across 90 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -167,7 +167,7 @@ listing once. Read a row as what that tool costs a menu.
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |
 | `update_record` | 581 |  |
-| `forecast_readings` | 553 |  |
+| `forecast_readings` | 552 |  |
 | `read_reporting` | 535 |  |
 | `query_workspace` | 530 |  |
 | `progress_deal` | 513 |  |
@@ -195,6 +195,7 @@ listing once. Read a row as what that tool costs a menu.
 | `describe_vocabulary` | 334 |  |
 | `decide_approval` | 332 |  |
 | `forecast_input_checks` | 324 |  |
+| `read_input_checks` | 322 |  |
 | `demote_lead` | 317 |  |
 | `promote_lead` | 304 |  |
 | `relink_activity` | 303 |  |
@@ -212,7 +213,7 @@ listing once. Read a row as what that tool costs a menu.
 | `company_coverage` | 246 |  |
 | `describe_report_blocks` | 245 |  |
 | `relink_thread` | 240 |  |
-| `commit_import` | 236 |  |
+| `commit_import` | 239 |  |
 | `decide_approval_bundle` | 235 |  |
 | `read_tags` | 235 |  |
 | `qualify_lead` | 229 |  |
@@ -237,6 +238,7 @@ listing once. Read a row as what that tool costs a menu.
 | `read_project_360` | 156 |  |
 | `read_approval` | 154 |  |
 | `get_record_tags` | 144 |  |
+| `read_import` | 131 |  |
 | `whoami` | 129 |  |
 | `list_tags` | 95 |  |
 | `get_tag` | 88 |  |

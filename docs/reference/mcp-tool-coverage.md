@@ -90,12 +90,12 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 88 |
+| Tools the assistant is offered | 90 |
 | … some case requires | 45 |
 | … some case requires as one of a set | 2 |
-| … **no case requires** | 41 |
-| … of those, permitted somewhere but never required | 18 |
-| Prompt tokens spent on tools no case requires | 11429 |
+| … **no case requires** | 43 |
+| … of those, permitted somewhere but never required | 15 |
+| Prompt tokens spent on tools no case requires | 11701 |
 | Use cases | 34 |
 | Acceptance criteria the cases declare, each with a statement | 81 |
 
@@ -117,7 +117,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 88 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 90 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -158,16 +158,16 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 |---|---|---|---:|---:|---|---|
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **8** Promises come back as suggestions<br>**14** The assistant says what is waiting | `create_record`, `log_activity` |
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **8** Promises come back as suggestions<br>**14** The assistant says what is waiting | `create_record`, `log_activity` |
-| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import_report` |
-| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import_report` |
+| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import` |
+| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import` |
 | [case2_business_card](../../e2e/llm/scenarios/case2-business-card.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **4** The assistant reports a possible duplicate it filed | `create_record` |
 | [case2_business_card](../../e2e/llm/scenarios/case2-business-card.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **4** The assistant reports a possible duplicate it filed | `create_record` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `compose_analytics_report`, `run_analytics_query` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `compose_analytics_report`, `run_analytics_query` |
 | [case21_what_are_we_closing](../../e2e/llm/scenarios/case21-what-are-we-closing.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The expectation is read from the forecast<br>**4** The deal with no amount is named | `forecast_readings` |
 | [case21_what_are_we_closing](../../e2e/llm/scenarios/case21-what-are-we-closing.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The expectation is read from the forecast<br>**4** The deal with no amount is named | `forecast_readings` |
-| [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `data_coverage` |
-| [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `data_coverage` |
+| [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `read_input_checks` |
+| [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `read_input_checks` |
 | [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
 | [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
 | [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The numbers are shown before anything is committed<br>**6** The row that could not be used is reported | `preview_import` |
@@ -338,6 +338,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `book_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `decide_approval` | 1.00 | 9 | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
+| `read_input_checks` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
@@ -351,12 +352,11 @@ Every run of every case requiring this tool passed, for the model named.
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
-| `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `read_import_report` | 1.00 | 3 | `case10_finish_the_import` |
+| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 
 ### `gpt-5.6-sol@codex-cli`
 
@@ -372,6 +372,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `attach_document` | 1.00 | 6 | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
+| `read_input_checks` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
@@ -379,12 +380,11 @@ Every run of every case requiring this tool passed, for the model named.
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
-| `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `read_import_report` | 1.00 | 3 | `case10_finish_the_import` |
+| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 
 ## 2. What is failing now
 
@@ -462,7 +462,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 41 tools no use case requires, **8 are graded elsewhere** and 33 are untried by any lane.
+So of the 43 tools no use case requires, **8 are graded elsewhere** and 35 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -481,7 +481,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `describe_record_fields` | 345 | - | - | - |
 | `search_report_evidence` | 335 | - | `case49_who_can_introduce_us` | - |
 | `describe_vocabulary` | 334 | - | `case20_put_it_in_the_board_pack`, `case43_the_fair_leads_are_prospects`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case7_ask_for_a_number` | - |
-| `forecast_input_checks` | 324 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers`, `case45_move_the_deal_on`, `case50_what_moved_my_quarter` | - |
+| `forecast_input_checks` | 324 | - | - | - |
 | `demote_lead` | 317 | - | - | - |
 | `promote_lead` | 304 | - | - | - |
 | `read_record` | 292 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case21_what_are_we_closing`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case6_ask_the_company`, `case7_ask_for_a_number`, `case8_whats_waiting`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
@@ -496,10 +496,11 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `apply_tag` | 226 | - | - | - |
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | - |
 | `disqualify_lead` | 209 | - | - | - |
-| `list_input_checks` | 209 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | - |
+| `list_input_checks` | 209 | - | - | - |
 | `read_brief` | 205 | `agent_loop` | - | `morning_brief` |
 | `update_tag` | 205 | - | - | - |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |
+| `data_coverage` | 195 | - | - | - |
 | `create_tag` | 191 | - | - | - |
 | `list_pipelines` | 186 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
 | `list_documents` | 180 | - | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` | - |
@@ -508,5 +509,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `list_tags` | 95 | - | - | - |
 | `get_tag` | 88 | - | - | - |
-| `read_import_run` | 67 | - | `case10_finish_the_import`, `case3_spreadsheet` | - |
+| `read_import_report` | 77 | - | - | - |
+| `read_import_run` | 67 | - | - | - |
 

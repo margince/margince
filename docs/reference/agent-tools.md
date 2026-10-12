@@ -49,19 +49,17 @@ ways.
   - The relink verbs (`relink_activity`, `relink_thread`, `relink_activities`) read the record type the activity moves
     to. Filing under a project is 🟡, because it marks every named activity as sales mail. A thread or a named set
     cannot pin a version, so a named set always waits.
-  - `relink_thread` never waits, and never runs for the assistant. It refuses at every target, because the retry reads
-    a thread key again. It sends the caller to `relink_activities`, whose approval binds the named IDs.
+  - `relink_thread` is not offered. It refuses at every target, because the retry reads a thread key again, and sends
+    the caller to `relink_activities`, whose approval binds the named IDs.
   - A credential may give the approval for its own staged relink with `decide_approval`, on a call with a human there.
     The same checks the decision applies must pass: the decision grants, and the target is visible. The change must
-    also be one a user can undo.
+    also be one a user can undo. Margince records the approval as the decision of the member, made through the agent.
   - A member takes a filing under a project back with *Undo filing*, a `human-only` decision whose written reason is
     never the reason of the credential. So a credential may give the approval for a project relink only while that
     undo could still apply.
-  - It may not when the activity is limited or archived, or linked to a record under a legal hold. It also may not
-    when an open request to erase covers the activity. The same goes when Margince keeps the activity for another
-    reason: a `won` deal, a sent offer, a pin by the data controller. A member gives the approval for such a relink in
-    the CRM.
-  - When a credential gives an approval, Margince records it as the decision of the member, made through the agent.
+  - It may not when the activity is limited, archived, under a legal hold or covered by an open request to erase. Nor
+    when Margince keeps it for another reason: a `won` deal, a sent offer, a pin by the data controller. A member gives
+    the approval for such a relink in the CRM.
   - The mark **🟢 / 🟡** means the tier turns on the record type the call names. It is 🟡 for `custom_field` and
     `webhook_subscription`, which the contract declares confirm-first, and 🟢 for the other record types.
 - A verb that changes something real is 🟢 when a passport can spend it. The passport carries the seat, grants and row
@@ -130,8 +128,10 @@ ways.
 | `read_tags` | 🟢 | `read` | no |
 | `read_record` | 🟢 | `read` | no |
 | `read_approval` | 🟢 | `read` | no |
+| `read_import` | 🟢 | `read` | no |
 | `read_import_report` | 🟢 | `read` | no |
 | `read_import_run` | 🟢 | `read` | no |
+| `read_input_checks` | 🟢 | `read` | no |
 | `read_lists` | 🟢 | `read` | no |
 | `read_project_360` | 🟢 | `read` | no |
 | `query_workspace` | 🟢 | `read` | no |

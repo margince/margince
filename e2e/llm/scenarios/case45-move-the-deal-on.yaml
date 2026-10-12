@@ -39,7 +39,7 @@ may_call:
   - query_workspace
   - forecast_readings
   - forecast_movement
-  - forecast_input_checks
+  - read_input_checks
 
 must_mention:
   - "Negotiation"
