@@ -79,8 +79,8 @@ function Names({
         const name = record.name ?? t("lists.unnamed");
         const open = i === 0 && "(";
         const close = i < last || more > 0 ? "," : ")";
-        // A name drawn as a button breaks the line on both sides, so the
-        // brackets and comma around it are held to it; plain text wraps freely.
+        // A name drawn as a button breaks the line on both sides. So the
+        // brackets and comma around it are held to it, while plain text wraps.
         return (
           <Fragment key={record.entity_id}>
             {" "}

@@ -598,7 +598,7 @@ describe("an opened list", () => {
     );
     await waitFor(() => expect(archived).toEqual([LIVE_ID]));
     expect(screen.queryByText(en["lists.fact.exported"])).toBeNull();
-    // The confirm closes with the menu that opened it gone, so focus has no
+    // The confirm closes with the menu that opened it gone. So focus has no
     // opener to return to and falls to the head that replaced it.
     expect(
       await screen.findByText(en["lists.archived.title"]),
@@ -709,7 +709,7 @@ describe("an opened list", () => {
     expect(name).not.toHaveFocus();
   });
 
-  // Each verb takes its own button away by changing the notice, so the name
+  // Each verb takes its own button away by changing the notice. The name
   // heading the fresh page is where a keyboard reader carries on from.
   it("hands focus to the list's name when archiving or restoring takes away the button pressed", async () => {
     let archivedAt: string | null = null;

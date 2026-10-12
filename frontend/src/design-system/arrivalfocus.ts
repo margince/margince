@@ -3,9 +3,9 @@
 
 import { type RefObject, useEffect, useRef } from "react";
 
-// The press that opened a page unmounted its control and dropped focus on <body>;
-// the page title (tabIndex -1) takes it so a screen reader says where it landed.
-// `when` is false for a mount no press caused, such as a page's first load.
+// The press that opened a page unmounted its control and dropped focus on
+// <body>. The page title (tabIndex -1) takes it, so a screen reader says where
+// it landed. A mount no press caused, such as a first load, sets `when` false.
 export function useArrivalFocus<Target extends HTMLElement>(
   when = true,
 ): RefObject<Target | null> {

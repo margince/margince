@@ -17,7 +17,7 @@ import type { List, ListHistoryEntry } from "./lists.queries";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // What changed on a list, newest first. A Live List says above its rows when
-// its checks last ran, with how they work one press away; a Shortlist's rows
+// its checks last ran, with how they work one press away. A Shortlist's rows
 // say who chose each record and, under it, why.
 const meta: Meta = {
   title: "Records/List history",
@@ -74,15 +74,15 @@ export const TooLarge: Story = {
 };
 
 // The note a reader left on a chosen record sits on its own line under the
-// change, and a record a rule added says so in plain ink.
+// change. A record a rule added says so in plain ink.
 export const ShortlistWithNote: Story = {
   render: panel(shortlist, [addedByRule, ...history]),
 };
 
 export const Empty: Story = { render: panel(shortlist, []) };
 
-// "How checks work", at the end of the intro, pressed: the caveat the sentence
-// leaves out, opening from inside the panel rather than from its head.
+// "How checks work", at the end of the intro, pressed. It opens the caveat
+// the sentence leaves out from inside the panel, not from its head.
 export const HowChecksWork: Story = {
   ...LiveHistory,
   play: async ({ canvasElement }) => {

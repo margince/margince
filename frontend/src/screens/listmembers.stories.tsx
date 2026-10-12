@@ -77,7 +77,7 @@ export const LiveListMembers: Story = {
   },
 };
 
-// The table sheds its own box on the Panel ground, so in dark no elevated
+// The table sheds its own box on the Panel ground. So in dark no elevated
 // rectangle or shadow is left behind it, and the Display band reads recessed.
 export const LiveListMembersDark: Story = {
   ...LiveListMembers,

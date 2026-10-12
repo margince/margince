@@ -69,11 +69,11 @@ function opened(list: List, routes: RouteMap = {}) {
 }
 
 // A Live List a reader can change: Export CSV, Edit filter and the menu beside
-// its name, its filter read as one sentence under its purpose, and members from
-// that filter, each beside the values of the fields the filter names.
+// its name. Its filter reads as one sentence under its purpose. Its members
+// come from that filter, each beside the values of the fields the filter names.
 export const LiveList: Story = { render: opened(liveList) };
 
-// A Shortlist whose steward is gone: the notice asks somebody to take it over,
+// A Shortlist whose steward is gone. The notice asks somebody to take it over,
 // the facts name no steward, and each member says who chose it, when and why.
 export const ShortlistNobodyLooksAfter: Story = {
   render: opened(shortlist),
@@ -148,9 +148,9 @@ export const Exported: Story = {
   render: opened({ ...liveList, dependencies: exportDependencies }),
 };
 
-// A filter that no longer compiles: the list cannot count or read its members,
-// so Records names the type alone, Members says it cannot show them, and the
-// one notice offers Edit filter.
+// A filter that no longer compiles, so the list cannot count or read its
+// members. Records names the type alone, Members says it cannot show them, and
+// the one notice offers Edit filter.
 export const FilterNoLongerWorks: Story = {
   render: opened(
     {

@@ -164,7 +164,7 @@ function useListMembers(list: List, source: MemberSource | undefined) {
 
 /**
  * The list's members as a CSV file, through the one export the filters use.
- * It is offered once the members are read and there are some to export, and
+ * It is offered once the members are read and there are some to export. It is
  * `awaited` while a list whose members can be read is still reading them.
  */
 export function useListExport(list: List) {
@@ -205,7 +205,7 @@ export function useListExport(list: List) {
 }
 
 /**
- * The list's members as one Panel: the table is the Panel's own content, so
+ * The list's members as one Panel. The table is the Panel's own content, so
  * the surface sheds its box (listsection.css) and the Panel is the one card.
  */
 export function MembersPanel({

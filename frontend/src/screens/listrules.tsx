@@ -54,7 +54,7 @@ export function ListRuleUses({
 /**
  * Archives the list. With rules depending on it, the reader first sees which
  * rules the archive will pause. It is drawn as a menu item, where danger keeps
- * the red ink without the fill; the menu closes on the press, so a direct
+ * the red ink without the fill. The menu closes on the press, so a direct
  * archive that fails opens the dialog to say why and offer it again.
  */
 export function ArchiveListAction({ list }: Readonly<{ list: List }>) {

@@ -156,7 +156,7 @@ function ListHead({
 /**
  * The verb any reader can use leads, then the steward's, then the menu of
  * rarer ones. Export CSV arrives once the members are read, so the group holds
- * its place while they load: folded, it is a row of its own (lists.css).
+ * its place while they load. Folded, it is a row of its own (lists.css).
  */
 function ListHeadActions({
   list,

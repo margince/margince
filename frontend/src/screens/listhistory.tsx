@@ -119,10 +119,10 @@ export function ListHistoryPanel({ list }: Readonly<{ list: List }>) {
 
 /**
  * When a Live List was last checked for who joined and left. It sits with the
- * history because members are worked out again on every open: the check dates
+ * history because members are worked out again on every open. The check dates
  * the joins and leaves below, not the members above. The caveat rides at the
- * end of the sentence, because a panel head never wraps and would cut its own
- * title to fit a trigger beside it; link ink marks it pressable within prose.
+ * end of the sentence. A panel head never wraps, so a trigger beside its title
+ * would cut the title short. Link ink marks it pressable within prose.
  */
 function ListCheckIntro({ check }: Readonly<{ check: List["last_check"] }>) {
   const t = useT();
