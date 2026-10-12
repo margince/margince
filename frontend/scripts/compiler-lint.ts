@@ -3,7 +3,7 @@
 // count may only fall, and the ledger must follow it down, so a fixed violation
 // cannot come back.
 import { readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const frontendDir = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -40,7 +40,7 @@ export function countFindings(
 ): Counts {
   const counts: Counts = new Map();
   for (const result of results) {
-    const path = relative(rootDir, result.filePath);
+    const path = relative(rootDir, result.filePath).split(sep).join("/");
     for (const message of result.messages) {
       const id = key(path, message.ruleId ?? "parse-error");
       counts.set(id, (counts.get(id) ?? 0) + 1);

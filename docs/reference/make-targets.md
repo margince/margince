@@ -215,7 +215,7 @@ The time is not spread evenly. On a quiet laptop the frontend's core legs measur
 ### Speed-ups measured and rejected
 
 - **`pool: threads` for vitest.** A loss on an idle machine: forks `73s` against threads `99s` measured quiet. It also shares one jsdom across the files of one worker, which two suites here cannot tolerate ([#2866](https://github.com/margince/margince/issues/2866)). The vitest 4 `forks` default is correct for this tree.
-- **Fanning out `frontend-check` under `-j`.** It has six legs. Five of them begin with `pnpm install --frozen-lockfile` into one `frontend/node_modules`. Run together, they race the `.bin` symlink farm and leave the tree broken (`ENOENT ... chmod`, exit 2). CI runs them as parallel jobs only because each CI job has its own checkout. A working fan-out would save about `20s`.
+- **Fanning out `frontend-check` under `-j`.** It has 7 legs. Five of them run `pnpm install --frozen-lockfile` into one `frontend/node_modules`, and four begin with it. Run together, they race the `.bin` symlink farm and leave the tree broken (`ENOENT ... chmod`, exit 2). CI runs them as parallel jobs only because each CI job has its own checkout. A working fan-out would save about `20s`.
 - **Running `check-backend` and `check-fe` concurrently.** The backend's last two phases (`drift`, `check-composition`) rewrite `build/composition/` and `*_gen.go` in place, and both frontend legs read `build/composition/`. The backend `check` recipe keeps its own phases serial to avoid that race.
 
 ## Occasional
@@ -266,7 +266,7 @@ The weekly scheduled workflow runs `bench-perf-check` on the SMB tier, which is 
 
 | Target | What it does |
 |---|---|
-| `frontend-check` | The frontend gate, node-only: `fe-ds-gates`, `fe-drift`, `fe-lint`, `fe-compiler-lint`, `fe-unit`, `fe-build` in that order. Spelled as those six legs because CI runs them as three parallel jobs and both callers have to mean the same thing. `TestEveryLocalFrontendGateLegRunsInCI` fails if a leg added here reaches no CI job |
+| `frontend-check` | The frontend gate, node-only: `fe-ds-gates`, `fe-drift`, `fe-file-length`, `fe-lint`, `fe-compiler-lint`, `fe-unit`, `fe-build` in that order. Spelled as those 7 legs because CI runs them as three parallel jobs and both callers have to mean the same thing. `TestEveryLocalFrontendGateLegRunsInCI` fails if a leg added here reaches no CI job |
 | `fe-ds-gates` | The design-system purity/font-lock/icon-glyph/spacing/spacing-role/space-token script gates, as one target. The native-control, extension-import and action-row gates are not here: they read the TypeScript AST and run in `fe-unit` with the rest of the vitest suite |
 | `fe-drift` | The TS type-drift gate: `pnpm gen:api`, then fail if the committed `src/api/schema.d.ts` / `public-events.ts` moved |
 | `fe-compiler-lint` | The rules of the React Compiler from `eslint-plugin-react-hooks`, and nothing else: Biome holds the other two hook rules. Ratcheted per file and rule via `frontend/scripts/compiler-lint-waivers.txt`: a count may only fall, and its line must follow it down. Caches in `frontend/node_modules/.cache/compiler-lint` |
