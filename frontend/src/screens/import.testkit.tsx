@@ -43,6 +43,51 @@ export const profile = {
   targets: ["full_name", "email", "title", "company_name"],
 };
 
+// A ZIP of two files the server detected, each with the mapping it proposes for
+// every type it could be.
+export const zipProfile = {
+  source_ref: "ws/import/zip",
+  file_name: "pipedrive-export.zip",
+  suggested_source_name: "pipedrive-export",
+  rows_profiled: 0,
+  columns: [],
+  suggested_mapping: {},
+  targets: [],
+  parts: [
+    {
+      file: "companies.csv",
+      object: "company",
+      rows_profiled: 2,
+      columns: [
+        { header: "ref", fill_rate: 1, samples: ["ORG-1"] },
+        { header: "display_name", fill_rate: 1, samples: ["Acme"] },
+        { header: "Level", fill_rate: 0.5, samples: ["A"] },
+      ],
+      suggested_mappings: {
+        company: { ref: "ref", display_name: "display_name" },
+        contact: { ref: "ref" },
+        lead: {},
+      },
+    },
+    {
+      file: "contacts.csv",
+      object: "contact",
+      rows_profiled: 3,
+      columns: [
+        { header: "ref", fill_rate: 1, samples: ["P-1"] },
+        { header: "email", fill_rate: 1, samples: ["jo@acme.com"] },
+        { header: "company_ref", fill_rate: 1, samples: ["ORG-1"] },
+      ],
+      suggested_mappings: {
+        company: { ref: "ref" },
+        contact: { ref: "ref", email: "email", company_ref: "company_ref" },
+        lead: { email: "email" },
+      },
+    },
+  ],
+  ignored: [{ file: "products.csv", reason: "unknown_name" }],
+};
+
 export const run = {
   id: "019ff-run",
   connector: "csv",

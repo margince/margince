@@ -18,12 +18,18 @@ import {
 import type { Locale } from "../i18n";
 import { throwProblem, unwrap } from "./common";
 import type {
+  ImportFormat,
   ImportObject,
+  ImportPartProfile,
   ImportProfile,
   ImportReport,
   ImportRun,
 } from "./importtypes";
-import { DONT_IMPORT, isImportObject } from "./importtypes";
+import {
+  DONT_IMPORT,
+  isImportObject,
+  UNNAMED_IMPORT_OBJECT,
+} from "./importtypes";
 
 // A mutation's answer, stamped with the flow generation it was asked in.
 type Generational<T> = Readonly<{ at: number; value: T }>;
@@ -38,27 +44,22 @@ type RunAndReport = Readonly<{ run: ImportRun; report: ImportReport }>;
 // would be a promise the code has no way to keep, so every member the screen
 // reads is checked and the value is rebuilt from the checked parts.
 function asProfile(payload: unknown): ImportProfile {
-  if (typeof payload !== "object" || payload === null) {
-    throw new Error(unreadableUpload);
-  }
-  // Read by name rather than destructured through a cast: the payload is
-  // genuinely unknown here, and asserting a shape onto it is the promise this
-  // function exists to avoid making.
-  const read = (name: string): unknown =>
-    name in payload ? Reflect.get(payload, name) : undefined;
+  const read = reader(payload);
   const source_ref = read("source_ref");
   const object = read("object");
   const rows_profiled = read("rows_profiled");
   const columns = read("columns");
   const targets = read("targets");
   const suggested_mapping = read("suggested_mapping");
+  const parts = read("parts");
   if (
     typeof source_ref !== "string" ||
     typeof rows_profiled !== "number" ||
     !Array.isArray(columns) ||
     !Array.isArray(targets) ||
-    !isImportObject(object) ||
-    !isMapping(suggested_mapping)
+    !(object === undefined || isImportObject(object)) ||
+    !isMapping(suggested_mapping) ||
+    !(parts === undefined || Array.isArray(parts))
   ) {
     throw new Error(unreadableUpload);
   }
@@ -69,7 +70,78 @@ function asProfile(payload: unknown): ImportProfile {
     columns,
     targets,
     suggested_mapping,
+    file_name: optionalText(read("file_name")),
+    suggested_source_name: optionalText(read("suggested_source_name")),
+    parts: parts?.map(asPart),
+    ignored: asIgnored(read("ignored")),
   };
+}
+
+// Read by name rather than destructured through a cast: the payload is
+// genuinely unknown here, and asserting a shape onto it is the promise these
+// readers exist to avoid making.
+function reader(payload: unknown): (name: string) => unknown {
+  if (typeof payload !== "object" || payload === null) {
+    throw new Error(unreadableUpload);
+  }
+  return (name) => (name in payload ? Reflect.get(payload, name) : undefined);
+}
+
+function optionalText(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function asPart(payload: unknown): ImportPartProfile {
+  const read = reader(payload);
+  const file = read("file");
+  const object = read("object");
+  const columns = read("columns");
+  const rows_profiled = read("rows_profiled");
+  if (
+    typeof file !== "string" ||
+    !(object === undefined || isImportObject(object)) ||
+    !Array.isArray(columns) ||
+    typeof rows_profiled !== "number"
+  ) {
+    throw new Error(unreadableUpload);
+  }
+  return {
+    file,
+    object,
+    columns,
+    rows_profiled,
+    suggested_mappings: asMappings(read("suggested_mappings")),
+  };
+}
+
+// One proposed mapping per record type, keyed by the type.
+function asMappings(value: unknown): Record<string, Record<string, string>> {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(unreadableUpload);
+  }
+  const mappings: Record<string, Record<string, string>> = {};
+  for (const [object, mapping] of Object.entries(value)) {
+    if (!isMapping(mapping)) throw new Error(unreadableUpload);
+    mappings[object] = mapping;
+  }
+  return mappings;
+}
+
+function asIgnored(value: unknown): ImportProfile["ignored"] {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new Error(unreadableUpload);
+  return value.map((entry) => {
+    const read = reader(entry);
+    const file = read("file");
+    const reason = read("reason");
+    if (
+      typeof file !== "string" ||
+      (reason !== "unknown_name" && reason !== "not_yet_importable")
+    ) {
+      throw new Error(unreadableUpload);
+    }
+    return { file, reason };
+  });
 }
 
 const unreadableUpload =
@@ -591,3 +663,276 @@ function mappedOnly(mapping: Record<string, string>): Record<string, string> {
   }
   return out;
 }
+
+/** Where a reader is in the run flow; the first three come before any run. */
+export type WizardStep =
+  | "upload"
+  | "files"
+  | "map"
+  | "test"
+  | "import"
+  | "result";
+
+type Mapping = Readonly<Record<string, string>>;
+
+/** One file of an upload, as the Files and Map steps work on it. */
+export type WizardFile = Readonly<{
+  file: string;
+  rowsProfiled: number;
+  columns: ImportProfile["columns"];
+  /** The type the server detected, null where it detected none. */
+  detected: ImportObject | null;
+  /** One proposed mapping per type, so a changed type needs no second call. */
+  suggested: Readonly<Record<string, Mapping>>;
+}>;
+
+// A ZIP is its parts. A single CSV is one file whose only proposal is for the
+// type it was uploaded as.
+export function filesOf(profile: ImportProfile): WizardFile[] {
+  if (profile.parts) {
+    return profile.parts.map((part) => ({
+      file: part.file,
+      rowsProfiled: part.rows_profiled,
+      columns: part.columns,
+      detected: part.object ?? null,
+      suggested: part.suggested_mappings,
+    }));
+  }
+  return [
+    {
+      file: profile.file_name ?? "",
+      rowsProfiled: profile.rows_profiled,
+      columns: profile.columns,
+      detected: profile.object ?? null,
+      suggested: profile.object
+        ? { [profile.object]: profile.suggested_mapping }
+        : {},
+    },
+  ];
+}
+
+const ZIP_NAME = /\.zip$/i;
+
+// The type a single CSV is uploaded as: the format's file name for a type when
+// the file carries one, else the flow's default. A ZIP names its types itself.
+export function uploadObjectFor(
+  name: string,
+  format: ImportFormat | undefined,
+): ImportObject | undefined {
+  if (ZIP_NAME.test(name)) return undefined;
+  const lower = name.toLowerCase();
+  return (
+    format?.files.find((file) => file.file === lower)?.object ??
+    UNNAMED_IMPORT_OBJECT
+  );
+}
+
+// The source name a ZIP starts with: the one the last ZIP run was filed under,
+// so a re-downloaded "crm (1).zip" updates what "crm.zip" landed rather than
+// starting a second namespace; else the server's proposal. A single CSV keeps
+// the server's empty proposal, so its re-upload stays where it was first filed.
+export function defaultSourceName(
+  profile: ImportProfile,
+  recent: readonly ImportRun[] | undefined,
+): string {
+  if (!profile.parts) return profile.suggested_source_name ?? "";
+  const last = recent?.find(
+    (one) => ZIP_NAME.test(one.file_name ?? "") && one.source_name,
+  );
+  return last?.source_name ?? profile.suggested_source_name ?? "";
+}
+
+type UploadInput = Readonly<{
+  file: File;
+  object: ImportObject | undefined;
+  /** The runs already made, read for the source name a ZIP starts with. */
+  recent: readonly ImportRun[] | undefined;
+  /** A type change of a single CSV, which keeps the name the reader set. */
+  retype: boolean;
+}>;
+
+async function postSource(input: UploadInput): Promise<ImportProfile> {
+  // Multipart by hand: the generated client serializes JSON bodies, and this
+  // operation takes a file part.
+  const body = new FormData();
+  if (input.object) body.append("object", input.object);
+  body.append("file", input.file);
+  // contract-fetch:allow multipart — see the note above
+  const response = await fetch("/v1/imports/sources", {
+    method: "POST",
+    body,
+    credentials: "include",
+  });
+  const payload = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throwProblem(payload);
+  }
+  return asProfile(payload);
+}
+
+type StageInput = Readonly<{
+  profile: ImportProfile;
+  objects: Readonly<Record<string, ImportObject | null>>;
+  mapping: Readonly<Record<string, Mapping>>;
+  sourceName: string;
+  onBrokenLink: "skip_row" | "drop_link";
+  contextTagID: string;
+}>;
+
+// The create request for the files the reader typed: parts for a ZIP, the
+// object and mapping for one CSV. Empty choices are left out, not sent empty.
+function stageBody(input: StageInput) {
+  const typed = filesOf(input.profile).flatMap((file) => {
+    const object = input.objects[file.file];
+    return object
+      ? [
+          {
+            file: file.file,
+            object,
+            mapping: mappedOnly(input.mapping[file.file] ?? {}),
+          },
+        ]
+      : [];
+  });
+  const single = input.profile.parts ? undefined : typed[0];
+  return {
+    connector: "csv" as const,
+    source_ref: input.profile.source_ref,
+    ...(single
+      ? { object: single.object, mapping: single.mapping }
+      : { parts: typed }),
+    ...(input.sourceName.trim() === ""
+      ? {}
+      : { source_name: input.sourceName.trim() }),
+    on_broken_link: input.onBrokenLink,
+    ...(input.profile.file_name ? { file_name: input.profile.file_name } : {}),
+    ...(input.contextTagID === ""
+      ? {}
+      : { context_tag_id: input.contextTagID }),
+  };
+}
+
+// The run flow: upload, check the files, map their columns, then stage a test
+// run. Every answer carries the generation it was asked in, and an answer from
+// a generation the reader has since left is dropped.
+export function useImportWizard() {
+  const queryClient = useQueryClient();
+  const generation = useRef(0);
+  const [phase, setPhase] = useState<"upload" | "files" | "map">("upload");
+  const [source, setSource] = useState<File | null>(null);
+  const [profile, setProfile] = useState<ImportProfile | null>(null);
+  const [objects, setObjects] = useState<
+    Readonly<Record<string, ImportObject | null>>
+  >({});
+  const [mapping, setMapping] = useState<Readonly<Record<string, Mapping>>>({});
+  const [sourceName, setSourceName] = useState("");
+  const [contextTagID, setContextTagID] = useState("");
+  const [runId, setRunId] = useState<string | null>(null);
+
+  const upload = useMutation({
+    mutationFn: async (input: UploadInput) => {
+      const at = generation.current;
+      return { at, input, profile: await postSource(input) };
+    },
+    onSuccess: ({ at, input, profile: next }) => {
+      if (at !== generation.current) return;
+      const files = filesOf(next);
+      setSource(input.file);
+      setProfile(next);
+      setObjects(Object.fromEntries(files.map((f) => [f.file, f.detected])));
+      setMapping(
+        Object.fromEntries(
+          files.map((f) => [
+            f.file,
+            f.detected ? (f.suggested[f.detected] ?? {}) : {},
+          ]),
+        ),
+      );
+      if (!input.retype) setSourceName(defaultSourceName(next, input.recent));
+      setPhase("files");
+    },
+  });
+
+  const stage = useMutation({
+    mutationFn: async (input: StageInput) => {
+      const at = generation.current;
+      const run = unwrap(
+        await api.POST("/imports", { body: stageBody(input) }),
+      );
+      return { at, run };
+    },
+    onSuccess: ({ at, run }) => {
+      if (at !== generation.current) return;
+      setRunId(run.id);
+      queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] });
+    },
+  });
+
+  const files = profile ? filesOf(profile) : [];
+  const step: WizardStep = runId === null ? phase : "test";
+
+  return {
+    step,
+    profile,
+    files,
+    objects,
+    // A ZIP part's type changes in place, and its mapping starts again from
+    // that type's proposal. A single CSV is profiled for one type, so a new
+    // type uploads the same file again.
+    setFileObject: (file: string, object: ImportObject | null) => {
+      if (profile && !profile.parts && source && object) {
+        upload.mutate({
+          file: source,
+          object,
+          recent: undefined,
+          retype: true,
+        });
+        return;
+      }
+      setObjects((current) => ({ ...current, [file]: object }));
+      const suggested = files.find((one) => one.file === file)?.suggested;
+      setMapping((current) => ({
+        ...current,
+        [file]: object ? (suggested?.[object] ?? {}) : {},
+      }));
+    },
+    mapping,
+    setColumnTarget: (file: string, column: string, target: string) =>
+      setMapping((current) => ({
+        ...current,
+        [file]: { ...current[file], [column]: target },
+      })),
+    sourceName,
+    setSourceName,
+    contextTagID,
+    setContextTagID,
+    runId,
+    upload,
+    stage,
+    // What a test run of the screen as it stands sends.
+    stageInput: (staged: ImportProfile): StageInput => ({
+      profile: staged,
+      objects,
+      mapping,
+      sourceName,
+      onBrokenLink: "skip_row",
+      contextTagID,
+    }),
+    goTo: (next: "files" | "map") => setPhase(next),
+    reset: () => {
+      generation.current += 1;
+      upload.reset();
+      stage.reset();
+      setPhase("upload");
+      setSource(null);
+      setProfile(null);
+      setObjects({});
+      setMapping({});
+      setSourceName("");
+      setContextTagID("");
+      setRunId(null);
+    },
+  };
+}
+
+export type ImportWizardState = ReturnType<typeof useImportWizard>;
