@@ -1031,11 +1031,13 @@ test-sbom-sign:
 	@./scripts/test-sbom-sign.sh
 
 ## test-sbom-census — prove `sbom-census` refuses an SBOM that lists fewer npm
-## packages than pnpm-lock.yaml resolves: one with only the first YAML document,
-## one without it, one that swaps a package for another, and a lockfile that
-## resolves nothing or does not parse. The YAML reader is the real pinned one,
-## because reading every document is what is under test, so this needs Docker
-## and network; the license-gate job runs it.
+## packages than the lockfiles resolve: one with only the first YAML document,
+## one without it, one that swaps a package or a version for another, and one
+## that misses a second lockfile. It also refuses a document that resolves
+## nothing or declares another lockfileVersion, and a lockfile that is empty or
+## does not parse. The YAML reader is the real pinned one, because reading every
+## document is what is under test, so this needs Docker and network; the
+## license-gate job runs it.
 test-sbom-census:
 	@./scripts/test-sbom-census.sh
 
@@ -1710,21 +1712,23 @@ sbom-parity:
 	    echo "FAIL: SBOM file sets differ — see the diff above"; exit 1; \
 	  fi
 
-## sbom-census — the license gate's coverage check: every package pnpm-lock.yaml
-## resolves must be an npm component of the CycloneDX SBOM, because grant judges
-## only what the SBOM lists. A scanner that reads the first YAML document of the
-## lockfile and stops lists pnpm's own binaries and none of the web app, and that
-## SBOM passes parity, validation and grant alike. scripts/sbom-census.sh reads
-## every document with a YAML reader that shares no code with syft, and fails on
-## a package the SBOM lacks and on a lockfile that resolves nothing. `make sbom`
-## runs it after parity, and it prints a failure to stderr, which sbom-gate keeps.
+## sbom-census — the license gate's coverage check: every package a committed
+## pnpm-lock.yaml resolves must be an npm component of the CycloneDX SBOM,
+## because grant judges only what the SBOM lists. A scanner that reads the first
+## YAML document of the lockfile and stops lists pnpm's own binaries and none of
+## the web app, and that SBOM passes parity, validation and grant alike.
+## scripts/sbom-census.sh reads every document with a YAML reader that shares no
+## code with syft. It fails on a package the SBOM lacks, and on a document that
+## resolves nothing or declares a lockfile version neither reader was checked
+## against. `make sbom` runs it after parity; its verdict goes to stderr, which
+## sbom-gate keeps.
 ##
-## An empty SBOM_LOCKFILE reads HEAD's lockfile, the tree `make sbom` scanned;
-## scripts/test-sbom-census.sh points it at planted files.
-SBOM_LOCKFILE ?=
+## An empty SBOM_LOCKFILES reads every pnpm-lock.yaml committed at HEAD, the
+## tree `make sbom` scanned; scripts/test-sbom-census.sh points it at planted files.
+SBOM_LOCKFILES ?=
 sbom-census:
 	@test -f $(SBOM_DIR)/margince.cdx.json || { echo "FAIL: no SBOM found — run 'make sbom' first"; exit 1; }
-	@./scripts/sbom-census.sh $(SBOM_PYTHON_IMAGE) $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt $(SBOM_DIR)/margince.cdx.json $(SBOM_LOCKFILE)
+	@./scripts/sbom-census.sh $(SBOM_PYTHON_IMAGE) $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt $(SBOM_DIR)/margince.cdx.json $(SBOM_LOCKFILES)
 
 ## sbom-validate — conformance gate: each SBOM must validate against its own format,
 ## so a syft bump, a config change, or a normalization filter that emitted a malformed

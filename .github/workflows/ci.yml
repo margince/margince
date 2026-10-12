@@ -807,7 +807,8 @@ jobs:
           fetch-depth: 0
       # A scan that read part of pnpm-lock.yaml writes a valid SBOM that grant
       # passes, and only the census inside `make sbom` tells it apart. Planted
-      # short SBOMs, read by the real pinned YAML reader, prove it still fails.
+      # lockfiles, read by the real pinned YAML reader, and short SBOMs prove it
+      # still fails.
       - name: the census still catches a short SBOM
         run: make test-sbom-census
       # syft and grant run through digest-pinned Docker images (see the Makefile),

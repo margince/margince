@@ -78,13 +78,12 @@ var targetSpecificAssignment = regexp.MustCompile(`^[A-Z][A-Z0-9_]*\s*[:?+]?=`)
 // A `NAME=value` word set for the duration of one recipe command.
 var environmentAssignment = regexp.MustCompile(`^[A-Z][A-Z0-9_]*=\S*$`)
 
-// The operators that join simple commands on one recipe line: `a; b`,
-// `a && b`, `a || b`, `a | b`.
-var shellCommandSeparator = regexp.MustCompile(`;|&&|\|\|?`)
-
 // Words that open a simple command without being its program:
-// `if $(MAKE) x; then`, `do $(MAKE) y`, `! $(MAKE) z`.
-var shellKeywords = []string{"if", "then", "else", "elif", "do", "while", "until", "!", "{"}
+// `if $(MAKE) x; then`, `do $(MAKE) y`, `! $(MAKE) z`, `( $(MAKE) w )`.
+var shellKeywords = []string{"if", "then", "else", "elif", "do", "while", "until", "!", "{", "("}
+
+// A redirection operator that stands apart from its file, as in `> build.log`.
+var bareRedirection = regexp.MustCompile(`^[0-9]*(?:>>?|<<?|&>>?|>&|<&|<>|>\|)$`)
 
 // A variable reference in either spelling make accepts.
 var makeReference = regexp.MustCompile(`\$[({]([A-Z][A-Z0-9_]*)[)}]`)
@@ -285,7 +284,7 @@ func scriptsUnder(targets map[string]*recipeTarget, vars map[string]string, root
 // runs `$(MAKE) sbom` inside a shell loop written on one line.
 func delegatedTargets(command string) []string {
 	var targets []string
-	for _, simple := range shellCommandSeparator.Split(strings.TrimLeft(command, " \t@+-"), -1) {
+	for _, simple := range simpleCommands(strings.TrimLeft(command, " \t@+-")) {
 		// Words, not a split on " ": make separates a recipe's words with a tab
 		// as readily as with a space.
 		words := strings.Fields(simple)
@@ -295,18 +294,50 @@ func delegatedTargets(command string) []string {
 		if len(words) == 0 || words[0] != "$(MAKE)" || slices.Contains(words, "-C") {
 			continue
 		}
-		for _, word := range words[1:] {
-			// A redirection ends the command's words: `$(MAKE) sbom >/dev/null`.
-			if strings.ContainsAny(word, "<>") {
-				break
+		for i := 1; i < len(words); i++ {
+			word := words[i]
+			if bareRedirection.MatchString(word) {
+				i++ // the file after `>` is no target either
+				continue
 			}
-			if strings.HasPrefix(word, "-") || strings.ContainsAny(word, "$()") {
+			// A flag, a redirection with its file attached, a reference and a
+			// `NAME=value` override all name no target.
+			if strings.HasPrefix(word, "-") || strings.ContainsAny(word, "$()<>") || environmentAssignment.MatchString(word) {
 				continue
 			}
 			targets = append(targets, word)
 		}
 	}
 	return targets
+}
+
+// simpleCommands splits a recipe line where a shell ends one simple command:
+// at `;`, `&&`, `||` and `|` outside quotes, so `echo "a; b"` stays one.
+func simpleCommands(line string) []string {
+	var commands []string
+	var quote byte
+	start := 0
+	for i := 0; i < len(line); i++ {
+		switch c := line[i]; {
+		case quote != 0:
+			if c == quote {
+				quote = 0
+			} else if c == '\\' && quote == '"' {
+				i++
+			}
+		case c == '\\':
+			i++
+		case c == '\'' || c == '"':
+			quote = c
+		case c == ';' || c == '|' || (c == '&' && i+1 < len(line) && line[i+1] == '&'):
+			commands = append(commands, line[start:i])
+			if c != ';' && i+1 < len(line) && line[i+1] == c {
+				i++
+			}
+			start = i + 1
+		}
+	}
+	return append(commands, line[start:])
 }
 
 func sorted(set map[string]bool) []string {
@@ -562,8 +593,15 @@ func TestARecursiveMakeInsideACompoundLineIsStillAnEdge(t *testing.T) {
 	for command, want := range map[string][]string{
 		"\t@set -e; \t for n in 1 2; do \t $(MAKE) sbom >/dev/null; \t if $(MAKE) sbom-check; then exit 0; fi; done": {"sbom", "sbom-check"},
 		"\t@test -f gen.out || $(MAKE) gen 2>&1 | tee gen.log":                                                       {"gen"},
-		"\t@cd frontend && $(MAKE) -C .. fe-lint":                                                                    nil,
-		"\t@echo \"run $(MAKE) fe-lint by hand\"":                                                                    nil,
+		"\t@test -d backend && $(MAKE) -C backend tools":                                                             nil,
+		"\t@( $(MAKE) fe-lint )": {"fe-lint"},
+		// A redirection can stand before a target, and only its file is not one.
+		"\t@$(MAKE) >/dev/null fe-drift":   {"fe-drift"},
+		"\t@$(MAKE) 2>&1 sbom-check":       {"sbom-check"},
+		"\t@$(MAKE) > build.log gen check": {"gen", "check"},
+		// A separator inside quotes joins nothing.
+		"\t@$(MAKE) GO_TEST_FLAGS='-run=A|B' test-integration": {"test-integration"},
+		"\t@echo \"run; $(MAKE) fe-lint by hand\"":             nil,
 	} {
 		if got := delegatedTargets(command); !slices.Equal(got, want) {
 			t.Errorf("delegatedTargets(%q) = %v, want %v", command, got, want)
