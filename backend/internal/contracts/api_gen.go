@@ -36446,7 +36446,10 @@ type ImportRun struct {
 	// Checkpoint Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from.
 	Checkpoint int                `json:"checkpoint"`
 	Connector  ImportRunConnector `json:"connector"`
-	CreatedAt  time.Time          `json:"created_at"`
+
+	// ContextTagId The tag every record this run creates is filed under, as the run was staged with it. Absent when the run names none.
+	ContextTagId *openapi_types.UUID `json:"context_tag_id,omitempty"`
+	CreatedAt    time.Time           `json:"created_at"`
 
 	// Error Why a failed run stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string `json:"error,omitempty"`
@@ -36481,6 +36484,16 @@ type ImportRun struct {
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
 	Object *ImportObject `json:"object,omitempty"`
+
+	// OnBrokenLink What a run does with a contact row whose company link finds no single
+	// company, in the upload or in the estate. `skip_row` leaves the row out
+	// and reports it; `drop_link` lands the row without the link and reports
+	// the dropped link. A ZIP run applies it to `company_ref` and
+	// `company_name`; a row holding both is decided by its `company_ref`. A
+	// single CSV applies it to `company_ref` only, and lands a row whose
+	// `company_name` finds nothing, with the link reported as unresolved. A
+	// lead's `company_name` is text, not a link, so it never skips a lead.
+	OnBrokenLink *ImportOnBrokenLink `json:"on_broken_link,omitempty"`
 
 	// Parts The files the run imports, in import order. A single CSV is one part.
 	Parts  *[]ImportRunPart `json:"parts,omitempty"`

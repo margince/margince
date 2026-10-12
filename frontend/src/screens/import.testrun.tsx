@@ -122,7 +122,9 @@ function TestRunBody({
           })
         }
       />
-      <ImportContextTagSummary tagID={wizard.contextTagID} />
+      <ImportContextTagSummary
+        tagID={wizard.contextTagID || (wizard.run.data?.context_tag_id ?? "")}
+      />
       {invalid > 0 ? (
         <Callout
           tone="warning"
@@ -250,9 +252,7 @@ export function ProblemTable({
           render: (issue) => (
             <>
               {issue.file ? <code>{issue.file}</code> : null}
-              <div className="t-caption">
-                {issueWhere(issue, t, locale)}
-              </div>
+              <div className="t-caption">{issueWhere(issue, t, locale)}</div>
             </>
           ),
         },

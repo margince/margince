@@ -390,6 +390,14 @@ func toContractImportRun(run migration.Run) crmcontracts.ImportRun {
 		if m.SourceName != "" {
 			out.SourceName = &m.SourceName
 		}
+		if tag := parseContextTag(m.ContextTag); !tag.IsZero() {
+			id := openapi_types.UUID(tag.UUID)
+			out.ContextTagId = &id
+		}
+		if m.OnBrokenLink != "" {
+			policy := crmcontracts.ImportOnBrokenLink(m.OnBrokenLink)
+			out.OnBrokenLink = &policy
+		}
 		parts := make([]crmcontracts.ImportRunPart, 0, len(m.PartList()))
 		for _, p := range m.PartList() {
 			parts = append(parts, crmcontracts.ImportRunPart{

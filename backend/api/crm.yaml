@@ -33492,6 +33492,9 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ImportRunPart' }
           description: 'The files the run imports, in import order. A single CSV is one part.'
+        context_tag_id: { type: string, format: uuid, readOnly: true, description: 'The tag every record this run creates is filed under, as the run was staged with it. Absent when the run names none.' }
+        on_broken_link:
+          $ref: '#/components/schemas/ImportOnBrokenLink'
         status:     { $ref: '#/components/schemas/ImportRunStatus' }
         checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing`; 0 = not started either way. What a resume continues from.' }
         error:      { type: [string, 'null'], description: 'Why a failed run stopped, in the uploader''s terms. Never a driver or SQL message.' }

@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   dryRun,
   jsonResponse,
+  renderAtImport,
   renderAtTestRun,
   run,
   stubRoutes,
@@ -139,6 +140,27 @@ describe("the test run", () => {
       String(call[0]).includes("same key"),
     );
     expect(duplicateKeys).toEqual([]);
+  });
+
+  it("names the run's context tag when the page is opened on the run", async () => {
+    stubRoutes({
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse({ ...run, context_tag_id: "t-1" }),
+      "GET /tags": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "t-1",
+              workspace_id: "w",
+              name: "K5 Conference",
+              color: "amber",
+            },
+          ],
+          page: { has_more: false, next_cursor: null },
+        }),
+    });
+    renderAtImport(run.id);
+    expect(await screen.findByText(/K5 Conference/)).toBeVisible();
   });
 
   it("offers no choice about links when no link is broken", async () => {

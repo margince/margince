@@ -23533,6 +23533,12 @@ export interface components {
             source_name?: string;
             /** @description The files the run imports, in import order. A single CSV is one part. */
             parts?: components["schemas"]["ImportRunPart"][];
+            /**
+             * Format: uuid
+             * @description The tag every record this run creates is filed under, as the run was staged with it. Absent when the run names none.
+             */
+            readonly context_tag_id?: string;
+            on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from. */
             checkpoint: number;
