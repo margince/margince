@@ -2931,11 +2931,11 @@ export const de = {
     "Über diesen Vorschlag wurde schon entschieden. Lade neu, um den Stand zu sehen.",
   "tagSuggestion.unavailable":
     "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
-  "tagAdmin.descriptionLabel": "Wörter, die Interesse zeigen",
+  "tagAdmin.descriptionLabel": "Anzeichen für Interesse",
   "tagAdmin.descriptionHint":
-    "Trenne Wörter oder Wendungen mit Kommas, zum Beispiel: Preise für Produkt X, Demo von Produkt X.",
+    "Zum Beispiel: fragt nach Preisen oder einer Demo von Produkt X (ohne KI: Wendungen mit Kommas).",
   "tagAdmin.suggestibleLabel":
-    "Diesen Tag vorschlagen, wenn Mails oder Terminnotizen diese Wörter enthalten",
+    "Diesen Tag vorschlagen, wenn Mails oder Terminnotizen dieses Interesse zeigen",
   "tagAdmin.colorNone": "Keine Farbe",
   "tagAdmin.color.teal": "Petrol",
   "tagAdmin.color.amber": "Bernstein",

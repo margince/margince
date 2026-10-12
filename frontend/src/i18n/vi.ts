@@ -2875,11 +2875,11 @@ export const vi = {
   "tagSuggestion.decided":
     "Gợi ý này đã có quyết định. Tải lại để xem tình trạng hiện tại.",
   "tagSuggestion.unavailable": "Không thể tải gợi ý. Thử lại sau.",
-  "tagAdmin.descriptionLabel": "Từ ngữ cho thấy mối quan tâm",
+  "tagAdmin.descriptionLabel": "Dấu hiệu quan tâm",
   "tagAdmin.descriptionHint":
-    "Phân tách các từ hoặc cụm từ bằng dấu phẩy, ví dụ: giá Product X, demo Product X.",
+    "Ví dụ: hỏi về giá hoặc demo Product X (khi chưa có AI, các cụm từ cách nhau bằng dấu phẩy).",
   "tagAdmin.suggestibleLabel":
-    "Gợi ý thẻ này khi email hoặc ghi chú cuộc họp dùng các từ này",
+    "Gợi ý thẻ này khi email hoặc ghi chú cuộc họp cho thấy mối quan tâm này",
   "tagAdmin.colorNone": "Không màu",
   "tagAdmin.color.teal": "Xanh mòng két",
   "tagAdmin.color.amber": "Hổ phách",

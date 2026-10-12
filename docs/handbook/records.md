@@ -383,12 +383,12 @@ Two admin actions are worth knowing:
 Yes, for tags an admin marks as suggested. Margince never adds such a tag by itself: you accept or dismiss each suggestion.
 
 1. In **Settings → Tags**, choose **Edit** on the tag.
-2. Fill in **Words that show interest**, separated by commas, for example "pricing for Product X, Product X demo".
-3. Tick "Suggest this tag when mail or meeting notes use these words" and save.
+2. Under **What shows interest**, describe it in plain words, for example "asks about pricing or a demo of Product X".
+3. Tick "Suggest this tag when mail or meeting notes show this interest" and save.
 
-Once an hour Margince reads the last 30 days of captured mail, meetings, notes and calls. When one of them uses the listed words, it suggests the tag on the contact or company that item is filed under. Each entry in the list needs at least three characters, and case does not matter.
+Once an hour Margince looks at the captured mail, meetings, notes and calls of the last 30 days. When one of them matches the description, it suggests the tag on the contact or company that item is filed under. With an AI model set up for tag suggestions, the model reads each new item once and judges it by the tag descriptions. When an admin changes a suggested tag, the model reads the last 30 days again. Without an AI model, Margince matches each part of the description between commas instead. Each part needs at least three characters, and case does not matter.
 
-A suggestion waits in your Worklist with the other decisions. It names the tag and lists each mail or note it came from. **Add tag** puts the tag on the record as you, and then offers it to the company or its contacts as above. **Not this tag** dismisses it for everyone. The same tag comes back on that record only when newer mail or notes use the words.
+A suggestion waits in your Worklist with the other decisions. It names the tag and lists each mail or note it came from. **Add tag** puts the tag on the record as you, and then offers it to the company or its contacts as above. **Not this tag** dismisses it for everyone. The same tag comes back on that record only when newer mail or notes match the description.
 
 You see a suggestion only when you may read the record and every item it lists. A suggestion that came from mail only its owner can read is shown to that owner alone.
 
