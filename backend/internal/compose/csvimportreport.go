@@ -102,9 +102,14 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 }
 
 // predictPages walks the source and tallies what the commit would do with each
-// row, page by page, the same way the engine will walk it.
+// row, page by page, the same way the engine will walk it. Each row is judged
+// against the estate and against the file's earlier creates.
 func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (p prediction, err error) {
 	collision, skipReason := collisionWordingFor(object)
+	earlier, err := newInFileCreates(ctx, writers)
+	if err != nil {
+		return prediction{}, err
+	}
 	for offset := 0; ; offset += importPredictPage {
 		rows, err := source.Rows(ctx, object, offset, importPredictPage)
 		if err != nil {
@@ -115,6 +120,8 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 			if err != nil {
 				return prediction{}, err
 			}
+			outcome, refusal = earlier.reconsider(row, outcome, refusal)
+			earlier.record(row, outcome)
 			switch outcome {
 			case predictCreate:
 				p.created++

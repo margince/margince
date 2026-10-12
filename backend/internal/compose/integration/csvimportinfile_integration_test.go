@@ -1,0 +1,167 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+// The dry run must say what approval will do when the file's own rows collide.
+// The commit lands them one at a time, so a later look-alike meets each earlier
+// row in the estate.
+
+import (
+	"maps"
+	"net/http"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+)
+
+// previewThenCommit stages a run, reads its preview, approves it and reads
+// the finished report.
+func previewThenCommit(t *testing.T, e *apptest.AppEnv, object, file string, run map[string]any) (importReportDTO, importReportDTO) {
+	t.Helper()
+	profile, status := uploadCSV(t, e, object, file)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	body := map[string]any{"connector": "csv", "object": object, "source_ref": profile.SourceRef}
+	maps.Copy(body, run)
+	var staged importRunDTO
+	if status := e.Call(t, http.MethodPost, "/v1/imports", body, nil, &staged); status != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", status)
+	}
+	var preview, final importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+staged.ID+"/report", nil, nil, &preview); status != http.StatusOK {
+		t.Fatalf("preview report → %d, want 200", status)
+	}
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+staged.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+staged.ID+"/report", nil, nil, &final); status != http.StatusOK {
+		t.Fatalf("final report → %d, want 200", status)
+	}
+	return preview, final
+}
+
+// assertPreviewIsTheCommit holds the preview to the finished run and both to
+// the counts the file should produce.
+func assertPreviewIsTheCommit(t *testing.T, preview, final importReportDTO, want importDispositionDTO) {
+	t.Helper()
+	if final.Status != "complete" {
+		t.Fatalf("the run ended %q, want complete; issues: %+v", final.Status, final.Issues)
+	}
+	for _, report := range []struct {
+		name string
+		got  importReportDTO
+	}{{"preview", preview}, {"commit", final}} {
+		got := report.got.Disposition
+		if got.Created != want.Created || got.Updated != want.Updated ||
+			got.Unchanged != want.Unchanged || got.Skipped != want.Skipped {
+			t.Errorf("%s = created %d updated %d unchanged %d skipped %d, want %d %d %d %d",
+				report.name, got.Created, got.Updated, got.Unchanged, got.Skipped,
+				want.Created, want.Updated, want.Unchanged, want.Skipped)
+		}
+		if got.Duplicates == nil || *got.Duplicates != *want.Duplicates {
+			t.Errorf("%s reports %s duplicate(s), want %d", report.name, duplicatesSaid(report.got), *want.Duplicates)
+		}
+	}
+}
+
+func dispositionOf(created, unchanged, skipped, duplicates int) importDispositionDTO {
+	return importDispositionDTO{Created: created, Unchanged: unchanged, Skipped: skipped, Duplicates: &duplicates}
+}
+
+func TestTheDryRunSkipsTheLookAlikesTheCommitSkips(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Company\nSkipco Trading\nSkipco Trading GmbH\nSkipco Tradng\nNordwind Logistik\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, map[string]any{
+		"mapping": map[string]string{"Company": "display_name"}, "on_duplicate": "skip",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(2, 0, 2, 2))
+	if got := len(companyList(t, e).Data); got != 2 {
+		t.Errorf("%d companies exist after the run, want the 2 the preview promised", got)
+	}
+}
+
+func TestTheDryRunCountsTheLookAlikesTheCommitLands(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Company\nKestrel Data\nKestrel Dta\nKestrell Data\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, map[string]any{
+		"mapping": map[string]string{"Company": "display_name"},
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(3, 0, 0, 2))
+}
+
+// A domain is one company's across the estate, so the second row naming it is
+// refused by the store however differently the two are named.
+func TestTheDryRunRefusesADomainAnEarlierRowTakes(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Company,Website\nZephyr Freight,https://zephyr.example/\nNordwind Logistik,zephyr.example\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, map[string]any{
+		"mapping": map[string]string{"Company": "display_name", "Website": "domain"},
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+}
+
+func TestTheDryRunMeetsAContactAnEarlierRowCreates(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Full Name,Email\n" +
+		"Mareike Olsen,mareike@kestrel.example\n" +
+		"Mareike Olson,m.olson@kestrel.example\n" +
+		"Jonas Weber,jonas@kestrel.example\n"
+
+	preview, final := previewThenCommit(t, e, "contact", file, map[string]any{
+		"mapping":    map[string]string{"Full Name": "full_name", "Email": "email"},
+		"source_key": "Full Name", "on_duplicate": "skip",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(2, 0, 1, 1))
+}
+
+func TestTheDryRunRefusesAnAddressAnEarlierRowTakes(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Full Name,Email\nAda Lovelace,ada@lovelace.example\nGrace Hopper,ADA@lovelace.example\n"
+
+	preview, final := previewThenCommit(t, e, "contact", file, map[string]any{
+		"mapping":    map[string]string{"Full Name": "full_name", "Email": "email"},
+		"source_key": "Full Name",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+}
+
+func TestALeadFileWithABadCellPreviewsTheSkipAndCommitsTheRest(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Email,Full Name,Phone\n" +
+		"ada@lovelace.example,Ada Lovelace,+49 30 1234567\n" +
+		"not-an-email,Grace Hopper,\n" +
+		"katherine@johnson.example,Katherine Johnson,call me\n" +
+		"dorothy@vaughan.example,Dorothy Vaughan,\n"
+
+	preview, final := previewThenCommit(t, e, "lead", file, map[string]any{
+		"mapping": map[string]string{"Email": "email", "Full Name": "full_name", "Phone": "phone"},
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(2, 0, 2, 0))
+	if got := leadCount(t, e); got != 2 {
+		t.Errorf("%d leads exist after the run, want the 2 the preview promised", got)
+	}
+}
+
+func TestAReImportOfAPhoneSpelledWithSpacesChangesNothing(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Email,Full Name,Phone\nada@lovelace.example,Ada Lovelace,+84 90 111 0002\n"
+	run := map[string]any{"mapping": map[string]string{"Email": "email", "Full Name": "full_name", "Phone": "phone"}}
+
+	previewThenCommit(t, e, "lead", file, run)
+	preview, final := previewThenCommit(t, e, "lead", file, run)
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(0, 1, 0, 0))
+}

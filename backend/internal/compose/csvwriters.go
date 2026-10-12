@@ -205,6 +205,13 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	// whole reason a duplicate count is worth reading. The cost is one
 	// dedupe query per row this importer has not landed before, which is what
 	// the preview already spends on the same rows.
+	taken, err := w.keyTakenReason(ctx, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if taken != "" {
+		return migration.EnsureResult{Skipped: true, SkipReason: taken}, nil
+	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -234,7 +241,7 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	}
 	// The flag rides the create rather than replacing it: a duplicate the run
 	// asked to keep IS a created row, and the review queue picks up the pair.
-	created.Duplicate = collides
+	created.Duplicate = collides && created.Created
 	return created, nil
 }
 

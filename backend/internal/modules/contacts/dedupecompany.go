@@ -251,9 +251,7 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 		if err := rows.Scan(&id, &name, &rowLegal); err != nil {
 			return CompanyMatch{}, fmt.Errorf("scan company candidate: %w", err)
 		}
-		score := bestCompanyNamePairing(
-			c.DisplayName, c.LegalName, name, rowLegal)
-		if score.Confidence >= dedupeReviewThreshold {
+		if score, rival := companyNameRival(c, name, rowLegal); rival {
 			score.CompanyID = id
 			ranked = append(ranked, score)
 		}
@@ -403,6 +401,13 @@ func companyTrigramArms(args *[]any, axes ...string) []string {
 		}
 	}
 	return arms
+}
+
+// companyNameRival is the fuzzy tier's verdict on one incumbent's names: the
+// score, and whether it clears the review threshold.
+func companyNameRival(c CompanyCandidate, display, legal string) (CompanyCandidateScore, bool) {
+	score := bestCompanyNamePairing(c.DisplayName, c.LegalName, display, legal)
+	return score, score.Confidence >= dedupeReviewThreshold
 }
 
 // bestCompanyNamePairing scores every pairing of the two name axes and reports

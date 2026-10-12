@@ -286,6 +286,13 @@ func canonicalFor(field, value string) string {
 			return parsed.String()
 		}
 		return trimmed
+	case fieldLeadPhone:
+		// The store holds E.164, so "+84 90 111 0002" read raw differs from the
+		// stored "+84901110002" on every re-import.
+		if parsed, err := values.ParsePhone(trimmed); err == nil {
+			return parsed.String()
+		}
+		return trimmed
 	}
 	return trimmed
 }
@@ -372,11 +379,8 @@ func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontra
 // cannot be written, so a preview cannot promise a create the commit then
 // fails on.
 //
-// Today it holds one check: size_band is a closed vocabulary with a database
-// CHECK constraint behind it, and a headcount column mapped onto it ("240")
-// reached the preview as a clean create, then could only fail at write time.
-// A dry run whose whole job is to say what WILL happen may not report the
-// opposite.
+// size_band started it. A headcount column mapped onto that closed vocabulary
+// ("240") previewed as a clean create and then failed at write time.
 //
 // The vocabulary is read off the generated contract, not hand-copied, for the
 // same reason contacts.validSizeBands is: a band added to crm.yaml must not
@@ -387,20 +391,8 @@ func unwritableReason(object string, fields map[string]string) string {
 	if reason := authorUnwritableReason(fields); reason != "" {
 		return reason
 	}
-	if object == migration.ObjectContact {
-		// A contact's addresses are parsed before the write transaction opens
-		// (parseContactContacts), so a malformed one refuses the row at commit.
-		// Unchecked here, the dry run would promise a create for every bad
-		// address in the file and the commit would answer differently — the
-		// same shape as the size_band defect below, on the other object.
-		email, given := fields[fieldEmail]
-		if !given || strings.TrimSpace(email) == "" {
-			return ""
-		}
-		if _, err := values.ParseEmail(strings.TrimSpace(email)); err != nil {
-			return fmt.Sprintf("%q is not an email address that can be written", email)
-		}
-		return ""
+	if object == migration.ObjectContact || object == migration.ObjectLead {
+		return reachabilityUnwritableReason(object, fields)
 	}
 	if object != migration.ObjectCompany {
 		return ""

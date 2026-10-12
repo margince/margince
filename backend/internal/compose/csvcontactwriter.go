@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -102,6 +103,20 @@ func (w *csvWriters) contactEmailAlreadyHeld(ctx context.Context, row migration.
 	return claimed, nil
 }
 
+// contactCandidateOf is what the collision check asks the ladder about a row.
+func contactCandidateOf(fields map[string]string, consumerMail *freemail.Matcher) contacts.ContactCandidate {
+	var emails []string
+	if email := strings.TrimSpace(fields[fieldEmail]); email != "" {
+		emails = []string{email}
+	}
+	return contacts.ContactCandidate{
+		FullName: contactFullName(fields), Emails: emails, ConsumerMail: consumerMail,
+		// The preview writes nothing and routes nothing, so it has no
+		// business filing a review pair for what it merely looked at.
+		QueueNameCollisions: false,
+	}
+}
+
 // contactEmailClaimedReason is what the report says for such a row. It names the
 // address the file supplied and nothing else — not the incumbent, not their
 // owner, not whether the caller could have seen them.
@@ -136,16 +151,7 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		if err != nil {
 			return err
 		}
-		var emails []string
-		if email != "" {
-			emails = []string{email}
-		}
-		match, err := contacts.DedupeContact(ctx, tx, contacts.ContactCandidate{
-			FullName: name, Emails: emails, ConsumerMail: consumerMail,
-			// The preview writes nothing and routes nothing, so it has no
-			// business filing a review pair for what it merely looked at.
-			QueueNameCollisions: false,
-		})
+		match, err := contacts.DedupeContact(ctx, tx, contactCandidateOf(fields, consumerMail))
 		if err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}

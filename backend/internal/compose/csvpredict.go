@@ -109,19 +109,12 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 // through reported invisible companies as duplicates on a `skip` run, one CSV
 // row at a time.
 func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
-	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
+	taken, err := w.keyTakenReason(ctx, row)
 	if err != nil {
 		return predictCreate, "", err
 	}
-	if claimed {
-		return predictUnwritable, contactEmailClaimedReason, nil
-	}
-	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
-	if err != nil {
-		return predictCreate, "", err
-	}
-	if takenDomain {
-		return predictUnwritable, domainClaimedReason, nil
+	if taken != "" {
+		return predictUnwritable, taken, nil
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
@@ -134,6 +127,25 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (
 		return predictCollidesSkipped, "", nil
 	}
 	return predictCollides, "", nil
+}
+
+// keyTakenReason is why the store refuses a create whose unique key the estate
+// already holds, or "" when it holds none. The preview and the commit both ask
+// it before the collision check. A refused row then reads the same whoever
+// holds the key.
+func (w *csvWriters) keyTakenReason(ctx context.Context, row migration.Row) (string, error) {
+	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
+	if err != nil {
+		return "", err
+	}
+	if claimed {
+		return contactEmailClaimedReason, nil
+	}
+	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
+	if err != nil || !takenDomain {
+		return "", err
+	}
+	return domainClaimedReason, nil
 }
 
 // predictReconcile is what reconcile would do to this record, without writing.

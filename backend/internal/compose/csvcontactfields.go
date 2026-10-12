@@ -19,6 +19,8 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // contactCreateFrom builds the create input for one mapped row.
@@ -212,4 +214,23 @@ func storedPrimaryEmail(current map[string]json.RawMessage) json.RawMessage {
 		return nil
 	}
 	return encoded
+}
+
+// reachabilityUnwritableReason refuses the malformed address of a contact or
+// lead, and a lead's malformed phone number. Both are parsed before the write,
+// so the commit refuses the row and the dry run must too.
+func reachabilityUnwritableReason(object string, fields map[string]string) string {
+	if email := strings.TrimSpace(fields[fieldEmail]); email != "" {
+		if _, err := values.ParseEmail(email); err != nil {
+			return fmt.Sprintf("%q is not an email address that can be written", fields[fieldEmail])
+		}
+	}
+	phone := strings.TrimSpace(fields[fieldLeadPhone])
+	if object != migration.ObjectLead || phone == "" {
+		return ""
+	}
+	if _, err := values.ParsePhone(phone); err != nil {
+		return fmt.Sprintf("%q is not a phone number that can be written", fields[fieldLeadPhone])
+	}
+	return ""
 }
