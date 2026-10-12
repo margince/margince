@@ -197,21 +197,28 @@ type Identifier struct {
 // ever read the name index. The address lives one table away and is the thing
 // most often copied out of a mail client, so it is the identifier a search has
 // to answer for.
-//
-// The arm is `id = ANY (ARRAY(SELECT fk FROM t WHERE col = ...))`. The array
-// is built once, ahead of the scan, so the primary key can join the bitmap union
-// over the name indexes. `id IN (SELECT ...)` and a correlated EXISTS both
-// become a subplan evaluated per row, which no index can serve, and turn the
-// whole search into a scan of the record table.
 func QuickFindClauseWith(pos int, nameExpr string, id Identifier) string {
 	clause := fmt.Sprintf(`search_tsv @@ websearch_to_tsquery('simple', f_unaccent($%[1]d))
 	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || %[3]s || '%%'`,
 		pos, nameExpr, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower($%d))", pos)))
 	if id.Table != "" {
-		clause += fmt.Sprintf(`
-	   OR id = ANY (ARRAY(SELECT %[2]s FROM %[3]s
-	              WHERE archived_at IS NULL AND %[4]s = lower(btrim($%[1]d))))`,
-			pos, id.FK, id.Table, id.Column)
+		clause += "\n\t   OR " + id.MatchSQL(pos, "id")
 	}
 	return "(" + clause + ")"
+}
+
+// The identifier tables of the two record types a pasted handle names. The
+// contact and company lists and the cross-object search all read them here.
+var (
+	ContactEmails  = Identifier{Table: "contact_email", FK: "contact_id", Column: "email"}
+	CompanyDomains = Identifier{Table: "company_domain", FK: "company_id", Column: "domain"}
+)
+
+// MatchSQL is true when a live identifier row of the record equals the query at
+// pos. The ARRAY is built once, so the primary key joins the bitmap union over
+// the name indexes. `IN (SELECT ...)` or EXISTS runs per row and scans the table.
+func (id Identifier) MatchSQL(pos int, idColumn string) string {
+	return fmt.Sprintf(`%[1]s = ANY (ARRAY(SELECT %[3]s FROM %[4]s
+	              WHERE archived_at IS NULL AND %[5]s = lower(btrim($%[2]d))))`,
+		idColumn, pos, id.FK, id.Table, id.Column)
 }
