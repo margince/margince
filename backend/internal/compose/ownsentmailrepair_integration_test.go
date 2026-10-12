@@ -8,8 +8,8 @@ package compose
 // The pass that re-reads mail a seat sent from another address of theirs,
 // stored as received before capture read it as outbound.
 //
-// Every message is seeded through the real mapper and Sink, unfiled as sent,
-// which is the shape such mail was stored in: inbound, with the seat's other
+// Every message is seeded through the real mapper and Sink, unfiled as sent.
+// That is the shape such mail was stored in: inbound, with the seat's other
 // address as its counterparty. The pass runs through the participant backfill
 // worker, the wiring production runs it under.
 
@@ -57,7 +57,7 @@ func repairMessage(from, to, messageID string, received bool) []byte {
 }
 
 // seedReceivedMail lands one message from the seat's former address as their
-// Gmail connection stores mail it was not told it sent, and places the pass's
+// Gmail connection stores mail it was not told it sent. It places the pass's
 // cutoff after it, as the migration does for mail captured before it ran.
 func seedReceivedMail(t *testing.T, e *integration.Env, messageID string) ids.UUID {
 	t.Helper()

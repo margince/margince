@@ -122,16 +122,16 @@ type backfillPass struct {
 	limit int
 }
 
-// backfillPasses run after the two-end backfill and never instead of it: an
-// activity with no participants at all is the worse gap, and settling that
-// first means a workspace part-way through recovery still answers "who was in
-// this" with something true.
+// backfillPasses run after the two-end backfill and never instead of it. An
+// activity with no participants at all is the worse gap. Settling that first
+// means a workspace part-way through recovery still answers "who was in this"
+// with something true.
 var backfillPasses = []backfillPass{
 	// The CCs and meeting attendees of activities whose two ends are recorded.
 	{replayParticipantsBatch, participantReplayBatch},
 	// The meetings whose attendees were read under the earlier rule, which bound no
 	// colleague from a calendar's list. They already carry a replay marker, so
-	// the pass above never offers them again, and until they are re-read a
+	// the pass above never offers them again. Until they are re-read, a
 	// colleague who was in a meeting cannot read it.
 	{repairMeetingAttendeesBatch, meetingAttendeeRepairPerTick},
 	// The meetings the calendar had already called off when they were captured.
@@ -150,7 +150,7 @@ var backfillPasses = []backfillPass{
 }
 
 // drainPass runs one pass's batches until a batch finds nothing or the tick's
-// bound is reached, so a workspace with none left costs one probe a tick.
+// bound is reached. A workspace with none left costs one probe a tick.
 func (w *participantBackfillWorker) drainPass(wsCtx context.Context, pass backfillPass) (int, error) {
 	total := 0
 	for range participantBackfillBatchesPerTick {

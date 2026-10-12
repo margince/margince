@@ -5,8 +5,8 @@ package compose
 
 // Mail a seat sent from another address of theirs, captured before capture read
 // it as outbound. Those rows still read as received from the seat's own
-// address, so the waiting lane offers the seat's reply as a customer message,
-// and the answered check never counts it. Capture judges each stored original
+// address. The waiting lane offers the seat's reply as a customer message, and
+// the answered check never counts it. Capture judges each stored original
 // (capture.ReclaimStoredOwnSentMailTx) and activities rewrites the row through
 // its audited claim; this pass offers the rows and records each verdict.
 
@@ -46,9 +46,9 @@ func (c ownSentMailCandidate) original() ids.UUID       { return c.rawCaptureID 
 // repairOwnSentMailBatch judges up to limit stored received emails and answers
 // how many it settled.
 //
-// Idempotent twice over: a judged row carries a marker and is not offered
-// again, and activities.ClaimOwnSentMailTx changes nothing on a row that no
-// longer reads as received from the seat.
+// Idempotent twice over. A judged row carries a marker and is not offered
+// again. activities.ClaimOwnSentMailTx changes nothing on a row that no longer
+// reads as received from the seat.
 func repairOwnSentMailBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
 	if pass, ok := principal.Actor(ctx); ok {
 		pass.ID = ownSentMailRepairActor
@@ -70,8 +70,8 @@ func repairOwnSentMailBatch(ctx context.Context, pool *pgxpool.Pool, limit int, 
 }
 
 // ownSentMailParties reads an original's further parties with no owner
-// address: capture excludes every address of the seat's, the mailbox's
-// included, which is all the owner would exclude.
+// address. Capture excludes every address of the seat's, the mailbox's
+// included, and the owner would exclude no more.
 func ownSentMailParties(original []byte) ([]connector.MessageParticipant, error) {
 	parties, err := mailmap.ParticipantsOf(original, "")
 	return parties.Participants, err
@@ -79,13 +79,13 @@ func ownSentMailParties(original []byte) ([]connector.MessageParticipant, error)
 
 // selectOwnSentMailCandidates offers the live, unrestricted, non-bulk received
 // emails captured before the cutoff by one seat's own Gmail or Graph
-// connection, whose counterparty is an address that seat alone has proven, in
-// every spelling a stored counterparty can take. The offer reads no original
+// connection. Each one's counterparty is an address that seat alone has
+// proven, in every spelling a stored counterparty can take. The offer reads no original
 // whose sender lacks standing; capture still judges each row.
 //
 // The connection is read out of captured_by as the participant replay reads
-// it, and so is the stored original: the link first, the natural key for a row
-// carrying none. A stamp from before provenance named the seat is a bare
+// it. So is the stored original: the link first, then the natural key for a
+// row carrying none. A stamp from before provenance named the seat is a bare
 // `connector:gmail`, and stands for the seat when that seat alone imported it.
 //
 // A `not_the_seats` verdict is offered again: the offer holds only rows whose
@@ -149,9 +149,9 @@ func selectOwnSentMailCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]o
 // markOwnSentMailRepaired records this pass's verdict on one email, so no later
 // pass offers it again.
 //
-// A claimed email keeps its participant replay marker. Replaying it again would
+// A claimed email keeps its participant replay marker. Replaying it would
 // re-read further parties from an original that can outlive an erasure of one
-// of them, and the replay writes those parties without the suppression list.
+// of them. The replay writes those parties without the suppression list.
 func markOwnSentMailRepaired(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_own_sent_mail_repair (activity_id, outcome)

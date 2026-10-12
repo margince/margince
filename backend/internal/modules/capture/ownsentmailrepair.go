@@ -6,8 +6,8 @@ package capture
 // Mail a seat sent from another address of theirs, stored as received before
 // capture read it as outbound (asSentFromOwnAddressTx). The provider's sent
 // filing was never stored, so the evidence a stored row still carries is its
-// original: every hop that delivers mail prepends a Received header, and a
-// message in the seat's own mailbox with none was written there by its owner.
+// original. Every hop that delivers mail prepends a Received header. A message
+// in the seat's own mailbox with none was written there by its owner.
 
 import (
 	"bufio"
@@ -64,14 +64,12 @@ type StoredOwnSentMail struct {
 type OwnSentMailParties func(original []byte) ([]connector.MessageParticipant, error)
 
 // ReclaimStoredOwnSentMailTx re-reads one stored received message against its
-// original and, where the seat wrote it from another address of theirs, claims
-// it as their outbound mail to the recipient live capture would pick
-// (sentToAt).
+// original. Where the seat wrote it from another address of theirs, it claims
+// it as their outbound mail to the recipient live capture would pick (sentToAt).
 //
 // The sender must be an address this seat alone has proven by connecting its
-// mailbox. A declared address is not enough here: without the provider's sent
-// filing, the absent Received header is the only other evidence, and a seat can
-// declare an address that is not theirs.
+// mailbox. Without the provider's sent filing, the absent Received header is
+// the only other evidence, and a seat can declare an address not theirs.
 func ReclaimStoredOwnSentMailTx(
 	ctx context.Context, tx pgx.Tx, claim OwnSentMailClaim, readParties OwnSentMailParties,
 	row StoredOwnSentMail, original []byte,

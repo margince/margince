@@ -124,9 +124,8 @@ func SeatsProvingAddressTx(ctx context.Context, tx pgx.Tx, address string) (int,
 // seat proved the address, and no other seat did.
 //
 // One function rather than two calls at the call site, because the two
-// questions are one rule, "may this address speak for this seat", and a
-// caller that asked only the first would attribute a shared mailbox to whoever
-// synced first.
+// questions are one rule: "may this address speak for this seat". A caller that
+// asked only the first would attribute a shared mailbox to whoever synced first.
 func ProvedUnambiguouslyTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
 	folded := foldAddress(bareAddress(address))
 	if folded == "" || seat == ids.Nil {
@@ -177,7 +176,7 @@ func UnambiguouslyProvedAddressesTx(ctx context.Context, tx pgx.Tx) ([]ProvedAdd
 // labels SeatProvedAddressTx admits.
 //
 // The label is stored in whatever shape the provider gave it, `Rep <rep@co>`
-// included, so it is folded in Go rather than compared in SQL, the way
+// included. So it is folded in Go rather than compared in SQL, the way
 // ownerIdentitiesTx already folds it. A display-form label compared as a whole
 // address matches no header.
 func provedAddressesTx(ctx context.Context, tx pgx.Tx) ([]ProvedAddress, error) {
