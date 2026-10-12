@@ -82,7 +82,7 @@ func (t describeQueryVocabulary) Spec() mcp.ToolSpec {
 		Version:       toolVersionV1,
 		Description:   describeQueryVocabularyCopy.render(),
 		Instead:       describeQueryVocabularyCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeQueryVocabulary",
 		// No arguments. The document is composed for the calling principal, so
 		// there is nothing to ask about: a target filter would only let a

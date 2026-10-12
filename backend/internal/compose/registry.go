@@ -155,6 +155,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)
 	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
+	agents.RegisterRouters(registry)
 	registerComposedTools(registry)
 	return registry
 }

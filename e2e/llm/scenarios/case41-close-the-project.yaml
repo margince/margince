@@ -12,7 +12,7 @@
 # `pursuing` to get there. That is also what the must_mention below rests on.
 #
 # WHY THE PHASE VOCABULARY IS THE SUBJECT. advance_project_phase's own copy says
-# it: "Use advance_deal for a deal's pipeline stages; a project's phases are a
+# it: "Use progress_deal for a deal's pipeline stages; a project's phases are a
 # different vocabulary on a different record." An assistant that reaches for a
 # deal here has answered a different question on a record this fixture does not
 # have.

@@ -115,6 +115,10 @@ type ToolSpec struct {
 	// RequiredScope are meaningless on a HumanOnly spec and must be left at
 	// their zero value by whatever registers one.
 	HumanOnly bool
+	// Unlisted marks a tool that is never offered: a router fronts it, or a
+	// listed tool replaces it. It still runs when called by name. Its name is
+	// the approval kind it stages and the key of its tier floor and retry claims.
+	Unlisted bool
 	// ConfirmsInConversation marks a tool whose confirmation happens in the
 	// conversation that asked for it, never in the approval inbox. An exhausted
 	// volume budget refuses such a call outright instead of asking the connecting

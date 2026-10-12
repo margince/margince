@@ -56,7 +56,15 @@ var commitImportCopy = toolCopy{
 		"needs the web app. A request to get a file in is not a review of it: unless the asker " +
 		"says they have already been through these rows, show the counts and the mapping and wait " +
 		"for their go-ahead.",
-	Instead: "read_import_report first: numbers nobody read are not a check.",
-	Retain: "Report what landed from read_import_report once this answers — the counts and the " +
+	Instead: "Use read_import for the report first: numbers nobody read are not a check.",
+	Retain: "Report what landed from read_import's report once this answers — the counts and the " +
 		"mapping the run used, each column by the field it went to.",
+}
+
+var readImportCopy = toolCopy{
+	Purpose: "Read one import run by run_id. run: where it got to — awaiting approval, running, " +
+		"done, or stopped at a named row it can resume from. report: what it will do or did — " +
+		"rows created, updated, failed, unusable, duplicates — in the same shape before and " +
+		"after the commit.",
+	Limits: "The report's counts are what the user weighs before committing.",
 }

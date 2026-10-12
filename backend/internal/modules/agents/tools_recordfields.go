@@ -62,7 +62,7 @@ func (t describeRecordFields) Spec() mcp.ToolSpec {
 		// what crm.yaml already says in public. The resource's write scope is
 		// about not ADVERTISING the write vocabulary in a catalogue a read-only
 		// client browses; this door is one such a client must ask for by name.
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeRecordFields",
 		// No arguments. The document is composed from the contract and is the
 		// same for every caller, so a record_type filter would only let one

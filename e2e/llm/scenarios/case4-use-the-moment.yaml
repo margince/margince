@@ -43,7 +43,7 @@ prompt: |
 must_call:
   - query_workspace
 may_call:
-  - describe_query_vocabulary
+  - describe_vocabulary
   - search_records
   - read_record
   - search_context

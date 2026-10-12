@@ -16,8 +16,8 @@ and what a live server shows can differ from the table:
   `["read"]` sees the read tools and nothing else. The filter copies the scope check of the admission gate, so the
   list never shows what the gate will refuse.
 
-  It answers **only for scope**. Margince works out the seat limit, and the object RBAC of the human who gave the
-  passport, again on each call. They can still refuse a tool the list showed.
+  It answers **only for scope**. Each call checks the seat limit and object RBAC of the human who gave the
+  passport. They can still refuse a tool the list showed.
 - **Extensions register after core.** `registerComposedTools` runs last in `internal/compose/registry.go`, so an
   extension unit can add verbs, and a name that is the same as a core verb fails boot. Each extension operation
   declares `x-mcp-tool` or `x-agent-access: human-only`, the same closed set of options core operations have. A
@@ -27,23 +27,20 @@ and what a live server shows can differ from the table:
   A tool that must be confirmed first must declare `x-mcp-tool.subject`. At boot, Margince refuses `send` and `enrich`
   from an extension; the rules are in [how-to/add-an-extension.md](../how-to/add-an-extension.md). The composed set is
   a trust line, and that limits what the handler of a unit can do.
-- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none, and the operations of
-  `extensions/openchannel` are all `human-only`. It makes and returns a lasting signing secret over a path open to
-  all. It also points the whole outbound mail route of a member to a new place. On a plain install, the catalog below
-  is all an agent can reach.
+- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none. The operations of
+  `extensions/openchannel` are all `human-only`. One returns a lasting signing secret over a path open to all. One
+  moves a member's whole outbound mail route. On a plain install, the catalog below is all an agent can reach.
 
-**Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the same origin as
-`/oauth/*` and the discovery documents. There is no stdio transport and no `cmd/mcp` binary; `backend/cmd/` is `api`,
-`migrate`, `worker`. To connect a client: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md). To
-make the credential: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
+**Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the origin of `/oauth/*`
+and the discovery documents. There is no stdio transport and no `cmd/mcp` binary. To connect a client:
+[how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md); the credential: [mint-a-passport.md](../how-to/mint-a-passport.md).
 
 ## The catalog
 
-Every core verb the surface serves; the generated [mcp-info.md](mcp-info.md) has the live tool count.
-`TestTheToolCatalogsTiersAreTheContractsTiers` holds the tiers and the rows of this table against the contract, both
-ways. Every operation with `x-mcp-tool` in `api/crm.yaml` has a registered tool of that verb. Every registered tool is
-declared by an operation. `TestEveryDeclaredToolVerbIsRegistered` and `TestEveryRegisteredToolIsDeclared` hold both
-ways.
+Every core verb the surface serves, including those a client reaches only through a router
+([agent-surface.md](../explanation/agent-surface.md)); [mcp-info.md](mcp-info.md) has what a client is offered.
+`TestTheToolCatalogsTiersAreTheContractsTiers` holds the tiers and rows against the contract, both ways, and
+`TestEveryDeclaredToolVerbIsRegistered` and `TestEveryRegisteredToolIsDeclared` hold the verbs, both ways.
 
 - **Tier**: 🟢 runs at once. 🟡 is refused until a human gives the staged approval. **dynamic** is decided on each call,
   from what the call points at. It may only *raise* the tier.
@@ -51,19 +48,17 @@ ways.
   - The relink verbs (`relink_activity`, `relink_thread`, `relink_activities`) read the record type the activity moves
     to. Filing under a project is 🟡, because it marks every named activity as sales mail. A thread or a named set
     cannot pin a version, so a named set always waits.
-  - `relink_thread` never waits, and never runs for the assistant. It refuses at every target, because the retry reads
-    a thread key again. It sends the caller to `relink_activities`, whose approval binds the named IDs.
-  - A credential may give the approval for its own staged relink with `decide_approval`, on a call with a human there.
+  - `relink_thread` is not offered. It refuses at every target, because the retry reads a thread key again, and sends
+    the caller to `relink_activities`, whose approval binds the named IDs.
+  - A credential may give the approval for its own staged relink with `decide_approvals`, on a call with a human there.
     The same checks the decision applies must pass: the decision grants, and the target is visible. The change must
-    also be one a user can undo.
+    also be one a user can undo. Margince records the approval as the decision of the member, made through the agent.
   - A member takes a filing under a project back with *Undo filing*, a `human-only` decision whose written reason is
     never the reason of the credential. So a credential may give the approval for a project relink only while that
     undo could still apply.
-  - It may not when the activity is limited or archived, or linked to a record under a legal hold. It also may not
-    when an open request to erase covers the activity. The same goes when Margince keeps the activity for another
-    reason: a `won` deal, a sent offer, a pin by the data controller. A member gives the approval for such a relink in
-    the CRM.
-  - When a credential gives an approval, Margince records it as the decision of the member, made through the agent.
+  - It may not when the activity is limited, archived, under a legal hold or covered by an open request to erase. Nor
+    when Margince keeps it for another reason: a `won` deal, a sent offer, a pin by the data controller. A member gives
+    the approval for such a relink in the CRM.
   - The mark **🟢 / 🟡** means the tier turns on the record type the call names. It is 🟡 for `custom_field` and
     `webhook_subscription`, which the contract declares confirm-first, and 🟢 for the other record types.
 - A verb that changes something real is 🟢 when a passport can spend it. The passport carries the seat, grants and row
@@ -87,16 +82,20 @@ ways.
 | `bulk_update_records` | 🟢 | `write` | no |
 | `invite_meeting` | 🟡 | `send` | yes |
 | `catch_me_up_on` | 🟢 | `read` | no |
+| `change_lead_state` | 🟢 | `write` | no |
 | `change_lists` | 🟢 | `write` | no |
+| `change_tags` | 🟢 | `write` | no |
 | `check_availability` | 🟢 | `read` | no |
 | `commit_import` | 🟢 | `write` | no |
 | `create_record` | 🟢 / 🟡 | `write` | no |
 | `create_tag` | 🟢 | `write` | no |
 | `create_task` | 🟢 | `write` | no |
 | `decide_approval` | 🟢 | `write` | no |
+| `decide_approvals` | 🟢 | `write` | no |
 | `decide_duplicate` | 🟢 | `write` | no |
 | `decide_approval_bundle` | 🟢 | `write` | no |
 | `describe_query_vocabulary` | 🟢 | `read` | no |
+| `describe_vocabulary` | 🟢 | `read` | no |
 | `describe_analytics_vocabulary` | 🟢 | `read` | no |
 | `describe_record_fields` | 🟢 | `read` | no |
 | `describe_report_blocks` | 🟢 | `read` | no |
@@ -126,10 +125,13 @@ ways.
 | `promote_lead` | 🟢 | `write` | no |
 | `qualify_lead` | 🟢 | `write` | no |
 | `read_brief` | 🟢 | `read` | no |
+| `read_tags` | 🟢 | `read` | no |
 | `read_record` | 🟢 | `read` | no |
 | `read_approval` | 🟢 | `read` | no |
+| `read_import` | 🟢 | `read` | no |
 | `read_import_report` | 🟢 | `read` | no |
 | `read_import_run` | 🟢 | `read` | no |
+| `read_input_checks` | 🟢 | `read` | no |
 | `read_lists` | 🟢 | `read` | no |
 | `read_project_360` | 🟢 | `read` | no |
 | `query_workspace` | 🟢 | `read` | no |
@@ -164,9 +166,8 @@ ways.
   The fields a human *did* write last wait for approval. The result names them in `staged_approval`, with the replay
   call that uses the approval. A machine never undoes the edit of a human unless asked, and the edit of a human never
   blocks the own fields of the machine.
-- **The dynamic pair reads the *meaning* of the stage, not its label.** A custom pipeline column renamed to `"Won"`
-  still gets 🟡, because `advanceDealTier` trusts the meaning set up for the stage. Anything Margince cannot prove is
-  `open` gets 🟡, so a meaning it cannot read goes to the approval gate.
+- **A deal move reads the *meaning* of the stage, not its label.** A column renamed `"Won"` still gets 🟡, because
+  `advanceDealTier` trusts the meaning set up for the stage, and a stage it cannot prove is `open` gets 🟡.
 - **Margince works out the `list_records` filters at boot.** They are the overlap of the `crm.yaml` query fields of
   each list operation and what the record store can bind. They are published in the schema of the tool, not written
   here or in the tool.

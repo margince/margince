@@ -247,6 +247,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterBriefTool(r, briefOf(0))
 	RegisterAnnotateBriefTool(r, func(context.Context, AnnotateBriefArgs) error { return nil })
 	RegisterApprovalTools(r, &fakeInbox{})
+	RegisterRouters(r)
 	return r
 }
 

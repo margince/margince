@@ -42,7 +42,7 @@ func (t createTag) Spec() mcp.ToolSpec {
 		Name: "create_tag", Title: "Create a tag", Version: toolVersionV1,
 		Description:   createTagCopy.render(),
 		Instead:       createTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
 		// handler checked; it is what the replay checks. Without it a retry
@@ -84,7 +84,7 @@ func (t updateTag) Spec() mcp.ToolSpec {
 		Name: "update_tag", Title: "Rename or recolour a tag", Version: toolVersionV1,
 		Description:   updateTagCopy.render(),
 		Instead:       updateTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
 		// handler checked; it is what the replay checks. Without it a retry

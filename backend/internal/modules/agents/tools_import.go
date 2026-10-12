@@ -79,6 +79,7 @@ func RegisterImportTools(r *Registry, imports Imports) {
 	r.Register(readImportRun{imports: imports})
 	r.Register(readImportReport{imports: imports})
 	r.Register(commitImport{imports: imports, language: r.language})
+	r.Register(readImport{})
 }
 
 // importObjectEnum is what a file's rows may be.
@@ -153,7 +154,7 @@ func (t readImportRun) Spec() mcp.ToolSpec {
 		Name: "read_import_run", Title: "Read an import run", Version: toolVersionV1,
 		Description:   readImportRunCopy.render(),
 		Instead:       readImportRunCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getImportRun",
 		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportRunResult](),
@@ -179,7 +180,7 @@ func (t readImportReport) Spec() mcp.ToolSpec {
 		Name: "read_import_report", Title: "Read an import report", Version: toolVersionV1,
 		Description:   readImportReportCopy.render(),
 		Instead:       readImportReportCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getImportRunReport",
 		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportReportResult](),

@@ -125,17 +125,37 @@ var _ mcp.Registry = (*Registry)(nil)
 // (idempotency.go): the claim is taken AFTER admission, so a caller the gate
 // turns away never occupies a key, and the effect is what the claim protects.
 func (r *Registry) Invoke(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, error) {
-	out, _, err := r.InvokeServing(ctx, name, in)
-	return out, err
+	served, err := r.InvokeServed(ctx, name, in)
+	return served.Output, err
+}
+
+// InvokeServed is Invoke for a caller that also needs the tool that ran: the
+// router's target when name is a router. A caller that records the call by
+// tool, or checks its answer against a tool's schema, needs that name and not
+// the one it called.
+func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMessage) (Served, error) {
+	target, args, err := r.resolve(name, in)
+	if err != nil {
+		return Served{Tool: name}, err
+	}
+	served := Served{Tool: target}
+	if target != name {
+		served.Router = name
+	}
+	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
+	return served, err
 }
 
 // InvokeServing is Invoke, plus the number of records the answer handed over.
 //
-// The count exists for exactly one caller: a surface that RECORDS the answer
-// and may serve it again later. What an answer cost is what its replay costs,
-// and only the frame that ran the tool can see it — deriving it afterwards from
-// the envelope's evidence would undercount every answer that hands over more
-// than it can name, making a repeat cheaper than the call.
+// The count exists for one caller: a surface that records the answer and may
+// serve it again later. What an answer cost is what its replay costs, and only
+// the frame that ran the tool can see it. Deriving it afterwards from the
+// envelope's evidence would undercount an answer that hands over more than it
+// can name. A repeat would then cost less than the call.
+//
+// It serves name as given and resolves no router. Callers holding a name a
+// client chose go through InvokeServed; taskexecute holds the stored target.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
 	// The REGISTERED spec, not a fresh Spec() call. The two are the same for a
 	// tool whose spec is a literal, and every tool here is — but the registered
