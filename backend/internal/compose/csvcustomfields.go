@@ -29,7 +29,8 @@ const customFieldPrefix = "cf_"
 // importCatalog is one object's active custom fields, keyed by column name,
 // and their labels. It needs no create grant, so profile, stage and format can
 // read it for a caller who may not write records. Options always check a
-// cell; optionsReadable says whether they may be shown to the caller.
+// cell; optionsReadable says whether the fields' keys, types and options may be
+// shown to the caller.
 type importCatalog struct {
 	byName          map[string]fieldcatalog.Column
 	labels          map[string]string

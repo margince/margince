@@ -104,7 +104,11 @@ func formatColumns(object string, cat importCatalog, spoken langcopy.Spoken) ([]
 	columns := make([]crmcontracts.ImportFormatColumn, 0, len(targets))
 	for _, target := range targets {
 		if col, custom := cat.byName[target]; custom {
-			columns = append(columns, customFormatColumn(col, cat, spoken))
+			// A custom field's key and type are catalog data, so a caller who
+			// may not read custom fields is shown none of them.
+			if cat.optionsReadable {
+				columns = append(columns, customFormatColumn(col, cat, spoken))
+			}
 			continue
 		}
 		guide, ok := guideFor(object, target)
@@ -119,8 +123,7 @@ func formatColumns(object string, cat importCatalog, spoken langcopy.Spoken) ([]
 	return columns, nil
 }
 
-// customFormatColumn is a custom field by its key, with its label and, for a
-// caller holding custom_field:read, its options.
+// customFormatColumn is a custom field by its key, with its label and options.
 func customFormatColumn(col fieldcatalog.Column, cat importCatalog, spoken langcopy.Spoken) crmcontracts.ImportFormatColumn {
 	guide := importguide.Custom[col.Type]
 	out := crmcontracts.ImportFormatColumn{
@@ -130,7 +133,7 @@ func customFormatColumn(col fieldcatalog.Column, cat importCatalog, spoken langc
 	if label, ok := cat.labels[col.Name]; ok {
 		out.Label = &label
 	}
-	if cat.optionsReadable && len(col.Options) > 0 {
+	if len(col.Options) > 0 {
 		options := append([]string(nil), col.Options...)
 		out.Options = &options
 		out.Example = optionExample(col)

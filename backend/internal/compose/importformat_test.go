@@ -126,16 +126,19 @@ func TestACustomColumnIsNamedByItsKeyAndShowsItsLabel(t *testing.T) {
 	}
 }
 
-func TestACustomColumnKeepsItsOptionsFromACallerWithoutCustomFieldRead(t *testing.T) {
+func TestTheFormatOmitsCustomColumnsFromACallerWithoutCustomFieldRead(t *testing.T) {
 	tier := fieldcatalog.Column{Name: "cf_tier", Type: fieldcatalog.TypePicklist, Options: []string{"Gold", "Silver"}}
 	cat := importCatalog{byName: map[string]fieldcatalog.Column{tier.Name: tier}}
 	f, err := formatFrom(map[string]importCatalog{migration.ObjectCompany: cat}, langcopy.For("en"), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	col := columnOf(t, f, crmcontracts.ImportObjectCompany, "cf_tier")
-	if col.Options != nil || col.Label != nil || strings.Contains(col.Example, "Gold") {
-		t.Fatalf("cf_tier = %+v, want no options, no label and no option as example", col)
+	for _, file := range f.Files {
+		for _, col := range file.Columns {
+			if col.Custom || col.Name == tier.Name {
+				t.Fatalf("%s lists %+v; a caller who may not read custom fields learns none of their keys or types", file.File, col)
+			}
+		}
 	}
 }
 
