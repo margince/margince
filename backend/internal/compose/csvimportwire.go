@@ -461,15 +461,6 @@ func readAllUpload(file multipart.File) ([]byte, error) {
 	return body, nil
 }
 
-// refinePrediction replaces the engine's create/update split with one the
-// report can honestly show a human.
-//
-// The engine classifies from Writers.Exists alone, so every row that already
-// landed counts as an update — including the ones whose values are identical,
-// which the commit will not rewrite. A dry run whose whole job is to say what
-// WILL happen may not overstate it by the size of the customer's re-upload, so
-// each row is compared here exactly as the commit will compare it.
-
 // applyImportMapping copies what the run's mapping says about its files onto
 // the contract run.
 func applyImportMapping(out *crmcontracts.ImportRun, run migration.Run, m *migration.RunMapping) {
