@@ -117,7 +117,7 @@ func requestedObjects(req crmcontracts.CreateImportRunRequest) []string {
 
 // commonHeaders are the headers most exports give a field under another name.
 // Each type has one of a header's targets: a company is named by display_name,
-// a person by full_name.
+// a contact or lead by full_name.
 var commonHeaders = map[string][]string{
 	"name":    {fieldDisplayName, fieldFullName},
 	"company": {companyNameField},

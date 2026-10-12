@@ -99,7 +99,7 @@ func TestOnlyCheckedCustomFieldsReachCustomFields(t *testing.T) {
 }
 
 // The header most exports give the record's own name, and the one they give a
-// person's company, are suggested onto those fields for every type.
+// contact's company, are suggested onto those fields for every type.
 func TestTheCommonHeadersForANameAndACompanyAreSuggested(t *testing.T) {
 	for object, want := range map[string]map[string]string{
 		migration.ObjectCompany: {"Name": fieldDisplayName},
