@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 66,
     "system_frame_tokens": 586,
-    "tokens": 26547,
+    "tokens": 26630,
     "median_tool_tokens": 346,
-    "mean_tool_tokens": 401
+    "mean_tool_tokens": 403
   },
   "agents": [
     {
@@ -159,12 +159,16 @@
       "tokens": 508
     },
     {
+      "name": "change_lead_state",
+      "tokens": 494
+    },
+    {
       "name": "resolve_entities",
       "tokens": 493
     },
     {
-      "name": "change_lead_state",
-      "tokens": 485
+      "name": "change_tags",
+      "tokens": 492
     },
     {
       "name": "search_records",
@@ -173,10 +177,6 @@
     {
       "name": "forecast_movement",
       "tokens": 443
-    },
-    {
-      "name": "change_tags",
-      "tokens": 441
     },
     {
       "name": "decide_approvals",
@@ -239,12 +239,12 @@
       "tokens": 335
     },
     {
-      "name": "relink_activity",
-      "tokens": 303
+      "name": "read_tags",
+      "tokens": 322
     },
     {
-      "name": "read_tags",
-      "tokens": 299
+      "name": "relink_activity",
+      "tokens": 303
     },
     {
       "name": "merge_records",

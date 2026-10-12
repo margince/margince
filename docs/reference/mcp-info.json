@@ -10,16 +10,16 @@
   "totals": {
     "tools": 66,
     "resources": 9,
-    "tool_catalog_bytes": 216545,
+    "tool_catalog_bytes": 216876,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 55026,
+    "approx_wire_tokens_total": 55109,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 58060,
-      "input_schema_bytes": 55049,
+      "input_schema_bytes": 55380,
       "output_schema_bytes": 87281,
-      "description_plus_input_schema_bytes": 113109
+      "description_plus_input_schema_bytes": 113440
     }
   },
   "tools": {
@@ -1738,7 +1738,7 @@
               "type": "string"
             },
             "approval_id": {
-              "description": "Set on approved retry",
+              "description": "demote, disqualify, promote only: Set on approved retry",
               "format": "uuid",
               "type": "string"
             },
@@ -2080,6 +2080,7 @@
               "type": "string"
             },
             "description": {
+              "description": "create, update only",
               "type": "string"
             },
             "idempotency_key": {
@@ -2088,15 +2089,18 @@
               "type": "string"
             },
             "name": {
+              "description": "create, update only",
               "maxLength": 64,
               "minLength": 1,
               "type": "string"
             },
             "record_id": {
+              "description": "apply, remove only",
               "format": "uuid",
               "type": "string"
             },
             "record_type": {
+              "description": "apply, remove only",
               "enum": [
                 "company",
                 "contact",
@@ -2107,11 +2111,12 @@
               "type": "string"
             },
             "tag_id": {
+              "description": "apply, remove, update only",
               "format": "uuid",
               "type": "string"
             },
             "tag_name": {
-              "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+              "description": "apply, remove only: Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
               "maxLength": 64,
               "type": "string"
             }
@@ -10168,7 +10173,7 @@
         "inputSchema": {
           "properties": {
             "include_archived": {
-              "description": "Also list retired words; they cannot be applied",
+              "description": "list only: Also list retired words; they cannot be applied",
               "type": "boolean"
             },
             "mode": {
@@ -10181,10 +10186,12 @@
               "type": "string"
             },
             "record_id": {
+              "description": "record only",
               "format": "uuid",
               "type": "string"
             },
             "record_type": {
+              "description": "record only",
               "enum": [
                 "contact",
                 "company",
@@ -10194,6 +10201,7 @@
               "type": "string"
             },
             "tag_id": {
+              "description": "get only",
               "format": "uuid",
               "type": "string"
             }

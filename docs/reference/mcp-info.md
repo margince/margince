@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 66 |
 | Resources | 9 |
-| Tool catalog | 211.5 KB |
+| Tool catalog | 211.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 55026 |
+| Approx. wire tokens | 55109 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 85.2 KB | 40% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 56.7 KB | 26% | Yes, every step |
-| Input schemas | 53.8 KB | 25% | Yes, every step |
+| Input schemas | 54.1 KB | 25% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **110.5 KB** | **52%** | **the recurring cost** |
+| **Description + input schema** | **110.8 KB** | **52%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -66,7 +66,7 @@ descriptions and input schemas are what each step pays for.
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 2.2 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
-| [`change_tags`](#change_tags) | Change tags |  |  | 2.0 KB |
+| [`change_tags`](#change_tags) | Change tags |  |  | 2.2 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.2 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.3 KB |
-| [`read_tags`](#read_tags) | Read tags | yes |  | 1.4 KB |
+| [`read_tags`](#read_tags) | Read tags | yes |  | 1.5 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.6 KB |
@@ -2109,7 +2109,7 @@ until the retry carrying it has answered. (Governance: runs immediately; require
       "type": "string"
     },
     "approval_id": {
-      "description": "Set on approved retry",
+      "description": "demote, disqualify, promote only: Set on approved retry",
       "format": "uuid",
       "type": "string"
     },
@@ -2478,6 +2478,7 @@ requires passport scope "write".)
       "type": "string"
     },
     "description": {
+      "description": "create, update only",
       "type": "string"
     },
     "idempotency_key": {
@@ -2486,15 +2487,18 @@ requires passport scope "write".)
       "type": "string"
     },
     "name": {
+      "description": "create, update only",
       "maxLength": 64,
       "minLength": 1,
       "type": "string"
     },
     "record_id": {
+      "description": "apply, remove only",
       "format": "uuid",
       "type": "string"
     },
     "record_type": {
+      "description": "apply, remove only",
       "enum": [
         "company",
         "contact",
@@ -2505,11 +2509,12 @@ requires passport scope "write".)
       "type": "string"
     },
     "tag_id": {
+      "description": "apply, remove, update only",
       "format": "uuid",
       "type": "string"
     },
     "tag_name": {
-      "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+      "description": "apply, remove only: Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
       "maxLength": 64,
       "type": "string"
     }
@@ -11085,7 +11090,7 @@ offers it without applying it. (Governance: runs immediately; requires passport 
 {
   "properties": {
     "include_archived": {
-      "description": "Also list retired words; they cannot be applied",
+      "description": "list only: Also list retired words; they cannot be applied",
       "type": "boolean"
     },
     "mode": {
@@ -11098,10 +11103,12 @@ offers it without applying it. (Governance: runs immediately; requires passport 
       "type": "string"
     },
     "record_id": {
+      "description": "record only",
       "format": "uuid",
       "type": "string"
     },
     "record_type": {
+      "description": "record only",
       "enum": [
         "contact",
         "company",
@@ -11111,6 +11118,7 @@ offers it without applying it. (Governance: runs immediately; requires passport 
       "type": "string"
     },
     "tag_id": {
+      "description": "get only",
       "format": "uuid",
       "type": "string"
     }

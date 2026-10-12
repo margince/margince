@@ -142,7 +142,7 @@ func readObjectSchema(owner string, raw json.RawMessage) objectSchema {
 // refuses a call missing one only it needs. The router may only word an
 // argument for every action at once, never restate its shape.
 func routedSchema(routerName, field string, choices []string, own json.RawMessage, targets []mcp.ToolSpec) json.RawMessage {
-	properties, required := unitedArguments(routerName, field, targets)
+	properties, required, takers := unitedArguments(routerName, field, choices, targets)
 	routerOwn := readObjectSchema(routerName, own)
 	for name, wording := range routerOwn.Properties {
 		_, known := properties[name]
@@ -152,6 +152,11 @@ func routedSchema(routerName, field string, choices []string, own json.RawMessag
 		}
 		if known {
 			properties[name][schemaDescription] = wording[schemaDescription]
+		}
+	}
+	for name, choicesTaking := range takers {
+		if _, worded := routerOwn.Properties[name]; !worded && field != "" && len(choicesTaking) < len(choices) {
+			properties[name][schemaDescription] = scopedDescription(choicesTaking, properties[name][schemaDescription])
 		}
 	}
 	out := map[string]json.RawMessage{}
@@ -169,12 +174,14 @@ func routedSchema(routerName, field string, choices []string, own json.RawMessag
 // naming one argument must agree on its shape. Where they differ only in the
 // words an enum admits, the router admits all of them. Neither target's call is
 // then refused by a client holding the advertised schema.
-func unitedArguments(routerName, field string, targets []mcp.ToolSpec) (map[string]argument, []string) {
+func unitedArguments(routerName, field string, choices []string, targets []mcp.ToolSpec) (map[string]argument, []string, map[string][]string) {
 	properties := map[string]argument{}
+	takers := map[string][]string{}
 	var required []string
 	for i, target := range targets {
 		schema := readObjectSchema(target.Name, target.InputSchema)
 		for name, arg := range schema.Properties {
+			takers[name] = append(takers[name], choices[i])
 			united, ok := uniteArgument(properties[name], arg)
 			if name == field || !ok {
 				//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
@@ -188,7 +195,21 @@ func unitedArguments(routerName, field string, targets []mcp.ToolSpec) (map[stri
 			required = slices.DeleteFunc(required, func(name string) bool { return !slices.Contains(schema.Required, name) })
 		}
 	}
-	return properties, required
+	return properties, required, takers
+}
+
+// scopedDescription names the choices that take an argument, so a caller
+// learns before the target refuses it that another choice does not.
+func scopedDescription(choicesTaking []string, description json.RawMessage) json.RawMessage {
+	var text string
+	if description != nil && json.Unmarshal(description, &text) != nil {
+		return description
+	}
+	scoped := strings.Join(slices.Sorted(slices.Values(choicesTaking)), ", ") + " only"
+	if text != "" {
+		scoped += ": " + text
+	}
+	return mustMarshal(scoped)
 }
 
 // uniteArgument is one argument as two targets declare it, ignoring wording.

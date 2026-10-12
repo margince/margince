@@ -375,3 +375,27 @@ func TestRegisterRefusesARouterThatRestatesOrConflicts(t *testing.T) {
 		})
 	}
 }
+
+// An argument only some actions take says which, so a caller sending it with
+// another action is told before the target refuses it.
+func TestARoutedArgumentNamesTheActionsThatTakeIt(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"x":{"type":"integer"},"y":{"type":"boolean","description":"also the old ones"}}`))
+	r.Register(shapedTarget("fake_b", `{"x":{"type":"integer"}}`))
+	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}})
+	spec, _ := r.Spec("fake_ab")
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if got := schema.Properties["y"].Description; got != "a only: also the old ones" {
+		t.Errorf("y = %q, want it to name the one action that takes it", got)
+	}
+	if got := schema.Properties["x"].Description; got != "" {
+		t.Errorf("x = %q, want no action named for an argument every action takes", got)
+	}
+}

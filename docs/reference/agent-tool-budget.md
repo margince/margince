@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 66 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 66 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 26547 |  |  | 81% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 26630 |  |  | 81% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 346 tokens, mean 401, across 66 served tools.
+Median 346 tokens, mean 403, across 66 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -172,11 +172,11 @@ listing once. Read a row as what that tool costs a menu.
 | `query_workspace` | 530 |  |
 | `progress_deal` | 513 |  |
 | `run_analytics_query` | 508 |  |
+| `change_lead_state` | 494 |  |
 | `resolve_entities` | 493 |  |
-| `change_lead_state` | 485 |  |
+| `change_tags` | 492 |  |
 | `search_records` | 456 |  |
 | `forecast_movement` | 443 |  |
-| `change_tags` | 441 |  |
 | `decide_approvals` | 429 |  |
 | `annotate_brief` | 417 | 2 scenarios |
 | `advance_project_phase` | 416 |  |
@@ -192,8 +192,8 @@ listing once. Read a row as what that tool costs a menu.
 | `search_context` | 344 |  |
 | `check_availability` | 342 |  |
 | `search_report_evidence` | 335 |  |
+| `read_tags` | 322 |  |
 | `relink_activity` | 303 |  |
-| `read_tags` | 299 |  |
 | `merge_records` | 293 |  |
 | `read_record` | 292 | 2 scenarios |
 | `archive_record` | 291 |  |
