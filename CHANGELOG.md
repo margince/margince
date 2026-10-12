@@ -12,6 +12,17 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- **One jurisdiction per installation.** An admin chooses the law the
+  installation follows at first setup, in `workspace.country` in
+  `margince.yaml`, or on **Settings → Governance → Jurisdiction**. It sets how
+  long business mail is kept, the due date of a privacy request and the rules
+  for sales mail. The page shows what the choice changes and lists the pack's
+  documents to read and download; the German employee notices moved there from
+  `docs/compliance`. A privacy request filed by hand now gets its due date
+  worked out, and a later date than the law allows is refused. **On upgrade**,
+  an installation with no `workspace.country` in its file stays unset, keeping
+  mail for the longest built-in floor, until an admin chooses the law. Boot
+  refuses a stored jurisdiction the build carries no pack for.
 - **The Margince skill for AI tools.** Settings → Agents → **Agent passports**
   shows two ways to use a passport. **In your AI tool** has **Download skill**,
   and **In your own code** has a curl, Python and JavaScript example that reads

@@ -104,6 +104,7 @@ On the first boot against an empty database the api bootstraps the company + adm
    `MARGINCE_PUBLIC_BASE_URL`, or the api refuses to boot.
 6. Leave `operations:` commented out, as the example ships it.
 7. Decide the retention posture before first boot, if the installation must keep everything (below).
+8. Choose the country: set `workspace.country` (below).
 
 The path in step 2 is `/app/secrets/admin-password`, because the api's working dir is `/app`.
 
@@ -122,6 +123,32 @@ block to keep the connector off; the code default is off, so an absent block exp
 Uncommenting `operations.allow_data_reset` arms `POST /v1/admin/reset-data`. It purges this
 installation's tenant data back to its first-boot state, and shows the "Reset data" button to every
 admin seat. A deployed installation leaves it off.
+
+### Choose the country
+
+`workspace.country` names the country whose legal rules the installation follows, as a two-letter
+code in small letters (`de`, `vn`). The build must carry a pack for it: `extensions/de` and
+`extensions/vn` ship in this repo. The api and the worker both refuse to boot on a code with no
+pack, and the log names the codes the build carries.
+
+The country sets three things:
+
+- how long business mail is kept before anything may delete it (the retention floor);
+- the due date of a data-subject request;
+- the rules for sales mail.
+
+```yaml
+workspace:
+  country: de
+```
+
+Leave it out, and the admin who claims the installation picks it on the setup screen. Until a
+country is set, Margince keeps mail for the longest time any built-in pack asks for. A request is
+then due in one calendar month. The admin changes it later on the Jurisdiction settings page, which
+also lists the documents the pack ships, such as the German employee notices.
+
+A change to a country with a shorter floor keeps the old floor for mail already held, until that
+mail's window closes. A change needs both the installation-settings and the retention-policy grant.
 
 ### Keep everything, if you must
 
@@ -237,6 +264,11 @@ unset `MARGINCE_ADMIN_PASSWORD`. Bootstrap values are read once, on the first bo
 reconcile them into an existing company. Past that point the credential grants nothing and only sits
 at rest. The entrypoint stops writing the file once a company exists and says so on stderr if the
 variable is still set.
+
+**Set the country after an upgrade.** An upgrade seeds `workspace.country` from `margince.yaml`
+once, when the installation has no stored country. With no value in the file, it stays unset: the
+longest built-in floor and the one-month request deadline apply. Choose the country on the
+Jurisdiction settings page. Editing the file afterwards changes nothing.
 
 **Set up outbound mail.** It needs the worker and an SMTP relay. `cmd/worker` transmits what the api
 stages. Mail the installation writes itself (privacy notice, confirm links, password reset,
