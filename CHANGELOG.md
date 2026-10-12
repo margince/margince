@@ -20,8 +20,9 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   documents to read and download; the German employee notices moved there from
   `docs/compliance`. A privacy request filed by hand now gets its due date
   worked out, and a later date than the law allows is refused. **On upgrade**,
-  an installation with no `workspace.country` in its file stays unset, keeping
-  mail for the longest built-in floor, until an admin chooses the law. Boot
+  a stored country is kept. An installation with no stored country and no
+  `workspace.country` in its file stays unset, keeping mail for the longest
+  built-in floor, until an admin chooses the law. Boot
   refuses a stored jurisdiction the build carries no pack for.
 - **The Margince skill for AI tools.** Settings → Agents → **Agent passports**
   shows two ways to use a passport. **In your AI tool** has **Download skill**,

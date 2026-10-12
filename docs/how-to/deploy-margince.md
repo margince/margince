@@ -266,8 +266,9 @@ at rest. The entrypoint stops writing the file once a company exists and says so
 variable is still set.
 
 **Set the country after an upgrade.** An upgrade seeds `workspace.country` from `margince.yaml`
-once, when the installation has no stored country. With no value in the file, it stays unset: the
-longest built-in floor and the one-month request deadline apply. Choose the country on the
+once, when the installation has no stored country. A stored country is kept, even when the file
+has none. With no country in either place, it stays unset: the longest built-in floor and the
+one-month request deadline apply. Choose the country on the
 Jurisdiction settings page. Editing the file afterwards changes nothing.
 
 **Set up outbound mail.** It needs the worker and an SMTP relay. `cmd/worker` transmits what the api
