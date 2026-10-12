@@ -33,7 +33,10 @@ type BlockedDomain struct {
 	Reason    string
 	Source    string
 	DecidedAt time.Time
-	CompanyID *ids.CompanyID
+	// CompanyID and CompanyName are set together by withVisibleCompanyTx, and
+	// only for a company the caller may read.
+	CompanyID   *ids.CompanyID
+	CompanyName *string
 }
 
 // ToContractBlockedDomain is the wire shape of one admission decision.
@@ -43,17 +46,38 @@ type BlockedDomain struct {
 // second spelling would be free to disagree about which fields reach a reader.
 func ToContractBlockedDomain(e BlockedDomain) crmcontracts.BlockedDomain {
 	out := crmcontracts.BlockedDomain{
-		Domain:    e.Domain,
-		Admission: crmcontracts.BlockedDomainAdmission(e.Admission),
-		Reason:    e.Reason,
-		Source:    crmcontracts.BlockedDomainSource(e.Source),
-		DecidedAt: e.DecidedAt,
+		Domain:      e.Domain,
+		Admission:   crmcontracts.BlockedDomainAdmission(e.Admission),
+		Reason:      e.Reason,
+		Source:      crmcontracts.BlockedDomainSource(e.Source),
+		DecidedAt:   e.DecidedAt,
+		CompanyName: e.CompanyName,
 	}
+	out.ReasonCode, out.Note, out.SenderKind = reasonCodeOf(e)
 	if e.CompanyID != nil {
 		id := openapi_types.UUID(e.CompanyID.UUID)
 		out.CompanyId = &id
 	}
 	return out
+}
+
+// withVisibleCompanyTx withholds both fields for a company the caller may not
+// read: a mail-captured company stays owner-private even under row_scope=all.
+func withVisibleCompanyTx(ctx context.Context, tx pgx.Tx, d *BlockedDomain, companyID *ids.UUID) error {
+	if companyID == nil {
+		return nil
+	}
+	visible, err := auth.VisibleTo(ctx, tx, entityCompany, *companyID)
+	if err != nil || !visible {
+		return err
+	}
+	var name string
+	if err := tx.QueryRow(ctx, `SELECT display_name FROM company WHERE id = $1`, *companyID).Scan(&name); err != nil {
+		return fmt.Errorf("contacts: naming the company on %s: %w", d.Domain, err)
+	}
+	typed := ids.From[ids.CompanyKind](*companyID)
+	d.CompanyID, d.CompanyName = &typed, &name
+	return nil
 }
 
 // domainStanding is where a domain's company question stands, as one row of the
@@ -98,6 +122,8 @@ const domainPendingReason = `
 	    THEN 'Nothing on the site named a company, and the sender''s name did not explain the domain.'
 	  WHEN '` + PendingStaleEvidence + `'
 	    THEN 'The newest mail from this domain is too old to trust today''s site as evidence about it.'
+	  WHEN '` + PendingNearDuplicate + `'
+	    THEN 'More than one company already carries the name this domain resolved to, so which one it belongs to is for a colleague to decide.'
 	  ELSE '' END`
 
 // domainStandingWhere selects the rows this list is the right surface for: every
@@ -197,23 +223,8 @@ func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedD
 			return fmt.Errorf("contacts: listing domain admissions: %w", err)
 		}
 		for i, companyID := range companyIDs {
-			if companyID == nil {
-				continue
-			}
-			// The company id is withheld unless the caller could read that
-			// company. A company captured from mail is owner-PRIVATE
-			// until a human promotes it, and that privacy does not yield to
-			// row_scope=all — so returning the id here would hand every
-			// colleague a pointer to a record the record's own endpoint
-			// correctly 404s. Same rule, and same VisibleTo check, as the
-			// duplicate-domain refusal in company_domains.go.
-			visible, verr := auth.VisibleTo(ctx, tx, entityCompany, *companyID)
-			if verr != nil {
-				return verr
-			}
-			if visible {
-				typed := ids.From[ids.CompanyKind](*companyID)
-				out[i].CompanyID = &typed
+			if err := withVisibleCompanyTx(ctx, tx, &out[i], companyID); err != nil {
+				return err
 			}
 		}
 		return nil

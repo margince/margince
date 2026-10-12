@@ -11,12 +11,12 @@ page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
 There is no address to forward to and no step to copy and paste. Mail between colleagues is never stored, and senders judged to be newsletters, automated tools or spam create no contact.
-To bring in older mail, use **Import mailbox history**; to see what happened to one message, open **Settings → Capture activity**.
+To bring in older mail, use **Import old emails** in the mailbox's **…** menu; to see what happened to one message, open **Settings → Capture activity**.
 Also called: email logging, sync email to CRM, auto-log emails.
 
 ### How do I see emails I sent from Outlook or Gmail in Margince?
 Emails you send from Outlook or Gmail itself are captured into Margince too. A connected Gmail or Outlook mailbox is read in your inbox and your sent mail. So each sent message lands on the contact timelines of its recipients, marked **Sent**.
-1. Connect the mailbox at **Settings → Connections**; mail sent before that comes in with **Import mailbox history**.
+1. Connect the mailbox at **Settings → Connections**; mail sent before that comes in with **Import old emails**.
 2. Open the contact's **History** tab and pick **Threads** or **All** to see what you sent beside their replies.
 Mail sent only to colleagues is never stored. An IMAP mailbox reads only the one **Mailbox** it was set up with.
 Also called: sent items, outgoing mail, outbox, log sent emails.
@@ -42,14 +42,14 @@ records that this happened, never the subject or the body.
 
 **4. Deciding about the sender.** See the ladder below.
 
-You can watch all of this in **Settings → Capture activity**, under "What the
-last 24 hours of your mail produced". Under **Messages**, open any single
-message with **Show every processing step for this message**. **How this
+You can watch all of this in **Settings → Capture activity**, in **Last 24
+hours**. Under **Messages**, press a message's row, or its **Show every
+processing step for this message** button. **How this
 message was handled** lists every step in order, each marked Done, Skipped,
 Waiting, Failed, Not applicable, or Unknown.
 
 ### Why was my email not captured?
-To find out why an email is missing, open **Settings → Capture activity**, find it under **Messages** and press **Show every processing step for this message**.
+To find out why an email is missing, open **Settings → Capture activity**, find it under **Messages** and press its row.
 **How this message was handled** marks each step Done, Skipped, Waiting, Failed, Not applicable or Unknown, with the reason.
 Common causes: every address was on your own domains, so it was never stored. Or the sender is on your **Capture exclusions**, the sender was judged a newsletter or automated tool, or the mailbox shows **Needs reconnect**.
 The log keeps 24 hours and shows only your own connections.
@@ -281,15 +281,15 @@ To stop Margince capturing mail from a domain or address, open **Settings → Ca
 2. In **Capture exclusions**, press **New exclusion**.
 3. Choose **Applies to** (**Your mailboxes** or **Whole company**) and the **Kind** (**Address**, **Domain**, or **Label, folder or mailbox**).
 4. Enter the value and press **Exclude**.
-It applies from the next message; captured mail stays. **Whole company** rules belong to an administrator. Undo with **Resume capture of {value}**.
+It applies from the next message; captured mail stays. **Whole company** rules belong to an administrator. To take a rule back, open its **Actions** menu and choose **Remove rule**; **Undo** on the notice puts it back. **Delete matching mail** in the same menu destroys the mail the rule already matched, after a check.
 Also called: block a sender, ignore a domain, blacklist, do not log.
 
 ### How do I tell Margince a sender is business, or exclude one?
-To correct what Margince decided about a sender, open **Settings → Connections** and find the address in **Senders**. Press **Business** to let it back in, or **Exclude** to keep it out.
+To correct what Margince decided about a sender, open **Settings → Connections** and find the address in **Senders**. In its **Actions** menu, choose **Mark as business** to let it back in, or **Exclude** to keep it out.
 1. Open **Settings**, then **Connections**, and go down to **Senders**.
 2. Find the address; the **Decision** column shows what was decided.
-3. Press **Business**, or press **Exclude** and confirm **Exclude and destroy**.
-**Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. **Undo** takes back your answer. A later verdict never writes over a decision you make.
+3. Open its **Actions** menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
+**Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. **Withdraw my answer** takes back your answer. A later verdict never writes over a decision you make.
 Also called: mark as not spam, whitelist a sender.
 
 ## Things you control yourself
@@ -323,7 +323,7 @@ what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of
 them.
 
-**Business** lets a sender back in; **Exclude** destroys what they sent
+**Mark as business** lets a sender back in; **Exclude** destroys what they sent
 into your mailbox and stops the next message. A later verdict never writes over
 a decision you make. **Waiting on a decision**, under the list, names the
 contacts only you see until their sender is decided. An administrator sees only
@@ -332,8 +332,8 @@ how many there are.
 **Held threads** (Settings → Connections): the threads your mailbox is holding
 back right now, with the reason. **Share with the team** releases one.
 
-Three settings decide who may read captured mail. **Mail visibility** is under
-each mailbox in Settings → Connections. **Private correspondence** is on a
+Three settings decide who may read captured mail. **Mail visibility** is in
+each mailbox's settings in Settings → Connections. **Private correspondence** is on a
 contact's or company's page. **Email sharing** is in Settings → Capture rules,
 for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md),
 together with whose capture activity you can see.

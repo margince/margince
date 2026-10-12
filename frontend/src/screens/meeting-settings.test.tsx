@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -63,7 +64,7 @@ it("uses the only connected provider and keeps hours and calendar choices togeth
   const save = await screen.findByRole("button", { name: "Save settings" });
   await waitFor(() => expect(save).toHaveProperty("disabled", false));
   expect(screen.queryByLabelText("Calendar provider")).toBeNull();
-  expect(screen.queryByText("Microsoft Outlook")).toBeNull();
+  expect(screen.queryByText("Outlook Calendar")).toBeNull();
   expect(screen.getByRole("heading", { name: "Availability" })).toBeTruthy();
   expect(screen.getByLabelText("Timezone")).toBeTruthy();
   expect(
@@ -106,11 +107,9 @@ it("offers a provider choice only when both calendars are connected", async () =
   });
   await user.click(choice);
   expect(screen.getByRole("option", { name: "Google Calendar" })).toBeTruthy();
-  expect(
-    screen.getByRole("option", { name: "Microsoft Outlook" }),
-  ).toBeTruthy();
+  expect(screen.getByRole("option", { name: "Outlook Calendar" })).toBeTruthy();
   expect(screen.queryByRole("option", { name: "Gmail" })).toBeNull();
-  await user.click(screen.getByRole("option", { name: "Microsoft Outlook" }));
+  await user.click(screen.getByRole("option", { name: "Outlook Calendar" }));
   await waitFor(() =>
     expect(
       screen.getByRole("button", { name: "Save settings" }),
@@ -335,14 +334,12 @@ it("saves calendar setup and enables the reusable link using the Account name", 
     </StoryProviders>,
   );
   expect(await screen.findByText("Your public name")).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Enable bookings" }),
-  ).toHaveProperty("disabled", true);
-  expect(
-    screen.getByText(
-      "Choose and save a calendar in meeting settings before enabling bookings.",
-    ),
-  ).toBeDefined();
+  const enable = screen.getByRole("button", { name: "Enable bookings" });
+  expect(enable).toHaveProperty("disabled", true);
+  // The reason describes the button it refuses, so the two stay together.
+  expect(enable).toHaveAccessibleDescription(
+    "Choose and save a calendar in meeting settings before enabling bookings.",
+  );
   const save = await screen.findByRole("button", { name: "Save settings" });
   await waitFor(() => expect(save).toHaveProperty("disabled", false));
   await user.click(save);
@@ -575,19 +572,19 @@ it("lists what is left to set up until the booking link is on", async () => {
   expect(screen.getByText("Your booking link turned on")).toBeTruthy();
 });
 
-it("offers the booking link for a quick copy at the top of the page", async () => {
+// One place for the link: a strip at the top repeated the panel below it.
+it("offers the booking link once, in its own panel", async () => {
   const user = userEvent.setup();
   const copy = stubClipboard("accepts");
   mount();
-  const quick = await screen.findByRole("button", {
-    name: "Copy booking link",
-  });
-  const calendar = screen.getByRole("heading", { name: "Calendar" });
-  expect(
-    quick.compareDocumentPosition(calendar) & Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
-  expect(screen.getByText(bookingProfile.public_url ?? "")).toBeTruthy();
-  await user.click(quick);
+  const link = await screen.findByRole("textbox", { name: "My booking link" });
+  expect(screen.queryAllByText(bookingProfile.public_url ?? "")).toHaveLength(
+    0,
+  );
+  expect((link as HTMLInputElement).value).toBe(bookingProfile.public_url);
+  const copies = screen.getAllByRole("button", { name: /^Copy/ });
+  expect(copies).toHaveLength(1);
+  await user.click(copies[0]);
   expect(copy.written).toEqual([bookingProfile.public_url]);
 });
 

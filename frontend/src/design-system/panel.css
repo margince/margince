@@ -72,6 +72,21 @@
   flex-shrink: 0;
 }
 
+/* On a phone a cut title is worse than a taller band: a verb that does not fit
+ * drops under the title, and a long title wraps. */
+@media (max-width: 720px) {
+  .panel-head {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--panel-head-h);
+    padding-block: var(--space-3);
+    row-gap: var(--space-2);
+  }
+  .panel-head .panel-title {
+    white-space: normal;
+  }
+}
+
 .panel-body {
   position: relative;
   padding: var(--padPanel);
@@ -283,6 +298,9 @@
 }
 .panel-row-record::before {
   inset: 0 0 auto;
+}
+.panel-row-opens {
+  cursor: pointer;
 }
 
 /* The footer band — the card's own chrome, so edge to edge like the header. */

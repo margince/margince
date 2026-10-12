@@ -206,6 +206,22 @@ export const LongTitleTruncates: Story = {
   },
 };
 
+// At 390px the verb drops under a title it would cut. A title wider than the
+// pane wraps.
+export const PhoneVerbUnderTitle: Story = {
+  tags: ["uat-phone"],
+  args: {
+    title: "Connected mailboxes and calendars",
+    titleAction: <Button>Add connector</Button>,
+    children: (
+      <>
+        <PanelRow>gmail.com</PanelRow>
+        <PanelRow>outlook.com</PanelRow>
+      </>
+    ),
+  },
+};
+
 export const Untitled: Story = {
   args: {
     children: (

@@ -150,3 +150,13 @@ export const NeverRun: Story = {
 // A reader without the grant. The card keeps its place and says the reading is
 // not theirs; an absent card would read as "capture keeps up".
 export const Withheld: Story = { render: story(KEEPING_UP, ["rep"]) };
+
+export const NeedsAttentionAtPhoneWidth: Story = {
+  ...NeedsAttention,
+  tags: ["uat-phone"],
+};
+
+export const NeedsAttentionDark: Story = {
+  ...NeedsAttention,
+  globals: { theme: "dark" },
+};

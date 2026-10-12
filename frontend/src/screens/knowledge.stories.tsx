@@ -69,6 +69,7 @@ const handbook: Corpus = {
     documents_total: 12,
     chunks_total: 1_180,
     chunks_embedded: 1_180,
+    embed_state: "complete",
   },
   created_at: "2026-08-01T00:00:00Z",
 };
@@ -82,7 +83,12 @@ const priceBook: Corpus = {
     "What each line costs, and which discounts are ours to give.",
   min_similarity: 0.42,
   default_ask: false,
-  coverage: { documents_total: 4, chunks_total: 210, chunks_embedded: 96 },
+  coverage: {
+    documents_total: 4,
+    chunks_total: 210,
+    chunks_embedded: 96,
+    embed_state: "indexing",
+  },
   created_at: "2026-08-14T00:00:00Z",
 };
 
@@ -131,9 +137,7 @@ function sets(
 }
 
 /** The documents of the handbook set, which is the only set a frame with a
- *  `play()` below carries — one set means one "Show documents" and one
- *  "Archive set", so a canvas lookup names a single control rather than
- *  rejecting on an ambiguous match. */
+ *  `play()` below carries, so a canvas lookup names a single control. */
 function documents(items: readonly CorpusDocument[]): RouteMap {
   return {
     [`GET /knowledge/corpora/${SET_ID}/documents`]: () =>
@@ -152,8 +156,7 @@ function card(routes: RouteMap) {
   };
 }
 
-/** Unfold one set's documents. The button carries the copy the screen renders,
- *  not a fixture's own word. */
+/** Unfold the handbook's documents through the row's chevron. */
 const showDocuments = async ({
   canvasElement,
 }: {
@@ -161,10 +164,26 @@ const showDocuments = async ({
 }) => {
   await userEvent.click(
     await within(canvasElement).findByRole("button", {
-      name: "Show documents",
+      name: "Documents in Operator handbook",
     }),
   );
 };
+
+/** Open one row's menu and choose a verb from it. */
+async function chooseFromMenu(
+  canvasElement: HTMLElement,
+  row: string,
+  verb: string,
+) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: `Actions for ${row}`,
+    }),
+  );
+  const page = within(canvasElement.ownerDocument.body);
+  await userEvent.click(page.getByRole("button", { name: verb }));
+  await page.findByRole("dialog");
+}
 
 const meta: Meta<typeof KnowledgeCard> = {
   title: "Settings/Data/Knowledge/Document sets",
@@ -203,10 +222,8 @@ export const BeingReread: Story = {
   render: card(sets(administers, [{ ...handbook, reindexing: true }])),
 };
 
-// The four ingest states in one list, which is the whole reason they are four.
-// Only `failed` is bad news and it carries the reason it failed; `queued` and
-// `running` are the same wait in two words; `done` is deliberately quiet,
-// because a set where everything worked should not be a wall of green pills.
+// The four ingest states in one list, A to Z. Only `failed` carries a reason.
+// `done` draws no badge: a set that worked is not a wall of pills.
 export const DocumentsFiled: Story = {
   render: card(
     sets(
@@ -242,7 +259,12 @@ export const NothingFiledYet: Story = {
       [
         {
           ...handbook,
-          coverage: { documents_total: 0, chunks_total: 0, chunks_embedded: 0 },
+          coverage: {
+            documents_total: 0,
+            chunks_total: 0,
+            chunks_embedded: 0,
+            embed_state: "complete",
+          },
         },
       ],
       documents([]),
@@ -257,11 +279,8 @@ export const NothingFiledYet: Story = {
 // be the one they meant.
 export const ArchiveConfirm: Story = {
   render: card(sets(administers, [handbook])),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(
-      await within(canvasElement).findByRole("button", { name: "Archive set" }),
-    );
-  },
+  play: async ({ canvasElement }) =>
+    chooseFromMenu(canvasElement, "Operator handbook", "Archive set"),
 };
 
 // The same question one level down, and the level that matters more: a document
@@ -271,10 +290,38 @@ export const DeleteDocumentConfirm: Story = {
   render: card(sets(administers, [handbook], documents([searchable]))),
   play: async (context) => {
     await showDocuments(context);
-    await userEvent.click(
-      await within(context.canvasElement).findByRole("button", {
-        name: "Delete",
-      }),
-    );
+    await chooseFromMenu(context.canvasElement, "operating.md", "Delete");
   },
+};
+
+// No embedding model is bound, so nothing is searchable. The row says so and
+// says why, instead of a quiet "0 of 1,180" beside documents that read fine.
+export const NoEmbeddingModel: Story = {
+  render: card(
+    sets(
+      administers,
+      [
+        {
+          ...handbook,
+          coverage: {
+            ...handbook.coverage,
+            chunks_embedded: 0,
+            embed_state: "no_embedding_model",
+          },
+        },
+      ],
+      documents([searchable]),
+    ),
+  ),
+  play: showDocuments,
+};
+
+export const DocumentsAtPhoneWidth: Story = {
+  ...DocumentsFiled,
+  tags: ["uat-phone"],
+};
+
+export const DocumentsDark: Story = {
+  ...DocumentsFiled,
+  globals: { theme: "dark" },
 };

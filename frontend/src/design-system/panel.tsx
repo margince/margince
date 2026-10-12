@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId } from "react";
+import { opensRow } from "./datatable";
 import { Eyebrow } from "./eyebrow";
 import { Heading, type HeadingElement } from "./heading";
 import {
@@ -257,6 +258,7 @@ export function PanelIntro({
 export function PanelRow({
   interactive,
   record,
+  onOpen,
   children,
   className,
 }: Readonly<{
@@ -264,19 +266,31 @@ export function PanelRow({
   interactive?: boolean;
   // A list of things reads as a table, so its rows hover like one.
   record?: boolean;
+  // A press on no control inside the row opens it; its chevron is the keyboard path.
+  onOpen?: () => void;
   children: ReactNode;
   className?: string;
 }>) {
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: a pointer shortcut; the row's own chevron is the control.
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard reaches the same verb through the row's chevron.
     <div
       className={[
         "panel-row",
         interactive ? "panel-row-interactive" : "",
         record ? "panel-row-record" : "",
+        onOpen ? "panel-row-opens" : "",
         className ?? "",
       ]
         .filter(Boolean)
         .join(" ")}
+      onClick={
+        onOpen
+          ? (event) => {
+              if (opensRow(event)) onOpen();
+            }
+          : undefined
+      }
     >
       {children}
     </div>

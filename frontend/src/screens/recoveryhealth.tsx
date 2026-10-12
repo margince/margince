@@ -24,9 +24,9 @@ type Drill = components["schemas"]["RestoreDrill"];
 
 const OUTCOME: Record<
   Drill["outcome"],
-  { label: MessageKey; tone: "success" | "danger" | "info" }
+  { label: MessageKey; tone: "danger" | "info" | undefined }
 > = {
-  passed: { label: "recoveryHealth.outcome.passed", tone: "success" },
+  passed: { label: "recoveryHealth.outcome.passed", tone: undefined },
   failed: { label: "recoveryHealth.outcome.failed", tone: "danger" },
   running: { label: "recoveryHealth.outcome.running", tone: "info" },
 };
@@ -70,7 +70,13 @@ function drillFacts(
     {
       key: "outcome",
       term: t("recoveryHealth.outcome"),
-      value: <Badge tone={outcome.tone}>{t(outcome.label)}</Badge>,
+      // A pass is the normal reading, so only the other outcomes take a badge.
+      value:
+        drill.outcome === "passed" ? (
+          t(outcome.label)
+        ) : (
+          <Badge tone={outcome.tone}>{t(outcome.label)}</Badge>
+        ),
       note: t("recoveryHealth.startedAt", {
         when: formatDateTime(drill.started_at, locale, zone),
       }),
@@ -171,7 +177,7 @@ function RecoveryBody({
   const drill = health.last_drill;
 
   return (
-    <SettingList>
+    <SettingList bleed="settings">
       <SettingRow
         label={t("recoveryHealth.lastDrill")}
         description={t("recoveryHealth.lastDrillHint")}

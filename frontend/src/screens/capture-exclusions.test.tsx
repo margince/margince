@@ -8,6 +8,7 @@ import {
   backend,
   CAPTURE_EDITOR,
   openForm,
+  openPurge,
   Providers,
   READER,
   RULES,
@@ -42,6 +43,7 @@ describe("CaptureExclusionsCard", () => {
   // may not take back the company's, and the refusal names one sentence
   // rather than printing it per row.
   it("refuses only the company-wide rule to a seat without the update grant", async () => {
+    const user = userEvent.setup();
     const { fetchMock } = backend(READER);
     vi.stubGlobal("fetch", fetchMock);
     render(
@@ -53,8 +55,9 @@ describe("CaptureExclusionsCard", () => {
     await waitFor(() =>
       expect(screen.getByText("recruiter.test")).toBeTruthy(),
     );
-    expect(removeVerb("ex@partner.test").disabled).toBe(false);
-    const refused = removeVerb("recruiter.test");
+    expect((await removeVerb(user, "ex@partner.test")).disabled).toBe(false);
+    await user.keyboard("{Escape}");
+    const refused = await removeVerb(user, "recruiter.test");
     expect(refused.disabled).toBe(true);
     // Pointed at, not repeated: the button names the id of the one sentence on
     // the card that says why.
@@ -62,6 +65,42 @@ describe("CaptureExclusionsCard", () => {
     expect(reason).toBeTruthy();
     expect(document.getElementById(reason ?? "")?.textContent).toBe(
       en["captureSettings.adminOnly"],
+    );
+  });
+
+  // Putting the same rule back restores it, so removal runs at once and offers
+  // Undo. Deleting the mail it matched keeps its own dialog.
+  it("removes a rule at once and puts the same rule back on Undo", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend(CAPTURE_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(await removeVerb(user, "ex@partner.test"));
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) =>
+            call.method === "DELETE" && call.url.endsWith("/exclusions/cx-1"),
+        ),
+      ).toBe(true),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+    await waitFor(() =>
+      expect(calls.filter((call) => call.method === "POST")).toEqual([
+        expect.objectContaining({
+          body: { scope: "user", kind: "address", value: "ex@partner.test" },
+        }),
+      ]),
     );
   });
 
@@ -412,15 +451,11 @@ describe("the deletion receipt", () => {
     return { wrapped, calls };
   }
 
-  async function openPurge(user: ReturnType<typeof userEvent.setup>) {
+  async function openFirstPurge(user: ReturnType<typeof userEvent.setup>) {
     await waitFor(() =>
       expect(screen.getByText("ex@partner.test")).toBeTruthy(),
     );
-    await user.click(
-      screen.getAllByRole("button", {
-        name: /Delete mail already captured/,
-      })[0],
-    );
+    await openPurge(user, "ex@partner.test");
   }
 
   // The promise the information sheet makes is about the owner's own data, so
@@ -443,7 +478,7 @@ describe("the deletion receipt", () => {
       </Providers>,
     );
 
-    await openPurge(user);
+    await openFirstPurge(user);
     await user.click(screen.getByRole("button", { name: "Check first" }));
 
     expect(
@@ -483,7 +518,7 @@ describe("the deletion receipt", () => {
       </Providers>,
     );
 
-    await openPurge(user);
+    await openFirstPurge(user);
     await user.click(screen.getByRole("button", { name: "Check first" }));
 
     const kept = await screen.findByText(/kept as commercial correspondence/);
@@ -512,7 +547,7 @@ describe("the deletion receipt", () => {
       </Providers>,
     );
 
-    await openPurge(user);
+    await openFirstPurge(user);
     await user.click(screen.getByRole("button", { name: "Check first" }));
 
     expect(await screen.findByText(/is pinned/)).toBeTruthy();
@@ -549,7 +584,7 @@ describe("the deletion receipt", () => {
       </Providers>,
     );
 
-    await openPurge(user);
+    await openFirstPurge(user);
     await user.click(screen.getByRole("button", { name: "Check first" }));
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog")).toBeTruthy();
@@ -595,9 +630,7 @@ it("names an open request as the reason mail was kept", async () => {
   );
 
   await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
-  await user.click(
-    screen.getAllByRole("button", { name: /Delete mail already captured/ })[0],
-  );
+  await openPurge(user, "ex@partner.test");
   await user.click(screen.getByRole("button", { name: "Check first" }));
 
   expect(
@@ -641,9 +674,7 @@ it("destroys only after the preview, and reports it in the past tense", async ()
   );
 
   await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
-  await user.click(
-    screen.getAllByRole("button", { name: /Delete mail already captured/ })[0],
-  );
+  await openPurge(user, "ex@partner.test");
 
   // Nothing to confirm until a look has been taken.
   expect(
@@ -701,9 +732,7 @@ it("drops the year-end qualifier when the period does not carry one", async () =
   );
 
   await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
-  await user.click(
-    screen.getAllByRole("button", { name: /Delete mail already captured/ })[0],
-  );
+  await openPurge(user, "ex@partner.test");
   await user.click(screen.getByRole("button", { name: "Check first" }));
 
   const kept = await screen.findByText(/kept as commercial correspondence/);
@@ -750,9 +779,7 @@ it("names the class without a period it cannot state in years", async () => {
   );
 
   await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
-  await user.click(
-    screen.getAllByRole("button", { name: /Delete mail already captured/ })[0],
-  );
+  await openPurge(user, "ex@partner.test");
   await user.click(screen.getByRole("button", { name: "Check first" }));
 
   const kept = await screen.findByText(/kept as commercial correspondence/);

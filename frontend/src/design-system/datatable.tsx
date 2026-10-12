@@ -257,7 +257,7 @@ function cellContent<Row>(
 
 // React bubbles a portal's click into the row that rendered it, so a target
 // outside the row is a popover's. A drag that selects text is not a press.
-function opensRow(event: MouseEvent<HTMLTableRowElement>): boolean {
+export function opensRow(event: MouseEvent<HTMLElement>): boolean {
   const target = event.target;
   if (!(target instanceof Element) || !event.currentTarget.contains(target)) {
     return false;

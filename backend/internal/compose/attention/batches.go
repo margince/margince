@@ -166,6 +166,18 @@ func causeLabelOf(members []ranked) string {
 	return ""
 }
 
+// sharedConnectionOf is nil unless every member names one connection: a group
+// about two connections has no one name.
+func sharedConnectionOf(members []ranked) *crmcontracts.AttentionConnectionFacts {
+	first := members[0].item.Connection
+	for _, member := range members {
+		if member.item.Connection == nil || first == nil || *member.item.Connection != *first {
+			return nil
+		}
+	}
+	return first
+}
+
 // batchKeyOf says which group a row belongs to, and whether it may be grouped
 // at all.
 //
@@ -329,6 +341,7 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 			row.Batch.Label = &label
 		}
 	}
+	row.Connection = sharedConnectionOf(members)
 	if bounded {
 		atLeast := true
 		row.Batch.AtLeast = &atLeast

@@ -13,6 +13,7 @@ package ai
 
 import (
 	"net/http"
+	"slices"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -209,7 +210,10 @@ func (h Handlers) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	entries := h.providers.report(r.Context())
-	out := crmcontracts.AiProviderHealth{Providers: make([]crmcontracts.AiProviderHealthEntry, 0, len(entries))}
+	out := crmcontracts.AiProviderHealth{
+		Providers:  make([]crmcontracts.AiProviderHealthEntry, 0, len(entries)),
+		Configured: h.configuredProviders(),
+	}
 	for _, e := range entries {
 		wire := crmcontracts.AiProviderHealthEntry{
 			Provider: e.Provider,
@@ -223,6 +227,22 @@ func (h Handlers) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 		out.Providers = append(out.Providers, wire)
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// configuredProviders names every provider the lanes bind now. Read from the
+// same bindings as the lane health, so a rebind moves both answers together.
+func (h Handlers) configuredProviders() []string {
+	out := []string{}
+	if h.boundModels == nil {
+		return out
+	}
+	for _, ref := range h.boundModels() {
+		if ref.Provider != "" && !slices.Contains(out, ref.Provider) {
+			out = append(out, ref.Provider)
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // toContractRungHealth maps one rung onto the wire.

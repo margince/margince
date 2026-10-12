@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { HeldThreadsCard } from "./held-threads";
 
 // What this card must never do is state a fact it does not have. A thread whose
@@ -360,22 +361,28 @@ it("says nothing about the pass when no row is waiting on it", async () => {
   expect(screen.queryByTestId("verdict-pass-threads")).toBeNull();
 });
 
-// The classifier can name a kind this build has no word for — the vocabulary is
-// the server's and it moves independently of the app. The badge then shows the
-// server's own token rather than nothing: an untranslated word is a fact the
-// reader can carry to whoever knows it, and a blank is the "judged nothing" the
-// pending badge exists to be told apart from.
-it("shows a kind it has no translation for, rather than an empty badge", async () => {
+// A kind this build has no word for reads as words: never the raw token, and
+// never a blank badge that looks like "judged nothing".
+it("names a kind it has no translation for in words", async () => {
   renderCard([{ ...JUDGED, thread_key: "t-unknown", kind: "export_control" }]);
 
-  await screen.findByText("export_control");
+  await screen.findByText(en["heldThreads.kind.other"]);
+  expect(screen.queryByText("export_control")).toBeNull();
 });
 
-// And a row that reached a verdict carrying no kind at all falls back to the
-// status, which is the one thing every held row has. Without it the badge is
-// empty and the row says nothing about why it is here.
-it("falls back to the status when a judged row carries no kind", async () => {
+it("says a row with no kind is held for another reason", async () => {
   renderCard([{ ...JUDGED, thread_key: "t-nokind", kind: undefined }]);
 
-  await screen.findByText("held");
+  await screen.findByText(en["heldThreads.kind.other"]);
+  expect(screen.queryByText("held")).toBeNull();
+});
+
+// `unsure` is the classifier passing the call to the owner, not a kind.
+it("names a thread the classifier was unsure about", async () => {
+  renderCard([
+    { ...JUDGED, thread_key: "t-unsure", status: "unsure", kind: undefined },
+  ]);
+
+  await screen.findByText(en["heldThreads.kind.unsure"]);
+  expect(screen.queryByText("unsure")).toBeNull();
 });

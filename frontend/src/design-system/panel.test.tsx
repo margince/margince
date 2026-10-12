@@ -494,6 +494,20 @@ describe("the panel head is one band, fixed at the height every panel shares", (
   // `:has()` rule is how that stops being true without anyone editing the
   // height: the band grows for one kind of content and a page of panels goes
   // ragged.
+  it("drops a verb under the title on a phone, and wraps a title too long to fit", () => {
+    const phone =
+      /@media \(max-width: 720px\)\s*\{\s*\.panel-head\s*\{([^}]*)\}/.exec(
+        stripComments(panelCss()),
+      )?.[1] ?? "";
+    expect(declaredValue(phone, "flex-wrap")).toBe("wrap");
+    expect(declaredValue(phone, "min-height")).toBe("var(--panel-head-h)");
+    const phoneTitle =
+      /@media \(max-width: 720px\)\s*\{[^@]*?\.panel-head \.panel-title\s*\{([^}]*)\}/.exec(
+        stripComments(panelCss()),
+      )?.[1] ?? "";
+    expect(declaredValue(phoneTitle, "white-space")).toBe("normal");
+  });
+
   it("never sizes the band from what the head carries", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
   });

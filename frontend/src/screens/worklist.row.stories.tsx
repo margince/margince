@@ -453,8 +453,34 @@ export const AMailboxThatStopped: Story = {
       source: "capture_health",
       category: "system",
       level: 6,
-      consequence: "data_drifts",
-      title: "A mailbox stopped syncing",
+      consequence: "mailbox_blind",
+      kind: "reauth_required",
+      detail: "lena.fischer@margince.test",
+      cause_label: "lena.fischer@margince.test",
+      connection: { provider: "gmail", medium: "mailbox" },
+      because: [],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A calendar is never called a mailbox. Its title, eyebrow and cost come from
+// the connection's medium and provider; it has no account to name.
+export const ACalendarThatStopped: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "sh2",
+      source: "capture_health",
+      category: "system",
+      level: 6,
+      consequence: "mailbox_blind",
+      kind: "reauth_required",
+      connection: { provider: "gcal", medium: "calendar" },
       because: [],
       actions: [],
     },

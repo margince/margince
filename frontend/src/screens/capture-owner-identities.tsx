@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import {
@@ -21,10 +22,14 @@ import {
 } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
-import { useT } from "../i18n";
+import { formatDate } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
+import { type MutationOutcome, useUndoableRemoval } from "./undoableremoval";
+import "./capture-owner-identities.css";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
 // contact reads, an address they forward from.
@@ -77,30 +82,68 @@ function useAddIdentity() {
   });
 }
 
-function useRemoveIdentity() {
+type Declared = Pick<OwnerIdentity, "kind" | "value">;
+
+// On the hooks, not on `mutate`: an Undo runs after its row has unmounted.
+function useRemoveIdentity(outcome: MutationOutcome<Declared | null>) {
   const queryClient = useQueryClient();
   return useMutation({
-    // The id is a VARIABLE, so the press belongs to the render the reader saw
-    // (frontend/AGENTS.md, mutation-variable-coverage).
-    mutationFn: async (id: string) => {
+    mutationFn: async (identity: OwnerIdentity): Promise<Declared | null> => {
       unwrap(
         await api.DELETE("/capture/owner-identities/{id}", {
-          params: { path: { id } },
+          params: { path: { id: identity.id } },
         }),
       );
-      return id;
+      // Declaring it again restores a typed address. A learned one would come
+      // back as typed, so it offers no undo.
+      return identity.source === "user"
+        ? { kind: identity.kind, value: identity.value }
+        : null;
     },
-    onSuccess: () => {
+    onError: outcome.onError,
+    onSuccess: (declared) => {
       queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
+      outcome.onSuccess(declared);
     },
   });
+}
+
+function useRestoreIdentity(outcome: MutationOutcome<Declared>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (declared: Declared) => {
+      unwrap(
+        await api.POST("/capture/owner-identities", {
+          body: { kind: declared.kind, value: declared.value },
+        }),
+      );
+    },
+    onError: outcome.onError,
+    onSuccess: (_, declared) => {
+      queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
+      outcome.onSuccess(declared);
+    },
+  });
+}
+
+function useIdentityRemoval() {
+  const t = useT();
+  const toasts = useUndoableRemoval<Declared>({
+    removed: t("ownerIdentities.removedToast"),
+    restored: t("ownerIdentities.restoredToast"),
+  });
+  const restore = useRestoreIdentity(toasts.restored);
+  return useRemoveIdentity(
+    toasts.removed((declared) => restore.mutate(declared)),
+  );
 }
 
 export function OwnerIdentitiesCard() {
   const t = useT();
   const query = useOwnerIdentities();
-  const remove = useRemoveIdentity();
+  const remove = useIdentityRemoval();
   const [declaring, setDeclaring] = useState(false);
+  const [confirming, setConfirming] = useState<OwnerIdentity | null>(null);
   return (
     <Panel title={t("ownerIdentities.title")}>
       <PanelBody>
@@ -127,21 +170,31 @@ export function OwnerIdentitiesCard() {
           <IdentityRows
             list={list.data}
             pending={remove.isPending}
-            onRemove={(id) => remove.mutate(id)}
+            onRemove={(identity) =>
+              identity.source === "user"
+                ? remove.mutate(identity)
+                : setConfirming(identity)
+            }
           />
         )}
       </QueryGate>
-      {remove.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("ownerIdentities.removeFailed")}
-          >
-            {problemMessageOf(remove.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
+      <ConfirmModal
+        open={confirming !== null}
+        onClose={() => setConfirming(null)}
+        title={t("ownerIdentities.removeLearnedTitle", {
+          value: confirming?.value ?? "",
+        })}
+        confirmLabel={t("ownerIdentities.removeConfirm")}
+        confirmVariant="danger"
+        pending={remove.isPending}
+        onConfirm={() => {
+          if (confirming) {
+            remove.mutate(confirming, { onSettled: () => setConfirming(null) });
+          }
+        }}
+      >
+        <p>{t("ownerIdentities.removeLearnedBody")}</p>
+      </ConfirmModal>
       {declaring && <DeclareDialog onClose={() => setDeclaring(false)} />}
     </Panel>
   );
@@ -172,12 +225,8 @@ function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
 }
 
 /**
- * One declared address per row: what it names on the left, whether it is an
- * address or a whole domain as the row's answer, and the verb that withdraws it
- * at the right.
- *
- * The same row language the exclusions card uses, because a reader auditing
- * what binds their mailbox travels one column across both.
+ * One declared address per row, with its kind and date under it. The verb at
+ * the end withdraws it.
  */
 function IdentityRows({
   list,
@@ -186,9 +235,10 @@ function IdentityRows({
 }: Readonly<{
   list: OwnerIdentity[];
   pending: boolean;
-  onRemove: (id: string) => void;
+  onRemove: (identity: OwnerIdentity) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (list.length === 0) {
     // A reading, not a failed read: "I have declared no other addresses" is
     // what a reader opens this card to confirm.
@@ -206,15 +256,22 @@ function IdentityRows({
           <SettingRow
             key={identity.id}
             label={identity.value}
-            description={learned === null ? undefined : t(learned)}
-            value={t(kindLabel[identity.kind])}
+            description={
+              <span className="owner-identity-caption">
+                <span>{t(kindLabel[identity.kind])}</span>
+                <span>
+                  {formatDate(identity.created_at, locale, viewerZone())}
+                </span>
+                {learned !== null && <span>{t(learned)}</span>}
+              </span>
+            }
             control={
               <IconAction
                 variant="ghost"
                 disabled={pending}
                 label={t("ownerIdentities.remove", { value: identity.value })}
                 icon={<Trash2 aria-hidden />}
-                onClick={() => onRemove(identity.id)}
+                onClick={() => onRemove(identity)}
               />
             }
           />

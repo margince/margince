@@ -27,6 +27,20 @@ const EVERYONE = {
   kind: "domain",
   value: "recruiting.example",
 };
+// A provider's own token, shown once in the code face, and an address long
+// enough to wrap.
+const FOLDER = {
+  id: "ex-3",
+  scope: "user",
+  kind: "container",
+  value: "gmail:CATEGORY_PROMOTIONS",
+};
+const LONG = {
+  id: "ex-4",
+  scope: "user",
+  kind: "address",
+  value: "a.very.long.personal.address.for.wrapping@family-domain.example",
+};
 
 function story(
   rules: Record<string, unknown>[],
@@ -57,7 +71,23 @@ const meta: Meta<typeof CaptureExclusionsCard> = {
 export default meta;
 type Story = StoryObj<typeof CaptureExclusionsCard>;
 
-export const Populated: Story = { render: story([MINE, EVERYONE], OPS) };
+export const Populated: Story = {
+  render: story([MINE, EVERYONE, FOLDER, LONG], OPS),
+};
+
+// Removing the rule and deleting the mail it matched share one menu.
+export const RowMenu: Story = {
+  render: story([MINE, EVERYONE], OPS),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", {
+        name: "Actions for coach@personal.example",
+      }),
+    );
+    await body.findByRole("button", { name: "Remove rule" });
+  },
+};
 
 // Nothing excluded. It has to read as a fact about the installation rather than
 // as a list that failed to draw — and left-aligned at a row's interval, not as a
@@ -84,7 +114,7 @@ export const CompanyRuleRefusedDark: Story = {
 export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story([MINE, EVERYONE], OPS),
+  render: story([MINE, EVERYONE, FOLDER, LONG], OPS),
 };
 
 export const Excluding: Story = {

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ConnectorsCard } from "./connectors";
 import {
@@ -12,22 +12,8 @@ import {
   stubWithSession,
 } from "./story-utils";
 
-// ConnectorsCard stories for the fe-uat render gate: a healthy connection, a
-// reauth-needed one (the reconnect affordance), a sync-error one, the empty
-// state, and a load failure — all off the same GET /connectors shape the
-// unit tests (connectors.test.tsx) already exercise.
-//
-// Every story renders TWO panels now — mail capture and the workspace's
-// Telegram bot — because the component draws both, and both are built from the
-// same SettingRow: identity and health on the left, state and verbs on the
-// right, at one x. What to check in any of these pictures is that the right
-// column really does line up down the whole pair, including across the
-// history-import block that rides under a connected mailbox's row.
-//
-// Both panels also put their description in the BODY rather than in `Panel`'s
-// `sub`, which is what keeps the two header bands the same height: a sentence in
-// the band raises it, and one card taller than its neighbour is a page that has
-// lost its beat.
+// Every story draws both panels, mail and the workspace's Telegram bot,
+// because the card does.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
@@ -51,8 +37,6 @@ const gmailConnected: CaptureConnection = {
   last_synced_at: "2026-07-23T09:30:00Z",
   next_sync_due_at: "2026-07-23T09:35:00Z",
   watch_expires_at: "2026-08-01T00:00:00Z",
-  // Seeds the mounted BackfillPanel so it renders the finished state with no
-  // extra request against a route this story never stubs.
   backfill: {
     state: "done",
     counts: { captured: 842, contacts_created: 96, companies_created: 21 },
@@ -97,22 +81,17 @@ const imapPolled: CaptureConnection = {
   last_synced_at: "2026-07-23T09:00:00Z",
   next_sync_due_at: "2026-07-23T09:15:00Z",
   watch_expires_at: null,
-  // IMAP has no Backfiller (connector_unsupported) — the panel's own
-  // capability statement, seeded straight from "none" with no run ever
-  // possible, needs no preview stub here since IMAP never reaches preview
-  // successfully in the first place.
   backfill: { state: "none" },
 };
 
-function cardStory(connections: CaptureConnection[]) {
+function cardStory(
+  connections: CaptureConnection[],
+  publicOrigin?: { origin: string; reachable?: boolean | null },
+) {
   return () => {
     stubAsBotManager({
-      "GET /connectors": () => jsonResponse({ data: connections }),
-      // IMAP has no Backfiller — the mounted BackfillPanel's setup screen
-      // auto-loads this preview and must render the capability statement
-      // rather than crash on the default empty-list fallback shape.
-      "POST /connectors/imap/backfill/preview": () =>
-        jsonResponse({ code: "connector_unsupported" }, 422),
+      "GET /connectors": () =>
+        jsonResponse({ data: connections, public_origin: publicOrigin }),
     });
     return (
       <StoryProviders>
@@ -149,23 +128,14 @@ export const MixedRows: Story = {
   render: cardStory([gmailConnected, gcalReauth, imapError, imapPolled]),
 };
 
-// All four statuses in dark, side by side. `statusTone` is the only thing that
-// separates "connected", "needs reconnecting" and "erroring" at a glance, and the
-// roster is where a reader compares them — three tones that hold apart in light
-// and collapse together in dark would read as four healthy mailboxes. The
-// finished BackfillPanel rides along inside the healthy row with its own
-// success-tinted plate.
+// The badges are what tell a broken row from a healthy one, so their tones
+// must hold apart in dark too.
 export const MixedRowsDark: Story = {
   globals: { theme: "dark" },
   render: cardStory([gmailConnected, gcalReauth, imapError, imapPolled]),
 };
 
-// The roster at 390px. A row is an identity column (provider, mailbox address,
-// three timestamp lines) beside up to three controls — a status badge, Reconnect
-// and Disconnect — and the reauth row is the one that has to fit all of them.
-// The healthy row also carries a whole nested panel (the finished backfill hero
-// with its three-stat grid), so this is a card inside a row inside a card at
-// phone width.
+// At 390 each row keeps its verbs at the end of its first line.
 export const MixedRowsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -176,12 +146,31 @@ export const ImapPolled: Story = {
   render: cardStory([imapPolled]),
 };
 
-// No mailbox at all. The sentence that says so is a ROW of the card's list now
-// — a stacked row, so `.empty` gives up its 90px page-furniture slab and reads
-// left-aligned at a row's own interval — and the verb that fills it sits in the
-// header rather than in the column a reader travels to audit the roster.
 export const Empty: Story = {
   render: cardStory([]),
+};
+
+// Only an address that did not answer earns a badge.
+export const OriginUnreachable: Story = {
+  render: cardStory([gmailConnected], {
+    origin: "http://localhost:8080",
+    reachable: false,
+  }),
+};
+
+// The import lives in a dialog, so the roster spends no preview on load.
+export const ImportOldEmails: Story = {
+  render: cardStory([{ ...gmailConnected, backfill: { state: "done" } }]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /^Actions for Gmail/ }),
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Import old emails" }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("dialog");
+  },
 };
 
 /** Open the card's header verb, so the picture is the dialog behind it. */
@@ -329,90 +318,4 @@ export const OAuthError: Story = {
 
 export const OAuthOk: Story = {
   render: outcomeStory("ok", [gmailConnected]),
-};
-
-// The Telegram panel is its own card now, and it has three states of its own
-// that the mail roster's stories never reach: no bot yet (one row offering the
-// connect), live bots (a row each), and a deployment with no credential store
-// to seal a token in (503, a calm feature-off state and not an error).
-function telegramStory(
-  channels: unknown[] | null,
-  stub: (routes: RouteMap) => void = stubAsBotManager,
-) {
-  return () => {
-    stub({
-      "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
-      "GET /channel-connections": () =>
-        channels === null
-          ? jsonResponse({ code: "channel_credentials_not_configured" }, 503)
-          : jsonResponse({ data: channels }),
-    });
-    return (
-      <StoryProviders>
-        <ConnectorsCard />
-      </StoryProviders>
-    );
-  };
-}
-
-const salesBot = {
-  id: "018f3a1b-0000-7000-8000-0000000000d1",
-  provider: "telegram",
-  channelId: "555000111",
-  channelLabel: "acme_sales_bot",
-  status: "connected",
-  version: 1,
-};
-
-export const TelegramNoBotYet: Story = { render: telegramStory([]) };
-
-// Two live bots is the state a send refuses outright in, and this panel is the
-// only surface that can end it — so both have to be here, each with its own
-// Disconnect.
-export const TelegramTwoBots: Story = {
-  render: telegramStory([
-    salesBot,
-    {
-      ...salesBot,
-      id: "018f3a1b-0000-7000-8000-0000000000d2",
-      channelId: "555000222",
-      channelLabel: "acme_support_bot",
-      status: "pending",
-    },
-  ]),
-};
-
-export const TelegramNotConfigured: Story = { render: telegramStory(null) };
-
-// The seeded rep reads the bot and may change none of it: the roster without
-// a verb, and one line naming who can act instead.
-export const TelegramReadOnly: Story = {
-  render: telegramStory([salesBot], (routes) =>
-    stubWithSession(
-      routes,
-      { channel_connection: ["read"] },
-      { roles: ["rep"] },
-    ),
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByText(
-      "Only an administrator or operations user can connect or change the bot.",
-    );
-    const row = within(canvas.getByTestId("telegram-connection"));
-    await expect(
-      row.queryByRole("button", { name: "Replace token" }),
-    ).toBeNull();
-    await expect(row.queryByRole("button", { name: "Disconnect" })).toBeNull();
-  },
-};
-
-// Both panels' rows in dark. The row language puts the answer in the right
-// column against the panel's own ground, and `--textMuted` (the description)
-// against `--textMeta` (the account label) is the pair most likely to
-// collapse into one grey under the dark accent lift — a mailbox address that
-// reads as help text is the failure to look for.
-export const BothPanelsDark: Story = {
-  globals: { theme: "dark" },
-  render: telegramStory([salesBot]),
 };

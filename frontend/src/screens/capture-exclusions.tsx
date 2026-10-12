@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Flame, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -9,12 +8,13 @@ import {
   EmptyState,
   Field,
   Modal,
+  OverflowMenu,
   SegmentedControl,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { IconAction } from "../design-system/iconaction";
+import { KeyedName } from "../design-system/keyedname";
 import {
   Panel,
   PanelBody,
@@ -28,7 +28,9 @@ import { useT } from "../i18n";
 import { useFolderOptions } from "./capture-exclusions.queries";
 import { PurgeDialog } from "./capture-purge-dialog";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
+import { type MutationOutcome, useUndoableRemoval } from "./undoableremoval";
+import "./capture-exclusions.css";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
 // store at all. Two scopes on one card, because a reader sees both kinds of
@@ -67,37 +69,45 @@ function useExclusions() {
   });
 }
 
-function useAddExclusion() {
+type ExclusionBody = { scope: Scope; kind: Kind; value: string };
+
+// Without an outcome it is the dialog's add. With one it is an Undo putting a
+// removed rule back, which says so in its own words.
+function useAddExclusion(outcome?: MutationOutcome<ExclusionBody>) {
   const toast = useToast();
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { scope: Scope; kind: Kind; value: string }) => {
+    mutationFn: async (body: ExclusionBody) => {
       return unwrap(await api.POST("/capture/exclusions", { body }));
     },
+    onError: outcome?.onError,
     onSuccess: (_written, added) => {
       queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });
+      if (outcome) {
+        outcome.onSuccess(added);
+        return;
+      }
       toast.show(t("settings.addedItem", { name: added.value }));
     },
   });
 }
 
-function useRemoveExclusion() {
-  const toast = useToast();
-  const t = useT();
+function useRemoveExclusion(outcome: MutationOutcome<ExclusionBody | null>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (rule: CaptureExclusion): Promise<ExclusionBody> => {
       unwrap(
         await api.DELETE("/capture/exclusions/{id}", {
-          params: { path: { id } },
+          params: { path: { id: rule.id } },
         }),
       );
+      return { scope: rule.scope, kind: rule.kind, value: rule.value };
     },
-    onSuccess: () => {
+    onError: outcome.onError,
+    onSuccess: (removed) => {
       queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });
-      // The variable is the row id; see the note in consumer-mail-domains.
-      toast.show(t("settings.removed"));
+      outcome.onSuccess(removed);
     },
   });
 }
@@ -121,7 +131,6 @@ export function CaptureExclusionsCard() {
   const t = useT();
   const canManageWorkspace = useCanWrite("capture_settings", "update");
   const query = useExclusions();
-  const remove = useRemoveExclusion();
   const [excluding, setExcluding] = useState(false);
   // The rule whose already-captured mail is being destroyed, held by id AND
   // value so the dialog can name what it is about to act on.
@@ -170,24 +179,13 @@ export function CaptureExclusionsCard() {
             list={list.data}
             canManageWorkspace={canManageWorkspace}
             denialId={denialId}
-            pending={remove.isPending}
-            onRemove={(id) => remove.mutate(id)}
             onPurge={(id, value) => setPurging({ id, value })}
           />
         )}
       </QueryGate>
-      {(refusesARow || remove.isError) && (
-        <PanelBody className="form-stack">
-          {refusesARow && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
-          {remove.isError && (
-            <Callout
-              tone="danger"
-              kind="outcome"
-              title={t("captureSettings.removeFailed")}
-            >
-              {problemMessageOf(remove.error, t)}
-            </Callout>
-          )}
+      {refusesARow && (
+        <PanelBody>
+          <p id={denialId}>{t("captureSettings.adminOnly")}</p>
         </PanelBody>
       )}
       {excluding && (
@@ -207,36 +205,20 @@ export function CaptureExclusionsCard() {
   );
 }
 
-/**
- * One rule per row: the address or domain it names on the left, who it binds
- * and what kind of rule it is as the row's answer, and the verb that takes it
- * back at the right.
- *
- * It was a hand-rolled `<ul>` with an inline-styled `<li>` and an inline
- * `marginLeft` on the meta beside each entry — the same list own-domains.tsx
- * had copied, which is the signal the shape belongs to the row language rather
- * than to either screen. `SettingList` draws the hairline between entries and
- * `SettingRow` puts every verb at one x, so a reader auditing the rules travels
- * one column instead of reading a wall.
- */
+/** One rule per row: what it names, who it binds and its kind under it. */
 function ExclusionRows({
   list,
   canManageWorkspace,
   denialId,
-  pending,
-  onRemove,
   onPurge,
 }: Readonly<{
   list: CaptureExclusion[];
   canManageWorkspace: boolean;
   /** The one sentence saying why a company-wide rule is not this reader's. */
   denialId: string;
-  pending: boolean;
-  onRemove: (id: string) => void;
   onPurge: (id: string, value: string) => void;
 }>) {
   const t = useT();
-  const words = useRuleWords();
   if (list.length === 0) {
     // `empty`, and only `empty`: nothing is excluded, which is a fact about the
     // installation rather than a read that failed.
@@ -251,44 +233,65 @@ function ExclusionRows({
   return (
     <SettingList bleed="records" testId="capture-exclusions-list">
       {list.map((rule) => (
-        <SettingRow
+        <ExclusionRow
           key={rule.id}
-          label={rule.value}
-          value={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
-          control={
-            <>
-              {/* Removing the RULE stops future capture; the other destroys
-                  what it already matched. Two different acts, and only one of
-                  them is irreversible, so they are two controls. */}
-              <IconAction
-                variant="ghost"
-                label={t("capturePurge.open", { value: rule.value })}
-                icon={<Flame aria-hidden />}
-                disabled={pending}
-                reasonId={
-                  bindsEveryone(rule) && !canManageWorkspace
-                    ? denialId
-                    : undefined
-                }
-                onClick={() => onPurge(rule.id, rule.value)}
-              />
-              <IconAction
-                variant="ghost"
-                label={t("captureExclusions.remove", { value: rule.value })}
-                icon={<Trash2 aria-hidden />}
-                disabled={pending}
-                reasonId={
-                  bindsEveryone(rule) && !canManageWorkspace
-                    ? denialId
-                    : undefined
-                }
-                onClick={() => onRemove(rule.id)}
-              />
-            </>
+          rule={rule}
+          refusal={
+            bindsEveryone(rule) && !canManageWorkspace ? denialId : undefined
           }
+          onPurge={() => onPurge(rule.id, rule.value)}
         />
       ))}
     </SettingList>
+  );
+}
+
+// Removing the rule stops future capture and comes back with Undo; deleting
+// what it already matched cannot be undone, so that verb keeps its dialog.
+function ExclusionRow({
+  rule,
+  refusal,
+  onPurge,
+}: Readonly<{
+  rule: CaptureExclusion;
+  refusal: string | undefined;
+  onPurge: () => void;
+}>) {
+  const t = useT();
+  const words = useRuleWords();
+  const toasts = useUndoableRemoval<ExclusionBody>({
+    removed: t("settings.removedItem", { name: rule.value }),
+    restored: t("settings.addedItem", { name: rule.value }),
+  });
+  const restore = useAddExclusion(toasts.restored);
+  const remove = useRemoveExclusion(
+    toasts.removed((body) => restore.mutate(body)),
+  );
+  return (
+    <SettingRow
+      label={
+        rule.kind === "container" ? (
+          <KeyedName name={rule.value} code={rule.value} />
+        ) : (
+          <span className="capture-exclusions-value">{rule.value}</span>
+        )
+      }
+      description={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
+      control={
+        <OverflowMenu label={t("table.rowActions", { name: rule.value })}>
+          <Button
+            disabled={remove.isPending}
+            reasonId={refusal}
+            onClick={() => remove.mutate(rule)}
+          >
+            {t("captureExclusions.removeRule")}
+          </Button>
+          <Button aria-haspopup="dialog" reasonId={refusal} onClick={onPurge}>
+            {t("capturePurge.openShort")}
+          </Button>
+        </OverflowMenu>
+      }
+    />
   );
 }
 

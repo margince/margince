@@ -11568,7 +11568,8 @@ export interface paths {
          * Which AI providers are not answering, and why.
          * @description Every provider this process currently treats as degraded, down, out of credit or refusing
          *     its credential, in name order. A provider that is answering normally is not listed, so an
-         *     empty list is the healthy answer.
+         *     empty list is the healthy answer when `configured` names at least one provider. With no
+         *     provider configured both lists are empty, and nothing is answering.
          *
          *     The API and the worker each publish their status changes to Redis and this reads the merged
          *     view, where the worst or blocking status wins, so an outage only the worker saw still shows.
@@ -21029,8 +21030,38 @@ export interface components {
              * @enum {string}
              */
             admission: "suppressed" | "admitted" | "undecided";
-            /** @description One sentence an operator can act on: why this domain was refused, let in, or left open. */
+            /**
+             * @deprecated
+             * @description One sentence an operator can act on: why this domain was refused, let in, or left open.
+             *     Kept for clients that predate `reason_code`. A sentence the machine wrote is English
+             *     whatever the reader's language, so a client says `reason_code` in the reader's own
+             *     words and shows `note` for a decision somebody explained.
+             */
             reason: string;
+            /**
+             * @description Why, as a code the client words in the reader's language.
+             *
+             *     - `stated`: whoever decided wrote the reason down; it travels as `note`.
+             *     - `company_created`: a colleague created a company on this domain, which let it in.
+             *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
+             *       company this business works with. `sender_kind` says which, when it is known.
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
+             *       question, as `source` describes each one.
+             * @enum {string}
+             */
+            reason_code: "stated" | "company_created" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate";
+            /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
+            note?: string;
+            /**
+             * @description What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
+             * @enum {string}
+             */
+            sender_kind?: "newsletter" | "transactional" | "spam";
+            /**
+             * @description The name of the company `company_id` points at. Sent exactly when `company_id` is, so
+             *     a company the reader may not see stays withheld by both.
+             */
+            company_name?: string;
             /**
              * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
              *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -21048,7 +21079,8 @@ export interface components {
             decided_at: string;
             /**
              * Format: uuid
-             * @description The company on this domain, when one exists — an admitted domain usually has one.
+             * @description The company on this domain, when one exists and the reader may see it. An admitted
+             *     domain usually has one. A company the reader may not open is withheld, never pointed at.
              */
             company_id?: string | null;
         };
@@ -22420,6 +22452,12 @@ export interface components {
         AiProviderHealth: {
             /** @description Providers that are not answering normally, in name order. Empty when all are. */
             providers: components["schemas"]["AiProviderHealthEntry"][];
+            /**
+             * @description Every provider the routing binds now, answering or not, in name order and in the
+             *     same names `providers` uses. Empty when no AI provider is configured. An empty
+             *     `providers` means every provider answers only when this list is not empty too.
+             */
+            configured: string[];
         };
         AiProviderHealthEntry: {
             /** @description The provider's name as the routing binds it, never a key or host. */
@@ -42225,6 +42263,7 @@ export interface components {
              */
             detail?: string;
             staged?: components["schemas"]["AttentionStagedFacts"];
+            connection?: components["schemas"]["AttentionConnectionFacts"];
             /**
              * @description How many days a deal or a relationship has been idle, where the producing lane
              *     measures one. Sent by `deal_at_risk` and `relationship_decay`.
@@ -42411,6 +42450,22 @@ export interface components {
             machine_sender?: boolean;
             /** @description The address's domain already names a company in this workspace. */
             known_company?: boolean;
+        };
+        /**
+         * @description The connection a `capture_health` row is about. Sent only for `source: capture_health`.
+         *
+         *     Typed so the client names it in the reader's language. `detail` and `cause_label` carry
+         *     the account label when the connector reported one, and are absent when it did not:
+         *     neither ever carries a provider id.
+         */
+        AttentionConnectionFacts: {
+            /** @description The provider id the connection was made with (`gmail`, `imap`, `gcal`, …). A key the client maps to a display name, never prose. */
+            provider: string;
+            /**
+             * @description Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
+             * @enum {string}
+             */
+            medium: "mailbox" | "calendar";
         };
         /**
          * @description The deal behind a `deal_at_risk` item: the facts its card states, so a client
@@ -43669,6 +43724,8 @@ export interface components {
             kind?: string;
             /** @description The server's own sentence for this item, where it has one. */
             title?: string;
+            /** @description The connection a `capture_health` row is about, carried from the attention item. Sent only on `capture_health` rows. */
+            connection?: components["schemas"]["AttentionConnectionFacts"];
             /**
              * @description Which underlying CONDITION this row reports, so a surface can group repeated
              *     failures of one thing into one row. Opaque identity, never rendered and never
@@ -43888,6 +43945,12 @@ export interface components {
             done: components["schemas"]["MagicLine"][];
             needs_you: components["schemas"]["MagicLine"][];
             could_not_complete: components["schemas"]["MagicLine"][];
+            /**
+             * @description One line per connection whose health needs restoring. Its summary values carry
+             *     `provider`, the connection's provider id (`gmail`, `gcal`, …), which the client maps to
+             *     a display name; `account`, the account label, when the connector reported one; and
+             *     `failing_since` where the condition has a start.
+             */
             watching: components["schemas"]["MagicLine"][];
             totals: components["schemas"]["MagicTotals"];
             /**
@@ -44522,6 +44585,21 @@ export interface components {
             chunks_total: number;
             chunks_embedded: number;
             documents_total: number;
+            /**
+             * @description Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+             *     searchable rather than shown a bare count.
+             *
+             *     - `no_embedding_model`: this installation binds no embedding model, so no passage
+             *       gets a vector and nothing is searchable. It is the same answer as
+             *       `settings_availability.embedding_reindex` being false on `/me`, read from the
+             *       same embed lane.
+             *     - `indexing`: a model is bound and work is still owed: a document is queued or
+             *       being read, a re-embed is running, or some passage has no vector under the
+             *       model bound now.
+             *     - `complete`: every live passage carries a vector under the model bound now.
+             * @enum {string}
+             */
+            embed_state: "no_embedding_model" | "indexing" | "complete";
         };
         KnowledgeDocument: {
             /** Format: uuid */

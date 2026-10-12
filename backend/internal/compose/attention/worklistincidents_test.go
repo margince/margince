@@ -349,3 +349,36 @@ func TestAGroupTakesItsScreenFromItsMembers(t *testing.T) {
 			"first member's screen", *disagreeing.item.Destination, destinationReview)
 	}
 }
+
+// A folded capture incident has no title to sample, so only the connection its
+// members share lets the client name it.
+func TestAFoldedCaptureIncidentCarriesTheConnectionItsMembersShare(t *testing.T) {
+	incident := func(providers ...string) crmcontracts.WorklistItem {
+		t.Helper()
+		rows := []crmcontracts.AttentionItem{}
+		for i, provider := range providers {
+			row := item(provider+string(rune('a'+i)), "capture_health", withKind("reauth_required"))
+			cause := "capture_health:reauth_required:sales@acme.test"
+			row.CauseRef = &cause
+			row.Connection = &crmcontracts.AttentionConnectionFacts{
+				Provider: provider, Medium: crmcontracts.AttentionConnectionFactsMediumCalendar,
+			}
+			rows = append(rows, row)
+		}
+		day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
+		got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
+		if len(got) != 1 || got[0].Batch == nil {
+			t.Fatalf("four failures of one cause drew %d rows, want one incident", len(got))
+		}
+		return got[0]
+	}
+
+	shared := incident("gcal", "gcal", "gcal", "gcal")
+	if shared.Connection == nil || shared.Connection.Provider != "gcal" ||
+		shared.Connection.Medium != crmcontracts.AttentionConnectionFactsMediumCalendar {
+		t.Errorf("incident connection = %+v, want the gcal calendar every member names", shared.Connection)
+	}
+	if mixed := incident("gcal", "graphcal", "gcal", "gcal"); mixed.Connection != nil {
+		t.Errorf("incident connection = %+v, want none when the members name different connections", mixed.Connection)
+	}
+}

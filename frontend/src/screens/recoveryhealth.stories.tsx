@@ -87,3 +87,8 @@ export const PassedDark: Story = {
   globals: { theme: "dark" },
   render: story(PASSED),
 };
+
+export const FailedOverTargetAtPhoneWidth: Story = {
+  ...FailedOverTarget,
+  tags: ["uat-phone"],
+};

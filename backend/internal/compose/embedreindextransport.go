@@ -427,7 +427,7 @@ func WithEmbedReindex(router *ai.Router, inserter *jobs.Runner) Option {
 		if router == nil || inserter == nil {
 			return
 		}
-		if identity, _ := router.EmbedIdentity(); identity == "" {
+		if embedLaneIdentity(router) == "" {
 			return
 		}
 		store := search.NewStore(InstallationDB(pool))

@@ -7,8 +7,8 @@ import {
   type UnitSecretScope,
   unitsForSecretScope,
 } from "../app/extensions";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { KeyedName } from "../design-system/keyedname";
+import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
 import "./extension-units.css";
 
@@ -34,12 +34,8 @@ import "./extension-units.css";
 // no gate of their own — the rail rows they replace had none either, and a
 // unit's screen refuses independently on the object it declares.
 //
-// A unit is ONE settings row, not a panel of its own: the page offers it, and
-// the only thing to do with the offer is go there. Nothing about a unit is
-// configured HERE — its own screen owns that — so a nested panel would draw a
-// container around a single verb. The row puts the unit's name in the same
-// naming column as every other decision on the page, with the way in where
-// every other answer sits.
+// A unit is one row whose only verb is to go there, so the whole row is the
+// link. Its own screen configures it.
 
 /**
  * The units whose credential lives in `scope`, or nothing at all.
@@ -64,49 +60,32 @@ export function ExtensionUnitsCard({
     <Panel title={t(`extUnits.${scope}.title`)}>
       <PanelBody>
         <PanelIntro>{t(`extUnits.${scope}.sub`)}</PanelIntro>
-        <SettingList>
-          {units.map((unit) => (
-            <UnitRow key={unit.name} name={unit.name} />
-          ))}
-        </SettingList>
       </PanelBody>
+      {units.map((unit) => (
+        <UnitRow key={unit.name} name={unit.name} />
+      ))}
     </Panel>
   );
 }
 
 /**
- * One unit, as a row whose verb leads to its screen.
- *
- * The row draws the unit's name and the control is the way in, so the link's
- * VISIBLE text can be the verb while its accessible name still carries the
- * unit: a list of links all announced as "Open" names nothing to anyone reading
- * them out of context, which is the trap the whole-row link was avoiding
- * before. The row's naming column wraps, so a long unit name needs no
- * truncation and there is nothing left to reveal on hover.
+ * One unit, as a row that is its own way in. A unit ships no display name, so
+ * its directory name shows once, in the code face.
  */
 function UnitRow({ name }: Readonly<{ name: string }>) {
   const t = useT();
   return (
-    <SettingRow
-      testId={`ext-unit-${name}`}
-      label={
-        <span className="extunits-name">
-          <Blocks aria-hidden />
-          {/* Untranslated: it is the INSTALLATION's text, and a catalogue this
-              program ships cannot hold a string for a unit it has never seen. */}
-          {name}
-        </span>
-      }
-      control={
-        <a
-          className="extunits-open"
-          href={`#/${EXTENSION_SCREEN}/${name}`}
-          aria-label={t("extUnits.openNamed", { name })}
-        >
-          {t("extUnits.open")}
-          <ChevronRight aria-hidden />
-        </a>
-      }
-    />
+    <PanelRow interactive record className="extunits-row">
+      <a
+        className="extunits-row-press"
+        data-testid={`ext-unit-${name}`}
+        href={`#/${EXTENSION_SCREEN}/${name}`}
+        aria-label={t("extUnits.openNamed", { name })}
+      >
+        <Blocks className="extunits-mark" aria-hidden />
+        <KeyedName name={name} code={name} />
+        <ChevronRight className="extunits-go" aria-hidden />
+      </a>
+    </PanelRow>
   );
 }

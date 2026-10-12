@@ -18,7 +18,6 @@ import {
   CalendarSection,
   DefaultFields,
   LimitFields,
-  QuickLink,
   SetupChecklist,
 } from "./meeting-settings-sections";
 import { useSchedulingProfile } from "./scheduling-profile-query";
@@ -122,7 +121,6 @@ function MeetingSettingsForm({
       (calendar.needsCalendar && (!ready || !selected?.writable)));
   return (
     <div className="book-form">
-      <QuickLink profile={profile} />
       <SetupChecklist
         calendar={ready && !!selected?.writable}
         hours={chosen}

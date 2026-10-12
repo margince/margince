@@ -151,20 +151,8 @@ func readOpenQuestionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedD
 	if err != nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: reading where %s stands: %w", domain, err)
 	}
-	if companyID != nil {
-		// Withheld unless the caller could read that company, exactly as the
-		// list withholds it. A company captured from mail is owner-PRIVATE
-		// until somebody promotes it, and that privacy does not yield to
-		// row_scope=all — so answering with the id here would hand a colleague
-		// a pointer to a record the record's own endpoint correctly 404s.
-		visible, verr := auth.VisibleTo(ctx, tx, entityCompany, *companyID)
-		if verr != nil {
-			return BlockedDomain{}, verr
-		}
-		if visible {
-			typed := ids.From[ids.CompanyKind](*companyID)
-			d.CompanyID = &typed
-		}
+	if err := withVisibleCompanyTx(ctx, tx, &d, companyID); err != nil {
+		return BlockedDomain{}, err
 	}
 	return d, nil
 }

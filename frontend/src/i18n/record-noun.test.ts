@@ -333,7 +333,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
-    "captureHealth.classifier",
+    "captureHealth.fact.pending",
+    "captureHealth.fact.unsure",
+    "captureHealth.fact.exhausted",
+    "captureActivity.col.message",
+    "senders.byYou",
     "compose.derivedReply",
     "log.attendee",
     "book.attendee",
@@ -342,7 +346,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "scheduling.cancelConfirm",
     "pipeline.reason.answered_on_the_company",
     "pipeline.reason.no_site_identified",
-    "senders.emptyTitle",
     "sendPermission.unproven",
     "sendPermission.reason.ambiguous",
     "sendPermission.reason.askedUsToStop",

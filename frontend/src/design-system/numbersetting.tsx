@@ -33,6 +33,7 @@ export function NumberSetting({
   max,
   lowestOn,
   refusal,
+  reading,
   onCommit,
   disabled,
   testId,
@@ -43,6 +44,8 @@ export function NumberSetting({
   max: number;
   lowestOn?: number;
   refusal: string;
+  /** The typed number in words under the box, for a unit a bare figure hides. */
+  reading?: (value: number) => string;
   onCommit: (next: number) => void;
   disabled?: boolean;
   testId?: string;
@@ -57,8 +60,14 @@ export function NumberSetting({
   } | null>(null);
   const [refused, setRefused] = useState(false);
   const refusalId = useId();
+  const readingId = useId();
   const live = draft !== null && draft.over === value ? draft : null;
   const shown = live?.text ?? String(value);
+  const typed = Number(shown.trim());
+  const words =
+    reading && shown.trim() !== "" && Number.isInteger(typed)
+      ? reading(typed)
+      : null;
   const commit = (by: "enter" | "blur") => {
     if (live === null) {
       setRefused(false);
@@ -92,11 +101,16 @@ export function NumberSetting({
       <TextInput
         {...control}
         aria-describedby={
-          [control["aria-describedby"], refused ? refusalId : null]
+          [
+            control["aria-describedby"],
+            words ? readingId : null,
+            refused ? refusalId : null,
+          ]
             .filter(Boolean)
             .join(" ") || undefined
         }
         aria-invalid={refused ? true : undefined}
+        className="t-num"
         data-testid={testId}
         inputMode="numeric"
         value={shown}
@@ -110,6 +124,11 @@ export function NumberSetting({
           }
         }}
       />
+      {words && (
+        <span id={readingId} className="t-caption numbersetting-reading">
+          {words}
+        </span>
+      )}
       <ErrorLine id={refusalId}>{refused ? refusal : null}</ErrorLine>
     </div>
   );

@@ -29,7 +29,11 @@ type Entry = {
   retry_after?: string;
 };
 
-function stubBackend(providers: Entry[], allow: GrantSpec = DIAGNOSER) {
+function stubBackend(
+  providers: Entry[],
+  allow: GrantSpec = DIAGNOSER,
+  configured: string[] = ["gemini", "openai"],
+) {
   const sent: string[] = [];
   vi.stubGlobal(
     "fetch",
@@ -39,7 +43,8 @@ function stubBackend(providers: Entry[], allow: GrantSpec = DIAGNOSER) {
       const path = new URL(req.url).pathname.replace(/^\/v1/, "");
       sent.push(path);
       if (path === "/me") return jsonResponse(meFixture({ allow }));
-      if (path === "/ai/provider-health") return jsonResponse({ providers });
+      if (path === "/ai/provider-health")
+        return jsonResponse({ configured, providers });
       if (path === "/ai/provider-keys")
         return jsonResponse({
           providers: [
@@ -94,6 +99,19 @@ describe("ProviderHealthCard", () => {
     expect(
       await screen.findByText("All AI providers are answering."),
     ).toBeInTheDocument();
+  });
+
+  it("does not call an installation with no provider healthy", async () => {
+    stubBackend([], DIAGNOSER, []);
+    render(<ProviderHealthCard />);
+    expect(
+      await screen.findByText(
+        "No AI provider is set up, so there is nothing to check.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("All AI providers are answering."),
+    ).not.toBeInTheDocument();
   });
 
   it.each([

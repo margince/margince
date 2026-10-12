@@ -267,32 +267,28 @@ export function MailSharingPostureRow() {
   const shared = query.data?.mail_sharing ?? false;
   return (
     <Panel title={t("mailSharing.title")}>
-      <PanelBody>
-        {/* A fact, not a setting: a definition list rather than SettingRow,
-            which requires a control because every row of it is something a
-            reader can operate. This one is operated on Capture rules. */}
-        <dl className="settings-facts">
-          <dt>{t("mailSharing.label")}</dt>
-          <dd>
-            {/* The stored answer in words. `query.data` is absent while the read
-                is in flight, and an absent answer says nothing rather than
-                claiming the narrower one — a wrong statement about who can read
-                somebody's mail is worse than a moment with no statement. */}
-            {query.isSuccess
+      <SettingList bleed="settings">
+        <SettingRow
+          testId="mail-sharing-posture"
+          label={t("mailSharing.label")}
+          // Absent while the read is in flight: a wrong statement about who can
+          // read somebody's mail is worse than a moment with none.
+          description={
+            query.isSuccess
               ? t(
                   shared
                     ? "mailSharing.posture.shared"
                     : "mailSharing.posture.private",
                 )
-              : null}
-          </dd>
-        </dl>
-        {canChangeIt && (
-          <p>
-            <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
-          </p>
-        )}
-      </PanelBody>
+              : undefined
+          }
+          control={
+            canChangeIt && (
+              <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
+            )
+          }
+        />
+      </SettingList>
     </Panel>
   );
 }

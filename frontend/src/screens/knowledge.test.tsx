@@ -56,7 +56,12 @@ function corpus(over: Record<string, unknown> = {}) {
     min_similarity: 0.35,
     default_ask: false,
     created_at: "2026-08-01T00:00:00Z",
-    coverage: { documents_total: 1, chunks_total: 4, chunks_embedded: 4 },
+    coverage: {
+      documents_total: 1,
+      chunks_total: 4,
+      chunks_embedded: 4,
+      embed_state: "complete",
+    },
     ...over,
   };
 }
@@ -154,6 +159,7 @@ describe("KnowledgeCard", () => {
               documents_total: 1,
               chunks_total: 4,
               chunks_embedded: 0,
+              embed_state: "no_embedding_model",
             },
           }),
         ],
@@ -164,11 +170,14 @@ describe("KnowledgeCard", () => {
 
     expect(await screen.findByText(/0 of 4 passages searchable/)).toBeTruthy();
     await user.click(
-      await screen.findByRole("button", { name: /show documents/i }),
+      await screen.findByRole("button", { name: "Documents in How-to" }),
     );
+    // The set says why nothing is searchable, and a read document draws no
+    // green "Imported" beside it to contradict that.
+    expect(screen.getByText("Not searchable")).toBeTruthy();
+    expect(screen.getByText(/no embedding model is set up/i)).toBeTruthy();
     expect(await screen.findByText("operating.md")).toBeTruthy();
-    expect(screen.getByText("Imported")).toBeTruthy();
-    expect(screen.queryByText("Searchable")).toBeNull();
+    expect(screen.queryByText("Imported")).toBeNull();
   });
 
   it("offers no verbs to a reader who may ask but not administer", async () => {
@@ -178,7 +187,9 @@ describe("KnowledgeCard", () => {
     // The set is visible: read IS the ask, and every seeded role holds it.
     expect(await screen.findByText("How-to")).toBeTruthy();
     // And nothing that changes it is offered.
-    expect(screen.queryByRole("button", { name: /archive set/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Actions for How-to" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: /create set/i })).toBeNull();
   });
 
@@ -224,7 +235,7 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: /show documents/i }),
+      await screen.findByRole("button", { name: "Documents in How-to" }),
     );
 
     expect(await screen.findByText("operating.md")).toBeTruthy();
@@ -261,14 +272,17 @@ describe("KnowledgeCard", () => {
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<KnowledgeCard />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /archive set/i }),
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
     );
+    await user.click(screen.getByRole("button", { name: /archive set/i }));
+    expect(
+      within(screen.getByRole("dialog")).getByText("Archive How-to?"),
+    ).toBeTruthy();
     expect(backend.deletes).toHaveLength(0);
 
-    // The dialog's own confirm, not the row button that opened it: both carry
-    // the same verb, which is right on screen and ambiguous to a query.
-    await userEvent.click(
+    await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^archive set$/i,
       }),
@@ -287,7 +301,7 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: /show documents/i }),
+      await screen.findByRole("button", { name: "Documents in How-to" }),
     );
     const input = await screen.findByLabelText(/add document/i);
     await userEvent.upload(
@@ -313,7 +327,7 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: /show documents/i }),
+      await screen.findByRole("button", { name: "Documents in How-to" }),
     );
     // Named up front rather than after a refusal: there is no reader for a PDF
     // here, and a contact who has just watched an upload fail has learned it the
@@ -321,5 +335,54 @@ describe("KnowledgeCard", () => {
     expect(
       await screen.findByText(/plain text, markdown, csv or json/i),
     ).toBeTruthy();
+  });
+});
+
+describe("KnowledgeCard documents", () => {
+  it("lists a set's documents A to Z with their passages and size", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        documents: [
+          document({ id: "b", filename: "zeta.md", chunk_count: 12 }),
+          document({ id: "a", filename: "alpha.md", byte_size: 2_048 }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    const table = await screen.findByRole("table", {
+      name: "Documents in How-to",
+    });
+    const names = within(table)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[0]?.textContent);
+    expect(names).toEqual(["alpha.md", "zeta.md"]);
+    expect(within(table).getByText("2 kB")).toBeTruthy();
+  });
+
+  it("asks before deleting a document, naming it", async () => {
+    const backend = backendFor(ADMIN);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for operating.md" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByText("Delete operating.md?")).toBeTruthy();
+    expect(backend.deletes).toHaveLength(0);
+    await user.click(dialog.getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(backend.deletes).toHaveLength(1));
   });
 });

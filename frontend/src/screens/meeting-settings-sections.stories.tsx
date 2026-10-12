@@ -1,10 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { bookingProfile } from "./book.testkit";
-import {
-  DefaultFields,
-  QuickLink,
-  SetupChecklist,
-} from "./meeting-settings-sections";
+import { DefaultFields, SetupChecklist } from "./meeting-settings-sections";
 import { StoryProviders } from "./story-utils";
 
 import "./book.css";
@@ -25,17 +21,6 @@ export const ChecklistOneLeft: Story = {
 };
 export const ChecklistOneLeftDark: Story = {
   ...ChecklistOneLeft,
-  globals: { theme: "dark" },
-};
-export const QuickCopyPaused: Story = {
-  render: () => (
-    <StoryProviders>
-      <QuickLink profile={{ ...bookingProfile, enabled: false }} />
-    </StoryProviders>
-  ),
-};
-export const QuickCopyPausedDark: Story = {
-  ...QuickCopyPaused,
   globals: { theme: "dark" },
 };
 export const DefaultsOnOutlook: Story = {

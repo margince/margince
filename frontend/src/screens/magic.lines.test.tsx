@@ -183,4 +183,37 @@ describe("a receipt line is one row", () => {
     renderMagic();
     expect(rowOf(await onlyLine("Needs restoring")).mark).toBe("restore");
   });
+
+  it("names a failing connector by its readable name, never its provider id", async () => {
+    stub(
+      receipt({
+        watching: [
+          line({
+            lane: "watching",
+            summary: {
+              key: "magic.action.capture_reauth_required",
+              values: { provider: "gcal", account: "anna@example.com" },
+            },
+          }),
+          line({
+            id: "00000000-0000-7000-8000-000000000002",
+            lane: "watching",
+            summary: {
+              key: "magic.action.capture_sync_failing",
+              values: { provider: "imap" },
+            },
+          }),
+        ],
+      }),
+    );
+    renderMagic();
+    const watching = await screen.findByRole("list", {
+      name: "Needs restoring",
+      hidden: true,
+    });
+    const text = watching.textContent ?? "";
+    expect(text).toContain("Google Calendar needs to be connected again");
+    expect(text).toContain("IMAP mailbox is not keeping up");
+    expect(text).not.toMatch(/\bgcal\b|\bimap\b/);
+  });
 });

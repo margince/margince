@@ -2023,6 +2023,24 @@ func (e AttentionThisMorningState) Valid() bool {
 	}
 }
 
+// Defines values for AttentionConnectionFactsMedium.
+const (
+	AttentionConnectionFactsMediumCalendar AttentionConnectionFactsMedium = "calendar"
+	AttentionConnectionFactsMediumMailbox  AttentionConnectionFactsMedium = "mailbox"
+)
+
+// Valid indicates whether the value is a known member of the AttentionConnectionFactsMedium enum.
+func (e AttentionConnectionFactsMedium) Valid() bool {
+	switch e {
+	case AttentionConnectionFactsMediumCalendar:
+		return true
+	case AttentionConnectionFactsMediumMailbox:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionItemActions.
 const (
 	AttentionItemActionsAcknowledge AttentionItemActions = "acknowledge"
@@ -2998,6 +3016,57 @@ func (e BlockedDomainAdmission) Valid() bool {
 	case BlockedDomainAdmissionSuppressed:
 		return true
 	case BlockedDomainAdmissionUndecided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BlockedDomainReasonCode.
+const (
+	BlockedDomainReasonCodeBulkSender     BlockedDomainReasonCode = "bulk_sender"
+	BlockedDomainReasonCodeCompanyCreated BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeNearDuplicate  BlockedDomainReasonCode = "near_duplicate"
+	BlockedDomainReasonCodeStaleEvidence  BlockedDomainReasonCode = "stale_evidence"
+	BlockedDomainReasonCodeStated         BlockedDomainReasonCode = "stated"
+	BlockedDomainReasonCodeUnevidenced    BlockedDomainReasonCode = "unevidenced"
+)
+
+// Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
+func (e BlockedDomainReasonCode) Valid() bool {
+	switch e {
+	case BlockedDomainReasonCodeBulkSender:
+		return true
+	case BlockedDomainReasonCodeCompanyCreated:
+		return true
+	case BlockedDomainReasonCodeNearDuplicate:
+		return true
+	case BlockedDomainReasonCodeStaleEvidence:
+		return true
+	case BlockedDomainReasonCodeStated:
+		return true
+	case BlockedDomainReasonCodeUnevidenced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BlockedDomainSenderKind.
+const (
+	BlockedDomainSenderKindNewsletter    BlockedDomainSenderKind = "newsletter"
+	BlockedDomainSenderKindSpam          BlockedDomainSenderKind = "spam"
+	BlockedDomainSenderKindTransactional BlockedDomainSenderKind = "transactional"
+)
+
+// Valid indicates whether the value is a known member of the BlockedDomainSenderKind enum.
+func (e BlockedDomainSenderKind) Valid() bool {
+	switch e {
+	case BlockedDomainSenderKindNewsletter:
+		return true
+	case BlockedDomainSenderKindSpam:
+		return true
+	case BlockedDomainSenderKindTransactional:
 		return true
 	default:
 		return false
@@ -10855,6 +10924,27 @@ func (e KnowledgeAnswerOutcome) Valid() bool {
 	case KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeRetrievalUnavailable:
 		return true
 	case KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for KnowledgeCoverageEmbedState.
+const (
+	KnowledgeCoverageEmbedStateComplete         KnowledgeCoverageEmbedState = "complete"
+	KnowledgeCoverageEmbedStateIndexing         KnowledgeCoverageEmbedState = "indexing"
+	KnowledgeCoverageEmbedStateNoEmbeddingModel KnowledgeCoverageEmbedState = "no_embedding_model"
+)
+
+// Valid indicates whether the value is a known member of the KnowledgeCoverageEmbedState enum.
+func (e KnowledgeCoverageEmbedState) Valid() bool {
+	switch e {
+	case KnowledgeCoverageEmbedStateComplete:
+		return true
+	case KnowledgeCoverageEmbedStateIndexing:
+		return true
+	case KnowledgeCoverageEmbedStateNoEmbeddingModel:
 		return true
 	default:
 		return false
@@ -23437,6 +23527,11 @@ type AiProfileState string
 
 // AiProviderHealth defines model for AiProviderHealth.
 type AiProviderHealth struct {
+	// Configured Every provider the routing binds now, answering or not, in name order and in the
+	// same names `providers` uses. Empty when no AI provider is configured. An empty
+	// `providers` means every provider answers only when this list is not empty too.
+	Configured []string `json:"configured"`
+
 	// Providers Providers that are not answering normally, in name order. Empty when all are.
 	Providers []AiProviderHealthEntry `json:"providers"`
 }
@@ -24923,6 +25018,22 @@ type AttentionLanesOmitted string
 // when the lane itself was withheld (`lanes_omitted` names it).
 type AttentionThisMorningState string
 
+// AttentionConnectionFacts The connection a `capture_health` row is about. Sent only for `source: capture_health`.
+//
+// Typed so the client names it in the reader's language. `detail` and `cause_label` carry
+// the account label when the connector reported one, and are absent when it did not:
+// neither ever carries a provider id.
+type AttentionConnectionFacts struct {
+	// Medium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
+	Medium AttentionConnectionFactsMedium `json:"medium"`
+
+	// Provider The provider id the connection was made with (`gmail`, `imap`, `gcal`, …). A key the client maps to a display name, never prose.
+	Provider string `json:"provider"`
+}
+
+// AttentionConnectionFactsMedium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
+type AttentionConnectionFactsMedium string
+
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
@@ -25116,6 +25227,13 @@ type AttentionItem struct {
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
 	Confidence *float32 `json:"confidence,omitempty"`
+
+	// Connection The connection a `capture_health` row is about. Sent only for `source: capture_health`.
+	//
+	// Typed so the client names it in the reader's language. `detail` and `cause_label` carry
+	// the account label when the connector reported one, and are absent when it did not:
+	// neither ever carries a provider id.
+	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
 
 	// Deal The deal behind a `deal_at_risk` item: the facts its card states, so a client
 	// draws value and ownership without a second read per row. Sent only for
@@ -26011,8 +26129,13 @@ type BlockedDomain struct {
 	// on the row for this state, it is what the absence of a decision is called on the wire.
 	Admission BlockedDomainAdmission `json:"admission"`
 
-	// CompanyId The company on this domain, when one exists — an admitted domain usually has one.
+	// CompanyId The company on this domain, when one exists and the reader may see it. An admitted
+	// domain usually has one. A company the reader may not open is withheld, never pointed at.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// CompanyName The name of the company `company_id` points at. Sent exactly when `company_id` is, so
+	// a company the reader may not see stays withheld by both.
+	CompanyName *string `json:"company_name,omitempty"`
 
 	// DecidedAt When the decision was recorded. For an `undecided` domain, when the row last moved.
 	DecidedAt time.Time `json:"decided_at"`
@@ -26020,8 +26143,28 @@ type BlockedDomain struct {
 	// Domain The registrable domain the decision is about.
 	Domain string `json:"domain"`
 
+	// Note The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`.
+	Note *string `json:"note,omitempty"`
+
 	// Reason One sentence an operator can act on: why this domain was refused, let in, or left open.
+	// Kept for clients that predate `reason_code`. A sentence the machine wrote is English
+	// whatever the reader's language, so a client says `reason_code` in the reader's own
+	// words and shows `note` for a decision somebody explained.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Reason string `json:"reason"`
+
+	// ReasonCode Why, as a code the client words in the reader's language.
+	//
+	// - `stated`: whoever decided wrote the reason down; it travels as `note`.
+	// - `company_created`: a colleague created a company on this domain, which let it in.
+	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
+	//   company this business works with. `sender_kind` says which, when it is known.
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
+	//   question, as `source` describes each one.
+	ReasonCode BlockedDomainReasonCode `json:"reason_code"`
+
+	// SenderKind What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
+	SenderKind *BlockedDomainSenderKind `json:"sender_kind,omitempty"`
 
 	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -26036,6 +26179,19 @@ type BlockedDomain struct {
 // refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
 // on the row for this state, it is what the absence of a decision is called on the wire.
 type BlockedDomainAdmission string
+
+// BlockedDomainReasonCode Why, as a code the client words in the reader's language.
+//
+//   - `stated`: whoever decided wrote the reason down; it travels as `note`.
+//   - `company_created`: a colleague created a company on this domain, which let it in.
+//   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
+//     company this business works with. `sender_kind` says which, when it is known.
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
+//     question, as `source` describes each one.
+type BlockedDomainReasonCode string
+
+// BlockedDomainSenderKind What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
+type BlockedDomainSenderKind string
 
 // BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 // `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -37048,7 +37204,33 @@ type KnowledgeCoverage struct {
 	ChunksEmbedded int `json:"chunks_embedded"`
 	ChunksTotal    int `json:"chunks_total"`
 	DocumentsTotal int `json:"documents_total"`
+
+	// EmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+	// searchable rather than shown a bare count.
+	//
+	// - `no_embedding_model`: this installation binds no embedding model, so no passage
+	//   gets a vector and nothing is searchable. It is the same answer as
+	//   `settings_availability.embedding_reindex` being false on `/me`, read from the
+	//   same embed lane.
+	// - `indexing`: a model is bound and work is still owed: a document is queued or
+	//   being read, a re-embed is running, or some passage has no vector under the
+	//   model bound now.
+	// - `complete`: every live passage carries a vector under the model bound now.
+	EmbedState KnowledgeCoverageEmbedState `json:"embed_state"`
 }
+
+// KnowledgeCoverageEmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+// searchable rather than shown a bare count.
+//
+//   - `no_embedding_model`: this installation binds no embedding model, so no passage
+//     gets a vector and nothing is searchable. It is the same answer as
+//     `settings_availability.embedding_reindex` being false on `/me`, read from the
+//     same embed lane.
+//   - `indexing`: a model is bound and work is still owed: a document is queued or
+//     being read, a re-embed is running, or some passage has no vector under the
+//     model bound now.
+//   - `complete`: every live passage carries a vector under the model bound now.
+type KnowledgeCoverageEmbedState string
 
 // KnowledgeDocument defines model for KnowledgeDocument.
 type KnowledgeDocument struct {
@@ -38084,7 +38266,12 @@ type MagicReceipt struct {
 	// happened today". The window's own size arrives with the cursor, which is the
 	// thing that makes it worth counting; a figure asserted before then would be
 	// neither the page nor the window.
-	Totals   MagicTotals `json:"totals"`
+	Totals MagicTotals `json:"totals"`
+
+	// Watching One line per connection whose health needs restoring. Its summary values carry
+	// `provider`, the connection's provider id (`gmail`, `gcal`, …), which the client maps to
+	// a display name; `account`, the account label, when the connector reported one; and
+	// `failing_since` where the condition has a start.
 	Watching []MagicLine `json:"watching"`
 }
 
@@ -48537,6 +48724,9 @@ type WorklistItem struct {
 	// READER's, filled under their own grants, and absent where the reader may not
 	// have them, which is not the same as never.
 	Company *WorklistCompanyFacts `json:"company,omitempty"`
+
+	// Connection The connection a `capture_health` row is about, carried from the attention item. Sent only on `capture_health` rows.
+	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
 
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close

@@ -170,7 +170,7 @@ To create a knowledge base in Margince, open **Settings → Knowledge** and fill
 2. Under **New document set**, fill **Name** and **What this set covers** (both required).
    Write one real sentence: it is shown to anyone whose question the set does not cover.
 3. Click **Create set**.
-4. On the new set, click **Show documents** and drop one or more files on **Add document**.
+4. Click the new set's row to open its documents, and drop one or more files on **Add document**.
    Then click **Add document** (or **Add {count} documents**).
 Also called: knowledge base, FAQ, handbook, document library, corpus.
 
@@ -220,22 +220,30 @@ Each document in a set moves through a visible state as it is taken in:
 
 - **Queued**
 - **Importing…**
-- **Imported**
-- **Could not be read**, with "Why this file could not be read"
+- **Could not be read**, with the reason under it
 
-The set shows how much of it can be searched: "{documents} documents ·
-{embedded} of {total} passages searchable". It may be read again after a change
+A document that was read shows no badge.
+
+The set shows how many documents it holds and how much of it can be searched:
+"{embedded} of {total} passages searchable". When some passages cannot be
+searched, it says why:
+
+- **Not searchable**: "No embedding model is set up, so no passage can be
+  searched."
+- **Indexing**: "Passages are still being indexed."
+
+It may be read again after a change
 to how text is indexed. Then it says "Reindexing this set", and that no data was
 lost. A question asked while that runs gets the answer that the set is not ready,
 and is not answered from part of the set.
 
 ### Removing things from a document set
 
-**Archive set**: "Archive this document set? The set and its documents are no
-longer searchable. Nothing is deleted."
+**Archive set**, in the set's **…** menu: "Archive {name}? The set and its
+documents are no longer searchable. Nothing is deleted."
 
-**Delete** a document: "Delete this document? The file, its extracted text and
-its search index are permanently deleted."
+**Delete**, in a document's **…** menu: "Delete {name}? The file, its extracted
+text and its search index are permanently deleted."
 
 ### Who can see which sets exist
 Not everyone can see which document sets exist. If they are not yours to see,

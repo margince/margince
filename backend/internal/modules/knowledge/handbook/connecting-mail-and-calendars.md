@@ -88,7 +88,7 @@ arrives.
 ### Why did my Gmail or Outlook connection stop working?
 When emails stop coming into Margince, open **Settings → Connections** and read the status on the mailbox under **Connected mailboxes and calendars**.
 - **Needs reconnect**: "The provider rejected the stored credentials. Reconnect to resume." Press **Reconnect** and approve access again.
-- **Sync error**: the line under it says why. When the provider is slowed down or unreachable, Margince tries again on its own. If it stays in **Sync error**, press **Disconnect**, then connect again with **Add connector**.
+- **Sync error**: the line under it says why. When the provider is slowed down or unreachable, Margince tries again on its own. If it stays in **Sync error**, choose **Disconnect** in the row's **…** menu, then connect again with **Add connector**.
 - **Disconnected**: connect again with **Add connector**.
 Also called: mailbox not syncing, emails stopped coming in, Gmail disconnected, sync broken.
 
@@ -101,9 +101,9 @@ To reconnect a mailbox in Margince (for example when Gmail stopped syncing), ope
 Also called: re-authenticate, fix mailbox sync, refresh email connection.
 
 ### How do I disconnect a mailbox?
-To disconnect a mailbox from Margince, open **Settings → Connections** and press **Disconnect** on the mailbox. Confirm with **Disconnect** in "Disconnect this mailbox?".
+To disconnect a mailbox from Margince, open **Settings → Connections** and choose **Disconnect** in the mailbox's **…** menu. Confirm with **Disconnect** in "Disconnect this mailbox?".
 1. Open **Settings**, then **Connections**.
-2. Press **Disconnect** on the mailbox or calendar.
+2. Open the **…** menu on the mailbox or calendar and choose **Disconnect**.
 3. Confirm with **Disconnect**.
 Capture stops at once and Margince drops its access to the mailbox. Everything already captured stays in the CRM, and reconnecting asks for permission again.
 Google or Microsoft may still list Margince under the connected apps of your account. Remove it there too to end all access.
@@ -143,23 +143,23 @@ Also called: add a Telegram bot, link Telegram, BotFather token.
 ### Why did my Telegram bot not connect?
 When connecting fails, the form shows **Bot not connected** with the reason. The form starts empty again, so paste the token once more.
 - The token was refused: check the token BotFather sent you, and that nobody revoked it.
-- A bot is already connected: the company has one bot. Use **Replace token** or **Disconnect** on it first.
+- A bot is already connected: the company has one bot. Use **Replace token** or **Disconnect** in its **…** menu first.
 - Telegram could not be reached: nothing changed, so try again later.
 Also called: Telegram token rejected, bot not connected.
 
 ### How do I replace the Telegram bot token?
-To replace the bot token, press **Replace token** on the bot's row and paste the new token.
+To replace the bot token, choose **Replace token** in the bot's **…** menu and paste the new token.
 1. Open **Settings**, then **Connections**.
-2. In the **Telegram bot** card, press **Replace token**.
+2. In the **Telegram bot** card, open the bot's **…** menu and choose **Replace token**.
 3. Paste the new token into **Bot token** in **Replace bot token**, and press **Replace token**.
 The connection stays, with all captured chats and contacts. You can even point it at a different bot.
 Replacing the token keeps the status. A bot in **Needs reconnect** or **Sync error** needs **Disconnect**, then connecting again.
 Also called: change the bot token, new BotFather token, change the bot.
 
 ### How do I disconnect the Telegram bot?
-To disconnect the Telegram bot, press **Disconnect** on its row and confirm in "Disconnect this bot?".
+To disconnect the Telegram bot, choose **Disconnect** in its **…** menu and confirm in "Disconnect this bot?".
 1. Open **Settings**, then **Connections**.
-2. In the **Telegram bot** card, press **Disconnect**.
+2. In the **Telegram bot** card, open the bot's **…** menu and choose **Disconnect**.
 3. Confirm with **Disconnect**.
 Margince deletes the stored token and stops reading the bot at once. Every message and contact it captured stays in the CRM.
 Also called: remove the Telegram bot, stop Telegram capture, unlink Telegram.
@@ -173,11 +173,12 @@ Margince does not try again on its own. Once the other reader is gone, press **D
 Also called: Telegram not syncing, bot stopped capturing.
 
 ### How do I import my old emails?
-To import your old emails into Margince, open **Settings → Connections** and use **Import mailbox history** under the connected mailbox. Choose an **Import window** and press **Start import**.
+To import your old emails into Margince, open **Settings → Connections** and choose **Import old emails** in the mailbox's **…** menu. Choose **How far back** and press **Start import**.
 1. Open **Settings**, then **Connections**.
-2. Under the mailbox, in **Import mailbox history**, pick an **Import window** from **3 months** to **10 years**. 6 months is the default.
-3. Read the message count and **Estimated AI cost**, then press **Start import**, or **Skip mailbox history import**.
-**Stop import** keeps what was captured so far. IMAP mailboxes have no history import, and the window can only be widened later.
+2. Open the **…** menu on the mailbox and choose **Import old emails**.
+3. Pick **How far back**, from **3 months** to **10 years**. 6 months is the default.
+4. Read the email count and the AI cost, then press **Start import**, or **Not now**.
+**Stop** keeps what was captured so far. IMAP mailboxes have no history import, and the window can only be widened later.
 Also called: backfill, import past mail, sync old emails, email history.
 
 ## Importing your mail history
