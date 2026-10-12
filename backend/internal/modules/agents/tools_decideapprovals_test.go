@@ -23,8 +23,10 @@ func TestDecideApprovalsPicksTheTargetByTheIDItNames(t *testing.T) {
 			t.Errorf("%s: served %q with %v, want %s's own refusal", tc.args, served.Tool, err, tc.target)
 		}
 	}
-	for _, args := range []string{`{"decision":"approve"}`,
-		`{"staged_action_id":"a","bundle_id":"b","decision":"approve"}`} {
+	for _, args := range []string{
+		`{"decision":"approve"}`,
+		`{"staged_action_id":"a","bundle_id":"b","decision":"approve"}`,
+	} {
 		served, err := r.InvokeServed(agentCtx(), "decide_approvals", json.RawMessage(args))
 		if _, bad := errors.AsType[*BadArgsError](err); !bad || served.Tool != "decide_approvals" {
 			t.Errorf("%s: served %q with %v, want the router's refusal naming exactly one id", args, served.Tool, err)

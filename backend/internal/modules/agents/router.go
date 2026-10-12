@@ -89,6 +89,17 @@ func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 	return t.Spec()
 }
 
+type routeChoice struct {
+	Type string   `json:"type"`
+	Enum []string `json:"enum"`
+}
+
+type routedObject struct {
+	Type       string                     `json:"type"`
+	Required   []string                   `json:"required,omitempty"`
+	Properties map[string]json.RawMessage `json:"properties"`
+}
+
 // routedSchema is the targets' arguments plus the route field. An argument is
 // required only when every target requires it; the target's own check still
 // refuses a call missing one only it needs. An argument the router describes
@@ -108,7 +119,7 @@ func routedSchema(field string, choices []string, own json.RawMessage, targets [
 	var required []string
 	for i, target := range targets {
 		var own struct {
-			Required   []string                   `json:"required"`
+			Required   []string                   `json:"required,omitempty"`
 			Properties map[string]json.RawMessage `json:"properties"`
 		}
 		if err := json.Unmarshal(target.InputSchema, &own); err != nil {
@@ -127,7 +138,7 @@ func routedSchema(field string, choices []string, own json.RawMessage, targets [
 		}
 	}
 	if field != "" {
-		enum, err := json.Marshal(map[string]any{"type": "string", "enum": choices})
+		enum, err := json.Marshal(routeChoice{Type: schemaString, Enum: choices})
 		if err != nil {
 			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 			panic(err)
@@ -135,7 +146,7 @@ func routedSchema(field string, choices []string, own json.RawMessage, targets [
 		properties[field] = enum
 		required = append([]string{field}, required...)
 	}
-	out, err := json.Marshal(map[string]any{"type": "object", "required": required, "properties": properties})
+	out, err := json.Marshal(routedObject{Type: schemaObject, Required: required, Properties: properties})
 	if err != nil {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(err)
@@ -202,8 +213,10 @@ func pickTarget(rt router, members map[string]json.RawMessage) (string, error) {
 		}
 	}
 	choices := slices.Sorted(maps.Keys(rt.routeTargets()))
-	return "", &BadArgsError{Field: field,
-		Cause: fmt.Errorf("%s must be one of %s", field, strings.Join(choices, ", "))}
+	return "", &BadArgsError{
+		Field: field,
+		Cause: fmt.Errorf("%s must be one of %s", field, strings.Join(choices, ", ")),
+	}
 }
 
 // routed gives a router the Handle every tool must have. Registry.resolve

@@ -27,8 +27,13 @@ func (decideApprovals) Spec() mcp.ToolSpec {
 
 func (decideApprovals) routeField() string { return "" }
 
+const (
+	decideOne    = "decide_approval"
+	decideBundle = "decide_approval_bundle"
+)
+
 func (decideApprovals) routeTargets() map[string]string {
-	return map[string]string{"one": "decide_approval", "bundle": "decide_approval_bundle"}
+	return map[string]string{"one": decideOne, "bundle": decideBundle}
 }
 
 var errDecideNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of staged_action_id or bundle_id")}
@@ -38,9 +43,9 @@ func (decideApprovals) chooseTarget(members map[string]json.RawMessage) (string,
 	_, bundle := members["bundle_id"]
 	switch {
 	case one && !bundle:
-		return "decide_approval", nil
+		return decideOne, nil
 	case bundle && !one:
-		return "decide_approval_bundle", nil
+		return decideBundle, nil
 	}
 	return "", errDecideNamesOneID
 }

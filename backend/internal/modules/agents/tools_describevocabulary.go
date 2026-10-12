@@ -20,11 +20,14 @@ func (describeVocabulary) Spec() mcp.ToolSpec {
 	}
 }
 
+// topicQuery is the topic naming query_workspace's vocabulary.
+const topicQuery = "query"
+
 func (describeVocabulary) routeField() string { return "topic" }
 
 func (describeVocabulary) routeTargets() map[string]string {
 	return map[string]string{
-		"query":             "describe_query_vocabulary",
+		topicQuery:          "describe_query_vocabulary",
 		"analytics":         "describe_analytics_vocabulary",
 		"record_fields":     "describe_record_fields",
 		"report_blocks":     "describe_report_blocks",

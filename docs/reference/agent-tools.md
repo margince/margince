@@ -16,8 +16,8 @@ and what a live server shows can differ from the table:
   `["read"]` sees the read tools and nothing else. The filter copies the scope check of the admission gate, so the
   list never shows what the gate will refuse.
 
-  It answers **only for scope**: the seat limit and object RBAC of the human who gave the passport are checked on
-  each call, and can still refuse a tool the list showed.
+  It answers **only for scope**. Each call checks the seat limit and object RBAC of the human who gave the
+  passport. They can still refuse a tool the list showed.
 - **Extensions register after core.** `registerComposedTools` runs last in `internal/compose/registry.go`, so an
   extension unit can add verbs, and a name that is the same as a core verb fails boot. Each extension operation
   declares `x-mcp-tool` or `x-agent-access: human-only`, the same closed set of options core operations have. A
@@ -27,9 +27,9 @@ and what a live server shows can differ from the table:
   A tool that must be confirmed first must declare `x-mcp-tool.subject`. At boot, Margince refuses `send` and `enrich`
   from an extension; the rules are in [how-to/add-an-extension.md](../how-to/add-an-extension.md). The composed set is
   a trust line, and that limits what the handler of a unit can do.
-- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none, and the operations of
-  `extensions/openchannel` are all `human-only`: one returns a lasting signing secret over a path open to all, and
-  one moves a member's whole outbound mail route. On a plain install, the catalog below is all an agent can reach.
+- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none. The operations of
+  `extensions/openchannel` are all `human-only`. One returns a lasting signing secret over a path open to all. One
+  moves a member's whole outbound mail route. On a plain install, the catalog below is all an agent can reach.
 
 **Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the origin of `/oauth/*`
 and the discovery documents. There is no stdio transport and no `cmd/mcp` binary. To connect a client:

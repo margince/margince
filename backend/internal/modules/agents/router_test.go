@@ -52,6 +52,7 @@ func (f fakeRouter) Spec() mcp.ToolSpec {
 	}
 	return spec
 }
+
 func (fakeRouter) Handle(context.Context, json.RawMessage) (json.RawMessage, error) {
 	return nil, errors.New("a router is resolved before any handler runs")
 }
@@ -184,8 +185,10 @@ func TestRegisterDerivesTheRouterSpec(t *testing.T) {
 	small.InputSchema = json.RawMessage(`{"type":"object","required":["x"],"properties":{"x":{"type":"integer"},"y":{"type":"string"}}}`)
 	r.Register(&argsTool{spec: big})
 	r.Register(&argsTool{spec: small})
-	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"b": "fake_b", "a": "fake_a"},
-		schema: `{"type":"object","properties":{"x":{"type":"integer","description":"what x means for every action"}}}`})
+	r.Register(fakeRouter{
+		name: "fake_ab", targets: map[string]string{"b": "fake_b", "a": "fake_a"},
+		schema: `{"type":"object","properties":{"x":{"type":"integer","description":"what x means for every action"}}}`,
+	})
 
 	spec, _ := r.Spec("fake_ab")
 	if spec.RequiredScope != principal.ScopeWrite || spec.Tier != mcp.TierAutoExecute {
