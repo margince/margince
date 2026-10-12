@@ -124,7 +124,7 @@ func TestAnEntryThatLiesAboutItsSizeStopsAtTheDeclaredSize(t *testing.T) {
 }
 
 func TestTheTemplateFileNameOfEveryTypeIsDetectedAsThatType(t *testing.T) {
-	for _, object := range []string{ObjectCompany, ObjectContact, ObjectLead} {
+	for _, object := range ImportOrder {
 		if got := DetectObject("export/" + FileNameFor(object)); got != object {
 			t.Errorf("FileNameFor(%s) = %q is detected as %q", object, FileNameFor(object), got)
 		}

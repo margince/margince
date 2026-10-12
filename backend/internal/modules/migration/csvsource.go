@@ -73,6 +73,9 @@ type CSVSource struct {
 	object    string
 	mapping   map[string]string
 	sourceKey string
+	// zip, when it names an entry, makes the bytes one file of a stored ZIP
+	// instead of the blob itself.
+	zip ZipPart
 
 	// skipped accumulates rows no page could deliver. One source is walked by
 	// one request — the engine pages sequentially and the prediction pass runs
@@ -87,6 +90,13 @@ type CSVSource struct {
 // makes that choice.
 func NewCSVSource(blobs blobstore.Store, key, object string, mapping map[string]string, sourceKeyColumn string) *CSVSource {
 	return &CSVSource{blobs: blobs, key: key, object: object, mapping: mapping, sourceKey: sourceKeyColumn}
+}
+
+// NewZipPartSource binds one entry of a stored ZIP to one object and mapping.
+func NewZipPartSource(blobs blobstore.Store, part ZipPart, object string, mapping map[string]string, sourceKeyColumn string) *CSVSource {
+	s := NewCSVSource(blobs, part.Key, object, mapping, sourceKeyColumn)
+	s.zip = part
+	return s
 }
 
 // Objects fixes the import order. One upload is one object, so there is one.
@@ -240,9 +250,9 @@ type openFile struct {
 // mapping check needs only the names — and both must frame it identically, or
 // the check accepts a column the walk then cannot find.
 func (s *CSVSource) open(ctx context.Context) (openFile, error) {
-	body, _, err := s.blobs.Get(ctx, s.key)
+	body, err := s.openBody(ctx)
 	if err != nil {
-		return openFile{}, fmt.Errorf("import source %q: %w", s.key, err)
+		return openFile{}, err
 	}
 	records, err := newRecordReader(body)
 	if err != nil {
@@ -264,6 +274,21 @@ func (s *CSVSource) open(ctx context.Context) (openFile, error) {
 	}
 	file.header = header
 	return file, nil
+}
+
+// openBody is the stored file, or the one entry of a stored ZIP.
+//
+// Every walk re-opens the entry, bounded by the upload cap: the same O(rows)
+// per page a plain file costs.
+func (s *CSVSource) openBody(ctx context.Context) (io.ReadCloser, error) {
+	if s.zip.Entry == "" {
+		body, _, err := s.blobs.Get(ctx, s.key)
+		if err != nil {
+			return nil, fmt.Errorf("import source %q: %w", s.key, err)
+		}
+		return body, nil
+	}
+	return openZipEntry(ctx, s.blobs, s.zip)
 }
 
 // close releases the stored file. A close error cannot change what was already
