@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -190,11 +190,15 @@ function CriterionCreate({
 }: Readonly<{ stageId: string; stageName: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const stageNameId = useId();
   return (
     <>
+      <span id={stageNameId} className="sr-only">
+        {stageName}
+      </span>
       <Button
         data-testid={`new-criterion-${stageId}`}
-        aria-label={t("stage.criteria.addTo", { name: stageName })}
+        aria-describedby={stageNameId}
         onClick={() => setOpen(true)}
       >
         {t("stage.criteria.add")}

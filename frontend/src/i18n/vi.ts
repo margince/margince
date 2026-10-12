@@ -6372,7 +6372,6 @@ export const vi = {
   "stage.criteria.hint": "Gợi ý",
   "stage.criteria.editOf": "Sửa {name}",
   "stage.criteria.removeOf": "Gỡ {name}",
-  "stage.criteria.addTo": "Thêm tiêu chí cho {name}",
   "stage.criteria.remove": "Gỡ",
   "stage.criteria.removeTitle": "Gỡ tiêu chí này?",
   "stage.criteria.removeBody":

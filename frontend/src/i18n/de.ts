@@ -6506,7 +6506,6 @@ export const de = {
   "stage.criteria.hint": "Hinweis",
   "stage.criteria.editOf": "{name} bearbeiten",
   "stage.criteria.removeOf": "{name} entfernen",
-  "stage.criteria.addTo": "Kriterium hinzufügen zu {name}",
   "stage.criteria.remove": "Entfernen",
   "stage.criteria.removeTitle": "Dieses Kriterium entfernen?",
   "stage.criteria.removeBody":

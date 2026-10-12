@@ -6647,7 +6647,6 @@ export const en = {
   "stage.criteria.hint": "Hint",
   "stage.criteria.editOf": "Edit {name}",
   "stage.criteria.removeOf": "Remove {name}",
-  "stage.criteria.addTo": "Add criterion to {name}",
   "stage.criteria.remove": "Remove",
   "stage.criteria.removeTitle": "Remove this criterion?",
   "stage.criteria.removeBody":

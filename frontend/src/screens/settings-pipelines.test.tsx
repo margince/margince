@@ -454,9 +454,11 @@ describe("PipelinesCard: the ladder", () => {
     expect(criteriaReads()).toHaveLength(0);
     await user.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    const add = await screen.findByRole("button", { name: "Add criterion" });
     expect(
-      await screen.findByRole("button", { name: "Add criterion to Qualify" }),
-    ).toBeTruthy();
+      document.getElementById(add.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("Qualify");
     expect(criteriaReads().map((c) => new URL(c.url).pathname)).toEqual([
       "/v1/stages/s1/exit-criteria",
     ]);
