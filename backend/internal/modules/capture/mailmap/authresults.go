@@ -16,10 +16,11 @@ import (
 // nothing inside one is read as a result.
 var authComment = regexp.MustCompile(`\([^()]*\)`)
 
-// authQuoted is a quoted string. The server copies sender-chosen values into
-// its result, smtp.mailfrom among them, and a quoted local part may carry a
-// ";" and a whole forged clause. It is removed before the clauses are split.
-var authQuoted = regexp.MustCompile(`"[^"]*"`)
+// authQuoted is a quoted string, escaped characters included. The server
+// copies sender-chosen values into its result, smtp.mailfrom among them, and a
+// quoted local part may carry a ";" and a whole forged clause. It is removed
+// before the clauses are split.
+var authQuoted = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 
 // TopSenderAuthentication reads the topmost Authentication-Results header: the
 // one the final receiving server wrote. A receiving server adds its headers
@@ -69,10 +70,15 @@ func parseAuthenticationResults(value string) connector.SenderAuthentication {
 	if len(verdicts) != 1 || len(verdicts[0]) == 0 || verdicts[0][0] != "pass" {
 		return out
 	}
+	// One header.from: a pass naming two domains says nothing about either.
+	var domains []string
 	for _, token := range verdicts[0][1:] {
 		if domain, ok := strings.CutPrefix(token, "header.from="); ok {
-			out.DMARCPassDomain = domain
+			domains = append(domains, domain)
 		}
+	}
+	if len(domains) == 1 {
+		out.DMARCPassDomain = domains[0]
 	}
 	return out
 }

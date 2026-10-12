@@ -91,6 +91,23 @@ func TestOnlyTheTopmostAuthenticationResultIsRead(t *testing.T) {
 			want:  connector.SenderAuthentication{Server: "mx.google.com"},
 		},
 		{
+			name: "a forged clause behind an escaped quote",
+			lines: []string{
+				`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="a\"; dmarc=pass header.from=acme.example; \"b"@evil.example`,
+			},
+			want: connector.SenderAuthentication{Server: "mx.google.com"},
+		},
+		{
+			name:  "a quoted value with an escaped quote around a real pass",
+			lines: []string{`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="a\"b"@acme.example; dmarc=pass header.from=acme.example`},
+			want:  connector.SenderAuthentication{Server: "mx.google.com", DMARCPassDomain: "acme.example"},
+		},
+		{
+			name:  "a pass naming two domains",
+			lines: []string{"Authentication-Results: mx.google.com; dmarc=pass header.from=evil.example header.from=acme.example"},
+			want:  connector.SenderAuthentication{Server: "mx.google.com"},
+		},
+		{
 			name:  "a quote this reading cannot pair",
 			lines: []string{`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="x@evil.example; dmarc=pass header.from=acme.example`},
 			want:  connector.SenderAuthentication{},

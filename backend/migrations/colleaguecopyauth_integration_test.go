@@ -73,7 +73,16 @@ func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
 	if _, err := conn.Exec(ctx, `UPDATE activity SET counterparty_outbound_attested = true WHERE id = $1`, attestedSince); err != nil {
 		t.Fatal(err)
 	}
-	wrapped := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-7", gmail, pass...)
+	escapedPass := []string{
+		`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="s\"m"@auth.test;`,
+		"       dmarc=pass header.from=auth.test",
+	}
+	wrapped := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-7", gmail, escapedPass...)
+	behindEscapedQuote := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-9", gmail,
+		`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="a\"; dmarc=pass header.from=auth.test; \"b"@evil.test`)
+	aroundEscapedQuote := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-10", gmail, escapedPass...)
+	twoDomains := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-11", gmail,
+		"Authentication-Results: mx.google.com; dmarc=pass header.from=evil.test header.from=auth.test")
 	if _, err := conn.Exec(ctx, `
 		UPDATE raw_capture SET payload = jsonb_build_object('encoding', 'base64',
 		       'data', encode(convert_to(payload #>> '{}', 'UTF8') || '\x00ff'::bytea, 'base64'))
@@ -87,14 +96,17 @@ func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
 	for name, c := range map[string]struct {
 		id, direction, counterparty string
 	}{
-		"Gmail passed DMARC for the From domain": {authenticated, "outbound", "dana@client.test"},
-		"the topmost result failed":              {failed, "inbound", "sam@auth.test"},
-		"no stored original":                     {noOriginal, "inbound", "sam@auth.test"},
-		"captured over IMAP":                     {overIMAP, "inbound", "sam@auth.test"},
-		"a pass smuggled in a quoted sender":     {smuggled, "inbound", "sam@auth.test"},
-		"a pass under another DMARC version":     {otherVersion, "inbound", "sam@auth.test"},
-		"attested by the colleague's mailbox":    {attestedSince, "outbound", "dana@client.test"},
-		"a base64-wrapped original that passed":  {wrapped, "outbound", "dana@client.test"},
+		"Gmail passed DMARC for the From domain":  {authenticated, "outbound", "dana@client.test"},
+		"the topmost result failed":               {failed, "inbound", "sam@auth.test"},
+		"no stored original":                      {noOriginal, "inbound", "sam@auth.test"},
+		"captured over IMAP":                      {overIMAP, "inbound", "sam@auth.test"},
+		"a pass smuggled in a quoted sender":      {smuggled, "inbound", "sam@auth.test"},
+		"a pass under another DMARC version":      {otherVersion, "inbound", "sam@auth.test"},
+		"attested by the colleague's mailbox":     {attestedSince, "outbound", "dana@client.test"},
+		"a base64-wrapped original that passed":   {wrapped, "outbound", "dana@client.test"},
+		"a forged clause behind an escaped quote": {behindEscapedQuote, "inbound", "sam@auth.test"},
+		"a pass around an escaped quote":          {aroundEscapedQuote, "outbound", "dana@client.test"},
+		"a pass naming two domains":               {twoDomains, "inbound", "sam@auth.test"},
 	} {
 		var direction, counterparty string
 		var stillColleague bool
