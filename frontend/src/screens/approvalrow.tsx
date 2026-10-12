@@ -30,7 +30,7 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import { approvalKindLabel } from "./approvalkind";
+import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import {
@@ -38,7 +38,7 @@ import {
   isVersionSkew,
   ProblemError,
   provenanceOf,
-  throwProblem,
+  unwrap,
   useViewerId,
 } from "./common";
 import { SendPermission } from "./sendpermission";
@@ -231,16 +231,14 @@ export function ApprovalRow({
         input.verdict === "approve"
           ? "/approvals/{id}/approve"
           : "/approvals/{id}/reject";
-      const { data, error } = await api.POST(path, {
-        params: { path: { id: approval.id } },
-        ...(input.verdict === "approve" && input.editedPayload
-          ? { body: { edited_payload: input.editedPayload } }
-          : {}),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST(path, {
+          params: { path: { id: approval.id } },
+          ...(input.verdict === "approve" && input.editedPayload
+            ? { body: { edited_payload: input.editedPayload } }
+            : {}),
+        }),
+      );
     },
     onSuccess: (_data, input) => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
@@ -278,7 +276,8 @@ export function ApprovalRow({
 
   const problem =
     decide.error instanceof ProblemError ? decide.error.problem : null;
-  const skew = problem ? isVersionSkew(problem) : false;
+  const skewKey =
+    problem && isVersionSkew(problem) ? decisionSkewKey(approval.kind) : null;
   const alreadyDecided = problem ? isAlreadyDecided(problem) : false;
 
   // The draft is seeded with what the CONTROL will show, not with what the
@@ -398,7 +397,7 @@ export function ApprovalRow({
           )}
           <DecideOutcome
             decide={decide}
-            skew={skew}
+            skewKey={skewKey}
             alreadyDecided={alreadyDecided}
             onReRead={reRead}
           />

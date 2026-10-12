@@ -41,8 +41,7 @@ func Deterministic(companyID string, in Input, lang string) []Sentence {
 	sentences = append(sentences,
 		perRecordSentences(stalledDeals(in), citeDeal, dealID,
 			func(deal DealIn) string { return stalledLine(deal, say) })...)
-	if len(in.Recent) > 0 {
-		last := in.Recent[0]
+	if last, ok := lastContact(in); ok {
 		sentences = append(sentences, Sentence{
 			Text:     lastTouchLine(last, say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},
@@ -280,8 +279,7 @@ func DeterministicSections(companyID string, in Input, lang string) []Section {
 	}
 
 	var activity []Sentence
-	if len(in.Recent) > 0 {
-		last := in.Recent[0]
+	if last, ok := lastContact(in); ok {
 		activity = append(activity, Sentence{
 			Text:     lastTouchLine(last, say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},

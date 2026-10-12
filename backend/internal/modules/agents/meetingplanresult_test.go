@@ -5,6 +5,7 @@ package agents
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -31,8 +32,8 @@ func TestCitationsReachesEveryFieldThatCanCarryEvidence(t *testing.T) {
 		return MeetingBriefLine{Text: "x", Evidence: cite()}
 	}
 	plan := MeetingPlanResult{
-		Objective: ptrTo(line()),
-		Opening:   ptrTo(line()),
+		Objective: new(line()),
+		Opening:   new(line()),
 		TopRisk: &MeetingPlanRiskPart{
 			Text: line(),
 		},
@@ -73,9 +74,8 @@ func TestCitationsReachesEveryFieldThatCanCarryEvidence(t *testing.T) {
 		"Objective", "Opening", "TopRisk", "LikelyAsks",
 		"Questions", "Scenarios", "Arc", "Advance",
 	}
-	shape := reflect.TypeOf(MeetingPlanResult{})
-	for i := range shape.NumField() {
-		field := shape.Field(i)
+	shape := reflect.TypeFor[MeetingPlanResult]()
+	for field := range shape.Fields() {
 		if !canCarryEvidence(field.Type) {
 			continue
 		}
@@ -92,8 +92,8 @@ func canCarryEvidence(shape reflect.Type) bool {
 	case reflect.Pointer, reflect.Slice:
 		return canCarryEvidence(shape.Elem())
 	case reflect.Struct:
-		for i := range shape.NumField() {
-			if canCarryEvidence(shape.Field(i).Type) {
+		for field := range shape.Fields() {
+			if canCarryEvidence(field.Type) {
 				return true
 			}
 		}
@@ -105,12 +105,5 @@ func canCarryEvidence(shape reflect.Type) bool {
 }
 
 func contains(names []string, want string) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
-
-func ptrTo[T any](v T) *T { return &v }

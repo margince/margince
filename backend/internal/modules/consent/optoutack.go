@@ -37,6 +37,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -183,12 +184,7 @@ func (s *Store) stageAcknowledgementTx(
 // mailing an acknowledgement to a dead address would be both futile and a
 // second delivery attempt at one the provider already rejected.
 func acknowledgeableStop(kind string) bool {
-	for _, k := range acknowledgeableKinds() {
-		if kind == k {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(acknowledgeableKinds(), kind)
 }
 
 // acknowledgeableKinds is the same answer as a list, for the validator that has

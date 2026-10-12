@@ -59,6 +59,9 @@ func writtenToBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (b
 // in the company's mailbox long before the CRM read it. Reading that mailbox
 // is not a new acquisition of them.
 //
+// A colleague's mail held as a copy counts: the mailbox received it, though
+// capture files it as the workspace's outbound mail.
+//
 // The proof is the PROVIDER's arrival time in that seat's mailbox
 // (capture_import.provider_received_at: Gmail's internalDate, Graph's
 // receivedDateTime), never the Date header, which the sender writes. The import
@@ -79,7 +82,7 @@ func receivedBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (bo
 		    JOIN activity a ON a.id = p.activity_id
 		    JOIN capture_import ci ON ci.activity_id = a.id
 		   WHERE p.address = lower(trim($1)) AND p.role IN ('to', 'cc')
-		     AND a.kind = 'email' AND a.direction = 'inbound'
+		     AND a.kind = 'email' AND (a.direction = 'inbound' OR a.sent_by_colleague IS NOT NULL)
 		     AND NOT a.bulk_mail_attested AND a.archived_at IS NULL
 		     AND ci.provider_received_at < (SELECT min(cc.created_at) FROM capture_connection cc
 		                                     WHERE cc.user_id = ci.user_id))`, email).Scan(&held); err != nil {

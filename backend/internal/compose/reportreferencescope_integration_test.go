@@ -250,7 +250,7 @@ func TestAnAnalyticsFilterOnAReferenceIsScoped(t *testing.T) {
 		VALUES ($1, 'Open Customer', 'manual', 'human:x')`)
 	// Above the privacy floor on both sides, so a refusal can never stand in
 	// for the scope and pass this test for the wrong reason.
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		for _, company := range []ids.UUID{hidden, open} {
 			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency, expected_close_date, source, captured_by)
 				VALUES ($1, 'Deal', $2, $3, $4, 50000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x')`,
@@ -470,7 +470,7 @@ func TestTheAnalyticsSurfaceScopesAJoinedAttributeToo(t *testing.T) {
 		VALUES ($1, $2, 'Hidden Enterprise', '1001-5000', 'owner', 'manual', 'human:x')`, e.Rep3)
 	open := e.seedID(t, `INSERT INTO company (id, display_name, size_band, source, captured_by)
 		VALUES ($1, 'Open Startup', '11-50', 'manual', 'human:x')`)
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		for _, company := range []ids.UUID{hidden, open} {
 			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
 				VALUES ($1, 'Won deal', $2, $3, $4, 'won', now() - interval '2 days', 50000, 'EUR', 1.0, (now() - interval '2 days')::date, 'manual', 'human:x')`,

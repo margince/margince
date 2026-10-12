@@ -59,7 +59,7 @@ func TestAHeldSendCardIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
 
-	setBaseLanguage(ctx, t, e.Pool, "de")
+	SetBaseLanguage(ctx, t, e.Pool, "de")
 	german := `"Angebot Q3" wurde nicht gesendet: eine Prüfung hat den Versand zum Sendezeitpunkt abgelehnt`
 	if got := holdAndReadSummary(ctx, t, e); got != german {
 		t.Errorf("the installation is set to German and the card reads %q, want %q", got, german)
@@ -68,7 +68,7 @@ func TestAHeldSendCardIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
 	// The other direction catches a resolver that happens to return a
 	// constant: a test asserting only German passes against code that always
 	// writes German.
-	setBaseLanguage(ctx, t, e.Pool, "en")
+	SetBaseLanguage(ctx, t, e.Pool, "en")
 	english := `"Angebot Q3" was not sent: a gate refused it at send time`
 	if got := holdAndReadSummary(ctx, t, e); got != english {
 		t.Errorf("the installation was changed to English and the card reads %q, want %q", got, english)
@@ -136,14 +136,14 @@ func TestALinkedInMatchCardIsWrittenInTheInstallationsBaseLanguage(t *testing.T)
 		t.Fatalf("seeding the account: %v", err)
 	}
 
-	setBaseLanguage(ctx, t, e.Pool, "de")
+	SetBaseLanguage(ctx, t, e.Pool, "de")
 	seedLinkedInLookalike(ctx, t, e, company, "Andreas Müller", "andreas muller", "Andreas Muller")
 	german := "Andreas Müller bei Acme GmbH scheint Andreas Muller zu sein"
 	if got := stageLinkedInAndReadSummary(ctx, t, e, "Andreas Muller"); got != german {
 		t.Errorf("the installation is set to German and the card reads %q, want %q", got, german)
 	}
 
-	setBaseLanguage(ctx, t, e.Pool, "en")
+	SetBaseLanguage(ctx, t, e.Pool, "en")
 	seedLinkedInLookalike(ctx, t, e, company, "Björn Lindström", "bjorn lindstrom", "Bjorn Lindstrom")
 	english := "Björn Lindström at Acme GmbH looks like Bjorn Lindstrom"
 	if got := stageLinkedInAndReadSummary(ctx, t, e, "Bjorn Lindstrom"); got != english {

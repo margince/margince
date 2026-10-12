@@ -93,9 +93,8 @@ func observeGatePause(ctx context.Context, extended time.Duration, cause error) 
 	if extended <= 0 {
 		return
 	}
-	var limited *connector.RateLimitedError
 	var asked time.Duration
-	if errors.As(cause, &limited) {
+	if limited, ok := errors.AsType[*connector.RateLimitedError](cause); ok {
 		asked = limited.RetryAfter
 	}
 	capturemetrics.ObserveInPageWait(ctx, extended, asked)

@@ -5,15 +5,15 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
-import { DataTable } from "../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
-import { SettingRow } from "../design-system/settingrow";
 import { formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { attemptReasonLabel } from "./ai-decision-labels";
 import { TaskName } from "./ai-task-name";
 
-type DecisionSummary = components["schemas"]["AiDecisionSummary"];
+type DecisionRate = components["schemas"]["AiDecisionSummary"];
 
 // A task's fallback rate, and where the number comes from: a button that opens
 // the reasons one per line, largest first, each under the reason label the call
@@ -22,7 +22,7 @@ type DecisionSummary = components["schemas"]["AiDecisionSummary"];
 function FallbackRate({
   row,
   locale,
-}: Readonly<{ row: DecisionSummary; locale: Locale }>) {
+}: Readonly<{ row: DecisionRate; locale: Locale }>) {
   const t = useT();
   const shown = rate(fallbackCount(row.fallbacks), row.asked, locale);
   if (fallbackCount(row.fallbacks) === 0) return shown;
@@ -44,7 +44,7 @@ function FallbackRate({
 }
 
 function fallbackLines(
-  fallbacks: DecisionSummary["fallbacks"],
+  fallbacks: DecisionRate["fallbacks"],
   locale: Locale,
   t: ReturnType<typeof useT>,
 ): ReactNode {
@@ -63,7 +63,7 @@ function fallbackLines(
   );
 }
 
-function fallbackCount(fallbacks: DecisionSummary["fallbacks"]): number {
+function fallbackCount(fallbacks: DecisionRate["fallbacks"]): number {
   return Object.values(fallbacks).reduce((sum, calls) => sum + calls, 0);
 }
 
@@ -75,63 +75,68 @@ function rate(part: number, whole: number, locale: Locale): string {
 // The decision model's pass and fallback rates per task. Each count is of
 // logical calls, which the server reads from the call trace — the spend table's
 // calls count attempts, and a decision that fell back is two of those.
-export function DecisionSummaryRow({
+export function DecisionSummary({
   decisions,
   taskName,
   taskSummary,
 }: Readonly<{
-  decisions: DecisionSummary[];
+  decisions: DecisionRate[];
   taskName: (task: string) => string;
   taskSummary: (task: string) => string | undefined;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const columns = [
+  const columns: DataTableColumn<DecisionRate>[] = [
     {
       key: "task",
       header: t("aiusage.col.task"),
-      render: (r: DecisionSummary) => (
+      grow: true,
+      render: (r) => (
         <TaskName name={taskName(r.task)} summary={taskSummary(r.task)} />
       ),
     },
     {
       key: "asked",
       header: t("aiusage.decisions.col.asked"),
-      render: (r: DecisionSummary) => formatNumber(r.asked, locale),
+      align: "end",
+      render: (r) => formatNumber(r.asked, locale),
     },
     {
       key: "pass",
       header: t("aiusage.decisions.col.passRate"),
-      render: (r: DecisionSummary) => rate(r.decided, r.asked, locale),
+      align: "end",
+      render: (r) => rate(r.decided, r.asked, locale),
     },
     {
       key: "fallback",
       header: t("aiusage.decisions.col.fallbackRate"),
+      align: "end",
       // From the fallbacks rather than asked minus decided: a consultation
       // that neither stood nor handed a reason on is neither, and folding it
       // into either rate would claim to know which it was.
-      render: (r: DecisionSummary) => <FallbackRate row={r} locale={locale} />,
+      render: (r) => <FallbackRate row={r} locale={locale} />,
     },
   ];
   return (
-    <SettingRow
-      layout="stack"
-      label={t("aiTier.decide")}
-      description={t("aiusage.decisions.note")}
-      control={
-        <div className="settingrow-measure">
-          {decisions.length === 0 ? (
-            <EmptyState>{t("aiusage.decisions.empty")}</EmptyState>
-          ) : (
-            <DataTable
-              label={t("aiTier.decide")}
-              columns={columns}
-              rows={decisions}
-              rowKey={(row) => row.task}
-            />
-          )}
-        </div>
-      }
-    />
+    <>
+      <PanelGroupHead title={t("aiTier.decide")} level="h3" />
+      {decisions.length === 0 ? (
+        <PanelBody>
+          <EmptyState>{t("aiusage.decisions.empty")}</EmptyState>
+        </PanelBody>
+      ) : (
+        <DataTable
+          bleed
+          stickyFirst
+          label={t("aiTier.decide")}
+          columns={columns}
+          rows={decisions}
+          rowKey={(row) => row.task}
+        />
+      )}
+      <PanelBody>
+        <p className="t-caption">{t("aiusage.decisions.note")}</p>
+      </PanelBody>
+    </>
   );
 }

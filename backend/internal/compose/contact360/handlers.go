@@ -43,7 +43,7 @@ func NewHandlers(svc *Service) Handlers {
 func (h Handlers) GetContact360(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetContact360Params) {
 	var opts AssembleOptions
 	if params.ProjectId != nil {
-		opts.ProjectID = ptr(ids.From[ids.ProjectKind](ids.UUID(*params.ProjectId)))
+		opts.ProjectID = new(ids.From[ids.ProjectKind](ids.UUID(*params.ProjectId)))
 	}
 	view, err := h.svc.AssembleScoped(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)), opts)
 	if err != nil {

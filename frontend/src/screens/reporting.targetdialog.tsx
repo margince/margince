@@ -21,7 +21,7 @@ import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { dayInZone, UTC_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, unwrap } from "./common";
 import { metricLabel, type ReportingMetricID } from "./reporting.model";
 import { useReportingPipelines } from "./reporting.queries";
 import { TargetHistory } from "./reporting.targethistory";
@@ -71,9 +71,7 @@ export function ReportingTargetDialog({
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const pipelines = useReportingPipelines();

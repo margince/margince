@@ -154,7 +154,7 @@ func wireRecordTag(t RecordTag) crmcontracts.RecordTag {
 // identically — so the sentinel values do it instead: "none" clears a colour,
 // an empty string clears a description.
 func tagUpdateFrom(req crmcontracts.UpdateTagRequest) TagUpdate {
-	out := TagUpdate{Name: req.Name}
+	out := TagUpdate{Name: req.Name, Suggestible: req.Suggestible}
 	if req.Color != nil {
 		var color *string
 		if *req.Color != clearColor {
@@ -164,17 +164,17 @@ func tagUpdateFrom(req crmcontracts.UpdateTagRequest) TagUpdate {
 		out.Color = &color
 	}
 	if req.Description != nil {
-		description := tagDescriptionOrNone(req.Description)
+		description := TagDescriptionOrNone(req.Description)
 		out.Description = &description
 	}
 	return out
 }
 
-// tagDescriptionOrNone reads a wire description as the column holds it. The
-// contract's empty string is not a description, it is the absence of one, and
-// create and update share this so a tag's description cannot depend on which
+// TagDescriptionOrNone reads a wire description as the column holds it. The
+// contract's empty string is not a description, it is the absence of one.
+// Create and update share this, so a tag's description cannot depend on which
 // door wrote it.
-func tagDescriptionOrNone(description *string) *string {
+func TagDescriptionOrNone(description *string) *string {
 	if description == nil || *description == "" {
 		return nil
 	}
@@ -198,6 +198,7 @@ func wireTagDetail(t tagRow, usage TagUsage) crmcontracts.TagDetail {
 		Name:        t.Name,
 		Color:       color,
 		Description: t.Description,
+		Suggestible: &t.Suggestible,
 		Version:     &version,
 		CreatedAt:   &t.CreatedAt,
 		UpdatedAt:   &t.UpdatedAt,
@@ -227,6 +228,7 @@ func wireTag(t tagRow) crmcontracts.Tag {
 		Name:        t.Name,
 		Color:       color,
 		Description: t.Description,
+		Suggestible: &t.Suggestible,
 		Version:     &version,
 		CreatedAt:   &t.CreatedAt,
 		UpdatedAt:   &t.UpdatedAt,

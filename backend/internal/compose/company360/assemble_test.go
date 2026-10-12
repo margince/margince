@@ -22,7 +22,7 @@ func TestAccountStrengthToWireCarriesTheContributorAndCount(t *testing.T) {
 	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	contributor := ids.From[ids.ContactKind](ids.NewV7())
 	wire := accountStrengthToWire(contacts.AccountStrength{
-		RelationshipStrength: contacts.RelationshipStrength{Strength: 62, Bucket: "strong", Inbound90d: 2, Outbound90d: 2},
+		Strength: 62, Bucket: "strong", Inbound90d: 2, Outbound90d: 2,
 		ContributorContactID: &contributor,
 		ContactCount:         4,
 	}, now)
@@ -46,7 +46,7 @@ func TestAccountStrengthToWireCarriesTheContributorAndCount(t *testing.T) {
 func TestAccountStrengthToWireLeavesTheContributorNullWithoutContacts(t *testing.T) {
 	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	wire := accountStrengthToWire(contacts.AccountStrength{
-		RelationshipStrength: contacts.RelationshipStrength{Bucket: "none"},
+		Bucket: "none",
 	}, now)
 	if wire.ContributorContactId != nil {
 		t.Errorf("contributor_contact_id = %v for an account with no visible contact, want null", wire.ContributorContactId)

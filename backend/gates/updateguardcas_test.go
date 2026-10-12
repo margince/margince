@@ -43,7 +43,7 @@ var livenessOnly = regexp.MustCompile(
 
 // topLevelOr finds a disjunction outside any parentheses, which widens the
 // predicate instead of narrowing it: `id = $1 AND status = $2 OR TRUE` writes
-// every row. <!-- prose:allow caps the statements it quotes are SQL -->
+// every row.
 //
 // Parenthesised groups are removed first and the rest read with a word
 // boundary, because SQL in a raw string breaks lines and indents with tabs: a

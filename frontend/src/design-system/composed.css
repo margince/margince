@@ -1074,17 +1074,17 @@
 .timeline-card .tl-group-members {
   padding-inline: 0;
 }
-/* Date, axis, what happened, and the row's own verbs. A grid rather than a
-   flex row: the dates line up in a column of their own, which is how a
-   chronology is actually read — down the left edge for "what happened in
-   August" rather than along every line to its end. */
+/* Date, axis, and what happened. A grid rather than a flex row: the dates
+   line up in a column of their own, which is how a chronology is actually
+   read — down the left edge for "what happened in August" rather than along
+   every line to its end. */
 .timeline > li {
   display: grid;
   /* A fixed date gutter, the rail, then everything else. Fixed rather than
      `auto`, so the dates and the rail hold one line down the whole list
      however wide a single date renders — an axis that stepped left and right
      row by row is not an axis. */
-  grid-template-columns: 76px 20px minmax(0, 1fr) auto;
+  grid-template-columns: 76px 20px minmax(0, 1fr);
   align-items: stretch;
   column-gap: var(--space-3);
   padding: 0;
@@ -1094,28 +1094,6 @@
 }
 .timeline > li:last-child {
   border-block-end: 0;
-}
-
-/* THE VERBS TAKE THEIR OWN LINE BEFORE THE ENTRY GIVES UP ITS WIDTH.
-   The trailing track is `auto`, so it is sized to its content and wins over the
-   `minmax(0, 1fr)` beside it — and there is ONE button size in this product, so
-   a row offering three verbs asks for more than a narrowed column can give.
-   What that cost was not a cramped row but an invisible one: the track resolved
-   to zero and the headline a reader came for was drawn at no width at all, on a
-   row still measuring its full height. Under the width where both fit, the
-   verbs drop below the entry — pinned to the entry's own column, so they keep
-   the gutter and the rail rather than sliding under the date. */
-@container chronology (max-width: 38rem) {
-  .timeline > li {
-    grid-template-columns: 76px 20px minmax(0, 1fr);
-  }
-  .timeline .tl-actions {
-    grid-column: 3;
-    margin-left: 0;
-    padding-top: 0;
-    padding-bottom: var(--space-3);
-    flex-wrap: wrap;
-  }
 }
 
 /* Set on the first line's own baseline, so the date reads level with the kind
@@ -1187,15 +1165,14 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-.timeline .tl-actions {
-  margin-left: auto;
+/* The verbs share the head line only. Beside the whole body they held a
+   column the full height of the entry, and long notes wrapped at a few words. */
+.timeline .tl-body > .tl-actions {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
   display: flex;
-  /* Held at the row's head. The row's tracks stretch so the rail can run its
-     full height, and a verb that stretched with them became a button the
-     height of a three-line entry. */
-  align-items: flex-start;
   gap: var(--space-2);
-  padding-top: var(--space-3);
 }
 
 /* A conversation's mark on the rail: the kind's icon rather than a dot,
@@ -1222,13 +1199,38 @@
   height: 13px;
 }
 .timeline .tl-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-1) var(--space-3);
   padding-block: var(--space-3) var(--space-4);
   min-inline-size: 0;
 }
+.timeline .tl-body:has(> .tl-actions) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.timeline .tl-body > * {
+  grid-column: 1 / -1;
+}
+.timeline .tl-body > :first-child:has(~ .tl-actions) {
+  grid-column: 1;
+}
+
+/* The verbs' `auto` track wins over the head beside it, so in a narrow list
+   the head drew at zero width. Below 38rem the verbs drop under the entry. */
+@container chronology (max-width: 38rem) {
+  .timeline .tl-body > :first-child:has(~ .tl-actions),
+  .timeline .tl-body > .tl-actions {
+    grid-column: 1 / -1;
+  }
+  .timeline .tl-body > .tl-actions {
+    grid-row: auto;
+    order: 1;
+    justify-self: start;
+    flex-wrap: wrap;
+  }
+}
+
 /* The headline carries the row. Everything else on it — the kind, who it was
    with, what changed — qualifies this line, and set at the same weight as its
    qualifiers the reader had to read all four to find out what happened. */

@@ -111,3 +111,84 @@ func TestAnotherConnectorCannotMoveACalendarMeeting(t *testing.T) {
 		t.Errorf("the meeting moved to %s, want it left at %s", got, meetingStart)
 	}
 }
+
+// A start outside the storable range moves nothing, as a start the calendar
+// could not state moves nothing: the stored start is the better answer.
+func TestAnEventMovedPastTheStorableRangeKeepsTheStoredStart(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureMeeting(t, e, e.AdminUser)
+
+	if _, err := movingCalendarSink(e).Upsert(calendarOwnerCtx(e, e.AdminUser), connector.NormalizedRecord{
+		EntityType: "activity",
+		NaturalKey: meetingKey,
+		Fields: capture.ActivityFields{
+			Kind: "meeting", Subject: "Consulting Monthly",
+			Body: "Organizer: client@acme.test", OccurredAt: time.Date(9999, 12, 31, 23, 0, 0, 0, time.UTC),
+		},
+		Source:     calendarSystem + ":" + calendarEvent,
+		CapturedBy: "connector:" + calendarSystem,
+		Raw:        []byte(`{"id":"` + calendarEvent + `"}`),
+	}); err != nil {
+		t.Fatalf("replaying the event: %v", err)
+	}
+
+	if got := readMeetingStart(t, e, id); !got.Equal(meetingStart) {
+		t.Errorf("the meeting starts %s, want the stored %s: no zone can render the start the calendar sent", got, meetingStart)
+	}
+}
+
+// A cancellation that states a start outside the storable range still cancels.
+// Its history row records no scheduled start, as for a start it could not read.
+func TestACancellationPastTheStorableRangeRecordsNoScheduledStart(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureMeeting(t, e, e.AdminUser)
+	far := time.Date(9999, 12, 31, 23, 0, 0, 0, time.UTC)
+	if err := calendarSink(e).CancelMeeting(calendarOwnerCtx(e, e.AdminUser), meetingKey, far); err != nil {
+		t.Fatalf("cancelling the meeting: %v", err)
+	}
+
+	var startless bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT scheduled_start IS NULL FROM activity_meeting_history
+			 WHERE activity_id = $1 AND status = 'canceled'`, id).Scan(&startless)
+	}); err != nil {
+		t.Fatalf("reading the cancellation: %v", err)
+	}
+	if !startless {
+		t.Error("the cancellation stored a scheduled start no zone can render, want none")
+	}
+}
+
+// An event that runs longer than activity.duration_seconds can hold is captured
+// with no duration. Stored as sent, it fails the insert, and the calendar sync
+// for that seat stops on it for good.
+func TestAMeetingTooLongToStoreIsCapturedWithNoDuration(t *testing.T) {
+	e := integration.Setup(t)
+	decades := 3_000_000_000
+	ref, err := calendarSink(e).Upsert(calendarOwnerCtx(e, e.AdminUser), connector.NormalizedRecord{
+		EntityType: "activity",
+		NaturalKey: meetingKey,
+		Fields: capture.ActivityFields{
+			Kind: "meeting", Subject: "Until 2100",
+			Body: "Organizer: client@acme.test", OccurredAt: meetingStart, DurationSeconds: &decades,
+		},
+		Source:     calendarSystem + ":" + calendarEvent,
+		CapturedBy: "connector:" + calendarSystem,
+		Raw:        []byte(`{"id":"` + calendarEvent + `"}`),
+	})
+	if err != nil {
+		t.Fatalf("capturing the meeting: %v", err)
+	}
+
+	var durationless bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT duration_seconds IS NULL FROM activity WHERE id = $1`, ref.ID).Scan(&durationless)
+	}); err != nil {
+		t.Fatalf("reading the meeting: %v", err)
+	}
+	if !durationless {
+		t.Error("the meeting stored a duration, want none for one past the column's range")
+	}
+}

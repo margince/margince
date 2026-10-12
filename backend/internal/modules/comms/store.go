@@ -129,6 +129,9 @@ type StageInput struct {
 	// never replaces Body: a retry rebuilds the message from this snapshot, so
 	// a shape stored here is the shape that goes out.
 	HTMLBody string
+	// InlineLogoKey is the stored logo HTMLBody embeds by content id, empty
+	// when it embeds none. A retry embeds this object, not the current logo.
+	InlineLogoKey string
 	// FromName is the sender's display name at the moment of staging. Empty
 	// sends a bare address, which is what every message did before the name
 	// was available.
@@ -192,13 +195,13 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 		INSERT INTO comms_outbound
 		  (id, activity_id, user_id, provider, message_id,
 		   recipients, cc, bcc, subject, body, html_body, from_name, consent_purpose, in_reply_to,
-		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments)
+		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key)
 		VALUES ($1, $2, $3, $4, $5,
 		        $6, $7, $8, $9, $10, NULLIF($11,''), NULLIF($12,''), $13, NULLIF($14,''), $15,
-		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19)`,
+		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''))`,
 		id, in.ActivityID, userID, in.Provider, in.MessageID,
 		recipients, cc, bcc, in.Subject, in.Body, in.HTMLBody, in.FromName, in.ConsentPurpose,
-		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files); err != nil {
+		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey); err != nil {
 		// The idempotency key is an ANSWER, and it is mapped rather than
 		// wrapped: a raw violation carries the constraint and table names, and
 		// no caller is owed the schema behind a refusal it can act on.

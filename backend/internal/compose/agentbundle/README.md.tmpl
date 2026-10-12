@@ -1,0 +1,73 @@
+# Margince skill
+
+This folder lets an AI tool work in Margince as you. The tool calls the Margince API at
+`{{.BaseURL}}` with your agent passport, and can do what you can do there with the
+permissions you ticked on that passport, and nothing more.
+
+The folder holds four files:
+
+- `SKILL.md`: the rules the AI tool follows.
+- `INDEX.md`: every call a passport can make, one row each.
+- `openapi.yaml`: those calls in full.
+- `README.md`: this page.
+
+No passport is in this folder. You save it apart, so one download serves every
+passport you make.
+
+## Save your passport
+
+Create a passport in Margince under **Settings → Agents**, and copy it. It is shown once.
+Never type it on a command line, where your shell history keeps it. Save it in one
+of these places, under the name `MARGINCE_PASSPORT`:
+
+- **macOS Keychain.** Run the command below. It asks for the passport and keeps it in
+  your login keychain.
+
+  ```sh
+  security add-generic-password -a "$USER" -s MARGINCE_PASSPORT -w
+  ```
+
+- **1Password.** Save it as an item, and give the AI tool the item's reference, for
+  example `op://Private/Margince passport/credential`.
+- **Your shell, for this session only.** Run the command below and paste the passport
+  when it waits. Nothing is shown and nothing is written to your history.
+
+  ```sh
+  read -rs MARGINCE_PASSPORT && export MARGINCE_PASSPORT
+  ```
+
+The AI tool reads the passport from `MARGINCE_PASSPORT` only, so set it in the shell
+you start the tool from. From the Keychain:
+
+```sh
+export MARGINCE_PASSPORT="$(security find-generic-password -s MARGINCE_PASSPORT -w)"
+```
+
+From 1Password: `export MARGINCE_PASSPORT="$(op read '<item reference>')"`.
+
+## Install the skill
+
+Unzip `margince-skill.zip`. It holds one folder, `margince`.
+
+- **Claude Code.** Move the `margince` folder to `~/.claude/skills/margince`. Claude finds
+  it the next time it starts.
+- **Claude Desktop.** Add `margince-skill.zip` as a skill in the app's settings.
+- **Codex.** Move the folder where you keep such files, for example `~/margince`, and
+  add this line to your `AGENTS.md`: "To work in Margince, read `~/margince/SKILL.md`
+  first."
+- **Gemini CLI and Antigravity.** Move the folder the same way, and add the same line to
+  your `GEMINI.md`.
+
+## Try it
+
+With the passport in `MARGINCE_PASSPORT`, this lists one company you can see:
+
+```sh
+curl '{{.BaseURL}}/companies?limit=1' -H "Authorization: Bearer $MARGINCE_PASSPORT"
+```
+
+## When a passport ends
+
+A passport made in Settings lasts 30 days. To stop an agent sooner, choose **Revoke** on
+the passport in **Settings → Agents**. It loses access on its next call. Then make a new
+passport and save it under the same name. The skill does not change.

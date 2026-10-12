@@ -6,12 +6,18 @@ all the rest: the branch and PR loop, the license header, the commit rules. The 
 the frontend alone. Gates hold parts of some, and each section says which; what it does not name, no
 gate checks for you.
 
-`craft static` does not scan `*.test.tsx`. So P3 (`tests prove behaviour or they are noise`, no test
-that fails from a real clock) holds here only because the author holds it. One part has a gate:
+`craft static` reads only the comments of a TypeScript file, `*.test.tsx` included. So P3
+(`tests prove behaviour or they are noise`, no test that fails from a real clock) holds here only
+because the author holds it. One part has a gate:
 `make fe-clock-drift` runs all the tests with the clock 200 days later and needs the same result. It
 runs daily on `main` (`scheduled.yml`), not on your PR, because the calendar breaks these tests, not
 a diff. A test file you add today can turn that lane red many days from now. Run it on your machine
 when a test you touch reads a date.
+
+Biome holds the size of a function in product code: 300 lines, blank lines not counted
+(`noExcessiveLinesPerFunction`), and a score of 15 (`noExcessiveCognitiveComplexity`). Test code has
+no such limit. A `biome-ignore` for either rule in product
+code names the issue that splits the function, and `scripts/complexity-waivers.test.ts` checks it.
 
 ## Read the design system before you build something a user can see
 
@@ -61,9 +67,11 @@ thing.
 ## Text follows the writing guides
 
 English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
-German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md). `copy-style.test.ts` and
-`copy-style-de.test.ts` hold only the rules a program can check. The tone, the words, the length and
-the shape of a message are yours to check before you add or change a value.
+German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md) and Vietnamese adds
+[`ui-copy-style-vi.md`](../docs/reference/ui-copy-style-vi.md). `copy-style.test.ts`,
+`copy-style-de.test.ts` and `copy-style-vi.test.ts` hold only the rules a program can check. The
+tone, the words, the length and the shape of a message are yours to check before you add or change
+a value.
 
 ## A test must pass on a slow machine
 

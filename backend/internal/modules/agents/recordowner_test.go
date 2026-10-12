@@ -102,9 +102,9 @@ func TestAReadRecordSaysWhoseItIs(t *testing.T) {
 	me, sofia := ids.NewV7(), ids.NewV7()
 	theirs := ownedRecord(datasource.EntityCompany, sofia)
 	nobodys := ownedRecord(datasource.EntityCompany, ids.UUID{})
-	provider := &pageProbeProvider{queryProbeProvider: queryProbeProvider{records: map[ids.UUID]datasource.Record{
+	provider := &pageProbeProvider{records: map[ids.UUID]datasource.Record{
 		theirs.Ref.ID: theirs, nobodys.Ref.ID: nobodys,
-	}}}
+	}}
 	r := recordToolsNamedBy(provider, func(context.Context, []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{sofia: "Sofia Meier"}, nil
 	})

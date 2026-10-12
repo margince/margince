@@ -87,8 +87,16 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		if err != nil {
 			return err
 		}
-		if existing != "" {
-			return &AlreadyFiledError{Filename: existing}
+		if existing.found && !existing.failed {
+			return &AlreadyFiledError{Filename: existing.filename}
+		}
+		if existing.failed {
+			// Discarded, so the insert below files these bytes as a new
+			// document. That is the manual step the advice already requires:
+			// a re-upload only worked once somebody deleted the failed row.
+			if err := discardFailedDocument(ctx, tx, existing.id); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO knowledge_document
@@ -223,10 +231,54 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	if err != nil {
 		return "", "", 0, err
 	}
-	if existing != "" {
-		return "", "", 0, &AlreadyFiledError{Filename: existing}
+	// A failed row holds no bytes, so it is not a reason to refuse.
+	//
+	// The write discards it and files these bytes fresh.
+	if existing.found && !existing.failed {
+		return "", "", 0, &AlreadyFiledError{Filename: existing.filename}
 	}
 	return media, checksum, size, nil
+}
+
+// holdingRow is the live document already carrying these bytes, if one is.
+//
+// `failed` is carried because such a row holds no bytes: FailIngest deletes the
+// stored object and keeps the row.
+//
+// The advice on screen is to upload the file again, and a re-upload refused as
+// already filed made that impossible to follow.
+type holdingRow struct {
+	id       ids.UUID
+	filename string
+	failed   bool
+	found    bool
+}
+
+func documentHoldingIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, checksum string) (holdingRow, error) {
+	var row holdingRow
+	switch err := tx.QueryRow(ctx,
+		`SELECT id, filename, ingest_status = 'failed' FROM knowledge_document
+		  WHERE corpus_id = $1 AND checksum = $2 AND archived_at IS NULL
+		  LIMIT 1`, corpusID, checksum).Scan(&row.id, &row.filename, &row.failed); {
+	case err == nil:
+		row.found = true
+		return row, nil
+	case errors.Is(err, pgx.ErrNoRows):
+		return holdingRow{}, nil
+	default:
+		return holdingRow{}, fmt.Errorf("look for a document already holding these bytes: %w", err)
+	}
+}
+
+// documentHolding names the live document in this corpus already holding these
+// exact bytes, or "" when none does.
+func (s *Store) documentHolding(ctx context.Context, corpusID ids.UUID, checksum string) (holdingRow, error) {
+	var existing holdingRow
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		existing, err = documentHoldingIn(ctx, tx, corpusID, checksum)
+		return err
+	})
+	return existing, err
 }
 
 // ListDocuments returns one corpus's live documents, newest first, whatever
@@ -360,7 +412,7 @@ func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 		if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", documentID,
 			map[string]any{
 				filenameKey:      doc.filename,
-				"checksum":       doc.checksum,
+				checksumKey:      doc.checksum,
 				contentTypeKey:   doc.contentType,
 				chunkCountColumn: doc.chunkCount,
 			}, nil); err != nil {
@@ -386,32 +438,6 @@ type deletedDocument struct {
 	checksum    string
 	contentType string
 	chunkCount  int
-}
-
-// documentHolding names the live document in this corpus already holding these
-// exact bytes, or "" when none does.
-func (s *Store) documentHolding(ctx context.Context, corpusID ids.UUID, checksum string) (string, error) {
-	var existing string
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		existing, err = documentHoldingIn(ctx, tx, corpusID, checksum)
-		return err
-	})
-	return existing, err
-}
-
-func documentHoldingIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, checksum string) (string, error) {
-	var existing string
-	switch err := tx.QueryRow(ctx,
-		`SELECT filename FROM knowledge_document
-		  WHERE corpus_id = $1 AND checksum = $2 AND archived_at IS NULL
-		  LIMIT 1`, corpusID, checksum).Scan(&existing); {
-	case err == nil:
-		return existing, nil
-	case errors.Is(err, pgx.ErrNoRows):
-		return "", nil
-	default:
-		return "", fmt.Errorf("look for a document already holding these bytes: %w", err)
-	}
 }
 
 // UnreferencedDocumentKeys answers which of these keys no knowledge_document carries.

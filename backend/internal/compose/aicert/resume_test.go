@@ -292,12 +292,10 @@ func TestAnExpiredRunIsCompactedOutOfTheJournal(t *testing.T) {
 // decides what it should round-trip as.
 func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 	want := runOutcome{
-		RunResult: RunResult{
-			Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
-			TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
-			Degraded: true, HardPass: true, Score: 87, Ungraded: true, JudgeScores: []int{12, 87, 90},
-			Withheld: "SAFETY", Abandoned: true, AnswerConfidence: &ConfidenceRange{Min: 0.6, Max: 0.9},
-		},
+		Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
+		TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
+		Degraded: true, HardPass: true, Score: 87, Ungraded: true, JudgeScores: []int{12, 87, 90},
+		Withheld: "SAFETY", Abandoned: true, AnswerConfidence: &ConfidenceRange{Min: 0.6, Max: 0.9},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
 		CertifiedScope: "full_invocation", JudgeDegraded: true, ContextApplied: true,

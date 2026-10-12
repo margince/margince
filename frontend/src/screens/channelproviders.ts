@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 type Carriage = components["schemas"]["ChannelProviderEntry"]["attachments"];
 
@@ -19,11 +19,7 @@ export function useChannelProviders(enabled = true) {
     enabled,
     queryKey: ["channel-providers"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/channel-providers");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/channel-providers"));
     },
     // It changes only when the server is redeployed, so refetching it on every
     // window focus spends a request to learn nothing.

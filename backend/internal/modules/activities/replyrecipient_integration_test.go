@@ -599,8 +599,7 @@ func TestAnAutomationDraftingFromANoteStillHasNoReplyAddress(t *testing.T) {
 		t.Fatalf("reading the colleague predicate: %v", err)
 	}
 	_, err = e.store(nil).ReplyAddressFor(ctx, note, covers)
-	var none *NoReplyAddressError
-	if !errors.As(err, &none) {
+	if _, ok := errors.AsType[*NoReplyAddressError](err); !ok {
 		t.Fatalf("ReplyAddressFor on a note → %v, want NoReplyAddressError", err)
 	}
 }

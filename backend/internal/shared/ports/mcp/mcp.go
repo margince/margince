@@ -104,8 +104,10 @@ type ToolSpec struct {
 	// into strict typed structs and enforce their own invariants.
 	InputSchema  json.RawMessage
 	OutputSchema json.RawMessage
-	OpenAPIOp    string // the crm.yaml operationId (or logical op family) this maps to
-	Egress       bool   // true if the tool reaches outside the workspace (send_email, webhooks)
+	// OpenAPIOp names the crm.yaml operations this tool runs as, operationIds
+	// joined by "/"; each declares this tool as its x-mcp-tool verb.
+	OpenAPIOp string
+	Egress    bool // true if the tool reaches outside the workspace (send_email, webhooks)
 	// HumanOnly marks a tool that exists in the registry so REST can dispatch
 	// it by name, but that no Agent or Buyer principal may ever invoke or be
 	// shown — the wire twin of a contract's x-agent-access: human-only. The

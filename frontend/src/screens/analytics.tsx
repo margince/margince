@@ -63,8 +63,9 @@ import { QuestionsView } from "./analytics.questions";
 import { FORECAST_CATEGORIES } from "./analytics.questions.values";
 import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
+import { stagesOfEveryPipeline } from "./pipelinestages";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingLibrary } from "./reporting.library";
 import { ReportingOverview } from "./reporting.overview";
@@ -906,20 +907,18 @@ function ReportCard({
   const reportQuery = useQuery({
     queryKey: ["report", report],
     queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report } },
-        // An empty list and an absent one both take the report's own declared
-        // defaults (report.go branches on len==0), so the delivery reports'
-        // empty plans ask for exactly what their specs declare.
-        body: {
-          group_by: REPORT_GROUP_BY[report],
-          aggregates: REPORT_AGGREGATES[report],
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/reports/{report}", {
+          params: { path: { report } },
+          // An empty list and an absent one both take the report's declared defaults
+          // (report.go branches on len==0). So the delivery reports' empty plans ask
+          // for what their specs declare.
+          body: {
+            group_by: REPORT_GROUP_BY[report],
+            aggregates: REPORT_AGGREGATES[report],
+          },
+        }),
+      );
     },
   });
 
@@ -1011,16 +1010,13 @@ export function AnalyticsScreen() {
   const context = useAnalyticsContext();
   const { selection, selectScope } = useAnalyticsSelection(context.data);
 
-  const pipelineQuery = useQuery({
-    queryKey: ["pipelines"],
+  const stagesQuery = useQuery({
+    queryKey: ["pipelines", "all-stages"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data.find((pipeline) => pipeline.is_default) ?? data.data[0];
+      const pipelines = unwrap(
+        await api.GET("/pipelines", { params: { query: {} } }),
+      );
+      return stagesOfEveryPipeline(pipelines.data);
     },
   });
 
@@ -1116,7 +1112,7 @@ export function AnalyticsScreen() {
           selection={selection}
           onSelectScope={selectScope}
           scopeControl={scopeControl}
-          stages={pipelineQuery.data?.stages ?? []}
+          stages={stagesQuery.data ?? []}
         />
       </div>
     </div>

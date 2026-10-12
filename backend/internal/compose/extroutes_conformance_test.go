@@ -141,8 +141,8 @@ func TestAMountedRouteAnswersTheBodyItsContractDeclares(t *testing.T) {
 	// 4. The correlation id is not lost, only moved: it is the handle that
 	//    makes a governed call findable in the audit log, and the body has no
 	//    room for it.
-	if rec.Header().Get(extensionTraceHeader) == "" {
-		t.Errorf("no %s header — a REST caller has no way to find this call in the audit log", extensionTraceHeader)
+	if rec.Header().Get(toolTraceHeader) == "" {
+		t.Errorf("no %s header — a REST caller has no way to find this call in the audit log", toolTraceHeader)
 	}
 }
 

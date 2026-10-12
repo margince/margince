@@ -1,0 +1,23 @@
+{
+  "scenario": "case58_quiet_for_three_weeks",
+  "criteria": [
+    1
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 1228,
+    "cache_creation_input_tokens": 19772,
+    "cache_read_input_tokens": 351100,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.1265
+  }
+}

@@ -10,7 +10,7 @@ import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 // Answering an undecided domain, from the row that asked.
@@ -35,14 +35,12 @@ export function useDomainQuestionKeep(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (domain: string) => {
-      const { data, error } = await api.POST(
-        "/capture/domain-questions/{domain}/keep",
-        { params: { path: { domain } } },
+      return unwrap(
+        await api.POST("/capture/domain-questions/{domain}/keep", {
+          params: { path: { domain } },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
@@ -65,14 +63,12 @@ export function useDomainQuestionDiscard(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (domain: string) => {
-      const { data, error } = await api.POST(
-        "/capture/domain-questions/{domain}/discard",
-        { params: { path: { domain } } },
+      return unwrap(
+        await api.POST("/capture/domain-questions/{domain}/discard", {
+          params: { path: { domain } },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {

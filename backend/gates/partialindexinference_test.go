@@ -56,7 +56,7 @@ func uniqueIndexesByTable(t *testing.T) map[string][]uniqueIndex {
 	}
 	byTable := map[string][]uniqueIndex{}
 	var declared, read int
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.Contains(strings.ToUpper(line), "CREATE UNIQUE INDEX") {
 			continue

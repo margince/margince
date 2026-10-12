@@ -12,7 +12,7 @@ import { leadIdentityName } from "../format/leadname";
 import { toMinorUnits } from "../format/minorunits";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import { leadPromotePreviewKey, leadWriteKeys } from "./leadkeys";
 import { usePipelines } from "./pipelines.queries";
@@ -39,13 +39,12 @@ function usePromotePreview(id: string, open: boolean) {
     // the dialog opens, and a 30s-old "create" can be a merge by now.
     staleTime: 0,
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}/promote-preview", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}/promote-preview", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
   });
 }
@@ -164,14 +163,13 @@ export function QualifyDialog({
 
   const qualify = useMutation({
     mutationFn: async (body: PromoteLeadRequest) => {
-      const { data, error } = await api.POST("/leads/{id}/promote", {
-        params: { path: { id: lead.id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/leads/{id}/promote", {
+          params: { path: { id: lead.id } },
+          body,
+        }),
+        t,
+      );
     },
     onSuccess: (result) => {
       // leadWriteKeys carries the history key: the promotion WROTE the audit

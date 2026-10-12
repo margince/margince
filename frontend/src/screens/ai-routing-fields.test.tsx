@@ -169,4 +169,21 @@ describe("the Host field's help", () => {
       "https://api.typesafe.ai/v1/systemone",
     );
   });
+  // Gemini's paths start at the model, so its host carries the API version.
+  it("asks Gemini for a host that ends at its API version", () => {
+    mountSheet("gemini");
+    const host = screen.getByLabelText("Host");
+    expect(host).toHaveAccessibleDescription(/API version/);
+    expect(host).toHaveAttribute(
+      "placeholder",
+      "https://generativelanguage.googleapis.com/v1beta",
+    );
+  });
+
+  it("tells Anthropic that /v1 is added and a blank host is its own", () => {
+    mountSheet("anthropic");
+    const host = screen.getByLabelText("Host");
+    expect(host).toHaveAccessibleDescription(/\/v1 is added.*Blank uses/);
+    expect(host).toHaveAttribute("placeholder", "https://api.anthropic.com");
+  });
 });

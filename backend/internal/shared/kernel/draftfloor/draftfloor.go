@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -200,7 +201,7 @@ func For(lang textlang.Lang, band convstate.Band) Phrases {
 // (DRAFT-AC-E-3).
 func Subject(lang textlang.Lang, band convstate.Band, topic string, threaded bool) string {
 	phrases := For(lang, band)
-	topic = strings.TrimSpace(topic)
+	topic = mailsubject.WithoutReplyPrefix(topic)
 	if topic == "" {
 		return phrases.SubjectNoContext
 	}

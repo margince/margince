@@ -553,3 +553,31 @@ func (e *rateEnv) storeFor(ws ids.UUID) *RateStore {
 func (e *rateEnv) dbFor(ws ids.UUID) *database.DB {
 	return database.BindTo(e.pool, ids.From[ids.WorkspaceKind](ws))
 }
+
+func TestSheetHeadLeavesOutTheRowThatNamesNoModelWhilePricingStillReadsIt(t *testing.T) {
+	e := setupRateStore(t)
+	ctx := context.Background()
+	ws, wsCtx := e.seedWorkspace(ctx, t)
+	store := e.storeFor(ws)
+	day := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	e.insertRate(ctx, t, ModelRate{Provider: ProviderFake, ModelID: "", EffectiveDate: day})
+	e.insertRate(ctx, t, ModelRate{
+		Provider: providerAnthropic, ModelID: "claude-test-model",
+		InputPerMTokMicroUSD: 1_000_000, OutputPerMTokMicroUSD: 1_000_000, EffectiveDate: day,
+	})
+
+	head, err := store.ListLatestModelRates(laneWriterCtx(ws))
+	if err != nil {
+		t.Fatalf("ListLatestModelRates: %v", err)
+	}
+	if len(head) != 1 || head[0].ModelID != "claude-test-model" {
+		t.Fatalf("sheet head = %+v, want only claude-test-model", head)
+	}
+	free, err := store.RateFor(wsCtx, ProviderFake, "", day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if free == nil {
+		t.Fatal("the fake binding's call reads as unpriced; the row must still price it")
+	}
+}

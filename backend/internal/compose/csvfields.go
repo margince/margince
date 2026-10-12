@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -21,6 +22,11 @@ const descriptionField = "description"
 // fieldFullName is a lead's own name column, spelled once for the three places
 // that map onto it.
 const fieldFullName = "full_name"
+
+// fieldLeadPhone is a lead's own phone column, the one number it carries until
+// it is promoted. A contact's numbers are a list in their own table and are
+// mapped separately; a lead has one, so it maps like its email.
+const fieldLeadPhone = "phone"
 
 // fieldEmail is the lead's identifying field: the natural key an import
 // recognizes a row by, and the one value the store canonicalizes on write.
@@ -62,7 +68,7 @@ const leadStatusNew = "new"
 // paths. A target that only half works is worse than one the screen never
 // offers.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldTitle, companyNameField, csvTargetAuthor},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldLeadPhone, fieldTitle, companyNameField, csvTargetAuthor},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -268,7 +274,7 @@ func canonicalFor(field, value string) string {
 	trimmed := strings.TrimSpace(value)
 	switch field {
 	case fieldEmail:
-		return strings.ToLower(trimmed)
+		return correspondence.Fold(trimmed)
 	case fieldDomain:
 		// Through the store's OWN parser, not an approximation of it. A
 		// spreadsheet's website column carries "https://www.acme.com/" where the
@@ -309,6 +315,7 @@ func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source s
 	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
+	in.Phone = importString(fields, fieldLeadPhone)
 	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
 	return in
@@ -319,6 +326,7 @@ func leadUpdateFrom(changed map[string]string) contacts.UpdateLeadInput {
 	return contacts.UpdateLeadInput{
 		FullName:    importString(changed, fieldFullName),
 		Email:       importString(changed, fieldEmail),
+		Phone:       importString(changed, fieldLeadPhone),
 		Title:       importString(changed, fieldTitle),
 		CompanyName: importString(changed, "company_name"),
 	}

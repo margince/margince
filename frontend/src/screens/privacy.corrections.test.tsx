@@ -2,7 +2,12 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,6 +28,8 @@ import { ConfirmSubmissionsPanel } from "./privacy.corrections";
 // than as whatever the render happened to be holding.
 
 type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
+
+const DECIDE = /^Decide on request from/;
 
 const PAGE = { next_cursor: null, has_more: false };
 
@@ -178,7 +185,72 @@ describe("the queue of what contacts told us to change", () => {
     expect(await screen.findByText("Anna Schmidt")).toBeInTheDocument();
     expect(screen.getByText(/Schmitt/)).toBeInTheDocument();
     expect(screen.getByText(/Schmidt →|→ Schmidt/)).toBeInTheDocument();
-    expect(screen.getByText("full_name")).toBeInTheDocument();
+    // Named as the contact's own confirm page names it, never as a column.
+    expect(screen.getByText("Name")).toBeInTheDocument();
+  });
+
+  it("marks a removal apart from a correction", async () => {
+    server([correction("s-1", "full_name", "Schmidt"), removal("s-9")], []);
+    render(<ConfirmSubmissionsPanel />);
+
+    expect(
+      (await screen.findByText(en["privacy.correctionKindRemoval"])).closest(
+        ".badge",
+      ),
+    ).toHaveClass("badge-warning");
+    expect(
+      screen
+        .getByText(en["privacy.correctionKindCorrection"])
+        .closest(".badge"),
+    ).not.toHaveClass("badge-warning");
+    expect(screen.getByText(en["privacy.correctionRemoval"])).toBeVisible();
+  });
+
+  it("keeps the decision open over the server's refusal", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : null;
+        const url = new URL(
+          request ? request.url : String(input),
+          "https://test.local",
+        );
+        if (url.pathname.endsWith("/me")) {
+          return json(
+            meFixture({ roles: ["admin"], allow: { contact: ["update"] } }),
+          );
+        }
+        if (url.pathname.endsWith("/resolve")) {
+          return json(
+            {
+              title: "Forbidden",
+              status: 403,
+              code: "permission_denied",
+              detail: "no",
+            },
+            403,
+          );
+        }
+        return json({
+          data: [correction("s-1", "full_name", "Schmidt")],
+          page: PAGE,
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ConfirmSubmissionsPanel />);
+
+    await user.click(await screen.findByRole("button", { name: DECIDE }));
+    const dialog = screen.getByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: en["privacy.correctionAccept"],
+      }),
+    );
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      /do not have permission/i,
+    );
   });
 
   it("says a read failed rather than reporting an empty queue", async () => {
@@ -217,11 +289,7 @@ describe("the queue of what contacts told us to change", () => {
     const user = userEvent.setup();
     render(<ConfirmSubmissionsPanel />);
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: en["privacy.correctionDecide"],
-      }),
-    );
+    await user.click(await screen.findByRole("button", { name: DECIDE }));
     expect(
       screen.getByRole("button", { name: en["privacy.correctionAcknowledge"] }),
     ).toBeInTheDocument();
@@ -245,11 +313,7 @@ describe("the queue of what contacts told us to change", () => {
     const user = userEvent.setup();
     render(<ConfirmSubmissionsPanel />);
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: en["privacy.correctionDecide"],
-      }),
-    );
+    await user.click(await screen.findByRole("button", { name: DECIDE }));
     await user.type(screen.getByRole("textbox"), "Passport says otherwise.");
     await user.click(
       screen.getByRole("button", { name: en["privacy.correctionReject"] }),
@@ -273,7 +337,7 @@ describe("the queue of what contacts told us to change", () => {
     // that contact asked for. What they are not offered is the decision.
     expect(await screen.findByText("Anna Schmidt")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: en["privacy.correctionDecide"] }),
+      screen.queryByRole("button", { name: DECIDE }),
     ).not.toBeInTheDocument();
   });
 
@@ -288,15 +352,15 @@ describe("the queue of what contacts told us to change", () => {
     );
     render(<ConfirmSubmissionsPanel />);
 
-    expect(await screen.findByText("full_name")).toBeInTheDocument();
-    expect(screen.queryByText("title")).toBeNull();
+    expect(await screen.findByText("Name")).toBeInTheDocument();
+    expect(screen.queryByText("Job title")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: /more/i }));
 
-    expect(await screen.findByText("title")).toBeInTheDocument();
+    expect(await screen.findByText("Job title")).toBeInTheDocument();
     // Still on screen: a page that replaced the last one would lose the rows
     // the reviewer is working through.
-    expect(screen.getByText("full_name")).toBeInTheDocument();
+    expect(screen.getByText("Name")).toBeInTheDocument();
     expect(asked).toEqual(["", "page-two"]);
   });
 
@@ -306,7 +370,7 @@ describe("the queue of what contacts told us to change", () => {
     server([correction("s-1", "full_name", "Schmidt")], []);
     render(<ConfirmSubmissionsPanel />);
 
-    expect(await screen.findByText("full_name")).toBeInTheDocument();
+    expect(await screen.findByText("Name")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /more/i })).toBeNull();
   });
 });

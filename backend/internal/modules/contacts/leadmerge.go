@@ -68,6 +68,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	if err := refuseWebsiteLeadNotYetTold(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	src, tgt, err := mergePair(ctx, tx, entityLead, sourceID, targetID, nil, readLeadMergeState)
 	if err != nil {
 		return crmcontracts.Lead{}, err
@@ -128,6 +131,9 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	}
 	if err := s.carryConsentSatellitesTx(ctx, tx, from, to); err != nil {
 		return fmt.Errorf("carry the merged-away lead's consent links: %w", err)
+	}
+	if err := s.carryGrantsTx(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("carry the merged-away lead's grants: %w", err)
 	}
 	return carryLeadMembershipsToLead(ctx, tx, sourceID, targetID)
 }

@@ -31,12 +31,20 @@ func SuppressionHash(value string) string {
 }
 
 // EscapeLike neutralizes LIKE/ILIKE wildcards in a value that is about
-// to be embedded in a pattern (pair with ESCAPE '\'). An identifier
-// containing % or _ must match itself, not everything — in an erasure
-// purge an unescaped % would delete the whole evidence store.
+// to be embedded in a pattern. Postgres' default LIKE escape is the
+// backslash, so no ESCAPE clause is needed. An identifier containing %
+// or _ must match itself, not everything: in an erasure purge an
+// unescaped % would delete the whole evidence store.
 func EscapeLike(value string) string {
 	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 	return r.Replace(value)
+}
+
+// EscapeLikeSQL is EscapeLike for an operand that exists only inside the
+// statement, such as a column or a bound parameter. The chain it returns
+// holds raw `%` verbs, so splice it in through %s, never into a format string.
+func EscapeLikeSQL(expr string) string {
+	return `replace(replace(replace(` + expr + `, '\', '\\'), '%', '\%'), '_', '\_')`
 }
 
 // EmailSuppressed reports whether an address belongs to an erased

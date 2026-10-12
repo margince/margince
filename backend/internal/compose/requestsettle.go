@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 const (
@@ -251,10 +252,10 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   -- conversation; every message of THAT thread would then be read here
 		   -- and sent to the model as context for the stranger's request.
 		   -- Outbound also has to be attested — the provider's own record of
-		   -- having sent it to this address — since the column is only filled
-		   -- for a message we really addressed there.
+		   -- having sent it to this address — or a colleague's mail held as a
+		   -- copy, the one exception activities.ourOutboundInThisThread makes.
 		   AND counterparty_email = $5
-		   AND (direction = 'inbound' OR counterparty_outbound_attested)
+		   AND (direction = 'inbound' OR counterparty_outbound_attested OR sent_by_colleague IS NOT NULL)
 		   AND archived_at IS NULL
 		   -- The audience, tested HERE and not only in the read that offered
 		   -- this request: the candidate query runs in its own statement and a
@@ -375,14 +376,15 @@ func (s *RequestSettler) commit(ctx context.Context, candidate settleCandidate, 
 // A date the model invented is worse than no date: it puts a deadline on
 // somebody's task that nobody agreed to. So an unparseable value is dropped
 // rather than guessed at, and the task simply stays undated — which is what
-// every machine-filed reminder is anyway.
+// every machine-filed reminder is anyway. A date outside the storable range is
+// dropped the same way.
 func settleDueDate(value string) *time.Time {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return nil
 	}
 	for _, layout := range []string{time.RFC3339, "2006-01-02"} {
-		if at, err := time.Parse(layout, value); err == nil {
+		if at, err := time.Parse(layout, value); err == nil && datasource.InstantInRange(at) {
 			return &at
 		}
 	}

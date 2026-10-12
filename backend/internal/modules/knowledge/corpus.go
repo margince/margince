@@ -37,6 +37,7 @@ const defaultAskColumn = "default_ask"
 // names do not read as a record changing; they read as two records.
 const (
 	filenameKey      = "filename"
+	checksumKey      = "checksum"
 	contentTypeKey   = "content_type"
 	managedSourceKey = "managed_source"
 	byteSizeKey      = "byte_size"
@@ -104,11 +105,19 @@ func (s *Store) CreateCorpus(ctx context.Context, in NewCorpus) (crmcontracts.Kn
 	if err := auth.Require(ctx, "knowledge_corpus", principal.ActionCreate); err != nil {
 		return crmcontracts.KnowledgeCorpus{}, err
 	}
-	name, err := httperr.RequireNonBlank("name", in.Name)
+	name, err := requireCorpusText("name", in.Name, maxCorpusName)
 	if err != nil {
 		return crmcontracts.KnowledgeCorpus{}, err
 	}
 	in.Name = name
+	if in.TopicStatement, err = requireCorpusText("topic_statement", in.TopicStatement, maxCorpusTopic); err != nil {
+		return crmcontracts.KnowledgeCorpus{}, err
+	}
+	if in.Description != nil {
+		if err := httperr.RequireWithin("description", *in.Description, maxCorpusDescription); err != nil {
+			return crmcontracts.KnowledgeCorpus{}, err
+		}
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.KnowledgeCorpus{}, err
@@ -159,11 +168,23 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 		return crmcontracts.KnowledgeCorpus{}, err
 	}
 	if in.Name != nil {
-		name, err := httperr.RequireNonBlank("name", *in.Name)
+		name, err := requireCorpusText("name", *in.Name, maxCorpusName)
 		if err != nil {
 			return crmcontracts.KnowledgeCorpus{}, err
 		}
 		in.Name = &name
+	}
+	if in.TopicStatement != nil {
+		topic, err := requireCorpusText("topic_statement", *in.TopicStatement, maxCorpusTopic)
+		if err != nil {
+			return crmcontracts.KnowledgeCorpus{}, err
+		}
+		in.TopicStatement = &topic
+	}
+	if in.Description != nil {
+		if err := httperr.RequireWithin("description", *in.Description, maxCorpusDescription); err != nil {
+			return crmcontracts.KnowledgeCorpus{}, err
+		}
 	}
 	var out crmcontracts.KnowledgeCorpus
 	err := s.tx(ctx, func(tx pgx.Tx) error {

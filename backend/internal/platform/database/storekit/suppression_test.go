@@ -3,7 +3,10 @@
 
 package storekit
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // The suppression hash is a matching contract between the eraser and
 // every ingest path: normalization must be identical on both sides,
@@ -54,6 +57,27 @@ func TestEscapeLikeNeutralizesWildcards(t *testing.T) {
 	for in, want := range cases {
 		if got := EscapeLike(in); got != want {
 			t.Errorf("EscapeLike(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// The SQL chain must escape in the same order as EscapeLike (backslash first).
+func TestEscapeLikeSQLEscapesBackslashFirst(t *testing.T) {
+	const want = `replace(replace(replace(x, '\', '\\'), '%', '\%'), '_', '\_')`
+	if got := EscapeLikeSQL("x"); got != want {
+		t.Errorf("EscapeLikeSQL(x) = %s, want %s", got, want)
+	}
+}
+
+// Every quick-find, with or without the identifier arm, escapes the typed text.
+func TestQuickFindEscapesTheTypedText(t *testing.T) {
+	const folded = "f_fold_apostrophes(lower($3))"
+	for name, clause := range map[string]string{
+		"plain":      QuickFindClause(3, "name"),
+		"identifier": QuickFindClauseWith(3, "name", Identifier{Table: "contact_email", FK: "contact_id", Column: "email"}),
+	} {
+		if !strings.Contains(clause, EscapeLikeSQL(folded)) {
+			t.Errorf("%s quick-find does not escape the typed text: %s", name, clause)
 		}
 	}
 }

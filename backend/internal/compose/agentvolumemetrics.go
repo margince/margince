@@ -14,10 +14,10 @@ package compose
 // every agent read refuses.
 //
 // Not readiness, and that is the decision rather than the cheap way out.
-// Readiness is per-POD: a probe would drain the pod for human traffic too, over
-// a fault no human request can meet. The alert on this gauge carries the
-// sentence that makes it actionable — agent reads are refusing, human traffic
-// is unaffected — and docs/reference/operator-signals.md is where it lives.
+// Readiness is per-POD: a probe would drain the pod for human traffic too. The
+// alert on this gauge says what to do:
+// agent reads are refusing, and draining the pod does not fix it. The alert is
+// in docs/how-to/deploy-margince.md.
 
 import (
 	"io"
@@ -38,7 +38,7 @@ func (s Server) writeAgentVolumeSection(w io.Writer) {
 	httpserver.WriteLine(w, "# HELP margince_agent_volume_bound Whether this role composed a bound on agent reads (MCP-SESS-READS): 1 when it did, 0 when it declared it serves no bounded agent surface.\n")
 	httpserver.WriteLine(w, "# TYPE margince_agent_volume_bound gauge\n")
 	httpserver.WriteLine(w, "margince_agent_volume_bound %d\n", boolGauge(reach.Bound))
-	httpserver.WriteLine(w, "# HELP margince_agent_volume_answerable Whether the bound could read its counter store on its last attempt: 0 means the bound is failing closed and every agent read on this role is refusing. Human traffic is unaffected.\n")
+	httpserver.WriteLine(w, "# HELP margince_agent_volume_answerable Whether the bound could read its counter store on its last attempt: 0 means the bound is failing closed and every agent read on this role is refusing. Draining the pod does not fix it; restore the counter store.\n")
 	httpserver.WriteLine(w, "# TYPE margince_agent_volume_answerable gauge\n")
 	httpserver.WriteLine(w, "margince_agent_volume_answerable %d\n", boolGauge(reach.Reachable))
 }

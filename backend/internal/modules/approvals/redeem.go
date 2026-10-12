@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -102,7 +103,7 @@ func (s *Service) RedeemInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, 
 		// the caller is asserting authority, not browsing.
 		return 0, false, fmt.Errorf("no such approval: %w", apperrors.ErrApprovalTokenInvalid)
 	}
-	if err := validateRedemption(a, p, tool, diffHash, s.now()); err != nil {
+	if err := validateRedemption(a, redeemerFor(ctx, a, p), tool, diffHash, s.now()); err != nil {
 		return 0, false, err
 	}
 
@@ -170,14 +171,14 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 }
 
 func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
-	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "target"); err != nil {
+	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "record"); err != nil {
 		return err
 	}
 	// The SECOND row, where the proposal declared one. A tag merge names two
 	// words and the human judged both, so both have to still be what they were
 	// — the retired side has always been checked here, and the survivor being
 	// exempt is what let a rename slip between the card and the merge.
-	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "co-target")
+	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record")
 }
 
 // checkPin re-reads one pinned row and refuses if it has moved since the
@@ -185,7 +186,7 @@ func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
 // approval that rests on a single row.
 func checkPin(
 	ctx context.Context, tx pgx.Tx,
-	entityType *string, id *ids.UUID, pinned *int64, which string,
+	entityType *string, id *ids.UUID, pinned *int64, record string,
 ) error {
 	if pinned == nil || id == nil || entityType == nil {
 		return nil
@@ -195,8 +196,9 @@ func checkPin(
 		return err
 	}
 	if current != *pinned {
-		return fmt.Errorf("%s changed since approval (v%d → v%d): %w",
-			which, *pinned, current, apperrors.ErrVersionSkew)
+		return &apperrors.VersionSkewError{Message: fmt.Sprintf(
+			"The %s this approval names changed after it was approved (version %d, now %d), so nothing was changed. "+
+				"Stage the change again for a fresh approval.", record, *pinned, current)}
 	}
 	return nil
 }
@@ -325,9 +327,7 @@ func UnpinnedKinds() map[string]string {
 
 func copyRationales(declared map[string]string) map[string]string {
 	out := make(map[string]string, len(declared))
-	for kind, why := range declared {
-		out[kind] = why
-	}
+	maps.Copy(out, declared)
 	return out
 }
 

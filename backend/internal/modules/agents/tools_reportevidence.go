@@ -92,6 +92,7 @@ func (t searchReportEvidence) Spec() mcp.ToolSpec {
 		Description:   searchReportEvidenceCopy.render(),
 		Instead:       searchReportEvidenceCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "searchReportEvidence",
 		InputSchema: schema(`{"type":"object","required":["run_id","query"],"properties":{
 			"run_id":{"type":"string","format":"uuid","description":"A saved run: run_analytics_query with save answers one."},
 			"cell":{"type":"array","items":{},"description":"One cell's group key values, in the run's group_by order. Omit to search every record the run measured."},

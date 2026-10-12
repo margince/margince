@@ -146,6 +146,10 @@ const RETIRED_WORD_KEPT = new Map<string, string>([
   ["oauthApp.tenant", "Microsoft Entra labels the directory tenant Mandant"],
   ["aiProviders.name.geminiVertex", "Vertex AI is Google's product name"],
   [
+    "aiProviderSettings.service.googleAiStudio",
+    "Google AI Studio is Google's product name",
+  ],
+  [
     "aiProviderKeys.vertexRoleHint",
     "Vertex AI User is Google's name for the role",
   ],

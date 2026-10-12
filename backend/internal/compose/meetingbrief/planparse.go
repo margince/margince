@@ -14,7 +14,9 @@ package meetingbrief
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
@@ -39,12 +41,7 @@ func groundedLine(sentence Sentence, known map[Evidence]string) bool {
 // so an id leaked there reaches the page as developer output in the middle of a
 // sentence, which is what claims.Grounded refuses for every cited line.
 func spellsAnID(lines ...string) bool {
-	for _, line := range lines {
-		if claims.SpellsRecordID(line) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(lines, claims.SpellsRecordID)
 }
 
 // groundedEvidenceOnly is the same rule for a field that carries citations
@@ -141,7 +138,7 @@ func ParsePlan(reply string, in Input, floor Plan) (Plan, error) {
 	written.Scenarios = keptScenarios(parsed.Scenarios, known)
 
 	if emptyReply(written) {
-		return Plan{}, fmt.Errorf("the meeting plan reply said nothing this meeting's records support")
+		return Plan{}, errors.New("the meeting plan reply said nothing this meeting's records support")
 	}
 	return written, nil
 }

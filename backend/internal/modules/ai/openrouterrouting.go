@@ -206,7 +206,7 @@ func IsOpenRouterHost(baseURL string) bool {
 // preferences, gpt-oss-120b on draft_reply: p50 19.0s → 1.1s, p90 38.0s → 2.0s,
 // p99 304.2s → 3.7s, hosts reached 8 → 1, and the repeats of 8 of 9 scenarios
 // stopped being split across different hosts. cold_start moved the same way.
-// The full measurement is docs/reference/openrouter.md.
+// The full measurement is docs/explanation/openrouter-upstream-choice.md.
 //
 // Why these three and not the faster ones the same experiment found:
 //

@@ -329,7 +329,7 @@ func releasedArgs(ctx context.Context, approvals TaskApprovals, approvalID ids.A
 	if members == nil {
 		// A literal JSON null decodes into a nil map without error, and would
 		// reach Invoke as an argument-less call.
-		return nil, fmt.Errorf("the approved change is a JSON null, not an object")
+		return nil, errors.New("the approved change is a JSON null, not an object")
 	}
 	id, err := json.Marshal(approvalID.String())
 	if err != nil {

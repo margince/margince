@@ -51,9 +51,28 @@ var (
 func TestEveryRelativeLinkUnderDocsResolves(t *testing.T) {
 	t.Parallel()
 	const docsRoot = "../docs"
+	// A pack's shipped documents are docs a reader follows links in too, so
+	// every extensions/<unit>/documents tree is walked beside docs/.
+	packDocs, globErr := filepath.Glob("../extensions/*/documents")
+	if globErr != nil {
+		t.Fatalf("finding the packs' document trees: %v", globErr)
+	}
 
 	scanned := 0
-	err := filepath.WalkDir(docsRoot, func(path string, d os.DirEntry, err error) error {
+	for _, root := range append([]string{docsRoot}, packDocs...) {
+		scanned += checkRelativeLinksUnder(t, root)
+	}
+	if scanned == 0 {
+		t.Fatalf("no markdown found under %s — this gate is reading a tree shape that is gone", docsRoot)
+	}
+}
+
+// checkRelativeLinksUnder fails every relative link under root that names no
+// file, and answers how many pages it read.
+func checkRelativeLinksUnder(t *testing.T, root string) int {
+	t.Helper()
+	scanned := 0
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -80,11 +99,9 @@ func TestEveryRelativeLinkUnderDocsResolves(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Fatalf("walking %s: %v", docsRoot, err)
+		t.Fatalf("walking %s: %v", root, err)
 	}
-	if scanned == 0 {
-		t.Fatalf("no markdown found under %s — this gate is reading a tree shape that is gone", docsRoot)
-	}
+	return scanned
 }
 
 // docsLink is one in-tree link target and the line it was written on.

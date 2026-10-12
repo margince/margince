@@ -289,7 +289,7 @@ func (c contract) sortedTaskNames() []string {
 // every Task/Tier constant uses (cert_judge -> CertJudge).
 func pascalCase(snake string) string {
 	var b strings.Builder
-	for _, part := range strings.Split(snake, "_") {
+	for part := range strings.SplitSeq(snake, "_") {
 		if part == "" {
 			continue
 		}

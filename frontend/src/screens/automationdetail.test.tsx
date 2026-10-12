@@ -58,7 +58,7 @@ describe("OutcomeBadge", () => {
   const cases: ReadonlyArray<[AutomationRun["outcome"], string, string]> = [
     ["fired", "badge-success", "Fired"],
     ["failed", "badge-danger", "Failed"],
-    ["blocked", "badge-danger", "Blocked"],
+    ["blocked", "badge-warning", "Blocked"],
     ["skipped", "badge-warning", "Skipped"],
     ["queued_for_approval", "badge-warning", "Queued"],
   ];

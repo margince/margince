@@ -53,10 +53,7 @@ const systemActingHelper = "SystemActing"
 // mints an id CONDITIONALLY. SystemActing always mints, so pushing one of these
 // through it would overwrite a trace the caller already opened — the opposite
 // of what the site is for.
-var inheritedCorrelationBindings = gatekit.Waive(map[string]string{
-	"internal/modules/integrations/runactor.go:actingForProvider": "a connector run inherits the correlation id of whatever opened it — a webhook " +
-		"delivery, a rep's request — and mints one only when nothing did, so the purchase and the claim rows it writes replay as one story with the call that asked for them",
-})
+var inheritedCorrelationBindings = gatekit.Waive(map[string]string{})
 
 func TestASystemPassBindsItsProvenanceThroughOneHelper(t *testing.T) {
 	t.Parallel()

@@ -14,6 +14,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -45,7 +46,7 @@ func runReopenParked(ctx context.Context, pool *pgxpool.Pool, args []string, std
 		return err
 	}
 	if *batch <= 0 {
-		return fmt.Errorf("reopen-parked: --batch must be positive")
+		return errors.New("reopen-parked: --batch must be positive")
 	}
 
 	recovery := compose.NewProviderRecovery(pool)
@@ -69,7 +70,7 @@ func runReopenParked(ctx context.Context, pool *pgxpool.Pool, args []string, std
 
 func parseReopenWindow(from, to string) (capture.ReopenWindow, error) {
 	if from == "" || to == "" {
-		return capture.ReopenWindow{}, fmt.Errorf("reopen-parked: --from and --to are required (RFC3339)")
+		return capture.ReopenWindow{}, errors.New("reopen-parked: --from and --to are required (RFC3339)")
 	}
 	start, err := time.Parse(time.RFC3339, from)
 	if err != nil {

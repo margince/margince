@@ -40,6 +40,8 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | IMAP | The standard protocol for reading mail from a mail server. |
+| Jurisdiction | The settings page where an admin chooses the law an installation follows. |
+| Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | macOS | Apple's desktop operating system. |
@@ -57,6 +59,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Redis | The in-memory store Margince uses as its event bus. |
 | REST | The style of HTTP API Margince offers next to MCP. |
 | RTF | Rich Text Format, a document format most word processors read. |
+| skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |
 | SonarCloud | A code quality service that scans each pull request. |
 | Telegram | A chat app Margince can send messages through. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
@@ -66,6 +69,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+| ZIP | A file format that packs many files into one. |
 
 ## Names without a meaning yet
 
@@ -76,7 +80,7 @@ write its meaning, and delete it here. A name new to the docs goes in the table,
 `AA`, `AAAA`, `ack`, `acks`, `AD`, `AirDrop`, `AkashML`, `allowlist`, `American`, `Android`, `Anthropic`, `AO`,
 `api`, `apidiff`, `Apple`, `arch-lint`, `args`, `ARIA`, `Art`, `ASCII`, `AST`, `Atlassian`, `Aurora`,
 `Austria`, `Austrian`, `auth`, `Authenticode`, `Auto-capture`, `auto-capture`, `axe`, `Azure`, `B`, `BaseTen`,
-`bash`, `Bcc`, `BDSG`, `Betriebsrat`, `Betriebsvereinbarung`, `BetrVG`, `BI`, `Biome`, `biome`, `BotFather`,
+`bash`, `Bcc`, `BDSG`, `Betriebsrat`, `Betriebsvereinbarung`, `BetrVG`, `Biome`, `biome`, `BotFather`,
 `British`, `BSD`, `Buchungsbelege`, `BYOK`, `BYPASSRLS`, `C`, `CA`, `calendarView`, `Cc`, `CDN`, `Cerebras`,
 `cert`, `CGNAT`, `ChatGPT`, `CHF`, `chi`, `Chrome`, `Chromium`, `chunker`, `Claude`, `claude`, `CLDR`, `CLI`,
 `Cloud`, `Cmd`, `CNAME`, `codegen`, `CODEOWNERS`, `CodeRabbit`, `Codex`, `codex`, `comms`, `compose`, `config`,
@@ -87,30 +91,29 @@ write its meaning, and delete it here. A name new to the docs goes in the table,
 `DSFA`, `DSGVO`, `DSL`, `DSN`, `DSNs`, `DSR`, `DTO`, `EAV`, `Edge`, `Einwilligung`, `embeddings`,
 `Empfangsbestätigung`, `Enterprise`, `Entra`, `entrypoint`, `enum`, `env`, `ERP`, `Esc`, `Escape`, `ETag`,
 `EUR`, `European`, `evaluator`, `Excel`, `Exchange`, `FAQ`, `Fastmail`, `favicons`, `FE`, `Firefox`,
-`Flash-Lite`, `Fonts`, `forbidigo`, `Forrester`, `frontend`, `FX`, `Garnet`, `Gartner`, `Gatekeeper`, `GB`,
-`GBP`, `gcal`, `GCM`, `Geist`, `Gemini`, `Gemma`, `Geocoding`, `GGUF`, `GH`, `GiB`, `gitignored`, `gitleaks`,
-`glob`, `GNU`, `go-arch-lint`, `GoBD`, `gofmt`, `golangci`, `golangci-lint`, `gosec`, `govulncheck`, `GPL`,
-`GPT`, `GPU`, `Graph`, `graphcal`, `grep`, `Groq`, `GUC`, `Haiku`, `Handelsbrief`, `HardPass`, `HGB`, `HMAC`,
-`HMAC-SHA`, `HTML`, `HTTP`, `Hà`, `IAM`, `IANA`, `ICP`, `ID`, `id`, `idempotency`, `Idempotency-Key`, `IDs`,
-`IMAPS`, `Impressum`, `Inspector`, `Intel`, `Intelligence`, `IP`, `iPhone`, `ISO`, `Jev`, `jq`, `jsdom`,
-`JSON`, `JSON-LD`, `JSON-RPC`, `JSONL`, `JSONPath`, `K`, `KB`, `Kev`, `Keychain`, `keyvault`, `Lars`, `Laya`,
-`lcov`, `Levenshtein`, `libpq`, `Linux`, `LiteLLM`, `LLM`, `LOC`, `localhost`, `lockfile`, `London`, `Mac`,
-`Mach-O`, `MAJOR`, `Makefile`, `Markdown`, `markdown`, `MB`, `Meet`, `MFA`, `MiB`, `micro-USD`, `middleware`,
-`MIME`, `Minh`, `MinIO`, `Ministral`, `MINOR`, `Mistral`, `MIT`, `Mitarbeiterinformation`, `MLX`, `MoE`, `MRL`,
-`ms`, `MSVC`, `mtime`, `MX`, `NAT`, `Nebius`, `Nemo`, `NFC`, `NL`, `non-match`, `nonce`, `NormalizedRecord`,
-`notarization`, `Novita`, `npm`, `Nr`, `NULL`, `null`, `OA`, `oapi-codegen`, `oasdiff`, `OAuth`, `Office`,
-`OIDC`, `OpenAI`, `OpenAI-compatible`, `OpenAPI`, `Ops`, `ops`, `OS`, `Outfit`, `Outlook`, `Parasail`, `PATCH`,
-`PDF`, `PERF`, `pgvector`, `pids`, `PII`, `PIM`, `Playwright`, `POSIX`, `POST`, `PostgreSQL`, `POSTs`,
-`PowerShell`, `PR`, `PRs`, `PTR`, `Pub`, `purl`, `push-capable`, `px`, `Python`, `QC`, `Qwen`, `RAM`,
-`re-authenticate`, `Re-certify`, `re-certify`, `README`, `Rekor`, `Renovate`, `RFC`, `River`, `RLS`, `Rosetta`,
-`RPC`, `RRF`, `Safari`, `SAR`, `SBOM`, `SBOMs`, `SDR`, `semver`, `send-capable`, `SendGrid`, `SHA`, `sha`,
-`Shopify`, `Shopware`, `Shortlist`, `Shortlists`, `sigstore`, `SiliconFlow`, `SKU`, `SLA`, `slug`,
-`SmartScreen`, `SMB`, `SMTP`, `Sonnet`, `SPA`, `Sparkles`, `SPDX`, `SPF`, `SQL`, `SQLSTATE`, `SSRF`, `stderr`,
-`stdin`, `stdout`, `storekit`, `Storybook`, `Streamable`, `Stripe`, `struct`, `structs`, `Studio`, `Sub`,
-`sub-issue`, `Surface-B`, `Surfe`, `Svix`, `syft`, `SyncOnce`, `syncToken`, `T`, `TCP`, `testkit`, `ThreadKey`,
-`Tiếng`, `TLS`, `Trần`, `TS`, `tsc`, `TTL`, `TUF`, `TXT`, `typecheck`, `TypeSafe`, `TypeScript`, `UA`, `UAT`,
-`UI`, `UID`, `uid`, `und`, `unix`, `URI`, `URIs`, `URL`, `URL-safe`, `USB`, `USP`, `UTC`, `UUID`, `uuid`,
-`Valkey`, `vCard`, `vCPU`, `Ventura`, `Verarbeitungsverzeichnis`, `Vertex`, `vet`, `VIES`, `Vietnamese`,
-`Visual`, `vite`, `Vitest`, `vitest`, `Việt`, `vllm-metal`, `Voice-DNA`, `VS`, `vuln`, `WAI-ARIA`,
-`Wappalyzer`, `WatchRenewer`, `WCAG`, `WebGL`, `Wettbewerbszentrale`, `worktrees`, `WSL`, `Xcode`, `XRechnung`,
-`YAML`, `Zalo`, `ZUGFeRD`, `Zürich`
+`Flash-Lite`, `Fonts`, `forbidigo`, `frontend`, `FX`, `Garnet`, `Gatekeeper`, `GB`, `GBP`, `gcal`, `GCM`,
+`Geist`, `Gemini`, `Gemma`, `GGUF`, `GH`, `GiB`, `gitignored`, `gitleaks`, `glob`, `GNU`, `go-arch-lint`,
+`GoBD`, `gofmt`, `golangci`, `golangci-lint`, `gosec`, `govulncheck`, `GPL`, `GPT`, `GPU`, `Graph`, `graphcal`,
+`grep`, `Groq`, `GUC`, `Haiku`, `Handelsbrief`, `HardPass`, `HGB`, `HMAC`, `HMAC-SHA`, `HTML`, `HTTP`, `Hà`,
+`IAM`, `IANA`, `ICP`, `ID`, `id`, `idempotency`, `Idempotency-Key`, `IDs`, `IMAPS`, `Impressum`, `Inspector`,
+`Intel`, `Intelligence`, `IP`, `iPhone`, `ISO`, `Jev`, `jq`, `jsdom`, `JSON`, `JSON-LD`, `JSON-RPC`, `JSONL`,
+`JSONPath`, `K`, `KB`, `Kev`, `Keychain`, `keyvault`, `Laya`, `lcov`, `Levenshtein`, `libpq`, `Linux`,
+`LiteLLM`, `LLM`, `LOC`, `localhost`, `lockfile`, `London`, `Mac`, `Mach-O`, `MAJOR`, `Makefile`, `Markdown`,
+`markdown`, `MB`, `Meet`, `MFA`, `MiB`, `micro-USD`, `middleware`, `MIME`, `Minh`, `MinIO`, `Ministral`,
+`MINOR`, `Mistral`, `MIT`, `Mitarbeiterinformation`, `MLX`, `MoE`, `MRL`, `ms`, `MSVC`, `mtime`, `MX`, `NAT`,
+`Nebius`, `Nemo`, `NFC`, `NL`, `non-match`, `nonce`, `NormalizedRecord`, `notarization`, `Novita`, `npm`, `Nr`,
+`NULL`, `null`, `OA`, `oapi-codegen`, `oasdiff`, `OAuth`, `Office`, `OIDC`, `OpenAI`, `OpenAI-compatible`,
+`OpenAPI`, `Ops`, `ops`, `OS`, `Outfit`, `Outlook`, `Parasail`, `PATCH`, `PDF`, `PERF`, `pgvector`, `pids`,
+`PII`, `Playwright`, `POSIX`, `POST`, `PostgreSQL`, `POSTs`, `PowerShell`, `PR`, `PRs`, `PTR`, `Pub`, `purl`,
+`push-capable`, `px`, `Python`, `QC`, `Qwen`, `RAM`, `re-authenticate`, `Re-certify`, `re-certify`, `README`,
+`Rekor`, `Renovate`, `RFC`, `River`, `RLS`, `Rosetta`, `RPC`, `RRF`, `Safari`, `SAR`, `SBOM`, `SBOMs`, `SDR`,
+`semver`, `send-capable`, `SendGrid`, `SHA`, `sha`, `Shopware`, `Shortlist`, `Shortlists`, `sigstore`,
+`SiliconFlow`, `SKU`, `SLA`, `slug`, `SmartScreen`, `SMB`, `SMTP`, `Sonnet`, `SPA`, `Sparkles`, `SPDX`, `SPF`,
+`SQL`, `SQLSTATE`, `SSRF`, `stderr`, `stdin`, `stdout`, `storekit`, `Storybook`, `Streamable`, `Stripe`,
+`struct`, `structs`, `Studio`, `Sub`, `sub-issue`, `Surface-B`, `Surfe`, `Svix`, `syft`, `SyncOnce`,
+`syncToken`, `T`, `TCP`, `testkit`, `ThreadKey`, `Tiếng`, `TLS`, `Trần`, `TS`, `tsc`, `TTL`, `TUF`, `TXT`,
+`typecheck`, `TypeSafe`, `TypeScript`, `UA`, `UAT`, `UI`, `UID`, `uid`, `und`, `unix`, `URI`, `URIs`, `URL`,
+`URL-safe`, `USB`, `USP`, `UTC`, `UUID`, `uuid`, `Valkey`, `vCard`, `vCPU`, `Ventura`,
+`Verarbeitungsverzeichnis`, `Vertex`, `vet`, `VIES`, `Vietnamese`, `Visual`, `vite`, `Vitest`, `vitest`,
+`Việt`, `vllm-metal`, `Voice-DNA`, `VS`, `vuln`, `WAI-ARIA`, `Wappalyzer`, `WatchRenewer`, `WCAG`, `WebGL`,
+`Wettbewerbszentrale`, `worktrees`, `WSL`, `Xcode`, `XRechnung`, `YAML`, `Zalo`, `ZUGFeRD`, `Zürich`

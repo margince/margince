@@ -119,7 +119,7 @@ func TestAHandLoggedMessageNamesNoMailbox(t *testing.T) {
 		},
 	})
 	logged, _, err := store.LogActivity(writeCtx, activities.LogActivityInput{
-		Kind: "email", Subject: strptr("Typed by a contact"), Body: strptr("Not delivered anywhere."),
+		Kind: "email", Subject: new("Typed by a contact"), Body: new("Not delivered anywhere."),
 	})
 	if err != nil {
 		t.Fatalf("logging an activity by hand: %v", err)
@@ -251,5 +251,3 @@ func setCapturedBy(t *testing.T, e *integration.SearchEnv, activityID ids.UUID, 
 		t.Fatalf("setting the provenance stamp: %v", err)
 	}
 }
-
-func strptr(s string) *string { return &s }

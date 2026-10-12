@@ -182,7 +182,7 @@ The AI group in Settings has the pages **AI usage**, **AI models**, **AI call lo
 
 **Model routing**, on **AI models**, shows which model does each kind of work, listed by activity. What you see is the current setting; **AI call log** shows what ran. Settings that several kinds of work share sit under **Advanced**, and changing one can move several kinds of work at once. Prices show the cost of the text sent in and the text that comes back, per million tokens. To know where data goes and what it costs, check the model and provider shown on each row, not the tier name.
 
-Each row in **AI tasks** names its tier. Its name opens its state, what it does when the provider is down, and **View calls**. **Edit** sets how hard it reasons, and its time limits. Search and retrieval has neither: set its model under **Model tiers**.
+Each row in **AI tasks** names its tier. Its name opens its state, what it does when the provider is down, and **View calls**. Opening the row sets how hard it reasons, and its time limits. Search and retrieval has neither: set its model under **Model tiers**.
 
 Changes start to work in about 60 seconds; a call already running keeps its old setting.
 
@@ -248,10 +248,46 @@ System health and Reset data sit in the **Governance** group, and Data import in
   back in the whole installation. It shows counts only; the contacts and messages stay
   in view to their mailbox owner alone. The same readers as Background jobs see
   it.
+- **Restore drills**: when a restore from a backup was last tested, if it
+  passed, and how long it took against the targets. Whoever runs the
+  installation records each test. Margince does not see backups, so the card
+  says "Not observed by Margince" for the last backup. The same readers as
+  Background jobs see it.
 - **Reset data**: takes an installation back to how it was on its first start.
   It deletes every record and setting, but keeps the company and its users, so
   everyone can still sign in. It appears only where whoever runs the
   installation has turned it on.
+
+## Data import
+
+The Data import page in Settings (group **Data**) brings in a CSV of prospects, companies or contacts. Only an admin or ops user can import. Starting an import and undoing one are in [What is kept, what is destroyed](retention-exports-and-deletion.md).
+
+### What does the import preview tell me?
+The Margince **Import preview** counts what the import will do with each row: **Create**, **Update**, **Unchanged** and **Skipped**. The four add up to the rows in the file, and "{rows} rows read, identified by {column}." names the column that tells rows apart. Rows that cannot be imported are listed with their line number. Fix them in the file and choose **Preview import** again. Nothing is written until you choose **Import {rows} rows**.
+Also called: test run, check an import, import report.
+
+### What happens if I import the same file again?
+Importing the same file again in Margince updates the records that file made the first time, and does not copy them. The screen names the column that tells rows apart: the company name for companies, the email for contacts and prospects. A row whose values did not change counts as **Unchanged**, so a file you already imported reports no work.
+Also called: re-import, upload again, update from a spreadsheet.
+
+### What happens to a company I already have?
+A company that Margince already holds, and that no import made, is not matched by its name. The import creates a second company and files the two for review as a possible duplicate. To change companies you already have, correct them by their ID instead. A company you cannot see is not counted or named in the preview.
+Also called: duplicates on import, import made copies.
+
+### How do I correct companies with a spreadsheet?
+To correct companies in Margince from a CSV, give each row the company's ID and map that column to **id**.
+1. Use **Export CSV** from **Filters and views**; its **id** column holds each ID.
+2. Edit the file, then choose **Start import** in **Settings → Data import**, with **Row type** **Companies**.
+3. In **Column mapping**, map **id** to **id**, and the name column to **display_name**.
+4. Choose **Preview import**.
+An empty ID creates a company. An ID that matches no company is skipped and named.
+Also called: bulk edit companies, update companies from Excel, fix company data.
+
+Undo never puts back the old values of a company an import corrected. It only archives the companies that import created.
+
+### What if an import stops partway?
+When a Margince import stops partway, the result says **Import stopped partway** and how many rows it read. Choose **Resume import** to go on from that row, not from the start. **Tag for this import** puts every record the import creates under one tag, so you can find them later. Records it only updates keep their own tags.
+Also called: import failed, import stopped, continue an import.
 
 ---
 

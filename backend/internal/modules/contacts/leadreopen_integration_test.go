@@ -73,8 +73,7 @@ func TestReopeningALeadRestoresTheStatusItWasClosedAt(t *testing.T) {
 	if _, err := e.store.ReopenLead(e.ctx, lead); err == nil {
 		t.Error("reopening an open lead succeeded, want a conflict")
 	} else {
-		var notDisqualified *NotDisqualifiedError
-		if !errors.As(err, &notDisqualified) {
+		if _, ok := errors.AsType[*NotDisqualifiedError](err); !ok {
 			t.Errorf("second reopen: err = %v, want NotDisqualifiedError", err)
 		}
 	}
@@ -126,8 +125,7 @@ func TestReopeningALeadWhoseEmailALiveLeadNowHoldsIsADuplicate(t *testing.T) {
 
 	_, err := e.store.ReopenLead(e.ctx, first)
 
-	var duplicate *DuplicateLeadError
-	if !errors.As(err, &duplicate) {
+	if _, ok := errors.AsType[*DuplicateLeadError](err); !ok {
 		t.Fatalf("reopen answered %v, want a duplicate-email conflict", err)
 	}
 }

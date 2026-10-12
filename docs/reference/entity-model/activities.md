@@ -6,7 +6,7 @@ The 24 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-58 columns · primary key `(id)` · referenced by 32 foreign keys
+59 columns · primary key `(id)` · referenced by 33 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -53,6 +53,7 @@ The 24 tables owned by `activities`, as the migrations build them. [Back to the 
 | `restricted_until` | `timestamp with time zone` |  |  |
 | `retention_class` | `text` |  |  |
 | `retention_class_at` | `timestamp with time zone` |  |  |
+| `sent_by_colleague` | `uuid` |  | Points at `app_user.id`. |
 | `source_activity_id` | `uuid` |  | The activity this one was derived from: today, the meeting whose transcript proposed a task. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
@@ -78,6 +79,7 @@ The 24 tables owned by `activities`, as the migrations build them. [Back to the 
 | `host_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `kind` | `activity_kind` | the parent cannot be deleted while this row points at it |
 | `raw_capture_id` | `raw_capture` | deleting the parent keeps this row and clears the link |
+| `sent_by_colleague` | `app_user` | deleting the parent keeps this row and clears the link |
 | `source_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `source_author_id` | `app_user` | deleting the parent keeps this row and clears the link |
 
@@ -86,6 +88,7 @@ The 24 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_audience_check`: `CHECK ((audience = ANY (ARRAY['workspace', 'participants', 'selected'])))`
 - `activity_capture_label_check`: `CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment', 'meeting', 'noise']))))`
 - `activity_capture_label_stamped`: `CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))`
+- `activity_colleague_mail_is_outbound`: `CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound')))`
 - `activity_direction_check`: `CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound', 'outbound']))))`
 - `activity_done_at`: `CHECK (((is_done = false) OR (done_at IS NOT NULL)))`
 - `activity_exact_booking_duration`: `CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))`

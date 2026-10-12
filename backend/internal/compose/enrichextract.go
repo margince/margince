@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
@@ -359,10 +360,7 @@ func mergeSiteFields(seed, legal []evidencedField) []evidencedField {
 // the request is built, because the evidence gate must match quotes against the
 // SAME text the model saw — never against a region nobody was given.
 func boundedExtractionText(sourceText string) string {
-	if runes := []rune(sourceText); len(runes) > maxExtractionText {
-		return string(runes[:maxExtractionText])
-	}
-	return sourceText
+	return textcut.Runes(sourceText, maxExtractionText)
 }
 
 // extractFields is the model+gate step for ONE page: an empty result is a

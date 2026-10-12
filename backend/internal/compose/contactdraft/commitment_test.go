@@ -349,7 +349,7 @@ func TestTheNextMeetingReachesTheDraft(t *testing.T) {
 	soon := draftedAt.Add(72 * time.Hour)
 	in := foldedWithMeeting(&crmcontracts.Contact360NextMeeting{
 		StartsAt:     soon,
-		Subject:      strPtr("Integration review"),
+		Subject:      new("Integration review"),
 		Participants: participants(recipientID),
 	})
 
@@ -369,7 +369,7 @@ func TestAMeetingTheyAreNotOnIsNeverMentioned(t *testing.T) {
 
 	other := foldedWithMeeting(&crmcontracts.Contact360NextMeeting{
 		StartsAt:     soon,
-		Subject:      strPtr("Internal pricing review"),
+		Subject:      new("Internal pricing review"),
 		Participants: participants(openapi_types.UUID(ids.NewV7())),
 	})
 	if other.Meeting != nil {
@@ -379,7 +379,7 @@ func TestAMeetingTheyAreNotOnIsNeverMentioned(t *testing.T) {
 	// An absent participant list is not evidence that they attend, so it is
 	// treated as no.
 	unknown := foldedWithMeeting(&crmcontracts.Contact360NextMeeting{
-		StartsAt: soon, Subject: strPtr("Unlisted"),
+		StartsAt: soon, Subject: new("Unlisted"),
 	})
 	if unknown.Meeting != nil {
 		t.Errorf("a meeting with no attendee list should not be assumed theirs: %+v", unknown.Meeting)
@@ -391,7 +391,7 @@ func TestAMeetingTheyAreNotOnIsNeverMentioned(t *testing.T) {
 func TestAPastMeetingIsNotTheNextOne(t *testing.T) {
 	past := foldedWithMeeting(&crmcontracts.Contact360NextMeeting{
 		StartsAt:     draftedAt.Add(-48 * time.Hour),
-		Subject:      strPtr("Last week's call"),
+		Subject:      new("Last week's call"),
 		Participants: participants(recipientID),
 	})
 	if past.Meeting != nil {
@@ -400,8 +400,6 @@ func TestAPastMeetingIsNotTheNextOne(t *testing.T) {
 }
 
 var recipientID = openapi_types.UUID(ids.NewV7())
-
-func strPtr(s string) *string { return &s }
 
 // helper has to land in exactly that anonymous struct to be assignable to it.
 //

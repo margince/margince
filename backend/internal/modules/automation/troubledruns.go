@@ -37,24 +37,13 @@ type TroubledAutomationRun struct {
 	CreatedAt    time.Time
 }
 
-// troubledRunsSQL joins each failed or blocked run back to its LIVE, ENABLED
-// automation the way ListRuns addresses runs forward: the handler is the
-// automation's key and the idempotency key carries "@<automation id>" (a
-// UUID, so the LIKE pattern carries no metacharacters). A paused rule's
-// failures raise nothing — its owner turned it off, often because of exactly
-// those failures, and a card would nag them about their own decision — and
-// an archived rule's history stays history. The two spellings stay separate
-// because the fragment binds differently — ListRuns parameterizes one
-// instance's id, this join correlates the automation column — and runKey's
-// own doc (engine_run.go) names both readers so a key-shape change lands on
-// everyone who decodes it. An archived automation's history stays
-// history — a card for a rule nobody can open would be a dead end.
+// troubledRunsSQL reads recent failed and blocked runs of live, enabled rules.
+// A paused rule raises nothing: its owner chose to stop it.
 const troubledRunsSQL = `
 SELECT r.id, a.id, a.name, r.status, r.detail, r.created_at
   FROM workflow_run r
   JOIN automation a ON a.archived_at IS NULL AND a.enabled
-   AND r.handler = a.key
-   AND r.idempotency_key LIKE '%@' || a.id
+   AND ` + runOfAutomationSQL + `
  WHERE r.status IN ('failed', 'blocked')
    AND r.created_at >= $1
  ORDER BY r.created_at DESC, r.id DESC

@@ -81,7 +81,7 @@ func resetDataRequiredFields(t *testing.T) []string {
 			continue
 		}
 		var fields []string
-		for _, name := range strings.Split(m[1], ",") {
+		for name := range strings.SplitSeq(m[1], ",") {
 			if trimmed := strings.TrimSpace(name); trimmed != "" {
 				fields = append(fields, trimmed)
 			}

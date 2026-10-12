@@ -25,6 +25,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -298,4 +299,4 @@ func (p UndoabilityPage) judge(ctx context.Context, tx pgx.Tx, row pageRow,
 // The evaluator only asks whether the port returned an error, and the real one
 // separates "not yours" from "does not exist" — the distinction the row-scope
 // gate keeps hidden.
-var errRecordNotWritable = fmt.Errorf("the caller may not change this record")
+var errRecordNotWritable = errors.New("the caller may not change this record")

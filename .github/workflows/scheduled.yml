@@ -45,6 +45,11 @@ name: scheduled
 #                        bench-perf-check), and an alarm that cannot finish files
 #                        a breach it never measured.
 #
+#   slop trend         — the slop scores and the comment numbers, once a week,
+#                        beside last week's. Not a verdict: the comment checks
+#                        judge only added lines, and this is what shows whether
+#                        the rest of the tree gets better.
+#
 # One more job earns its place here for the same reason rather than the same
 # question. reap-caches is maintenance, not a verdict on main — but the state it
 # maintains only ever drifts BETWEEN merges, and its failure mode is silence:
@@ -73,6 +78,10 @@ on:
         default: false
       llm:
         description: "Also run the six use cases against a real model (COSTS TOKENS; needs CLAUDE_CODE_OAUTH_TOKEN)"
+        type: boolean
+        default: false
+      trend:
+        description: "Also record the slop trend (craft slop and craft stats against last week's run)"
         type: boolean
         default: false
 
@@ -265,6 +274,69 @@ jobs:
       - name: Backend merge gate (make check-backend)
         working-directory: .
         run: make check-backend
+
+  # The backend's counterpart to fe-clock-drift: the suite's verdict must not
+  # depend on the calendar. It moves the runner's own clock, and
+  # scripts/clock-drift-host.sh says why no other shift reaches both Go and
+  # Postgres.
+  #
+  # Order matters: checkout, module download, the gate binaries and the compose
+  # pull all finish at the real date, because a 200-day jump expires the TLS
+  # certificates they verify. Only then does the clock move.
+  backend-clock-drift:
+    # The DAILY cadence, spelled per job for the reason backend-lane states: a
+    # job with no `if` runs on every trigger the workflow has.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
+    name: backend clock drift (main, +200 days)
+    runs-on: ubuntu-latest
+    # Longer than backend-lane's 45: this runs the integration lane too, on one
+    # runner rather than across the six shards ci.yml splits it into.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      BACKEND_CLOCK_SKEW: machine:200
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # rbacbaselineerafixture_test.go reads the migration baseline commit and
+          # fails rather than degrades on a shallow checkout.
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: integration
+      - name: Install the pinned gate binaries
+        run: make tools
+      - name: Gate binaries onto PATH
+        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      # Every step that needs the network has finished by here.
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      - name: Compile the suites at the real date
+        run: make -C backend build
+      # The offset comes from BACKEND_CLOCK_SKEW rather than being spelled again.
+      # The restore below is the copy that matters: raising the skew here and
+      # leaving a literal there hands the runner back with its clock in the
+      # past, which is the poisoning that step exists to prevent.
+      - name: Move the runner's clock forward
+        run: ./scripts/clock-drift-host.sh move "${BACKEND_CLOCK_SKEW##*:}"
+      - name: The backend suites at the moved clock
+        run: make backend-clock-drift
+      # The clock goes back even when the suites failed. A runner handed back to
+      # the pool 200 days ahead poisons whatever runs on it next, and that
+      # failure would surface in someone else's lane with nothing to point at.
+      - name: Restore the clock
+        if: always()
+        run: ./scripts/clock-drift-host.sh restore "${BACKEND_CLOCK_SKEW##*:}"
 
   # PERF-3/PERF-7 on the SMB tier, weekly. It is the only job here gated on a
   # cadence rather than running every time the workflow fires: the daily lane
@@ -628,6 +700,62 @@ jobs:
   # gate is a second RUN rather than a pattern: shift the clock, require the same
   # verdict. A test that pins its own clock is unaffected, which is correct — it
   # is already immune to what this lane looks for.
+  # The weekly trend of the slop scores and the comment numbers. No gate reads
+  # them: the paper behind the scores found they do not predict a failing test,
+  # so the job writes this week beside last week in the run summary and keeps
+  # the JSON for next week. It fails only when it cannot measure.
+  slop-trend:
+    name: slop trend (weekly)
+    if: github.event.schedule == '0 2 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.trend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # Reads the previous run's artifact, the only history the trend has.
+      actions: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # craft scores TypeScript with the frontend's own compiler.
+      - name: Install the frontend packages
+        run: cd frontend && pnpm install --frozen-lockfile
+      - name: Fetch last week's numbers
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          prev="$RUNNER_TEMP/slop-trend-prev"
+          mkdir -p "$prev"
+          # The newest live artifact from a run on main. A manual run on another
+          # branch must not become the week the next run is compared with.
+          url="$(gh api "repos/$REPO/actions/artifacts?name=slop-trend&per_page=50" \
+            --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main")][0].archive_download_url // empty')"
+          if [[ -z "$url" ]]; then
+            echo "No earlier slop-trend artifact from main: this run records the first one."
+            exit 0
+          fi
+          gh api "$url" > "$RUNNER_TEMP/slop-trend-prev.zip"
+          unzip -o -q "$RUNNER_TEMP/slop-trend-prev.zip" -d "$prev"
+      # runner.temp is not available in a job's env, so the paths are set here.
+      - name: Record the trend
+        run: SLOP_TREND_DIR="$RUNNER_TEMP/slop-trend" make slop-trend PREV="$RUNNER_TEMP/slop-trend-prev"
+      - uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: slop-trend
+          path: ${{ runner.temp }}/slop-trend/*.json
+          retention-days: 90
+
   fe-clock-drift:
     name: fe clock drift (main, +200 days)
     runs-on: ubuntu-latest
@@ -696,7 +824,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -740,6 +868,7 @@ jobs:
           RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
           LANE_RESULT: ${{ needs.backend-lane.result }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
+          BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
@@ -747,4 +876,5 @@ jobs:
           LLM_RESULT: ${{ needs['llm-use-cases'].result }}
           LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
+          TREND_RESULT: ${{ needs['slop-trend'].result }}
         run: ./scripts/scheduled-report.sh

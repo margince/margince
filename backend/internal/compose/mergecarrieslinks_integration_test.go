@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -46,6 +47,7 @@ type carryEnv struct {
 	consent  *consent.Store
 	intros   *introductions.Store
 	contacts *contacts.Store
+	grants   *identity.Service
 }
 
 func setupCarry(t *testing.T) *carryEnv {
@@ -53,10 +55,11 @@ func setupCarry(t *testing.T) *carryEnv {
 	e := integration.Setup(t)
 	consentStore := consent.NewStore(e.DB())
 	intros := introductions.NewStore(e.DB(), time.Now)
+	grants := identity.NewServiceFor(e.DB())
 	return &carryEnv{
-		e: e, admin: e.Admin(), consent: consentStore, intros: intros,
+		e: e, admin: e.Admin(), consent: consentStore, intros: intros, grants: grants,
 		contacts: contacts.NewStore(e.DB()).WithStopCarrier(consentStore).
-			WithSatelliteCarriers(consentStore, intros),
+			WithSatelliteCarriers(consentStore, intros).WithGrantCarrier(grants),
 	}
 }
 
@@ -421,8 +424,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenALinkWouldBeStranded(t *testing.T) {
 	c.withdrawalLink(t, consent.WithdrawalMintInput{Address: "holder@carry.test", ContactID: holder})
 
 	_, err := unwired.MergeContact(c.admin, holder, holderInto, nil)
-	var notWired *contacts.SatelliteCarrierNotWiredError
-	if !errors.As(err, &notWired) {
+	if _, ok := errors.AsType[*contacts.SatelliteCarrierNotWiredError](err); !ok {
 		t.Fatalf("the merge answered %v, want SatelliteCarrierNotWiredError", err)
 	}
 	if n := c.count(t, `SELECT count(*) FROM withdrawal_credential WHERE contact_id = $1`, holder); n != 1 {

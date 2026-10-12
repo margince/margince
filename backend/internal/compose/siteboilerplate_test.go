@@ -180,7 +180,7 @@ func TestAHostileCorpusCannotBurnAWorkerGoroutine(t *testing.T) {
 	// repeating the call.
 	pages := make([]crawlPage, 0, 40)
 	opening := strings.Repeat("a ", 200_000)
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		pages = append(pages, crawlPage{
 			URL:  fmt.Sprintf("https://hostile.test/p%d", i),
 			Text: opening + fmt.Sprintf("%d", i),
@@ -246,7 +246,7 @@ func TestEachLanguageLosesItsOwnMenu(t *testing.T) {
 
 	var pages []crawlPage
 	for i, menu := range []string{englishMenu, germanMenu} {
-		for j := 0; j < 4; j++ {
+		for j := range 4 {
 			body := fmt.Sprintf("Page %d-%d. ", i, j) +
 				filler(fmt.Sprintf("topic %d-%d", i, j))
 			pages = append(pages, crawlPage{

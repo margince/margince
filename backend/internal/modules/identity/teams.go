@@ -126,7 +126,11 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 			if *in.Archived {
 				change, set = "archived", `archived_at = now()`
 			}
-			if err := tx.QueryRow(ctx, `UPDATE team SET `+set+` WHERE id = $1 RETURNING archived_at`, id).Scan(&out.ArchivedAt); err != nil {
+			err := tx.QueryRow(ctx, `UPDATE team SET `+set+` WHERE id = $1 RETURNING archived_at`, id).Scan(&out.ArchivedAt)
+			if storekit.IsUniqueViolation(err) {
+				return fmt.Errorf("%w: a team named %q already exists", apperrors.ErrConflict, out.Name)
+			}
+			if err != nil {
 				return err
 			}
 			if err := s.recordTeamChange(ctx, tx, actor, id, nil, change,
@@ -310,8 +314,8 @@ func (s *Service) CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool,
 
 // validTeamName trims and bounds a team name.
 func validTeamName(raw string) (string, error) {
-	name := strings.TrimSpace(raw)
-	if name == "" || utf8.RuneCountInString(name) > maxTeamName {
+	name := strings.TrimSpace(values.WithoutZeroWidth(raw))
+	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > maxTeamName {
 		return "", &values.ParseError{
 			Field: "name", Code: "invalid_team_name",
 			Message: fmt.Sprintf("a team name is 1 to %d characters", maxTeamName),

@@ -18,7 +18,7 @@ import {
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, unwrap } from "./common";
 import {
   metricLabel,
   reportingAmount,
@@ -45,20 +45,20 @@ export function ReportingTargets() {
   const query = useQuery({
     queryKey: ["reporting-targets", cursor, status, periodFilter],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/targets", {
-        params: {
-          query: {
-            cursor,
-            limit: 50,
-            retired: status === "all" ? undefined : status === "retired",
-            period_start: isISODate(`${periodFilter}-01`)
-              ? `${periodFilter}-01`
-              : undefined,
+      return unwrap(
+        await api.GET("/analytics/targets", {
+          params: {
+            query: {
+              cursor,
+              limit: 50,
+              retired: status === "all" ? undefined : status === "retired",
+              period_start: isISODate(`${periodFilter}-01`)
+                ? `${periodFilter}-01`
+                : undefined,
+            },
           },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
+        }),
+      );
     },
   });
   return (

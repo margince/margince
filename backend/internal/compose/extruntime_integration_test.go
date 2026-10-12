@@ -298,8 +298,7 @@ func TestRuntimeTxSurfacesTheDatabasesOwnRefusal(t *testing.T) {
 // sqlState digs the server's own error code out of whatever the seam wrapped
 // it in, or returns "" when the error never came from Postgres at all.
 func sqlState(err error) string {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgErr.Code
 	}
 	return ""

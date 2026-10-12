@@ -35,14 +35,15 @@ import type { MessageKey } from "../i18n/en";
 import {
   problemCodeOf,
   problemMessageOf,
-  throwProblem,
+  unwrap,
   useFinanceSummary,
 } from "./common";
 import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import "./company360.css";
 import { FactList } from "../design-system/factlist";
-import { daysAgo, HealthStat, WITHHELD_READING } from "./company360health";
+import { HealthStat, WITHHELD_READING } from "./company360health";
+import { LastTouchStat } from "./company360lasttouch";
 import {
   HEALTH_DIMENSION_LABEL,
   HEALTH_RATING_LABEL,
@@ -83,13 +84,11 @@ export function useCompany360(id: string, enabled = true) {
     queryKey: ["company360", id],
     enabled: enabled && id !== "",
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/360", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}/360", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -118,12 +117,11 @@ const VIEW_ACK_DWELL_MS = 5_000;
 export function useAcknowledgeCompanyView(id: string, visited: boolean) {
   const ack = useMutation({
     mutationFn: async (companyId: string) => {
-      const { error } = await api.POST("/companies/{id}/view-ack", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/companies/{id}/view-ack", {
+          params: { path: { id: companyId } },
+        }),
+      );
     },
   });
   // The mutation's own error state holds a failure; nothing renders it. A
@@ -445,14 +443,12 @@ export function AskSection({
       question: Question;
       project: string;
     }) => {
-      const { data, error } = await api.POST("/companies/{id}/ask", {
-        params: { path: { id: companyId } },
-        body: { question, ...(project ? { project_id: project } : {}) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/companies/{id}/ask", {
+          params: { path: { id: companyId } },
+          body: { question, ...(project ? { project_id: project } : {}) },
+        }),
+      );
     },
   });
 
@@ -724,60 +720,6 @@ export function StateStrip({
         t={t}
       />
     </StatStrip>
-  );
-}
-
-// The last word exchanged, as days since it fell, and who said it. Read off
-// the account's own timestamps rather than the health reading: the two dates
-// are the fact, and the reading is a judgement made from them.
-function LastTouchStat({
-  view,
-  withheld,
-  locale,
-  recordZone,
-  onOpen,
-  t,
-}: Readonly<{
-  view?: Company360;
-  // Refused, read once by the strip and shared with the relationship card.
-  withheld: boolean;
-  locale: Locale;
-  recordZone: string;
-  onOpen?: () => void;
-  t: ReturnType<typeof useT>;
-}>) {
-  const slot = { label: t("co.strip.lastTouch"), narrow: "row" } as const;
-  if (!view || withheld) {
-    return <StatCard onOpen={onOpen} {...slot} value={t(WITHHELD_READING)} />;
-  }
-  const inbound = view.last_inbound_at ?? undefined;
-  const outbound = view.last_outbound_at ?? undefined;
-  const theirs = Boolean(inbound && (!outbound || inbound > outbound));
-  const last = theirs ? inbound : outbound;
-  if (!last) {
-    return (
-      <StatCard
-        onOpen={onOpen}
-        {...slot}
-        value={t("co.strip.lastTouch.never")}
-      />
-    );
-  }
-  const days = daysAgo(last, view.as_of);
-  return (
-    <StatCard
-      onOpen={onOpen}
-      {...slot}
-      value={
-        days === undefined
-          ? t("co.strip.lastTouch.today")
-          : t("co.strip.lastTouch.ago", { count: formatNumber(days, locale) })
-      }
-      detail={join(
-        t(theirs ? "co.strip.lastTouch.theirs" : "co.strip.lastTouch.ours"),
-        formatDateAbbrev(last, locale, recordZone),
-      )}
-    />
   );
 }
 
@@ -1398,13 +1340,12 @@ export function useSuggestionsBody({
   const client = useQueryClient();
   const dismiss = useMutation({
     mutationFn: async (fingerprint: string) => {
-      const { error } = await api.POST("/companies/{id}/suggestions/dismiss", {
-        params: { path: { id: companyId } },
-        body: { fingerprint },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/companies/{id}/suggestions/dismiss", {
+          params: { path: { id: companyId } },
+          body: { fingerprint },
+        }),
+      );
     },
     // The 360 is the only thing that knows which suggestions survive, so the
     // row goes when the re-read says it does. Hiding it locally on click would
@@ -1421,10 +1362,7 @@ export function useSuggestionsBody({
     // The body is the SERVER's, passed as a variable: the click posts the step
     // the row was drawn from, never one recomposed here from the row's words.
     mutationFn: async (body: CreateTaskRequest) => {
-      const { error } = await api.POST("/tasks", { body });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(await api.POST("/tasks", { body }), t);
     },
     // Three reads change. The 360 decides whether the advice still stands — it
     // fired on there being no open task, and there is one now — while the task

@@ -77,9 +77,9 @@ func loadAICertVerdictRule(t *testing.T) string {
 		if !strings.HasPrefix(text, "Verdict folds") {
 			continue
 		}
-		for _, line := range strings.Split(text, "\n") {
-			if strings.HasPrefix(line, "\t") {
-				rule = append(rule, strings.TrimPrefix(line, "\t"))
+		for line := range strings.SplitSeq(text, "\n") {
+			if after, ok := strings.CutPrefix(line, "\t"); ok {
+				rule = append(rule, after)
 			}
 		}
 	}

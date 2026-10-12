@@ -134,10 +134,8 @@ func RegisterComposedFailureClasses(byKind map[string][]extension.FailureClass) 
 // token equal to a core one would put two different failures behind one string
 // an alert matches on, and an operator filtering for it would get both.
 func refuseCoreCollision(kind string, c extension.FailureClass) error {
-	for _, substitute := range substitutes {
-		if c.Sentence == substitute {
-			return fmt.Errorf("jobs: kind %q class %q declares a substitute sentence — the substitutes are what this surface says when it has NOTHING to say about a failure, so a class that classified something may not claim one", kind, c.Class)
-		}
+	if slices.Contains(substitutes, c.Sentence) {
+		return fmt.Errorf("jobs: kind %q class %q declares a substitute sentence — the substitutes are what this surface says when it has NOTHING to say about a failure, so a class that classified something may not claim one", kind, c.Class)
 	}
 	for _, technical := range technicalFaults {
 		if c.Sentence == technical.sentence {

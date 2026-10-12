@@ -121,6 +121,18 @@ describe("the syntax the shipped handbook uses", () => {
   });
 });
 
+describe("an ordered list's numbering", () => {
+  it("starts from the number its source was written from", () => {
+    const { container } = render(<Markdown source={"5. Fifth\n6. Sixth"} />);
+    expect(container.querySelector("ol")?.getAttribute("start")).toBe("5");
+  });
+
+  it("carries no start when the list begins at one", () => {
+    const { container } = render(<Markdown source={"1. First\n2. Second"} />);
+    expect(container.querySelector("ol")?.hasAttribute("start")).toBe(false);
+  });
+});
+
 describe("a link is only a link when its scheme is one we allow", () => {
   it("renders an http link, opening it away from the answer", () => {
     render(<Markdown source="See [the docs](https://example.com/a)." />);
@@ -469,6 +481,50 @@ describe("autolink shows where every link goes", () => {
     expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
       "https://example.com/t",
     ]);
+  });
+});
+
+describe("a link to a Margince page stays in this tab", () => {
+  const own = () =>
+    `${window.location.origin}${window.location.pathname}#/deals/42`;
+  const other = "https://example.com/#/deals/42";
+
+  it.each([
+    ["a bare address", (href: string) => href],
+    ["a written link", (href: string) => `[the deal](${href})`],
+  ])(
+    "opens %s on this origin in place, and one elsewhere in a new tab",
+    (_, write) => {
+      render(
+        <Markdown source={`${write(own())}\n\n${write(other)}`} autolink />,
+      );
+      const [inApp, outbound] = screen.getAllByRole("link");
+      expect(inApp).toHaveAttribute("href", own());
+      expect(inApp).not.toHaveAttribute("target");
+      expect(inApp).toHaveAttribute("rel", "noopener noreferrer");
+      expect(outbound).toHaveAttribute("href", other);
+      expect(outbound).toHaveAttribute("target", "_blank");
+    },
+  );
+
+  it.each([
+    ["an API address", "/v1/attachments/7"],
+    ["a hash route on another path", "/v1/export#/deals/42"],
+    ["a page path with no hash route", "#section"],
+  ])("opens %s on this origin in a new tab", (_, tail) => {
+    const href = tail.startsWith("#")
+      ? `${window.location.origin}${window.location.pathname}${tail}`
+      : `${window.location.origin}${tail}`;
+    render(<Markdown source={href} autolink />);
+    expect(screen.getByRole("link")).toHaveAttribute("target", "_blank");
+  });
+
+  it("still shows the real address behind a label on this origin", () => {
+    const { container } = render(
+      <Markdown source={`[Your bank](${own()})`} autolink />,
+    );
+    expect(screen.getByRole("link").textContent).toBe(own());
+    expect(visibleText(container)).toBe(`Your bank (${own()})`);
   });
 });
 

@@ -108,7 +108,7 @@ async function testRow(
   await user.click(
     within(await screen.findByTestId(`ai-provider-row-${provider}`)).getByRole(
       "button",
-      { name: /^Edit/ },
+      { name: /^(Edit|Open) / },
     ),
   );
   const row = await screen.findByTestId(`ai-provider-key-${provider}`);
@@ -195,7 +195,7 @@ describe("testing a provider key", () => {
       await user.click(
         within(
           await screen.findByTestId(`ai-provider-row-${provider}`),
-        ).getByRole("button", { name: /^Edit/ }),
+        ).getByRole("button", { name: /^(Edit|Open) / }),
       );
       const row = await screen.findByTestId(`ai-provider-key-${provider}`);
       const test = within(row).queryByRole("button", { name: /^test$/i });

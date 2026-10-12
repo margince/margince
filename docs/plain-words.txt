@@ -67,6 +67,7 @@ chat
 check
 checksum
 choose
+chose
 claim
 click
 client
@@ -107,6 +108,7 @@ date
 deal
 decide
 declare
+default
 defer
 delivery
 demo
@@ -228,6 +230,7 @@ list
 local
 log
 look
+lookup
 machine
 mail
 mailbox
@@ -251,6 +254,7 @@ mode
 model
 module
 money
+month
 more
 morning
 most
@@ -344,6 +348,7 @@ record
 red
 reference
 refuse
+region
 register
 release
 remove
@@ -384,6 +389,7 @@ security
 see
 send
 separate
+september
 sequence
 serious
 serve

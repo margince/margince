@@ -136,6 +136,9 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	}
 	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
 	if p.Empty() {
+		if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
+			return crmcontracts.Deal{}, err
+		}
 		// Nothing changed, but the echo is still a read: `current` came from
 		// the unmasked readDeal above, which the before-image needs and the
 		// caller must not have.

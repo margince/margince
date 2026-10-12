@@ -18,6 +18,7 @@ import {
   problemCodeOf,
   problemMessageOf,
   throwProblem,
+  unwrap,
 } from "./common";
 
 // The roles a workspace defines, as the pickers and the role editor read them.
@@ -43,10 +44,7 @@ export function useAssignableRoles(enabled: boolean) {
     queryKey: ASSIGNABLE_ROLES_KEY,
     enabled,
     queryFn: async (): Promise<AssignableRole[]> => {
-      const { data, error } = await api.GET("/users/assignable-roles");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/users/assignable-roles"));
       return data.roles;
     },
   });
@@ -115,12 +113,11 @@ export function useRoles(enabled: boolean, includeArchived = false) {
     enabled,
     queryFn: async (): Promise<readonly Role[]> => {
       // The flag rides only when asked: the live read is the plain URL.
-      const { data, error } = await api.GET("/roles", {
-        params: { query: includeArchived ? { include_archived: true } : {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/roles", {
+          params: { query: includeArchived ? { include_archived: true } : {} },
+        }),
+      );
       return data.roles;
     },
   });
@@ -174,17 +171,15 @@ export function useSetRoleGrant() {
       grant: ObjectGrant;
       version: number;
     }): Promise<Role> => {
-      const { data, error } = await api.PATCH("/roles/{key}/objects/{object}", {
-        params: {
-          path: { key: input.roleKey, object: input.object },
-          ...ifMatch(input.version),
-        },
-        body: input.grant,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/roles/{key}/objects/{object}", {
+          params: {
+            path: { key: input.roleKey, object: input.object },
+            ...ifMatch(input.version),
+          },
+          body: input.grant,
+        }),
+      );
     },
     // The server answers with the whole updated role, so every directory read
     // takes it verbatim: a refetch would repaint the matrix a beat later, and a
@@ -240,17 +235,15 @@ export function useUpdateRole() {
       name?: string;
       rowScope?: RowScope;
     }): Promise<Role> => {
-      const { data, error } = await api.PATCH("/roles/{key}", {
-        params: {
-          path: { key: input.roleKey },
-          ...ifMatch(input.version),
-        },
-        body: { name: input.name, row_scope: input.rowScope },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/roles/{key}", {
+          params: {
+            path: { key: input.roleKey },
+            ...ifMatch(input.version),
+          },
+          body: { name: input.name, row_scope: input.rowScope },
+        }),
+      );
     },
     // The answer carries the role's new version; the next write on it must
     // send that one, so the directory takes it before the refetch lands.
@@ -267,13 +260,11 @@ export function useCreateRole() {
       copyFrom: string;
       name: string;
     }): Promise<Role> => {
-      const { data, error } = await api.POST("/roles", {
-        body: { copy_from: input.copyFrom, name: input.name },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/roles", {
+          body: { copy_from: input.copyFrom, name: input.name },
+        }),
+      );
     },
     // The new role lands in the directory before the refetch, so the editor can
     // open it even when that refetch fails and the old list is kept.

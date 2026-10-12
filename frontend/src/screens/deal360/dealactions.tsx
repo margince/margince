@@ -26,7 +26,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { dealRecordKeys } from "../activitykeys";
 import { ArchiveAction } from "../archive";
-import { throwProblem, useMe } from "../common";
+import { unwrap, useMe } from "../common";
 import { LogActivityAction } from "../logactivity";
 import { RecordEmailVerb } from "../recordemail";
 import { ShareAction } from "../share";
@@ -97,17 +97,16 @@ function ReopenAction({
       toStageId: string;
       version: number | undefined;
     }) => {
-      const { data, error } = await api.POST("/deals/{id}/advance", {
-        params: {
-          path: { id: dealId },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: { to_stage_id: input.toStageId, status: "open" },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deals/{id}/advance", {
+          params: {
+            path: { id: dealId },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: { to_stage_id: input.toStageId, status: "open" },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       setOpen(false);
@@ -259,16 +258,14 @@ export function DealActions({
           confirmText={t("deal.archiveConfirm")}
           archivedMessage={t("record.archiveDone", { name: deal.name })}
           archive={async () => {
-            const { data, error } = await api.DELETE("/deals/{id}", {
-              params: {
-                path: { id: deal.id },
-                ...ifMatch(requireVersion(deal.version)),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return unwrap(
+              await api.DELETE("/deals/{id}", {
+                params: {
+                  path: { id: deal.id },
+                  ...ifMatch(requireVersion(deal.version)),
+                },
+              }),
+            );
           }}
           invalidate="deals"
           recordKey="deal"

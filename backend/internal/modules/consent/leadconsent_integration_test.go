@@ -193,8 +193,7 @@ func TestLeadScopedDOIGrantIsRefused(t *testing.T) {
 		LeadID: e.lead, PurposeID: e.doiNews, NewState: "granted",
 		PolicyText: &grantWording,
 	})
-	var invalid *ValidationError
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("a DOI grant on a lead subject: got %v, want a ValidationError (the round-trip is contact-keyed)", err)
 	}
 }

@@ -15,6 +15,7 @@ package main
 import (
 	"go/ast"
 	"go/token"
+	"iter"
 )
 
 // handlerAliasTypeNames are the published extension handler function types a
@@ -45,81 +46,91 @@ var handlerAliasTypeNames = map[string]bool{
 // conversion this reader already sees directly — there is no alias to resolve.
 func collectHandlerAliases(pkgs map[string][]*ast.File, extensionPkg string) map[string]map[string]bool {
 	aliases := map[string]map[string]bool{}
-	for _, files := range pkgs {
-		for _, f := range files {
-			ext := importAlias(f, extensionPkg)
-			if ext == "" {
-				continue
-			}
-			for _, decl := range f.Decls {
-				d, ok := decl.(*ast.GenDecl)
-				if !ok || d.Tok != token.TYPE {
-					continue
-				}
-				for _, spec := range d.Specs {
-					ts, ok := spec.(*ast.TypeSpec)
-					if !ok || !ts.Assign.IsValid() {
-						continue
-					}
-					sel, ok := unwrapType(ts.Type).(*ast.SelectorExpr)
-					if !ok {
-						continue
-					}
-					pkgIdent, ok := sel.X.(*ast.Ident)
-					if !ok || pkgIdent.Name != ext || !handlerAliasTypeNames[sel.Sel.Name] {
-						continue
-					}
-					if aliases[sel.Sel.Name] == nil {
-						aliases[sel.Sel.Name] = map[string]bool{}
-					}
-					aliases[sel.Sel.Name][ts.Name.Name] = true
-				}
+	for f, alias := range typeAliases(pkgs) {
+		published, ok := publishedHandlerName(alias, importAlias(f, extensionPkg))
+		if !ok {
+			continue
+		}
+		if aliases[published] == nil {
+			aliases[published] = map[string]bool{}
+		}
+		aliases[published][alias.Name.Name] = true
+	}
+	for extendAliasChains(pkgs, aliases) {
+		// Each pass resolves one more hop of every chain.
+	}
+	return aliases
+}
+
+// publishedHandlerName reports which of handlerAliasTypeNames alias names
+// through the package imported as ext. An empty ext means the file does not
+// import the extension package, so nothing in it can match.
+func publishedHandlerName(alias *ast.TypeSpec, ext string) (string, bool) {
+	sel, ok := unwrapType(alias.Type).(*ast.SelectorExpr)
+	if !ok || ext == "" {
+		return "", false
+	}
+	pkgIdent, ok := sel.X.(*ast.Ident)
+	if !ok || pkgIdent.Name != ext || !handlerAliasTypeNames[sel.Sel.Name] {
+		return "", false
+	}
+	return sel.Sel.Name, true
+}
+
+// extendAliasChains adds every alias whose right side is a bare name already
+// in aliases, and reports whether it added any. An alias of an alias is the
+// same type: `type H2 = H` must resolve as `type H = extension.Y` does, or
+// `H2(nil)` reaches boot as a real handler.
+//
+// The caller repeats it to a fixed point because a chain has no declared
+// length, and a depth limit would be a silent horizon.
+func extendAliasChains(pkgs map[string][]*ast.File, aliases map[string]map[string]bool) bool {
+	grew := false
+	for _, alias := range typeAliases(pkgs) {
+		rhs, ok := unwrapType(alias.Type).(*ast.Ident)
+		if !ok {
+			continue
+		}
+		for _, names := range aliases {
+			if names[rhs.Name] && !names[alias.Name.Name] {
+				names[alias.Name.Name] = true
+				grew = true
 			}
 		}
 	}
-	// AN ALIAS OF AN ALIAS is the same type, so it must resolve the same way.
-	// `type H = extension.InboundHandler` is caught above because its right
-	// side names the published package; `type H2 = H` is not, because its
-	// right side is a bare identifier. Both spell the identical type, and a
-	// reader that saw only the first would publish `H2(nil)` as a real handler
-	// and leave boot to refuse it — the failure landing at a shipped binary's
-	// startup rather than at the `make composition` its author runs.
-	//
-	// To a fixed point rather than one extra pass, because the chain has no
-	// declared length: H3 = H2 is as legal as H2 = H, and stopping at a depth
-	// would put a silent horizon in a check whose whole job is to have none.
-	for {
-		grew := false
+	return grew
+}
+
+// typeAliases yields every package-level `type X = Y` spec in pkgs with the
+// file that declares it. A defined type (`type X Y`) is never yielded.
+func typeAliases(pkgs map[string][]*ast.File) iter.Seq2[*ast.File, *ast.TypeSpec] {
+	return func(yield func(*ast.File, *ast.TypeSpec) bool) {
 		for _, files := range pkgs {
 			for _, f := range files {
-				for _, decl := range f.Decls {
-					d, ok := decl.(*ast.GenDecl)
-					if !ok || d.Tok != token.TYPE {
-						continue
-					}
-					for _, spec := range d.Specs {
-						ts, ok := spec.(*ast.TypeSpec)
-						if !ok || !ts.Assign.IsValid() {
-							continue
-						}
-						rhs, ok := unwrapType(ts.Type).(*ast.Ident)
-						if !ok {
-							continue
-						}
-						for _, names := range aliases {
-							if names[rhs.Name] && !names[ts.Name.Name] {
-								names[ts.Name.Name] = true
-								grew = true
-							}
-						}
-					}
+				if !yieldFileAliases(f, yield) {
+					return
 				}
 			}
 		}
-		if !grew {
-			return aliases
+	}
+}
+
+// yieldFileAliases passes f's type alias specs to yield, and reports false
+// once yield asks to stop.
+func yieldFileAliases(f *ast.File, yield func(*ast.File, *ast.TypeSpec) bool) bool {
+	for _, decl := range f.Decls {
+		d, ok := decl.(*ast.GenDecl)
+		if !ok || d.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range d.Specs {
+			ts, ok := spec.(*ast.TypeSpec)
+			if ok && ts.Assign.IsValid() && !yield(f, ts) {
+				return false
+			}
 		}
 	}
+	return true
 }
 
 // isStaticallyNilHandler reports whether expr is nil at the declaration, for

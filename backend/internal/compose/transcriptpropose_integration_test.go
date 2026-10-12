@@ -99,6 +99,7 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	e.ctx = e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms)
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(e.svc, e.Activities, e.Contacts))
+	e.svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(e.Activities))
 
 	subject := "Rollout call"
 	sourceSystem := "transcript"
@@ -303,6 +304,33 @@ func TestATranscriptStatingNothingProducesNoProposalAndSaysSo(t *testing.T) {
 	}
 }
 
+// Lines cited across a gap are not one passage of the transcript. The reading
+// still finishes, quoting the words the transcript does hold.
+func TestAReadingThatCitesLinesAcrossAGapStillStagesItsProposal(t *testing.T) {
+	e := setupTranscript(t)
+	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
+		"summary": "Send the revised pricing", "owner": "Priya",
+		"source_lines": []int{3, 4, 1}, "confidence": 0.9,
+	}}})
+	if err != nil {
+		t.Fatalf("building the model reply: %v", err)
+	}
+
+	read := e.read(t, cannedBrain{reply: string(raw)})
+
+	if read.Status != activities.TranscriptReadDone || len(read.ProposalIDs) != 1 {
+		t.Fatalf("the reading must finish with one proposal, got %s with %d (%v)",
+			read.Status, len(read.ProposalIDs), read.StatusDetail)
+	}
+	staged, err := e.svc.Get(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]))
+	if err != nil {
+		t.Fatalf("reading back the staged proposal: %v", err)
+	}
+	if snippet := storedEvidence(t, staged.Evidence)[0].Snippet; !strings.Contains(transcriptBody, snippet) {
+		t.Errorf("the evidence %q is not words the transcript holds", snippet)
+	}
+}
+
 func TestAReadingThatCitesALineThatDoesNotExistStagesNothing(t *testing.T) {
 	e := setupTranscript(t)
 
@@ -371,8 +399,7 @@ func TestAnActivityThatCarriesNoTranscriptCannotBeRead(t *testing.T) {
 	if err == nil {
 		t.Fatal("an activity with no transcript has no lines to cite and must be refused")
 	}
-	var notTranscript *activities.NotATranscriptError
-	if !errors.As(err, &notTranscript) {
+	if _, ok := errors.AsType[*activities.NotATranscriptError](err); !ok {
 		t.Errorf("want the not-a-transcript refusal, got %v", err)
 	}
 }
@@ -499,8 +526,7 @@ func TestATranscriptTooLongForOneReadingIsRefusedAtTheDoor(t *testing.T) {
 	if err == nil {
 		t.Fatal("a transcript past the reading bound must be refused here, not after a queued job fails minutes later")
 	}
-	var tooLong *activities.TranscriptTooLongError
-	if !errors.As(err, &tooLong) {
+	if _, ok := errors.AsType[*activities.TranscriptTooLongError](err); !ok {
 		t.Fatalf("want the too-long refusal, got %v", err)
 	}
 	if e.WsCount(t, `SELECT count(*) FROM transcript_read`) != 0 {
@@ -616,7 +642,7 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 	// separate ones about a stamp and a render. A proposal for the 8th came
 	// back as a task the reader saw as the 9th, and neither half of it was
 	// wrong on its own.
-	if day := strings.SplitN(due, " ", 2)[0]; day != "2026-09-08" {
+	if day, _, _ := strings.Cut(due, " "); day != "2026-09-08" {
 		t.Errorf("the approved day was %q and the task landed on %q", "2026-09-08", day)
 	}
 }

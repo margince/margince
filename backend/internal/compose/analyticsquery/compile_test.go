@@ -116,8 +116,7 @@ func TestAFieldNameCarryingSQLIsRefusedBeforeAnythingIsRendered(t *testing.T) {
 				t.Errorf("a query naming %q compiled to: %s", name, plan.SQL)
 				continue
 			}
-			var refusal *RefusalError
-			if !errors.As(err, &refusal) {
+			if _, ok := errors.AsType[*RefusalError](err); !ok {
 				t.Errorf("naming %q answered %v, which is not a typed refusal", name, err)
 			}
 			if !errors.Is(err, apperrors.ErrInvalidArgument) {

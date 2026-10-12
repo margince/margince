@@ -200,11 +200,9 @@ func TestConcurrentIssuesLeaveExactlyOneLiveToken(t *testing.T) {
 	var wg sync.WaitGroup
 	errs := make([]error, racers)
 	for i := range racers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, _, errs[i] = e.svc.IssuePasswordLink(e.wsCtx(e.admin), e.admin, member)
-		}()
+		})
 	}
 	wg.Wait()
 	for i, err := range errs {

@@ -94,7 +94,9 @@ describe("lead work-board presentation", () => {
     expect(screen.queryByText(/deals/i)).toBeNull();
     expect(screen.getByText("Overdue")).toBeTruthy();
     expect(screen.getByText("Web form")).toBeTruthy();
-    expect(screen.getByText(/Call about the pilot · 1 open task/)).toBeTruthy();
+    expect(
+      screen.getByText(/Call about the pilot · 1 open task$/),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /next page/i })).toBeNull();
   });
 

@@ -93,18 +93,18 @@ func (s *scriptedClassifyBrain) Complete(_ context.Context, req model.Request) (
 // sender who could put "inbound: no" in their own body must not be able to move
 // this answer.
 func directionLineFor(prompt, id string) string {
-	span := strings.Index(prompt, id)
-	if span < 0 {
+	before, _, ok := strings.Cut(prompt, id)
+	if !ok {
 		return ""
 	}
-	head := prompt[:span]
-	marker := strings.LastIndex(head, "inbound: ")
-	if marker < 0 {
+	head := before
+	_, after, ok := strings.CutLast(head, "inbound: ")
+	if !ok {
 		return ""
 	}
-	rest := head[marker+len("inbound: "):]
-	if nl := strings.IndexByte(rest, '\n'); nl >= 0 {
-		return strings.TrimSpace(rest[:nl])
+	rest := after
+	if before, _, ok := strings.Cut(rest, "\n"); ok {
+		return strings.TrimSpace(before)
 	}
 	return strings.TrimSpace(rest)
 }

@@ -397,9 +397,9 @@ func TestAnUnboundVendorFallsBackToTheAdapterDefault(t *testing.T) {
 	}
 	// And the embeddings lane's host is found too — it binds separately, and a
 	// broker reached only there would otherwise be asked at the wrong address.
-	cfg.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{
+	cfg.Embeddings = EmbeddingsConfig{
 		Provider: providerOpenAICompatible, BaseURL: "https://embed.example",
-	}}
+	}
 	if got := providerConfigFor(cfg, providerOpenAICompatible, ""); got.BaseURL != "https://embed.example" {
 		t.Fatalf("the embeddings host was not found: %q", got.BaseURL)
 	}

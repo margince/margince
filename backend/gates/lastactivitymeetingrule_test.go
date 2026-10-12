@@ -73,7 +73,7 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 // its own, so a rule written twice in one cannot cover its absence in another.
 func activityArms(body string) []string {
 	var arms []string
-	for _, part := range strings.Split(body, "UNION ALL") {
+	for part := range strings.SplitSeq(body, "UNION ALL") {
 		if strings.Contains(part, "activity a ON a.id = l.activity_id") {
 			arms = append(arms, part)
 		}

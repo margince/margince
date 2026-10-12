@@ -48,8 +48,7 @@ func TestNormalizeLinkedInURLRefusesNonURLs(t *testing.T) {
 	// parse to an empty hostname, and only one of them names a profile.
 	for _, raw := range []string{"", "   ", "ftp://linkedin.com/in/x", "https://", "://nope", "//"} {
 		_, err := NormalizeLinkedInURL(raw)
-		var parseErr *values.ParseError
-		if !errors.As(err, &parseErr) {
+		if _, ok := errors.AsType[*values.ParseError](err); !ok {
 			t.Errorf("NormalizeLinkedInURL(%q): got %v, want a values.ParseError", raw, err)
 		}
 	}

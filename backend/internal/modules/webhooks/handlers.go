@@ -91,6 +91,10 @@ func (h Handlers) UpdateWebhookSubscription(w http.ResponseWriter, r *http.Reque
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	if err := httperr.RequireAnyField(r); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	in := UpdateSubscriptionInput{EventTypes: req.EventTypes, IfVersion: ifVersion}
 	if req.State != nil {
 		state := string(*req.State)

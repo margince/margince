@@ -5,6 +5,15 @@ First, set the date on the first release heading of `CHANGELOG.md` to today, and
 heading is written when the section fills up, so its date is a guess until you correct it. The date is
 part of the released commit, so it goes in before the tag.
 
+In the same change, update the `Parameters` block of `LICENSE` and nothing else in the file:
+
+1. Set **Change Date** to the date the release goes public plus 2 years, as `YYYY-MM-DD`.
+2. Add the version name to the **Licensed Work** line, for example `Licensed Work: Margince CRM v1.3.0`.
+
+Leave every line after the `Parameters` block alone. What each value must be, and why, is in
+[license-release-rule.md](../reference/license-release-rule.md). No check catches a missed update
+yet, so the tag goes out with whatever the file says.
+
 Then tag a commit that is on `main`:
 
 ```sh

@@ -27,17 +27,9 @@ import (
 // RefreshDisplayNameTx sets one contact's display name to the name its own
 // columns already carry, and answers whether it moved.
 //
-// Only where no contact has ever set that display name. It calls
-// displayNameSetByHumanTx for that, which is the same function completeContactName
-// calls, so today the two writers answer it identically — a shared helper rather
-// than a claim that nothing could ever ask it differently.
-//
-// Asked again HERE rather than trusted to the caller's selector: a repair pass
-// reads a page of ids and then writes them one at a time, and a colleague who
-// renames one of those contacts in between must keep their name.
-//
-// It writes nothing when the display already agrees with the parts, so a pass
-// over a repaired workspace costs one query and produces no audit noise.
+// Only where displayNameIsStaleTx holds, asked under the row lock. A repair
+// pass selects a page of ids and then writes them one at a time. A colleague who
+// renames one of those contacts in between keeps their name.
 func RefreshDisplayNameTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (bool, error) {
 	// Locked before it is read, for the reason completeContactName states: the
 	// value recorded as the audit's before must be the one this write replaces,
@@ -54,23 +46,11 @@ func RefreshDisplayNameTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	if err != nil {
 		return false, fmt.Errorf("contacts: reading the name contact %s shows: %w", contactID, err)
 	}
-	// Both halves, because a name is the pair. One half alone would put "Björn"
-	// or "Welter" on the page in place of a label that at least identified
-	// somebody, which is not an improvement.
-	if first == "" || last == "" {
-		return false, nil
-	}
-	humanNamed, err := displayNameSetByHumanTx(ctx, tx, contactID)
-	if err != nil {
+	stale, err := displayNameIsStaleTx(ctx, tx, contactID)
+	if err != nil || !stale {
 		return false, err
 	}
-	if humanNamed {
-		return false, nil
-	}
-	learned := strings.TrimSpace(first + " " + last)
-	if learned == previous {
-		return false, nil
-	}
+	learned := strings.TrimSpace(first) + " " + strings.TrimSpace(last)
 	tag, err := tx.Exec(ctx, `
 		UPDATE contact SET full_name = $2 WHERE id = $1 AND full_name = $3`,
 		contactID, learned, previous)

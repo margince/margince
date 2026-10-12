@@ -413,7 +413,7 @@ func TestASecondPassSeedsNoSecondRunForTheSameSeat(t *testing.T) {
 	}
 
 	now := afterEveryDueHour()
-	for pass := 0; pass < 2; pass++ {
+	for pass := range 2 {
 		if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
 			t.Fatalf("scheduling pass %d: %v", pass+1, err)
 		}

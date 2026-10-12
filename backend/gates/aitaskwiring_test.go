@@ -105,9 +105,8 @@ func TestEveryCensusedSiteRidesALaneAProcessRoleWires(t *testing.T) {
 // name; this only needs to find the lane.
 func laneNameFor(task string) (string, bool) {
 	flattened := strings.ReplaceAll(task, "_", "")
-	pathType := reflect.TypeOf(compose.ModelPath{})
-	for i := range pathType.NumField() {
-		field := pathType.Field(i)
+	pathType := reflect.TypeFor[compose.ModelPath]()
+	for field := range pathType.Fields() {
 		if field.IsExported() && strings.EqualFold(field.Name, flattened) {
 			return field.Name, true
 		}

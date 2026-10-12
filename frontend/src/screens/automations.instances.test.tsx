@@ -1,0 +1,257 @@
+// @vitest-environment happy-dom
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import "@testing-library/jest-dom/vitest";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { GrantSpec } from "../app/mefixture";
+import { en } from "../i18n/en";
+import { AutomationsAdmin } from "./automations";
+import {
+  AUTOMATION_CATALOG,
+  configuredAutomations,
+} from "./automations.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
+
+const OPERATOR: GrantSpec = {
+  automation: ["create", "read", "update", "delete"],
+};
+const RECORDED_AT = Date.parse("2026-09-01T12:00:00Z");
+
+beforeEach(() => {
+  globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
+});
+
+afterEach(() => {
+  cleanup();
+  globalThis.localStorage.clear();
+});
+
+function mount(allow: GrantSpec = OPERATOR, routes: RouteMap = {}) {
+  installFetchStub({
+    "GET /me": meRoute(allow),
+    "GET /automations/catalog": () =>
+      jsonResponse({ data: AUTOMATION_CATALOG }),
+    "GET /automations": () =>
+      jsonResponse({
+        data: configuredAutomations(RECORDED_AT),
+        page: { next_cursor: null },
+      }),
+    ...routes,
+  });
+  render(
+    <StoryProviders>
+      <AutomationsAdmin />
+    </StoryProviders>,
+  );
+}
+
+const row = (id: string) => screen.findByTestId(`automation-${id}`);
+
+describe("the configured automations table", () => {
+  it("reads each rule's last run as an outcome word, and Never when it has none", async () => {
+    mount();
+    expect(await row("au-1")).toHaveTextContent(en["auto.runs.outcomeFired"]);
+    const failed = within(await row("au-2")).getByText(
+      en["auto.runs.outcomeFailed"],
+    );
+    expect(failed.closest(".badge")?.className).toContain("badge-danger");
+    const blocked = within(await row("au-3")).getByText(
+      en["auto.runs.outcomeBlocked"],
+    );
+    expect(blocked.closest(".badge")?.className).toContain("badge-warning");
+    expect(await row("au-4")).toHaveTextContent(en["auto.runs.outcomeQueued"]);
+    expect(
+      within(await row("au-5")).getByText(en["auto.lastRunNever"]),
+    ).toBeInTheDocument();
+    const at = (await row("au-1")).querySelector("time");
+    expect(at?.getAttribute("dateTime")).toBe(
+      configuredAutomations(RECORDED_AT)[0].last_run_at,
+    );
+  });
+
+  it("puts the 30-day run count in an end-aligned column, grouped for the reader", async () => {
+    mount();
+    const heading = await screen.findByRole("columnheader", {
+      name: en["auto.colRuns30"],
+    });
+    expect(heading.className).toContain("datatable-end");
+    const figure = within(await row("au-4")).getByText("1,240");
+    expect(figure.closest("td")?.className).toContain("datatable-end");
+    expect(within(await row("au-6")).getByText("0")).toBeInTheDocument();
+    // A rule that never ran says so once: no count beside "Never".
+    expect(within(await row("au-5")).queryByText("0")).toBeNull();
+  });
+
+  it("captions a rule the system paused with why, and leaves one paused by hand bare", async () => {
+    mount();
+    const paused = await row("au-6");
+    expect(
+      within(paused).getByRole("button", {
+        name: en["auto.pausedShort.listArchived"],
+      }),
+    ).toBeInTheDocument();
+    expect(await row("au-5")).not.toHaveTextContent(/Paused ·/);
+  });
+
+  it("says what a rule does in words, never in its key or raw parameters", async () => {
+    mount();
+    const first = await row("au-1");
+    expect(first).toHaveTextContent("Quiet accounts follow-up");
+    expect(first).toHaveTextContent(
+      `${en["auto.trigger.noActivity"]}: ${en["auto.action.createTask"]}`,
+    );
+    for (const raw of ["no_activity_reminder", "days=", "create_task"]) {
+      expect(first).not.toHaveTextContent(raw);
+    }
+    expect(await row("au-6")).not.toHaveTextContent(/list_id|list\.evaluated/);
+  });
+});
+
+/** Records the If-Match of every PATCH the page sends. */
+function recordIfMatch(): (string | null)[] {
+  const stubbed = globalThis.fetch;
+  const sent: (string | null)[] = [];
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init);
+    if (request.method === "PATCH") {
+      sent.push(request.headers.get("If-Match"));
+    }
+    return stubbed(input, init);
+  };
+  return sent;
+}
+
+const flipRecap = async (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(
+    within(await row("au-5")).getByRole("switch", {
+      name: "Post-meeting recap draft is enabled",
+    }),
+  );
+
+describe("a rule's switch", () => {
+  it("pins the flip to the version the row was read at", async () => {
+    const user = userEvent.setup();
+    mount();
+    const sent = recordIfMatch();
+    await flipRecap(user);
+    await waitFor(() => expect(sent).toEqual(["2"]));
+  });
+
+  it("reads the list again after a version_skew refusal, so the next flip carries the new version", async () => {
+    const user = userEvent.setup();
+    let version = 2;
+    const rules = () =>
+      configuredAutomations(RECORDED_AT).map((rule) =>
+        rule.id === "au-5" ? { ...rule, version } : rule,
+      );
+    mount(OPERATOR, {
+      "GET /automations": () =>
+        jsonResponse({ data: rules(), page: { next_cursor: null } }),
+      "PATCH /automations/au-5": () => {
+        if (version === 2) {
+          version = 3;
+          return jsonResponse(
+            { title: "Conflict", status: 409, code: "version_skew" },
+            409,
+          );
+        }
+        return jsonResponse({ ...rules()[4], status: "enabled" });
+      },
+    });
+    const sent = recordIfMatch();
+    await flipRecap(user);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId("automation-au-5"))
+          .getByRole("switch")
+          .getAttribute("aria-busy"),
+      ).not.toBe("true"),
+    );
+    await flipRecap(user);
+    await waitFor(() => expect(sent).toEqual(["2", "3"]));
+  });
+});
+
+describe("a rule's run history", () => {
+  it("opens as a detail row under its rule, from the keyboard, and closes again", async () => {
+    const user = userEvent.setup();
+    mount();
+    const renewal = await row("au-2");
+    const toggle = within(renewal).getByRole("button", {
+      name: "Run history of Renewal reminder",
+    });
+    toggle.focus();
+    await user.keyboard("{Enter}");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const detail = document.getElementById(
+      toggle.getAttribute("aria-controls") ?? "",
+    );
+    if (!detail) {
+      throw new Error("the toggle names no detail");
+    }
+    expect(detail.closest("tr")?.previousElementSibling).toBe(renewal);
+    expect(
+      await within(detail).findByRole("heading", {
+        name: en["auto.runs.title"],
+      }),
+    ).toBeInTheDocument();
+    await user.keyboard("{Enter}");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
+describe("the starter library", () => {
+  it("opens a template's create dialog from a press anywhere on its row", async () => {
+    const user = userEvent.setup();
+    mount();
+    const template = await screen.findByTestId("template-renewal_reminder");
+    expect(template).not.toHaveTextContent(/clock:|create_task|->/);
+    expect(template).toHaveTextContent(en["auto.trigger.renewal"]);
+    await user.click(
+      within(template).getByText(AUTOMATION_CATALOG[1].description ?? ""),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: "Renewal reminder" }),
+    ).toBeInTheDocument();
+  });
+
+  it("reaches the same verb from the keyboard, and Escape puts it away", async () => {
+    const user = userEvent.setup();
+    mount();
+    const template = await screen.findByTestId("template-post_meeting_recap");
+    within(template)
+      .getByRole("button", { name: "Use template: Post-meeting recap draft" })
+      .focus();
+    await user.keyboard("{Enter}");
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("stays readable without the create grant, but no row opens", async () => {
+    const user = userEvent.setup();
+    mount({ automation: ["read"] });
+    const template = await screen.findByTestId("template-renewal_reminder");
+    expect(template.className).not.toContain("rowlink");
+    expect(within(template).queryByRole("button")).toBeNull();
+    await user.click(within(template).getByText("Renewal reminder"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});

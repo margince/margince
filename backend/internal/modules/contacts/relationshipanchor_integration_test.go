@@ -226,11 +226,11 @@ func TestCreatingAnEdgeTakesTheAnchorsRowAuthority(t *testing.T) {
 	}{
 		{"contact", CreateRelationshipInput{
 			Kind: employmentKind, ContactID: &e.theirContact, CompanyID: &e.myCompany,
-			IsCurrentPrimary: pointerTo(true), Source: "manual",
+			IsCurrentPrimary: new(true), Source: "manual",
 		}},
 		{"project", CreateRelationshipInput{
 			Kind: ProjectStakeholderKind, ProjectID: &e.theirProject, ContactID: &e.myContact,
-			Role: pointerTo("sponsor"), Source: "manual",
+			Role: new("sponsor"), Source: "manual",
 		}},
 		{"company", CreateRelationshipInput{
 			Kind: "partner_of", CompanyID: &e.theirCompany, CounterpartyCompanyID: &e.theirPartner,
@@ -258,7 +258,7 @@ func TestCreatingAnEdgeTakesTheAnchorsRowAuthority(t *testing.T) {
 	// the surface.
 	if _, err := e.store.CreateRelationship(me, CreateRelationshipInput{
 		Kind: employmentKind, ContactID: &e.myContact, CompanyID: &e.theirCompany,
-		IsCurrentPrimary: pointerTo(true), Source: "manual",
+		IsCurrentPrimary: new(true), Source: "manual",
 	}); err != nil {
 		t.Fatalf("an edge on the caller's OWN contact was refused: %v", err)
 	}
@@ -272,11 +272,11 @@ func TestPatchingAndArchivingAnEdgeTakeTheAnchorsRowAuthority(t *testing.T) {
 	me := e.as(e.me)
 	edge := e.seedEdge(t, CreateRelationshipInput{
 		Kind: employmentKind, ContactID: &e.theirContact, CompanyID: &e.theirCompany,
-		IsCurrentPrimary: pointerTo(true), Source: "manual",
+		IsCurrentPrimary: new(true), Source: "manual",
 	})
 
 	if _, err := e.store.UpdateRelationship(me, edge.ID, UpdateRelationshipInput{
-		Role: pointerTo("former"),
+		Role: new("former"),
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("patching another rep's employment edge = %v, want ErrPermissionDenied", err)
 	}
@@ -298,7 +298,7 @@ func TestPatchingAndArchivingAnEdgeTakeTheAnchorsRowAuthority(t *testing.T) {
 
 	// Positive control on both verbs, on an anchor the caller owns.
 	mine := e.seedEdgeAsMe(me, t)
-	if _, err := e.store.UpdateRelationship(me, mine.ID, UpdateRelationshipInput{Role: pointerTo("founder")}); err != nil {
+	if _, err := e.store.UpdateRelationship(me, mine.ID, UpdateRelationshipInput{Role: new("founder")}); err != nil {
 		t.Fatalf("patching an edge on the caller's own contact was refused: %v", err)
 	}
 	if _, err := e.store.ArchiveRelationship(me, mine.ID, nil); err != nil {
@@ -312,7 +312,7 @@ func (e *edgeAnchorEnv) seedEdgeAsMe(me context.Context, t *testing.T) relations
 	t.Helper()
 	row, err := e.store.CreateRelationship(me, CreateRelationshipInput{
 		Kind: employmentKind, ContactID: &e.myContact, CompanyID: &e.myCompany,
-		IsCurrentPrimary: pointerTo(true), Source: "manual",
+		IsCurrentPrimary: new(true), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the caller's own edge: %v", err)
@@ -339,11 +339,6 @@ func TestAnAnchorTheCallerCannotSeeStillAnswersNotFound(t *testing.T) {
 	}
 }
 
-// pointerTo is the optional-field spelling this file needs across three types.
-// The package's own `ptr` takes a string only, and widening it would touch every
-// caller of it for the sake of one test file.
-func pointerTo[T any](v T) *T { return &v }
-
 // The stakeholder role stays inside the contract's list when an edge is
 // re-roled through the generic route, as it does when the edge is made.
 func TestPatchingAProjectStakeholderEdgeToAnOffListRoleIsRefused(t *testing.T) {
@@ -358,17 +353,17 @@ func TestPatchingAProjectStakeholderEdgeToAnOffListRoleIsRefused(t *testing.T) {
 	}
 	edge, err := e.store.CreateRelationship(me, CreateRelationshipInput{
 		Kind: ProjectStakeholderKind, ProjectID: &project, ContactID: &e.myContact,
-		Role: pointerTo("sponsor"), Source: "manual",
+		Role: new("sponsor"), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the stakeholder edge: %v", err)
 	}
 
-	_, err = e.store.UpdateRelationship(me, edge.ID, UpdateRelationshipInput{Role: pointerTo("zzz")})
+	_, err = e.store.UpdateRelationship(me, edge.ID, UpdateRelationshipInput{Role: new("zzz")})
 	if fault, ok := httperr.Classify(err); !ok || fault.Status != http.StatusUnprocessableEntity {
 		t.Fatalf("re-roling to an off-list role answered %v, want a 422", err)
 	}
-	if _, err := e.store.UpdateRelationship(me, edge.ID, UpdateRelationshipInput{Role: pointerTo("champion")}); err != nil {
+	if _, err := e.store.UpdateRelationship(me, edge.ID, UpdateRelationshipInput{Role: new("champion")}); err != nil {
 		t.Errorf("re-roling to a listed role was refused: %v", err)
 	}
 }

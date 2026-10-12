@@ -227,10 +227,9 @@ func TestEveryAllowedUpdateKindHasASubjectArm(t *testing.T) {
 // subjectEnvelope's JSON tags, which are the Bot API's own names for them.
 func subjectEnvelopeUpdateKinds(t *testing.T) []string {
 	t.Helper()
-	envelope := reflect.TypeOf(subjectEnvelope{})
+	envelope := reflect.TypeFor[subjectEnvelope]()
 	kinds := make([]string, 0, envelope.NumField())
-	for i := range envelope.NumField() {
-		field := envelope.Field(i)
+	for field := range envelope.Fields() {
 		tag, ok := field.Tag.Lookup("json")
 		if !ok {
 			t.Fatalf("subjectEnvelope.%s carries no json tag, so the update kind it decodes cannot be derived", field.Name)

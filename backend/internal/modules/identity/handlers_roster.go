@@ -135,6 +135,7 @@ func wireUserWithRoles(u userRow) crmcontracts.User {
 		}
 		wire.TeamIds = &teams
 	}
+	wire.LastActiveAt = u.LastActiveAt
 	return wire
 }
 

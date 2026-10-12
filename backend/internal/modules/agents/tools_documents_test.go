@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -62,9 +64,7 @@ func attachCall(t *testing.T, overrides map[string]any) json.RawMessage {
 		"entity_type": "company", "entity_id": ids.NewV7().String(), "filename": "offer.pdf",
 		"content_type": "application/pdf", "content_base64": base64.StdEncoding.EncodeToString([]byte("%PDF-1.7")),
 	}
-	for k, v := range overrides {
-		args[k] = v
-	}
+	maps.Copy(args, overrides)
 	raw, err := json.Marshal(args)
 	if err != nil {
 		t.Fatalf("encoding the call: %v", err)
@@ -88,8 +88,8 @@ func TestAttachDocumentHandsTheStoreTheDecodedFileAndItsRecord(t *testing.T) {
 	}
 	got := docs.attached[0]
 	want := DocumentUpload{
-		RecordLink: RecordLink{EntityType: "company", EntityID: company},
-		Filename:   "Q3 offer.pdf", ContentType: "application/pdf; charset=binary", Content: []byte("%PDF-1.7"),
+		EntityType: "company", EntityID: company,
+		Filename: "Q3 offer.pdf", ContentType: "application/pdf; charset=binary", Content: []byte("%PDF-1.7"),
 	}
 	if got.RecordLink != want.RecordLink || got.Filename != want.Filename ||
 		got.ContentType != want.ContentType || !bytes.Equal(got.Content, want.Content) {
@@ -102,6 +102,30 @@ func TestAttachDocumentHandsTheStoreTheDecodedFileAndItsRecord(t *testing.T) {
 	}
 	if strings.Contains(string(out), "storage_key") {
 		t.Errorf("the answer names where the bytes are stored: %s", out)
+	}
+}
+
+// contract_id reaches the store as the agreement to file against, and its
+// absence files against none.
+func TestAttachDocumentFilesAgainstTheContractItNames(t *testing.T) {
+	contract := ids.NewV7()
+	for _, tc := range []struct {
+		name string
+		args map[string]any
+		want *ids.UUID
+	}{
+		{"named", map[string]any{"contract_id": contract.String()}, &contract},
+		{"absent", nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			docs := &fakeDocuments{}
+			if _, err := documentsRegistry(docs).Invoke(docsCtx(), "attach_document", attachCall(t, tc.args)); err != nil {
+				t.Fatalf("attach_document: %v", err)
+			}
+			if got := docs.attached[0].ContractID; !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("the store was handed contract %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 
@@ -118,8 +142,9 @@ func TestAttachDocumentRefusesWhatItCannotStore(t *testing.T) {
 		"a word, not a type":    {map[string]any{"content_type": "pdf"}, "content_type"},
 		"an unparsable type":    {map[string]any{"content_type": "application/pdf; ="}, "content_type"},
 		"a blank filename":      {map[string]any{"filename": "  "}, "filename"},
-		"a record without docs": {map[string]any{"entity_type": "activity"}, "entity_type"},
-		"an unknown argument":   {map[string]any{"contract_id": ids.NewV7().String()}, ""},
+		"a record without docs": {map[string]any{"entity_type": "relationship"}, "entity_type"},
+		"an unknown argument":   {map[string]any{"folder_id": ids.NewV7().String()}, ""},
+		"a contract not an id":  {map[string]any{"contract_id": "the MSA"}, ""},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -350,8 +375,7 @@ func TestAttachDocumentReportsARefusedKindAsFinal(t *testing.T) {
 	if !errors.Is(err, errFileKindRefused) {
 		t.Fatalf("err = %v, want the refused-kind sentinel", err)
 	}
-	var fault apperrors.FieldFault
-	if !errors.As(err, &fault) {
+	if _, ok := errors.AsType[apperrors.FieldFault](err); !ok {
 		t.Fatalf("err = %v lost the store's field fault, which the REST door classifies", err)
 	}
 

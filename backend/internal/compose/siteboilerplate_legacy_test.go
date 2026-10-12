@@ -33,7 +33,7 @@ func legacyStripSharedPrefixBlocks(pages []crawlPage) ([]crawlPage, []string) {
 	}
 
 	var blocks []string
-	for round := 0; round < boilerplateMaxRounds; round++ {
+	for range boilerplateMaxRounds {
 		block := legacyStripOneSharedBlock(out)
 		if block == "" {
 			break
@@ -192,13 +192,7 @@ func legacyTooLargeAShare(prefix string, pages []crawlPage) bool {
 }
 
 func legacyCommonPrefix(a, b string) string {
-	limit := len(a)
-	if len(b) < limit {
-		limit = len(b)
-	}
-	if limit > boilerplateMaxBlockBytes {
-		limit = boilerplateMaxBlockBytes
-	}
+	limit := min(min(len(b), len(a)), boilerplateMaxBlockBytes)
 	end := 0
 	for end < limit && a[end] == b[end] {
 		end++

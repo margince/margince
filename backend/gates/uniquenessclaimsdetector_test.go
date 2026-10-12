@@ -16,6 +16,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -411,9 +412,7 @@ func findClaims(root string) ([]claim, error) {
 			text := flattenWraps(doc.Text())
 			shapes := sortedShapes()
 			patterns := make(map[string]*regexp.Regexp, len(claimShapes)+1)
-			for name, pattern := range claimShapes {
-				patterns[name] = pattern
-			}
+			maps.Copy(patterns, claimShapes)
 			// The derived shape's idiom rule travels WITH its pattern rather
 			// than being applied once here, so the two readings of the same
 			// text cannot disagree about which match is the claim.

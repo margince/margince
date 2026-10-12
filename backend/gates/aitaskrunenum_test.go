@@ -193,7 +193,7 @@ func aiTaskRunCheckValues(t *testing.T, column string) []string {
 		t.Fatalf("no CHECK naming ai_task_run.%s in %s", column, matches[0])
 	}
 	var out []string
-	for _, v := range strings.Split(m[1], ",") {
+	for v := range strings.SplitSeq(m[1], ",") {
 		out = append(out, strings.Trim(strings.TrimSpace(v), "'"))
 	}
 	slices.Sort(out)

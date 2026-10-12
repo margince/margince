@@ -108,7 +108,7 @@ func TestBucketBoundsAscendAndEndAtInf(t *testing.T) {
 	m := NewHTTPMetrics()
 	m.observe("/v1/x", "GET", 200, time.Millisecond)
 	var lastSeen float64
-	for _, line := range strings.Split(rendered(m), "\n") {
+	for line := range strings.SplitSeq(rendered(m), "\n") {
 		if !strings.Contains(line, "_bucket{") {
 			continue
 		}
@@ -354,7 +354,7 @@ func TestTheExpositionIsSortedOnEveryDimension(t *testing.T) {
 	m.observe("/v1/a", http.MethodPost, 201, time.Millisecond)
 
 	var counters []string
-	for _, line := range strings.Split(rendered(m), "\n") {
+	for line := range strings.SplitSeq(rendered(m), "\n") {
 		if strings.HasPrefix(line, "margince_http_requests_total{") {
 			counters = append(counters, line)
 		}

@@ -57,6 +57,8 @@ func (cfg RoutingConfig) liftLaneProviderFields(log *slog.Logger) RoutingConfig 
 		lift.providers = map[string]ProviderSettings{}
 	}
 	for name, settings := range lift.providers {
+		settings.BaseURL = hostRoot(name, settings.BaseURL)
+		lift.providers[name] = settings
 		if settings.BaseURL != "" {
 			lift.hostFrom[name] = providerEntryLabel
 		}
@@ -129,6 +131,7 @@ func (l providerLift) tier(label string, lane ProviderConfig) ProviderConfig {
 // which is the compiled default — and warns for each later lane elsewhere. Once
 // providers hold hosts, an empty lane host is the provider's and states nothing.
 func (l providerLift) host(label, provider, baseURL string) {
+	baseURL = hostRoot(provider, baseURL)
 	if baseURL == "" && !l.perLane {
 		return
 	}
@@ -204,7 +207,7 @@ func (l providerLift) pins(label, provider string, pins *OpenRouterRouting) bool
 // else decided, and otherwise keeps whichever differs from the provider's as
 // the lane's own override.
 func (l providerLift) embeddings(lane ProviderConfig) ProviderConfig {
-	lane.BaseURL = l.embeddingsHost(lane.Provider, lane.BaseURL)
+	lane.BaseURL = l.embeddingsHost(lane.Provider, hostRoot(lane.Provider, lane.BaseURL))
 	if lane.BaseURL == "" {
 		lane.Routing = l.embeddingsPins(lane.Provider, lane.Routing)
 	}

@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -76,6 +77,10 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	if review.Narrative != "" {
 		b.WriteString(mailcopy.OneLine(review.Narrative) + "\n\n")
 	}
+	figures := figuresOf(review, words)
+	if figures.beforeHistory() {
+		b.WriteString(words.WeeklyBeforeHistory + "\n\n")
+	}
 
 	c := review.Counts
 	// The label column is padded to the WIDEST label in this language rather
@@ -83,16 +88,17 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	// English ones they were laid out for, and a fixed width turns the column
 	// into a ragged edge in two of the three.
 	rows := [][2]string{
-		{words.WeeklyTasksDelivered, fmt.Sprintf(words.WeeklyOfDue, c.TasksDone, c.TasksDue)},
+		{words.WeeklyTasksDelivered, figures.value(figures.set.Tasks, fmt.Sprintf(words.WeeklyOfDue, c.TasksDone, c.TasksDue))},
 		{
 			words.WeeklyDealsWon + " · " + words.WeeklyDealsLost + " · " + words.WeeklyMoved,
-			strconv.Itoa(c.DealsWon) + " · " + strconv.Itoa(c.DealsLost) + " · " + strconv.Itoa(c.DealsMoved),
+			figures.value(figures.set.Deals,
+				figures.won(strconv.Itoa(c.DealsWon))+" · "+strconv.Itoa(c.DealsLost)+" · "+strconv.Itoa(c.DealsMoved)),
 		},
 		{words.WeeklyDecided, strconv.Itoa(c.ProposalsAccepted) + " " + words.WeeklyYes +
 			" · " + strconv.Itoa(c.ProposalsRejected) + " " + words.WeeklyNo},
 		{words.WeeklyQueue, strconv.Itoa(c.BriefItemsActed) + " " + words.WeeklyActed +
 			" · " + strconv.Itoa(c.BriefItemsDismissed) + " " + words.WeeklyDismissed},
-		{words.WeeklyCarried, strconv.Itoa(c.TasksCarriedOver)},
+		{words.WeeklyCarried, figures.value(figures.set.Tasks, strconv.Itoa(c.TasksCarriedOver))},
 	}
 	writeRows(&b, rows)
 
@@ -286,9 +292,7 @@ func (e *Engine) MailFailed(ctx context.Context, reviewID ids.UUID, cause string
 	if err != nil {
 		return err
 	}
-	if n := len([]rune(cause)); n > maxMailErrorRunes {
-		cause = string([]rune(cause)[:maxMailErrorRunes])
-	}
+	cause = textcut.Runes(cause, maxMailErrorRunes)
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE weekly_review SET mail_error = $3

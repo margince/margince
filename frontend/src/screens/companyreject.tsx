@@ -11,7 +11,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./common.css";
 
 type Company = components["schemas"]["Company"];
@@ -73,20 +73,20 @@ export function CompanyRejectAction({
     // the latest render sends the previous text — refusing a filled form, or
     // recording a reason the reader had already replaced.
     archive: async ({ reason: typed }) => {
-      const { data, error } = await api.POST("/companies/{id}/reject", {
-        params: {
-          path: { id: company.id },
-          // Through ifMatch's own second argument: it owns the header map, and
-          // a sibling `header` beside it is silently overwritten.
-          ...ifMatch(requireVersion(company.version), {
-            "Idempotency-Key": idempotencyKey,
-          }),
-        },
-        body: { reason: typed.trim() },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      const data = unwrap(
+        await api.POST("/companies/{id}/reject", {
+          params: {
+            path: { id: company.id },
+            // Through ifMatch's own second argument: it owns the header map, and
+            // a sibling `header` beside it is silently overwritten.
+            ...ifMatch(requireVersion(company.version), {
+              "Idempotency-Key": idempotencyKey,
+            }),
+          },
+          body: { reason: typed.trim() },
+        }),
+        t,
+      );
       return { id: data.company.id, domain: data.domain.domain };
     },
     invalidate: "companies",

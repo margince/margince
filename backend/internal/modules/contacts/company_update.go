@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -122,6 +123,9 @@ func (s *Store) updateCompanyInTx(
 		return crmcontracts.Company{}, err
 	}
 	if p.Empty() {
+		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
+			return crmcontracts.Company{}, err
+		}
 		return current, nil
 	}
 	if in.Visibility != nil {
@@ -132,6 +136,9 @@ func (s *Store) updateCompanyInTx(
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
 			return crmcontracts.Company{}, &RequiredFieldError{Field: filterOwnerID}
+		}
+		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "company_linkedin_url_key" {
+			return crmcontracts.Company{}, apperrors.ErrConflict
 		}
 		return crmcontracts.Company{}, fmt.Errorf("apply company patch: %w", err)
 	}

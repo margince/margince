@@ -4,7 +4,7 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 
 export type Team = components["schemas"]["Team"];
 export type TeamWeeklyReview = components["schemas"]["TeamWeeklyReview"];
@@ -79,10 +79,11 @@ export function useTeams(): UseQueryResult<readonly Team[]> {
       const teams: Team[] = [];
       let cursor: string | undefined;
       do {
-        const { data, error } = await api.GET("/teams", {
-          params: { query: { limit: 100, cursor } },
-        });
-        if (error) throwProblem(error);
+        const data = unwrap(
+          await api.GET("/teams", {
+            params: { query: { limit: 100, cursor } },
+          }),
+        );
         teams.push(...data.data);
         cursor = data.page.has_more
           ? (data.page.next_cursor ?? undefined)

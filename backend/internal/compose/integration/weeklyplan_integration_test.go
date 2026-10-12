@@ -556,14 +556,12 @@ func TestConcurrentDonePressesFileOneAuditRow(t *testing.T) {
 	var group sync.WaitGroup
 	start := make(chan struct{})
 	for range presses {
-		group.Add(1)
-		go func() {
-			defer group.Done()
+		group.Go(func() {
 			<-start
 			if err := e.store.SetState(e.rep1Ctx, id, weeklyplan.StateDone); err != nil {
 				t.Errorf("done: %v", err)
 			}
-		}()
+		})
 	}
 	close(start)
 	group.Wait()

@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,9 +39,7 @@ import (
 var introAskPerms = func() principal.Permissions {
 	p := graphPerms
 	objects := map[string]principal.ObjectGrant{"introduction": {Create: true, Read: true}}
-	for name, grant := range graphPerms.Objects {
-		objects[name] = grant
-	}
+	maps.Copy(objects, graphPerms.Objects)
 	p.Objects = objects
 	return p
 }()

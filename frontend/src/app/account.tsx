@@ -1,4 +1,4 @@
-import { ChevronRight, LogOut, UserRound } from "lucide-react";
+import { ChevronRight, UserRound } from "lucide-react";
 import {
   type KeyboardEvent,
   type RefObject,
@@ -10,11 +10,11 @@ import {
 } from "react";
 import type { components } from "../api/schema";
 import { Avatar } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { useT } from "../i18n";
-import { problemMessageOf, useLogout, useMe } from "../screens/common";
+import { useMe } from "../screens/common";
 import { SETTINGS_SCREEN } from "../screens/settingsnav";
+import { AccountRelease, type RowSeat, SignOutRow } from "./accountfoot";
 import { usePopoverDismiss } from "./popover";
 import { routeHash } from "./router";
 import {
@@ -99,22 +99,6 @@ function IdentityLines({ identity }: Readonly<{ identity: Identity }>) {
 }
 
 /**
- * What a row needs in order to BE a menu item: the role, its place in the roving
- * tabstop, the handle the menu moves focus with, and the callback that records
- * where focus landed when the reader put it there themselves.
- *
- * Optional at every call site, because the phone sheet's rows are not a menu.
- * They are ordinary content in a sheet, walked with Tab, and announcing
- * `role="menuitem"` outside a `role="menu"` would promise a keyboard contract
- * nothing there implements.
- */
-type RowSeat = Readonly<{
-  ref: (element: HTMLElement | null) => void;
-  tabIndex: number;
-  onFocus: () => void;
-}>;
-
-/**
  * The way into settings — the only one the product has.
  *
  * `onActivate` is how a caller says this click should BOTH act and close: the
@@ -139,46 +123,6 @@ function SettingsRow({
     >
       {t("nav.settings")}
     </a>
-  );
-}
-
-/**
- * The way out, with the guard against a second POST while the first is in
- * flight. One spelling for the menu and the sheet: two would be two ways to sign
- * out, and only one of them would keep the guard.
- */
-function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
-  const t = useT();
-  const logout = useLogout();
-  return (
-    <>
-      <button
-        type="button"
-        className="acctrow"
-        role={seat ? "menuitem" : undefined}
-        tabIndex={seat?.tabIndex}
-        ref={seat?.ref}
-        onFocus={seat?.onFocus}
-        disabled={logout.isPending}
-        onClick={() => logout.mutate()}
-      >
-        <LogOut size={15} aria-hidden />
-        {t("shell.signOutAria")}
-      </button>
-      {/* A refused sign-out is the one failure here a reader must not have to
-          infer. The row re-enables when the request settles either way, so
-          without this a session that is still open looks exactly like one that
-          has ended — and the next thing the reader does, they do believing they
-          have signed out. `role="none"`: a menu's children are its items, and an
-          alert is not one. */}
-      {logout.isError && (
-        <div className="acctrowalert" role="none">
-          <Callout tone="danger" kind="outcome" title={t("shell.signOutErr")}>
-            {problemMessageOf(logout.error, t)}
-          </Callout>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -470,6 +414,7 @@ function AccountPanel({
         {t("scheduling.myLink")}
       </a>
       <SignOutRow seat={seat(SIGN_OUT_SEAT)} />
+      <AccountRelease />
     </div>
   );
 }

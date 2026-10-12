@@ -8,7 +8,7 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
@@ -61,12 +61,11 @@ export function useCompanyProfileFields(companyId: string) {
   return useQuery({
     queryKey: profileFieldsKey(companyId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/profile-fields", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies/{id}/profile-fields", {
+          params: { path: { id: companyId } },
+        }),
+      );
       return data.data ?? [];
     },
   });
@@ -88,23 +87,18 @@ export function profileFieldClaim(
     verifiedAt: field.verified_at,
     verifiedBy: field.verified_by,
     confirmPath: async () => {
-      const { error } = await api.POST(
-        "/companies/{id}/profile-fields/{field}/confirm",
-        {
+      unwrap(
+        await api.POST("/companies/{id}/profile-fields/{field}/confirm", {
           params: {
             path: { id: companyId, field: field.field },
             ...ifMatch(requireVersion(field.version)),
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     correctPath: async (value) => {
-      const { error } = await api.PATCH(
-        "/companies/{id}/profile-fields/{field}",
-        {
+      unwrap(
+        await api.PATCH("/companies/{id}/profile-fields/{field}", {
           params: {
             path: { id: companyId, field: field.field },
             // Both verbs pin the row they answer for. A confirmation is a human
@@ -114,11 +108,8 @@ export function profileFieldClaim(
             ...ifMatch(requireVersion(field.version)),
           },
           body: { value },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
   };
 }
@@ -134,30 +125,25 @@ export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
     verifiedAt: fact.verified_at,
     verifiedBy: fact.verified_by,
     confirmPath: async () => {
-      const { error } = await api.POST(
-        "/companies/{id}/facts/{factKey}/confirm",
-        {
+      unwrap(
+        await api.POST("/companies/{id}/facts/{factKey}/confirm", {
           params: {
             path: { id: companyId, factKey },
             ...ifMatch(requireVersion(fact.version)),
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     correctPath: async (value) => {
-      const { error } = await api.PATCH("/companies/{id}/facts/{factKey}", {
-        params: {
-          path: { id: companyId, factKey },
-          ...ifMatch(requireVersion(fact.version)),
-        },
-        body: { value },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/companies/{id}/facts/{factKey}", {
+          params: {
+            path: { id: companyId, factKey },
+            ...ifMatch(requireVersion(fact.version)),
+          },
+          body: { value },
+        }),
+      );
     },
   };
 }
@@ -204,15 +190,8 @@ export function EvidenceVerdict({
       await settle();
     },
   });
-  // Losing the race is the one refusal a precondition creates, and the server
-  // states it as the bare sentinel `version skew` — two words naming a concept
-  // no reader has met. The catalog says what happened and what to do instead.
   const reasonFor = (failure: Error | null) =>
-    failure === null
-      ? undefined
-      : isVersionSkewOf(failure)
-        ? t("edit.versionSkew")
-        : problemMessageOf(failure, t);
+    failure === null ? undefined : problemMessageOf(failure, t);
   const corrected = reasonFor(correct.error);
   const confirmed = reasonFor(confirm.error);
 
@@ -227,6 +206,16 @@ export function EvidenceVerdict({
               when: formatDateTime(claim.verifiedAt, locale, recordZone),
             })
           : t("evidence.humanSet")}
+      </span>
+    );
+  }
+  // An agent's correction, said as an agent's. The automatic refresh leaves it
+  // alone, so the reader is told why the value stopped moving. It carries no
+  // time because nothing was verified.
+  if (claim.source === "agent") {
+    return (
+      <span className="evidence-verdict t-caption">
+        {t("evidence.agentSet")}
       </span>
     );
   }

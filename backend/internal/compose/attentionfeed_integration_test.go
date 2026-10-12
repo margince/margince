@@ -23,11 +23,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -315,7 +316,7 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 		  WHERE id = $1`, old)
 	// Enough newer stagings, decided outside the window, to fill any page the
 	// lane would ask for.
-	for i := 0; i < doneLaneWidth+4; i++ {
+	for i := range doneLaneWidth + 4 {
 		id := stageFor(t, e, svc, contact, fmt.Sprintf("An older act %d", i))
 		e.WsExec(t, `UPDATE approval
 			    SET status = 'approved', decided_by_system = true,
@@ -476,10 +477,8 @@ func TestThePlannedLaneCapKeepsTheMostOverdueNotTheNewestLogged(t *testing.T) {
 		t.Fatalf("the lane carries %d cards, want the cap of twelve", len(day.Planned))
 	}
 	got := titlesOn(day.Planned)
-	for _, title := range got {
-		if title == stale {
-			return
-		}
+	if slices.Contains(got, stale) {
+		return
 	}
 	t.Fatalf("the lane dropped the most overdue promise behind twelve tasks filed after it: %v", got)
 }

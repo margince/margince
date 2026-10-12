@@ -16,10 +16,15 @@ import (
 // The deal arm deliberately does not exclude archived or lost deals: a set
 // stricter than the predicate would show a message on the timeline whose
 // account never gets a signal about it.
+//
+// The employment arm is bounded by when the message was sent. The set form has
+// no outer activity to read that from, so the arms join the activity.
 var companyArms = `FROM activity_link l
+		    JOIN activity la ON la.id = l.activity_id
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
-		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL`
+		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
+		      AND ` + employment.InPlaceAtSQL("r", "la.occurred_at")
 
 // participantEmployerArm is the fourth arm: the employer of somebody who is on
 // the event as a participant rather than as a link. Without it a meeting whose
@@ -34,6 +39,7 @@ var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
 		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
+		        AND ` + employment.InPlaceAtSQL("emp", "a.occurred_at") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
 // activityReachesCompany is "this activity belongs to the account", for a query

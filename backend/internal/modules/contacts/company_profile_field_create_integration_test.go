@@ -305,13 +305,11 @@ func TestRepsStatingTheSameFieldAtOnceAllSucceed(t *testing.T) {
 	start := make(chan struct{})
 	var wg sync.WaitGroup
 	for i, value := range stated {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
 			_, errs[i] = e.store.UpdateCompanyProfileField(e.as(), companyID,
 				"register_vat", ProfileFieldWriteInput{Value: &value})
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()

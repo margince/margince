@@ -29,6 +29,7 @@ import (
 // published room with one invited buyer, and the buyer's credential.
 type buyerRoom struct {
 	roomID     string
+	dealID     string
 	credential string
 	email      string
 	// queued is what the invitation said about its own mail: whether a relay
@@ -71,7 +72,7 @@ func openRoomWithABuyer(t *testing.T, e *apptest.AppEnv) buyerRoom {
 		t.Fatalf("the issued invitation carries no boolean `queued`, so nothing says whether the "+
 			"seller must pass the link on by hand: %v", issued)
 	}
-	return buyerRoom{roomID: roomID, credential: credential, email: "laura@buyer.example", queued: queued}
+	return buyerRoom{roomID: roomID, dealID: dealID, credential: credential, email: "laura@buyer.example", queued: queued}
 }
 
 func bearer(token string) map[string]string {

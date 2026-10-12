@@ -31,12 +31,10 @@ func TestConcurrentPromotesMintExactlyOneContact(t *testing.T) {
 	errs := make([]error, racers)
 	var wg sync.WaitGroup
 	for i := range racers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, _, errs[i] = e.Contacts.PromoteLead(e.Admin(), leadID,
 				contacts.PromoteLeadInput{Trigger: "human_qualify"})
-		}()
+		})
 	}
 	wg.Wait()
 

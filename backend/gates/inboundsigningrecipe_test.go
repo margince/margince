@@ -206,18 +206,18 @@ func recipeArgOrder(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("reading %s: %v", recipeFile, err)
 	}
-	for _, line := range strings.Split(string(source), "\n") {
+	for line := range strings.SplitSeq(string(source), "\n") {
 		const marker = "printf '"
-		start := strings.Index(line, marker)
-		if start == -1 {
+		_, after, ok := strings.Cut(line, marker)
+		if !ok {
 			continue
 		}
-		rest := line[start+len(marker):]
-		end := strings.Index(rest, "'")
-		if end == -1 {
+		rest := after
+		_, after0, ok0 := strings.Cut(rest, "'")
+		if !ok0 {
 			continue
 		}
-		args := rest[end+1:]
+		args := after0
 		// The line ends with a template-literal backtick and a line-continuing
 		// backslash, neither of them an argument — cut everything from the
 		// backtick on, then trim what is left.

@@ -84,7 +84,7 @@ func (t listPipelinesTool) Spec() mcp.ToolSpec {
 		Description:   listPipelinesCopy.render(),
 		Instead:       listPipelinesCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listPipelines/listStages",
+		OpenAPIOp: "listPipelines",
 		// No arguments. The whole config is small, bounded by how many pipelines
 		// a workspace configures, and a filter would only let a caller ask for
 		// the one it cannot name yet.

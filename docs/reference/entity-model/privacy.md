@@ -39,6 +39,7 @@ The 2 tables owned by `privacy`, as the migrations build them. [Back to the enti
 **Rules**
 
 - `retention_policy_action_check`: `CHECK ((action = ANY (ARRAY['archive', 'anonymize', 'erase'])))`
+- `retention_policy_retain_days_check`: `CHECK (((retain_days >= 1) AND (retain_days <= 36500)))`
 - `retention_policy_unique`: `UNIQUE NULLS NOT DISTINCT (object_type, category)`
 
 **Indexes**

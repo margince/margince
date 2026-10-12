@@ -3,7 +3,7 @@
 
 import { api } from "../api/client";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import type { CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import {
@@ -39,13 +39,12 @@ export function useProjectCreateForm(company: ProjectCreateCompany): {
   const create = async (values: Record<string, string>) => {
     const answers =
       pinned === undefined ? values : { ...values, company_id: pinned };
-    const { data, error } = await api.POST("/projects", {
-      body: { ...mapProjectCreate(answers), ...cf.toBody(values) },
-    });
-    if (error) {
-      throwProblem(error, t);
-    }
-    return data;
+    return unwrap(
+      await api.POST("/projects", {
+        body: { ...mapProjectCreate(answers), ...cf.toBody(values) },
+      }),
+      t,
+    );
   };
   return { fields: [...core, ...cf.formFields], create };
 }

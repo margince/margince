@@ -23,7 +23,7 @@ import type { MessageKey } from "../i18n/en";
 import { useBookingIntent } from "./booking-common";
 import type { BookingMode, BookingSlot } from "./booking-picker";
 import { proposalEmailBody } from "./booking-proposal-message";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { ComposeModal } from "./compose";
 import { refreshContactMeetings } from "./contactmeetings.waiting";
 
@@ -303,12 +303,12 @@ function InviteSend({
   const client = useQueryClient();
   const send = useMutation({
     mutationFn: async (body: Invitation) => {
-      const { data, error } = await api.POST("/scheduling/invitations", {
-        body,
-        params: { header: { "Idempotency-Key": intent(body) } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.POST("/scheduling/invitations", {
+          body,
+          params: { header: { "Idempotency-Key": intent(body) } },
+        }),
+      );
     },
     onSuccess: async (value, body) => {
       await refreshContactMeetings(client, body.contact_id);
@@ -350,12 +350,12 @@ function ProposalSend({
   const [review, setReview] = useState(false);
   const create = useMutation({
     mutationFn: async (body: Proposal) => {
-      const { data, error } = await api.POST("/scheduling/proposals", {
-        params: { header: { "Idempotency-Key": intent(body) } },
-        body,
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.POST("/scheduling/proposals", {
+          params: { header: { "Idempotency-Key": intent(body) } },
+          body,
+        }),
+      );
     },
     onSuccess: async (_proposal, body) => {
       setReview(true);

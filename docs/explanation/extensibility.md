@@ -4,11 +4,12 @@
 The *extension tier* is how a small, closed add-on comes into this product without a change to any file
 the core owns. A unit is one named folder with a version under `extensions/<name>/`. It is its own Go
 module, it reaches the core through one small public surface, and the build composes it in. The plain
-tree, with no add-ons of its own, ships two units:
+tree, with no add-ons of its own, ships three units:
 
 | Unit | What it is |
 |---|---|
-| `extensions/de` | The German jurisdiction pack: the legal floors on retention, and nothing else |
+| `extensions/de` | The German jurisdiction pack: the legal floors on retention and the outbound messaging rules |
+| `extensions/vn` | The Vietnamese jurisdiction pack: the advertising-mail rules, and no retention floor |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 Read this page for the whole tier first and then each part. To *build* a unit, go to
@@ -109,6 +110,8 @@ already exists:
 | Field | What it adds |
 |---|---|
 | `Jurisdictions` | Policy the core reads. It never does anything itself, so it shows in no manifest |
+| `Messaging`, `SubjectRights` | The jurisdiction's messaging rules and request deadlines. Each must name a code the same unit's `Jurisdictions` carries |
+| `Documents` | The compliance documents the jurisdiction ships, served on the Jurisdiction settings page |
 | `Tools` | Governed agent tools: a request for a risk tier in the manifest and, when the declaration carries a handler, a tool the agent surface serves (see [what an extension can do](#what-an-extension-can-do-and-how-that-changes)) |
 | `Channels` | Messaging providers the unit supplies the **transport** for. The core calls the unit to send; the unit never sends on its own authority |
 | `Ingress` | Providers the unit takes records **in** from, and the identity keys that source stands behind |
@@ -122,7 +125,7 @@ provider it cannot send on, and the channel declaration says which.
 
 ### 2. The public surface and the mark that gates it
 
-A unit may import only `backend/pkg/**`, and only the packages that carry the mark. Four exist today:
+A unit may import only `backend/pkg/**`, and only the packages that carry the mark. Six exist today:
 
 - **`pkg/extension`**: the declaration types (`Extension`, and `Name` and `Version`, which check their
   own values). It also holds every capability contract carried on them: `Tool`, `Channel`,
@@ -140,6 +143,9 @@ A unit may import only `backend/pkg/**`, and only the packages that carry the ma
   stays a reply, and what exceptions hold for a customer who already buys. They also say what a first
   message must say, and the limits on sales messages. The core engine that approves a send reads them as
   data; a pack never decides a send.
+- **`pkg/extension/subjectrights`**: the deadline a jurisdiction gives each kind of data-subject request.
+  It counts in months and days, or in hours, and names the laws it rests on.
+- **`pkg/extension/compliancedocs`**: the documents a pack ships, with their audience and kind.
 
 Being in `backend/pkg` grants nothing on its own. A package is extension surface only when its package
 line carries the mark `//margince:extension-surface`. The allowlist is *derived from the tree*. A fitness

@@ -256,9 +256,6 @@ func weightedMinor(amountMinor, probability int64) int64 {
 	return (amountMinor*probability + 50) / 100
 }
 
-func int64p(v int64) *int64    { return &v }
-func stringp(v string) *string { return &v }
-
 func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 	e := setupForecast(t)
 
@@ -270,11 +267,11 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 		category    *string
 	}
 	constituents := []constituent{
-		{int64p(100000), 20, stringp("commit")},
-		{int64p(12341), 60, stringp("commit")},
-		{nil, 60, stringp("commit")}, // no amount: counted, sums untouched
-		{int64p(999), 55, stringp("best_case")},
-		{int64p(54321), 55, nil}, // no category: the NULL group
+		{new(int64(100000)), 20, new("commit")},
+		{new(int64(12341)), 60, new("commit")},
+		{nil, 60, new("commit")}, // no amount: counted, sums untouched
+		{new(int64(999)), 55, new("best_case")},
+		{new(int64(54321)), 55, nil}, // no category: the NULL group
 	}
 	for i, c := range constituents {
 		e.seedOpenDeal(t, fmt.Sprintf("Deal %d", i), int(c.probability), nil, c.amount, c.category)
@@ -358,7 +355,7 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 // a deal with two stakeholders counts once in the per-owner grouping.
 func TestForecastByOwnerCountsAMultiStakeholderDealOnce(t *testing.T) {
 	e := setupForecast(t)
-	dealID := e.seedOpenDeal(t, "Two champions", 60, &e.Rep1, int64p(50000), stringp("commit"))
+	dealID := e.seedOpenDeal(t, "Two champions", 60, &e.Rep1, new(int64(50000)), new("commit"))
 	for _, role := range []string{"champion", "economic_buyer"} {
 		contactID := e.seedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, "Stakeholder "+role)
 		e.seedID(t, `INSERT INTO relationship (id, kind, deal_id, contact_id, role, source, captured_by)
@@ -390,10 +387,10 @@ func TestForecastByOwnerCountsAMultiStakeholderDealOnce(t *testing.T) {
 // to its base inputs, so the lineage bottoms out with no opaque step.
 func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Alpha", 20, &e.Rep1, int64p(100000), stringp("commit"))
-	e.seedOpenDeal(t, "Beta", 60, &e.Rep1, int64p(12341), stringp("best_case"))
-	e.seedOpenDeal(t, "Gamma", 55, &e.Rep1, nil, stringp("commit"))
-	e.seedOpenDeal(t, "Foreign owner", 60, &e.Rep3, int64p(999999), stringp("commit"))
+	e.seedOpenDeal(t, "Alpha", 20, &e.Rep1, new(int64(100000)), new("commit"))
+	e.seedOpenDeal(t, "Beta", 60, &e.Rep1, new(int64(12341)), new("best_case"))
+	e.seedOpenDeal(t, "Gamma", 55, &e.Rep1, nil, new("commit"))
+	e.seedOpenDeal(t, "Foreign owner", 60, &e.Rep3, new(int64(999999)), new("commit"))
 
 	result := e.runReport(e.Admin(), t, "forecast", `{"group_by":["owner_id","currency"]}`)
 	var row map[string]any
@@ -485,9 +482,9 @@ func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 // explained from.
 func TestForecastDerivationRidesThePopulationOfTheReportItExplains(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Mine A", 20, &e.Rep1, int64p(10000), stringp("commit"))
-	e.seedOpenDeal(t, "Mine B", 60, &e.Rep1, int64p(20000), stringp("commit"))
-	e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, int64p(40000), stringp("commit"))
+	e.seedOpenDeal(t, "Mine A", 20, &e.Rep1, new(int64(10000)), new("commit"))
+	e.seedOpenDeal(t, "Mine B", 60, &e.Rep1, new(int64(20000)), new("commit"))
+	e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, new(int64(40000)), new("commit"))
 
 	rep := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(rep, t, "forecast", `{"group_by":["owner_id","currency"]}`)
@@ -686,8 +683,8 @@ func TestAReportAndItsDrillThroughCoverTheAskersOwnPopulation(t *testing.T) {
 	e := setupForecast(t)
 	mine := int64(100_000)
 	theirs := int64(250_000)
-	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, &mine, stringp("commit"))
-	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, &theirs, stringp("commit"))
+	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, &mine, new("commit"))
+	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, &theirs, new("commit"))
 
 	rep := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn))
 	result := e.runReport(rep, t, "forecast",

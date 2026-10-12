@@ -5,7 +5,7 @@ package assignments
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -146,5 +146,5 @@ func parentOf(company, deal, project *ids.UUID) (crmcontracts.AssignmentRecordTy
 	case project != nil:
 		return crmcontracts.AssignmentRecordTypeProject, *project, nil
 	}
-	return "", ids.UUID{}, fmt.Errorf("record_assignment row has no parent")
+	return "", ids.UUID{}, errors.New("record_assignment row has no parent")
 }

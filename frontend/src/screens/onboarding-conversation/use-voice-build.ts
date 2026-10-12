@@ -3,7 +3,7 @@ import type { Dispatch } from "react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { throwProblem } from "../common";
+import { unwrap } from "../common";
 import { pickBuiltVersion } from "../onboarding";
 import { ensureProfileId } from "../voice-profile";
 import type {
@@ -69,13 +69,12 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
   const start = useMutation({
     mutationFn: async (): Promise<{ profileId: string; buildId: string }> => {
       const id = await ensureProfileId();
-      const { data, error } = await api.POST("/voice-profiles/{id}/builds", {
-        params: { path: { id } },
-        body: { reason: "onboarding" },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.POST("/voice-profiles/{id}/builds", {
+          params: { path: { id } },
+          body: { reason: "onboarding" },
+        }),
+      );
       return { profileId: id, buildId: data.id };
     },
     onSuccess: ({ profileId: profile, buildId: build }) => {
@@ -90,14 +89,11 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
     queryKey: ["voice-build", profileId, buildId],
     enabled: profileId !== null && buildId !== null,
     queryFn: async (): Promise<VoiceBuild> => {
-      const { data, error } = await api.GET(
-        "/voice-profiles/{id}/builds/{buildId}",
-        { params: { path: { id: profileId ?? "", buildId: buildId ?? "" } } },
+      return unwrap(
+        await api.GET("/voice-profiles/{id}/builds/{buildId}", {
+          params: { path: { id: profileId ?? "", buildId: buildId ?? "" } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -179,12 +175,11 @@ export function useVoiceBuild({ dispatch, machine }: UseVoiceBuildArgs) {
     queryKey: ["voice-built-version", profileId, buildId],
     enabled: profileId !== null && poll.data?.status === "succeeded",
     queryFn: async (): Promise<VoiceProfileVersion | null> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/versions", {
-        params: { path: { id: profileId ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/voice-profiles/{id}/versions", {
+          params: { path: { id: profileId ?? "" } },
+        }),
+      );
       return pickBuiltVersion(data.data);
     },
   });

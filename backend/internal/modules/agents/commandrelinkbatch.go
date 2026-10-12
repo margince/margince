@@ -30,6 +30,7 @@ package agents
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -74,7 +75,7 @@ func (relinkThreadResolver) Subject(_ context.Context, cmd RelinkThreadCommand) 
 // can be approved names its rows, so the caller is sent to relink_activities.
 func (relinkThreadResolver) Guards(_ context.Context, cmd RelinkThreadCommand) error {
 	if cmd.ThreadKey == "" {
-		return &BadArgsError{Cause: fmt.Errorf("thread_key names the conversation to move; it cannot be blank")}
+		return &BadArgsError{Cause: errors.New("thread_key names the conversation to move; it cannot be blank")}
 	}
 	if err := requireLinkTarget(cmd.EntityType); err != nil {
 		return err

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // CreateRoomInput opens a room on a deal.
@@ -179,18 +180,12 @@ func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.Use
 // `status` retires the contact's access. A seat deactivated but not archived is
 // the ordinary shape of somebody who has left, and it is exactly the one the
 // old existence check admitted.
-//
-// This is identity.LiveMemberSQL's predicate, spelled here character for
-// character because a module never imports a sibling (ADR-0054 §3) and identity
-// owns app_user. The employment-currency gate's twin of this problem was
-// settled by moving the definition to a tier everything can reach; if a second
-// module ever needs this one, that is the move rather than a third copy.
 func stewardIsEligible(ctx context.Context, tx pgx.Tx, user ids.UserID) (bool, error) {
 	var eligible bool
 	if err := tx.QueryRow(ctx,
 		`SELECT EXISTS (
 		     SELECT 1 FROM app_user
-		      WHERE id = $1 AND status = 'active' AND archived_at IS NULL)`,
+		      WHERE id = $1 AND `+workforce.LiveMemberSQL("")+`)`,
 		user).Scan(&eligible); err != nil {
 		return false, fmt.Errorf("check steward: %w", err)
 	}
@@ -231,6 +226,9 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 		}
 		p := buildRoomPatch(current, in)
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, roomObject, id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

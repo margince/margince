@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -45,6 +46,9 @@ type Invoker interface {
 type Meta struct {
 	ModelID string
 	Tier    string
+	// Reject reports that the runner refused this reply, so a brain that keeps
+	// answers never serves it again. Nil for a brain that keeps none.
+	Reject func()
 }
 
 // Brain is one completion call. Compose adapts ai.Router into this so
@@ -279,6 +283,9 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 
 		step, parseErr := parseStep(resp.Text)
 		if parseErr != nil {
+			if meta.Reject != nil {
+				meta.Reject()
+			}
 			invalidStreak++
 			if invalidStreak >= consecutiveInvalidLimit {
 				return r.degradeFromCause(acc, job, invalidOutputReason(invalidStreak), parseErr), nil
@@ -403,15 +410,12 @@ func truncate(s string) string { return truncateTo(s, traceObservationLimit) }
 // small to carry the marker: a function that exists to enforce a cap must not
 // exceed it while saying it does.
 func truncateTo(s string, limit int) string {
-	if limit < 0 {
-		limit = 0
-	}
 	if len(s) <= limit {
 		return s
 	}
 	if limit <= len(truncationMarker) {
 		// No room to say "elided" without breaking the bound; the bound wins.
-		return s[:limit]
+		return textcut.Bytes(s, limit)
 	}
-	return s[:limit-len(truncationMarker)] + truncationMarker
+	return textcut.Bytes(s, limit-len(truncationMarker)) + truncationMarker
 }

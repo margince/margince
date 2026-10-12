@@ -16,6 +16,7 @@ package compose
 import (
 	"context"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -52,12 +53,7 @@ func namedDocuments(specs []mcp.ToolSpec) map[string][]string {
 }
 
 func alreadyNamed(names []string, name string) bool {
-	for _, existing := range names {
-		if existing == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, name)
 }
 
 // publishedDocumentURIs is what the composed resource surface actually serves to

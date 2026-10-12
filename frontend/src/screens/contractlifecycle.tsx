@@ -19,7 +19,7 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
 import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";
@@ -92,16 +92,15 @@ async function renewContract(
   draft: ContractDraft,
   dealId: string,
 ): Promise<string> {
-  const { data, error } = await api.POST("/contracts/{id}/renewal", {
-    params: {
-      path: { id: predecessor.id },
-      ...ifMatch(requireVersion(predecessor.version)),
-    },
-    body: renewalBody(draft, dealId),
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.POST("/contracts/{id}/renewal", {
+      params: {
+        path: { id: predecessor.id },
+        ...ifMatch(requireVersion(predecessor.version)),
+      },
+      body: renewalBody(draft, dealId),
+    }),
+  );
   return data?.id ?? "";
 }
 
@@ -113,12 +112,11 @@ function dealsForCompany(companyId: string) {
   return {
     queryKey: ["companyDeals", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals", {
-        params: { query: { company_id: companyId, limit: 100 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/deals", {
+          params: { query: { company_id: companyId, limit: 100 } },
+        }),
+      );
       return data?.data ?? [];
     },
   };
@@ -271,17 +269,15 @@ async function changeContractStatus(
   contract: Contract,
   status: ContractStatus,
 ): Promise<Contract> {
-  const { data, error } = await api.POST("/contracts/{id}/status", {
-    params: {
-      path: { id: contract.id },
-      ...ifMatch(requireVersion(contract.version)),
-    },
-    body: { status },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/contracts/{id}/status", {
+      params: {
+        path: { id: contract.id },
+        ...ifMatch(requireVersion(contract.version)),
+      },
+      body: { status },
+    }),
+  );
 }
 
 export function ContractStatusModal({
@@ -376,20 +372,18 @@ async function cancelContract(
   noticeOn: string,
   effectiveOn: string,
 ): Promise<Contract> {
-  const { data, error } = await api.POST("/contracts/{id}/cancellation", {
-    params: {
-      path: { id: contract.id },
-      ...ifMatch(requireVersion(contract.version)),
-    },
-    body: {
-      cancellation_notice_on: noticeOn,
-      cancellation_effective_on: effectiveOn,
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/contracts/{id}/cancellation", {
+      params: {
+        path: { id: contract.id },
+        ...ifMatch(requireVersion(contract.version)),
+      },
+      body: {
+        cancellation_notice_on: noticeOn,
+        cancellation_effective_on: effectiveOn,
+      },
+    }),
+  );
 }
 
 export function ContractCancelModal({

@@ -20,21 +20,29 @@ func (h Handlers) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// The contract requires the key; an empty string is a blank composer.
-	if _, present := httperr.PresentField(r, fieldBody); !present {
-		writeStoreErr(w, r, &RequiredFieldError{Field: fieldBody})
+	if err := httperr.RequireSent(r, fieldBody, fieldBody+" is required"); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	var subject string
 	if req.Subject != nil {
 		subject = *req.Subject
 	}
-	sign, err := h.store.signOff(r.Context(), req.Body, subject)
+	var draft signatureDraft
+	if req.Draft != nil {
+		draft = signatureDraft{Template: req.Draft.Template, Title: req.Draft.Title, Phone: req.Draft.Phone}
+	}
+	sign, err := h.store.previewSignOff(r.Context(), req.Body, subject, draft)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailSignOff{
+	out := crmcontracts.EmailSignOff{
 		Text: sign.Text,
 		Kind: crmcontracts.EmailSignOffKind(sign.Kind),
-	})
+	}
+	if sign.HTML != "" {
+		out.Html = &sign.HTML
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

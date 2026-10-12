@@ -11,7 +11,7 @@ import {
   type StageProgress,
 } from "../../design-system/onboarding-stage";
 import { type Translator, useLocale, useT } from "../../i18n";
-import { throwProblem } from "../common";
+import { throwProblem, unwrap } from "../common";
 import { loadWizardState } from "../onboarding";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
@@ -64,11 +64,7 @@ export function useConfiguredModel(): string {
     queryKey: ["ai-profile"],
     enabled: canReadProfile,
     queryFn: async (): Promise<AiProfile> => {
-      const { data, error } = await api.GET("/ai/profile");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/ai/profile"));
     },
     staleTime: Number.POSITIVE_INFINITY,
   });

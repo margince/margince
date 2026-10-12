@@ -24,7 +24,7 @@ import {
   SessionRefusedError,
   writeSession,
 } from "./buyerroomsession";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { problemMessageOf, QueryStates, throwProblem, unwrap } from "./common";
 import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it — the one screen an outside contact ever
@@ -220,12 +220,12 @@ function RoomBody({
   const signOut = useMutation({
     mutationKey: ["buyer-room-sign-out"],
     mutationFn: async (session: string) => {
-      const { error } = await api.POST("/public/rooms/sign-out", {
-        ...bearer(session),
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/public/rooms/sign-out", {
+          ...bearer(session),
+        }),
+        t,
+      );
     },
     // Whatever the server said, this tab is done with the token.
     onSettled: onSessionLost,

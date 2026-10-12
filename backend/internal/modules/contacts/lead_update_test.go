@@ -12,14 +12,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-func intp(v int) *int       { return &v }
-func strp(v string) *string { return &v }
-func int64p(v int64) *int64 { return &v }
-
 // leadWithOverride is a lead whose score 90 is a human override; the
 // machine value 23 is retained in score_computed.
 func leadWithOverride() crmcontracts.Lead {
-	return crmcontracts.Lead{Score: 90, ScoreOverrideReason: strp("board-level sponsor"), ScoreComputed: intp(23)}
+	return crmcontracts.Lead{Score: 90, ScoreOverrideReason: new("board-level sponsor"), ScoreComputed: new(23)}
 }
 
 func TestScoreOverrideNullClearsAndResumesRecompute(t *testing.T) {
@@ -59,15 +55,14 @@ func TestScoreOverrideNullWithoutOverrideIsANoOp(t *testing.T) {
 
 func TestScoreOverrideSetDemandsAWrittenReason(t *testing.T) {
 	for name, in := range map[string]UpdateLeadInput{
-		"reason absent":        {Score: intp(90)},
-		"reason explicit null": {Score: intp(90), ClearScoreOverride: true},
-		"reason empty":         {Score: intp(90), ScoreOverrideReason: strp("")},
-		"reason blank":         {Score: intp(90), ScoreOverrideReason: strp("   ")},
+		"reason absent":        {Score: new(90)},
+		"reason explicit null": {Score: new(90), ClearScoreOverride: true},
+		"reason empty":         {Score: new(90), ScoreOverrideReason: new("")},
+		"reason blank":         {Score: new(90), ScoreOverrideReason: new("   ")},
 	} {
 		p := storekit.NewPatch()
 		_, err := applyScoreOverride(p, crmcontracts.Lead{Score: 23}, in)
-		var want *ScoreOverrideReasonRequiredError
-		if !errors.As(err, &want) {
+		if _, ok := errors.AsType[*ScoreOverrideReasonRequiredError](err); !ok {
 			t.Errorf("%s: got %v, want ScoreOverrideReasonRequiredError", name, err)
 		}
 	}
@@ -75,9 +70,8 @@ func TestScoreOverrideSetDemandsAWrittenReason(t *testing.T) {
 
 func TestScoreOverrideEmptyStringReasonIsInvalidNotAClear(t *testing.T) {
 	p := storekit.NewPatch()
-	_, err := applyScoreOverride(p, leadWithOverride(), UpdateLeadInput{ScoreOverrideReason: strp("")})
-	var want *ScoreOverrideReasonEmptyError
-	if !errors.As(err, &want) {
+	_, err := applyScoreOverride(p, leadWithOverride(), UpdateLeadInput{ScoreOverrideReason: new("")})
+	if _, ok := errors.AsType[*ScoreOverrideReasonEmptyError](err); !ok {
 		t.Fatalf("empty-string reason: got %v, want ScoreOverrideReasonEmptyError", err)
 	}
 	if !p.Empty() {
@@ -88,9 +82,8 @@ func TestScoreOverrideEmptyStringReasonIsInvalidNotAClear(t *testing.T) {
 func TestScoreOverrideNullScoreWithWrittenReasonIsContradictory(t *testing.T) {
 	p := storekit.NewPatch()
 	_, err := applyScoreOverride(p, leadWithOverride(),
-		UpdateLeadInput{ClearScoreOverride: true, ScoreOverrideReason: strp("still strategic")})
-	var want *ScoreOverrideClearConflictError
-	if !errors.As(err, &want) {
+		UpdateLeadInput{ClearScoreOverride: true, ScoreOverrideReason: new("still strategic")})
+	if _, ok := errors.AsType[*ScoreOverrideClearConflictError](err); !ok {
 		t.Fatalf("null score + written reason: got %v, want ScoreOverrideClearConflictError", err)
 	}
 }
@@ -99,7 +92,7 @@ func TestScoreOverrideSetRetainsMachineValueOnce(t *testing.T) {
 	// First override: the machine value moves into score_computed.
 	p := storekit.NewPatch()
 	resume, err := applyScoreOverride(p, crmcontracts.Lead{Score: 23},
-		UpdateLeadInput{Score: intp(90), ScoreOverrideReason: strp("board-level sponsor")})
+		UpdateLeadInput{Score: new(90), ScoreOverrideReason: new("board-level sponsor")})
 	if err != nil || resume {
 		t.Fatalf("first override: err=%v resume=%v", err, resume)
 	}
@@ -110,7 +103,7 @@ func TestScoreOverrideSetRetainsMachineValueOnce(t *testing.T) {
 	// Refreshing an override in force must NOT clobber the retained value.
 	p = storekit.NewPatch()
 	if _, err := applyScoreOverride(p, leadWithOverride(),
-		UpdateLeadInput{Score: intp(95), ScoreOverrideReason: strp("expanded scope")}); err != nil {
+		UpdateLeadInput{Score: new(95), ScoreOverrideReason: new("expanded scope")}); err != nil {
 		t.Fatalf("refreshing the override: %v", err)
 	}
 	if _, touched := p.After()["score_computed"]; touched {
@@ -120,7 +113,7 @@ func TestScoreOverrideSetRetainsMachineValueOnce(t *testing.T) {
 
 func TestScoreOverrideAmendsReasonOnlyWhenOneIsInForce(t *testing.T) {
 	p := storekit.NewPatch()
-	if _, err := applyScoreOverride(p, leadWithOverride(), UpdateLeadInput{ScoreOverrideReason: strp("updated note")}); err != nil {
+	if _, err := applyScoreOverride(p, leadWithOverride(), UpdateLeadInput{ScoreOverrideReason: new("updated note")}); err != nil {
 		t.Fatalf("amending the note: %v", err)
 	}
 	if p.After()["score_override_reason"] != "updated note" {
@@ -131,7 +124,7 @@ func TestScoreOverrideAmendsReasonOnlyWhenOneIsInForce(t *testing.T) {
 	// so the refusal must name the score. Telling the caller to supply a
 	// score_override_reason it already sent is guidance it cannot act on.
 	p = storekit.NewPatch()
-	_, err := applyScoreOverride(p, crmcontracts.Lead{Score: 23}, UpdateLeadInput{ScoreOverrideReason: strp("a reason for nothing")})
+	_, err := applyScoreOverride(p, crmcontracts.Lead{Score: 23}, UpdateLeadInput{ScoreOverrideReason: new("a reason for nothing")})
 	var want *ScoreOverrideWithoutScoreError
 	if !errors.As(err, &want) {
 		t.Fatalf("reason without a score or override: got %v, want ScoreOverrideWithoutScoreError", err)
@@ -160,7 +153,7 @@ func TestLeadUpdateRequestKeepsNullDistinctFromAbsent(t *testing.T) {
 		if err := json.Unmarshal([]byte(tc.body), &req); err != nil {
 			t.Fatalf("%s: decode: %v", name, err)
 		}
-		in := leadUpdateInput(req, int64p(1))
+		in := leadUpdateInput(req, new(int64(1)))
 		if in.ClearScoreOverride != tc.wantClear {
 			t.Errorf("%s: ClearScoreOverride = %v, want %v", name, in.ClearScoreOverride, tc.wantClear)
 		}
@@ -175,5 +168,40 @@ func TestLeadUpdateRequestKeepsNullDistinctFromAbsent(t *testing.T) {
 	if in.Score == nil || *in.Score != 90 || in.ScoreOverrideReason == nil || *in.ScoreOverrideReason != "sponsor" ||
 		in.FullName == nil || *in.FullName != "Vera" {
 		t.Fatalf("wrapper dropped embedded fields: %+v", in)
+	}
+}
+
+// The HTTP handler lists a null field in Clear and also sets ClearScoreOverride.
+// The patch builder must hand the score pair to the override rule. Refusing it
+// as a column it cannot clear leaves the override in place forever.
+func TestANamedNullOnTheScorePairEndsTheOverride(t *testing.T) {
+	for name, clear := range map[string][]string{
+		"score":        {leadScoreField},
+		"reason":       {leadScoreOverrideReasonField},
+		"both":         {leadScoreField, leadScoreOverrideReasonField},
+		"beside title": {leadScoreField, "title"},
+	} {
+		p, resume, err := buildLeadPatch(leadWithOverride(), UpdateLeadInput{Clear: clear})
+		if err != nil {
+			t.Fatalf("%s: clearing the override was refused: %v", name, err)
+		}
+		if !resume {
+			t.Errorf("%s: the cleared override must resume recompute", name)
+		}
+		after := p.After()
+		if after["score_override_reason"] != nil || after["score"] != 23 {
+			t.Errorf("%s: override not ended: %v", name, after)
+		}
+	}
+}
+
+func TestANamedNullOnTheScoreKeepsOtherClears(t *testing.T) {
+	p, _, err := buildLeadPatch(crmcontracts.Lead{Score: 23, Title: new("CTO")},
+		UpdateLeadInput{Clear: []string{leadScoreField, "title"}})
+	if err != nil {
+		t.Fatalf("clear refused: %v", err)
+	}
+	if v, ok := p.After()["title"]; !ok || v != nil {
+		t.Errorf("title was not cleared beside the score: %v", p.After())
 	}
 }

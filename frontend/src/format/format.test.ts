@@ -129,6 +129,27 @@ describe("a money figure abbreviated for a KPI slot", () => {
     expect(formatMoneyCompact(833_200, "EUR", "en")).toBe("€8,332");
   });
 
+  // Rounded to whole units, a one-cent deal reads "€0", the same as a deal
+  // with no value, and the table beside it says €0.01.
+  it("keeps the cents a figure under ten thousand carries", () => {
+    expect(formatMoneyCompact(1, "EUR", "en")).toBe("€0.01");
+    expect(formatMoneyCompact(99_950, "EUR", "en")).toBe("€999.50");
+    expect(formatMoneyCompact(123_456, "EUR", "en")).toBe("€1,234.56");
+  });
+
+  // Rounded half-up, CHF 999,999.99 reads as a million. An abbreviation may
+  // drop digits, but never states more than the record holds.
+  it("never rounds an abbreviated figure up past the record", () => {
+    const plain = (s: string) => s.replace(/\s/g, " ").toLowerCase();
+    expect(plain(formatMoneyCompact(99_999_999, "CHF", "en"))).toBe(
+      "chf 999.9k",
+    );
+    expect(plain(formatMoneyCompact(-99_999_999, "CHF", "en"))).toBe(
+      "-chf 999.9k",
+    );
+    expect(formatMoneyCompact(99_999_999, "CHF", "de")).not.toMatch(/Mio/);
+  });
+
   // The scale is the SERVER's ISO table, not Intl's CLDR one. VND carries no
   // minor unit, so 420,000 minor units is ₫420k; dividing by Intl's count
   // instead would draw ₫4.2k, a figure the record does not hold.

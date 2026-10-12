@@ -18,6 +18,7 @@ package integration
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -37,8 +38,8 @@ func linkEmployment(t *testing.T, e *Env, contact, company ids.UUID, role string
 	t.Helper()
 	rel, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 		Kind:      "employment",
-		ContactID: ptr(ContactIDOf(contact)),
-		CompanyID: ptr(ids.From[ids.CompanyKind](company)),
+		ContactID: new(ContactIDOf(contact)),
+		CompanyID: new(ids.From[ids.CompanyKind](company)),
 		Role:      &role,
 		Source:    "manual",
 	})
@@ -55,8 +56,8 @@ func seedCoSell(t *testing.T, e *Env, company, counterparty ids.UUID) ids.UUID {
 	t.Helper()
 	rel, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 		Kind:                  "co_sell_with",
-		CompanyID:             ptr(ids.From[ids.CompanyKind](company)),
-		CounterpartyCompanyID: ptr(ids.From[ids.CompanyKind](counterparty)),
+		CompanyID:             new(ids.From[ids.CompanyKind](company)),
+		CounterpartyCompanyID: new(ids.From[ids.CompanyKind](counterparty)),
 		Source:                "manual",
 	})
 	if err != nil {
@@ -64,8 +65,6 @@ func seedCoSell(t *testing.T, e *Env, company, counterparty ids.UUID) ids.UUID {
 	}
 	return rel.ID
 }
-
-func ptr[T any](v T) *T { return &v }
 
 // edgeHistoryOf reads one record's history as the workspace admin and answers
 // the summary lines, newest first.
@@ -90,12 +89,7 @@ func summaries(page privacy.RecordHistoryPage) []string {
 }
 
 func containsLine(lines []string, want string) bool {
-	for _, line := range lines {
-		if line == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(lines, want)
 }
 
 // A caller with NO `relationship` grant reads both windows built around the edge
@@ -318,7 +312,7 @@ func TestEdgeHistoryStillShowsAnUnlinkedEdge(t *testing.T) {
 	edge := linkEmployment(t, e, contact, company, "cto")
 
 	if _, err := e.Contacts.UpdateRelationship(e.Admin(), edge, contacts.UpdateRelationshipInput{
-		Role: ptr("coo"),
+		Role: new("coo"),
 	}); err != nil {
 		t.Fatalf("changing the link's role: %v", err)
 	}

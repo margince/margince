@@ -133,6 +133,7 @@ export function activityTimeline(
       // timeline of unreadable subject lines was a rendering choice, not a
       // limit of what the page knew.
       body: activity.body,
+      transcript: isTranscriptActivity(activity),
       direction: activity.direction,
       counterparts:
         contacts && who

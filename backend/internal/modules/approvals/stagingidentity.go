@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -451,10 +452,8 @@ func (s *Service) stageUnlessDeclinedInTx(ctx context.Context, tx pgx.Tx, in Sta
 		if err != nil {
 			return fmt.Errorf("read the prior offers for this proposal: %w", err)
 		}
-		for _, status := range statuses {
-			if status == approvalStatusRejected {
-				return nil
-			}
+		if slices.Contains(statuses, approvalStatusRejected) {
+			return nil
 		}
 		if in.JoinPending {
 			id, err = s.stageOrJoinPendingInTx(ctx, tx, in)

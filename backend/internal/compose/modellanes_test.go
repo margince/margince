@@ -39,7 +39,7 @@ var laneExemptions = gatekit.Waive(map[string]string{
 // spelling of them.
 func taskConstantName(task ai.Task) string {
 	var b strings.Builder
-	for _, part := range strings.Split(string(task), "_") {
+	for part := range strings.SplitSeq(string(task), "_") {
 		if part == "" {
 			continue
 		}
@@ -52,8 +52,8 @@ func taskConstantName(task ai.Task) string {
 // exportedLanes returns the exported fields of ModelPath in declaration order.
 func exportedLanes(t reflect.Type) []reflect.StructField {
 	var lanes []reflect.StructField
-	for i := range t.NumField() {
-		if field := t.Field(i); field.IsExported() {
+	for field := range t.Fields() {
+		if field.IsExported() {
 			lanes = append(lanes, field)
 		}
 	}
@@ -73,7 +73,7 @@ func TestEveryModelLaneIsNamedForAShippedTask(t *testing.T) {
 		t.Fatal("the task contract declares no shipped task: the allowed lane names would be derived from nothing")
 	}
 
-	for _, field := range exportedLanes(reflect.TypeOf(ModelPath{})) {
+	for _, field := range exportedLanes(reflect.TypeFor[ModelPath]()) {
 		if laneExemptions.Waived(t, field.Name) {
 			continue
 		}

@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer explicitly states the file was stored on the project, which the criterion rejects as insufficient; the criterion requires the answer to state the file is stored on the signing meeting.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer tells the reader that the signed PDF is now stored as a file on the signing meeting (Vertragsunterzeichnung Leitstand Goslar). Answer no if it says the file was stored only on the project, the company or Katrin Albers, says it was saved as a note, or never says where the file was stored.",
+  "answer": "Done. servicevertrag-signiert.pdf is stored on the Leitstand Goslar project and filed against the Servicevertrag Leitstand Goslar (HST-2026-014). Meetings cannot hold files, so I put it on the project instead."
+}

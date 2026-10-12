@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 // The workspace roster as the frontend reads it: one walk over `/users` or
 // `/teams`, cached once, and the hooks that read it. Split out of entityref.tsx,
@@ -60,23 +60,25 @@ async function readRosterPage(
   // The two endpoints answer differently-typed rows, so each arm reads its own
   // — a shared call would have to assert one shape onto the other.
   if (kind === "user") {
-    const { data, error } = await api.GET("/users", {
-      params: {
-        query: {
-          limit: ROSTER_PAGE_SIZE,
-          ...(cursor ? { cursor } : {}),
+    const data = unwrap(
+      await api.GET("/users", {
+        params: {
+          query: {
+            limit: ROSTER_PAGE_SIZE,
+            ...(cursor ? { cursor } : {}),
+          },
         },
-      },
-    });
-    if (error) throwProblem(error);
+      }),
+    );
     return { entries: data.data, next: data.page.next_cursor ?? null };
   }
-  const { data, error } = await api.GET("/teams", {
-    params: {
-      query: { limit: ROSTER_PAGE_SIZE, ...(cursor ? { cursor } : {}) },
-    },
-  });
-  if (error) throwProblem(error);
+  const data = unwrap(
+    await api.GET("/teams", {
+      params: {
+        query: { limit: ROSTER_PAGE_SIZE, ...(cursor ? { cursor } : {}) },
+      },
+    }),
+  );
   return { entries: data.data, next: data.page.next_cursor ?? null };
 }
 
@@ -84,7 +86,7 @@ async function walkRoster(kind: RosterKind): Promise<Roster> {
   const entries: RosterEntry[] = [];
   let cursor = FIRST_PAGE;
   for (let page = 0; page < ROSTER_WALK_PAGES; page += 1) {
-    // A page that fails throws out of the whole walk (through `throwProblem`
+    // A page that fails throws out of the whole walk (through `unwrap`
     // inside `readRosterPage`), so react-query holds the read as an error.
     // Caught and dropped here it would come back as a SHORT list that reads as
     // complete — the one shape a caller cannot tell from a small workspace.

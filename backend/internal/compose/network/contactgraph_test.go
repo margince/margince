@@ -23,8 +23,6 @@ func daysBefore(n int) *time.Time {
 	return &t
 }
 
-func intp(v int) *int { return &v }
-
 // graphWith builds a picture with one anchor, so a test states the shape it
 // cares about rather than the whole assembly.
 func graphWith(nodes []crmcontracts.ContactGraphNode, edges []crmcontracts.ContactGraphEdge) *crmcontracts.ContactGraph {
@@ -69,12 +67,12 @@ func TestChooseRouteAlwaysPrefersADirectRelationship(t *testing.T) {
 			// Thin but direct.
 			{
 				From: userNodeID(uuidFor(1)), To: anchor,
-				Interactions90d: 2, Inbound90d: intp(1), Outbound90d: intp(1), LastAt: daysBefore(20),
+				Interactions90d: 2, Inbound90d: new(1), Outbound90d: new(1), LastAt: daysBefore(20),
 			},
 			// Far busier, but one hop away.
 			{
 				From: userNodeID(uuidFor(2)), To: contactNodeID(uuidFor(3)),
-				Interactions90d: 40, Inbound90d: intp(20), Outbound90d: intp(20), LastAt: daysBefore(1),
+				Interactions90d: 40, Inbound90d: new(20), Outbound90d: new(20), LastAt: daysBefore(1),
 			},
 		})
 
@@ -101,7 +99,7 @@ func TestChooseRouteNamesTheIntermediaryWhenTheHopIsIndirect(t *testing.T) {
 		},
 		[]crmcontracts.ContactGraphEdge{{
 			From: userNodeID(uuidFor(2)), To: contactNodeID(uuidFor(3)),
-			Interactions90d: 12, Inbound90d: intp(6), Outbound90d: intp(6), LastAt: daysBefore(2),
+			Interactions90d: 12, Inbound90d: new(6), Outbound90d: new(6), LastAt: daysBefore(2),
 		}})
 
 	route := chooseRoute(chooseRoutes(graph, graphNow))
@@ -128,11 +126,11 @@ func TestChooseRoutePrefersAnExchangeOverAOneSidedRelationship(t *testing.T) {
 		[]crmcontracts.ContactGraphEdge{
 			{
 				From: userNodeID(uuidFor(1)), To: anchor,
-				Interactions90d: 30, Inbound90d: intp(0), Outbound90d: intp(30), LastAt: daysBefore(1),
+				Interactions90d: 30, Inbound90d: new(0), Outbound90d: new(30), LastAt: daysBefore(1),
 			},
 			{
 				From: userNodeID(uuidFor(2)), To: anchor,
-				Interactions90d: 6, Inbound90d: intp(3), Outbound90d: intp(3), LastAt: daysBefore(3),
+				Interactions90d: 6, Inbound90d: new(3), Outbound90d: new(3), LastAt: daysBefore(3),
 			},
 		})
 
@@ -160,13 +158,13 @@ func TestChooseRouteRecommendsNothingWhenThereIsNoEdge(t *testing.T) {
 // to distinguish the two cases rather than print one number.
 func TestProofLineSaysWhetherTheRelationshipIsTwoWay(t *testing.T) {
 	twoWay := proofLineFor(evidenceOf(&crmcontracts.ContactGraphEdge{
-		Interactions90d: 6, Inbound90d: intp(3), Outbound90d: intp(3), LastAt: daysBefore(2),
+		Interactions90d: 6, Inbound90d: new(3), Outbound90d: new(3), LastAt: daysBefore(2),
 	}, graphNow))
 	if !strings.Contains(twoWay, "two-way") {
 		t.Errorf("a mutual relationship reads %q and does not say it is mutual", twoWay)
 	}
 	oneSided := proofLineFor(evidenceOf(&crmcontracts.ContactGraphEdge{
-		Interactions90d: 30, Inbound90d: intp(0), Outbound90d: intp(30), LastAt: daysBefore(2),
+		Interactions90d: 30, Inbound90d: new(0), Outbound90d: new(30), LastAt: daysBefore(2),
 	}, graphNow))
 	if !strings.Contains(oneSided, "one-sided") {
 		t.Errorf("thirty unanswered sends read %q and do not say they went unanswered", oneSided)

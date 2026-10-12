@@ -48,7 +48,7 @@ func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
 			// text their agents actually select on.
 			Title:         spec.Title,
 			Description:   agents.DescribeForClient(spec),
-			RequiredScope: ptrString(string(spec.RequiredScope)),
+			RequiredScope: new(string(spec.RequiredScope)),
 			Tier:          tierWire(spec.Tier),
 			Egress:        spec.Egress,
 		})
@@ -73,5 +73,3 @@ func tierWire(t mcp.RiskTier) crmcontracts.AgentToolTier {
 	}
 	return crmcontracts.AgentToolTierConfirmationRequired // unreachable; conservative floor if a tier is added without updating this switch
 }
-
-func ptrString(v string) *string { return &v }

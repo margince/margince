@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -799,7 +800,7 @@ func toolsInBlock(block, inline *regexp.Regexp, text string) []string {
 // one token by more than one reader, and this is the other reader.
 func alternativesIn(entry string) []string {
 	var out []string
-	for _, part := range strings.Split(entry, "|") {
+	for part := range strings.SplitSeq(entry, "|") {
 		if trimmed := strings.TrimSpace(part); trimmed != "" {
 			out = append(out, trimmed)
 		}
@@ -944,12 +945,7 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 // with a different argument order, and two spellings of the same predicate is
 // how a call site comes to read backwards.
 func listHas(in []string, want string) bool {
-	for _, v := range in {
-		if v == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(in, want)
 }
 
 func atoiOrZero(s string) int {

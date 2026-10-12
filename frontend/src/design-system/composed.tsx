@@ -584,6 +584,8 @@ export type TimelineEntry = {
    * Art. 17 request, which is why this is optional rather than empty string.
    */
   body?: string | null;
+  /** A pasted or uploaded transcript, drawn as its lines rather than markdown. */
+  transcript?: boolean;
   /**
    * The row is discoverable but its CONTENT is not this reader's: the
    * activity's audience was limited by a human and the reader is not in it.
@@ -690,35 +692,35 @@ function linkify(text: string): ReactNode[] {
   return out;
 }
 
+const WRITTEN_KINDS = new Set(["note", "call", "meeting", "task"]);
+
 /**
  * TimelineText is the message itself, three lines by default and the whole of
- * it on request.
+ * it on request. A timeline of full emails would be a mailbox.
  *
- * Three lines is enough to recognise a thread; the full text is one click away
- * rather than one application away. Collapsed by default because a timeline
- * where every row is a full email is a mailbox, and the point of the row is
- * still the sequence.
- *
- * On a mail row the reader gets the sentence the sender wrote. The sign-off and
- * the quoted history below it are folded into a second control instead of being
- * dropped, because the split is a heuristic: when it takes too much, the text is
- * one click away rather than gone. Only a mail is split, since a note may say
- * "Viele Grüße" as prose. Only a note is drawn as markdown; a mail stays text.
+ * On a mail row the sign-off and quoted history fold into a second control,
+ * because the split is a heuristic and may take too much. Only a mail is split,
+ * since a note may say "Viele Grüße" as prose. What a rep writes (a note, call,
+ * meeting or task) is markdown; a mail, a chat and a transcript stay text.
  */
 function TimelineText({
   text,
-  kind,
-}: Readonly<{ text: string; kind: TimelineEntry["kind"] }>) {
+  entry,
+}: Readonly<{
+  text: string;
+  entry: Pick<TimelineEntry, "kind" | "transcript">;
+}>) {
   const t = useT();
-  const email = kind === "email";
+  const email = entry.kind === "email";
   const [open, setOpen] = useState(false);
   const [tailOpen, setTailOpen] = useState(false);
   // Measured, not guessed: the clamp is three VISUAL lines at the column's
   // width, and a short guess leaves clipped text with no control to reach it.
   const [clipped, setClipped] = useState(false);
   const [el, setEl] = useState<HTMLElement | null>(null);
-  // A note's markdown is block content, which a <span> may not hold.
-  const Block = kind === "note" ? "div" : "span";
+  // Markdown is block content, which a <span> may not hold.
+  const Block =
+    WRITTEN_KINDS.has(entry.kind) && !entry.transcript ? "div" : "span";
   // The tail is what the reader is spared; `trimmed` is what the row shows and
   // what the clamp measures, so the split has to happen before that effect.
   const parts = useMemo(
@@ -729,10 +731,8 @@ function TimelineText({
     ? [parts.header, parts.main].filter(Boolean).join("\n\n")
     : text.trim();
   const tail = parts?.trimmed ?? "";
-  // A row is keyed by activity id, so React keeps this component mounted when
-  // the entry it renders is replaced. Without this the next mail's signature
-  // would already be open, revealed by a click the reader made on a different
-  // message.
+  // A row is keyed by activity id, so this stays mounted when its entry is
+  // replaced. The next mail's signature stays closed.
   const [shownFor, setShownFor] = useState(text);
   if (shownFor !== text) {
     setShownFor(text);
@@ -1115,9 +1115,7 @@ function MessageWords({
   if (entry.emailSummary) {
     return <EmailWords summary={entry.emailSummary} />;
   }
-  return entry.body ? (
-    <TimelineText text={entry.body} kind={entry.kind} />
-  ) : null;
+  return entry.body ? <TimelineText text={entry.body} entry={entry} /> : null;
 }
 
 /**
@@ -1376,7 +1374,7 @@ function BulkGroupRow({
             {/* Never for a withheld entry — a summary row must not show a
                 reader words the row itself refuses. */}
             {newest.body && !newest.withheld && (
-              <TimelineText text={newest.body} kind={newest.kind} />
+              <TimelineText text={newest.body} entry={newest} />
             )}
           </>
         )}
@@ -1401,11 +1399,11 @@ function BulkGroupRow({
             ))}
           </ul>
         )}
+        {/* The newest copy's verbs stand for the send: Relink on it offers to
+            move the rest, so a mis-filed send is fixed from its summary row
+            without opening it first. */}
+        {newest.actions && <span className="tl-actions">{newest.actions}</span>}
       </div>
-      {/* The newest copy's verbs stand for the send: Relink on it offers to
-          move the rest, so a mis-filed send is fixed from its summary row
-          without opening it first. */}
-      {newest.actions && <span className="tl-actions">{newest.actions}</span>}
     </li>
   );
 }
@@ -1490,8 +1488,8 @@ export function TimelineRow({
             whyNotOpenable="noReader"
           />
           {flag}
+          {entry.actions && <span className="tl-actions">{entry.actions}</span>}
         </div>
-        {entry.actions && <span className="tl-actions">{entry.actions}</span>}
       </li>
     );
   }
@@ -1512,8 +1510,7 @@ export function TimelineRow({
       </span>
       {/* A div, not a span: a change row's detail is a field diff whose
                 long-value side is a focusable region — flow content, invalid
-                inside phrasing content. The row lays out identically, because
-                .tl-body is a flex column either way. */}
+                inside phrasing content. */}
       <div className="tl-body">
         {/* What KIND of thing this was, as a kicker and not a status, and
             which way it went — one line above the headline, because both
@@ -1568,14 +1565,14 @@ export function TimelineRow({
             here; one without still needs the splitter, because a reader whose
             server has not caught up should not lose the fold. */}
         {entry.body && !entry.withheld && (
-          <TimelineText text={entry.body} kind={entry.kind} />
+          <TimelineText text={entry.body} entry={entry} />
         )}
         {entry.detail}
         <span className="tl-meta">
           <ProvenanceTag provenance={entry.provenance} />
         </span>
+        {entry.actions && <span className="tl-actions">{entry.actions}</span>}
       </div>
-      {entry.actions && <span className="tl-actions">{entry.actions}</span>}
     </li>
   );
 }

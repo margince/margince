@@ -26,7 +26,7 @@ func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
 	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "manual"})
 
 	created, _, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
-		FullName: strp("Grace Hopper"), Source: "manual",
+		FullName: new("Grace Hopper"), Source: "manual",
 		CustomFields: map[string]any{col: true},
 	})
 	if err != nil {
@@ -74,7 +74,7 @@ func TestCustomFieldValues_LeadSourceReplayCarriesCustomFields(t *testing.T) {
 	system, id := "crm", "ext-42"
 
 	created, wasCreated, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
-		FullName: strp("Ada"), Source: "import", SourceSystem: &system, SourceID: &id,
+		FullName: new("Ada"), Source: "import", SourceSystem: &system, SourceID: &id,
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil || !wasCreated {
@@ -83,7 +83,7 @@ func TestCustomFieldValues_LeadSourceReplayCarriesCustomFields(t *testing.T) {
 	assertCF(t, created.AdditionalProperties, col, "gold")
 
 	replay, wasCreated, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
-		FullName: strp("Ada"), Source: "import", SourceSystem: &system, SourceID: &id,
+		FullName: new("Ada"), Source: "import", SourceSystem: &system, SourceID: &id,
 		CustomFields: map[string]any{col: "silver"},
 	})
 	if err != nil {
@@ -103,7 +103,7 @@ func TestCustomFieldValues_LeadDisqualifyPreservesCustomFields(t *testing.T) {
 	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "manual"})
 
 	created, _, err := f.store.CreateLead(f.ctx, contacts.CreateLeadInput{
-		FullName: strp("Otto"), Source: "manual",
+		FullName: new("Otto"), Source: "manual",
 		CustomFields: map[string]any{col: true},
 	})
 	if err != nil {

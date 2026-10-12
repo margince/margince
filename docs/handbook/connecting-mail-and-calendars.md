@@ -11,6 +11,7 @@ To connect your Gmail or Outlook mailbox to Margince, open **Settings → Connec
 3. Press **Connect** beside **Gmail** or **Outlook** (a Microsoft work account).
 4. Approve every permission on the Google or Microsoft screen.
 You then see "Connected. Your mailbox is capturing." An agent cannot connect a mailbox for you.
+If the row says "{provider} is not configured on this installation.", an administrator has to set it up first.
 Also called: hook up Google Mail, link my inbox, email sync, Outlook sync, Office 365.
 
 ### How do I connect an IMAP mailbox?
@@ -19,7 +20,25 @@ To connect any other mail host to Margince, open **Settings → Connections** an
 2. Press **Connect** beside **IMAP mailbox**.
 3. Fill **IMAP server**, **Port**, **Email address**, **App password**, **Mailbox** and **Messages per sync**, then press **Connect**.
 Use a password made for this one app. Missing fields show "Required: {fields}". An IMAP mailbox only captures: Margince cannot send from it, and it has no history import.
+
+**Messages per sync** is the most one check reads. The first messages arrive a few minutes after you connect, not at once.
 Also called: connect Fastmail, connect my own mail server, app password.
+
+### How do I get an app password for IMAP?
+To get an app password, turn on two-step sign-in for your mail account, then create an app password in its security settings.
+- **Gmail**: turn on 2-Step Verification, then make one under Google Account, Security, App passwords. The server is `imap.gmail.com`, **Port** 993.
+- **Outlook**: turn on two-step sign-in, then create one under Security, Advanced security options, App passwords. The server is `outlook.office365.com`, **Port** 993.
+
+Both providers refuse your normal password over IMAP. If your company turns off IMAP or app passwords, connect **Outlook** instead.
+Margince seals the password and never shows it again. **Disconnect** deletes it, and you can also revoke it at the provider.
+Also called: app-specific password, IMAP password, Gmail app password.
+
+### Why does my IMAP mailbox not connect?
+When the **Connect IMAP mailbox** form refuses, the message under it says which of two things went wrong.
+- "The mailbox rejected these credentials. Check host, email and app password.": a value is wrong, or you used your normal password.
+- "The mail server could not be reached. Check the host and port.": the server name or port is wrong, or the server is down.
+An IMAP server inside your own network is always unreachable, because Margince never connects to a private address.
+Also called: IMAP login failed, credentials rejected, mail server unreachable.
 
 ### How do I connect my calendar?
 To connect your calendar to Margince, open **Settings → Connections** and press **Add connector**. Choose **Connect** beside **Google Calendar** or **Outlook Calendar**; a calendar connects apart from mail.
@@ -28,6 +47,7 @@ To connect your calendar to Margince, open **Settings → Connections** and pres
 3. Press **Connect** beside **Google Calendar** or **Outlook Calendar**. Their rows read "Your Google Calendar, connected separately from Gmail." and "Your Outlook calendar, connected separately from Outlook mail."
 4. Approve access on the provider's screen.
 Connecting Gmail does not connect Google Calendar, and the other way round.
+A calendar brings meetings from 90 days back to one year from now, and the window moves forward on its own. There is no history import for a calendar.
 Also called: calendar sync, sync meetings, link my agenda.
 
 ## What you can connect
@@ -96,6 +116,61 @@ Only you can connect your mailbox. An agent cannot.
 A connection also cannot reach past the colleague who made it. If your
 permissions are cut later, the connection's reach is cut with them on its next
 check.
+
+## The company's Telegram bot
+
+One Telegram bot receives and sends messages for the whole company. It sits on
+**Settings → Connections** in the **Telegram bot** card, below your mailboxes.
+Every user can see whether it is connected. Only an administrator or operations
+user can connect or change it, and an agent never can.
+
+A Telegram bot cannot start a chat. A contact writes to the bot first, and only
+then can you reply to them there. What a reply looks like is in
+[Writing and sending mail](sending-mail.md).
+
+### How do I connect the company's Telegram bot?
+To connect the Telegram bot, create a bot with BotFather, then press **Connect Telegram bot** on **Settings → Connections**.
+1. In Telegram, write to @BotFather, send `/newbot`, and copy the token it gives you.
+2. In Margince, open **Settings**, then **Connections**.
+3. In the **Telegram bot** card, press **Connect Telegram bot**.
+4. Paste the token into **Bot token** and press **Connect**.
+You then see "Connected as @yourbot." and a **Done** button. The bot starts reading messages within a minute.
+
+Messages already waiting for the bot arrive too. Telegram keeps unread bot messages for about a day, so nothing older comes in.
+The card may say "Messaging channels are not configured on this installation." Then an administrator has to set it up first.
+Also called: add a Telegram bot, link Telegram, BotFather token.
+
+### Why did my Telegram bot not connect?
+When connecting fails, the form shows **Bot not connected** with the reason. The form starts empty again, so paste the token once more.
+- The token was refused: check the token BotFather sent you, and that nobody revoked it.
+- A bot is already connected: the company has one bot. Use **Replace token** or **Disconnect** on it first.
+- Telegram could not be reached: nothing changed, so try again later.
+Also called: Telegram token rejected, bot not connected.
+
+### How do I replace the Telegram bot token?
+To replace the bot token, press **Replace token** on the bot's row and paste the new token.
+1. Open **Settings**, then **Connections**.
+2. In the **Telegram bot** card, press **Replace token**.
+3. Paste the new token into **Bot token** in **Replace bot token**, and press **Replace token**.
+The connection stays, with all captured chats and contacts. You can even point it at a different bot.
+Replacing the token keeps the status. A bot in **Needs reconnect** or **Sync error** needs **Disconnect**, then connecting again.
+Also called: change the bot token, new BotFather token, change the bot.
+
+### How do I disconnect the Telegram bot?
+To disconnect the Telegram bot, press **Disconnect** on its row and confirm in "Disconnect this bot?".
+1. Open **Settings**, then **Connections**.
+2. In the **Telegram bot** card, press **Disconnect**.
+3. Confirm with **Disconnect**.
+Margince deletes the stored token and stops reading the bot at once. Every message and contact it captured stays in the CRM.
+Also called: remove the Telegram bot, stop Telegram capture, unlink Telegram.
+
+### Why does my Telegram bot show Sync error or Needs reconnect?
+**Needs reconnect** means Telegram refused the stored token, so get a new one from BotFather.
+**Sync error** on the bot means another program reads the same bot's messages. Telegram allows only one reader per bot.
+
+Find that program and stop it. It may be a second Margince, a test installation, or another tool using the same token.
+Margince does not try again on its own. Once the other reader is gone, press **Disconnect**, then connect the bot again.
+Also called: Telegram not syncing, bot stopped capturing.
 
 ### How do I import my old emails?
 To import your old emails into Margince, open **Settings → Connections** and use **Import mailbox history** under the connected mailbox. Choose an **Import window** and press **Start import**.

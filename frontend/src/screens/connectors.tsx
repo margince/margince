@@ -25,7 +25,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BackfillPanel } from "./backfill";
 import { useCaptureSettings } from "./capture-settings";
-import { problemCode, problemMessageOf, throwProblem } from "./common";
+import { problemCode, problemMessageOf, throwProblem, unwrap } from "./common";
 import {
   errorClassKey,
   missingCalendarWriteGrant,
@@ -564,13 +564,15 @@ function useSetMailPosture(provider: CaptureConnection["provider"]) {
       posture: MailPosture;
       applyToHistory: boolean;
     }) => {
-      const { error } = await api.PUT("/connectors/{provider}/mail-posture", {
-        params: { path: { provider } },
-        body: { posture: vars.posture, apply_to_history: vars.applyToHistory },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/connectors/{provider}/mail-posture", {
+          params: { path: { provider } },
+          body: {
+            posture: vars.posture,
+            apply_to_history: vars.applyToHistory,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["connectors"] });
@@ -629,13 +631,12 @@ function useSetSignatureEnrichment(provider: CaptureConnection["provider"]) {
     // reading render state would answer with whatever the previous render held
     // (frontend/AGENTS.md, mutation-variable-coverage).
     mutationFn: async (enabled: boolean) => {
-      const { error } = await api.PUT(
-        "/connectors/{provider}/signature-enrichment",
-        { params: { path: { provider } }, body: { enabled } },
+      unwrap(
+        await api.PUT("/connectors/{provider}/signature-enrichment", {
+          params: { path: { provider } },
+          body: { enabled },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["connectors"] });
@@ -828,12 +829,11 @@ function MailConnectorsPanel() {
 
   const disconnect = useMutation({
     mutationFn: async (provider: Provider) => {
-      const { error } = await api.POST("/connectors/{provider}/disconnect", {
-        params: { path: { provider } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/connectors/{provider}/disconnect", {
+          params: { path: { provider } },
+        }),
+      );
     },
     onSuccess: () => {
       setPendingDisconnect(null);

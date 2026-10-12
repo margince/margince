@@ -118,7 +118,7 @@ func findSpec(decl *ast.GenDecl, name string) ast.Node {
 // the printer keeps because it lays out by the original line positions.
 func dropBlankLines(src string) string {
 	var kept []string
-	for _, line := range strings.Split(src, "\n") {
+	for line := range strings.SplitSeq(src, "\n") {
 		if strings.TrimSpace(line) != "" {
 			kept = append(kept, line)
 		}

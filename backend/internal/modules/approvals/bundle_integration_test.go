@@ -427,9 +427,8 @@ func TestABundleTooLargeToDecideIsRefusedAndStillHiddenFromOutsiders(t *testing.
 		t.Fatalf("seeding an oversized bundle: %v", err)
 	}
 
-	var oversized *BundleTooLargeError
 	_, err := e.svc.DecideBundle(ctx, bundle, true, nil)
-	if !errors.As(err, &oversized) {
+	if _, ok := errors.AsType[*BundleTooLargeError](err); !ok {
 		t.Fatalf("err = %v, want BundleTooLargeError", err)
 	}
 	if n := e.count(t, `SELECT count(*) FROM approval WHERE bundle_id = $1 AND status <> 'pending'`, bundle); n != 0 {

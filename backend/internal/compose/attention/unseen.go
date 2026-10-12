@@ -117,6 +117,9 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	if day.Counts.DealSuggestionsOpen != nil {
 		bounded[sourceDealSuggestion] = shownFrom(day.NeedsYou, sourceDealSuggestion) < *day.Counts.DealSuggestionsOpen
 	}
+	if day.Counts.TagSuggestionsOpen != nil {
+		bounded[sourceTagSuggestion] = shownFrom(day.NeedsYou, sourceTagSuggestion) < *day.Counts.TagSuggestionsOpen
+	}
 	return bounded
 }
 

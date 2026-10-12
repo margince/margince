@@ -7,6 +7,7 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -23,6 +24,12 @@ import (
 //
 // An installation with no at-risk lane bound has nothing to judge.
 func (s *Service) MaterialAtRisk(ctx context.Context) ([]ids.UUID, error) {
+	// System only, because the bar this computes is the workspace's judgement
+	// over every amount. A human caller would rank against the amounts their
+	// field masks leave visible and record that as the workspace's verdict.
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
 	if s.atRisk == nil {
 		return nil, nil
 	}

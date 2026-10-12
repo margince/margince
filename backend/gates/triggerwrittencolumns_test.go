@@ -308,7 +308,7 @@ func touchTriggerTables(t *testing.T) map[string]map[string]bool {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
 	tables := map[string]map[string]bool{}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		m := touchTriggerLine.FindStringSubmatch(strings.TrimSpace(line))
 		if m == nil {
 			continue
@@ -515,13 +515,13 @@ func functionBody(catalog, function string) string {
 		return ""
 	}
 	rest := catalog[start+1:]
-	header := strings.Index(rest, "\n")
-	if header < 0 {
+	_, after, ok := strings.Cut(rest, "\n")
+	if !ok {
 		return ""
 	}
-	body := rest[header+1:]
-	if end := strings.Index(body, "\n\n"); end >= 0 {
-		return body[:end]
+	body := after
+	if before, _, ok := strings.Cut(body, "\n\n"); ok {
+		return before
 	}
 	return body
 }

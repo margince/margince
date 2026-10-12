@@ -89,24 +89,20 @@ func (e *restatedDecodeError) Unwrap() error { return e.cause }
 func decodeDetail(err error) (string, bool) {
 	// Ours already: this refusal names the caller's own value and the form it
 	// must take, with nothing of the program that read it.
-	var badID *ids.ParseError
-	if errors.As(err, &badID) {
+	if badID, ok := errors.AsType[*ids.ParseError](err); ok {
 		return boundFaultText(badID.Error()), true
 	}
 
-	var typeErr *json.UnmarshalTypeError
-	if errors.As(err, &typeErr) {
+	if typeErr, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
 		return unmarshalTypeDetail(typeErr), true
 	}
 
-	var syntaxErr *json.SyntaxError
-	if errors.As(err, &syntaxErr) {
+	if syntaxErr, ok := errors.AsType[*json.SyntaxError](err); ok {
 		return fmt.Sprintf("the payload is not valid JSON at byte %d; send one well-formed JSON object",
 			syntaxErr.Offset), true
 	}
 
-	var timeErr *time.ParseError
-	if errors.As(err, &timeErr) {
+	if timeErr, ok := errors.AsType[*time.ParseError](err); ok {
 		return boundFaultText(strconv.Quote(timeErr.Value)) + " is not " + expectedTimeFormat(timeErr.Layout), true
 	}
 
@@ -228,16 +224,14 @@ func deref(t reflect.Type) reflect.Type {
 // Both answers come from one function so the sentence shown and the words kept
 // cannot disagree about which was which.
 func fieldDecodeRefusal(cause error) (detail string, causeWithheld bool) {
-	var ourKeyRefusal *datasource.UnknownFieldError
-	if errors.As(cause, &ourKeyRefusal) {
+	if ourKeyRefusal, ok := errors.AsType[*datasource.UnknownFieldError](cause); ok {
 		return boundFaultText(ourKeyRefusal.Error()) + fieldDecodeAdvice, false
 	}
 	// The seam's other own refusal: the key was right and its VALUE was not.
 	// It carries the field name, which is the half every branch below is
 	// missing — the generated per-field unmarshalers decode through a fresh
 	// json.Unmarshal, so the decoder's own error names no path.
-	var ourShapeRefusal *datasource.FieldShapeError
-	if errors.As(cause, &ourShapeRefusal) {
+	if ourShapeRefusal, ok := errors.AsType[*datasource.FieldShapeError](cause); ok {
 		return fieldShapeDetail(ourShapeRefusal)
 	}
 	if restated := RestateDecodeError(cause); restated != nil {
@@ -293,8 +287,7 @@ func withheldFieldDecodeCause(err error) error {
 	// operator with no trace of what the library actually refused — the exact
 	// loss this function exists to prevent, dressed as a log line that looks
 	// like it worked.
-	var shaped *datasource.FieldShapeError
-	if errors.As(badFields.Cause, &shaped) {
+	if shaped, ok := errors.AsType[*datasource.FieldShapeError](badFields.Cause); ok {
 		return shaped.Unwrap()
 	}
 	return badFields.Cause

@@ -99,10 +99,13 @@ var audienceLiteralMarkers = []*regexp.Regexp{
 // without the audience test and may. Keyed by FILE AND FUNCTION, so a waiver
 // covers one reader and not every reader added to that file afterwards.
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/compose/tagscout.go:tagScoutSQL":                                       "the tag scout matches a suggestible tag's phrases against captured subjects and bodies as the system principal, across every audience on purpose: a suggestion from mail only its owner may read is shown to that owner. Nothing it reads leaves the pass but activity ids, which become evidence rows; every reader of a suggestion passes auth.ActivityContentClause on EACH cited activity (collections visibleTagSuggestionsQuery), so a suggestion is invisible to anybody who could not open its evidence",
 	"internal/modules/capture/importrow.go:replayClaimIsProvenTx":                    "establishes whether a replay may acquire an import grant by comparing the content and attachment checksums already delivered to that seat; applying the audience it establishes would reject legitimate second-mailbox imports. Only a boolean leaves the query, never stored content. The cost is an internal comparison against a held message; TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail covers forged message identities and the legitimate second-mailbox case",
 	"internal/compose/assurancebundletask.go:taskStillOpenTx":                        "the nightly assurance pass holding the task it is about to file findings onto, as the system principal. It reads two columns — is_done and archived_at — and what survives the transaction is one boolean: whether this is still a row a rep would open. No subject, no body, no participant and no text of any kind reaches a caller, and the task is one this same pass minted. It composes no audience because the answer decides whether the SWEEP may write, not whether a reader may see: gating it would leave a limited deal's findings filed onto a task somebody had already answered, which is the defect it exists to close. The cost is nil; nothing it reads is returned",
 	"internal/modules/activities/capturenoise.go:Store.RedactCapturedNoiseTx":        "the noise redaction reads subject, body and raw to answer ONE question — is there content left to destroy — and its only effect is to null them. A gate here would exempt limited mail from destruction, which is the opposite of what the audience protects: it would leave a colleague's held message stored forever because nobody may read it. The cost is nil; no column it reads reaches a caller",
 	"internal/modules/privacy/retentionselectors.go:AuthorableScopes":                "the retention selectors name which activities a policy DESTROYS, and the content columns in them are tests for whether there is content left to destroy (`a.body IS NOT NULL`), never a projection: the query returns ids. Gating them on the audience would exempt limited mail from retention — a colleague's held message kept forever because nobody may read it, which is the opposite of what the audience protects. Same obligation as the noise redaction above, at the other place content is destroyed",
+	"internal/modules/deals/stageevidence.go:withholdQuotationOfGoneText":            "the stage-evidence writer asks whether the activity a quotation came from still has its text, so a quotation of erased, emptied or restricted mail is not stored. Only one boolean leaves the query, and it only ever REMOVES the snippet. Gating it on the audience would let a writer acting for someone outside a limited message's audience store the quotation of erased text. The cost is nil; no column it reads reaches a caller",
+	"internal/modules/privacy/sarjudgements.go:subjectAuthoredMessages":              "resolves which activities the access export's judgement sections read, and returns their ids only: no subject, body or other content leaves the query. The sections that use the ids withhold content by the export's own audience rule (sarContentDisclosed). Gating the id set on the audience would drop the verdict on a limited message from the subject's own export, which Art. 15 owes them",
 	"internal/modules/privacy/retentionselectors.go:ParseRetentionScope":             "the same selector text, parsed rather than run, to answer whether a scope a human typed is one the engine knows. It reaches no rows at all",
 	"internal/modules/privacy/retentionselectors.go:RetentionService.evaluatePolicy": "the same selectors, executed: the ids they return are handed to the destruction executors. See the AuthorableScopes entry for why gating them would keep limited mail rather than protect it",
 	"internal/modules/privacy/erasure_restrict.go:stampLegacyHandelsbriefe":          "the statutory-hold stamper, which gives a pre-stamp row the retention class it would have earned and NULLs the content the hold does not cover. It writes; the content columns it names are the ones it destroys. A row is stamped or not by what the law says about it, never by who may read it",
@@ -195,12 +198,14 @@ func TestEveryReaderOfTheActivityTableComposesTheAudience(t *testing.T) {
 	defer audienceReadersAdmitted.AssertAllMatched(t)
 	subjects := audienceReaderScope.Files(t)
 	graphs := map[string]map[string]*graphFunc{}
+	bindings := map[string]map[string]map[string]bool{}
 	for _, src := range subjects {
 		dir := path.Dir(src.Path)
 		if _, done := graphs[dir]; !done {
 			graphs[dir] = packageCallGraph(t, dir)
+			bindings[dir] = packageBindingNames(parsePackageFiles(t, dir))
 		}
-		for _, offender := range unguardedActivityReaders(graphs[dir], src.File, audienceDimension) {
+		for _, offender := range unguardedActivityReaders(graphs[dir], bindings[dir], src.File, audienceDimension) {
 			if audienceReadersAdmitted.Waived(t, src.Path+":"+strings.SplitN(offender, ":", 2)[0]) {
 				continue
 			}

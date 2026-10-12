@@ -27,9 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func strp(s string) *string { return &s }
-func intp(i int) *int       { return &i }
-
 func TestLeadScoreOverrideIsSticky(t *testing.T) {
 	e := SetupSearch(t)
 	engine := compose.NewWorkflowEngine(e.DB())
@@ -44,11 +41,10 @@ func TestLeadScoreOverrideIsSticky(t *testing.T) {
 	                     VALUES ($1, 'Vera VP', 'VP Sales', 'contacted', 'inbound', 0, 'human:x')`)
 
 	// (1) A human score with no reason is rejected (AC-S1).
-	if _, err := store.UpdateLead(ctx, leadIDOf(leadID), contacts.UpdateLeadInput{Score: intp(90)}); err == nil {
+	if _, err := store.UpdateLead(ctx, leadIDOf(leadID), contacts.UpdateLeadInput{Score: new(90)}); err == nil {
 		t.Fatal("score without a reason was accepted; want ScoreOverrideReasonRequiredError")
 	} else {
-		var want *contacts.ScoreOverrideReasonRequiredError
-		if !errors.As(err, &want) {
+		if _, ok := errors.AsType[*contacts.ScoreOverrideReasonRequiredError](err); !ok {
 			t.Fatalf("score without reason → %v, want ScoreOverrideReasonRequiredError", err)
 		}
 	}
@@ -56,7 +52,7 @@ func TestLeadScoreOverrideIsSticky(t *testing.T) {
 	// (2) A human score WITH a reason persists both and retains the prior
 	// machine value (0) in score_computed.
 	overridden, err := store.UpdateLead(ctx, leadIDOf(leadID), contacts.UpdateLeadInput{
-		Score: intp(90), ScoreOverrideReason: strp("strategic account — board-level sponsor"),
+		Score: new(90), ScoreOverrideReason: new("strategic account — board-level sponsor"),
 	})
 	if err != nil {
 		t.Fatalf("setting the override: %v", err)

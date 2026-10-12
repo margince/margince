@@ -15,7 +15,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"sync/atomic"
@@ -352,7 +351,7 @@ func TestSubscriberReclaimRedeliversAfterHandlerCrash(t *testing.T) {
 			t.Errorf("delivered %s, staged %s", got.EventID, env.EventID)
 		}
 		if attempts.Add(1) == 1 {
-			return fmt.Errorf("simulated consumer crash")
+			return errors.New("simulated consumer crash")
 		}
 		return nil
 	}, testLogger())
@@ -411,7 +410,7 @@ func TestDedupeMarksOnlyAfterTheEffectSucceeded(t *testing.T) {
 	var calls atomic.Int32
 	handler := Dedupe(e.rdb, "cg:context-graph", func(context.Context, kevents.Envelope) error {
 		if calls.Add(1) == 1 {
-			return fmt.Errorf("transient effect failure")
+			return errors.New("transient effect failure")
 		}
 		return nil
 	})
