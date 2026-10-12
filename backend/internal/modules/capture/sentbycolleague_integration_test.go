@@ -21,11 +21,11 @@ import (
 // colleagueCopy is the copy a seat's mailbox receives when a colleague answers
 // a customer and copies the seat: From the colleague, To the customer.
 func colleagueCopy(sourceID, from string) connector.NormalizedRecord {
-	rec := mailRecord(sourceID, from, from, "arne@client.io", "rep@acme.com", "patrick@client.io")
+	rec := mailRecord(sourceID, from, from, "dana@client.io", "rep@acme.com", "eli@client.io")
 	rec.Participants = []connector.MessageParticipant{
-		{Email: "arne@client.io", Role: connector.ParticipantRoleTo},
+		{Email: "dana@client.io", Role: connector.ParticipantRoleTo},
 		{Email: "rep@acme.com", Role: connector.ParticipantRoleCC},
-		{Email: "patrick@client.io", Role: connector.ParticipantRoleCC},
+		{Email: "eli@client.io", Role: connector.ParticipantRoleCC},
 	}
 	return rec
 }
@@ -73,10 +73,10 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
-	colleague := seedSeat(ctx, t, db, "marcus@acme.com", "invited")
+	colleague := seedSeat(ctx, t, db, "sam@acme.com", "invited")
 
 	if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat),
-		colleagueCopy("colleague-1", "Marcus@acme.com")); err != nil {
+		colleagueCopy("colleague-1", "Sam@acme.com")); err != nil {
 		t.Fatalf("Upsert: %v", err)
 	}
 
@@ -84,7 +84,7 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	if got.direction != connector.DirectionOutbound {
 		t.Errorf("direction = %q, want outbound: the customer's question would stay owed", got.direction)
 	}
-	if got.counterparty != "arne@client.io" {
+	if got.counterparty != "dana@client.io" {
 		t.Errorf("counterparty = %q, want the first outside recipient", got.counterparty)
 	}
 	if got.attested {
