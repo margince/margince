@@ -76,7 +76,7 @@
 661 frontend/src/screens/record360/citations.tsx
 529 frontend/src/screens/contractform.tsx
 662 frontend/src/screens/worklist.dispositions.tsx
-653 frontend/src/format/format.ts
+651 frontend/src/format/format.ts
 734 frontend/src/screens/companytoday.tsx
 708 frontend/src/screens/installation-settings.tsx
 531 frontend/src/screens/extension-access.tsx
