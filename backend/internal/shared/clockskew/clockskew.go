@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package clockskew reads the drift lane's offset: how far the suite is being
-// run from the real date, and which of the three clocks in the test rig was
-// moved to put it there.
+// Package clockskew reads the drift lane's offset. It says how far from the real
+// date the suite runs, and which of the test rig's three clocks moved.
 //
 // gates/wallclockfixtures_test.go carries why the lane exists. This package
 // parses the value and reads nothing itself.
@@ -20,9 +19,9 @@ import (
 const EnvVar = "BACKEND_CLOCK_SKEW"
 
 // maxDays bounds the offset at a century. A day count near the int64 nanosecond
-// ceiling wraps FixtureOffset to a large negative duration, which runs the suite
-// at a clock in the past under the drift lane's name: the same defect the zero
-// check refuses, arrived at from the other end.
+// ceiling wraps FixtureOffset to a large negative duration. The suite would then
+// run in the past under the drift lane's name. The zero check refuses the same
+// defect from the other end.
 const maxDays = 36500
 
 // Applier is the clock that was moved to put the suite in the future.
@@ -54,10 +53,9 @@ type Skew struct {
 // FixtureOffset is what a fixture's base instant adds to time.Now().
 //
 // Nonzero under Fixture alone. Under Machine the operating system has already
-// moved and under Database the database has, so a helper adding its own on top
-// would stand the fixtures a further 200 days from the rows they are compared
-// against, and every failure that produced would belong to the lane rather
-// than to the tree.
+// moved, and under Database the database has. A helper adding its own on top
+// would put the fixtures a second offset away from the rows they meet. Those
+// failures would belong to the lane, not the tree.
 func (s Skew) FixtureOffset() time.Duration {
 	if s.Applier != Fixture {
 		return 0
@@ -70,14 +68,13 @@ func (s Skew) Armed() bool { return s.Applier != None }
 
 // Parse reads `<applier>:<days>`. An unset value is the ordinary run.
 //
-// Anything else that cannot be read is an error rather than a fallback to the
-// ordinary run: a typo that silently shifted nothing leaves the lane reporting
-// PASS over a suite it never moved, which reads just like a suite with no
-// date-fragile fixtures left.
+// Anything else that cannot be read is an error, not a fallback to the ordinary
+// run. A typo that shifted nothing would leave the lane reporting PASS over a
+// suite it never moved.
 //
 // The applier is named beside the amount so that two cannot be armed at once.
-// The three clocks do not compose: two armed together run the suite at twice
-// the offset, with the layers disagreeing about which day it is.
+// The three clocks do not compose. Two armed together run the suite at twice the
+// offset, with the layers disagreeing about which day it is.
 func Parse(value string) (Skew, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -110,8 +107,8 @@ func Parse(value string) (Skew, error) {
 	return Skew{Applier: parsed, Days: n}, nil
 }
 
-// String renders the offset the way the variable spells it, so a lane's log line
-// and the value a reader sets to reproduce it are the same text.
+// String renders the offset the way the variable spells it. A lane's log line is
+// then the value a reader sets to reproduce it.
 func (s Skew) String() string {
 	if !s.Armed() {
 		return string(None)

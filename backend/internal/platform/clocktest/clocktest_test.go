@@ -39,10 +39,9 @@ func TestAnAppliedClockIsNotShiftedTwice(t *testing.T) {
 // either side of it.
 //
 // Bracketing rather than measuring the gap: the two clock reads are not the
-// same instant, and a gap compared against a threshold is a verdict about how
-// busy the machine is, which is what mergegateclockbounds_test.go prohibits and
-// what P3 means by real-clock flakiness. Three instants in order answer the same
-// on any machine, and need no tolerance to be invented for them.
+// same instant. A gap compared against a threshold judges how busy the machine
+// is, which mergegateclockbounds_test.go prohibits. Three instants in order
+// answer the same on any machine, and need no invented tolerance.
 func assertOffsetFromWallTime(t *testing.T, want time.Duration) {
 	t.Helper()
 

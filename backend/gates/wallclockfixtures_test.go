@@ -8,11 +8,11 @@ package gates
 // The population of tests that date themselves from wall time may fall and
 // never rise.
 //
-// A fixture built on time.Now() makes its claim about the day it runs, so the
-// day it changes its answer is a day nobody edited anything. The drift lane, a
-// second run of the suite at a moved clock, is what finds it. This gate judges
-// no site, because nothing static separates an instant compared against a
-// boundary from one merely stored; it holds the count and lets the lane judge.
+// A fixture built on time.Now() makes its claim about the day it runs. So it
+// changes its answer on a day nobody edited anything. The drift lane, a second
+// run of the suite at a moved clock, finds it. This gate judges no site:
+// nothing static separates an instant compared against a boundary from one
+// merely stored. It holds the count and lets the lane judge.
 //
 // What this does not cover, so its silence is not read as a wider claim:
 //   - Whether any counted site is fragile. A file at its frozen count may
@@ -47,8 +47,8 @@ import (
 // comes out, which holds the file at zero for good.
 const ledgerPath = "gates/testdata/wallclockfixtures.txt"
 
-// clockOwners are the packages whose subject is the clock, so a wall-time read
-// in their tests is the thing under test rather than a fixture dating itself.
+// clockOwners are the packages whose subject is the clock. A wall-time read in
+// their tests is the thing under test, not a fixture dating itself.
 var clockOwners = []string{
 	"internal/platform/clocktest/",
 	"internal/shared/clockskew/",
@@ -63,7 +63,7 @@ func TestTheWallClockFixturePopulationOnlyFalls(t *testing.T) {
 }
 
 // TestTheWallClockLedgerAnswersEveryPlantedShape plants each way the tree can
-// disagree with the ledger, so a comparison that stops seeing one fails here
+// disagree with the ledger. A comparison that stops seeing one fails here,
 // rather than reporting PASS over the real tree.
 func TestTheWallClockLedgerAnswersEveryPlantedShape(t *testing.T) {
 	t.Parallel()
@@ -95,7 +95,7 @@ func TestTheWallClockLedgerAnswersEveryPlantedShape(t *testing.T) {
 
 // ledgerDrift returns every disagreement between the frozen ledger and the
 // counted tree. The ledger states each current count, so a count that fell is a
-// finding too: an entry left above its file is headroom the file can grow back
+// finding too. An entry left above its file is headroom the file can grow back
 // into unseen.
 func ledgerDrift(frozen, counted map[string]int, exists func(string) bool) []string {
 	var findings []string
@@ -139,10 +139,10 @@ func fileExists(path string) bool {
 // countWallClockReads returns every backend test file holding at least one
 // time.Now() call, with how many.
 //
-// Read with the language's parser rather than by scanning text: a scanner that
+// Read with the language's parser rather than by scanning text. A scanner that
 // runs off the end of a string goes blind and reports OK over the rest of the
-// file, which is the one failure a population budget must not have. A parse
-// error is the answer here, not an inconvenience.
+// file. A population budget must not fail that way, so a parse error is the
+// answer here.
 func countWallClockReads(t *testing.T) map[string]int {
 	t.Helper()
 
@@ -180,23 +180,19 @@ func countWallClockReads(t *testing.T) map[string]int {
 
 // wallClockReads counts one parsed file's reads of the wall clock.
 //
-// A read, not a call. `NewStore(db, time.Now)` hands the clock over as a value
-// and is the dominant injection idiom here: the store stamps rows at wall time
-// and no fixture helper can move it, which makes those the sites that matter
-// most.
+// A read, not a call. `NewStore(db, time.Now)` hands the clock over as a value,
+// the usual injection idiom here. The store stamps rows at wall time and no
+// fixture helper can move it, so those sites matter most.
 //
-// The package is resolved through the file's IMPORTS rather than matched on the
-// spelling `time`. Go lets a file bind the package to any name (`import
-// walltime "time"` makes every read `walltime.Now()`), and a counter keyed on
-// the word would return zero for such a file, admit it as reading no clock, and
-// report PASS. That is under-recognition, the one direction a census must not
-// fail in: it reads a smaller tree and there is no failing assertion to notice.
+// The package is resolved through the file's imports, not matched on the
+// spelling `time`. Go lets a file bind the package to any name, so
+// `import walltime "time"` makes every read `walltime.Now()`. A counter keyed on
+// the word would count zero there and report PASS. A census must not fail by
+// under-recognition: it reads a smaller tree and no assertion fails.
 //
-// It can over-count, and that is the safe direction. A local variable named
-// `time` with a Now method would be counted, because resolving that needs type
-// information this gate does not load; the result is a file that appears to
-// hold more reads than it does, which fails loudly and is fixed by a waiver
-// line rather than passing in silence.
+// It can over-count, which is the safe direction. A local variable named `time`
+// with a Now method is counted, since telling it apart needs type information.
+// That file fails loudly and takes a ledger line, rather than passing in silence.
 func wallClockReads(file *ast.File) int {
 	names, dotted := timePackageNames(file)
 	found := 0
@@ -217,19 +213,17 @@ func wallClockReads(file *ast.File) int {
 }
 
 // dotImportedNowReads counts the bare Now a dot import puts in the file's own
-// scope. Reached only for a file that dot-imported time: an unqualified `Now`
-// is not distinctive on its own (a method, a field and a local can all wear
-// the name), so matching it anywhere else would report far more correct sites
-// than wrong ones.
+// scope. Reached only for a file that dot-imported time. An unqualified `Now`
+// is not distinctive on its own, since a method, a field and a local can all
+// wear the name. Matching it elsewhere would report more correct sites than wrong.
 func dotImportedNowReads(file *ast.File) int {
 	found := 0
 	var count func(n ast.Node) bool
 	count = func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.SelectorExpr:
-			// Only the operand of a qualified name can hold a bare Now; its Sel
-			// is somebody's field or method, and a package-qualified read was
-			// already counted by the caller.
+			// Only the operand of a qualified name can hold a bare Now. Its Sel
+			// is a field or method, and the caller already counted a qualified read.
 			ast.Inspect(node.X, count)
 			return false
 		case *ast.Ident:
@@ -269,8 +263,8 @@ func timePackageNames(file *ast.File) (names map[string]bool, dotted bool) {
 }
 
 // readLedger parses the frozen counts. A malformed line fails rather than being
-// skipped: a budget that silently ignored an entry it could not read would
-// admit whatever that entry was holding.
+// skipped. A budget that ignored an entry it could not read would admit
+// whatever that entry was holding.
 func readLedger(t *testing.T) map[string]int {
 	t.Helper()
 
@@ -289,9 +283,8 @@ func readLedger(t *testing.T) map[string]int {
 		if !ok || err != nil || n <= 0 {
 			t.Fatalf("%s:%d: %q is not `<path> <count>` with a positive count", ledgerPath, i+1, line)
 		}
-		// A second line for one path would otherwise overwrite the first, so
-		// the higher of two counts silently becomes the ceiling: the ledger
-		// raised by an edit that looks like an addition.
+		// A second line for one path would overwrite the first. The later count
+		// would become the ceiling, raised by an edit that looks like an addition.
 		if was, seen := frozen[path]; seen {
 			t.Fatalf("%s:%d: %s is listed twice, frozen at %d and again at %d. One line per file, or "+
 				"the larger entry quietly becomes the budget.", ledgerPath, i+1, path, was, n)

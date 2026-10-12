@@ -49,8 +49,7 @@ func TestAnOffsetNamesItsApplierAndItsAmount(t *testing.T) {
 }
 
 // A value that shifts nothing must not parse. The lane would otherwise run the
-// ordinary suite and report its verdict under the drift lane's name, which
-// reads identically to a suite with no date-fragile fixtures left.
+// ordinary suite and report its verdict under the drift lane's name.
 func TestAValueThatMovesNoClockIsRefused(t *testing.T) {
 	t.Parallel()
 
@@ -73,10 +72,9 @@ func TestAValueThatMovesNoClockIsRefused(t *testing.T) {
 	}
 }
 
-// The coherence rule the whole design rests on: one layer alone supplies the
-// shift. Under machine the operating system already moved and under database
-// the database did, so a fixture helper adding its own would run the suite at
-// twice the offset with the layers disagreeing.
+// The rule the design rests on: one layer alone supplies the shift. Under
+// machine the operating system already moved, and under database the database
+// did. A fixture helper adding its own would run the suite at twice the offset.
 func TestOnlyTheFixtureApplierMovesAFixturesBaseInstant(t *testing.T) {
 	t.Parallel()
 

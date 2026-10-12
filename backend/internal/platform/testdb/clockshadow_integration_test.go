@@ -18,14 +18,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/clockskew"
 )
 
-// The database applier is worth a test because every way it fails is silent: a
+// The database applier is worth a test because every way it fails is silent. A
 // shadow the path never reaches moves nothing, every statement answers at the
-// real date, and the lane reports a green meaning the ordinary suite passed.
+// real date, and the lane reports green.
 //
-// The assertions run as the APP role, because that is the role the suite's
-// queries use. Asked as the owner, the schema's own creator, all three of the
-// reachability conditions in clockshadow.go answer yes whether or not they hold
-// for anybody else.
+// The assertions run as the app role, because the suite's queries use it. Asked
+// as the owner, the schema's own creator, all three reachability conditions in
+// clockshadow.go answer yes whether or not they hold for anybody else.
 //
 // Each test gets its own database: the path is set per-database and would
 // otherwise outlive the test for every suite that connected afterwards.
@@ -39,9 +38,9 @@ func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 		t.Fatalf("installing the shadow: %v", err)
 	}
 
-	// Dialled after the install, as the app role: ALTER DATABASE reaches the
-	// sessions that connect next, and every test pool is held back until
-	// EnsureSchema has run this.
+	// Dialled after the install, as the app role. ALTER DATABASE reaches the
+	// sessions that connect next, and EnsureSchema holds every test pool back until
+	// it has run this.
 	app := connectAs(t, appDSN(t), probe)
 	var shifted, reserved, current, path string
 	err := app.QueryRow(ctx, `SELECT (now() - pg_catalog.now())::text,
@@ -65,10 +64,9 @@ func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 	// ext is on no path the application connects with, and two gates rest on
 	// that. This applier must not be the thing that changes it.
 	//
-	// Compared element by element rather than as a substring: the path holds
-	// the expanded "$user", so a role or schema whose name merely contains the
-	// three letters (extensions, context, an app role named for them) would
-	// report a failure against a path that is correct.
+	// Compared element by element rather than as a substring. The path holds the
+	// expanded "$user", so a name that merely contains the three letters, such as
+	// extensions or context, would fail a correct path.
 	if slices.Contains(strings.Split(path, ","), "ext") {
 		t.Errorf("the app role's effective path is %s, which volunteers ext: a unit's unqualified "+
 			"ext_* name would resolve into it under this applier and nowhere else", path)
@@ -98,10 +96,10 @@ func TestEveryOtherApplierLeavesTheDatabaseClockAlone(t *testing.T) {
 	}
 }
 
-// A run that is not using the applier CLEARS what one left behind. The setting
+// A run that is not using the applier clears what one left behind. The setting
 // lives in pg_db_role_setting rather than in a schema, so re-migrating does not
-// remove it and an ordinary run would otherwise inherit a previous drift run's
-// path with nothing set and nothing printed.
+// remove it. An ordinary run would otherwise inherit a previous drift run's path,
+// with nothing set and nothing printed.
 func TestAnOrdinaryRunClearsAPreviousDriftRunsResidue(t *testing.T) {
 	ctx := context.Background()
 	t.Setenv(clockskew.EnvVar, "database:200")

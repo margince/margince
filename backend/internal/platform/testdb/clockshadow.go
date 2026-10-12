@@ -6,16 +6,15 @@
 package testdb
 
 // The database applier: a now() of our own, ahead of pg_catalog's on the search
-// path, so the integration lane can be reproduced at a moved clock on a machine
-// whose wall clock must not move.
+// path. It reproduces the integration lane at a moved clock on a machine whose
+// wall clock must not move.
 //
 // It lives here because the lane's database admin goes through cmd/migrate's db
-// verbs so that psql is not a host requirement, leaving no sanctioned shell path
+// verbs, so psql is not a host requirement. That leaves no sanctioned shell path
 // for DDL.
 //
-// Three things make the shadow reachable, and missing any one of them leaves it
-// installed and inert: every statement answers at the real date under a lane
-// reporting green.
+// Three things make the shadow reachable. Missing any one leaves it installed and
+// inert: every statement answers at the real date under a lane reporting green.
 //
 //   - pg_catalog is named last. Unnamed, it is searched implicitly first and
 //     nothing in a listed schema is ever reached.
@@ -29,10 +28,10 @@ package testdb
 //     for the application's columns in a schema holding one function.
 //
 // ext stays off the path, as it is off every path the application connects
-// with (extensionsqlscope_test.go and extmigrategate/role.go both rest on that).
-// Putting it there would resolve a unit's unqualified ext_* name into ext
-// only under this applier, and let the drift lane differ from the ordinary lane
-// for a reason that has nothing to do with the clock.
+// with. extensionsqlscope_test.go and extmigrategate/role.go both rest on that.
+// On the path, it would resolve a unit's unqualified ext_* name into ext only
+// under this applier. The drift lane would then differ for a reason unrelated to
+// the clock.
 //
 // What it cannot move: CURRENT_TIMESTAMP, which resolves without consulting the
 // search path, and the migrations' column DEFAULTs, which bound pg_catalog.now()
@@ -53,8 +52,7 @@ import (
 const shadowSchema = "clockshadow"
 
 // installClockShadow puts the shadowed now() in front of pg_catalog's for every
-// connection opened to this database afterwards, and takes it back off for a
-// run that is not using it.
+// later connection to this database. A run that is not using it takes it back off.
 //
 // The setting is per-database rather than per-session because the tests reach
 // the database through their own pools, not through this connection. A pool
@@ -88,9 +86,9 @@ func installClockShadow(ctx context.Context, owner *pgx.Conn) error {
 		return fmt.Errorf("installing the shadowed clock: %w", err)
 	}
 
-	// The catalog name is sanitised rather than formatted raw: it is an
-	// identifier read back from the server, and the tree formats only
-	// identifiers, only through Sanitize or as a compile-time literal.
+	// The catalog name is sanitised rather than formatted raw. It is an identifier
+	// read back from the server, and the tree formats identifiers only through
+	// Sanitize or as a compile-time literal.
 	path := fmt.Sprintf(`ALTER DATABASE %s SET search_path = "$user", public, %s, pg_catalog`,
 		pgx.Identifier{database}.Sanitize(), shadowSchema)
 	if _, err := owner.Exec(ctx, path); err != nil {
@@ -101,12 +99,10 @@ func installClockShadow(ctx context.Context, owner *pgx.Conn) error {
 
 // clearClockShadow removes what a previous drift run left behind.
 //
-// ALTER DATABASE ... SET lives in pg_db_role_setting, which is in no schema:
-// dropping and re-migrating the schema leaves it untouched, so one local
-// `make backend-clock-drift` would otherwise leave every later ordinary run on
-// the modified path and, once the shadow is reachable, 200 days into the
-// future with nothing set and nothing printed. An ordinary run therefore clears
-// the residue rather than inheriting it.
+// ALTER DATABASE ... SET lives in pg_db_role_setting, which is in no schema.
+// Dropping and re-migrating the schema leaves it untouched. Without this, one
+// local `make backend-clock-drift` would leave every later ordinary run at the
+// moved clock, with nothing set and nothing printed. So an ordinary run clears it.
 func clearClockShadow(ctx context.Context, owner *pgx.Conn, database string) error {
 	var installed bool
 	if err := owner.QueryRow(ctx,
