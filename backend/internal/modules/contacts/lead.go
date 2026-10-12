@@ -84,11 +84,9 @@ func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontract
 	return out, created, err
 }
 
-// CreateLeadTx is CreateLead for a caller that already opened a transaction —
-// one whose own write must land with this lead or not at all. Same gates in
-// the same order; only the transaction is borrowed. The bool answers what
-// CreateLead's does: false when the idempotency replay found the lead already
-// landed, so a caller can tell a fresh capture from a re-import.
+// CreateLeadTx is CreateLead inside a transaction the caller opened, whose own
+// write must land with this lead or not at all. Same gates, same order. The
+// bool is false when the idempotency replay found the lead already landed.
 //
 // Custom fields ride on the columns the caller read before it opened the
 // transaction (ActiveCreateColumns); with none, they are refused, never dropped.

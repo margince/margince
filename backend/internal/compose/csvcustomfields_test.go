@@ -33,7 +33,7 @@ func TestACustomFieldIsSuggestedByItsLabelOrItsKey(t *testing.T) {
 }
 
 // Two headers onto one field would be refused at staging, so the suggestion
-// leaves both blank, as SuggestMapping does for two spellings of one core field.
+// leaves both blank. SuggestMapping does the same for one core field.
 func TestALabelAndAKeyHeaderForOneFieldSuggestNeither(t *testing.T) {
 	cat := tierCatalog()
 	targets, err := importTargets(migration.ObjectCompany, cat)

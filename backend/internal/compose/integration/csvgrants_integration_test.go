@@ -14,8 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// actWithGrant makes the signed-in admin hold a role of its own: the admin's
-// document with one object's grant replaced, so a refusal can only come from
+// actWithGrant gives the signed-in admin a role of its own: the admin's
+// document with one object's grant replaced. A refusal can then only come from
 // that grant.
 func actWithGrant(t *testing.T, e *apptest.AppEnv, object, grant string) {
 	t.Helper()

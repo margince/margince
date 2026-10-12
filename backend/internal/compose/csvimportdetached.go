@@ -4,8 +4,8 @@
 package compose
 
 // A commit or an undo runs after its request has answered. The response
-// deadline is far shorter than the work, so approve and undo answer with the
-// run as it stands, and the screen follows the run.
+// deadline is far shorter than the work. Approve and undo answer with the run
+// as it stands, and the screen follows the run.
 
 import (
 	"context"
@@ -17,10 +17,9 @@ import (
 )
 
 // importCommitTimeout bounds a detached commit or undo. The work scales with
-// the upload, whose ceiling is CAP-BODY and set by the deployment, so this sits
-// an order of magnitude above any cap rather than tracking one: too short turns
-// a slow-but-succeeding import into the half-written run the detach exists to
-// prevent. The stale-run sweep reads the same budget.
+// the upload, whose cap the deployment sets, so this sits far above any cap.
+// Too short turns a slow import into a half-written run. The stale-run sweep
+// reads the same budget.
 const importCommitTimeout = 30 * time.Minute
 
 // RunImportInline runs a detached task where it is handed, so a test sees the
@@ -29,7 +28,7 @@ func RunImportInline(task func()) { task() }
 
 // runDetached hands work to the import runner on a context that outlives the
 // request and carries the commit budget. A panic fails the run with its cause,
-// because the engine records only the failures it sees; a returned error is
+// because the engine records only the failures it sees. A returned error is
 // already on the run and is logged here.
 func (h importHandlers) runDetached(ctx context.Context, id migration.RunID, name string, work func(context.Context) error) {
 	detach := h.detach

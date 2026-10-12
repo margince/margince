@@ -113,9 +113,9 @@ func setupImportApp(t *testing.T) *apptest.AppEnv {
 	return e
 }
 
-// setupImportAppWithStore hands the suite the same object store the server
-// holds, so a scenario can make an uploaded file disappear the way a retention
-// sweep or an operator would. Its commits run inline, so a scenario reads the
+// setupImportAppWithStore hands the suite the object store the server holds.
+// A scenario can then make an uploaded file disappear, as a retention sweep or
+// an operator would. Its commits run inline, so a scenario reads the
 // finished run from the approve that started it.
 func setupImportAppWithStore(t *testing.T) (*apptest.AppEnv, blobstore.Store) {
 	t.Helper()

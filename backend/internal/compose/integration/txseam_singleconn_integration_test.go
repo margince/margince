@@ -264,9 +264,9 @@ func TestUpdateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 }
 
 // The caller-opened creates the import lands its rows through. Each one runs
-// with the catalog WIRED and a workspace that has an active custom column, the
-// arrangement under which a seam that reached for the catalog would block. The
-// columns its caller read before the transaction ride the create.
+// with the catalog wired and a workspace that has an active custom column. A
+// seam that reached for the catalog would block there. The columns its caller
+// read before the transaction ride the create.
 
 func TestCreateContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)

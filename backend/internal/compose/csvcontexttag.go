@@ -78,12 +78,11 @@ func taggableObjectOf(object string) (string, bool) {
 
 // contextTagIsApplicable refuses a run naming a word that cannot be applied.
 //
-// Asked HERE, where the answer reaches the caller, rather than at the apply.
-// The dry run writes no rows, so nothing else exercises the word before a human
-// approves the report — and the apply's own refusal would then fail a run
-// mid-way, on a report that never mentioned the tag. A word retired between
-// this check and the commit still fails there, which is the narrow race this
-// cannot close and the run's own failure record does report.
+// Asked here, where the answer reaches the caller, not at the apply. The dry
+// run writes no rows, so nothing else tests the word before a human approves.
+// The apply's refusal would then fail a run mid-way, on a report silent about
+// the tag. A word retired after this check still fails the commit, and the
+// run's failure record reports it.
 func (h importHandlers) contextTagIsApplicable(ctx context.Context, raw string) error {
 	if raw == "" {
 		return nil

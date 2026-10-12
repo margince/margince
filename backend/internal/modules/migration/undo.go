@@ -89,16 +89,11 @@ type mapRow struct {
 	createdAt time.Time
 }
 
-// Undo reverses a completed CSV import run: every row it created that
-// nobody has touched since is archived; a row a human touched after import
-// is left exactly as they left it and named in the report's `kept` list
-// (A93); a row that cannot be reversed for any other reason is named in
-// `errored` — never a reason to abort the rows after it. Never an
-// all-or-nothing hard rollback.
+// Undo reverses a completed CSV import run row by row. An untouched row is
+// archived; a row a human touched is kept and listed in `kept` (A93). A row
+// that fails lands in `errored` and never aborts the rows after it.
 //
-// Refuses a second call while one is already under way for this run
-// (lockUndo). Pages the reversal (undoPageSize), so neither the row set nor
-// the persisted report grows unbounded in memory or on the wire.
+// lockUndo refuses a concurrent call; undoPageSize bounds memory and the report.
 func (s *RunStore) Undo(ctx context.Context, id RunID, w UndoWriters) (UndoReport, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return UndoReport{}, err
@@ -205,14 +200,9 @@ func reversalRefusalReason(err error) string {
 	}
 }
 
-// lockUndo takes an exclusive, session-scoped advisory lock on this run's
-// undo, held for the lifetime of the caller's Undo call. beginUndo's row
-// lock only covers its own transaction; the reversal that follows spans
-// many transactions, so without a lock held across the whole call, two
-// concurrent `POST /imports/{id}/undo` requests on the SAME run would both
-// pass beginUndo's `complete`/`undoing` check and both loop over the same
-// rows. A second caller is refused immediately rather than piling a
-// duplicate pass onto the first.
+// lockUndo takes a session-scoped advisory lock on this run's undo for the
+// whole Undo call. beginUndo's row lock ends with its transaction, but the
+// reversal spans many, so two concurrent undos would both pass its check.
 func (s *RunStore) lockUndo(ctx context.Context, id RunID) (func(), error) {
 	conn, err := s.db.Pool().Acquire(ctx)
 	if err != nil {

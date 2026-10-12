@@ -124,9 +124,9 @@ func (s *Store) geocodeANewCompany(ctx context.Context, tx pgx.Tx,
 	return nil
 }
 
-// readyCompanyCreate runs what a create settles BEFORE any transaction
-// opens — the domain and LinkedIn parses, the size-band vocabulary and the
-// captured-by resolution — and answers the attribution the write shape stamps.
+// readyCompanyCreate runs what a create settles before any transaction opens:
+// the domain and LinkedIn parses, the size-band vocabulary and the captured-by
+// resolution. It answers the attribution the write shape stamps.
 // Both entry points call it, so neither can drift from the other's validation.
 func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) (string, error) {
 	if err := parseCompanyDomains(in.Domains); err != nil {

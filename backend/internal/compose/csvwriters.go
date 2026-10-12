@@ -184,10 +184,9 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 }
 
 // Ensure lands one row: created the first time, updated when the file has
-// since changed, unchanged when it has not. A row of a type the importer may
-// not create is skipped first, then a row with a cell the store would refuse;
-// then a contact whose company link finds no single company is skipped or
-// lands with a warning, as the run's policy says.
+// since changed, unchanged when it has not. It skips a row the importer may
+// not create, then a row with a cell the store would refuse. A contact whose
+// company link finds no single company follows the run's policy.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return migration.EnsureResult{Skipped: true, SkipReason: refused.Reason, Problem: refused}, nil
@@ -460,10 +459,9 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 const domainClaimedReason = "this domain is already held by another company in the CRM, " +
 	"so the row cannot create a second company under it"
 
-// land commits one native record, its identity-map row and its tags in ONE
-// transaction, then caches the binding — after the commit, never inside it: an entry for a
-// landing that then rolled back would make this run's later pages resolve an id
-// that does not exist, and lookup answers from the cache before it asks the map.
+// land commits one native record, its identity-map row and its tags in one
+// transaction, then caches the binding. It caches after the commit: a rolled
+// back landing would leave later pages resolving an id that does not exist.
 func (w *csvWriters) land(ctx context.Context, row migration.Row, create func(tx pgx.Tx) (ids.UUID, error)) error {
 	// Every row this importer writes is one of many under a single approval, so
 	// it carries the marker that says so. What it buys today is one thing: a

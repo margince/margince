@@ -40,23 +40,12 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 	return withPredictedLinks(ctx, source, writers, report, p.absent)
 }
 
-// withPredictedLinks adds, before anything is written, how many of one part's
-// employer links will actually find a company. Parts add to one count, which
-// predictEveryPart starts at zero.
-//
-// The engine's own dry run counts edges OFFERED — it has no writer, so it cannot
-// resolve an endpoint. That number alone would tell a contact approving a file of
-// 12,000 contacts that 12,000 links are coming, when the truthful answer might be
-// 3,000 and 9,000 companies nobody has imported yet. So the resolvable half is
-// computed here through the SAME resolver the commit will use, and the names that
-// resolve to nothing are listed rather than counted — the answer a contact needs
-// is WHICH company was not found, because that is the row they have to go fix.
-//
-// Only the COMPANY end is resolved. At dry-run time no contact has landed, so the
-// contact end would answer "not imported" for every row, and predicting that would
-// be worse than saying nothing. The asymmetry is deliberate: a preview reports
-// what it can honestly know, and claiming more is the preview/commit disagreement
-// this whole pass exists to prevent.
+// withPredictedLinks adds how many of one part's employer links will find a
+// company. Parts add to one count, which predictEveryPart starts at zero.
+// The engine's dry run has no writer, so it counts links offered, not links
+// that resolve. This uses the commit's resolver and lists each unfound name,
+// the row a reader has to fix. Only the company end is resolved: no contact
+// has landed yet, so the contact end would read "not imported" on every row.
 func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writers *csvWriters,
 	report migration.Report, absent []string,
 ) (migration.Report, error) {

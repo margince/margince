@@ -115,7 +115,7 @@ func TestACheckedRowCarriesOnlyItsFilledCustomFieldsTyped(t *testing.T) {
 	}
 }
 
-// A field retired after staging is no longer in the commit's catalog; its
+// A field retired after staging is no longer in the commit's catalog. Its
 // value is refused rather than reaching a store that has no column for it.
 func TestAValueForAFieldNoLongerActiveIsRefused(t *testing.T) {
 	fields := map[string]string{fieldDisplayName: "Acme", "cf_gone": "x"}

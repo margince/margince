@@ -55,17 +55,11 @@ const fieldTitle = "title"
 // rows as leads rather than as contacts.
 const leadStatusNew = "new"
 
-// The fields a CSV import may target, per object. A closed set, because a
-// mapping names a destination and every destination here has to be one this
-// writer knows how to both create and update — a target it can only create
-// would silently stop honouring the file on the second upload.
+// The fields a CSV import may target, per object. Each one round-trips: the
+// writer can both create and update it. A create-only target would stop
+// honouring the file on the second upload.
 //
-// `lead` and `contact` are both offered and the caller picks per run: a
-// machine-sourced list lands as leads for a human to promote, a file the
-// business already knows lands as contacts. Neither skips the identity ladder.
-//
-// Every field here round-trips: the writer can both CREATE it and UPDATE it.
-// A target that only half works is worse than one the screen never offers.
+// The caller picks `lead` or `contact` per run. Neither skips the identity ladder.
 var csvTargets = map[string][]string{
 	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
@@ -75,7 +69,7 @@ var csvTargets = map[string][]string{
 	// input takes the same set as a replace-set.
 	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 	// The owner is named by the seat's email (csvowners.go), never by its id.
-	// `author` is a name, an honest spelling (csvauthor.go).
+	// `author` is a name (csvauthor.go).
 	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 }
 
@@ -184,14 +178,9 @@ func linksEmployer(object string) bool {
 // isNonFieldTarget reports whether a mapped target names something other than a
 // value the record stores.
 //
-// Five targets qualify. `id` names the RECORD the row is, and `ref` its id in
-// the source system. The two employer columns name an EDGE to another record,
-// and `tags` names tags applied beside the write, only ever added. None
-// is a column on the record, so none is compared against the stored JSON. The
-// lookup would find nothing and report the row as changed, so every re-import
-// of an unedited file would update every row.
-//
-// Excluded in one place rather than at each caller so no path can forget one.
+// `id` and `ref` name the record, the employer columns an edge, and `tags`
+// tags added beside the write. None is a column, so a stored-JSON lookup would
+// report every unedited row as changed on each re-import.
 func isNonFieldTarget(field string) bool {
 	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef ||
 		field == csvTargetCompanyRef || field == csvTargetTags
@@ -248,9 +237,8 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
 	parent, child, nested := strings.Cut(field, ".")
 	if !nested {
-		// These targets may name a CHILD COLLECTION rather than a column on
-		// the record, so a flat lookup finds nothing and reports them changed
-		// on every re-import of a file nobody edited.
+		// These targets may name a child collection, not a column. A flat
+		// lookup finds nothing and reports them changed on every re-import.
 		switch field {
 		case fieldEmail:
 			return storedPrimaryEmail(current)

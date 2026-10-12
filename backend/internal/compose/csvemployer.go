@@ -128,10 +128,8 @@ func employerKey(name string) string {
 // employerCandidate is one folded name's answer: the company, and whether more
 // than one wears the name.
 //
-// The count is capped at two by the read that fills it, because only "exactly
-// one" links and a name worn by forty companies is the same answer as one worn
-// by two. Zero means no company of that name — which, deliberately, is also
-// what a name worn only by companies this caller cannot see answers.
+// The read caps the count at two (see estateEmployer). Zero means no company
+// of that name, which is also the answer for a name only hidden companies wear.
 //
 // pending marks an answer that counts a company of this upload. Only the dry
 // run sees one, and its id may be zero.
@@ -151,29 +149,11 @@ func (r *linkResolver) employerFor(ctx context.Context, key string) (employerCan
 	return r.names[key].over(hit), nil
 }
 
-// estateEmployer answers one folded name: which company wears it, and whether
-// more than one does. Cached, so a file naming the same employer on nineteen
-// thousand rows asks once.
-//
-// It replaces an index of the whole estate. That shape read every visible
-// company into a Go map, once for the dry run and again for the commit, so a
-// ten-row file against a workspace holding hundreds of thousands of companies
-// loaded all of them — and a run that linked nothing paid exactly the same.
-// The upload cap bounds the FILE; nothing bounded this. Now the work is
-// bounded by the distinct names in the file, which is what the caller actually
-// asked about.
-//
-// LIMIT 2 is the whole count. Only "exactly one" links, and a name worn by
-// forty companies is the same answer as one worn by two — so the read stops as
-// soon as it can tell those apart, and a common name never drags a page of rows
-// back to be counted.
-//
-// The answer is a SNAPSHOT per name, taken when the first row needs it. A
-// company created by someone else while the run is in flight is not in it, so a
-// link that could have resolved is reported as unresolved instead. That is the
-// same staleness collidesWithExisting already accepts and for the same reason:
-// the failure mode is a missing link the report names, never a link to the
-// wrong company.
+// estateEmployer answers which company wears one folded name, cached per name,
+// so the work scales with the file's names. `LIMIT 2` is the whole count: only
+// a single match links. The answer is a snapshot, so a company created mid-run
+// reads unresolved, as in collidesWithExisting. The worst case is a missing
+// link the report names, never a link to the wrong company.
 func (r *linkResolver) estateEmployer(ctx context.Context, key string) (employerCandidate, error) {
 	if hit, ok := r.employers[key]; ok {
 		return hit, nil

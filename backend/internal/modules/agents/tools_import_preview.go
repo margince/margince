@@ -151,31 +151,17 @@ const discardTimeout = 10 * time.Second
 // proposalCoversTheFile refuses a proposal that places some of the file's
 // columns and not others, when the caller sent no mapping of their own.
 //
-// The proposal matches NAMES, and nothing more (migration.SuggestMapping); the
-// timidity is right for the screen, which draws an unplaced column as a blank
-// the contact fills. A tool caller has no blanks. Handed a proposal that maps
-// `id` and drops `Company`, `City`, `Country` and `Band`, they get something
-// plausible that validates clean and commits an update with no changed fields
-// — an import that reports success and writes nothing. A partial answer that
-// looks whole is worse than no answer, so this is the refusal that says which
-// columns it could not place and what the object can receive.
-//
-// Only when the caller named NO column — whether the member was omitted or sent
-// as `{}`, which are the same thing to ask about: a mapping that names nothing
-// is not a choice about the columns, it is the absence of one, and what would
-// be used either way is the proposal. A caller who named even one column HAS
-// made a choice about the rest, and the result's `unmapped` list reports it.
+// The proposal matches names only, and a tool caller has no blanks to fill.
+// A partial proposal could commit an import that writes nothing. A caller who
+// named one column chose the rest, and `unmapped` reports it.
 func proposalCoversTheFile(profile crmcontracts.ImportSourceProfile, mapping map[string]string) error {
 	unplaced := unmappedColumns(profile, mapping)
 	if len(unplaced) == 0 {
 		return nil
 	}
-	// Both LISTS ride in Guidance, which is not bounded. The cause is echoed
-	// through echoSafe's 200 bytes, and the fixed prose alone is most of that —
-	// so a list put there is cut off partway through, which on a wide file
-	// means the refusal stops naming the very columns it is about. What is left
-	// in the cause is the sentence that is the same length whatever the file
-	// holds.
+	// Both lists ride in Guidance, which is not bounded. The cause is echoed
+	// through echoSafe's 200 bytes, so a list there would be cut off on a wide
+	// file.
 	return &BadArgsError{
 		Cause: fmt.Errorf(
 			"the proposal places %d of this file's %d columns, so importing it would leave the "+

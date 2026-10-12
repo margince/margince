@@ -116,16 +116,9 @@ func importDispositionOf(o migration.ObjectReport, committed bool) crmcontracts.
 // withoutStaleSkips takes a committed object's surplus out of `skipped` when
 // the run was never resumed.
 //
-// A stored report can carry more outcomes than the file has rows, for two
-// reasons. First, a row the dry run skipped can commit as a create, and the
-// stale skip stays beside it. Then the skip is the entry to drop. Second, a
-// resumed run can count a row twice when its checkpoint did not persist. Then
-// the surplus is in created or updated, and the skip is a real refusal.
-//
-// Only a resume causes the second, so the walk count tells them apart. Two
-// walks (dry run, then commit) is an ordinary run; three or more is a resume.
-// The object count cannot stand in: attempts fold by object, so one object
-// says nothing about how often it was walked.
+// A dry-run skip can commit as a create and leave a stale skip beside it.
+// A resume can also count a row twice, and then the skip is real. Only the
+// walk count tells them apart: two walks (dry run, commit) is no resume.
 func withoutStaleSkips(d crmcontracts.ImportRunDisposition, rowsRead, walks int) crmcontracts.ImportRunDisposition {
 	surplus := d.Created + d.Updated + d.Skipped - rowsRead
 	if surplus > 0 && walks <= walksWithoutAResume {
@@ -271,8 +264,8 @@ func issueKey(o migration.ObjectReport, row migration.SkippedRow) string {
 	return o.Object + "\x00" + row.ExternalID + "\x00" + strconv.Itoa(row.Line)
 }
 
-// warningKey is issueKey with the kind and value, because one row may carry
-// several warnings and a part's new tags belong to no row at all.
+// warningKey is issueKey with the kind and value. One row may carry several
+// warnings, and a part's new tags belong to no row at all.
 func warningKey(o migration.ObjectReport, row migration.SkippedRow) string {
 	return issueKey(o, row) + "\x00" + row.Kind + "\x00" + row.Value
 }

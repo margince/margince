@@ -5,27 +5,13 @@
 
 package integration
 
-// A caller-opened create admits exactly what its store-opened twin admits, and
-// refuses before it writes.
+// Each Create*Tx seam must admit and refuse what its store-opened twin does,
+// and refuse before it writes. Every arm drives both entry points with one
+// input. The row count runs inside the test's transaction, before rollback,
+// so an early gate and a late one read differently.
 //
-// Each Create*Tx seam shares a body with the store-opened entry point beside it
-// and claims to run the same gates in the same order. Two things can go wrong
-// with that and neither shows up in the suites either path already had: a seam
-// that admitted what its twin refuses is an ungoverned door, and one that
-// refused what its twin admits breaks the flip on estate data nobody predicted.
-// So every arm below drives BOTH entry points with the same input and asserts
-// the same answer.
-//
-// One asymmetry is deliberate and is not tested here as a difference: a
-// caller-opened create carries custom-field values only with the catalog its
-// caller read before opening the transaction. txseam_singleconn and
-// csvcustomfields hold both halves.
-//
-// The row count runs INSIDE the transaction the test opened, before the
-// rollback. That ordering is the point: a seam that inserted the row and then
-// refused would have its write rolled back by the wrapper, so counting
-// afterwards cannot tell an early gate from a late one — every arm would pass
-// either way.
+// Intended asymmetry: a caller-opened create carries custom-field values only
+// with the catalog its caller read first (txseam_singleconn, csvcustomfields).
 
 import (
 	"context"

@@ -358,15 +358,8 @@ func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, ownerID, c
 // auditLinkedInHandleGained records that a contact's empty LinkedIn slot was
 // filled, as its own audit row and its own contact.updated.
 //
-// Both writers of contact_social's linkedin slot land here — this decision and
-// the research-claim slot fill — because a reader asking "when did this contact
-// gain its profile link" must get the same answer whichever put it there. The
-// slot fill in particular has no other way to say it: its caller's audit row
-// describes the evidence write, and that row reads identically whether the slot
-// was filled or was already occupied.
-//
-// The handle lands in contact_social, never on a column of the contact, so there
-// is no field image to carry — what the contact gained is the whole of it.
+// Both writers of the linkedin slot (this decision and the research-claim fill)
+// land here, so "when did this contact gain its link" has one answer.
 func auditLinkedInHandleGained(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
 	contactAudit, err := storekit.AuditEvent(ctx, tx, "update", entityContact, contactID,
 		map[string]any{auditKeySocial: []string{SocialLinkedIn}})
@@ -382,24 +375,9 @@ func auditLinkedInHandleGained(ctx context.Context, tx pgx.Tx, contactID ids.UUI
 // writeLinkedInHandle stamps the member's LinkedIn profile URL onto the contact
 // they just confirmed a connection to.
 //
-// This is the ONE thing a ghost contributes to a real record, and it is
-// deliberately narrow: the URL and nothing else. The ghost's name, employer,
-// position and connection date stay where they are — the export is a third
-// party's data, and copying it onto a contact would be the consent problem the
-// whole ghost design exists to avoid.
-//
-// The handle written is the CONNECTION's own profile URL — the `URL` column
-// Connections.csv has always carried. NOT the member's own profile URL: that
-// one belongs to the member, and stamping it on every contact they confirm
-// would put the wrong contact's address on the record.
-//
-// A connection imported before the URL column existed has no URL and writes nothing.
-// The confirmation still stands; only the copy is unavailable, and the caller
-// is told so rather than left to wonder.
-//
-// ON CONFLICT DO NOTHING: a handle already on the record is somebody's
-// statement, and confirming a match is not grounds to replace it. The caller is
-// told which happened rather than left to guess.
+// The connection's URL is all a ghost contributes. The rest is a third party's
+// data, and copying it would be the consent problem ghosts avoid. A handle
+// already on the record is kept; the bool says whether one landed.
 func writeLinkedInHandle(ctx context.Context, tx pgx.Tx, connectionID, contactID ids.UUID) (bool, error) {
 	var handle *string
 	err := tx.QueryRow(ctx,

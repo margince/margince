@@ -60,30 +60,10 @@ import (
 // waited on had been taken. That decision landed.
 var grantedToNobody = gatekit.Waive(map[string]string{})
 
-// dynamicObjectCeiling is how many `auth.Require` call sites name an object
-// this scan cannot resolve — a runtime value rather than a literal or a
-// package-level string constant.
-//
-// A ceiling rather than an exact count, because a refactor that removes one is
-// not a regression and should not fail. It moves DOWN freely and up only with
-// a reason: each of these is a door no static check covers, so growing the
-// number is growing the blind spot this gate exists to bound.
-//
-// 107 since the record-less replay path: ensureReplayVisible re-checks the
-// object a TOOL declares in its ReplayGrant, so the object is the tool's own
-// and cannot be a literal here. The declarations it reads are held instead —
-// agents/recordlessreplay_test.go pins each vocabulary tool to the grant its
-// handler checks, which is the same claim this scan makes for a literal.
-//
-// 108 since settings.Store.DeleteRawTx: like SetRawTxReceipt beside it, it
-// gates on the object the setting's own declaration names, which the registry
-// resolves at run time.
-//
-// 109 since Service.CarryGrantsTx: a merge carries the shares of a contact,
-// company or lead, and the gate names the record type the merge retires.
-//
-// 96 since migration's doors name ImportRunObject itself rather than a
-// constant aliasing it, which this scan cannot follow.
+// dynamicObjectCeiling bounds the `auth.Require` call sites whose object this
+// scan cannot resolve. Each is a door no static check covers, so it may fall
+// freely and rise only with a reason. Migration's doors count here because
+// they name ImportRunObject, which the scan cannot follow.
 const dynamicObjectCeiling = 96
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a

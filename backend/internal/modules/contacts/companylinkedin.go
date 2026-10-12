@@ -40,13 +40,10 @@ func (e *DuplicateCompanyLinkedInError) Is(target error) bool { return target ==
 
 // NormalizeCompanyLinkedInURL reduces a LinkedIn *company* URL to its stored
 // spelling (PO-DDL-N-2, ADR-0085). The scheme, host, query and fragment rules
-// are the profile normalizer's, so both sides of the product canonicalize a
-// LinkedIn URL exactly once and the same way. What differs is the path: a
-// company URL must name a company, and the slug must be present.
+// are the profile normalizer's; only the path differs, and must name a company.
 //
-// The caller decides what an empty input means. Here it is a parse failure,
-// because "" is not a company URL; the update path treats a cleared field as a
-// clear before it ever reaches this function.
+// "" is a parse failure here; the update path treats a cleared field as a
+// clear before it reaches this function.
 func NormalizeCompanyLinkedInURL(raw string) (string, error) {
 	normalized, err := NormalizeLinkedInURL(raw)
 	if err != nil {

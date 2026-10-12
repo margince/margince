@@ -67,7 +67,7 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 	return migration.EnsureResult{Created: true}, nil
 }
 
-// applyContact writes a contact's changed fields, merging the file's address,
+// applyContact writes a contact's changed fields. It merges the file's address,
 // email, phone and LinkedIn handle onto what the contact holds, because the
 // store replaces each of those wholesale.
 func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, current []byte, source string) error {

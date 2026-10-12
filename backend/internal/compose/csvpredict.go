@@ -62,11 +62,8 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // predictRow answers what the commit will do, and what the report says about
 // the row: why it is refused, or the warning it lands with.
 //
-// The reason travels with the outcome, so every refusal reaches the report
-// with its reason. In Ensure's order: a type the importer may not create, a
-// cell the store would refuse, then a contact whose
-// company link finds no single company, by the run's policy. A dropped link
-// rides on the landing outcome.
+// Checks run in Ensure's order: create grant, then cells, then a contact's
+// company link under the run's policy. A dropped link rides on the outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return predictUnwritable, refused, nil

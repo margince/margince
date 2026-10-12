@@ -3,9 +3,9 @@
 
 package compose
 
-// A workspace's custom fields as import targets: offered by key, suggested by
-// label or key, and carried through the caller-opened creates on the columns
-// read before the row transaction opens.
+// A workspace's custom fields as import targets: offered by key and suggested
+// by label or key. The caller-opened creates carry them on the columns read
+// before the row transaction opens.
 
 import (
 	"context"
@@ -152,7 +152,7 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 }
 
 // customFieldsFrom picks the checked custom-field values of the targets in
-// fields, which is the whole row on a create and the changed cells on an
+// fields. Those are the whole row on a create and the changed cells on an
 // update. It is nil when there are none, which a caller-opened create reads
 // as no values.
 func customFieldsFrom(fields map[string]string, typed map[string]any) map[string]any {

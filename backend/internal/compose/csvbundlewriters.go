@@ -97,7 +97,7 @@ func newBundleWriters(
 }
 
 // resolveOwnersAndTags reads every owner and tag cell of the run in import
-// order, then resolves each distinct address and name once, and checks the
+// order. It resolves each distinct address and name once, then checks the
 // grants they take. Without tag read the tag resolver is the empty one, and the
 // dry run reports the missing grant.
 func (b *bundleWriters) resolveOwnersAndTags(ctx context.Context, db *database.DB, src migration.Source) error {
@@ -185,7 +185,7 @@ func (b *bundleWriters) bindNamedCompanies(ctx context.Context, source migration
 }
 
 // namedTarget is the record a company row names by id, and whether the row
-// lands: Ensure's order for a company row, which has no link to check.
+// lands. It follows Ensure's order for a company row, which has no link to check.
 func (w *csvWriters) namedTarget(ctx context.Context, row migration.Row) (targetID, bool) {
 	if _, invalid := w.checkedCells(row); invalid != nil {
 		return targetID{}, false
