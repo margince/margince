@@ -7,10 +7,9 @@ package compose
 //
 // The census next door (TestEveryDraftingSurfaceLoadsTheSenderVoice) asks
 // whether a surface's PACKAGE can reach draftvoice.Load. That question has one
-// answer for a package and several entry points inside it, which is how the
-// first-message drafter shipped unvoiced: it lives beside the reply drafter, its
-// package loads the voice for the reply, and its own function passed a literal
-// nil straight to the model. The package census read green the whole time.
+// answer for a package and several entry points inside it, so a function that
+// passes a literal nil to the model reads green there whenever a sibling in its
+// package loads the voice.
 //
 // So this reads the entry points. An unvoiced call is not itself a defect — a
 // rep with no profile is drafted for unvoiced, and a voiced draft that trips the
@@ -84,14 +83,7 @@ func TestNoDraftingEntryPointIsAlwaysUnvoiced(t *testing.T) {
 	// stopped seeing calls it used to see: either look at why, or lower this
 	// number deliberately. A rise is ordinary — a new drafting call — and
 	// raising it is the whole of the response.
-	// Was 36 while the two grounded surfaces each carried their own copy of the
-	// writer: 22 in the reply lane, 7 in accountdraft, 7 in contactdraft. The
-	// copies became one, so those fourteen are now 2 + 2 in the surfaces (their
-	// own prompt assembly) plus 5 in draftcore, which every surface runs. The
-	// reply lane's two greeting wrappers (completeVoiced, completeFirstVoiced)
-	// add two more, and draft_email's first message leaving the reply lane for
-	// the composers' engines took one away.
-	const governedCalls = 32
+	const governedCalls = 26
 	if governed != governedCalls {
 		t.Errorf("the sweep reached %d voice-carrying calls and this gate pins %d. Fewer means it stopped "+
 			"recognising calls it used to read — most likely a voice parameter was renamed out of "+
@@ -157,9 +149,9 @@ func alwaysUnvoicedCallers(t *testing.T, dir string) (findings []string, reached
 // Two spellings say "no voice", and both must count as unvoiced: a literal nil
 // for the func-shaped block, and an empty draftvoice.Context{} for the struct
 // one. Counting only nil let a site that always constructs the empty struct read
-// as voiced while taking the unvoiced branch on every call — which is what the
-// first-message certification case does deliberately, and what a production site
-// could do by accident.
+// as voiced while taking the unvoiced branch on every call — which a certification
+// case pinned to the plain variant does deliberately, and a production site could
+// do by accident.
 func voiceArgumentShapes(fn *ast.FuncDecl, positions map[string]int) (voiced, unvoiced int) {
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)

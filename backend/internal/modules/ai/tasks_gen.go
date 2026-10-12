@@ -28,7 +28,7 @@ const (
 	TaskDealHealth Task = "deal_health"
 	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it.
 	TaskDocumentExtract Task = "document_extract"
-	// TaskDraftReply is Six sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them.
+	// TaskDraftReply is Five sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site and the two composers each have two system variants (voice-enabled and plain), selected per call from the sender's Voice DNA state — a variant, not a site of its own.
 	TaskDraftReply Task = "draft_reply"
 	// TaskEnrich is Read a contact's own mail signature into contact fields - title, phone, linkedin, company_name, address, website - each quoting the signature line it was read from; a quote not in the signature is dropped in code. Floor 0.6. phone is a list: the reply carries one phone entry per number the signature lists, and each number is its own evidence row. A newer signature replaces only the older number of the same country and type; a number it leaves out is kept, because a trimmed signature is not a retired number.
 	TaskEnrich Task = "enrich"
@@ -178,7 +178,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "f4e62d028c83b01a75553ee601d218edd7785491c89cdc489e824dca68c25dd4"
+const TaskContractHash = "ce019d3e071916ace58a1afdf0b0ec157fba0a1a017733bb690c8885e9d9a2d5"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -430,7 +430,6 @@ var taskSites = map[Task][]Site{
 		{Name: "reply", Kind: "one_shot"},
 		{Name: "contact", Kind: "one_shot"},
 		{Name: "account", Kind: "one_shot"},
-		{Name: "first", Kind: "one_shot"},
 		{Name: "intro", Kind: "one_shot"},
 		{Name: "intro_note", Kind: "one_shot"},
 	},

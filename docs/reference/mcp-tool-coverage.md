@@ -477,7 +477,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 28 tools no use case requires, **8 are graded elsewhere** and 20 are untried by any lane.
+So of the 28 tools no use case requires, **7 are graded elsewhere** and 21 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -489,7 +489,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `review_commitments` | 401 | - | `case41_close_the_project` | `overnight_at_risk_sweep` |
 | `prep_for_meeting` | 394 | - | `case23_find_us_a_slot`, `case5_before_the_meeting` | - |
 | `enrich` | 390 | `enrich` | - | - |
-| `draft_email` | 385 | `draft_reply` | - | - |
+| `draft_email` | 385 | - | - | - |
 | `describe_report_vocabulary` | 349 | - | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us`, `case7_ask_for_a_number` | - |
 | `catch_me_up_on` | 348 | `agent_loop` | `case23_find_us_a_slot`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case44_chase_what_is_slipping`, `case48_that_whole_thread_is_filed_wrong`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `describe_record_fields` | 345 | - | `case43_the_fair_leads_are_prospects` | - |

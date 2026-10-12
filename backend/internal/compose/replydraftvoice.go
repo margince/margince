@@ -77,11 +77,11 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 	// cite the same record the first attempt did.
 	ctx = ai.WithSubject(ctx, ids.From[ids.ActivityKind](anchor).Ref(), "")
 	if !voice.OK {
-		draft, err := d.completeChecked(ctx, replyDraftSystem, data, nil)
+		draft, err := d.completeChecked(ctx, data, nil)
 		return draft, nil, nil, err
 	}
 	block := voice.Block
-	draft, err := d.completeChecked(ctx, replyDraftSystem, data, block)
+	draft, err := d.completeChecked(ctx, data, block)
 	if err != nil {
 		return replyDraft{}, nil, nil, err
 	}
@@ -115,7 +115,7 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 		// The voice-styled draft kept tripping the floor: serve the plain
 		// draft instead and let the failure feed the learning panel.
 		d.recordVoiceRejection(ctx, voice, anchor, draft)
-		plain, plainErr := d.completeChecked(ctx, replyDraftSystem, data, nil)
+		plain, plainErr := d.completeChecked(ctx, data, nil)
 		return plain, nil, nil, plainErr
 	}
 	ref := voiceDraftRef(voice, anchor, draft)
