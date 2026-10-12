@@ -49,7 +49,7 @@ func (h importHandlers) uploadLimitMB() int {
 // reads only the custom-field catalog, never the create columns, so a caller
 // who may read imports but not create records still gets it.
 func buildImportFormat(ctx context.Context, db *database.DB, lang textlang.Lang, capMB int) (crmcontracts.ImportFormat, error) {
-	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionRead); err != nil {
 		return crmcontracts.ImportFormat{}, err
 	}
 	cats, err := readImportCatalogs(ctx, db, migration.ImportOrder)

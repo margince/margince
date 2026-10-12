@@ -45,6 +45,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// importRunGrant is migration.ImportRunObject spelled as a literal: the
+// grant-reachability scan resolves only literals and same-package constants, so
+// a qualified name would leave each door below it uncounted.
+// importerobject_test.go pins the two spellings together.
+const importRunGrant = "import_run"
+
 // importSeam adapts the import handlers to the agents module's Imports port.
 type importSeam struct {
 	// srv is the served Server, when there is one. The handlers are read off it
@@ -107,7 +113,7 @@ func (i importSeam) ProfileSource(
 	// import_run grant could call preview_import repeatedly, leaving an orphan
 	// blob each time before the refusal arrived — storage a stranger can spend,
 	// and a probe of whether their CSV parses.
-	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
 	if err := i.ready(); err != nil {
@@ -120,7 +126,7 @@ func (i importSeam) ProfileSource(
 // storing it: a caller who may create an import run may drop the file they just
 // uploaded for one, and nobody else may reach into the store at all.
 func (i importSeam) DiscardSource(ctx context.Context, ref string) error {
-	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		return err
 	}
 	if err := i.ready(); err != nil {
@@ -177,7 +183,7 @@ func (i importSeam) DescribeFormat(ctx context.Context) (crmcontracts.ImportForm
 func (i importSeam) ProfileFiles(
 	ctx context.Context, files []agents.ImportFile,
 ) (crmcontracts.ImportSourceProfile, error) {
-	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
 	if err := i.ready(); err != nil {

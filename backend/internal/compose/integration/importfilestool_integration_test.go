@@ -36,7 +36,7 @@ func TestAnAgentImportsTwoLinkedFilesAsOneRun(t *testing.T) {
 				"mapping": map[string]string{"ref": "ref", "name": "display_name"},
 			},
 			{
-				"name": "people.csv", "object": "contact", "csv": "ref,email,company\nP-1,jo@filesby.example,CO-1\n",
+				"name": "contacts.csv", "object": "contact", "csv": "ref,email,company\nP-1,jo@filesby.example,CO-1\n",
 				"mapping": map[string]string{"ref": "ref", "email": "email", "company": "company_ref"},
 			},
 		},

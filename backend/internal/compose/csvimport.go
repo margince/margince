@@ -74,7 +74,7 @@ func (h importHandlers) UploadImportSource(w http.ResponseWriter, r *http.Reques
 		httperr.Write(w, r, err)
 		return
 	}
-	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -183,7 +183,7 @@ func (h importHandlers) CreateImportRun(w http.ResponseWriter, r *http.Request) 
 	// The grant is taken BEFORE the body is read: an ungranted caller must not
 	// be able to tell a rejected mapping from an accepted one, which is what a
 	// 422 arriving ahead of the 403 would tell them.
-	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

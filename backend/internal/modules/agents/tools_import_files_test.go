@@ -19,7 +19,7 @@ func TestPreviewImportStagesOnePartPerFile(t *testing.T) {
 	_, err := previewImport{imports: recordingImports{staged: &staged, profile: twoPartProfile()}}.Handle(context.Background(), json.RawMessage(`{
 		"source_name":"crm","on_broken_link":"drop_link",
 		"files":[{"name":"accounts.csv","object":"company","csv":"ref,name\nC1,Acme\n"},
-		         {"name":"people.csv","object":"contact","csv":"ref,email\nP1,jo@acme.test\n"}]}`))
+		         {"name":"contacts.csv","object":"contact","csv":"ref,email\nP1,jo@acme.test\n"}]}`))
 	if err != nil {
 		t.Fatal(err)
 	}
