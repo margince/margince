@@ -78,6 +78,14 @@ var targetSpecificAssignment = regexp.MustCompile(`^[A-Z][A-Z0-9_]*\s*[:?+]?=`)
 // A `NAME=value` word set for the duration of one recipe command.
 var environmentAssignment = regexp.MustCompile(`^[A-Z][A-Z0-9_]*=\S*$`)
 
+// The operators that join simple commands on one recipe line: `a; b`,
+// `a && b`, `a || b`, `a | b`.
+var shellCommandSeparator = regexp.MustCompile(`;|&&|\|\|?`)
+
+// Words that open a simple command without being its program:
+// `if $(MAKE) x; then`, `do $(MAKE) y`, `! $(MAKE) z`.
+var shellKeywords = []string{"if", "then", "else", "elif", "do", "while", "until", "!", "{"}
+
 // A variable reference in either spelling make accepts.
 var makeReference = regexp.MustCompile(`\$[({]([A-Z][A-Z0-9_]*)[)}]`)
 
@@ -272,24 +280,31 @@ func scriptsUnder(targets map[string]*recipeTarget, vars map[string]string, root
 // `@PHASE_TIMER_OWNED=1 $(MAKE) check-backend` — a reader that required the
 // line to OPEN with $(MAKE) followed neither half of the merge gate and judged
 // it against one timer script.
+//
+// Each simple command of the line counts on its own, because `make sbom-gate`
+// runs `$(MAKE) sbom` inside a shell loop written on one line.
 func delegatedTargets(command string) []string {
-	// Split into words first, because make separates a recipe's words with a tab
-	// as readily as with a space and neither the prefix nor the `-C` is found by
-	// matching a literal " ". A reader that missed one silently dropped a whole
-	// half of the merge gate from the census.
-	words := strings.Fields(strings.TrimLeft(command, " \t@+-"))
-	for len(words) > 0 && environmentAssignment.MatchString(words[0]) {
-		words = words[1:]
-	}
-	if len(words) == 0 || words[0] != "$(MAKE)" || slices.Contains(words, "-C") {
-		return nil
-	}
 	var targets []string
-	for _, word := range words[1:] {
-		if strings.HasPrefix(word, "-") || strings.ContainsAny(word, "$()") {
+	for _, simple := range shellCommandSeparator.Split(strings.TrimLeft(command, " \t@+-"), -1) {
+		// Words, not a split on " ": make separates a recipe's words with a tab
+		// as readily as with a space.
+		words := strings.Fields(simple)
+		for len(words) > 0 && (slices.Contains(shellKeywords, words[0]) || environmentAssignment.MatchString(words[0])) {
+			words = words[1:]
+		}
+		if len(words) == 0 || words[0] != "$(MAKE)" || slices.Contains(words, "-C") {
 			continue
 		}
-		targets = append(targets, word)
+		for _, word := range words[1:] {
+			// A redirection ends the command's words: `$(MAKE) sbom >/dev/null`.
+			if strings.ContainsAny(word, "<>") {
+				break
+			}
+			if strings.HasPrefix(word, "-") || strings.ContainsAny(word, "$()") {
+				continue
+			}
+			targets = append(targets, word)
+		}
 	}
 	return targets
 }
@@ -454,6 +469,8 @@ func TestAScriptReachedOnlyThroughMakeIsStillALaneInput(t *testing.T) {
 	for target, script := range map[string]string{
 		"seed-dev":    "scripts/seed-dev.sh",
 		"verify-boot": "scripts/verify-boot.sh",
+		// Two delegations deep, the first from inside a shell loop on one line.
+		"sbom-gate": "scripts/sbom-census.sh",
 	} {
 		found := scriptsUnder(targets, vars, target)
 		if !slices.Contains(found, script) {
@@ -529,6 +546,24 @@ func TestARecursiveMakeBehindAnEnvironmentPrefixIsStillAnEdge(t *testing.T) {
 		"\tPHASE_TIMER_OWNED=1 $(MAKE) -C backend check": nil,
 		"\t$(MAKE) fe-drift":                             {"fe-drift"},
 		"\t@bash scripts/phase-timer.sh reset":           nil,
+	} {
+		if got := delegatedTargets(command); !slices.Equal(got, want) {
+			t.Errorf("delegatedTargets(%q) = %v, want %v", command, got, want)
+		}
+	}
+}
+
+func TestARecursiveMakeInsideACompoundLineIsStillAnEdge(t *testing.T) {
+	t.Parallel()
+
+	// `make sbom-gate` retries `make sbom` inside a shell loop written on one
+	// line, where no $(MAKE) opens the line. Each simple command counts on its
+	// own, so the scripts behind such a line still reach the lane's scope.
+	for command, want := range map[string][]string{
+		"\t@set -e; \t for n in 1 2; do \t $(MAKE) sbom >/dev/null; \t if $(MAKE) sbom-check; then exit 0; fi; done": {"sbom", "sbom-check"},
+		"\t@test -f gen.out || $(MAKE) gen 2>&1 | tee gen.log":                                                       {"gen"},
+		"\t@cd frontend && $(MAKE) -C .. fe-lint":                                                                    nil,
+		"\t@echo \"run $(MAKE) fe-lint by hand\"":                                                                    nil,
 	} {
 		if got := delegatedTargets(command); !slices.Equal(got, want) {
 			t.Errorf("delegatedTargets(%q) = %v, want %v", command, got, want)

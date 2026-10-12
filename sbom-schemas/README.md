@@ -20,6 +20,9 @@ the set of packages pinned by hash in `spdx-tools-requirements.txt`. So it is as
 SBOM images pinned by digest. The steps to build that file again are in its header. It fails on a
 document that is not valid, so the `Makefile` recipe gates on that, and shows its report on failure.
 
+The same set holds `PyYAML`. `make sbom-census` runs it in the same image to read every YAML
+document of `pnpm-lock.yaml`. The check fails when the SBOM misses a package that file resolves.
+
 ## Why SPDX 3.0 is checked by JSON schema only
 
 The semantic layer of SPDX 3.0 is SHACL, and the SPDX project points at

@@ -1,14 +1,16 @@
-# Hash-pinned dependency set for the SPDX 2.x validator (pyspdxtools), consumed
-# by `make sbom-validate`. Fully pinned (versions + wheel hashes) so the SPDX
-# validator is as reproducible as the digest-pinned SBOM images. Regenerate on a
-# bump by editing the top-level requirement and re-running, in the pinned base
-# image, on linux/amd64 so the hash set matches CI:
+# Hash-pinned dependency set for the SBOM lane's Python steps: the SPDX 2.x
+# validator (pyspdxtools, `make sbom-validate`) and the lockfile reader of
+# `make sbom-census` (PyYAML). Fully pinned (versions + wheel hashes) so both are
+# as reproducible as the digest-pinned SBOM images. Regenerate on a bump by
+# editing the top-level requirements and re-running, in the pinned base image,
+# on linux/amd64 so the hash set matches CI:
 #
-#   printf 'spdx-tools==<version>\n' > in.txt
+#   printf 'spdx-tools==<version>\npyyaml==<version>\n' > spdx-tools.in
 #   pip install pip-tools
-#   pip-compile --generate-hashes --no-header --strip-extras -o spdx-tools-requirements.txt in.txt
+#   pip-compile --generate-hashes --no-header --strip-extras -o spdx-tools-requirements.txt spdx-tools.in
 #
-# Direct requirement: spdx-tools==0.8.5 (everything below is transitive).
+# Direct requirements: spdx-tools==0.8.5 and pyyaml==6.0.3 (everything else below
+# is transitive).
 
 beartype==0.22.9 \
     --hash=sha256:8f82b54aa723a2848a56008d18875f91c1db02c32ef6a62319a002e3e25a975f \
@@ -108,7 +110,9 @@ pyyaml==6.0.3 \
     --hash=sha256:f7057c9a337546edc7973c0d3ba84ddcdf0daa14533c2065749c9075001090e6 \
     --hash=sha256:fa160448684b4e94d80416c0fa4aac48967a969efe22931448d853ada8baf926 \
     --hash=sha256:fc09d0aa354569bc501d4e787133afc08552722d3ab34836a80547331bb5d4a0
-    # via spdx-tools
+    # via
+    #   -r spdx-tools.in
+    #   spdx-tools
 rdflib==7.6.0 \
     --hash=sha256:30c0a3ebf4c0e09215f066be7246794b6492e054e782d7ac2a34c9f70a15e0dd \
     --hash=sha256:6c831288d5e4a5a7ece85d0ccde9877d512a3d0f02d7c06455d00d6d0ea379df
