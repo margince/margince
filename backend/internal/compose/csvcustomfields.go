@@ -10,6 +10,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -114,9 +115,18 @@ func requestedObjects(req crmcontracts.CreateImportRunRequest) []string {
 	return objects
 }
 
+// commonHeaders are the headers most exports give a field under another name.
+// Each type has one of a header's targets: a company is named by display_name,
+// a person by full_name.
+var commonHeaders = map[string][]string{
+	"name":    {fieldDisplayName, fieldFullName},
+	"company": {companyNameField},
+}
+
 // suggestImportMapping is migration.SuggestMapping plus a header equal to a
-// custom field's label, folded and trimmed. A field two headers reach is
-// suggested for neither, since staging refuses two columns onto one field.
+// custom field's label or a common header, folded and trimmed. A field two
+// headers reach is suggested for neither, since staging refuses two columns
+// onto one field.
 func suggestImportMapping(p migration.Profile, targets []string, cat importCatalog) map[string]string {
 	suggested := migration.SuggestMapping(p, targets)
 	byLabel := map[string]string{}
@@ -139,8 +149,15 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 		if _, taken := suggested[col.Header]; taken {
 			continue
 		}
-		if name := byLabel[strings.ToLower(strings.TrimSpace(col.Header))]; name != "" {
+		folded := strings.ToLower(strings.TrimSpace(col.Header))
+		if name := byLabel[folded]; name != "" {
 			headersOf[name] = append(headersOf[name], col.Header)
+			continue
+		}
+		for _, target := range commonHeaders[folded] {
+			if slices.Contains(targets, target) {
+				headersOf[target] = append(headersOf[target], col.Header)
+			}
 		}
 	}
 	out := make(map[string]string, len(headersOf))

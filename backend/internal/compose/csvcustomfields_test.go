@@ -97,3 +97,41 @@ func TestOnlyCheckedCustomFieldsReachCustomFields(t *testing.T) {
 		t.Fatal("a row with no custom field gave a non-nil map, which a caller-opened create reads as values")
 	}
 }
+
+// The header most exports give the record's own name, and the one they give a
+// person's company, are suggested onto those fields for every type.
+func TestTheCommonHeadersForANameAndACompanyAreSuggested(t *testing.T) {
+	for object, want := range map[string]map[string]string{
+		migration.ObjectCompany: {"Name": fieldDisplayName},
+		migration.ObjectContact: {"Name": fieldFullName, "Company": companyNameField},
+		migration.ObjectLead:    {"name": fieldFullName, "company": companyNameField},
+	} {
+		targets, err := importTargets(object, importCatalog{})
+		if err != nil {
+			t.Fatalf("importTargets(%s): %v", object, err)
+		}
+		var p migration.Profile
+		for header := range want {
+			p.Columns = append(p.Columns, migration.Column{Header: header})
+		}
+		got := suggestImportMapping(p, targets, importCatalog{})
+		for header, target := range want {
+			if got[header] != target {
+				t.Errorf("%s: %q → %q, want %s", object, header, got[header], target)
+			}
+		}
+	}
+}
+
+// A file carrying both the common header and the field's own name gives the
+// field two columns, so neither is suggested.
+func TestANameHeaderBesideTheFieldsOwnNameSuggestsNeither(t *testing.T) {
+	targets, err := importTargets(migration.ObjectCompany, importCatalog{})
+	if err != nil {
+		t.Fatalf("importTargets: %v", err)
+	}
+	p := migration.Profile{Columns: []migration.Column{{Header: "name"}, {Header: "display_name"}}}
+	if got := suggestImportMapping(p, targets, importCatalog{}); len(got) != 0 {
+		t.Fatalf("suggestion = %v, want none for a field two columns claim", got)
+	}
+}
