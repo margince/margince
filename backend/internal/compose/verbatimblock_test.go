@@ -12,7 +12,7 @@ func verbatimBlock(text string) string {
 	const width = 100
 	var out strings.Builder
 	out.WriteString("```text\n")
-	for _, paragraph := range strings.Split(text, "\n") {
+	for paragraph := range strings.SplitSeq(text, "\n") {
 		line := 0
 		for i, word := range strings.Fields(paragraph) {
 			if i > 0 && line+1+len(word) > width {

@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -285,7 +286,7 @@ func (a *Adapter) call(ctx context.Context, cred provider.Credential, method, pa
 		// The vendor's body is NOT echoed: it may quote a fragment of the
 		// key we just sent, and an error a customer sees must carry a closed
 		// product reason instead.
-		return resp.StatusCode, fmt.Errorf("surfe: the response was not the documented JSON shape")
+		return resp.StatusCode, errors.New("surfe: the response was not the documented JSON shape")
 	}
 	return resp.StatusCode, nil
 }

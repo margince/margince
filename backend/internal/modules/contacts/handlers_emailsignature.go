@@ -31,7 +31,18 @@ func (h Handlers) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	signature, err := h.store.SaveMyEmailSignature(r.Context(), body.Body)
+	// Empty text clears the signature; a missing or null body is a client that
+	// forgot the field, and must not clear it.
+	for _, err := range []error{
+		httperr.RequireSent(r, "body", "body is required: send the signature, or empty text to clear it"),
+		httperr.RefuseNull(r, "body"),
+	} {
+		if err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
+	}
+	signature, err := h.store.SaveMyEmailSignature(r.Context(), SaveSignatureInput{Body: body.Body, Title: body.Title, Phone: body.Phone})
 	if err != nil {
 		// No branch for SignatureTooLongError: it implements
 		// apperrors.FieldFault, so every surface renders the same 422 from the
@@ -44,7 +55,10 @@ func (h Handlers) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
 
 func emailSignatureWire(signature EmailSignature) crmcontracts.EmailSignature {
 	return crmcontracts.EmailSignature{
-		Body:      signature.Body,
-		UpdatedAt: signature.UpdatedAt,
+		Body:           signature.Body,
+		Title:          signature.Title,
+		Phone:          signature.Phone,
+		TemplateActive: signature.TemplateActive,
+		UpdatedAt:      signature.UpdatedAt,
 	}
 }

@@ -88,3 +88,20 @@ func TestALostReasonIsWrittenWhenTheDealLandsOnLost(t *testing.T) {
 		t.Errorf("lost_reason = %v, want %q", got, reason)
 	}
 }
+
+func TestALostReasonIsTrimmedBeforeItIsStored(t *testing.T) {
+	store := &Store{clock: func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) }}
+	open := crmcontracts.Deal{Status: crmcontracts.DealStatusOpen}
+	padded := "  too expensive \n"
+	patch, _, err := store.stageTransitionPatch(context.Background(), nil, open, AdvanceDealInput{LostReason: &padded}, "lost")
+	if err != nil {
+		t.Fatalf("stageTransitionPatch: %v", err)
+	}
+	if got := patch.After()["lost_reason"]; got != "too expensive" {
+		t.Errorf("stored reason = %q, want it trimmed", got)
+	}
+	blank := " \t "
+	if _, _, err := store.stageTransitionPatch(context.Background(), nil, open, AdvanceDealInput{LostReason: &blank}, "lost"); err == nil {
+		t.Error("a blank reason closed the deal as lost")
+	}
+}

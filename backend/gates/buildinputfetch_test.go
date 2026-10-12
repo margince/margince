@@ -111,7 +111,7 @@ func TestEveryPinnedToolDownloadRetries(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for _, line := range strings.Split(string(raw), "\n") {
+		for line := range strings.SplitSeq(string(raw), "\n") {
 			if !strings.Contains(line, "curl ") || strings.HasPrefix(strings.TrimSpace(line), "#") {
 				continue
 			}

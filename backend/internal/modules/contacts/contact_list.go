@@ -36,7 +36,7 @@ type ListContactsInput struct {
 	OwnerID *ids.UserID
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
-	// listFilters.ownershipClause, which also refuses two of them at once.
+	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID     *ids.TeamID
 	Unassigned      *bool
 	IncludeArchived bool
@@ -71,7 +71,7 @@ var contactListFields = map[string]storekit.SortField{
 	createdAtColumn:    storekit.Column(storekit.KindTimestamp),
 	updatedAtColumn:    storekit.Column(storekit.KindTimestamp),
 	contactNameColumn:  storekit.Column(fieldcatalog.TypeText),
-	ownerIDColumn:      storekit.Column(storekit.KindUUID),
+	ownerIDColumn:      storekit.OwnerNameSort(contactEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	// The Company header, by the employer the row prints.
 	contactEmployerField: {Kind: fieldcatalog.TypeText, Expr: orderByCurrentEmployer},

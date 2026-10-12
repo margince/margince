@@ -69,3 +69,8 @@ func withheldReason(shielded, shieldedAs string) string {
 		WHEN (` + underAnOpenRequest + `) THEN '` + withheldByRequest + `'
 		ELSE '' END`
 }
+
+// importersOfActivity counts the seats that imported the activity aliased `a`.
+// More than one means a colleague holds a copy, which no purge of this seat's
+// mail may destroy.
+const importersOfActivity = `(SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id)`

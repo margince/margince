@@ -16,7 +16,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useAnalyticsContext } from "./analytics.context";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { problemMessageOf, QueryStates, unwrap } from "./common";
 
 // The forecast links a reader has issued and that still open, listed so any of
 // them can be closed after the dialog that showed it is gone. The server
@@ -43,12 +43,11 @@ const POPULATION_FALLBACK: Record<OpenShare["scope_kind"], MessageKey> = {
 };
 
 export async function closeShare(id: string): Promise<void> {
-  const { error } = await api.DELETE("/forecast/shares/{id}", {
-    params: { path: { id } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  unwrap(
+    await api.DELETE("/forecast/shares/{id}", {
+      params: { path: { id } },
+    }),
+  );
 }
 
 // `canClose` is the write half: a read seat may list its links and is refused
@@ -95,10 +94,7 @@ function OpenShareList({
   const shares = useQuery({
     queryKey: OPEN_SHARES_KEY,
     queryFn: async () => {
-      const { data, error } = await api.GET("/forecast/shares", {});
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/forecast/shares", {}));
       return data.data;
     },
   });

@@ -149,7 +149,7 @@ func (leg decisionLeg) askScenario(ctx context.Context, router *ai.Router, rec *
 		return nil, fmt.Errorf("the LLM record has no runs of scenario %s to match", sc.Name)
 	}
 	runs := make([]decisionRun, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		mark := rec.mark()
 		probe, err := router.DecideProbe(ctx, leg.task, dc.DecisionSite(), dc.DecisionRequest(), dc.GateDecision)
 		if err != nil {

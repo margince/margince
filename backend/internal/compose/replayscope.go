@@ -117,7 +117,7 @@ const (
 
 	// The fields a body names another record by, spelled where the table that
 	// uses them is.
-	offerDealField        = "deal_id"
+	dealIDField           = "deal_id"
 	companionContactField = "contact_id"
 	companionCompanyField = "company_id"
 	companionLeadField    = "lead_id"
@@ -177,7 +177,7 @@ var replayableOperations = map[string]replayTarget{
 		object: tableContact, table: tableContact, idPath: "contact.id",
 		companions: []companionRef{
 			{table: tableLead, idPath: companionLeadField},
-			{table: tableDeal, idPath: offerDealField},
+			{table: tableDeal, idPath: dealIDField},
 		},
 	},
 	"POST /v1/companies":            {object: tableCompany, table: tableCompany, idPath: "id"},
@@ -209,7 +209,7 @@ var replayableOperations = map[string]replayTarget{
 	// an acceptance opened rides beside it as a companion.
 	"POST /v1/deal-suggestions/{id}/accept": {
 		object: tableDeal, moduleProbe: probeDealSuggestion, idPath: "suggestion.id",
-		companions: []companionRef{{table: tableDeal, idPath: offerDealField}},
+		companions: []companionRef{{table: tableDeal, idPath: dealIDField}},
 	},
 	"POST /v1/deal-suggestions/{id}/dismiss": {object: tableDeal, moduleProbe: probeDealSuggestion, idPath: "id"},
 	// Taking back an automatic stage move answers the deal, and the deal's
@@ -287,10 +287,10 @@ var replayableOperations = map[string]replayTarget{
 	// Bodies with no owner column of their own that hand back a record which
 	// has one. An offer without its deal's scope would return that deal's
 	// pricing and buyer snapshot to someone who can no longer open the deal.
-	"POST /v1/deals/{id}/offers":      {object: objectOffer, table: tableDeal, idPath: offerDealField},
-	"POST /v1/offers/{id}/regenerate": {object: objectOffer, table: tableDeal, idPath: offerDealField},
-	"POST /v1/offers/{id}/send":       {object: objectOffer, table: tableDeal, idPath: offerDealField},
-	"POST /v1/offers/{id}/render":     {object: objectOffer, table: tableDeal, idPath: offerDealField},
+	"POST /v1/deals/{id}/offers":      {object: objectOffer, table: tableDeal, idPath: dealIDField},
+	"POST /v1/offers/{id}/regenerate": {object: objectOffer, table: tableDeal, idPath: dealIDField},
+	"POST /v1/offers/{id}/send":       {object: objectOffer, table: tableDeal, idPath: dealIDField},
+	"POST /v1/offers/{id}/render":     {object: objectOffer, table: tableDeal, idPath: dealIDField},
 	"POST /v1/record-grants": {
 		objectNote: "sharing is gated by the manage-sharing permission, which is not an entry in policy.coreObjects",
 		tableField: "record_type", idPath: "record_id",

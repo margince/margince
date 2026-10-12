@@ -23,7 +23,10 @@ func (s *Sink) readAgainstTheSeatsAddressesTx(
 	if err := s.noteAliasSightingTx(ctx, tx, seat, rec.DeliveredTo, rec.Source); err != nil {
 		return rec, fields, err
 	}
-	return s.asSentFromOwnAddressTx(ctx, tx, rec, fields)
+	if rec, fields, err := s.asSentFromOwnAddressTx(ctx, tx, rec, fields); err != nil || fields.Direction == connector.DirectionOutbound {
+		return rec, fields, err
+	}
+	return s.asSentByColleagueTx(ctx, tx, rec, fields)
 }
 
 // asSentFromOwnAddressTx re-reads mail the seat sent from another address of

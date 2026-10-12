@@ -102,19 +102,17 @@ function ImportStart() {
   const { resumed } = useImportFlow(UNNAMED_IMPORT_OBJECT);
   return (
     <Panel title={t("import.title")}>
-      <PanelBody>
-        <SettingList>
-          <SettingRow
-            label={t("import.startLabel")}
-            description={t("import.sub")}
-            control={
-              <Button variant="ghost" onClick={openRun}>
-                {resumed ? t("import.continue") : t("import.start")}
-              </Button>
-            }
-          />
-        </SettingList>
-      </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("import.startLabel")}
+          description={t("import.sub")}
+          control={
+            <Button variant="ghost" onClick={openRun}>
+              {resumed ? t("import.continue") : t("import.start")}
+            </Button>
+          }
+        />
+      </SettingList>
     </Panel>
   );
 }

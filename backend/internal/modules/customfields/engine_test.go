@@ -81,6 +81,19 @@ func TestValidate_PicklistOptionWithInvalidUTF8Rejected(t *testing.T) {
 	}
 }
 
+func TestValidate_PicklistOptionWithNoVisibleTextRejected(t *testing.T) {
+	// A null member of the options list decodes to "".
+	for _, option := range []string{"", "  "} {
+		errs := Validate(FieldSpec{
+			Object: "deal", Label: "Route", Type: TypePicklist,
+			Options: []string{"direct", option}, Source: "manual",
+		})
+		if !hasFieldError(errs, "options", "invalid_characters") {
+			t.Errorf("option %q: expected options/invalid_characters, got %+v", option, errs)
+		}
+	}
+}
+
 func TestValidate_RequiresSource(t *testing.T) {
 	errs := Validate(FieldSpec{Object: "deal", Label: "X", Type: TypeText})
 	if !hasFieldError(errs, "source", "required") {

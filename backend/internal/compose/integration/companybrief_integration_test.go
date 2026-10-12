@@ -204,7 +204,7 @@ func TestCompanyBriefDescribesOnlyWhatItsReaderCanSee(t *testing.T) {
 	contactID := ids.From[ids.ContactKind](hidden)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 		Kind: "employment", ContactID: &contactID, CompanyID: &company,
-		IsCurrentPrimary: BoolPtr(true), Source: "manual",
+		IsCurrentPrimary: new(true), Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding the employment edge: %v", err)
 	}

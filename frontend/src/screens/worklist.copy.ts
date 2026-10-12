@@ -707,8 +707,6 @@ export function sourceUnavailableText(
     : t("worklist.source.failed", { source: name });
 }
 
-// One source, in the reader's words.
-//
 // Through the same known-source check the titles use, so a source this build
 // has never heard of is described generically rather than printed as its own
 // identifier — a reader must never be shown `ai_work_health` as a noun.
@@ -723,11 +721,14 @@ export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
   deal_suggestion: true,
+  tag_suggestion: true,
   task: true,
   weekly_commitment: true,
   brief_item: true,
   conversation_claim: true,
   customer_waiting: true,
+  awaiting_reply: true,
+  meeting_follow_up: true,
   lead_response: true,
   deal_at_risk: true,
   meeting: true,
@@ -743,9 +744,7 @@ export const KNOWN_SOURCES = {
   automation_run: true,
   notice: true,
   introduction_request: true,
-  // An undecided domain: it names no record, and is answered in place.
   domain_question: true,
-  // A group of routine decisions, which names no single record.
   batch: true,
 } as const;
 

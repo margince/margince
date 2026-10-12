@@ -29,7 +29,7 @@ import { tierLabel } from "./ai-decision-labels";
 import { LatencyAgainstTimeout, TaskOutcome } from "./ai-task-outcome";
 import { ReadProblem, SaveProblem, TimeoutField } from "./ai-task-sheet-fields";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
-import { problemCodeOf, throwProblem } from "./common";
+import { problemCodeOf, throwProblem, unwrap } from "./common";
 import "./ai-settings.css";
 
 // One task's request settings, and what its calls did under them. The figures
@@ -217,12 +217,13 @@ function useSaveOverrides(onSaved: () => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { overrides: Overrides; version: string }) => {
-      const { error } = await api.PUT("/ai/task-overrides", {
-        // Always sent: an absent If-Match is an unconditional overwrite.
-        headers: { "If-Match": vars.version },
-        body: vars.overrides,
-      });
-      if (error) throwProblem(error);
+      unwrap(
+        await api.PUT("/ai/task-overrides", {
+          // Always sent: an absent If-Match is an unconditional overwrite.
+          headers: { "If-Match": vars.version },
+          body: vars.overrides,
+        }),
+      );
     },
     // A colleague's newer save is read back, so the next Save is held to it
     // rather than to the revision this sheet opened on.

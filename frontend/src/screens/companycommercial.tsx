@@ -9,7 +9,7 @@ import { PanelBody } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -66,13 +66,11 @@ export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
     queryKey: ["deal-latest-offer", leading?.deal_id],
     enabled: Boolean(leading) && mayRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/offers", {
-        params: { path: { id: leading?.deal_id ?? "" }, query: { limit: 1 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/offers", {
+          params: { path: { id: leading?.deal_id ?? "" }, query: { limit: 1 } },
+        }),
+      );
     },
   });
   const offer = offers.data?.data?.[0];

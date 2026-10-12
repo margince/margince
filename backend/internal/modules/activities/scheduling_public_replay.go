@@ -22,6 +22,10 @@ import (
 type invitationIntent struct {
 	ProposalID ids.UUID
 	Public     *publicBookingIntent
+	// DescriptionFromBooker keeps what an anonymous booker typed on the meeting
+	// record and out of the invitation, whose address is only what they typed.
+	// The door sets it because Public is nil whenever a request carries no key.
+	DescriptionFromBooker bool
 }
 type publicBookingIntent struct {
 	KeyHash   string           `json:"key_hash"`

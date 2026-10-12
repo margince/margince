@@ -23,7 +23,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BulkVerbs } from "./bulkverbs";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import { downloadBytes, filenameFromDisposition } from "./download";
 import {
   LISTS_KEY,
@@ -77,12 +77,11 @@ async function memberPage(
   limit: number,
   cursor: string | undefined,
 ): Promise<MemberPage> {
-  const { data, error } = await api.GET(MEMBER_SOURCES[source].path, {
-    params: { query: { list_id: listId, limit, cursor } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET(MEMBER_SOURCES[source].path, {
+      params: { query: { list_id: listId, limit, cursor } },
+    }),
+  );
   return data as MemberPage;
 }
 

@@ -156,6 +156,9 @@ type DeliveryRequest struct {
 	Subject  string
 	Body     string // the unsubscribe footer, when there is one, is already applied
 	HTMLBody string // the markup alternative, empty for a plain-text send
+	// InlineLogoKey is the stored logo HTMLBody embeds by content id, empty
+	// when it embeds none.
+	InlineLogoKey string
 	// FromName is the sender's display name, snapshotted so a retry renders the
 	// same From header the first attempt did.
 	FromName string

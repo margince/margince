@@ -10,6 +10,7 @@ package privacy
 
 import (
 	"errors"
+	"math"
 	"sort"
 	"strings"
 	"testing"
@@ -219,7 +220,9 @@ func TestEveryExecutorPairIsReachableAndEveryReachablePairHasAnExecutor(t *testi
 // comment calls the dangerous one: zero is not a harmless edge, it is a policy
 // that empties its scope on the next pass.
 func TestValidateRetainDaysRefusesAWindowThatActsImmediately(t *testing.T) {
-	for _, days := range []int{1, 30, 365, 2555} {
+	// The ceiling itself is legitimate: a bound that refuses its own limit
+	// would be off by one in the direction nobody notices.
+	for _, days := range []int{1, 30, 365, 2555, retainDaysCeiling} {
 		if err := validateRetainDays(days); err != nil {
 			t.Errorf("validateRetainDays(%d) refused a legitimate window: %v", days, err)
 		}
@@ -228,6 +231,15 @@ func TestValidateRetainDaysRefusesAWindowThatActsImmediately(t *testing.T) {
 		err := validateRetainDays(days)
 		if err == nil {
 			t.Fatalf("validateRetainDays(%d) accepted a window that acts on a record as soon as it exists", days)
+		}
+		assertFieldFault(t, err, fieldRetainDays, "invalid_retain_days")
+	}
+	// Past the ceiling the policy saves and the nightly pass errors instead of
+	// acting, which is a policy that looks enabled and does nothing.
+	for _, days := range []int{retainDaysCeiling + 1, 1 << 20, math.MaxInt32} {
+		err := validateRetainDays(days)
+		if err == nil {
+			t.Fatalf("validateRetainDays(%d) accepted a window the retention pass cannot evaluate", days)
 		}
 		assertFieldFault(t, err, fieldRetainDays, "invalid_retain_days")
 	}

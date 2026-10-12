@@ -165,6 +165,9 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	if err := compose.EnsureInstallation(ctx, pool, logger, deployCfg); err != nil {
 		return deployconfig.Config{}, nil, err
 	}
+	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
+		return deployconfig.Config{}, nil, err
+	}
 	// After the installation binds, so an installation that cannot bind fails on
 	// that rather than on its license.
 	// The deployment posture decides which license authorities are honored: a
@@ -175,6 +178,9 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	// keyvaultOptions wiring, because an installation that has sealed its token
 	// and dropped the declaration reads it out of the vault: the license
 	// question cannot be answered before the vault exists.
+	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
+		return deployconfig.Config{}, nil, err
+	}
 	license, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture, config.FromOS)
 	if err != nil {
 		return deployconfig.Config{}, nil, err
@@ -391,6 +397,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 		// the backfill surface isn't wired. Appended after baseComposeOptions'
 		// WithCaptureBackfill so the shared registry is already set.
 		opts = append(opts, compose.WithBackfillEstimator(modelPath.Router()))
+		opts = append(opts, compose.WithLaneHealthBindings(modelPath.Router()))
 	}
 	return opts, modelPath, nil
 }

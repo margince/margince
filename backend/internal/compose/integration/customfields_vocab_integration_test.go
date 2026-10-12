@@ -349,8 +349,7 @@ func TestCustomFieldVocab_SortedCursorRefusedUnderOtherSort(t *testing.T) {
 	}
 
 	_, _, err := f.store.ListDeals(f.ctx, deals.ListDealsInput{Cursor: &page.NextCursor})
-	var mismatch *storekit.CursorSortMismatchError
-	if !errors.As(err, &mismatch) {
+	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); !ok {
 		t.Fatalf("sorted cursor on the default list err = %v, want CursorSortMismatchError", err)
 	}
 }
@@ -369,8 +368,7 @@ func TestCustomFieldVocab_CraftedCursorKeyIsClientFault(t *testing.T) {
 		CreatedAt: time.Now().UTC(), ID: ids.NewV7(), SortField: score, SortKey: &badKey,
 	})
 	_, _, err := f.store.ListDeals(f.ctx, deals.ListDealsInput{Sort: &score, Cursor: &crafted})
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 		t.Fatalf("crafted numeric sort key err = %v, want MalformedCursorError", err)
 	}
 }

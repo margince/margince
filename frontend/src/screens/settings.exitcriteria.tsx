@@ -7,31 +7,23 @@ import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { type CreateField, CreateRecordModal } from "./create";
+import {
+  CRITERION_KIND_LABEL,
+  CRITERION_KINDS,
+  type CriterionKind,
+  criterionKindOf,
+} from "./criterionkinds";
 import { EditAction } from "./edit";
 
 type Criterion = components["schemas"]["StageExitCriterion"];
-type CriterionKind = components["schemas"]["StageCriterionKind"];
 
 // The key an extractor cites. Spelled here as well as in the column's CHECK
 // and the store's own guard, because a round trip to learn that a key may not
 // start with a digit is a wait the reader need not pay. The server stays the
 // authority: this only saves the trip.
 const KEY_SHAPE = /^[a-z][a-z0-9_]{0,63}$/;
-
-// Every kind the contract admits, with the label a reader sees. Derived from
-// the generated union rather than retyped, so a kind added to crm.yaml and
-// missing here fails the typecheck instead of rendering as a raw enum value.
-const KIND_LABEL: Record<CriterionKind, MessageKey> = {
-  buyer_confirmed: "stage.criteria.kindBuyerConfirmed",
-  event_held: "stage.criteria.kindEventHeld",
-  document_signed: "stage.criteria.kindDocumentSigned",
-  role_identified: "stage.criteria.kindRoleIdentified",
-  terms_accepted: "stage.criteria.kindTermsAccepted",
-  custom: "stage.criteria.kindCustom",
-};
 
 // The kinds that name something the BUYER did. A criterion of one of these is
 // never settled by a message our own side wrote, which is the rule the callout
@@ -65,12 +57,11 @@ export function StageExitCriteria({
   const query = useQuery({
     queryKey: ["stage-exit-criteria", stageId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/stages/{id}/exit-criteria", {
-        params: { path: { id: stageId }, query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/stages/{id}/exit-criteria", {
+          params: { path: { id: stageId }, query: {} },
+        }),
+      );
       return data.data;
     },
     // A terminal stage can hold none, so the read is not worth a round trip.
@@ -149,7 +140,7 @@ function CriterionRow({
     <li className="criterion-row">
       <span className="criterion-label">{criterion.label}</span>
       <span className="t-caption">{criterion.key}</span>
-      <Badge>{t(KIND_LABEL[criterion.kind])}</Badge>
+      <Badge>{t(CRITERION_KIND_LABEL[criterion.kind])}</Badge>
       <Badge tone={criterion.required ? "warning" : undefined}>
         {criterion.required
           ? t("stage.criteria.required")
@@ -174,9 +165,8 @@ function CriterionRow({
             }}
             fields={criterionEditFields(t)}
             update={async (values, _rows, opened) => {
-              const { data, error } = await api.PATCH(
-                "/stages/{id}/exit-criteria/{criterion_id}",
-                {
+              return unwrap(
+                await api.PATCH("/stages/{id}/exit-criteria/{criterion_id}", {
                   params: {
                     path: { id: stageId, criterion_id: criterion.id },
                     // The version the form OPENED on, not the one the row
@@ -187,12 +177,8 @@ function CriterionRow({
                     ...ifMatch(requireVersion(opened?.version)),
                   },
                   body: criterionEditBody(values),
-                },
+                }),
               );
-              if (error) {
-                throwProblem(error);
-              }
-              return data;
             }}
           />
           <CriterionRemove criterion={criterion} stageId={stageId} />
@@ -208,20 +194,18 @@ function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (values: Record<string, string>) => {
-      const { data, error } = await api.POST("/stages/{id}/exit-criteria", {
-        params: { path: { id: stageId } },
-        body: {
-          key: values.key,
-          label: values.label,
-          kind: values.kind as CriterionKind,
-          required: values.required !== "false",
-          ...(values.hint ? { hint: values.hint } : {}),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/stages/{id}/exit-criteria", {
+          params: { path: { id: stageId } },
+          body: {
+            key: values.key,
+            label: values.label,
+            kind: criterionKindOf(values.kind),
+            required: values.required !== "false",
+            ...(values.hint ? { hint: values.hint } : {}),
+          },
+        }),
+      );
     },
     onSuccess: () => {
       setOpen(false);
@@ -261,18 +245,14 @@ function CriterionRemove({
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE(
-        "/stages/{id}/exit-criteria/{criterion_id}",
-        {
+      unwrap(
+        await api.DELETE("/stages/{id}/exit-criteria/{criterion_id}", {
           params: {
             path: { id: stageId, criterion_id: criterion.id },
             ...ifMatch(requireVersion(criterion.version)),
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       setOpen(false);
@@ -301,9 +281,9 @@ function CriterionRemove({
 }
 
 function kindOptions(t: ReturnType<typeof useT>) {
-  return (Object.keys(KIND_LABEL) as CriterionKind[]).map((kind) => ({
+  return CRITERION_KINDS.map((kind) => ({
     value: kind,
-    label: t(KIND_LABEL[kind]),
+    label: t(CRITERION_KIND_LABEL[kind]),
   }));
 }
 
@@ -370,7 +350,7 @@ function text(value: unknown): string {
 function criterionEditBody(values: Record<string, unknown>) {
   return {
     label: text(values.label),
-    kind: text(values.kind) as CriterionKind,
+    kind: criterionKindOf(text(values.kind)),
     required: text(values.required) !== "false",
     // An emptied hint is a CLEAR, which the contract spells as an explicit
     // null. Sending "" instead would store an empty string the reader cannot

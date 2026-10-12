@@ -28,7 +28,7 @@ func TestTheCertExportsReachTheWholePlan(t *testing.T) {
 	}
 	plan := Plan{
 		Objective: &Objective{Sentence: line("objective-text", "id-objective")},
-		Opening:   ptr(line("opening-text", "id-opening")),
+		Opening:   new(line("opening-text", "id-opening")),
 		TopRisk: &Risk{
 			Text: line("risk-text", "id-risk"),
 			Response: Response{

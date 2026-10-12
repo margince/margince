@@ -263,7 +263,7 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input) (crmcontracts.Com
 		Name:       nonEmpty(message.Subject),
 		Quote:      &quote,
 		At:         &message.At,
-		Origin:     ptr(origin(message)),
+		Origin:     new(origin(message)),
 	}}
 	by := crmcontracts.WrittenByModel
 	out := crmcontracts.Company360Suggestion{
@@ -357,5 +357,3 @@ func nonEmpty(v string) *string {
 	}
 	return &v
 }
-
-func ptr(v string) *string { return &v }

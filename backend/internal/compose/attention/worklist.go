@@ -162,8 +162,9 @@ func (s *Service) worklistIn(
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
+	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	failed := append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, beside.failed...)
+	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
@@ -181,6 +182,20 @@ func (s *Service) worklistIn(
 		}
 	}
 	return out, nil
+}
+
+// stampSources files each missing source under its category and says whether
+// it is a lane. Only a side read marks itself, so every unmarked entry is one.
+func stampSources(missing []crmcontracts.WorklistSourceUnavailable) []crmcontracts.WorklistSourceUnavailable {
+	for i := range missing {
+		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
+		missing[i].Category = &category
+		if missing[i].ContributesRows == nil {
+			lane := true
+			missing[i].ContributesRows = &lane
+		}
+	}
+	return missing
 }
 
 // worklistFrom projects an already-assembled day, so a test can drive the
@@ -201,7 +216,7 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf, s.money)
-	rows = append(rows, s.planRows...)
+	rows = append(append(rows, s.planRows...), s.followUps.rows...)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	rows = append(rows, waits...)
 	// What the night thought of each deal, onto whichever row is about it — the
@@ -261,6 +276,7 @@ func (s *Service) worklistFrom(
 	if s.planCoverage != nil {
 		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
 	}
+	s.followUps.bound(bounded)
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
 	// entirely — a rep narrowing to meetings would read "no tasks" rather than
@@ -338,11 +354,7 @@ func (s *Service) worklistFrom(
 	// decided over the rows that actually survive to the page: the folds above
 	// turn several rows into one, and a group is one thing to read rather than
 	// the three it was assembled from.
-	for i := range missing {
-		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
-		missing[i].Category = &category
-	}
-	missing = withRosterRefusal(missing, scoped)
+	missing = withRosterRefusal(stampSources(missing), scoped)
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(

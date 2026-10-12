@@ -20,7 +20,8 @@ func TestActivityLogInputNormalizesATranscriptBody(t *testing.T) {
 	transcript := "transcript"
 	raw := "Anna: hello   \r\nBen: hi\r\n"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "meeting", SourceSystem: &transcript, Body: &raw,
+		Source: "manual",
+		Kind:   "meeting", SourceSystem: &transcript, Body: &raw,
 	})
 	if err != nil {
 		t.Fatalf("a transcript on a meeting must be accepted: %v", err)
@@ -34,7 +35,8 @@ func TestActivityLogInputRefusesATranscriptOnAKindThatIsNotCallOrMeeting(t *test
 	transcript := "transcript"
 	body := "Anna: hello"
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "note", SourceSystem: &transcript, Body: &body,
+		Source: "manual",
+		Kind:   "note", SourceSystem: &transcript, Body: &body,
 	})
 	var wrongKind *TranscriptKindError
 	if !errors.As(err, &wrongKind) {
@@ -56,7 +58,8 @@ func TestActivityLogInputRefusesABlankTranscript(t *testing.T) {
 	transcript := "transcript"
 	blank := "   \n\n"
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "call", SourceSystem: &transcript, Body: &blank,
+		Source: "manual",
+		Kind:   "call", SourceSystem: &transcript, Body: &blank,
 	})
 	if !errors.Is(err, ErrBlankTranscript) {
 		t.Fatalf("err = %v, want ErrBlankTranscript", err)

@@ -291,7 +291,7 @@ func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
 
 	// Fill this domain's share of the ceiling with other senders' open
 	// questions, so the create below finds no room to ask.
-	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+	for i := range capture.PendingDeferralDomainCap {
 		other := fmt.Sprintf("filler%d@partner.example", i)
 		seedAttestedOutbound(t, e, fmt.Sprintf("filler-out-%d", i), other, fmt.Sprintf("filler-t%d", i))
 		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("filler-in-%d", i), other, fmt.Sprintf("filler-t%d", i))
@@ -535,7 +535,7 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 
 	// Fill this domain's share of the ceiling, so the create below finds no
 	// room to ask.
-	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+	for i := range capture.PendingDeferralDomainCap {
 		other := fmt.Sprintf("filler%d@partner.example", i)
 		seedAttestedOutbound(t, e, fmt.Sprintf("quiet-fill-out-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
 		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("quiet-fill-in-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
@@ -640,7 +640,7 @@ func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
 
 	// Fill the domain ceiling so the capture's own question is refused, which
 	// is what puts this contact in the sweep's selector at all.
-	for i := 0; i < capture.PendingDeferralDomainCap; i++ {
+	for i := range capture.PendingDeferralDomainCap {
 		other := fmt.Sprintf("kept%d@kunde.example", i)
 		seedAttestedOutbound(t, e, fmt.Sprintf("kept-fill-out-%d", i), other, fmt.Sprintf("kept-fill-t%d", i))
 		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("kept-fill-in-%d", i), other, fmt.Sprintf("kept-fill-t%d", i))

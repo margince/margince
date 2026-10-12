@@ -5,10 +5,10 @@
 
 package compose
 
-// The deep read's contact lane while it is shut (siteLeadCaptureOpen): somebody
-// a company's website names becomes nobody's lead until accepting one also sends
-// them the Article 14 notice. A read proposes no one, and a proposal staged
-// before the lane shut cannot be accepted, one decision at a time or in a bundle.
+// The deep read's contact lane while it is shut (siteLeadLaneRefusal). Somebody
+// a company's website names becomes nobody's lead until the Article 14 notice
+// they are sent has passed legal review. A read proposes no one. A proposal
+// staged before the lane shut cannot be accepted, alone or in a bundle.
 
 import (
 	"context"
@@ -74,17 +74,26 @@ func runTeamDeepReadOn(t *testing.T, e *integration.Env, company ids.UUID, site 
 	return done, svc
 }
 
+// annaOnTheTeamPage is the contact acmeTeamSite publishes with an address.
+var annaOnTheTeamPage = siteContact{
+	Name: "Anna Muster", Role: "Chief Executive Officer", PublishedEmail: "anna@acme.example",
+	EvidenceSnippet: "Anna Muster is our Chief Executive Officer", SourceURL: seedURL + "/team",
+}
+
 // stageSiteLeadAsBefore stages one site_lead proposal through the lane's own
 // writer, the way a read did before the lane shut, and answers its id.
 func stageSiteLeadAsBefore(t *testing.T, e *integration.Env, company ids.UUID, bundleID ids.UUID) ids.ApprovalID {
 	t.Helper()
+	return stageSiteLeadFrom(t, e, company, bundleID, ids.NewV7(), annaOnTheTeamPage)
+}
+
+// stageSiteLeadFrom stages one contact as the read that found them would.
+func stageSiteLeadFrom(
+	t *testing.T, e *integration.Env, company, bundleID, readID ids.UUID, contact siteContact,
+) ids.ApprovalID {
+	t.Helper()
 	svc := approvalsServiceWithEffects(e.Pool)
-	contact := siteContact{
-		Name: "Anna Muster", Role: "Chief Executive Officer", PublishedEmail: "anna@acme.example",
-		EvidenceSnippet: "Anna Muster is our Chief Executive Officer", SourceURL: seedURL + "/team",
-	}
 	var id ids.ApprovalID
-	readID := ids.NewV7()
 	ctx := withClaimedRequester(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), readID)
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		in, err := siteLeadStageInput(approvalSummaryCopyIn(ctx, tx), readID, company, seedURL, contact, bundleID)

@@ -693,6 +693,10 @@
           "content_type": {
             "type": "string"
           },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "created_at": {
             "type": "string"
           },
@@ -5320,6 +5324,10 @@
                 "content_type": {
                   "type": "string"
                 },
+                "contract_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "created_at": {
                   "type": "string"
                 },
@@ -7238,6 +7246,12 @@
             "type": "string",
             "format": "uuid"
           },
+          "sections_omitted": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "stakeholders": {
             "type": "array",
             "items": {
@@ -7274,6 +7288,7 @@
           "open_commitments",
           "phase",
           "project_id",
+          "sections_omitted",
           "stakeholders"
         ]
       },
@@ -8618,6 +8633,9 @@
                   },
                   "status": {
                     "type": "string"
+                  },
+                  "updates_not_reversed": {
+                    "type": "integer"
                   }
                 },
                 "required": [

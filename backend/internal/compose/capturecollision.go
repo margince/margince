@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -87,7 +88,7 @@ func captureCollisionAcceptEffect(svc *approvals.Service, store *contacts.Store)
 			return fmt.Errorf("compose: decoding the captured lead fields: %w", err)
 		}
 		if _, ok := principal.Actor(ctx); !ok {
-			return fmt.Errorf("compose: capture-collision accept without a deciding principal")
+			return errors.New("compose: capture-collision accept without a deciding principal")
 		}
 		entityType, entityID, err := svc.StagedTarget(ctx, approvalID)
 		if err != nil {

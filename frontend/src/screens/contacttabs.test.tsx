@@ -158,15 +158,12 @@ describe("the timeline tab", () => {
     expect(screen.getByText("Fleet renewal")).toBeTruthy();
   });
 
-  it("opens on the whole chronology rather than on one cut of it", () => {
-    // What was said and what changed are one order of events, and a reader who
-    // wanted them together had to know a cut existed and choose it. The two
-    // narrower cuts stay for a reader who wants only one of them.
+  it("opens on All, the conversation", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
     const pressed = (name: string) =>
       screen.getByRole("button", { name }).getAttribute("aria-pressed");
     expect(pressed("All")).toBe("true");
-    expect(pressed("Activities")).toBe("false");
+    expect(pressed("Changes")).toBe("false");
   });
 
   // The cuts stand in the panel's body, over the row that narrows whichever

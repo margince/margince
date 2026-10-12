@@ -44,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // LinkedInMatchResult reports what one matching pass decided.
@@ -453,18 +454,14 @@ func CompanyLinkedInReach(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 		return nil, err
 	}
-	// Both halves of "still works here", not just archived_at. A reach count is
-	// an offer to ask a colleague for an intro, and a deactivated account is as
-	// unreachable as an archived one — filtering on archived_at alone answers
-	// "ask Lars" about someone who cannot be asked. Spelled out rather than
-	// taken from identity.LiveMemberSQL because a module never imports a
-	// sibling (ADR-0054 §3); TestOnlyOneSpellingOfALiveMember holds the two
-	// together.
+	// Both halves of "still works here", not just archived_at. A reach count
+	// offers to ask a colleague for an intro, and a deactivated account is as
+	// unreachable as an archived one.
 	rows, err := tx.Query(ctx, `
 		SELECT g.owner_user_id, count(*)
 		  FROM linkedin_connection g
 		  JOIN app_user u ON u.id = g.owner_user_id
-		                 AND u.status = 'active' AND u.archived_at IS NULL
+		                 AND `+workforce.LiveMemberSQL("u")+`
 		 WHERE g.matched_company_id = $1
 		   AND g.tombstoned_at IS NULL
 		   AND g.match_status <> 'rejected'

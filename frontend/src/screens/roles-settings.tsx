@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../app/capability";
 import {
@@ -12,13 +13,14 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStack } from "../design-system/cellstack";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { Select } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import { QueryGate, useMe } from "./common";
 import { useExtensions } from "./extensions.queries";
 import {
@@ -30,6 +32,7 @@ import {
   useRoles,
 } from "./roles.queries";
 import { RoleDetail } from "./roles-detail";
+import { useRosterWalk } from "./roster";
 import "./roles-settings.css";
 
 // Settings → Roles and permissions: every role the company defines, and the
@@ -52,7 +55,9 @@ export function RolesSettings() {
   const isAdmin = useHoldsAdminRole();
   const [showArchived, setShowArchived] = useState(false);
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const readsMembers = useCan("user_admin", "read");
   const roles = useRoles(readsRoles, showArchived);
+  const roster = useRosterWalk("user", readsRoles && readsMembers);
   const units = useExtensions(readsRoles && readsUnits);
   const open = roles.data?.find((role) => role.key === openKey);
   const readOnly = me.isSuccess && !(mayUpdate || mayCreate || mayMove);
@@ -66,28 +71,35 @@ export function RolesSettings() {
             <NewRoleAction roles={roles.data} onCreated={setOpenKey} />
           ) : undefined
         }
+        actions={
+          // Kept while archived roles are asked for, so a failed read of them
+          // can still be turned back off.
+          (roles.data !== undefined || showArchived) && (
+            <Switch
+              label={t("roles.showArchived")}
+              hint={t("roles.showArchivedSub")}
+              checked={showArchived}
+              onChange={setShowArchived}
+            />
+          )
+        }
       >
         <PanelBody>
           <PanelIntro>
             {t("roles.sub")}
             {readOnly && ` ${t("roles.readOnly")}`}
           </PanelIntro>
-          <Switch
-            label={t("roles.showArchived")}
-            hint={t("roles.showArchivedSub")}
-            checked={showArchived}
-            onChange={setShowArchived}
-          />
-          <QueryGate query={roles} pendingLabel={t("roles.title")}>
-            {(list) => (
-              <RoleList
-                roles={list}
-                openKey={openKey}
-                onOpen={(key) => setOpenKey(key)}
-              />
-            )}
-          </QueryGate>
         </PanelBody>
+        <QueryGate query={roles} pendingLabel={t("roles.title")}>
+          {(list) => (
+            <RoleList
+              roles={list}
+              members={memberCounts(roster.data)}
+              openKey={openKey}
+              onOpen={(key) => setOpenKey(key)}
+            />
+          )}
+        </QueryGate>
       </Panel>
       {open && (
         <RoleDetail
@@ -105,50 +117,124 @@ export function RolesSettings() {
   );
 }
 
+type RosterWalk = NonNullable<ReturnType<typeof useRosterWalk>["data"]>;
+
+// Undefined when the roster cannot say. Role keys ride only for a member
+// admin, and a walk that stopped short would count low while reading as whole.
+export function memberCounts(
+  roster: RosterWalk | undefined,
+): ReadonlyMap<string, number> | undefined {
+  if (!roster || roster.partial) {
+    return undefined;
+  }
+  const counts = new Map<string, number>();
+  for (const entry of roster.entries) {
+    if (!("email" in entry)) {
+      continue;
+    }
+    if (entry.roles === undefined) {
+      return undefined;
+    }
+    for (const key of entry.roles) {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+// Custom roles first: they are the ones an admin made and comes back to edit.
+function customFirst(roles: readonly Role[]): Role[] {
+  return [...roles].sort((a, b) => Number(a.is_system) - Number(b.is_system));
+}
+
 function RoleList({
   roles,
+  members,
   openKey,
   onOpen,
 }: Readonly<{
   roles: readonly Role[];
+  members: ReadonlyMap<string, number> | undefined;
   openKey: string | null;
   onOpen: (key: string) => void;
 }>) {
   const t = useT();
-  const label = roleLabel(t);
   if (roles.length === 0) {
-    return <EmptyState>{t("roles.empty")}</EmptyState>;
+    return (
+      <PanelBody>
+        <EmptyState>{t("roles.empty")}</EmptyState>
+      </PanelBody>
+    );
   }
   return (
-    <SettingList>
-      {roles.map((role) => {
-        const name = label(role.key, role.name);
-        return (
-          <SettingRow
-            key={role.key}
-            testId={`role-${role.key}`}
-            label={name}
-            description={t(`roles.scope.${role.row_scope}Sub`)}
-            control={
-              <>
-                {role.is_system && <Badge>{t("roles.system")}</Badge>}
-                {role.archived_at && (
-                  <Badge tone="warning">{t("roles.archived")}</Badge>
-                )}
-                <Button
-                  variant={role.key === openKey ? "primary" : undefined}
-                  aria-label={t("roles.openNamed", { name })}
-                  aria-pressed={role.key === openKey}
-                  onClick={() => onOpen(role.key)}
-                >
-                  {t("roles.open")}
-                </Button>
-              </>
-            }
-          />
-        );
-      })}
-    </SettingList>
+    <>
+      {customFirst(roles).map((role) => (
+        <RoleRow
+          key={role.key}
+          role={role}
+          members={members?.get(role.key) ?? (members ? 0 : undefined)}
+          open={role.key === openKey}
+          onOpen={() => onOpen(role.key)}
+        />
+      ))}
+    </>
+  );
+}
+
+function RoleRow({
+  role,
+  members,
+  open,
+  onOpen,
+}: Readonly<{
+  role: Role;
+  members: number | undefined;
+  open: boolean;
+  onOpen: () => void;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const id = useId();
+  return (
+    <PanelRow interactive record className="roles-row">
+      <button
+        type="button"
+        className="roles-row-press"
+        data-testid={`role-${role.key}`}
+        aria-current={open ? "true" : undefined}
+        aria-labelledby={`${id}-name`}
+        aria-describedby={`${id}-scope ${id}-facts`}
+        onClick={onOpen}
+      >
+        <CellStack>
+          <span className="t-name" id={`${id}-name`}>
+            {roleLabel(t)(role.key, role.name)}
+          </span>
+          <span className="t-caption" id={`${id}-scope`}>
+            {t(`roles.scope.${role.row_scope}Sub`)}
+          </span>
+        </CellStack>
+        <span className="roles-row-facts" id={`${id}-facts`}>
+          {members !== undefined && (
+            <span className="t-caption t-num">
+              {plural("roles.members", members, {
+                count: formatNumber(members, locale),
+              })}
+            </span>
+          )}
+          {role.is_system ? (
+            <Badge>{t("roles.system")}</Badge>
+          ) : (
+            <Badge tone="accent">{t("roles.custom")}</Badge>
+          )}
+          {role.archived_at && (
+            <Badge tone="warning">{t("roles.archived")}</Badge>
+          )}
+        </span>
+        <ChevronRight className="roles-row-go" aria-hidden />
+      </button>
+    </PanelRow>
   );
 }
 

@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # Relationships, introductions and research
 
-Three questions go together here. Who here already knows a contact? How do you get a warm introduction to someone you do not know? And what can Margince read about a company from its own website?
+Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
 
 ### Who here knows this contact?
 To see who in your company knows a contact in Margince, open the contact's page and choose the **Network** tab. **Routes** lists the colleagues who write with them, best route first.
@@ -45,6 +45,78 @@ The contact's **Network** tab also shows who can reach them, in four groups: **Y
 It counts and never shows the messages: "{total} interactions in 90 days · {inbound} in, {outbound} out", with "Counts only. The messages stay on the timeline."
 
 Where the map is not complete, it says so: "{count} more not shown.", "Some colleagues are not shown."
+
+### How do I import my LinkedIn connections?
+To import your LinkedIn network, open **Settings**, then **Connections**, and use the **LinkedIn connections** card.
+1. On LinkedIn, open **Settings**, then **Data privacy**, then **Get a copy of your data**, and ask for the archive.
+2. When the download arrives, open the archive and take the file named Connections.csv. Do not edit it.
+3. In Margince, choose **Edit** beside **Your LinkedIn profile URL**, paste your profile address, and choose **Save profile**.
+4. Choose **Choose Connections.csv** and pick the file. The import starts at once.
+5. Read the counts: **Connections imported**, **Matched to a contact** and **Awaiting confirmation**.
+   **Rows skipped (no usable name)** shows only when there are any.
+Saving your profile is optional. It makes the network read "Anna knows them", not "the company knows them".
+The LinkedIn step when you first set up Margince only saves your profile; the import itself is always here.
+Also called: LinkedIn import, upload my network, Connections.csv, LinkedIn export.
+
+## Your LinkedIn network
+
+There is no LinkedIn app to approve and nothing calls LinkedIn. You download your own export, and you upload it.
+
+The network you import is **yours alone**. Nobody can upload a network for a colleague, and no colleague, admin included, can open your list. An agent cannot import, read or change it.
+
+The importer reads LinkedIn's English and German exports. A file it cannot read is refused whole, with nothing imported, and the message says to export the file again.
+
+### What the imported connections are
+
+**An imported connection never becomes a contact.** It stays out of search, lists and contact pages. Nobody can write to it, log an activity on it or email it.
+
+It exists to answer one question: does someone here already know someone at this company?
+
+### How a connection is matched to a contact
+
+Matching runs as soon as the upload ends.
+
+| What matches | What happens |
+|---|---|
+| The email address of a contact | Matched at once |
+| The exact name, at the contact's current employer, with no one else of that name there | Matched at once |
+| A name with another spelling ("André" and "Andre") at the same employer | Sent for your decision as a **LinkedIn match** approval |
+| Two contacts with that name at that employer | Nothing: choosing one would be a guess |
+| A name alone, with no employer that matches | Nothing |
+
+A **LinkedIn match** approval shows **Name on LinkedIn** and **Company on LinkedIn** beside the contact it may be. It waits with your other approvals; see [Approvals](approvals.md). A colleague who can already see that contact can decide it too, and the link still goes on your network.
+
+When you accept a match, the connection's own LinkedIn profile goes on the contact. A contact that already has a LinkedIn profile keeps it.
+
+**A refusal lasts.** Once you reject a match, Margince never asks about that pair again, even after a new import.
+
+### Why nothing matched yet
+
+"No matches yet, which is normal for a new company." The contacts and companies your connections could match arrive over the following hours, as mail is read.
+
+You do not need to upload again. Matching runs again every hour, and whenever a contact or company is added or changed. A new company can match many of your connections at once.
+
+### Network reach
+
+The **Network reach** card, under the import card, lists the "Companies on file where you know someone, most connections first."
+
+| Column | What it shows |
+|---|---|
+| **Company** | The company, with a link to its page |
+| **Connections** | How many of your connections work there |
+| **Already on file** | How many of those are matched to a contact, as "{onFile} of {total}" |
+
+The gap between the last two columns is the finding: connections you know there who are not yet a contact. Only a matched connection counts as on file.
+
+The note under the table says how many companies are past the list's end. It also says how many connections work at companies not on file yet. A company you are not allowed to see counts as not on file, so the card never tells you it exists.
+
+### Importing a new export
+
+Importing again **updates** your connections and makes no copies, so the counts keep their meaning. A connection that dropped out of an earlier export comes back.
+
+A row with no usable name is counted under **Rows skipped (no usable name)**. A row for a contact whose data was erased is refused, and is not counted as imported.
+
+When your seat is turned off, your imported connections are deleted with it.
 
 ### How do I ask for a warm introduction?
 To ask a colleague for a warm introduction in Margince, open the contact's **Network** tab. Press **Ask {name} to introduce you** (or **Use this route** on the map), fill in the request, and press **Request introduction**.
@@ -201,3 +273,46 @@ The dossier, the scan and the growth fit are yours alone. An agent cannot read a
 ### When it is not available
 
 If your Margince has no website reader, the panel says "Website research is not configured on this server." The button stays in view, so if you press it and get that sentence, the cause is your Margince, not the company's website.
+
+### What does the Technology card on a company show?
+The **Technology** card shows "What this company publicly runs, read from its DNS records, certificates and homepage."
+1. Open the company and choose the **Profile** tab.
+2. Find **Technology** under the website research card.
+3. Read its parts: **Mail**, **Website technology**, **Services** and **Hosting**.
+4. Open a value's evidence mark to see the public record behind it.
+The card has no button. To refresh it, press **Read website again** on the website research card.
+Also called: tech stack, technographics, what software a company uses, mail provider, hosting provider.
+
+## What a company publicly runs
+
+The **Technology** card fills in on its own after the company's website is read. Until then it says "No technical data yet. Filled in and refreshed automatically when the company's website is read."
+
+| Part | What it says | Read from |
+|---|---|---|
+| **Mail** | Who runs their mail, such as Google Workspace or Microsoft 365, and how their mail is protected | The company's public mail records |
+| **Website technology** | What the site is built with, such as Shopware, WordPress or Matomo | The pages the website read fetched |
+| **Services** | What they operate, such as a webshop, a careers site, a customer portal or a status page | Public certificate logs |
+| **Hosting** | Where the site runs, such as Hetzner, AWS or Cloudflare | The site's public address records |
+
+No AI model is involved. Every value comes from fixed rules, and each one names the record that proved it.
+
+**Website technology** has two kinds of value. One is what the site itself serves, such as a page header or a script. The other is what the company states it uses, on its own pages. A vendor that is only named, compared or listed as a partner is not counted.
+
+### How the card stays current
+
+Mail, hosting and services refresh on their own once they are about a week old. **Website technology** changes only when the website is read again, because only a read sees the pages.
+
+A company that moves from Google to Microsoft 365 ends up with one mail provider, not two. A change shows among the company's **Signals** as **Technology change**.
+
+When a source did not answer, the card names it, such as "Certificates did not respond. The previous result is unchanged." So a missing service can mean "not checked today", not "they have none". "The site blocked the read." means the site refused the page read.
+
+A value a colleague corrected by hand stays on the card, and no refresh removes it.
+
+Certificate logs list every address on a company's certificates, and some carry the names of staff. Margince keeps only addresses that name a service, so a name never reaches the record.
+
+### When the card stays empty
+
+- The company has no website on file. The card reads only the website the company record holds.
+- Nobody has read the website yet. Press **Start company research**.
+- The company publishes few signals. A small site on shared hosting is a normal empty result.
+- Your Margince has these public lookups turned off. Ask whoever runs your installation.

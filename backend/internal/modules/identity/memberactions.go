@@ -57,17 +57,11 @@ type memberTarget struct {
 // allowedMemberActions answers, per member, the verbs this caller would be
 // admitted to right now. Read in the caller's transaction, without the locks
 // the writes take.
-func (s *Service) allowedMemberActions(ctx context.Context, tx pgx.Tx, actor Identity, rows []userRow) (map[ids.UUID][]memberAction, error) {
+func (s *Service) allowedMemberActions(
+	ctx context.Context, tx pgx.Tx, actor Identity, rows []userRow, grants map[ids.UUID]seatGrants,
+) (map[ids.UUID][]memberAction, error) {
 	ctx = actorCtx(ctx, actor)
-	userIDs := make([]ids.UUID, 0, len(rows))
-	for _, row := range rows {
-		userIDs = append(userIDs, row.ID)
-	}
-	grants, err := loadGrantsFor(ctx, tx, userIDs)
-	if err != nil {
-		return nil, err
-	}
-	archived, err := archivedRoleHolders(ctx, tx, userIDs)
+	archived, err := archivedRoleHolders(ctx, tx, rowIDs(rows))
 	if err != nil {
 		return nil, err
 	}

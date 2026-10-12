@@ -10,7 +10,7 @@
 
 import { api } from "../api/client";
 import type { EntityKind } from "../app/entity";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export type Candidate = { id: string; name: string };
 
@@ -19,12 +19,11 @@ export type Candidate = { id: string; name: string };
 // because it answers "which companies are we selling to"; this question is a
 // different one, so it opts back in (ADR-0082).
 async function searchCompanyCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q, limit: 10, include_anchor: true } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: { query: { q, limit: 10, include_anchor: true } },
+    }),
+  );
   return data.data.map((company) => ({
     id: company.id,
     name: company.display_name,
@@ -32,12 +31,11 @@ async function searchCompanyCandidates(q: string): Promise<Candidate[]> {
 }
 
 async function searchContactCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/contacts", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/contacts", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((contact) => ({
     id: contact.id,
     name: contact.full_name,
@@ -51,12 +49,11 @@ async function searchContactCandidates(q: string): Promise<Candidate[]> {
 const DEAL_PICKER_PAGE = 50;
 
 async function searchDealCandidates(q: string): Promise<Candidate[]> {
-  const { data, error } = await api.GET("/deals", {
-    params: { query: { limit: DEAL_PICKER_PAGE } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/deals", {
+      params: { query: { limit: DEAL_PICKER_PAGE } },
+    }),
+  );
   const needle = q.toLowerCase();
   return data.data
     .filter((deal) => deal.name.toLowerCase().includes(needle))

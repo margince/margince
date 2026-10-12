@@ -44,10 +44,10 @@ import (
 // wholesale. A value nothing can ever emit would be vocabulary a client had
 // to handle and would never see.
 const (
-	graphGroupContacts  = crmcontracts.CompanyGraphGroupsOmitted("contacts")
-	graphGroupDeals     = crmcontracts.CompanyGraphGroupsOmitted("deals")
-	graphGroupIntroPath = crmcontracts.CompanyGraphGroupsOmitted("intro_path")
-	graphGroupOurSide   = crmcontracts.CompanyGraphGroupsOmitted("our_side")
+	graphGroupContacts    = crmcontracts.CompanyGraphGroupsOmitted("contacts")
+	graphGroupDeals       = crmcontracts.CompanyGraphGroupsOmitted("deals")
+	graphGroupSignalRoute = crmcontracts.CompanyGraphGroupsOmitted("signal_route")
+	graphGroupOurSide     = crmcontracts.CompanyGraphGroupsOmitted("our_side")
 )
 
 // How many nodes of each capped group one graph carries. The card is a
@@ -248,7 +248,7 @@ func (g *graphAssembly) build() error {
 	}{
 		{graphGroupContacts, g.readEmployment},
 		{graphGroupDeals, g.readOpenDeals},
-		{graphGroupIntroPath, g.readRouteIn},
+		{graphGroupSignalRoute, g.readRouteIn},
 	} {
 		if err := g.group(group.name, group.read); err != nil {
 			return err
@@ -281,7 +281,7 @@ func (g *graphAssembly) build() error {
 	if err := g.placePeerEdges(); err != nil {
 		return err
 	}
-	g.markIntroPath()
+	g.markSignalRoute()
 	return nil
 }
 

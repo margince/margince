@@ -40,6 +40,7 @@ func buildCatalog() map[Language]Copy {
 	notificationLines(line)
 	digestLines(line)
 	confirmLines(line)
+	noticeLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
 }
@@ -103,133 +104,6 @@ func inviteLines(line writeLine) {
 		"If you weren't expecting this, you can ignore this email.",
 		"Hast du das nicht erwartet, kannst du diese E-Mail ignorieren.",
 		"Nếu bạn không mong đợi điều này, bạn có thể bỏ qua email này.")
-}
-
-// weeklyLines is the Monday retrospective: what the week did, and then what a
-// reader does next with it. Split where the mail itself changes subject — the
-// counted figures above, the movement and the two links below — because the
-// list is one call per line and grows every time the mail says something new.
-func weeklyLines(line writeLine) {
-	weeklyFigureLines(line)
-	weeklyMovementLines(line)
-}
-
-// weeklyFigureLines are the counted outcomes: what was delivered, won, lost,
-// moved, decided, and how much of the morning queue was answered.
-func weeklyFigureLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklySubject },
-		"Your week: ",
-		"Deine Woche: ",
-		"Tuần của bạn: ")
-	line(func(c *Copy) *string { return &c.WeeklyHeading },
-		"Your week of ",
-		"Deine Woche ab ",
-		"Tuần của bạn từ ")
-	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
-		"Tasks delivered",
-		"Aufgaben erledigt",
-		"Công việc đã hoàn thành")
-	line(func(c *Copy) *string { return &c.WeeklyOfDue },
-		"%d of %d",
-		"%d von %d",
-		"%d trên %d")
-	line(func(c *Copy) *string { return &c.WeeklyDealsWon },
-		"Won",
-		"Gewonnen",
-		"Thắng")
-	line(func(c *Copy) *string { return &c.WeeklyDealsLost },
-		"Lost",
-		"Verloren",
-		"Thua")
-	line(func(c *Copy) *string { return &c.WeeklyMoved },
-		"Moved",
-		"Bewegt",
-		"Đã chuyển")
-	line(func(c *Copy) *string { return &c.WeeklyDecided },
-		"Proposals decided",
-		"Entschiedene Vorschläge",
-		"Bạn đã quyết")
-	weeklyDecisionLines(line)
-}
-
-// weeklyDecisionLines is the retrospective's second half: what the reader did
-// with their queue, and how each thing turned out.
-//
-// Split from weeklyLines, which had grown past the function ceiling. The seam
-// is the one the mail itself has — the top of the message reports the week's
-// numbers, and from here down it reports the reader's own decisions — so the
-// two are edited for different reasons and read as two blocks on the page.
-func weeklyDecisionLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyYes },
-		"yes",
-		"ja",
-		"đồng ý")
-	line(func(c *Copy) *string { return &c.WeeklyNo },
-		"no",
-		"nein",
-		"từ chối")
-	weeklyQueueLines(line)
-	weeklyClosingLines(line)
-}
-
-// weeklyQueueLines is the retrospective's middle: what the morning list did
-// with the week, and what it carried into the next one.
-func weeklyQueueLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyQueue },
-		"Morning brief items",
-		"Einträge im Morgenbericht",
-		"Danh sách buổi sáng")
-	line(func(c *Copy) *string { return &c.WeeklyActed },
-		"acted",
-		"bearbeitet",
-		"đã xử lý")
-	line(func(c *Copy) *string { return &c.WeeklyDismissed },
-		"dismissed",
-		"weggeklickt",
-		"đã bỏ qua")
-	line(func(c *Copy) *string { return &c.WeeklyCarried },
-		"Carried over",
-		"Übertragen",
-		"Chuyển tiếp")
-}
-
-// weeklyMovementLines are what actually moved, the way on to the rest of it,
-// and the words a single row's outcome is written with.
-func weeklyMovementLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyWhatMoved },
-		"What moved:",
-		"Was sich bewegt hat:",
-		"Những gì đã chuyển động:")
-	line(func(c *Copy) *string { return &c.WeeklyAndMore },
-		"… and %d more, on Home",
-		"… weitere auf Home: %d",
-		"… và %d mục nữa, trên Home")
-}
-
-// weeklyClosingLines is what the retrospective asks for once it has reported:
-// next week's plan, the archive behind it, and the outcome words the movement
-// list is written in.
-func weeklyClosingLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
-		"This week’s commitments",
-		"Zusagen dieser Woche",
-		"Cam kết tuần này")
-	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
-		"The full week, and the ones before it:",
-		"Die ganze Woche, und die davor:",
-		"Cả tuần, và những tuần trước:")
-	line(func(c *Copy) *string { return &c.WeeklyOutcomeWon },
-		"won",
-		"gewonnen",
-		"thắng")
-	line(func(c *Copy) *string { return &c.WeeklyOutcomeLost },
-		"lost",
-		"verloren",
-		"thua")
-	line(func(c *Copy) *string { return &c.WeeklyOutcomeMoved },
-		"moved",
-		"bewegt",
-		"đã chuyển")
 }
 
 // morningLines is the daily brief.
@@ -332,18 +206,12 @@ func digestLines(line writeLine) {
 		"Mở danh sách công việc:")
 }
 
-// confirmLines is the copy for messages addressed to a contact the installation
-// holds a record about, rather than to a colleague who works here.
-//
-// The English is the wording that shipped, unchanged: it is pinned by hash and
-// recorded on every consent proof, so moving a word here is a version bump, not
-// a translation. The order these are registered in is part of that — the
-// sections below run in sequence for the same reason.
-//
-// The German and Vietnamese use the formal address (Sie / quý vị), unlike the
-// reset and invite copy above. Those speak to a colleague who works here; these
-// speak to a stranger the installation holds a record about, and about their
-// own rights.
+// confirmLines is the copy for a contact the installation holds a record about.
+// The English is pinned by hash on every consent proof, so moving a word or
+// reordering these registrations is a version bump, not a translation.
+// German and Vietnamese use the formal address (Sie; quý khách or quý vị). This
+// copy speaks to a stranger about their own rights, and the reset and invite
+// copy above to a colleague.
 func confirmLines(line writeLine) {
 	confirmAskLines(line)
 	recordNoticeLines(line)
@@ -361,26 +229,26 @@ func confirmAskLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
 		"News from time to time, roughly once a month. Your choice is respected.",
 		"Neuigkeiten von Zeit zu Zeit, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
-		"Tin tức thỉnh thoảng, khoảng mỗi tháng một lần. Bạn quyết định, và tôi sẽ tuân theo.")
+		"Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
 		"Subscribe to news",
 		"Neuigkeiten abonnieren",
-		"Có, hãy gửi tin cho tôi")
+		"Đăng ký nhận tin")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingNo },
 		"Do not send news",
 		"Keine Neuigkeiten senden",
-		"Không, chỉ cần giữ thông tin của tôi chính xác")
+		"Không gửi tin cho tôi")
 	// THE DEDICATED SUBSCRIPTION LINK'S OWN QUESTION, which names the purpose
 	// rather than describing a frequency. A grant through that door binds this;
 	// one through the record-confirmation door binds the pair above.
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionAsk },
 		"Confirm that you want to receive {purpose}.",
 		"Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
-		"Xác nhận rằng bạn muốn nhận {purpose}.")
+		"Xác nhận quý khách muốn nhận {purpose}.")
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
 		"Confirm subscription",
 		"Abonnement bestätigen",
-		"Có, đăng ký cho tôi")
+		"Xác nhận đăng ký")
 }
 
 // recordNoticeLines is the copy for the messages the installation sends about a

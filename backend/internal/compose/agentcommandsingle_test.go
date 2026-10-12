@@ -257,12 +257,9 @@ func TestAMergeStagesTheSurvivorTheBodyNamesRatherThanTheRoutedRecord(t *testing
 // where that shows: a site crawl a resolver describes as a page read is an
 // approval given for something else entirely.
 //
-// The SUMMARY rather than the inbox line, and the difference is worth stating.
-// stagedTarget (agentgatestaging.go) takes only the TARGET from the resolver
-// and writes restSummary as the line an approver reads on this door — that line
-// names the concrete path, so a human here does see which read they are
-// releasing. What the summary proves is that the erased command underneath
-// carries the right depth at all, which is the only handle this door has on it.
+// The resolver's SUMMARY is what stagedSentence puts in front of the approver,
+// so a human here reads which read they are releasing. What the summary proves
+// is that the erased command underneath carries the right depth at all.
 func TestTheTwoEnrichRoutesStageTheDepthTheirOwnRouteMeans(t *testing.T) {
 	staged := map[string]string{}
 	for _, c := range []struct{ op, path string }{

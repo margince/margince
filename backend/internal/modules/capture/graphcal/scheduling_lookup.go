@@ -6,7 +6,7 @@ package graphcal
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -40,7 +40,7 @@ func (a *httpAPI) Lookup(ctx context.Context, token string, in connector.Calenda
 //nolint:nilnil // A mismatched saved interval requires an update, not a second create.
 func matchingReceipt(event scheduledEvent, in connector.CalendarAppointment) (*connector.CalendarReceipt, error) {
 	if event.ID == "" || (!in.Cancel && event.Canceled) || (in.EventID != "" && event.ID != in.EventID) {
-		return nil, fmt.Errorf("calendar: event identity is unavailable")
+		return nil, errors.New("calendar: event identity is unavailable")
 	}
 	if in.Cancel {
 		return &connector.CalendarReceipt{EventID: event.ID}, nil
@@ -57,7 +57,7 @@ func matchingReceipt(event scheduledEvent, in connector.CalendarAppointment) (*c
 		if in.EventID != "" {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("calendar: existing invitation has changed; reconcile before retrying")
+		return nil, errors.New("calendar: existing invitation has changed; reconcile before retrying")
 	}
 	return &connector.CalendarReceipt{EventID: event.ID, UID: event.UID, URL: event.URL, VideoURL: event.videoURL()}, nil
 }
@@ -72,7 +72,7 @@ func (a *httpAPI) Inspect(ctx context.Context, token, calendar, event string) (c
 		return connector.CalendarState{}, err
 	}
 	if out.ID != event {
-		return connector.CalendarState{}, fmt.Errorf("calendar: mismatched event identity")
+		return connector.CalendarState{}, errors.New("calendar: mismatched event identity")
 	}
 	if out.Canceled {
 		return connector.CalendarState{Canceled: true}, nil
@@ -100,7 +100,7 @@ func (a *httpAPI) lookupRequest(ctx context.Context, token string, in connector.
 		return nil, nil
 	}
 	if len(result.Events) != 1 || result.Next != "" {
-		return nil, fmt.Errorf("calendar: ambiguous invitation identity")
+		return nil, errors.New("calendar: ambiguous invitation identity")
 	}
 	return &result.Events[0], nil
 }

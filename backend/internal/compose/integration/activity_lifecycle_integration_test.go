@@ -89,7 +89,7 @@ func TestActivityUpdateArchiveRelink(t *testing.T) {
 func assertRelinkIdempotentAndVisibilityScoped(t *testing.T, e *apptest.AppEnv, taskID, contactID string) {
 	t.Helper()
 	// Relink: idempotent association onto a visible contact.
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", AnyMap{
 			"entity_type": "contact", "entity_id": contactID,
 		}, nil, nil); status != http.StatusOK {

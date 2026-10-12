@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -227,10 +228,8 @@ func (s *Store) ReversalAnsweredThis(
 	if err != nil {
 		return false, err
 	}
-	for _, e := range earlier {
-		if asking.SameQuestionAs(e) {
-			return true, nil
-		}
+	if slices.ContainsFunc(earlier, asking.SameQuestionAs) {
+		return true, nil
 	}
 	return false, nil
 }
@@ -290,11 +289,9 @@ func (c *CloseDateCorrector) reversedSameQuestion(
 		if err != nil {
 			return err
 		}
-		for _, e := range earlier {
-			if asking.SameQuestionAs(e) {
-				found = true
-				return nil
-			}
+		if slices.ContainsFunc(earlier, asking.SameQuestionAs) {
+			found = true
+			return nil
 		}
 		return nil
 	})

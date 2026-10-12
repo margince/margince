@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // vcardCreateKind names the staged offer in the review queue.
@@ -174,9 +175,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 // sentence keeps that order.
 func vcardCreateSummary(said approvalSummaryCopy, fullName string) string {
 	name := strings.TrimSpace(fullName)
-	if runes := []rune(name); len(runes) > 80 {
-		name = string(runes[:80]) + "…"
-	}
+	name = textcut.RunesMarked(name, 80, "…")
 	return fmt.Sprintf(said.vcardResemblesContact, name)
 }
 

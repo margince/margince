@@ -107,17 +107,17 @@ func catalogProjection(t *testing.T, conn *pgx.Conn) string {
 // wholesale rewrite.
 func lineDiff(want, got string) (added, removed []string) {
 	inWant := map[string]bool{}
-	for _, ln := range strings.Split(want, "\n") {
+	for ln := range strings.SplitSeq(want, "\n") {
 		inWant[ln] = true
 	}
 	inGot := map[string]bool{}
-	for _, ln := range strings.Split(got, "\n") {
+	for ln := range strings.SplitSeq(got, "\n") {
 		inGot[ln] = true
 		if !inWant[ln] && ln != "" {
 			added = append(added, ln)
 		}
 	}
-	for _, ln := range strings.Split(want, "\n") {
+	for ln := range strings.SplitSeq(want, "\n") {
 		if !inGot[ln] && ln != "" {
 			removed = append(removed, ln)
 		}

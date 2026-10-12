@@ -17,6 +17,7 @@ package contacts
 // reads correctly can still return the wrong rows.
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -94,12 +95,7 @@ func (e *privacyEnv) findAccounts(t *testing.T, q string) []ids.UUID {
 }
 
 func holds(list []ids.UUID, want ids.UUID) bool {
-	for _, got := range list {
-		if got == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, want)
 }
 
 func TestAContactIsFoundByTheAddressARepPastedIn(t *testing.T) {

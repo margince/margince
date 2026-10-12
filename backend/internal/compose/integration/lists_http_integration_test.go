@@ -45,6 +45,7 @@ func TestListsAreAbsentWhenAnOperatorSwitchesThemOff(t *testing.T) {
 		{"GET", "/v1/lists/" + someList + "/members"},
 		{"POST", "/v1/lists/" + someList + "/members"},
 		{"POST", "/v1/lists/" + someList + "/members/remove"},
+		{"POST", "/v1/lists/" + someList + "/members/restore"},
 		{"GET", "/v1/lists/" + someList + "/members/" + someList + "/why"},
 		{"GET", "/v1/lists/" + someList + "/history"},
 		{"GET", "/v1/contacts?list_id=" + someList},

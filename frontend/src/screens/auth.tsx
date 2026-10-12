@@ -29,7 +29,7 @@ import {
   ProviderButtons,
   startFederatedSignIn,
 } from "./auth-providers";
-import { problemMessageOf, sessionAnswers, throwProblem } from "./common";
+import { problemMessageOf, sessionAnswers, unwrap } from "./common";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
 
@@ -487,13 +487,13 @@ function LoginForm({
       if (!result) {
         throw new LoginError("unreachable");
       }
-      const { data, error, response } = result;
-      if (error) {
-        if (response.status === 401) throw new LoginError("credentials");
-        if (response.status === 429) throw new LoginError("rate-limited");
-        if (response.status >= 500) throw new LoginError("unreachable");
-        throwProblem(error);
+      const { status } = result.response;
+      if (result.error) {
+        if (status === 401) throw new LoginError("credentials");
+        if (status === 429) throw new LoginError("rate-limited");
+        if (status >= 500) throw new LoginError("unreachable");
       }
+      const data = unwrap(result);
       // The login response only says the credential exchange succeeded. The
       // session is real when the app's authenticated /me probe accepts the
       // resulting cookie; keep the Core in its signing-in state until then.
@@ -656,12 +656,8 @@ function ForgotForm({
 
   const request = useMutation({
     mutationFn: async () => {
-      const { error } = await api.POST("/auth/forgot-password", {
-        body: { email: email.trim() },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const body = { email: email.trim() };
+      unwrap(await api.POST("/auth/forgot-password", { body }));
     },
     onSuccess: () => onSent(email.trim()),
   });

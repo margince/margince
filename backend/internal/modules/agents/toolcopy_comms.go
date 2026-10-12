@@ -30,7 +30,7 @@ var draftFollowUpsForCopy = toolCopy{
 		"evidenced, so it covers the same set whats_slipping_this_week reports. One call writes " +
 		"to many records, up to a server-side ceiling of 25.",
 	Instead: "Use draft_email for one specific conversation; this tool answers \"chase everything " +
-		"that is slipping\", not \"reply to this\".",
+		"that is slipping\" or \"that has gone quiet\", not \"reply to this\".",
 	Retain: "Each draft comes back with its deal_id and draft_activity_id — those are how a " +
 		"human finds the drafts to review.",
 }

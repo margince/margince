@@ -16,6 +16,7 @@ package meetingbrief
 // treated as zero would rank silently wrong, so it is not part of the score.
 
 import (
+	"slices"
 	"sort"
 	"time"
 
@@ -151,12 +152,7 @@ func freshness(claim ClaimIn, now time.Time) int {
 
 func ofKind(kinds ...string) func(ClaimIn) bool {
 	return func(c ClaimIn) bool {
-		for _, k := range kinds {
-			if c.Kind == k {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(kinds, c.Kind)
 	}
 }
 

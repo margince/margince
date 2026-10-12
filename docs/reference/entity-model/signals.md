@@ -6,7 +6,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 ## signal
 
-24 columns · primary key `(id)` · referenced by 2 foreign keys
+24 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

@@ -198,7 +198,7 @@ func schemaBlock(t *testing.T, doc, name string) string {
 // splitEnumList turns an `a, b, c` flow-list body into a sorted set slice.
 func splitEnumList(list string) []string {
 	var out []string
-	for _, tok := range strings.Split(list, ",") {
+	for tok := range strings.SplitSeq(list, ",") {
 		if tok = strings.TrimSpace(tok); tok != "" {
 			out = append(out, tok)
 		}

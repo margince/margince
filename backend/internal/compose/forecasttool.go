@@ -121,7 +121,7 @@ func forecastAsOf(req agents.ForecastRequest, now func() time.Time) (time.Time, 
 			Message: fieldAsOf + " is a calendar day, as YYYY-MM-DD",
 		}
 	}
-	return parsed, nil
+	return forecasting.DayNamed(parsed), nil
 }
 
 // forecastToolScope shapes the request's two scope keys into one scope. It

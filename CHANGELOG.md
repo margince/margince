@@ -12,6 +12,28 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- **One jurisdiction per installation.** An admin chooses the law the
+  installation follows at first setup, in `workspace.country` in
+  `margince.yaml`, or on **Settings → Governance → Jurisdiction**. It sets how
+  long business mail is kept, the due date of a privacy request and the rules
+  for sales mail. The page shows what the choice changes and lists the pack's
+  documents to read and download; the German employee notices moved there from
+  `docs/compliance`. A privacy request filed by hand now gets its due date
+  worked out, and a later date than the law allows is refused. **On upgrade**,
+  a stored country is kept. An installation with no stored country and no
+  `workspace.country` in its file stays unset, keeping mail for the longest
+  built-in floor, until an admin chooses the law. Boot
+  refuses a stored jurisdiction the build carries no pack for.
+- **The Margince skill for AI tools.** Settings → Agents → **Agent passports**
+  shows two ways to use a passport. **In your AI tool** has **Download skill**,
+  and **In your own code** has a curl, Python and JavaScript example that reads
+  the passport from `MARGINCE_PASSPORT`. `GET /v1/agent-bundle` (session only)
+  answers `margince-skill.zip`: one `margince/` folder with `README.md`,
+  `SKILL.md`, `INDEX.md` and an `openapi.yaml` that keeps only the operations a
+  passport can call. The API address in it, and `api_base_url` on
+  `GET /v1/passports`, is `MARGINCE_API_BASE_URL`, else
+  `MARGINCE_PUBLIC_BASE_URL`, else the request's own origin. The
+  **Connected agents** card is now **Connected MCP clients**.
 - AI provider health. A provider that is out of credit, rejecting its key,
   unreachable or degraded is marked on Settings → AI models and in the new
   **AI provider status** card under System health. A blocked provider is skipped
@@ -79,6 +101,17 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Changed
 
+- **The company graph names its signal route.** In `GET /companies/{id}/graph`,
+  `intro_path` is now `signal_route`. It is the contact the account's most recent
+  open signal proposes. A node's `intro_path` flag is now `on_signal_route`, and
+  `groups_omitted` names `signal_route`. Who should introduce us is still answered
+  by `GET /companies/{id}/intro-paths`.
+- **The handoff reads the project page.** `prepare_handoff` and
+  `GET /projects/{id}/handoff` take deals, stakeholders and open tasks from the
+  project page's own read, cut at the page's 25 rows. A list the caller may not
+  read is named in the new `sections_omitted`. It no longer fails the handoff or
+  counts as empty. A caller without the contact grant gets the stakeholder seats
+  with no names. The clock's own reminders stay out of the open commitments.
 - Analytics uses one reporting implementation across the web, API, MCP and workers.
   The old performance screen and rollout switch are removed. Existing
   `analytics.performance_enabled` configuration is accepted but ignored.
@@ -113,6 +146,24 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Fixed
 
+- **An approval reads the same on every door.** A write held for approval over
+  REST now opens with the sentence the tool door shows, naming the records it
+  changes, such as the two tags a merge folds together. Each field of the
+  request that the sentence does not show follows it as `field=value`, so a
+  blind-copy recipient, an attachment or a close reason stays on the card. A
+  record create, update or logged activity follows its sentence with the values
+  it sets, because that sentence names only the fields. A call with no sentence,
+  or one that names a record by its id, keeps the REST line.
+- **A create must name its source.** A lead, a relationship, a note, a task, an offer,
+  a product, a custom field and a signal are refused with a 422 naming `source` when
+  it is absent or blank, as a contact, a company and a deal already were. So are a
+  deal room, and the invitation or document added to one.
+- **An archived contact's unanswered message leaves the Worklist.** It no longer
+  shows under "Customer waiting", in the queue's count, in a record's waiting
+  filter or in the reply classifier's backlog. Restoring the contact brings it
+  back. Only the contacts the reader can see count: a message filed under a
+  second visible contact who is not archived stays, and its row names that
+  contact.
 - **The contacts-without-consent retention rule acts again** on older installations.
   An installation seeded before the record was renamed kept the rule under the old
   `person/no_consent_no_deal` scope. The nightly evaluator has no selector for it,

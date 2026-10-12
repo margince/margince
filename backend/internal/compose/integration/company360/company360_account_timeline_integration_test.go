@@ -20,6 +20,7 @@ package company360
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -107,12 +108,7 @@ func accountTimeline(ctx context.Context, t *testing.T, e *integration.Env, comp
 
 // containsActivity reports whether the listed timeline holds one activity.
 func containsActivity(got []ids.UUID, want ids.UUID) bool {
-	for _, id := range got {
-		if id == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(got, want)
 }
 
 // The three arms and their two exclusions, on one account, read through the

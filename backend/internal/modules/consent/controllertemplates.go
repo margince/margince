@@ -65,6 +65,9 @@ type Rendered struct {
 // ConfirmationSend is one confirmation message, ready to stage.
 type ConfirmationSend struct {
 	ContactID ids.ContactID
+	// LeadID is set instead of ContactID for a website lead's privacy notice,
+	// so the timeline row is filed under the lead the notice went to.
+	LeadID    ids.LeadID
 	Recipient string
 	// Category is what the engine is asked about. It is set from the template
 	// rather than by a caller: the whole point of the lane is that these
@@ -174,6 +177,13 @@ func ControllerTemplateRegistry() interface {
 func (templateRegistry) Registered(key string, version int) bool {
 	t, ok := controllerTemplates[key]
 	return ok && t.version == version
+}
+
+// ControllerTemplateVersion is the version of the wording this build sends
+// for a template, so a review can be pinned to the words it approved.
+func ControllerTemplateVersion(key string) (int, bool) {
+	t, ok := controllerTemplates[key]
+	return t.version, ok
 }
 
 // RenderControllerTemplate resolves one template into the words to be sent.

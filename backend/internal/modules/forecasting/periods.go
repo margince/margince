@@ -4,6 +4,7 @@
 package forecasting
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -73,7 +74,7 @@ const (
 // the first quarter of a financial year that started before it.
 func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *time.Location) (Period, error) {
 	if zone == nil {
-		return Period{}, fmt.Errorf("forecasting: a period needs the installation zone, which decides which day an instant falls on")
+		return Period{}, errors.New("forecasting: a period needs the installation zone, which decides which day an instant falls on")
 	}
 	if fiscalStartMonth < 1 || fiscalStartMonth > 12 {
 		return Period{}, fmt.Errorf("forecasting: fiscal year start month %d is outside 1..12", fiscalStartMonth)
@@ -83,9 +84,8 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 	// for anything it does not recognise, so an unrefused week would resolve to
 	// a QUARTER and every reading would silently be the wrong window.
 	if kind == PeriodWeek {
-		return Period{}, fmt.Errorf(
-			"forecasting: a week is resolved by ResolveWeek from the Monday weekly.WeekStartOf returns, " +
-				"not from the financial year")
+		return Period{}, errors.New("forecasting: a week is resolved by ResolveWeek from the Monday weekly.WeekStartOf returns, " +
+			"not from the financial year")
 	}
 	local := at.In(zone)
 	startYear, startMonth := periodStart(kind, local, fiscalStartMonth)
@@ -122,7 +122,7 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 // would leave the autumn week ending an hour before Sunday closed.
 func ResolveWeek(monday time.Time, zone *time.Location) (Period, error) {
 	if zone == nil {
-		return Period{}, fmt.Errorf("forecasting: a period needs the installation zone, which decides which day an instant falls on")
+		return Period{}, errors.New("forecasting: a period needs the installation zone, which decides which day an instant falls on")
 	}
 	local := monday.In(zone)
 	start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, zone)

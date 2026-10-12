@@ -28,7 +28,7 @@ func TestEveryTouchTriggerTableHasTheColumnsItsTriggerWrites(t *testing.T) {
 	// A column line is `public.<table>.<column> <type> … gen=…`; constraint,
 	// index and trigger lines share the prefix but never carry gen=.
 	columns := map[string]bool{}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		name, rest, found := strings.Cut(strings.TrimSpace(line), " ")
 		if found && strings.HasPrefix(name, "public.") && strings.Contains(rest, " gen=") {
 			columns[name] = true

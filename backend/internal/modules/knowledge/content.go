@@ -40,10 +40,11 @@ func handbookStorageKey(filename string) string { return handbookKeyPrefix + fil
 
 // ErrHandbookPageGone is a document row naming a page this build does not ship.
 //
-// It is reachable, not theoretical: a release that withdraws a page leaves its
+// It is reachable, not theoretical. A release that withdraws a page leaves its
 // rows behind until the boot reconciliation removes them, and a request can
-// arrive in between. Distinct from a missing object because the repair is
-// different — nobody should go looking in a bucket for it.
+// arrive in between. A worker older than a release that adds a page meets it
+// too, and an ingest waits that out. It is distinct from a missing object
+// because the repair differs: nobody should go looking in a bucket for it.
 var ErrHandbookPageGone = errors.New("knowledge: this release does not ship that handbook page")
 
 // openContent streams a document's bytes, whichever side of the split it is on.

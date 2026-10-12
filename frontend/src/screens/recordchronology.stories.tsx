@@ -35,22 +35,20 @@ const meta: Meta<typeof Live> = {
 export default meta;
 type Story = StoryObj<typeof Live>;
 
-// The base row: All, Activities, Changes. No Conversations pill, because the
+// The base row: All, Changes. No Conversations pill, because the
 // page has wired no renderer for that cut.
 export const WithoutConversations: Story = {
   render: () => <Live initial="all" />,
 };
 
-// The four cuts, Conversations sitting between the whole and the parts, and
-// pressed, so the row reads with a narrower cut selected rather than always
-// on the default.
+// The three cuts with Conversations pressed, so the row reads with a narrower
+// cut selected rather than always on the default.
 export const WithConversationsSelected: Story = {
   render: () => <Live initial="conversations" conversations />,
 };
 
-// The four-pill row in dark: the pressed pill carries its state by the same
-// tint as light, so this is the story that shows whether the pressed cut
-// still reads against the dark bar.
+// The three-pill row in dark. The pressed pill carries its state by the same
+// tint as in light, and this story shows whether it still reads.
 export const WithConversationsSelectedDark: Story = {
   ...WithConversationsSelected,
   globals: { theme: "dark" },

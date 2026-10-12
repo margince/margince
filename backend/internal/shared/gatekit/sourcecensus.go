@@ -24,6 +24,7 @@ import (
 	"go/parser"
 	"go/token"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -125,14 +126,14 @@ func isHardCodedScale(expr ast.Expr) bool {
 // the name is on the first of them.
 func enclosing(file *ast.File, target ast.Node) ast.Node {
 	path := ancestors(file, target)
-	for i := len(path) - 1; i >= 0; i-- {
-		switch path[i].(type) {
+	for i, p := range slices.Backward(path) {
+		switch p.(type) {
 		case *ast.CompositeLit:
 			// The element we arrived through, not the literal holding it: its
 			// siblings are other fields, and they are not this one's context.
 			return path[i+1]
 		case ast.Stmt, ast.Spec:
-			return path[i]
+			return p
 		}
 	}
 	return target

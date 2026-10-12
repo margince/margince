@@ -34,10 +34,10 @@ function stubBackend(
             .authorization,
         });
       }
+      const fromBen = url.includes("from_contact_id=c-ben");
+      if (fromBen) lookups.push(url);
       return jsonResponse({
-        data: url.includes("from_contact_id=c-ben")
-          ? (lookups.push(url), worked)
-          : [],
+        data: fromBen ? worked : [],
         page: { next_cursor: null, has_more: false },
       });
     },

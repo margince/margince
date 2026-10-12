@@ -41,18 +41,19 @@ type bulkUndoPlan struct {
 	tasks map[openapi_types.UUID]bulkCreatedTask
 	// taggings is the tag assignment add_tag made on each record.
 	taggings map[openapi_types.UUID]openapi_types.UUID
-	// members is each record's list membership as remove_from_list took it.
-	members map[openapi_types.UUID]collections.RemovedMember
+	// removals is the audit row remove_tag or remove_from_list wrote per record.
+	removals map[openapi_types.UUID]openapi_types.UUID
 }
 
-// membershipOf answers the list membership remove_from_list took from a
-// record; a forward change has no plan and knows none.
-func (p *bulkUndoPlan) membershipOf(id openapi_types.UUID) (collections.RemovedMember, bool) {
-	if p == nil {
-		return collections.RemovedMember{}, false
+// removalOf answers the removal an undo restores a record's link from. A
+// batch recorded before removals were kept names none, and nothing is kept
+// to put back.
+func (p *bulkUndoPlan) removalOf(id openapi_types.UUID) (ids.UUID, error) {
+	removal, known := p.removals[id]
+	if !known {
+		return ids.Nil, collections.ErrRemovalUnkept
 	}
-	was, known := p.members[id]
-	return was, known
+	return ids.UUID(removal), nil
 }
 
 // bulkCreatedTask is one task create_task filed, at the version it left it.
@@ -121,7 +122,7 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		ownersBefore: make(map[openapi_types.UUID]*openapi_types.UUID, len(op.result.Changed)),
 		tasks:        map[openapi_types.UUID]bulkCreatedTask{},
 		taggings:     map[openapi_types.UUID]openapi_types.UUID{},
-		members:      map[openapi_types.UUID]collections.RemovedMember{},
+		removals:     map[openapi_types.UUID]openapi_types.UUID{},
 	}
 	items := make([]crmcontracts.BulkItem, len(op.result.Changed))
 	for i, outcome := range op.result.Changed {
@@ -130,8 +131,8 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		if outcome.TaskID != nil {
 			plan.tasks[outcome.ID] = bulkCreatedTask{id: *outcome.TaskID, version: outcome.TaskVersion}
 		}
-		if outcome.MemberAddedAt != nil {
-			plan.members[outcome.ID] = collections.RemovedMember{Note: outcome.MemberNote, AddedAt: *outcome.MemberAddedAt}
+		if outcome.RemovalID != nil {
+			plan.removals[outcome.ID] = *outcome.RemovalID
 		}
 		if outcome.TaggableID != nil {
 			plan.taggings[outcome.ID] = *outcome.TaggableID

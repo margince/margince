@@ -132,6 +132,40 @@ it("shows missing capture history as unavailable instead of drawing a fabricated
   ).not.toBeInTheDocument();
 });
 
+it("names every movement bar in words, never by the server's bucket key", () => {
+  const keys = ["new", "reopened_or_archived", "stage_weight", "fx"];
+  const evaluation = {
+    ...forecastEvaluation,
+    charts: forecastEvaluation.charts
+      .filter((chart) => chart.kind === "pipeline_movement")
+      .map((chart) => ({
+        ...chart,
+        points: keys.map((key) => ({
+          key,
+          label: key,
+          value: 1000000,
+          status: "ok",
+        })),
+      })),
+  } satisfies typeof forecastEvaluation;
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  for (const word of [
+    "New deals",
+    "Reopened or archived",
+    "Stage weight changes",
+    "Exchange rate changes",
+  ]) {
+    expect(screen.getAllByText(word).length).toBeGreaterThan(0);
+  }
+  for (const key of keys) {
+    expect(screen.queryByText(key)).not.toBeInTheDocument();
+  }
+});
+
 it("opens forecast source evidence and returns to the chart", async () => {
   const user = userEvent.setup({ delay: null });
   installFetchStub(reportingStoryRoutes(forecastEvaluation));

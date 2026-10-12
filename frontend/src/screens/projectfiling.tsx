@@ -10,7 +10,7 @@ import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 
 type ProjectFiling = components["schemas"]["ProjectFiling"];
 type RefusalCode = components["schemas"]["ProjectFilingRefusal"]["code"];
@@ -88,26 +88,25 @@ export function ProjectFilingModal({
     staleTime: 0,
     gcTime: 0,
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}/project-filing", {
-        params: { path: { id: activityId } },
-      });
-      if (error) throwProblem(error, t);
-      return data;
+      return unwrap(
+        await api.GET("/activities/{id}/project-filing", {
+          params: { path: { id: activityId } },
+        }),
+        t,
+      );
     },
   });
 
   // The reason arrives as the mutation's variable, never read off render state.
   const undo = useMutation({
     mutationFn: async (request: { activityId: string; reason: string }) => {
-      const { data, error } = await api.POST(
-        "/activities/{id}/project-filing/undo",
-        {
+      return unwrap(
+        await api.POST("/activities/{id}/project-filing/undo", {
           params: { path: { id: request.activityId } },
           body: { reason: request.reason.trim() },
-        },
+        }),
+        t,
       );
-      if (error) throwProblem(error, t);
-      return data;
     },
     onSuccess: (state) => setUndone(state ?? null),
   });

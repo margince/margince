@@ -14,13 +14,14 @@ package mailmap
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -323,8 +324,8 @@ func replyIDs(references, inReplyTo, messageID string) []string {
 	refs := strings.Fields(references)
 	candidates := make([]string, 0, len(refs)+1)
 	candidates = append(candidates, strings.Fields(inReplyTo)...)
-	for i := len(refs) - 1; i >= 0; i-- {
-		candidates = append(candidates, refs[i])
+	for _, ref := range slices.Backward(refs) {
+		candidates = append(candidates, ref)
 	}
 	seen := make(map[string]bool, len(candidates))
 	out := make([]string, 0, len(candidates))
@@ -384,7 +385,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 	if m.body != "" {
 		body = header + "\n\n" + m.body
 	}
-	body = truncate(body, maxBodyLen)
+	body = textcut.BytesMarked(body, maxBodyLen, "…")
 
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
@@ -443,19 +444,6 @@ func orDash(s string) string {
 		return "-"
 	}
 	return s
-}
-
-func truncate(s string, limit int) string {
-	if len(s) <= limit {
-		return s
-	}
-	// Back off to a rune boundary so the stored excerpt is never a broken
-	// UTF-8 sequence.
-	cut := limit
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
 }
 
 // recordParts hands the collected files to the seam.

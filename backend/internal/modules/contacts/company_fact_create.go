@@ -7,11 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -56,10 +57,8 @@ func factInVocabulary(category, field string) error {
 			Message: "a fact category is one of company, offering, market or signal",
 		}
 	}
-	for _, name := range fields {
-		if name == field {
-			return nil
-		}
+	if slices.Contains(fields, field) {
+		return nil
 	}
 	return &values.ParseError{
 		Field: evidenceFieldKey, Code: "fact_field_unknown",

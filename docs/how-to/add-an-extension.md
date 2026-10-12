@@ -36,7 +36,7 @@ review on its own.
    ```text
    module github.com/margince/margince/extensions/<name>
 
-   go 1.27.1
+   go 1.27.2
    ```
 
 3. **Write the declaration** `extensions/<name>/<name>.go`.
@@ -55,16 +55,37 @@ review on its own.
    package fr
 
    import (
+   	_ "embed"
+
    	"github.com/margince/margince/backend/pkg/extension"
+   	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
    	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+   	"github.com/margince/margince/backend/pkg/extension/messaging"
+   	"github.com/margince/margince/backend/pkg/extension/subjectrights"
    )
+
+   //go:embed documents/information-salaries.md
+   var staffNotice []byte
 
    func New() extension.Extension {
    	return extension.Extension{
    		Name:          "fr",
    		Version:       "1.0.0",
-   		Description:   "French jurisdiction pack: statutory retention floors.",
+   		Description:   "French jurisdiction pack: statutory retention floors, request deadlines and the staff notice.",
    		Jurisdictions: []jurisdiction.Pack{pack{}},
+   		// Illustrative only: a real deadline needs its legal source cited.
+   		SubjectRights: []subjectrights.Rules{{
+   			Jurisdiction: "fr", Version: 1,
+   			Instruments:  []messaging.Instrument{{Name: "Loi n° 78-17"}},
+   			Deadlines: map[subjectrights.RequestKind]subjectrights.Deadline{
+   				subjectrights.Access: {Period: jurisdiction.Period{Months: 1}},
+   			},
+   		}},
+   		Documents: []compliancedocs.Document{{
+   			Jurisdiction: "fr", ID: "information-salaries", Title: "Information des salariés",
+   			Language: "fr", Audience: compliancedocs.Employee, Kind: compliancedocs.Template,
+   			Body: staffNotice, MediaType: "text/markdown",
+   		}},
    	}
    }
 
@@ -92,7 +113,8 @@ review on its own.
    reaches an install.
 
    **Import only `backend/pkg/**` packages that carry `//margince:extension-surface`**. Today those are
-   `pkg/extension`, `pkg/extension/jurisdiction` and `pkg/extension/crm`. Any import of `internal/**`,
+   `pkg/extension`, `pkg/extension/jurisdiction`, `pkg/extension/crm`, `pkg/extension/messaging`,
+   `pkg/extension/subjectrights` and `pkg/extension/compliancedocs`. Any import of `internal/**`,
    `cmd/**`, a `pkg` package with no mark, the `composition` module or another extension fails the `arch` test.
    The compiler already keeps `internal/**` out of reach, and the test holds the rest.
 
@@ -111,6 +133,13 @@ declare must be ones a core engine already knows:
   (`Period.Validate` stops a part at about 1000 years). So a typo cannot set a date long before any real one.
 - **`Anchor`** is `occurrence` (the zero value) or `calendar_year_end`. Pick `calendar_year_end` only when
   the legal rule counts from the end of the year (as German `§147(4) AO` does).
+
+- **`SubjectRights`** and **`Messaging`** must name a code in the same unit's `Jurisdictions`. One unit
+  owns everything for one code, and the start refuses a set for a code the unit carries no pack for.
+- **A `Deadline`** holds a calendar `Period` or a number of `Hours`, never both. A set that declares a
+  deadline must name at least one `Instrument` as its source. A kind you leave out gets the GDPR month.
+- **A `Document`** has a body, an audience and a kind from the closed sets, and a media type of `text/markdown` or
+  `application/pdf`. Two documents under one ID are refused.
 
 Get the legal content right: it is legal content, not a default. Pin it with a test (below).
 

@@ -1,10 +1,10 @@
 <!-- prose:plain -->
 # Connect a Telegram bot
 
-Bind a Telegram bot, and Margince captures the messages customers send it into the timeline. It creates
-contacts and activities through the one place that finds copies, and a rep can reply from that timeline.
-You do all of it in the app. The REST surface behind it is the contract (`backend/api/crm.yaml`,
-`/channel-connections*`), and nothing below needs you to call it by hand.
+The handbook page [connecting-mail-and-calendars.md](../handbook/connecting-mail-and-calendars.md) covers what an
+admin does on the screen: connect the bot, replace its token, and disconnect it. This page is for the operator. It covers what
+the installation needs, what each step does on the server, how to check it, and what each failure means. The REST
+surface is the contract (`backend/api/crm.yaml`, `/channel-connections*`).
 
 For the side that takes messages in (the connector seam, the one Sink, how the credential is kept), read
 [explanation/capture-connectors.md](../explanation/capture-connectors.md). For the side that sends (the
@@ -17,25 +17,22 @@ staging row, the gates, the dispatcher), read
 
 ## What kind of connection this is
 
-A bot binding is **not** a mailbox. A mailbox (**Settings → Connections → Connected inboxes**) is the
-grant of one human over their own mail. A Telegram bot is an **admin who binds one bot for every user**.
-That has these results:
+A bot binding is **not** a mailbox. A mailbox is the grant of one human over their own mail. A Telegram
+bot is an **admin who binds one bot for every user**. That has these results:
 
 - **One live bot, and no more.** `uq_channel_connection_provider` is a unique index over only the live
   rows, keyed on `(provider)`. Every reply that goes out looks up the bot of the installation, so with two
   live bindings the send path refuses to guess. A second bot would remove the way to reply on either
   one.
-- The card holds this rule on the screen too. Once a bot has a binding, the **Connect a Telegram bot** button
-  is no longer there. That leaves **Replace token** and **Disconnect** as the only actions.
+- The card holds this rule on the screen too: once a bot has a binding, its connect button is not shown.
 - **Admin and ops bind it; all read it.** The RBAC grants for `channel_connection` give create,
   update and delete to `admin` and `ops` only. `management`, `manager`, `rep` and `read_only` all hold
   read. A rep needs to know whether the channel is live before they expect a reply to come there.
 - Every action is also `x-agent-access: human-only`. The bot token can read every message the bot gets,
   so an agent must never bind one on its own.
 - **The customer writes to the bot first.** A Telegram bot cannot start a chat. A contact can only be
-  reached once a message from them binds a channel identity for them. So the **How to send** list in the
-  composer offers Telegram only for someone who already has a chat on it. It labels it
-  `Continues your Telegram conversation`.
+  reached once a message from them binds a channel identity for them. So the composer offers Telegram
+  only for a contact who already has a chat on it.
 
 A mailbox connector has several things that this one does not. There is no OAuth app, no consent
 redirect, no callback URI, and no HTTP route for messages that come in. **Messages come in by long poll**: this
@@ -52,7 +49,7 @@ You need two things:
 - **The vault key**, `MARGINCE_KEYVAULT_ROOT_KEY` (`base64` of 32 bytes), on **both** the API and the
   worker. The API seals the token on connect, and the worker opens it on every poll.
 
-Without a vault, the card shows `Messaging channels aren't configured in this deployment.`, and no
+Without a vault, the card shows `Messaging channels are not configured on this installation.`, and no
 connect button. The API refuses every path that changes data, by name, so it does not store a token that
 nothing could open. And the worker registers **neither** Telegram job. Both `telegram_poll` and
 `telegram_poll_sweep` declare `registration: {when: [ChannelVault], absent: registers_nothing}`.
@@ -73,21 +70,7 @@ This surface does **not** need or read any of these:
 
 > Start again with `make dev` after you set the vault key.
 
-## Connect
-
-1. Open **Settings → Connections**. The **Telegram bot** card is below **Connected inboxes**.
-2. Click **Connect a Telegram bot** on the card.
-3. Paste the BotFather token into **Bot token**, which is a password field.
-4. Click **Connect**. When it works, the panel reads `Connected as @yourbot.`, with a status badge and a
-   **Done** button.
-
-The card has the line `One bot receives and sends messages for the whole company.` under its title. With
-no bot, its row reads `No bot is connected yet.` The help text on the token field says
-`Paste the token BotFather gave you when you created the bot. We seal it in the credential vault and never show it again.`
-
-The form keeps nothing after a failed send, so when you try again you start from an empty box. After it
-connects, the card behind the panel reads the list of connections again to prove the binding. So it never
-claims one that the server did not confirm.
+## What connect does
 
 The `telegram_poll_sweep` dispatcher of the worker runs every `30s`. On its next turn it picks the
 binding up, and starts a long poll on it. The cursor starts at `0` ("whatever Telegram still holds"), so
@@ -102,35 +85,29 @@ a new bot gets the messages that already wait for it.
 4. Margince adds the row as `connected`, with a cursor of 0, in **one transaction with its audit row**.
 
 Nothing comes after that write, because a poll calls out, and there is nothing to register. No server
-makes the `pending` status of the schema. The screen still shows it as
-`Pending — not yet confirmed live` if one comes from an older server, or a server from another source. So it
-never looks live.
+makes the `pending` status of the schema. The screen still shows it as **Pending confirmation** if one
+comes from an older server, so it never looks live.
 
 A failure at any step before the commit leaves nothing behind but a vault entry. The path deletes that
 entry itself when another write takes the unique index first.
 
-## What the card shows once a bot has a binding
-
-It shows one row: `Telegram · @yourbot`, a status badge, and the two actions that change it.
+## What each status means
 
 | Badge | Status | Meaning |
 |---|---|---|
 | **Capturing** | `connected` | Live. Polled on every turn of the dispatcher. |
-| **Needs reconnect** | `reauth_required` | Telegram refused the sealed token. No retry can repair it; use **Replace token**. |
+| **Needs reconnect** | `reauth_required` | Telegram refused the sealed token. No retry can repair it. |
 | **Sync error** | `error` | Another reader holds the updates of this bot. Find it and stop it: a second installation, a staging stack, or some other integration. |
 | **Disconnected** | `disconnected` | Archived, and not in the list. |
 
-Margince does not poll either stopped status again until an operator does something. The scan for due rows picks
-only `connected` rows, and that ends the retry loop. The audit log records the reason in
-`poll_stopped_because`, because the row itself has no column for it.
+Margince does not poll either stopped status again. The scan for due rows picks only `connected` rows,
+and that ends the retry loop. Rotating the token leaves the status as it is, and only connect writes
+`connected`. So a stopped binding comes back only by disconnect and connect again. The audit log records
+the reason in `poll_stopped_because`, because the row itself has no column for it.
 
 ## Rotate the token
 
-Click **Replace token** on the row, paste the new token, and send it. The panel has the title
-`Replace the bot token`. It keeps the **current status badge of the connection** on the screen while you work.
-So a binding that the poll has stopped still reads as stopped while an edit form is open on it.
-
-To rotate happens **in place**; it is never a disconnect and then a reconnect. Here is what stays, and
+**Replace token** on the card rotates **in place**; it is never a disconnect and then a reconnect. Here is what stays, and
 what starts again:
 
 - **The row stays**, and with it every channel identity binding and all captured history. Telegram user
@@ -152,9 +129,6 @@ reads the version of the binding again right before it uses the credential. If t
 a short time, so the delivery looks up the binding again and does not stop.
 
 ## Disconnect
-
-Click **Disconnect** on the row, then confirm `Disconnect this bot?`. The text says:
-`This deletes the stored token and stops checking the bot for new messages. Capture and sending stop immediately; everything already captured stays in your CRM.`
 
 Three kinds of state have three different results:
 
@@ -198,17 +172,14 @@ the owner. **Margince makes no company**, because a channel identity has no mail
 More on step 4: some purposes need a double opt-in token first. Sending is refused by default *for each
 purpose*: a grant for one purpose never allows another.
 
-More on step 5: **Reply** opens the composer with no Subject and no Cc, because a channel has neither. It
-asks for a **Consent purpose**. You confirm at `Send this message?`, which says
-`You are sending this message now. This is an outbound, irreversible action.`
+More on step 5: what the user sees in the composer is in
+[sending-mail.md](../handbook/sending-mail.md). On the server:
 
 - **You never name who gets the message.** The entry you replied to *is* the chat, and its
   `channel_provider` names the channel. The server finds the channel identity of the contact that chat is
   with. The request carries only the body, the consent purpose, and if you want, files already stored
   in Margince. It names them by ID, and you do not add them here.
-- Without a grant, Margince holds the send back, and the composer says so:
-  `Send blocked — no consent`, with a **Review consent** link back to the contact. That is why the
-  surface shows a list of purposes to pick from.
+- Without a grant, Margince holds the send back, and the composer links back to the contact's consent.
 - **Reply does not appear** for a contact the channel cannot reach. That is an identity with no binding,
   or one that Telegram has reported as blocking the bot. Margince does not offer a button that could only fail.
 
@@ -232,7 +203,7 @@ a log or an audit row.
 | Telegram could not be reached | `channel_provider_unreachable` (502) | Nothing was changed; try again once the provider is back. |
 | Telegram read the request and refused it | `channel_provider_rejected` (502) | Nothing was changed; check that no one has limited or deleted the bot in BotFather. |
 | No credential store is set up | `channel_credentials_not_configured` (503) | Set `MARGINCE_KEYVAULT_ROOT_KEY`, and restart. |
-| `Messaging channels aren't configured in this deployment` | `channel_connections_not_configured` (503) | This server role has no channel store, and says so with a 503 and not a 500. `cmd/api` serves it. |
+| `Messaging channels are not configured on this installation.` | `channel_connections_not_configured` (503) | This server role has no channel store, and says so with a 503 and not a 500. `cmd/api` serves it. |
 | You may not change this | `permission_denied` (403) | Every role can read; only admin and ops can bind. |
 | No such connection | `not_found` (404) | This keeps it secret whether the row exists: an archived binding reads the same. Open the card again. |
 | (no warning box) | `conflict` (409) | This binary has no code for that provider, or some unique index other than the rule on live rows refused the write. Margince has code only for `telegram`. This is the last answer, and adds no second rule for bindings. |

@@ -17,3 +17,13 @@ func taskLabel(t Task) (name, summary string) {
 	}
 	return DisplayName(t), Summary(t)
 }
+
+// taskDisplayName is taskLabel's name for a wire that leaves an unnamed task
+// absent, so the screen falls back to the key itself.
+func taskDisplayName(t Task) *string {
+	name, _ := taskLabel(t)
+	if name == "" {
+		return nil
+	}
+	return &name
+}

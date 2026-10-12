@@ -45,6 +45,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		steppedUp   *StepUpStagedError
 		overQuota   *auth.VolumeExceededError
 		staged      *workflow.StagedApprovalError
+		skew        *apperrors.VersionSkewError
 	)
 	switch {
 	case errors.As(err, &steppedUp):
@@ -95,7 +96,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// Quoting the error whole would have carried the unescaped original
 		// beside the escaped copy.
 		return stagedExplanation(staged)
-	case errors.Is(err, errFileCannotWait):
+	case errors.Is(err, ErrFileCannotWait):
 		return "This call needs a contact's approval, and a file cannot wait for an approval: the approval would " +
 			"keep the file. Nothing was changed. Do not retry; tell the user to attach the file in the Margince app."
 	case errors.Is(err, errFileKindRefused):
@@ -121,6 +122,9 @@ func (s *Dispatcher) explain(tool string, err error) string {
 			"more of it than they lent this credential. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrNotFound):
 		return "No such record in this workspace (or it is outside the acting user's row scope). (" + err.Error() + ")"
+	case errors.As(err, &skew):
+		// Its words name the remedy, a re-stage or a reload, which the generic retry below contradicts.
+		return echoSafe(skew.Message, MaxFaultDetail)
 	case errors.Is(err, apperrors.ErrVersionSkew):
 		return "The record changed since it was read; re-read it and retry with the new version. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrApprovalTokenInvalid):

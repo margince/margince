@@ -32,8 +32,8 @@ import (
 // well-defined and grouping by currency would split an answer that needs no
 // splitting. Their default plan groups by phase alone, correctly.
 //
-// Worth knowing rather than only waiving: the frontend's own rule reads the
-// same `_minor` suffix, so it believes these are native too.
+// Both frontend rules read the declared native set rather than the suffix, so
+// the name misleads a reader here and nothing else.
 var convertedDespiteTheName = gatekit.Waive(map[string]string{
 	"projects-by-phase.open_deal_value_minor": "openDealValueBaseExpr converts through " +
 		"deals.OpenDealBaseValueSQL over the base-currency token; the name predates the conversion",

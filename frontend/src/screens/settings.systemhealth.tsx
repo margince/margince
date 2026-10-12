@@ -7,6 +7,7 @@ import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { JobHealthCard } from "./jobhealth";
 import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
 import { ProviderHealthCard } from "./providerhealth";
+import { RecoveryHealthCard } from "./recoveryhealth";
 
 /**
  * The system health page's cards. Extracted from settings.tsx, which is frozen
@@ -28,6 +29,7 @@ export function SystemHealthPage() {
       <CaptureHealthCard />
       <ExtensionIngestHealthCard />
       <ProviderHealthCard />
+      <RecoveryHealthCard />
     </>
   );
 }

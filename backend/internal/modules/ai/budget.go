@@ -79,8 +79,14 @@ func providerRefusal(resp *http.Response, limitSource string, err error) error {
 	if resp.StatusCode != http.StatusTooManyRequests {
 		return providerFaultOf(resp.StatusCode, err)
 	}
+	return refusedAs(refusalKind(limitSource, err.Error(), retryafter.Of(resp)), err)
+}
+
+// refusedAs is the error for a refusal whose kind is known, whether a 429 or a
+// failed response's own code said so.
+func refusedAs(kind refusal, err error) error {
 	refused := unusableAnswer{fmt.Errorf("%w: %w", errProviderRefused, err)}
-	switch refusalKind(limitSource, err.Error(), retryafter.Of(resp)) {
+	switch kind {
 	case refusalQuota:
 		return fmt.Errorf("%w: %w", ErrProviderQuota, refused)
 	case refusalThrottle:

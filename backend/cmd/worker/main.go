@@ -17,6 +17,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 	// Embedded tzdata: workspace timezones must resolve on scratch
@@ -79,7 +80,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
 		return err
 	}
-	if handled, err := runDatabaseSubcommand(ctx, pool, args, stdout); handled {
+	resolveVault := workerVault(ctx, pool)
+	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, args, stdout); handled {
 		return err
 	}
 
@@ -109,11 +111,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// the pool and after the release assertion, for the same reasons the license
 	// does. A nil vault IS an unconfigured deployment; keyvault.ForRole carries
 	// why nothing downstream is handed a flag beside it.
-	vault, err := keyvault.ForRole(ctx, "worker", pool, config.FromOS)
+	vault, err := admitBoot(ctx, logger, pool, resolveVault, cfg, deployCfg)
 	if err != nil {
-		return err
-	}
-	if err := admitBoot(ctx, logger, pool, vault, cfg, deployCfg); err != nil {
 		return err
 	}
 
@@ -367,6 +366,15 @@ func runGroupSubscriber(ctx context.Context, rdb *redis.Client, group kevents.Gr
 	}
 }
 
+// workerVault is the process's one resolution of its key vault, made on first
+// use. Only the subcommands that need a vault ask for it, so the rest run
+// without one.
+func workerVault(ctx context.Context, pool *pgxpool.Pool) func() (keyvault.Vault, error) {
+	return sync.OnceValues(func() (keyvault.Vault, error) {
+		return keyvault.ForRole(ctx, "worker", pool, config.FromOS)
+	})
+}
+
 // ensureLicense resolves this worker's entitlement, reading the token out of
 // the boot's key vault when the installation has sealed it there.
 //
@@ -374,17 +382,27 @@ func runGroupSubscriber(ctx context.Context, rdb *redis.Client, group kevents.Gr
 // is reached, which is the posture every role takes: an installation whose root
 // key no longer opens its own secrets has a problem that outlives the license
 // question.
-// admitBoot holds every precondition this worker must satisfy before it
-// starts doing work: it is entitled to run, and anything it sends will
-// carry links a recipient can open.
+// admitBoot holds every precondition this worker must meet before it works:
+// a license, a jurisdiction with a pack, and links a recipient can open. It
+// hands back the vault it resolved.
 func admitBoot(
 	ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool,
-	vault keyvault.Vault, cfg workerConfig, deployCfg deployconfig.Config,
-) error {
-	if err := ensureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture); err != nil {
-		return err
+	resolveVault func() (keyvault.Vault, error), cfg workerConfig, deployCfg deployconfig.Config,
+) (keyvault.Vault, error) {
+	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
+		return nil, err
 	}
-	return requireUsablePublicOrigin(cfg, deployCfg)
+	vault, err := resolveVault()
+	if err != nil {
+		return nil, err
+	}
+	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
+		return nil, err
+	}
+	if err := ensureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture); err != nil {
+		return nil, err
+	}
+	return vault, requireUsablePublicOrigin(cfg, deployCfg)
 }
 
 // requireUsablePublicOrigin refuses to start a sending worker whose

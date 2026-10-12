@@ -17,7 +17,7 @@ import (
 func TestOnlyTheImporterAdmissionAdmitsAnAuthor(t *testing.T) {
 	name := "Anna Müller"
 	body := func(sourceSystem string) crmcontracts.CreateActivityRequest {
-		return crmcontracts.CreateActivityRequest{Kind: "note", SourceSystem: &sourceSystem, SourceAuthorName: &name}
+		return crmcontracts.CreateActivityRequest{Source: "manual", Kind: "note", SourceSystem: &sourceSystem, SourceAuthorName: &name}
 	}
 
 	in, err := LogActivityInputFromImporter(body("mirror:hubspot"))

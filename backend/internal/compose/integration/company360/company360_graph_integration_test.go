@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -39,9 +40,7 @@ import (
 func withSignalRead(base principal.Permissions) principal.Permissions {
 	perms := base
 	perms.Objects = map[string]principal.ObjectGrant{}
-	for object, grant := range base.Objects {
-		perms.Objects[object] = grant
-	}
+	maps.Copy(perms.Objects, base.Objects)
 	perms.Objects["signal"] = principal.ObjectGrant{Read: true}
 	return perms
 }

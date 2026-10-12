@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { DecisionSummaryRow } from "./aiusage-decisions";
+import { Panel } from "../design-system/panel";
+import { DecisionSummary } from "./aiusage-decisions";
 import { StoryProviders } from "./story-utils";
 
 const DECISIONS: components["schemas"]["AiDecisionSummary"][] = [
@@ -21,18 +22,24 @@ const DECISIONS: components["schemas"]["AiDecisionSummary"][] = [
   { task: "capture_classify", asked: 3, decided: 3, fallbacks: {} },
 ];
 
-const meta: Meta<typeof DecisionSummaryRow> = {
+const meta: Meta<typeof DecisionSummary> = {
   title: "Settings/AI/AI usage/Decision model",
-  component: DecisionSummaryRow,
+  component: DecisionSummary,
   render: (args) => (
     <StoryProviders>
-      <DecisionSummaryRow {...args} />
+      <Panel title="Estimated AI spend and usage">
+        <DecisionSummary {...args} />
+      </Panel>
     </StoryProviders>
   ),
-  args: { decisions: DECISIONS, taskName: (task: string) => task },
+  args: {
+    decisions: DECISIONS,
+    taskName: (task: string) => task,
+    taskSummary: () => undefined,
+  },
 };
 export default meta;
-type Story = StoryObj<typeof DecisionSummaryRow>;
+type Story = StoryObj<typeof DecisionSummary>;
 
 // The fallback rate is the button that explains itself; a task that never fell
 // back shows its rate as plain text.
@@ -54,3 +61,7 @@ export const ReasonsOpenDark: Story = {
   globals: { theme: "dark" },
 };
 export const NothingAsked: Story = { args: { decisions: [] } };
+export const FallbacksPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

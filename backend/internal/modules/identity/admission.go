@@ -17,6 +17,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -36,7 +37,7 @@ func (h Handlers) serveAsAgent(ctx context.Context, w http.ResponseWriter, r *ht
 		return
 	}
 	if !isMutating(r.Method) && !agent.Scopes.Has(principal.ScopeRead) {
-		httperr.Write(w, r, apperrors.ErrScopeExceeded)
+		httperr.Write(w, r, &auth.ScopeRequiredError{Scope: principal.ScopeRead})
 		return
 	}
 	next.ServeHTTP(w, r.WithContext(principal.WithActor(ctx, agent.Principal())))

@@ -64,8 +64,7 @@ func TestEmbedReindexWorkerWithNoEmbedLaneFailsInsteadOfSittingQueued(t *testing
 	}
 	// Not cancelled: the lane is an operator's to configure, and a cancelled row
 	// stops asking for it.
-	var cancel *river.JobCancelError
-	if errors.As(err, &cancel) {
+	if _, ok := errors.AsType[*river.JobCancelError](err); ok {
 		t.Error("a missing embed lane was cancelled rather than failed")
 	}
 	// Work redacts through jobs.FaultContext, so the actionable text is asserted
@@ -96,8 +95,7 @@ func TestEmbedReindexWorkerReportsAMarkerItCouldNotHandBack(t *testing.T) {
 	// discards it, which is a different thing from a defect it declined to
 	// retry, and only one of the two tells an operator to go and steal the
 	// marker back.
-	var cancel *river.JobCancelError
-	if errors.As(err, &cancel) {
+	if _, ok := errors.AsType[*river.JobCancelError](err); ok {
 		t.Error("a release the outage prevented was reported as a cancellation")
 	}
 	// Both halves reach the log through the joined error: the pass failure says

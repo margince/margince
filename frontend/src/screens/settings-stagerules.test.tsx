@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
@@ -363,5 +363,82 @@ describe("stage automation rules", () => {
       await screen.findByRole("switch", { name: /Negotiation → Contract/ }),
     ).toBeTruthy();
     expect(screen.queryByText(/Stage automation is switched off/)).toBeNull();
+  });
+
+  it("lists the rules as one setting row per transition in their own panel", async () => {
+    const { fetchStub } = rulesStub();
+    vi.stubGlobal("fetch", fetchStub);
+    render(<StageAutomationCard />);
+
+    await screen.findByRole("switch", { name: /Discovery → Negotiation/ });
+    const panel = screen.getByRole("region", { name: "Transition rules" });
+    // Settings, not records: the list spans the pane and takes no hover.
+    const list = panel.querySelector(":scope > .settinglist-bleed");
+    expect(list?.classList.contains("settinglist-records")).toBe(false);
+    const rows = Array.from(
+      list?.querySelectorAll<HTMLElement>(":scope > .settingrow") ?? [],
+    );
+    expect(
+      rows.map((row) => row.querySelector(".t-name")?.textContent),
+    ).toEqual(["Discovery → Negotiation", "Negotiation → Contract"]);
+    // Each row keeps the hint, and the switch is described by it.
+    const toggle = within(rows[0]).getByRole("switch");
+    expect(toggle.getAttribute("aria-describedby")).toBeTruthy();
+    expect(rows[0].textContent).toContain("Margince moves the deal");
+    expect(rows[0].textContent).toContain("Undo for 72 h");
+  });
+
+  it("draws a suspension inside its transition's row, with the way back beside the switch", async () => {
+    const { fetchStub } = rulesStub({
+      ...RULES,
+      data: [
+        {
+          ...RULES.data[0],
+          suspended_at: "2026-09-03T10:00:00Z",
+          suspended_reason: "too many moves were undone",
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchStub);
+    render(<StageAutomationCard />);
+
+    const reason = await screen.findByText(/too many moves were undone/);
+    const row = reason.closest<HTMLElement>(".settingrow");
+    if (!row) throw new Error("the reason sits outside any setting row");
+    expect(within(row).getByText("Suspended by Margince")).toBeTruthy();
+    expect(within(row).getByRole("button", { name: "Resume" })).toBeTruthy();
+    expect(within(row).getByRole("switch")).toBeTruthy();
+  });
+
+  it("says which transition each Resume starts again", async () => {
+    const suspendedAt = {
+      suspended_at: "2026-09-03T10:00:00Z",
+      suspended_reason: "too many moves were undone",
+    };
+    const { fetchStub } = rulesStub({
+      ...RULES,
+      data: [
+        { ...RULES.data[0], ...suspendedAt },
+        {
+          ...RULES.data[0],
+          id: "r2",
+          from_stage_id: "s2",
+          to_stage_id: "s3",
+          ...suspendedAt,
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchStub);
+    render(<StageAutomationCard />);
+
+    await screen.findAllByText(/too many moves were undone/);
+    for (const transition of [
+      "Discovery → Negotiation",
+      "Negotiation → Contract",
+    ]) {
+      expect(
+        screen.getByRole("button", { name: "Resume", description: transition }),
+      ).toBeTruthy();
+    }
   });
 });

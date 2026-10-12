@@ -104,8 +104,7 @@ func TestNarrowingTheTimelineToAnUnknownEntityTypeIsRefused(t *testing.T) {
 	_, _, err := store.ListActivities(e.as(), ListActivitiesInput{
 		EntityType: &bogus, EntityID: &someID,
 	})
-	var invalid *InvalidLinkTypeError
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*InvalidLinkTypeError](err); !ok {
 		t.Fatalf("narrowing to entity_type %q → %v, want InvalidLinkTypeError", bogus, err)
 	}
 }

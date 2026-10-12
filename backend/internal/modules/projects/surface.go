@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ProjectCard is one project as a record page shows it: enough to name it,
@@ -99,7 +100,7 @@ func (s *Store) ListProjectsForCompanyTx(ctx context.Context, tx pgx.Tx, company
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT `+columns+`
 		  FROM project p
-		  LEFT JOIN app_user u ON u.id = p.owner_id AND u.status = 'active' AND u.archived_at IS NULL
+		  LEFT JOIN app_user u ON u.id = p.owner_id AND `+workforce.LiveMemberSQL("u")+`
 		 WHERE EXISTS (
 		           SELECT 1 FROM relationship c
 		            WHERE c.kind = 'project_company' AND c.project_id = p.id
@@ -161,7 +162,7 @@ func (s *Store) ListProjectsForContactTx(ctx context.Context, tx pgx.Tx, contact
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT `+columns+`
 		  FROM project p
-		  LEFT JOIN app_user u ON u.id = p.owner_id AND u.status = 'active' AND u.archived_at IS NULL
+		  LEFT JOIN app_user u ON u.id = p.owner_id AND `+workforce.LiveMemberSQL("u")+`
 		 WHERE p.archived_at IS NULL AND (%[2]s)
 		   AND (EXISTS (
 		            SELECT 1 FROM relationship r

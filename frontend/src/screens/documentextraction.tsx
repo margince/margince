@@ -12,7 +12,7 @@ import { formatMoney, formatNumber } from "../format/format";
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 
 // What a document says, staged for a human to accept onto the deal.
 //
@@ -156,12 +156,11 @@ export function DocumentExtractionPanel({
 
   const read = useMutation({
     mutationFn: async () => {
-      const { error } = await api.POST("/attachments/{id}/extraction", {
-        params: { path: { id: attachmentId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/attachments/{id}/extraction", {
+          params: { path: { id: attachmentId } },
+        }),
+      );
     },
     onSuccess: async () => {
       setDismissed(false);
@@ -189,20 +188,18 @@ export function DocumentExtractionPanel({
       if (!extraction) {
         return;
       }
-      const { error } = await api.POST("/attachments/{id}/extraction:accept", {
-        params: { path: { id: attachmentId } },
-        body: {
-          // The reading THIS panel is showing. Not "the latest": a reading
-          // somebody else started while this one was on screen must not decide
-          // what gets written.
-          extraction_id: extraction.id,
-          field_keys: fields.map((f) => f.field),
-          edits: editedOnly(fields, edits, groundedCurrency(extraction)),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/attachments/{id}/extraction:accept", {
+          params: { path: { id: attachmentId } },
+          body: {
+            // The reading this panel is showing, not "the latest". A reading somebody
+            // else started while this one was on screen must not decide what is written.
+            extraction_id: extraction.id,
+            field_keys: fields.map((f) => f.field),
+            edits: editedOnly(fields, edits, groundedCurrency(extraction)),
+          },
+        }),
+      );
     },
     onSuccess: async (_data, fields) => {
       setAccepted(fields.length);

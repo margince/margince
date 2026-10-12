@@ -79,6 +79,12 @@ const (
 // record's id without applying that record's row scope. Keyed
 // "package-dir:FuncName", each entry stating what stands in for the clause.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	// The tag scout's evidence read runs as the system principal
+	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
+	// collections.RecordTagSuggestionTx, never to a reader. A user sees the
+	// suggestion only through visibleTagSuggestionsQuery, which applies the
+	// record's row scope and each cited activity's content gate.
+	"internal/compose:tagScoutSQL": "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
 	// --- The module tier, one package at a time (censusedModules). ---
 	//
 	// These are the FIRST kind of read the widening has to tell apart, and the
@@ -456,9 +462,7 @@ type rowScopePkg map[string]map[string]*rowScopeFnInfo
 
 func (p rowScopePkg) visibleTo(recv string) map[string]*rowScopeFnInfo {
 	fns := make(map[string]*rowScopeFnInfo, len(p[""])+len(p[recv]))
-	for name, info := range p[""] {
-		fns[name] = info
-	}
+	maps.Copy(fns, p[""])
 	for name, info := range p[recv] {
 		if pkgLevel, both := fns[name]; both {
 			// Two same-named functions the index cannot tell apart at a call

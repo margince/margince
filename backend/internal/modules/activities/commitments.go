@@ -32,6 +32,7 @@ package activities
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -361,8 +362,10 @@ func openTasksLimit(asked int) int {
 // case to invent a TRUE for.
 func joinAnd(terms []string) string {
 	out := terms[0]
+	var outSb364 strings.Builder
 	for _, term := range terms[1:] {
-		out += " AND " + term
+		outSb364.WriteString(" AND " + term)
 	}
+	out += outSb364.String()
 	return out
 }

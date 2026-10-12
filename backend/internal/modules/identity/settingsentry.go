@@ -14,9 +14,9 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
@@ -80,7 +80,7 @@ var Name = settings.Define[string](
 	func(v string) error {
 		trimmed := strings.TrimSpace(v)
 		if trimmed == "" {
-			return fmt.Errorf("the company needs a name")
+			return errors.New("the company needs a name")
 		}
 		// Counted in RUNES, like every other length bound in this module: a name
 		// of 200 CJK characters is not three times too long.
@@ -101,20 +101,10 @@ var Timezone = settings.Define[string](
 	"update",
 	"UTC",
 	func(v string) error {
-		// LoadLocation accepts two values that are not IANA zones and would
-		// silently change what a reporting period means: "" resolves to UTC,
-		// and "Local" resolves to whatever zone the SERVER happens to run in —
-		// so the same installation would compute different period boundaries
-		// on different hosts. Both are refused before the lookup.
-		if v == "" || v == "Local" {
-			return fmt.Errorf("%q is not an IANA zone name — use one like Europe/Berlin", v)
-		}
-		// Then validated by loading it: the tzdata the server actually has is
-		// the only authority on whether a name resolves at report time. A name
-		// that passes a regex and fails at midnight is worse than one refused
-		// here.
-		if _, err := time.LoadLocation(v); err != nil {
-			return fmt.Errorf("%q is not an IANA timezone this server knows", v)
+		// The one zone rule: a "Local" or empty name would make the same
+		// installation compute different period boundaries on different hosts.
+		if err := values.ZoneName(v); err != nil {
+			return fmt.Errorf("%q is not an IANA zone name this server knows — use one like Europe/Berlin", v)
 		}
 		return nil
 	},
@@ -147,11 +137,15 @@ var BaseCurrency = settings.Define[string](
 	"EUR",
 	func(v string) error {
 		if !values.ValidCurrency(v) {
-			return fmt.Errorf("a base currency is three uppercase ISO-4217 letters, like EUR")
+			return errors.New("a base currency is three uppercase ISO-4217 letters, like EUR")
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+).AsInstallationIdentity().
+	// Read ungated when a list orders deals by value. Every converted figure
+	// already shows the base currency. The gate would protect nothing and
+	// refuse a seat that may read the deals.
+	MachineryApplied()
 
 // Country is where this installation is established, as a lower-case ISO
 // 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer
@@ -178,7 +172,16 @@ var Country = settings.Define[string](
 		if v == "" {
 			return nil
 		}
-		return jurisdiction.Code(v).Validate()
+		code := jurisdiction.Code(v)
+		if err := code.Validate(); err != nil {
+			return err
+		}
+		// A code no compiled-in pack answers would select a jurisdiction that
+		// applies nothing, while the screen says it applies.
+		if _, ok := jurisdiction.For(code); !ok {
+			return fmt.Errorf("no jurisdiction pack for %q is compiled into this build", v)
+		}
+		return nil
 	},
 	// MachineryApplied because the outbound authorization engine reads it while
 	// applying the posture to its OWN write — the case that declaration exists
@@ -253,6 +256,13 @@ func BaseCurrencyOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // the hardest kind of wrong to notice.
 func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.RequireTx(ctx, tx, Timezone)
+}
+
+// BaseCurrencyAppliedTx resolves the base currency for a read that only
+// orders by it. It skips the installation_settings.read gate and the lock
+// BaseCurrencyOf takes, because nothing is frozen or written against it.
+func BaseCurrencyAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.ApplyTx(ctx, tx, BaseCurrency)
 }
 
 // TimezoneAppliedTx resolves the installation's zone for an INTERNAL date

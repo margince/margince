@@ -4,8 +4,9 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { CreateAction, type CreateField } from "./create";
+import { currencyBeside } from "./dealcurrency";
 import { useProjectCreateForm } from "./projects.create";
 
 // What a rep can START from the company page.
@@ -31,12 +32,11 @@ function useDealTarget() {
   return useQuery({
     queryKey: ["pipelines", "dealTarget"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
       const pipeline: Pipeline | undefined =
         data.data.find((candidate) => candidate.is_default) ?? data.data[0];
       const stages: Stage[] = pipeline?.stages ?? [];
@@ -98,33 +98,31 @@ export function NewDealAction({
     { key: "expected_close_date", label: "create.expectedClose", type: "date" },
   ];
 
-  const createDeal = async (values: Record<string, string>) => {
+  const createDeal = async (
+    values: Record<string, string>,
+    _rows: unknown,
+    idempotencyKey: string,
+  ) => {
     const amount = values.amount?.trim();
-    const { data, error } = await api.POST("/deals", {
-      body: {
-        name: values.name.trim(),
-        pipeline_id: pipeline.id,
-        stage_id: values.stage_id,
-        // The form takes major units; the wire is minor units.
-        //
-        // Amount and currency travel together or not at all — the server
-        // refuses a half-populated pair (amount_currency_pair), so sending a
-        // currency beside an empty amount 422s the field the form presents as
-        // optional.
-        amount_minor: amount
-          ? toMinorUnits(Number(amount), values.currency || "EUR")
-          : null,
-        currency: amount ? values.currency || "EUR" : null,
-        company_id: companyId,
-        project_id: projectId ?? null,
-        expected_close_date: values.expected_close_date || null,
-        source: "manual",
-      },
-    });
-    if (error) {
-      throwProblem(error, t);
-    }
-    return data;
+    const currency = values.currency || "EUR";
+    return unwrap(
+      await api.POST("/deals", {
+        params: { header: { "Idempotency-Key": idempotencyKey } },
+        body: {
+          name: values.name.trim(),
+          pipeline_id: pipeline.id,
+          stage_id: values.stage_id,
+          // The form takes major units; the wire is minor units.
+          amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
+          currency: currencyBeside(currency, amount),
+          company_id: companyId,
+          project_id: projectId ?? null,
+          expected_close_date: values.expected_close_date || null,
+          source: "manual",
+        },
+      }),
+      t,
+    );
   };
 
   return (

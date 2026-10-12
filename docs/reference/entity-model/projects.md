@@ -6,7 +6,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project
 
-23 columns · primary key `(id)` · referenced by 9 foreign keys
+23 columns · primary key `(id)` · referenced by 10 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

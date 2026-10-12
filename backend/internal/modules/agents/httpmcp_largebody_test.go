@@ -222,8 +222,8 @@ func (b blockingTool) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 func TestALargeRequestHoldsItsSlotUntilItIsAnswered(t *testing.T) {
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	tool := blockingTool{
-		echoTool: echoTool{spec: objectSpec("read_record", principal.ScopeRead), out: json.RawMessage(`{"ok":true}`)},
-		entered:  make(chan struct{}), release: make(chan struct{}),
+		spec: objectSpec("read_record", principal.ScopeRead), out: json.RawMessage(`{"ok":true}`),
+		entered: make(chan struct{}), release: make(chan struct{}),
 	}
 	registry.Register(tool)
 	h, srv := largeBodyHandler(t, registry)

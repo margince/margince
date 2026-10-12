@@ -122,7 +122,7 @@ func TestAStoredStringCannotForgeALineInTheMessage(t *testing.T) {
 	// The finding may CONTAIN those words — it is one flattened line and the
 	// reader sees them inside it. What it must not do is occupy a line of its
 	// own, which is what makes a forged line read as the product's own.
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.TrimSpace(line) == "· a line we never wrote" {
 			t.Errorf("a stored string wrote a line of its own:\n%s", body)
 		}

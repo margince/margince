@@ -24,7 +24,7 @@ import (
 // concept's words, and the real workspace holds 163 failures of one AI task.
 func TestAlikeSystemFailuresAreOneIncident(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		failures = append(failures, aiFailure(i, "site_triage"))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &failures}
@@ -46,7 +46,7 @@ func TestAlikeSystemFailuresAreOneIncident(t *testing.T) {
 // two things are broken and name neither.
 func TestTwoBrokenThingsAreTwoIncidents(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		for _, task := range []string{"site_triage", "signal_extract"} {
 			failures = append(failures, aiFailure(i*2+len(task)%2, task))
 		}
@@ -74,7 +74,7 @@ func TestTwoBrokenThingsAreTwoIncidents(t *testing.T) {
 // the routine tidying.
 func TestAnIncidentIsNotFiledAsRoutineTidying(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		failures = append(failures, item("m"+string(rune('a'+i)), "capture_health", withKind("reauth_required")))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &failures}
@@ -94,7 +94,7 @@ func TestAnIncidentIsNotFiledAsRoutineTidying(t *testing.T) {
 // by the provider's reason would hide two of them.
 func TestBouncesAreNeverFoldedIntoAnIncident(t *testing.T) {
 	bounces := []crmcontracts.AttentionItem{}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		bounces = append(bounces, item("b"+string(rune('a'+i)), "bounce", withKind("hard")))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Bounces: &bounces}
@@ -111,7 +111,7 @@ func TestBouncesAreNeverFoldedIntoAnIncident(t *testing.T) {
 // sixty-three incidents for one broken task — the workspace's real number.
 func TestAIFailuresGroupByWhatRanNotByEachRunsOwnWords(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		row := aiFailure(i, "site_triage")
 		summary := "reading acme" + string(rune('a'+i)) + ".com failed"
 		row.Title = &summary
@@ -134,7 +134,7 @@ func TestAIFailuresGroupByWhatRanNotByEachRunsOwnWords(t *testing.T) {
 func TestTwoBrokenMailboxesAreTwoIncidents(t *testing.T) {
 	rows := []crmcontracts.AttentionItem{}
 	for _, mailbox := range []string{"sales@acme.test", "lena@acme.test"} {
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			row := item(mailbox+string(rune('a'+i)), "capture_health", withKind("disconnected"))
 			cause := "capture_health:disconnected:" + mailbox
 			row.CauseRef = &cause
@@ -155,14 +155,14 @@ func TestTwoBrokenMailboxesAreTwoIncidents(t *testing.T) {
 // that names neither.
 func TestTwoSourcesSharingAConditionWordAreNotOneIncident(t *testing.T) {
 	capture := []crmcontracts.AttentionItem{}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		row := item("c"+string(rune('a'+i)), "capture_health", withKind("sync_failing"))
 		cause := "capture_health:sync_failing:sales@acme.test"
 		row.CauseRef = &cause
 		capture = append(capture, row)
 	}
 	ai := []crmcontracts.AttentionItem{}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		row := item("a"+string(rune('a'+i)), "ai_work_health", withKind("sync_failing"))
 		cause := "ai_work_health:sync_failing"
 		row.CauseRef = &cause
@@ -181,7 +181,7 @@ func TestTwoSourcesSharingAConditionWordAreNotOneIncident(t *testing.T) {
 // many; a wrongly grouped one hides a failure the reader never learns about.
 func TestASystemRowWithNoNamedConditionNeverGroups(t *testing.T) {
 	rows := []crmcontracts.AttentionItem{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		rows = append(rows, item("s"+string(rune('a'+i)), "capture_health", withKind("disconnected")))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
@@ -219,7 +219,7 @@ func aiFailure(seq int, taskKind string) crmcontracts.AttentionItem {
 func TestAnIncidentGroupIsDrawnFromTheRulesNameNotItsIdentity(t *testing.T) {
 	automationID := ids.New[ids.AutomationKind]()
 	failures := []crmcontracts.AttentionItem{}
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		failures = append(failures, automationItem(TroubledAutomationRun{
 			ID:           ids.MustParse(fmt.Sprintf("01a05500-0000-7000-8000-0000000%05x", i)),
 			AutomationID: automationID,

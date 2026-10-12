@@ -121,7 +121,7 @@ func TestPurgeDedupeFlushesMidScan(t *testing.T) {
 	const seeded = scanBatch + 1
 
 	pipe := rdb.Pipeline()
-	for i := 0; i < seeded; i++ {
+	for i := range seeded {
 		pipe.Set(ctx, fmt.Sprintf("%scg:probe:%d", DedupeKeyPrefix, i), "1", time.Minute)
 	}
 	if _, err := pipe.Exec(ctx); err != nil {

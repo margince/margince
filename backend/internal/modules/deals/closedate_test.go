@@ -7,6 +7,7 @@ package deals
 // both CLOSE_DATE_AUTOAPPLY positions, and the replacement-date math.
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -40,12 +41,7 @@ func activeDeal(expectedClose *time.Time) CloseDateInput {
 }
 
 func hasFlag(h CloseDateHygiene, f CloseDateFlag) bool {
-	for _, got := range h.Flags {
-		if got == f {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(h.Flags, f)
 }
 
 func TestCloseDateAssessmentFlags(t *testing.T) {

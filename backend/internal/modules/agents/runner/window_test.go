@@ -46,7 +46,7 @@ func TestTheTriggerReferenceIsNeverPrintedWithoutSayingWhatItIs(t *testing.T) {
 	// fail; counting catches both directions — the clause leaking onto the
 	// grounding refs, which are records, and a second producer appearing.
 	var labelled, named int
-	for _, line := range strings.Split(win.msgs[0].Content, "\n") {
+	for line := range strings.SplitSeq(win.msgs[0].Content, "\n") {
 		if strings.Contains(line, triggerProvenance) {
 			labelled++
 		}
@@ -70,7 +70,7 @@ func TestTheTriggerReferenceIsNeverPrintedWithoutSayingWhatItIs(t *testing.T) {
 // most.
 func TestTheProvenanceRuleOutlivesEveryObservationTheCeilingElides(t *testing.T) {
 	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, nil, nil)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
 	}
 
@@ -133,7 +133,7 @@ func TestAResumedRunIsStillToldWhereARecordIdComesFrom(t *testing.T) {
 // The same transcript is bounded twice, and only the number differs.
 func TestALargerProviderWindowKeepsWhatTheFloorWouldElide(t *testing.T) {
 	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, nil, nil)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
 	}
 
@@ -167,7 +167,7 @@ func TestALargerProviderWindowKeepsWhatTheFloorWouldElide(t *testing.T) {
 // least, which is the failure a naive `> 0` check introduces.
 func TestAWindowOfZeroElidesNothing(t *testing.T) {
 	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, nil, nil)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
 	}
 

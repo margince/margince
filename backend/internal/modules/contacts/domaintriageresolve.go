@@ -16,6 +16,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -180,8 +182,13 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 			return ResolveDomainTriageResult{}, err
 		}
 	}
-	if err := bindTriageDossier(ctx, tx, in.ReadID, *res.CompanyID); err != nil {
-		return ResolveDomainTriageResult{}, err
+	// A verdict reached without a dossier names no read to bind, which is what
+	// an unblock answers with. settleDisposition reads the same zero the same
+	// way.
+	if !in.ReadID.IsZero() {
+		if err := bindTriageDossier(ctx, tx, in.ReadID, *res.CompanyID); err != nil {
+			return ResolveDomainTriageResult{}, err
+		}
 	}
 	return res, settleDisposition(ctx, tx, in, res.CompanyID)
 }
@@ -273,7 +280,8 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 // the verdict.
 //
 // It never reassigns: someone whose current employer a human already recorded
-// keeps it, exactly as the capture ensure never overrides one.
+// keeps it, as the capture ensure never overrides one. Each edge is dated
+// from the earliest mail of its contact on the domain.
 func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, companyID ids.CompanyID) (int, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -304,8 +312,8 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 	// point of the split: the candidate read above is a snapshot, and this is
 	// the decision.
 	rows, err := tx.Query(ctx, `
-		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by)
-		SELECT 'employment', p.id, $1, true, $2, $3
+		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by, first_observed_at)
+		SELECT 'employment', p.id, $1, true, $2, $3, `+employmentFirstObservedSQL("p.id", "$5", "NULL::uuid", "$6")+`
 		FROM contact p
 		WHERE p.id = ANY($4)
 		  AND NOT EXISTS (
@@ -313,7 +321,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 			WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id, contact_id`,
-		companyID, domainTriageSource(domain), by, candidates)
+		companyID, domainTriageSource(domain), by, candidates, domain, mailClockSkewAllowance)
 	if err != nil {
 		return 0, fmt.Errorf("contacts: planting the employment edges for %s: %w", domain, err)
 	}
@@ -400,14 +408,47 @@ func domainEmploymentCandidates(ctx context.Context, tx pgx.Tx, domain string) (
 // confirmed_at is what the row's target-shape CHECK requires alongside the
 // company, and it is honest here: the verdict IS the confirmation.
 func bindTriageDossier(ctx context.Context, tx pgx.Tx, readID ids.UUID, companyID ids.CompanyID) error {
-	if _, err := tx.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		UPDATE site_read
 		   SET company_id = $2, confirmed_at = now(), updated_at = now()
 		 WHERE id = $1 AND target_kind = $3 AND company_id IS NULL`,
-		readID, companyID, TargetKindDomainTriage); err != nil {
+		readID, companyID, TargetKindDomainTriage)
+	if err != nil {
 		return fmt.Errorf("contacts: binding the triage dossier to its company: %w", err)
 	}
+	if tag.RowsAffected() == 0 {
+		return declinedTriageBind(ctx, tx, readID, companyID)
+	}
 	return nil
+}
+
+// declinedTriageBind answers a bind the `company_id IS NULL` guard turned away.
+//
+// A replayed resolution asks for the company the row already names, and the
+// no-op is what makes the replay safe.
+//
+// A bind that lost the race to a different company is the one that matters.
+// Answering nil there leaves the caller holding a dossier that describes
+// somebody else's company.
+func declinedTriageBind(ctx context.Context, tx pgx.Tx, readID ids.UUID, wanted ids.CompanyID) error {
+	var bound *ids.CompanyID
+	switch err := tx.QueryRow(ctx,
+		`SELECT company_id FROM site_read WHERE id = $1 AND target_kind = $2`,
+		readID, TargetKindDomainTriage).Scan(&bound); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return fmt.Errorf("%w: triage dossier %s", apperrors.ErrNotFound, readID)
+	case err != nil:
+		return fmt.Errorf("contacts: reading the dossier that refused the bind %s: %w", readID, err)
+	case bound != nil && *bound == wanted:
+		return nil
+	case bound != nil:
+		return fmt.Errorf("%w: triage dossier %s already names company %s, not %s",
+			apperrors.ErrConflict, readID, *bound, wanted)
+	default:
+		// Unbound and still refused: the row is not a domain triage read, which
+		// the target_kind arm of the update is what checks.
+		return fmt.Errorf("%w: triage dossier %s", apperrors.ErrNotFound, readID)
+	}
 }
 
 // settleDisposition writes the answer and closes the retry cursor, so the domain

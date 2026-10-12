@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // digestWindowSQL is how much of a seat's queue one morning considers: still
@@ -255,7 +256,7 @@ func (s *Store) ClaimDigestRun(ctx context.Context, user ids.UserID, day time.Ti
 // find out why a message did not arrive would bury the relay failures it exists
 // for.
 func (s *Store) DigestFailed(ctx context.Context, user ids.UserID, day time.Time, cause string) error {
-	cause = truncate(cause, maxMailErrorRunes)
+	cause = textcut.Runes(cause, maxMailErrorRunes)
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, txErr := tx.Exec(ctx, `
 			UPDATE notification_digest_run SET mail_error = $3

@@ -16,6 +16,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -146,9 +147,7 @@ func TestAModernPostMustMirrorItsBodyIntoItsHeaders(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			headers := modernCallHeaders()
-			for name, value := range tc.bend {
-				headers[name] = value
-			}
+			maps.Copy(headers, tc.bend)
 
 			status, body := modernPOST(t, srv, modernCallBody, headers)
 

@@ -67,6 +67,7 @@ func (t describeAnalyticsVocabulary) Spec() mcp.ToolSpec {
 		Description:   describeAnalyticsVocabularyCopy.render(),
 		Instead:       describeAnalyticsVocabularyCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		OpenAPIOp: "describeAnalyticsVocabulary",
 		// No arguments. The document is composed for the calling principal, so
 		// a population filter would only let a caller narrow what it already
 		// receives, at the cost of a name it could spell wrong — which is the

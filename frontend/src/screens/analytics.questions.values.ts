@@ -9,6 +9,7 @@
 
 import { isMessageKey, type useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { dealStatusLabel } from "./dealdials";
 import { LEAD_STATUS_FILTER_OPTIONS } from "./leadpresentation";
 import { sourceKeyLabel } from "./leadsources";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
@@ -37,13 +38,6 @@ export const MEETING_STATUSES = [
   { key: "canceled", labelKey: "analytics.meetingsCanceled" },
 ] as const;
 
-// A deal's outcome, in the words the win-loss card already uses. An open deal
-// has no word on any screen yet, so it keeps its wire spelling.
-const DEAL_STATUS: Readonly<Record<string, MessageKey>> = {
-  won: "analytics.won",
-  lost: "analytics.lost",
-};
-
 const LEAD_ENTITIES: ReadonlySet<string> = new Set(["leads-by-status"]);
 
 function keyed(
@@ -63,7 +57,7 @@ function valueKey(
       return LEAD_ENTITIES.has(entity)
         ? LEAD_STATUS_FILTER_OPTIONS.find((option) => option.value === value)
             ?.label
-        : DEAL_STATUS[value];
+        : dealStatusLabel(value);
     case "forecast_category":
       return keyed(FORECAST_CATEGORIES, value);
     case "meeting_status":

@@ -219,10 +219,7 @@ func (in *BootstrapInput) normalize() error {
 	// route: without it, `"admin_password": ""` mints a loginable root account.
 	// Stated once at the point both provisioning paths converge rather than a
 	// third time at a call site.
-	if err := passwordLengthError("admin_password", in.AdminPassword); err != nil {
-		return err
-	}
-	return nil
+	return passwordLengthError("admin_password", in.AdminPassword)
 }
 
 // SeedSystemRoles lays down the compiled-in role set, and assigns nothing.

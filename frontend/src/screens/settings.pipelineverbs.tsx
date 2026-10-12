@@ -15,7 +15,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { ArchiveAction } from "./archive";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 type Pipeline = components["schemas"]["Pipeline"];
 
@@ -41,13 +41,11 @@ export function PipelineRetirement({
   const toast = useToast();
   const restore = useMutation({
     mutationFn: async (target: Pipeline) => {
-      const { data, error } = await api.POST("/pipelines/{id}/restore", {
-        params: { path: { id: target.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/pipelines/{id}/restore", {
+          params: { path: { id: target.id } },
+        }),
+      );
     },
     onSuccess: (restored) => {
       queryClient.invalidateQueries({ queryKey: ["pipelines"] });
@@ -82,15 +80,14 @@ export function PipelineRetirement({
       // just renamed or made default is a decision about a record the reader
       // was not looking at, and an unpinned DELETE cannot be taken back.
       archive={async () => {
-        const { error } = await api.DELETE("/pipelines/{id}", {
-          params: {
-            path: { id: pipeline.id },
-            ...ifMatch(requireVersion(pipeline.version)),
-          },
-        });
-        if (error) {
-          throwProblem(error);
-        }
+        unwrap(
+          await api.DELETE("/pipelines/{id}", {
+            params: {
+              path: { id: pipeline.id },
+              ...ifMatch(requireVersion(pipeline.version)),
+            },
+          }),
+        );
         return pipeline;
       }}
       invalidate="pipelines"
@@ -108,17 +105,15 @@ export function MakeDefault({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
   const queryClient = useQueryClient();
   const promote = useMutation({
     mutationFn: async (target: Pipeline) => {
-      const { data, error } = await api.PATCH("/pipelines/{id}", {
-        params: {
-          path: { id: target.id },
-          ...ifMatch(requireVersion(target.version)),
-        },
-        body: { is_default: true },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/pipelines/{id}", {
+          params: {
+            path: { id: target.id },
+            ...ifMatch(requireVersion(target.version)),
+          },
+          body: { is_default: true },
+        }),
+      );
     },
     onSuccess: (promoted) => {
       queryClient.invalidateQueries({ queryKey: ["pipelines"] });

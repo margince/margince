@@ -11,6 +11,7 @@ package aicert_test
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"testing"
@@ -55,9 +56,7 @@ func buildAICertDecisions(readiness []aicert.DecisionRow) []aiCertDecision {
 		if stats := rec.Decision; stats != nil {
 			entry.Kept, entry.KeptWrong = stats.Kept, stats.KeptWrong
 			entry.FallbackRate, entry.ServedPassRate = stats.FallbackRate, stats.ServedPassRate
-			for reason, n := range stats.FallbackByReason {
-				entry.FallbackByReason[reason] = n
-			}
+			maps.Copy(entry.FallbackByReason, stats.FallbackByReason)
 		}
 		decisions = append(decisions, entry)
 	}

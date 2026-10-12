@@ -102,7 +102,7 @@ func transmittedBody(t *testing.T, c *consentEnv) string {
 // answers a human click with 405.
 func unsubscribeLinkIn(t *testing.T, body string) string {
 	t.Helper()
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if link, ok := strings.CutPrefix(line, "Unsubscribe: "); ok {
 			return strings.TrimSpace(link)
 		}
@@ -118,7 +118,7 @@ func unsubscribeLinkIn(t *testing.T, body string) string {
 // preference centre can resolve.
 func manageLinkIn(t *testing.T, body string) string {
 	t.Helper()
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if link, ok := strings.CutPrefix(line, "Manage your preferences: "); ok {
 			return strings.TrimSpace(link)
 		}
@@ -134,7 +134,7 @@ func manageTokenFromLink(t *testing.T, link string) string {
 	if err != nil {
 		t.Fatalf("parsing the manage link %q: %v", link, err)
 	}
-	route := strings.SplitN(u.Fragment, "?", 2)[0]
+	route, _, _ := strings.Cut(u.Fragment, "?")
 	token := strings.TrimPrefix(route, "/preferences/")
 	if token == "" || token == route {
 		t.Fatalf("manage link has no token: %q", u.Fragment)
@@ -151,7 +151,7 @@ func tokenFromLink(t *testing.T, link string) string {
 	// The token lives in the FRAGMENT: the visible links are hash routes,
 	// which is also what keeps the token out of ordinary web-server access
 	// logs until the page deliberately calls the API with it.
-	route := strings.SplitN(u.Fragment, "?", 2)[0]
+	route, _, _ := strings.Cut(u.Fragment, "?")
 	parts := strings.Split(strings.TrimPrefix(route, "/unsubscribe/"), "/")
 	if len(parts) < 2 || parts[0] == "" {
 		t.Fatalf("unsubscribe link has no token: %q", u.Fragment)
@@ -536,7 +536,7 @@ func TestPreferenceCenterRejectsOversizedChoiceArray(t *testing.T) {
 	token := tokenFromLink(t, unsubscribeLinkIn(t, transmittedBody(t, c)))
 
 	choices := make([]AnyMap, 0, 100)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		choices = append(choices, AnyMap{"purpose_key": "newsletter", "state": "withdrawn"})
 	}
 	if s := publicCall(t, c.AppEnv, "PUT", "/v1/public/preferences/"+token, AnyMap{"choices": choices}, nil, nil); s != http.StatusUnprocessableEntity {
@@ -550,7 +550,7 @@ func TestPreferenceCenterRateLimited(t *testing.T) {
 	c := setupConsent(t)
 
 	last := 0
-	for i := 0; i < 21; i++ {
+	for range 21 {
 		last = publicCall(t, c.AppEnv, "POST", "/v1/public/preferences/pref_flood_probe/unsubscribe?purpose=newsletter", nil, nil, nil)
 	}
 	if last != http.StatusTooManyRequests {

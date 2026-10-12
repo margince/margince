@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -115,7 +116,7 @@ func TestARoundRenewsTheSubscriptionItAlreadyHasRatherThanAddingOne(t *testing.T
 	api := NewAPI(srv.Client(), srv.URL)
 
 	sub, err := api.EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour))
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour))
 	if err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
@@ -157,7 +158,7 @@ func TestASubscriptionForADifferentURLIsNotAdopted(t *testing.T) {
 	api := NewAPI(srv.Client(), srv.URL)
 
 	if _, err := api.EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour)); err != nil {
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour)); err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
 	if created != 1 || renewed != 0 {
@@ -181,7 +182,7 @@ func TestARenewalOfAVanishedSubscriptionCreatesANewOne(t *testing.T) {
 	api := NewAPI(srv.Client(), srv.URL)
 
 	sub, err := api.EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour))
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour))
 	if err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
@@ -201,6 +202,11 @@ type subscriptionStubState struct {
 // subscriptionStub answers the three calls a round can make.
 func subscriptionStub(t *testing.T, st subscriptionStubState) *httptest.Server {
 	t.Helper()
+	// Resolved here rather than inside the handlers: clocktest.Now fails the
+	// test through t.Fatalf, which testing permits only from the goroutine
+	// running the test. A handler goroutine would abort mid-response and the
+	// client would see a transport error instead of the reason.
+	expiry := clocktest.Now(t).Add(time.Hour)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/subscriptions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
@@ -209,7 +215,7 @@ func subscriptionStub(t *testing.T, st subscriptionStubState) *httptest.Server {
 			}
 			w.WriteHeader(http.StatusCreated)
 			writeJSON(w, map[string]any{
-				"id": "sub-new", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+				"id": "sub-new", "expirationDateTime": expiry.UTC().Format(time.RFC3339),
 			})
 			return
 		}
@@ -224,7 +230,7 @@ func subscriptionStub(t *testing.T, st subscriptionStubState) *httptest.Server {
 			return
 		}
 		writeJSON(w, map[string]any{
-			"id": "sub-1", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"id": "sub-1", "expirationDateTime": expiry.UTC().Format(time.RFC3339),
 		})
 	})
 	srv := httptest.NewServer(mux)
@@ -260,6 +266,8 @@ func TestADeadlineBeyondWhatWasAskedForIsClamped(t *testing.T) {
 // what would add one more every renewal cycle, each delivering the same
 // notification — the accumulation renew-then-create exists to prevent.
 func TestASubscriptionIsFoundOnAPageAfterTheFirst(t *testing.T) {
+	// On the test goroutine: the handlers below cannot take t.Fatalf's path.
+	expiry := clocktest.Now(t).Add(time.Hour)
 	var created, renewed int
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
@@ -285,12 +293,12 @@ func TestASubscriptionIsFoundOnAPageAfterTheFirst(t *testing.T) {
 	mux.HandleFunc("/subscriptions/", func(w http.ResponseWriter, _ *http.Request) {
 		renewed++
 		writeJSON(w, map[string]any{
-			"id": "sub-ours", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"id": "sub-ours", "expirationDateTime": expiry.UTC().Format(time.RFC3339),
 		})
 	})
 
 	sub, err := NewAPI(srv.Client(), srv.URL).EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour))
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour))
 	if err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
@@ -303,6 +311,8 @@ func TestASubscriptionIsFoundOnAPageAfterTheFirst(t *testing.T) {
 // token — at a path built from a provider-supplied id. An id carrying a path
 // segment must not redirect it at another resource.
 func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
+	// On the test goroutine: the handlers below cannot take t.Fatalf's path.
+	expiry := clocktest.Now(t).Add(time.Hour)
 	// Guarded for the reason oneSubscriptionStub gives below: the write happens
 	// on the server's goroutine and the read on this one.
 	var (
@@ -325,7 +335,7 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 		patched = r.URL.EscapedPath()
 		mu.Unlock()
 		writeJSON(w, map[string]any{
-			"id": "sub-1", "expirationDateTime": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"id": "sub-1", "expirationDateTime": expiry.UTC().Format(time.RFC3339),
 		})
 	})
 	srv := httptest.NewServer(mux)
@@ -336,7 +346,7 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 	// duplicate notification costs one redundant sync, where declining to renew
 	// costs the mailbox its push.
 	if _, err := NewAPI(srv.Client(), srv.URL).EnsureSubscription(context.Background(), "at",
-		"https://api.example/webhooks/graph?token=t", owner, time.Now().Add(time.Hour)); err != nil {
+		"https://api.example/webhooks/graph?token=t", owner, clocktest.Now(t).Add(time.Hour)); err != nil {
 		t.Fatalf("EnsureSubscription: %v", err)
 	}
 	// Nothing was PATCHed at all: the id is refused before a request is built,

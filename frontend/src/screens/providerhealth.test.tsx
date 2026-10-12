@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
@@ -170,20 +171,20 @@ describe("Providers list", () => {
     ]);
     render(<AiProviderKeysCard />);
     const row = await screen.findByTestId("ai-provider-row-openai");
-    expect(await screen.findByText("Key rejected")).toBeInTheDocument();
+    expect(await within(row).findByText("Key rejected")).toBeInTheDocument();
     // The configuration badge stays on the line; the health badge is a second
     // one in the same row, never a replacement for it.
     expect(within(row).getByText("Ready")).toBeInTheDocument();
-    const panelRow = row.parentElement;
-    if (!panelRow) throw new Error("the provider line has no row");
-    expect(
-      within(panelRow).getByTestId("ai-provider-health-openai"),
-    ).toHaveTextContent("Key rejected");
     expect(
       within(screen.getByTestId("ai-provider-row-gemini")).queryByText(
         "Key rejected",
       ),
     ).toBeNull();
+    expect(screen.getAllByTestId(/^ai-provider-row-/)[0]).toBe(row);
+    await userEvent.setup().click(within(row).getByText("OpenAI"));
+    expect(
+      await screen.findByTestId("ai-provider-health-openai"),
+    ).toHaveTextContent("Key rejected");
     expect(screen.getAllByTestId(/^ai-provider-health-/)).toHaveLength(1);
   });
 

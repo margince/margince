@@ -4,14 +4,16 @@ import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import { INSTALLATION_SETTINGS_KEY } from "../app/uploadlimit";
-import { Button, TextInput } from "../design-system/atoms";
+import { Button, EmptyState, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { IconAction } from "../design-system/iconaction";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import {
   type AssignableRole,
   roleLabel,
@@ -49,12 +51,11 @@ function useSetEnabledProviders() {
     // off. The caller passes it as a variable rather than closing over render
     // state, so a click cannot submit a list older than the row it came from.
     mutationFn: async (keys: string[]) => {
-      const { error } = await api.PATCH("/installation/settings", {
-        body: { enabled_oidc_providers: keys },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/installation/settings", {
+          body: { enabled_oidc_providers: keys },
+        }),
+      );
     },
     onSuccess: async () => {
       // BOTH caches. The write goes through the installation PATCH, so the
@@ -107,12 +108,11 @@ function useSetGroupRoleMap() {
     // The caller passes the map as a variable rather than closing over render
     // state, so a click cannot submit rows older than the ones on screen.
     mutationFn: async (map: Record<string, string>) => {
-      const { error } = await api.PATCH("/installation/settings", {
-        body: { oidc_group_role_map: map },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/installation/settings", {
+          body: { oidc_group_role_map: map },
+        }),
+      );
     },
     onSuccess: async () => {
       // Both caches, for the reason useSetEnabledProviders gives: the write
@@ -205,108 +205,139 @@ function GroupRoleGrants({
   );
   const nextId = useRef(Object.keys(initial).length);
   const refusal = grantRefusal(rows, t);
+  const locked = !canManage || save.isPending;
   const editRow = (id: number, edit: Partial<GrantRow>) =>
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, ...edit } : row)),
     );
-  return (
-    <div className="group-grants">
-      <p className="t-label">{t("groupRoles.title")}</p>
-      <p className="t-caption">{t("groupRoles.sub")}</p>
-      <Callout
-        tone="warning"
-        kind="standing"
-        title={t("groupRoles.grantOnlyTitle")}
-      >
-        <p>{t("groupRoles.grantOnly")}</p>
-        <p>{t("groupRoles.adminGrant")}</p>
-      </Callout>
-      {save.error && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("signInMethods.saveFailed")}
-        >
-          {problemMessageOf(save.error, t)}
-        </Callout>
-      )}
-      {rows.length === 0 ? (
-        <p className="t-caption">{t("groupRoles.empty")}</p>
-      ) : (
-        <div className="group-grant-rows">
-          {rows.map((row) => (
-            <div className="group-grant-row" key={row.id}>
-              <TextInput
-                aria-label={t("groupRoles.group")}
-                placeholder={t("groupRoles.groupPlaceholder")}
-                value={row.group}
-                autoComplete="off"
-                disabled={!canManage || save.isPending}
-                onChange={(event) =>
-                  editRow(row.id, { group: event.target.value })
-                }
-              />
-              <Select
-                aria-label={t("groupRoles.role")}
-                options={grantRoleOptions(row.role, t, offered)}
-                value={row.role}
-                disabled={!canManage || save.isPending}
-                onChange={(role) => editRow(row.id, { role })}
-              />
-              <Button
-                iconOnly
-                aria-label={
-                  row.group.trim() === ""
-                    ? t("groupRoles.remove")
-                    : t("groupRoles.removeNamed", { group: row.group })
-                }
-                disabled={!canManage || save.isPending}
-                onClick={() =>
-                  setRows((current) =>
-                    current.filter((each) => each.id !== row.id),
-                  )
-                }
-              >
-                <X aria-hidden="true" />
-              </Button>
-            </div>
-          ))}
+  const columns: DataTableColumn<GrantRow>[] = [
+    {
+      key: "group",
+      header: t("groupRoles.group"),
+      grow: true,
+      render: (row) => (
+        <TextInput
+          aria-label={t("groupRoles.group")}
+          placeholder={t("groupRoles.groupPlaceholder")}
+          value={row.group}
+          autoComplete="off"
+          disabled={locked}
+          onChange={(event) => editRow(row.id, { group: event.target.value })}
+        />
+      ),
+    },
+    {
+      key: "role",
+      header: t("groupRoles.role"),
+      render: (row) => (
+        <Select
+          className="group-grants-role"
+          aria-label={t("groupRoles.role")}
+          options={grantRoleOptions(row.role, t, offered)}
+          value={row.role}
+          disabled={locked}
+          onChange={(role) => editRow(row.id, { role })}
+        />
+      ),
+    },
+    {
+      key: "remove",
+      header: t("table.actions"),
+      headerHidden: true,
+      fold: "end",
+      align: "end",
+      render: (row) => (
+        <div className="cell-actions">
+          <IconAction
+            icon={<X aria-hidden />}
+            label={
+              row.group.trim() === ""
+                ? t("groupRoles.remove")
+                : t("groupRoles.removeNamed", { group: row.group })
+            }
+            disabled={locked}
+            onClick={() =>
+              setRows((current) => current.filter((each) => each.id !== row.id))
+            }
+          />
         </div>
+      ),
+    },
+  ];
+  return (
+    <Panel
+      title={t("groupRoles.title")}
+      actions={
+        <div className="group-grants-actions">
+          <Button
+            disabled={locked}
+            reason={
+              rows.length >= MAX_GROUP_GRANTS
+                ? t("groupRoles.tooMany")
+                : undefined
+            }
+            onClick={() =>
+              setRows((current) => [
+                ...current,
+                // Least privilege as the starting answer: a row born as Admin
+                // would make the costliest grant the one a hurried save ships.
+                { id: nextId.current++, group: "", role: "read_only" },
+              ])
+            }
+          >
+            {t("groupRoles.add")}
+          </Button>
+          <Button
+            variant="primary"
+            pending={save.isPending}
+            disabled={!canManage}
+            reason={refusal ?? undefined}
+            onClick={() =>
+              save.mutate(
+                Object.fromEntries(rows.map((row) => [row.group, row.role])),
+              )
+            }
+          >
+            {t("groupRoles.save")}
+          </Button>
+        </div>
+      }
+    >
+      <PanelBody>
+        <PanelIntro>{t("groupRoles.sub")}</PanelIntro>
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={t("groupRoles.grantOnlyTitle")}
+        >
+          <p>{t("groupRoles.grantOnly")}</p>
+          <p>{t("groupRoles.adminGrant")}</p>
+        </Callout>
+        {save.error && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("signInMethods.saveFailed")}
+          >
+            {problemMessageOf(save.error, t)}
+          </Callout>
+        )}
+      </PanelBody>
+      {rows.length === 0 ? (
+        <PanelBody>
+          <EmptyState>{t("groupRoles.empty")}</EmptyState>
+        </PanelBody>
+      ) : (
+        <DataTable
+          label={t("groupRoles.title")}
+          bleed
+          fold
+          columns={columns}
+          rows={[...rows]}
+          rowKey={(row) => String(row.id)}
+        />
       )}
-      <div className="form-actions">
-        <Button
-          disabled={!canManage || save.isPending}
-          reason={
-            rows.length >= MAX_GROUP_GRANTS
-              ? t("groupRoles.tooMany")
-              : undefined
-          }
-          onClick={() =>
-            setRows((current) => [
-              ...current,
-              // Least privilege as the starting answer: a row born as Admin
-              // would make the costliest grant the one a hurried save ships.
-              { id: nextId.current++, group: "", role: "read_only" },
-            ])
-          }
-        >
-          {t("groupRoles.add")}
-        </Button>
-        <Button
-          variant="primary"
-          pending={save.isPending}
-          disabled={!canManage}
-          reason={refusal ?? undefined}
-          onClick={() =>
-            save.mutate(
-              Object.fromEntries(rows.map((row) => [row.group, row.role])),
-            )
-          }
-        >
-          {t("groupRoles.save")}
-        </Button>
-      </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -323,32 +354,31 @@ export function SignInMethodsCard() {
   const save = useSetEnabledProviders();
 
   return (
-    <Panel title={t("signInMethods.title")}>
-      <PanelBody>
-        <p className="t-body">{t("signInMethods.sub")}</p>
+    <>
+      <Panel title={t("signInMethods.title")}>
+        <PanelBody>
+          <PanelIntro>{t("signInMethods.sub")}</PanelIntro>
+          {settings.isSuccess && save.error && (
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("signInMethods.saveFailed")}
+            >
+              {problemMessageOf(save.error, t)}
+            </Callout>
+          )}
+        </PanelBody>
         <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
           {(current) => {
-            // Defaulted, not asserted. The field is contract-required, but a
-            // body that lost one hands over `undefined` anyway, and this card
-            // sits on the settings screen — dereferencing it would take the
-            // whole page down over a list nobody could act on. The same reading
-            // Switch's own `checked` prop documents.
+            // Defaulted although required: a body missing it would otherwise
+            // take the whole settings page down.
             const providers = current.sign_in_providers ?? [];
             const enabledKeys = providers
               .filter((provider) => provider.enabled)
               .map((provider) => provider.key);
             return (
               <>
-                {save.error && (
-                  <Callout
-                    tone="danger"
-                    kind="outcome"
-                    title={t("signInMethods.saveFailed")}
-                  >
-                    {problemMessageOf(save.error, t)}
-                  </Callout>
-                )}
-                <SettingList>
+                <SettingList bleed="settings">
                   <SettingRow
                     label={t("signInMethods.password")}
                     description={t("signInMethods.passwordAlways")}
@@ -375,10 +405,8 @@ export function SignInMethodsCard() {
                           checked={provider.enabled}
                           describedBy={control["aria-describedby"]}
                           pending={save.isPending}
-                          // Disabled while ANY save is in flight, not just for
-                          // a reader who may not write. The list travels whole,
-                          // so a second flip computed from the still-stale cache
-                          // would send a list that undoes the first one.
+                          // The list is sent whole, so a second flip during a
+                          // save would send the stale list and undo the first.
                           disabled={!canManage || save.isPending}
                           onChange={(next) =>
                             save.mutate(
@@ -395,20 +423,23 @@ export function SignInMethodsCard() {
                   ))}
                 </SettingList>
                 {providers.length === 0 && (
-                  <p>{t("signInMethods.noneConfigured")}</p>
+                  <PanelBody>
+                    <EmptyState>{t("signInMethods.noneConfigured")}</EmptyState>
+                  </PanelBody>
                 )}
-                <GroupRoleGrants
-                  // Defaulted for the same reason `sign_in_providers` is: the
-                  // field is contract-required, and a body that lost it hands
-                  // over `undefined` anyway.
-                  initial={current.oidc_group_role_map ?? {}}
-                  canManage={canManageGrants}
-                />
               </>
             );
           }}
         </QueryGate>
-      </PanelBody>
-    </Panel>
+      </Panel>
+      {settings.data && (
+        <GroupRoleGrants
+          // Defaulted for the same reason `sign_in_providers` is: the field is
+          // contract-required, and a body that lost it hands over `undefined`.
+          initial={settings.data.oidc_group_role_map ?? {}}
+          canManage={canManageGrants}
+        />
+      )}
+    </>
   );
 }

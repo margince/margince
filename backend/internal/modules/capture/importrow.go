@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // recordImportTx records that THIS seat's mailbox delivered this message.
@@ -55,10 +57,11 @@ func recordImportTx(
 	//
 	// provider_received_at is the provider's own arrival time in THIS seat's
 	// mailbox (connector.NormalizedRecord.ProviderReceivedAt), NULL when the
-	// transport stated none. It is what proves the mail was already held before
-	// the seat connected the mailbox (contacts.receivedBeforeConnectedTx).
+	// transport stated none or stated one outside the storable range. It is
+	// what proves the mail was already held before the seat connected the
+	// mailbox (contacts.receivedBeforeConnectedTx).
 	var received *time.Time
-	if !receivedAt.IsZero() {
+	if !receivedAt.IsZero() && datasource.InstantInRange(receivedAt) {
 		received = &receivedAt
 	}
 	if _, err := tx.Exec(ctx, `
@@ -159,7 +162,7 @@ func (s *Sink) recordThisImport(
 	if err := recordImportTx(ctx, tx, id, owner, birth, rec.ProviderReceivedAt); err != nil {
 		return err
 	}
-	if err := stampCaptureParticipants(ctx, tx, id, owner, fields.Kind, fields.Direction, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec.Counterparty); err != nil {
 		return err
 	}
 	// The confidentiality question for THIS seat's view of the thread, opened
@@ -334,10 +337,8 @@ func mailboxWasARecipientTx(ctx context.Context, tx pgx.Tx, rec connector.Normal
 	if self.CoversAddressExactly(rec.DeliveredTo) {
 		return true, nil
 	}
-	for _, a := range rec.Addresses {
-		if self.CoversAddressExactly(a) {
-			return true, nil
-		}
+	if slices.ContainsFunc(rec.Addresses, self.CoversAddressExactly) {
+		return true, nil
 	}
 	return false, nil
 }

@@ -55,6 +55,11 @@ func (s *Store) ClaimRecord(ctx context.Context, recordType string, id ids.UUID,
 	}
 	out := RecordClaim{RecordType: recordType, RecordID: id, OwnerID: actor.UserID}
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if recordType == entityLead {
+			if err := refuseWebsiteLeadNotYetTold(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		claim, auditID, err := storekit.ClaimOwnership(ctx, tx, recordType, id, actor.UserID, ifVersion)
 		if err != nil {
 			return err

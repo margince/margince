@@ -437,8 +437,7 @@ func TestNoSeatLiftsAnObjectionItRecorded(t *testing.T) {
 	}
 	// And refused for the RIGHT reason: a validation error here would mean the
 	// request was malformed, not that the authority held.
-	var invalid *ValidationError
-	if errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*ValidationError](err); ok {
 		t.Fatalf("the lift was refused as malformed (%v), so this says nothing about authority", err)
 	}
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {

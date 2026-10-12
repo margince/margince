@@ -70,7 +70,7 @@ func undoReadableDateColumns(t *testing.T) map[string][]string {
 	}
 	columns := map[string][]string{}
 	total := 0
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		m := dateColumnLine.FindStringSubmatch(strings.TrimSpace(line))
 		if m == nil || !reads[m[1]] {
 			continue
@@ -112,7 +112,7 @@ func TestEveryUndoReadableDateColumnIsWrittenAsADate(t *testing.T) {
 func assertWrittenAsADate(t *testing.T, sources map[string]string, table, column string) {
 	t.Helper()
 	for path, body := range sources {
-		for _, line := range strings.Split(body, "\n") {
+		for line := range strings.SplitSeq(body, "\n") {
 			trimmed := strings.TrimSpace(line)
 			if !strings.Contains(trimmed, `"`+column+`"`) || !strings.Contains(trimmed, ".Set(") {
 				continue
@@ -171,7 +171,7 @@ func constantsNaming(sources map[string]string, column string) []string {
 func assertConstantWrittenAsADate(t *testing.T, sources map[string]string, table, column, name string) {
 	t.Helper()
 	for path, body := range sources {
-		for _, line := range strings.Split(body, "\n") {
+		for line := range strings.SplitSeq(body, "\n") {
 			trimmed := strings.TrimSpace(line)
 			if !strings.Contains(trimmed, ".Set("+name+",") {
 				continue

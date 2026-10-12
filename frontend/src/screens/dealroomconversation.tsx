@@ -5,7 +5,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { QueryStates, throwProblem } from "./common";
+import { QueryStates, unwrap } from "./common";
 import {
   AddDocument,
   DOCUMENT_GROUPS,
@@ -55,13 +55,11 @@ export function DealRoomConversation({
   const threads = useQuery({
     queryKey: ["deal-room-threads", room.id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms/{id}/threads", {
-        params: { path: { id: room.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deal-rooms/{id}/threads", {
+          params: { path: { id: room.id } },
+        }),
+      );
     },
   });
   const docs = useRoomDocuments(room.id);
@@ -74,50 +72,43 @@ export function DealRoomConversation({
       body: string;
       requiredChange: boolean;
     }) => {
-      const { data, error } = await api.POST("/deal-rooms/{id}/threads", {
-        params: { path: { id: room.id } },
-        body: {
-          document_id: input.documentId,
-          body: input.body,
-          required_change: input.requiredChange,
-          source: "manual",
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/threads", {
+          params: { path: { id: room.id } },
+          body: {
+            document_id: input.documentId,
+            body: input.body,
+            required_change: input.requiredChange,
+            source: "manual",
+          },
+        }),
+        t,
+      );
     },
     onSuccess: refresh,
   });
   const reply = useMutation({
     mutationKey: ["deal-room-thread-reply"],
     mutationFn: async (input: { threadId: string; body: string }) => {
-      const { data, error } = await api.POST(
-        "/deal-rooms/{id}/threads/{threadId}/comments",
-        {
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/threads/{threadId}/comments", {
           params: { path: { id: room.id, threadId: input.threadId } },
           body: { body: input.body, source: "manual" },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
     },
     onSuccess: refresh,
   });
   const resolve = useMutation({
     mutationKey: ["deal-room-thread-resolve"],
     mutationFn: async (threadId: string) => {
-      const { data, error } = await api.POST(
-        "/deal-rooms/{id}/threads/{threadId}/resolve",
-        { params: { path: { id: room.id, threadId } } },
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/threads/{threadId}/resolve", {
+          params: { path: { id: room.id, threadId } },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
     },
     onSuccess: refresh,
   });

@@ -57,3 +57,21 @@ func stringConstantIn(t *testing.T, path, pattern string) string {
 	}
 	return string(match[1])
 }
+
+// TestThePublicSourceAcquisitionIsSpelledTheSameOnBothSides holds the claim in
+// consent/privacyinfo.go's acquiredFromAPublicSource doc comment: a website
+// lead's disclosure names its source in contacts' own word.
+func TestThePublicSourceAcquisitionIsSpelledTheSameOnBothSides(t *testing.T) {
+	t.Parallel()
+	owner := stringConstantIn(t,
+		filepath.Join(repoRoot, "backend", "internal", "modules", "contacts", "acquisition.go"),
+		`AcquiredPublicOrBusinessSource\s*=\s*"([^"]+)"`)
+	mirror := stringConstantIn(t,
+		filepath.Join(repoRoot, "backend", "internal", "modules", "consent", "privacyinfo.go"),
+		`acquiredFromAPublicSource\s*=\s*"([^"]+)"`)
+	if owner != mirror {
+		t.Errorf("contacts spells the public-source acquisition %q and consent spells it %q.\n"+
+			"A website lead's privacy notice names its source with consent's value, so a "+
+			"drift shows the reader a token the vocabulary no longer has.", owner, mirror)
+	}
+}

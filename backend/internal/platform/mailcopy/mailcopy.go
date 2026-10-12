@@ -183,6 +183,16 @@ type Copy struct {
 	WeeklyOutcomeWon   string
 	WeeklyOutcomeLost  string
 	WeeklyOutcomeMoved string
+	// What a figure says in place of a count its source did not fully measure.
+	// They are the panel's words, with {date} and {value} kept as placeholders.
+	WeeklyNotRecorded   string
+	WeeklyRecordedFrom  string
+	WeeklyNoRecords     string
+	WeeklyPartialFrom   string
+	WeeklyPartialValue  string
+	WeeklyBeforeHistory string
+	// WeeklyUnavailable stands where Won would be when its bookings were not read.
+	WeeklyUnavailable string
 
 	// The two links the installation sends as ITSELF rather than on a rep's
 	// behalf: the confirm-details link and the double-opt-in link.
@@ -326,6 +336,20 @@ type Copy struct {
 	DigestIntro   string
 	DigestAndMore string
 	DigestOpen    string
+
+	// The worklist notices the product raises for itself.
+	//
+	// Stored on the notice row rather than rendered per reader, and the digest
+	// mail quotes the subject verbatim.
+	//
+	// So a notice is this installation's copy in both places, or it disagrees
+	// with itself in one.
+	//
+	// NoticeBacklogBody counts the waiting decisions, so it carries one %d.
+	NoticeSLASubject     string
+	NoticeSLABody        string
+	NoticeBacklogSubject string
+	NoticeBacklogBody    string
 }
 
 // OneLine collapses any run of line breaks and other control separators into

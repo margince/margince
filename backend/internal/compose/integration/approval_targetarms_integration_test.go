@@ -18,6 +18,7 @@ package integration
 
 import (
 	"bytes"
+	"maps"
 	"net/http"
 	"testing"
 
@@ -138,9 +139,7 @@ func TestAStagedPatchIsRefusedWhenItsTargetMovedBeforeTheApproval(t *testing.T) 
 		t.Fatalf("human approve → %d", status)
 	}
 	withToken := map[string]string{"X-Approval-Token": approvalID}
-	for k, v := range bearer {
-		withToken[k] = v
-	}
+	maps.Copy(withToken, bearer)
 	problem = struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
@@ -245,9 +244,7 @@ func releaseStagedCall(t *testing.T, e *apptest.AppEnv, bearer map[string]string
 			"end one step later", status)
 	}
 	withToken := map[string]string{"X-Approval-Token": approvalID}
-	for k, v := range bearer {
-		withToken[k] = v
-	}
+	maps.Copy(withToken, bearer)
 	// Every route here answers 200 on release: an archive returns the archived
 	// row and the subscription patch the updated one.
 	if status := e.Call(t, method, path, body, withToken, nil); status != http.StatusOK {

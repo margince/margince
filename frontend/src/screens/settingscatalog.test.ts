@@ -97,6 +97,8 @@ describe("the scope each page declares", () => {
     // Both retention endpoints are installation-wide. What this page destroys,
     // it destroys everywhere.
     privacy: "installation",
+    // One jurisdiction selects the floor and the deadlines for everyone.
+    jurisdiction: "installation",
     // POST /embeddings/reindex rebuilds the installation's embed store.
     "system-health": "installation",
     reset: "installation",
@@ -265,6 +267,9 @@ describe("what each page lets a reader change", () => {
 
     privacy:
       "all(full-seat, any(any(consent_config:create), any(retention_policy:update, retention_policy:create), retention_policy:delete, any(privacy_request:update), any(contact:update)))",
+    // The country and, on a weakening change, the carried retention floor.
+    jurisdiction:
+      "all(full-seat, any(any(installation_settings:update), any(retention_policy:update)))",
     audit: "same-as-requires",
     // The reindex takes the seat; watching the queue beside it is a read, and
     // watching a stalled queue is an operator acting.

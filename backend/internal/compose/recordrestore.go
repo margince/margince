@@ -159,8 +159,7 @@ func (s RestoreSeam) reverseCorrection(
 		// of history) are a 409 on every other route this seam serves — the
 		// receipt read this line as undoable, so a plain 500 here would be a
 		// harder disagreement between the two than the refusal itself is.
-		var conflict *deals.CorrectionReversalError
-		if errors.As(err, &conflict) {
+		if conflict, ok := errors.AsType[*deals.CorrectionReversalError](err); ok {
 			return privacy.RecordHistoryEntry{}, true,
 				RefusedRestore{Reason: ReasonNotRestorableByThisPath, Detail: conflict.Reason}
 		}

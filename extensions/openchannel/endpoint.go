@@ -148,7 +148,7 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 				return err
 			}
 			if mine == nil {
-				return fmt.Errorf("openchannel: opening conflicted with a concurrent open, but the endpoint it created cannot be found")
+				return errors.New("openchannel: opening conflicted with a concurrent open, but the endpoint it created cannot be found")
 			}
 			stored = *mine
 			return nil

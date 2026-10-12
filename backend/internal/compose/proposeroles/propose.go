@@ -24,6 +24,7 @@ package proposeroles
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -288,7 +289,7 @@ func Parse(raw string) ([]Proposal, error) {
 	// `{}` — or a grammar the lane failed to constrain — would report itself as
 	// a well-covered account with nothing to propose.
 	if answer.Proposals == nil {
-		return nil, fmt.Errorf("proposeroles: the reply carries no proposals field, which the schema requires")
+		return nil, errors.New("proposeroles: the reply carries no proposals field, which the schema requires")
 	}
 	return *answer.Proposals, nil
 }

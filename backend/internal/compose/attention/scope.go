@@ -14,6 +14,7 @@ package attention
 
 import (
 	"context"
+	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -70,10 +71,8 @@ func resolveScope(ctx context.Context, asked string) (string, error) {
 	if asked == "" {
 		return scopeMine, nil
 	}
-	for _, allowed := range scopeOptionsFor(ctx) {
-		if asked == allowed {
-			return asked, nil
-		}
+	if slices.Contains(scopeOptionsFor(ctx), asked) {
+		return asked, nil
 	}
 	return "", apperrors.ErrPermissionDenied
 }

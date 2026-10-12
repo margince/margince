@@ -8,6 +8,45 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for InternalEventLeadPrivacyNoticeCreatedFailure.
+const (
+	LeadNoticeCollision InternalEventLeadPrivacyNoticeCreatedFailure = "collision"
+	LeadNoticeNoAddress InternalEventLeadPrivacyNoticeCreatedFailure = "no_address"
+	LeadNoticeRefused   InternalEventLeadPrivacyNoticeCreatedFailure = "refused"
+)
+
+// Valid indicates whether the value is a known member of the InternalEventLeadPrivacyNoticeCreatedFailure enum.
+func (e InternalEventLeadPrivacyNoticeCreatedFailure) Valid() bool {
+	switch e {
+	case LeadNoticeCollision:
+		return true
+	case LeadNoticeNoAddress:
+		return true
+	case LeadNoticeRefused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InternalEventLeadPrivacyNoticeCreatedState.
+const (
+	LeadNoticeFailed InternalEventLeadPrivacyNoticeCreatedState = "failed"
+	LeadNoticeQueued InternalEventLeadPrivacyNoticeCreatedState = "queued"
+)
+
+// Valid indicates whether the value is a known member of the InternalEventLeadPrivacyNoticeCreatedState enum.
+func (e InternalEventLeadPrivacyNoticeCreatedState) Valid() bool {
+	switch e {
+	case LeadNoticeFailed:
+		return true
+	case LeadNoticeQueued:
+		return true
+	default:
+		return false
+	}
+}
+
 // InternalEventAiBudgetUpdated The shared company allowance changed; workers reconsider deferred work.
 type InternalEventAiBudgetUpdated struct {
 	AfterRevision        string `json:"after_revision"`
@@ -107,6 +146,24 @@ type InternalEventDealSuggestionDismissed struct{}
 // InternalEventDealSuggestionSuperseded A suggestion stopped standing without anybody deciding it: its company gained an open deal or was archived, or a piece of its evidence was erased.
 type InternalEventDealSuggestionSuperseded struct{}
 
+// InternalEventLeadPrivacyNoticeCreated A website lead's Art. 14 notice was queued, or could not be given and nothing about the lead was kept. Entity-less and without the lead, which keeps it off the subscribable set: a named lead's unmet legal obligation is not a subscriber's to read. The proof row stays on the audit row the emit points at.
+type InternalEventLeadPrivacyNoticeCreated struct {
+	// Failure Why the notice could not be given, when it could not.
+	Failure *InternalEventLeadPrivacyNoticeCreatedFailure `json:"failure,omitempty"`
+
+	// State Whether the notice is on its way or could not be given.
+	State InternalEventLeadPrivacyNoticeCreatedState `json:"state"`
+}
+
+// InternalEventLeadPrivacyNoticeCreatedFailure Why the notice could not be given, when it could not.
+type InternalEventLeadPrivacyNoticeCreatedFailure string
+
+// InternalEventLeadPrivacyNoticeCreatedState Whether the notice is on its way or could not be given.
+type InternalEventLeadPrivacyNoticeCreatedState string
+
+// InternalEventLeadPrivacyNoticeFailed A website lead's queued notice bounced, so the lead is deleted in the same transaction. Entity-less for the reason the created event gives.
+type InternalEventLeadPrivacyNoticeFailed struct{}
+
 // InternalEventMeetingInvitationUpdated The durable calendar operation changed state; consumers reread permissioned details.
 type InternalEventMeetingInvitationUpdated struct {
 	Status  string `json:"status"`
@@ -123,6 +180,21 @@ type InternalEventReportingChanged struct {
 	Action string `json:"action"`
 	Object string `json:"object"`
 }
+
+// InternalEventTagSuggestionAccepted A user accepted a tag suggestion. The tagging itself is audited on the tag; this records the decision.
+type InternalEventTagSuggestionAccepted struct{}
+
+// InternalEventTagSuggestionCreated The tag scout suggested a tag on a contact or company. Entity-less and without the tag or the record, which keeps it off the subscribable set: a suggestion built from mail only its owner may read is visible only to that owner, and no webhook consumer can be held to that.
+type InternalEventTagSuggestionCreated struct {
+	// EvidenceCount How many activities the suggestion cites.
+	EvidenceCount int `json:"evidence_count"`
+}
+
+// InternalEventTagSuggestionDismissed A user dismissed a tag suggestion for the whole workspace. The tag is suggested on that record again only on evidence newer than the dismissal.
+type InternalEventTagSuggestionDismissed struct{}
+
+// InternalEventTagSuggestionSuperseded A tag suggestion stopped standing without anybody deciding it: its tag was retired or made unsuggestible, its record was archived or tagged, or a cited activity went away.
+type InternalEventTagSuggestionSuperseded struct{}
 
 func (InternalEventAiBudgetUpdated) EventType() string { return "ai_budget.updated" }
 
@@ -156,6 +228,14 @@ func (InternalEventDealSuggestionSuperseded) EventType() string { return "deal_s
 
 func (InternalEventDealSuggestionSuperseded) EntityType() string { return "" }
 
+func (InternalEventLeadPrivacyNoticeCreated) EventType() string { return "lead_privacy_notice.created" }
+
+func (InternalEventLeadPrivacyNoticeCreated) EntityType() string { return "" }
+
+func (InternalEventLeadPrivacyNoticeFailed) EventType() string { return "lead_privacy_notice.failed" }
+
+func (InternalEventLeadPrivacyNoticeFailed) EntityType() string { return "" }
+
 func (InternalEventMeetingInvitationUpdated) EventType() string { return "meeting_invitation.updated" }
 
 func (InternalEventMeetingInvitationUpdated) EntityType() string { return "activity" }
@@ -167,3 +247,19 @@ func (InternalEventMeetingProposalUpdated) EntityType() string { return "activit
 func (InternalEventReportingChanged) EventType() string { return "reporting.changed" }
 
 func (InternalEventReportingChanged) EntityType() string { return "dynamic" }
+
+func (InternalEventTagSuggestionAccepted) EventType() string { return "tag_suggestion.accepted" }
+
+func (InternalEventTagSuggestionAccepted) EntityType() string { return "" }
+
+func (InternalEventTagSuggestionCreated) EventType() string { return "tag_suggestion.created" }
+
+func (InternalEventTagSuggestionCreated) EntityType() string { return "" }
+
+func (InternalEventTagSuggestionDismissed) EventType() string { return "tag_suggestion.dismissed" }
+
+func (InternalEventTagSuggestionDismissed) EntityType() string { return "" }
+
+func (InternalEventTagSuggestionSuperseded) EventType() string { return "tag_suggestion.superseded" }
+
+func (InternalEventTagSuggestionSuperseded) EntityType() string { return "" }

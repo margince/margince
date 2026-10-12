@@ -13,9 +13,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -106,7 +105,7 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 	if firstErr == nil {
 		return resp, info, nil
 	}
-	r.forgetCached(ctx, task, req)
+	r.refused(ctx, lc, task, info, firstErr)
 
 	retry := feedbackFor(req, resp, firstErr)
 	resp, info, err = r.serveAttempt(ctx, lc, task, ladder, retry, attemptReasonSchemaInvalid)
@@ -117,7 +116,7 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 	if secondErr == nil {
 		return resp, info, nil
 	}
-	r.forgetCached(ctx, task, retry)
+	r.refused(ctx, lc, task, info, secondErr)
 
 	escalated := feedbackFor(req, resp, secondErr)
 	resp, info, err = r.completeEscalated(ctx, lc, task, escalated)
@@ -125,10 +124,31 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 		return model.Response{}, info, err
 	}
 	if finalErr := validate(resp.Text); finalErr != nil {
-		r.forgetCached(ctx, task, escalated)
+		r.refused(ctx, lc, task, info, finalErr)
+		lc.markTerminal(sentinelOutputRejected)
 		return model.Response{}, info, rejected(task, info, finalErr, truncated(resp))
 	}
 	return resp, info, nil
+}
+
+// quotedSpan is a Go-quoted string. Validators echo model output through %q,
+// and the model read a correspondent's text, so those spans never reach a log.
+var quotedSpan = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
+
+// refused records that the validator refused the attempt info describes: the
+// cache forgets the answer, and the log says which rule refused it. ai_call has
+// no column for the rule, so this line is what groups refusals by cause.
+func (r *Router) refused(ctx context.Context, lc *logicalCall, task Task, info RouteInfo, cause error) {
+	r.Reject(info)
+	r.log.InfoContext(ctx, "ai: the validator refused an answer",
+		"task", string(task), "logical_call_id", lc.id.String(), "attempt", len(lc.attempts),
+		"tier", string(info.Tier), "model", info.ModelID, "reason", refusalReason(ctx, cause))
+}
+
+// refusalReason is the validator's message with every echoed token blanked,
+// then passed through the same stripping and bound as a provider's sentence.
+func refusalReason(ctx context.Context, cause error) string {
+	return safeProviderText(ctx, quotedSpan.ReplaceAllString(cause.Error(), `"…"`))
 }
 
 // rejected names what refused the text. The offline fake cannot produce a
@@ -152,27 +172,6 @@ func rejected(task Task, info RouteInfo, finalErr error, wasTruncated bool) erro
 		return fmt.Errorf("%w: %w", ErrUnconfiguredModel, err)
 	}
 	return err
-}
-
-// forgetCached evicts the cached completion for exactly this request: a
-// response the validator rejected must not be replayed to a future
-// identical call. Without this, a retried BUILD with an unchanged corpus
-// deterministically replays its own failure from the cache until the TTL
-// expires. Best-effort — a request outside a workspace has no cache row.
-func (r *Router) forgetCached(ctx context.Context, task Task, req model.Request) {
-	rawWS, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return
-	}
-	key, err := cacheKey(ids.From[ids.WorkspaceKind](rawWS), task, req)
-	if err != nil {
-		// The serve path derived this same key moments ago, so a failure
-		// here is a real anomaly: an unevicted invalid answer would replay
-		// on retry, which must not stay invisible to the operator.
-		r.log.WarnContext(ctx, "ai: cache eviction skipped", "task", string(task), "err", err)
-		return
-	}
-	r.cache.forget(key)
 }
 
 // truncationFeedback is what a cut-off attempt is told instead of a complaint

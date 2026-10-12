@@ -17,7 +17,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -25,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 const ifMatchHeader = "If-Match"
@@ -201,12 +199,11 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 		// If-Match at all would not be pinned by the well-formed header this
 		// function sets either, so a malformed one is not what would leave it
 		// unpinned.
-		if got, err := strconv.ParseInt(caller, 10, 64); err != nil || got == admitted {
+		got, err := strconv.ParseInt(caller, 10, 64)
+		if err != nil || got == admitted {
 			return true
 		}
-		httperr.Write(w, r, fmt.Errorf(
-			"If-Match %s is not the version this record was read at (%d) — re-read it and retry: %w",
-			caller, admitted, apperrors.ErrVersionSkew))
+		httperr.Write(w, r, auth.StalePinError(admitted, got))
 		return false
 	}
 	r.Header.Set(ifMatchHeader, strconv.FormatInt(admitted, 10))

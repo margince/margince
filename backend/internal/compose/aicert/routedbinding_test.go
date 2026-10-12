@@ -99,7 +99,7 @@ func TestResolveBindingRefusesWhenNoRungIsBound(t *testing.T) {
 // been paid for.
 func TestValidateRoutedBindingsCatchesAJudgeCollisionUpFront(t *testing.T) {
 	cfg := RunnerConfig{
-		Routing: ptr(devLikeRouting()),
+		Routing: new(devLikeRouting()),
 		// Exactly the premium binding above: the judge would be grading itself on
 		// every premium-led task.
 		JudgeBinding: ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/big-1", BaseURL: "https://broker.example/api"},
@@ -125,7 +125,7 @@ func TestValidateRoutedBindingsCatchesAJudgeCollisionUpFront(t *testing.T) {
 // binds — that is the ordinary case and must not be refused.
 func TestValidateRoutedBindingsAcceptsADistinctJudge(t *testing.T) {
 	cfg := RunnerConfig{
-		Routing:      ptr(devLikeRouting()),
+		Routing:      new(devLikeRouting()),
 		JudgeBinding: ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/grader-9", BaseURL: "https://broker.example/api"},
 		Profile:      ai.ProfileEUHosted,
 	}
@@ -137,7 +137,7 @@ func TestValidateRoutedBindingsAcceptsADistinctJudge(t *testing.T) {
 // No judge at all is refused BEFORE the run, and the message says why the
 // routing cannot supply one: cert_judge's own rung would collide.
 func TestValidateRoutedBindingsRequiresAJudge(t *testing.T) {
-	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), Profile: ai.ProfileEUHosted}
+	cfg := RunnerConfig{Routing: new(devLikeRouting()), Profile: ai.ProfileEUHosted}
 	err := validateRoutedBindings(cfg, ai.AllTasks(), slog.New(slog.DiscardHandler))
 	if err == nil {
 		t.Fatal("a routed run with no judge was accepted; nothing would have graded the candidate")
@@ -163,8 +163,6 @@ func TestValidateRoutedBindingsRefusesAnUnknownProfile(t *testing.T) {
 	}
 }
 
-func ptr(r ai.RoutingConfig) *ai.RoutingConfig { return &r }
-
 // A routed run files its records under the ROUTING's profile, whatever the
 // config field beside it says. The profile is part of a record's identity, so a
 // caller that set Routing and left Profile at something else would otherwise
@@ -188,7 +186,7 @@ func TestARoutedRunTakesItsProfileFromTheRouting(t *testing.T) {
 // incomparable.
 func TestJudgeForGradesEveryTaskWithTheOneJudge(t *testing.T) {
 	judge := ai.ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
-	cfg := RunnerConfig{Routing: ptr(devLikeRouting()), JudgeBinding: judge, Profile: ai.ProfileEUHosted}
+	cfg := RunnerConfig{Routing: new(devLikeRouting()), JudgeBinding: judge, Profile: ai.ProfileEUHosted}
 	for _, task := range []ai.Task{ai.TaskDocumentExtract, ai.TaskCaptureConfidentialityVerdict} {
 		candidate, _, ok := resolveBinding(*cfg.Routing, task)
 		if !ok {

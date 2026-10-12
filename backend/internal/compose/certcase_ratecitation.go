@@ -25,7 +25,7 @@ var statedNumber = regexp.MustCompile(`\d+(?:[.,]\d+)*`)
 // read back off its output so the two can never number a page differently.
 func ratePassages(pageText string) map[string]string {
 	passages := map[string]string{}
-	for _, line := range strings.Split(numberPassages(pageText), "\n") {
+	for line := range strings.SplitSeq(numberPassages(pageText), "\n") {
 		id, text, found := strings.Cut(strings.TrimPrefix(line, "["), "] ")
 		if found {
 			passages[id] = text

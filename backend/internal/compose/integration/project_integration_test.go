@@ -170,8 +170,7 @@ func TestClosingAProjectRequiresAReason(t *testing.T) {
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
 
 	_, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseClosed})
-	var needsReason *projects.ClosedReasonRequiredError
-	if !errors.As(err, &needsReason) {
+	if _, ok := errors.AsType[*projects.ClosedReasonRequiredError](err); !ok {
 		t.Fatalf("closing without a reason produced %v, want ClosedReasonRequiredError", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM project_phase_history WHERE project_id = $1`, p.ID); n != 1 {
@@ -181,7 +180,7 @@ func TestClosingAProjectRequiresAReason(t *testing.T) {
 	// Re-opening clears the closed reason: a live project must not carry
 	// the explanation of a close that no longer applies.
 	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
-		ToPhase: projects.PhaseClosed, Reason: StrPtr("Delivered."),
+		ToPhase: projects.PhaseClosed, Reason: new("Delivered."),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -209,8 +208,7 @@ func TestADealCannotPointAtAnotherCompanysProject(t *testing.T) {
 		Name: "Wrong company", PipelineID: pipeline, StageID: open,
 		CompanyID: &companyBID, ProjectID: &p.ID, Source: "manual",
 	})
-	var mismatch *deals.DealProjectCompanyMismatchError
-	if !errors.As(err, &mismatch) {
+	if _, ok := errors.AsType[*deals.DealProjectCompanyMismatchError](err); !ok {
 		t.Fatalf("a cross-company pointer produced %v, want DealProjectCompanyMismatchError", err)
 	}
 
@@ -241,7 +239,7 @@ func TestArchivingAProjectKeepsWhatItGrouped(t *testing.T) {
 		t.Fatal(err)
 	}
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: StrPtr("[ERP-27] kickoff"), Source: "manual",
+		Kind: "email", Subject: new("[ERP-27] kickoff"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "project", EntityID: p.ID.UUID}},
 	})
 	if err != nil {
@@ -282,7 +280,7 @@ func TestAnActivityLinkedOnlyToAProjectIsReachedThroughIt(t *testing.T) {
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, &owner)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: StrPtr("rollout schedule"), Source: "manual",
+		Kind: "email", Subject: new("rollout schedule"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "project", EntityID: p.ID.UUID}},
 	})
 	if err != nil {
@@ -337,7 +335,7 @@ func TestARepReadsAProjectTheyDoNotOwnButCannotWriteIt(t *testing.T) {
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, &owner)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Subject: StrPtr("kickoff notes"), Source: "manual",
+		Kind: "note", Subject: new("kickoff notes"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "project", EntityID: p.ID.UUID}},
 	})
 	if err != nil {
@@ -401,7 +399,7 @@ func TestALeadCanBelongToAProject(t *testing.T) {
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
 
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
-		FullName: StrPtr("Anna Weber"), Source: "manual", ProjectID: &p.ID,
+		FullName: new("Anna Weber"), Source: "manual", ProjectID: &p.ID,
 	})
 	if err != nil {
 		t.Fatalf("create lead on a project: %v", err)
@@ -413,12 +411,12 @@ func TestALeadCanBelongToAProject(t *testing.T) {
 	// PROJ-LIFE-2: a closed project still accepts work. Nothing about the
 	// phase gates an attachment — only the auto-link ladder consults it.
 	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
-		ToPhase: projects.PhaseClosed, Reason: StrPtr("Delivered."),
+		ToPhase: projects.PhaseClosed, Reason: new("Delivered."),
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
-		FullName: StrPtr("Late enquiry"), Source: "manual", ProjectID: &p.ID,
+		FullName: new("Late enquiry"), Source: "manual", ProjectID: &p.ID,
 	}); err != nil {
 		t.Errorf("a closed project refused a new lead: %v — phase is advisory, not a gate", err)
 	}
@@ -760,10 +758,9 @@ func TestClosingAProjectWithABlankReasonIsRefused(t *testing.T) {
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
 
 	_, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
-		ToPhase: projects.PhaseClosed, Reason: StrPtr("   "),
+		ToPhase: projects.PhaseClosed, Reason: new("   "),
 	})
-	var needsReason *projects.ClosedReasonRequiredError
-	if !errors.As(err, &needsReason) {
+	if _, ok := errors.AsType[*projects.ClosedReasonRequiredError](err); !ok {
 		t.Fatalf("closing with a blank reason produced %v, want ClosedReasonRequiredError", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM project_phase_history WHERE project_id = $1`, p.ID); n != 1 {

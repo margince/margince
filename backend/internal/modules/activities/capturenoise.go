@@ -87,23 +87,18 @@ func (s *Store) HideCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityIDs 
 	return len(hidden), nil
 }
 
-// RedactCapturedNoiseTx nulls the content of the given hidden messages and drops
-// the embeddings derived from them, on the CALLER's transaction — so the
-// activity's text, its vectors, and (in the caller) the provider original behind
-// it are destroyed together or not at all.
+// RedactCapturedNoiseTx nulls the content of the given hidden messages on the
+// caller's transaction. The caller destroys every copy derived from that text
+// in the same transaction (privacy.Eraser.PurgeContentDerivedFromNoiseTx).
 //
-// It returns the ids it ACTUALLY redacted, which is not always what it was
-// handed: a message a human un-archived since the sweep read its backlog keeps
-// its content, and must therefore keep its original too. A destructive follow-up
+// It returns the ids it actually redacted, which is not always what it was
+// handed. A message a human un-archived since the sweep read its backlog keeps
+// its content, and must therefore keep its copies too. A destructive follow-up
 // keyed on the proposed set rather than the done set would quietly destroy half
 // of one.
 //
-// The embeddings matter as much as the text: an activity's subject and body are
-// embedded when it is captured, so leaving the vector behind would let a
-// similarity probe reconstruct what was just redacted — the residue is the
-// content, in another shape. What survives is the row, its links, its source key
-// and its provenance: the tombstone that stops a replay re-capturing what was
-// just redacted.
+// What survives is the row, its links, its source key and its provenance: the
+// tombstone that stops a replay re-capturing what was just redacted.
 func (s *Store) RedactCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]ids.UUID, error) {
 	if len(activityIDs) == 0 {
 		return nil, nil
@@ -128,7 +123,10 @@ func (s *Store) RedactCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityID
 		   FOR UPDATE
 		), stripped AS (
 		  UPDATE activity a
-		     SET subject = NULL, body = NULL, raw = NULL
+		     SET subject = NULL, body = NULL, raw = NULL,
+		         -- Read from the words being emptied, so they go with them.
+		         language = NULL, source_author_name = NULL,
+		         reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL
 		    FROM target t
 		   WHERE a.id = t.id AND t.had_content
 		)
@@ -154,13 +152,6 @@ func (s *Store) RedactCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityID
 	}
 	if len(destroyed) == 0 {
 		return done, nil
-	}
-	// The vectors go with the text they were built from: an embedding of
-	// redacted mail is that mail in another shape, still reachable by a
-	// similarity probe.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = ANY($1)`, destroyed); err != nil {
-		return nil, fmt.Errorf("activities: dropping the redacted mail's embeddings: %w", err)
 	}
 	for _, id := range destroyed {
 		// 'erase' is the closed vocabulary's verb for content destruction, which

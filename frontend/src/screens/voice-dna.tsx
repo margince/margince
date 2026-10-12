@@ -16,7 +16,7 @@ import {
 import { useToast } from "../design-system/toast";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 import { VOICE_MIN_WORDS } from "./voice-intake-core";
 import { useVoiceProfile } from "./voice-profile";
@@ -40,12 +40,11 @@ function useVoiceSources(profileId: string) {
   return useQuery({
     queryKey: ["voice-sources", profileId],
     queryFn: async (): Promise<CorpusManifest> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/sources", {
-        params: { path: { id: profileId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/voice-profiles/{id}/sources", {
+          params: { path: { id: profileId } },
+        }),
+      );
       return { sources: data.data, summary: data.summary };
     },
   });
@@ -117,26 +116,21 @@ export function VoiceDnaCard() {
             <PanelBody>
               <PanelIntro>{t("settings.voice.intro")}</PanelIntro>
               <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
-              {/* The first sample is what MINTS the profile, so the control
-                  that adds it asks for the create grant rather than the update
-                  one every later sample rides on. Withheld rather than absent:
-                  an empty card with no way to start reads as a feature this
-                  installation does not have, when the truth is a seat that may
-                  not use it. */}
-              {canCreate ? (
-                <SettingList>
-                  <VoiceCorpusIntake
-                    first
-                    profileId={null}
-                    onChanged={() =>
-                      qc.invalidateQueries({ queryKey: ["voice-profile"] })
-                    }
-                  />
-                </SettingList>
-              ) : (
-                <p>{t("settings.voice.readOnly")}</p>
-              )}
+              {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
             </PanelBody>
+            {/* The first sample mints the profile, so adding it takes the
+                create grant rather than the update one. */}
+            {canCreate && (
+              <SettingList bleed="settings">
+                <VoiceCorpusIntake
+                  first
+                  profileId={null}
+                  onChanged={() =>
+                    qc.invalidateQueries({ queryKey: ["voice-profile"] })
+                  }
+                />
+              </SettingList>
+            )}
           </Panel>
         )
       }
@@ -223,36 +217,29 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
             canEdit={canEdit}
             onChanged={invalidate}
           />
-
-          <SettingList>
-            {/* Stacked: the preferences are the longest thing anybody types in
-                settings, and a control that IS the subject takes the width
-                rather than the right column. The row draws the label the box
-                announces, so the two cannot drift apart. */}
-            <SettingRow
-              label={t("settings.voice.personalityLabel")}
-              layout="stack"
-              control={(control) => (
-                <PersonalityEditor
-                  control={control}
-                  profile={profile}
-                  canEdit={canEdit}
-                  onSaved={invalidate}
-                />
-              )}
-            />
-            {/* The raw derived text is what a profile can show BEFORE it is
-                ready; once it is, the insights above quote the same build back
-                in a form a reader can use, and repeating the markdown under it
-                would say the same thing twice. Closed by default either way:
-                it is the artifact behind the reading, not the reading. */}
-            {profile.status !== "ready" && (
-              <Disclosure summary={t("settings.voice.derivedLabel")}>
-                <DerivedVoice profile={profile} />
-              </Disclosure>
-            )}
-          </SettingList>
         </PanelBody>
+        <SettingList bleed="settings">
+          {/* Stacked: the preferences are the longest text in settings. */}
+          <SettingRow
+            label={t("settings.voice.personalityLabel")}
+            layout="stack"
+            control={(control) => (
+              <PersonalityEditor
+                control={control}
+                profile={profile}
+                canEdit={canEdit}
+                onSaved={invalidate}
+              />
+            )}
+          />
+          {/* Once ready, the insights above quote this text, so showing it too
+              would say it twice. */}
+          {profile.status !== "ready" && (
+            <Disclosure summary={t("settings.voice.derivedLabel")}>
+              <DerivedVoice profile={profile} />
+            </Disclosure>
+          )}
+        </SettingList>
       </Panel>
 
       <Panel title={t("settings.voice.corpusLabel")}>
@@ -348,16 +335,15 @@ function PersonalityEditor({
   const toast = useToast();
   const save = useMutation({
     mutationFn: async () => {
-      const { error: err } = await api.PATCH("/voice-profiles/{id}", {
-        params: {
-          path: { id: profile.id },
-          header: { "If-Match": String(profile.version) },
-        },
-        body: { personality_md: text },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(
+        await api.PATCH("/voice-profiles/{id}", {
+          params: {
+            path: { id: profile.id },
+            header: { "If-Match": String(profile.version) },
+          },
+          body: { personality_md: text },
+        }),
+      );
     },
     onSuccess: () => {
       setError(null);
@@ -426,13 +412,11 @@ function CorpusManifest({
 
   const remove = useMutation({
     mutationFn: async (sourceId: string) => {
-      const { error: err } = await api.DELETE(
-        "/voice-profiles/{id}/sources/{sourceId}",
-        { params: { path: { id: profileId, sourceId } } },
+      unwrap(
+        await api.DELETE("/voice-profiles/{id}/sources/{sourceId}", {
+          params: { path: { id: profileId, sourceId } },
+        }),
       );
-      if (err) {
-        throwProblem(err);
-      }
     },
     onSuccess: () => {
       setError(null);
@@ -695,13 +679,11 @@ function BuildControls({
       }
       const buildId = created.data.id;
       for (let attempt = 0; attempt < 40; attempt++) {
-        const { data, error: err } = await api.GET(
-          "/voice-profiles/{id}/builds/{buildId}",
-          { params: { path: { id: profile.id, buildId } } },
+        const data = unwrap(
+          await api.GET("/voice-profiles/{id}/builds/{buildId}", {
+            params: { path: { id: profile.id, buildId } },
+          }),
         );
-        if (err) {
-          throwProblem(err);
-        }
         // Spelled as three comparisons rather than a set lookup: this is what
         // proves to the compiler that the status is one a BuildOutcome may
         // hold, so a new server state cannot be passed through untyped.

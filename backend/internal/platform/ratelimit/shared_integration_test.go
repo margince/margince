@@ -90,7 +90,7 @@ func TestTwoReplicasSharingOneRedisEnforceOneCeiling(t *testing.T) {
 func TestBlockedPeeksAcrossReplicasWithoutSpendingASlot(t *testing.T) {
 	a, b := replicas(t, "test/peek-across", FailOpen, 2, time.Minute)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if b.Blocked("mailbox") {
 			t.Fatalf("probe %d reported the mailbox spent before anything was recorded", i+1)
 		}

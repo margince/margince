@@ -424,7 +424,7 @@ func (s *PendingStore) Retire(
 	ctx context.Context, p PendingCounterparty, reason string, measured VerdictMeasurement,
 ) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			UPDATE capture_pending_counterparty
 			   SET status = 'unsure', disposition_reason = NULLIF($2, ''),
 			       attempts = $4, resolved_at = now(),
@@ -433,6 +433,9 @@ func (s *PendingStore) Retire(
 			       updated_at = now()
 			 WHERE id = $1 AND status = 'pending' AND claimed_by = $3`,
 			p.ID, reason, p.Claim, PendingMaxAttempts, measured.confidence(), measured.Model)
+		if err == nil && tag.RowsAffected() == 0 {
+			return declinedRetire(ctx, tx, p.ID, p.Claim)
+		}
 		return err
 	})
 	if err != nil {

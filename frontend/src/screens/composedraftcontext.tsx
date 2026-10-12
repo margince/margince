@@ -5,7 +5,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { useCompany360 } from "./company360";
-import type { DraftUnavailable } from "./compose";
+import type { DraftUnavailable } from "./composedraftcall";
 import { Citations } from "./record360";
 
 // The account-started draft: choosing what a message is about before a model

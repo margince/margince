@@ -79,7 +79,7 @@ func TestAContactAtTwoMatchedCompaniesAppearsOnce(t *testing.T) {
 	anna := seedSearchContact(t, e, "Anna Schmidt")
 	staffCompany(t, e, anna, weaker, employmentShape{})
 	staffCompany(t, e, anna, better, employmentShape{})
-	staffCompany(t, e, anna, better, employmentShape{endsInDays: daysFromNow(30)})
+	staffCompany(t, e, anna, better, employmentShape{endsInDays: new(30)})
 
 	page := searchWith(e.Admin(), t, e, search.Input{Query: "quedlinburg", WithEmployees: true})
 	var seen int
@@ -119,10 +119,10 @@ func TestOnlyACurrentEmploymentFindsAContact(t *testing.T) {
 	departed := seedSearchContact(t, e, "Dora Departed")
 	billing := seedSearchContact(t, e, "Bert Billing")
 	archived := seedSearchContact(t, e, "Arne Archived")
-	staffCompany(t, e, notice, werke, employmentShape{endsInDays: daysFromNow(30)})
+	staffCompany(t, e, notice, werke, employmentShape{endsInDays: new(30)})
 	formerStatus := "former"
 	staffCompany(t, e, former, werke, employmentShape{status: &formerStatus})
-	staffCompany(t, e, departed, werke, employmentShape{endsInDays: daysFromNow(-30)})
+	staffCompany(t, e, departed, werke, employmentShape{endsInDays: new(-30)})
 	staffCompany(t, e, archived, werke, employmentShape{archived: true})
 	e.SeedID(t, `INSERT INTO relationship (id, kind, contact_id, company_id, role, source, captured_by)
 		VALUES ($1, 'billing_contact', $2, $3, 'recipient', 'manual', 'human:x')`, billing, werke)
@@ -275,7 +275,7 @@ func TestARankedWalkWithEmployeesReturnsEachContactOnce(t *testing.T) {
 	seen := map[ids.UUID]bool{}
 	var order []ids.UUID
 	cursor := ""
-	for pages := 0; pages < 10; pages++ {
+	for range 10 {
 		in := search.Input{Query: "quedlinburg", Types: []string{"contact"}, Limit: 2, Cursor: cursor, WithEmployees: true}
 		page := searchWith(e.Admin(), t, e, in)
 		for _, hit := range page.Hits {
@@ -383,8 +383,6 @@ func staffCompany(t *testing.T, e *SearchEnv, contact, company ids.UUID, shape e
 		VALUES ($1, 'employment', $2, $3, current_date + $4::int, $5, CASE WHEN $6 THEN now() END, 'manual', 'human:x')`,
 		contact, company, shape.endsInDays, shape.status, shape.archived)
 }
-
-func daysFromNow(days int) *int { return &days }
 
 func searchWith(ctx context.Context, t *testing.T, e *SearchEnv, in search.Input) search.Page {
 	t.Helper()

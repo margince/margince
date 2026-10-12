@@ -12,6 +12,7 @@ import {
   paramsFromValues,
   scalarText,
 } from "./automations.params";
+import { recipeSentence } from "./automations.recipe";
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
@@ -198,9 +199,8 @@ export function AutomationForm({
         onSubmit(name.trim() || entry.name, paramsFromValues(fields, values));
       }}
     >
-      <p className="t-caption">
-        {entry.trigger} {"->"} {entry.action}
-      </p>
+      {entry.description && <p>{entry.description}</p>}
+      <p className="t-caption">{recipeSentence(entry, t)}</p>
       <Field label={t("auto.name")}>
         {(control) => (
           <TextInput

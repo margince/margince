@@ -75,7 +75,7 @@ var nearMisses = []rune{
 // below is what holds it to reaching them all.
 func trimCorpus() []trimCase {
 	var subjects []rune
-	for r := rune(0); r < 0x10000; r++ {
+	for r := range rune(0x10000) {
 		if unicode.IsSpace(r) {
 			subjects = append(subjects, r)
 		}
@@ -164,7 +164,7 @@ func TestTheServerTrimCorpusReachesEveryCharacterGoCallsASpace(t *testing.T) {
 		}
 	}
 	var missing []string
-	for r := rune(0); r < 0x10000; r++ {
+	for r := range rune(0x10000) {
 		if unicode.IsSpace(r) && !seen[r] {
 			missing = append(missing, fmt.Sprintf("U+%04X", r))
 		}

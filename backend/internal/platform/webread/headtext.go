@@ -14,9 +14,10 @@ package webread
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"golang.org/x/net/html"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // tagScript is the element three harvests in this package read: the
@@ -62,21 +63,12 @@ func headTextFrom(attrs map[string]string, seen map[string]bool) (string, bool) 
 	if content == "" {
 		return "", false
 	}
-	content = truncateRunes(content, headTextRunes)
+	content = textcut.Runes(content, headTextRunes)
 	if seen["v:"+content] {
 		return "", false
 	}
 	seen["v:"+content] = true
 	return content, true
-}
-
-// truncateRunes cuts a string to at most n runes, counting characters rather
-// than bytes so a multi-byte sentence is not split mid-rune.
-func truncateRunes(s string, n int) string {
-	if utf8.RuneCountInString(s) <= n {
-		return s
-	}
-	return string([]rune(s)[:n])
 }
 
 // countScripts counts the <script src=…> tags a page loads, and how many of

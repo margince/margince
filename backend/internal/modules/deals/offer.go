@@ -17,6 +17,7 @@ package deals
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -24,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -368,7 +370,10 @@ type UpdateOfferInput struct {
 	IntroText      *string
 	TermsText      *string
 	TemplateID     *ids.OfferTemplateID
-	IfVersion      *int64
+	// Clear are the fields the caller sent as an explicit null, which is a
+	// request to empty them rather than to leave them alone.
+	Clear     []string
+	IfVersion *int64
 }
 
 // UpdateOffer also answers the rendering a buyer change retired, nil when none
@@ -400,6 +405,9 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 			return err
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly)
 			return err
 		}
@@ -425,6 +433,9 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 // the rendering a buyer change retired.
 func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer, in UpdateOfferInput) (*storekit.Patch, *string, error) {
 	p := storekit.NewPatch()
+	if err := storekit.ApplyClears(p, in.Clear, clearableOfferColumns(current)); err != nil {
+		return nil, nil, err
+	}
 	var retired *string
 	if in.Currency != nil {
 		p.Set("currency", current.Currency, *in.Currency)
@@ -460,8 +471,17 @@ func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.
 	}
 	var out crmcontracts.Offer
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if _, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly); err != nil {
+		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
+		if err != nil {
 			return err
+		}
+		// An accepted offer is the source of its deal's price, so retiring it
+		// would leave the deal priced from a document nobody can open.
+		if current.Status == crmcontracts.OfferStatusAccepted {
+			return &httperr.DetailedError{
+				Status: http.StatusConflict, Code: "offer_accepted",
+				Detail: "an accepted offer prices its deal and cannot be archived; the deal's price has to change first",
+			}
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE offer SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
@@ -470,7 +490,6 @@ func (s *Store) ArchiveOffer(ctx context.Context, id ids.OfferID) (crmcontracts.
 		if _, err := storekit.Audit(ctx, tx, "archive", "offer", id.UUID, nil, nil); err != nil {
 			return fmt.Errorf("audit offer archive: %w", err)
 		}
-		var err error
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.IncludeArchived); err != nil {
 			return fmt.Errorf("read archived offer: %w", err)
 		}

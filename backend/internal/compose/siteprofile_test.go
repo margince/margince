@@ -171,13 +171,13 @@ func TestGateProfileRefusesUnknownIdsAndBadConfidence(t *testing.T) {
 
 func TestProfileExcerptPagesBoundLegalPagesAndReserveCommercialEvidence(t *testing.T) {
 	var pages []crawlPage
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		pages = append(pages, crawlPage{
 			URL: seedURL + "/about" + string(rune('a'+i)), Kind: crmcontracts.SiteReadPageKindAbout,
 			Text: string(make([]byte, 0)) + string(bytesOfRunes('a', 9000)),
 		})
 	}
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		pages = append(pages, crawlPage{
 			URL: seedURL + "/legal" + string(rune('a'+i)), Kind: crmcontracts.SiteReadPageKindImpressum,
 			Text: string(bytesOfRunes('l', 9000)),

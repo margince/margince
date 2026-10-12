@@ -152,6 +152,7 @@ func reachableBody(fn identityFunc, byName map[string]identityFunc, seen map[str
 	}
 	seen[fn.name] = true
 	text := fn.body
+	var textSb155 strings.Builder
 	for name, callee := range byName {
 		// Word-bounded: a plain substring makes canIssuePasswordLink look like
 		// a caller of IssuePasswordLink, dragging unrelated bodies in and
@@ -161,9 +162,10 @@ func reachableBody(fn identityFunc, byName map[string]identityFunc, seen map[str
 		}
 		callsCallee := regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\(`)
 		if callsCallee.MatchString(fn.body) {
-			text += reachableBody(callee, byName, seen)
+			textSb155.WriteString(reachableBody(callee, byName, seen))
 		}
 	}
+	text += textSb155.String()
 	return text
 }
 

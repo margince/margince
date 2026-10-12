@@ -669,7 +669,7 @@ func TestApprovalRequestedWireSnapshot(t *testing.T) {
 func TestApprovalDecidedWireSnapshot(t *testing.T) {
 	edited := true
 	diffHash := "sha256:abc123"
-	editedChange := map[string]interface{}{"stage_id": approvalSnapshotTargetID.String()}
+	editedChange := map[string]any{"stage_id": approvalSnapshotTargetID.String()}
 	decidedBy := openapi_types.UUID(approvalSnapshotDecidedBy)
 	sample := crmcontracts.PublicEventApprovalDecided{
 		Kind:         "advance_deal",
@@ -695,10 +695,10 @@ func TestApprovalDecidedWireSnapshot(t *testing.T) {
 // proves an arbitrary edited-change shape survives round-tripping
 // undisturbed.
 func TestApprovalDecidedKeyBindingIsStable(t *testing.T) {
-	editedChange := map[string]interface{}{
+	editedChange := map[string]any{
 		"stage_id": approvalSnapshotTargetID.String(),
 		"note":     "moved after the call",
-		"nested":   map[string]interface{}{"amount_minor": float64(50000)},
+		"nested":   map[string]any{"amount_minor": float64(50000)},
 	}
 	decidedBy := openapi_types.UUID(approvalSnapshotDecidedBy)
 	sample := crmcontracts.PublicEventApprovalDecided{

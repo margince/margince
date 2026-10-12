@@ -55,6 +55,10 @@ email:
   the value itself. Leave it out for a relay that needs no login. The first start
   that reads it seals it into the keyvault, and later starts read it from there.
   To take the reference out after that, see [configuration.md](../reference/configuration.md).
+- Once a password is sealed, leaving it out keeps the sealed copy in use. To stop
+  using it (a new relay with no login, or a password that is no longer secret),
+  write `password: ${none}`. The next start deletes the sealed copy and sends
+  without a login.
 - A Gmail or Google Workspace account can be the relay. Use
   `smtp.gmail.com` and port `587`. Set the account address as `username`, and a Google
   **app password** (not the account password) as `password`.

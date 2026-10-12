@@ -19,8 +19,8 @@ import {
   type ListColumn,
   ListTable,
   type ListView,
-  pagerSlots,
 } from "./listtable";
+import { pagerSlots } from "./listtable.paging";
 import { pickOption } from "./select-testing";
 
 // The list surface (design-system/listtable.tsx) on its own props: the query
@@ -707,9 +707,8 @@ describe("filter menu", () => {
 });
 
 describe("a chip with an async search source", () => {
-  function chipWithSearch(
-    search: NonNullable<ListChip["search"]>,
-  ): readonly ListChip[] {
+  type SearchFn = Extract<ListChip, { appliedName: unknown }>["search"];
+  function chipWithSearch(search: SearchFn): readonly ListChip[] {
     return [
       {
         key: "company",
@@ -717,6 +716,7 @@ describe("a chip with an async search source", () => {
         allLabel: "All companies",
         options: [],
         search,
+        appliedName: undefined,
       },
     ];
   }

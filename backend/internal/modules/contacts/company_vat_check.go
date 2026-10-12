@@ -25,7 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -318,7 +318,7 @@ func (s *Store) RecordVatCheck(ctx context.Context, check VatCheck) error {
 	}
 	number := strings.TrimSpace(check.Number)
 	if number == "" {
-		return fmt.Errorf("contacts: a VAT check names no number")
+		return errors.New("contacts: a VAT check names no number")
 	}
 	if check.Status != VatCheckValid && check.Status != VatCheckInvalid && check.Status != VatCheckUnavailable {
 		return fmt.Errorf("contacts: %q is not a VAT check status", check.Status)
@@ -327,7 +327,7 @@ func (s *Store) RecordVatCheck(ctx context.Context, check VatCheck) error {
 	// receipt for a check that did not happen. The schema refuses it too; this
 	// says so in a sentence rather than as a constraint violation.
 	if check.Status == VatCheckUnavailable && strings.TrimSpace(check.ConsultationNumber) != "" {
-		return fmt.Errorf("contacts: an unavailable VAT lookup carries no consultation number")
+		return errors.New("contacts: an unavailable VAT lookup carries no consultation number")
 	}
 
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {

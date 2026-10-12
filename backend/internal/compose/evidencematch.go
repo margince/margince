@@ -103,9 +103,9 @@ const (
 	// holds — a contact who has been emailing us for months does not
 	// become a decision because a crawler found their name.
 	dropAlreadyOnFile = "already_on_file"
-	// dropNoArticle14Notice marks published contacts not proposed because the
-	// lane that would capture them is shut until the notice path exists
-	// (siteLeadCaptureOpen).
+	// dropNoArticle14Notice marks published contacts not proposed while the
+	// lane is shut (siteLeadLaneRefusal). It opens once their notice has passed
+	// legal review.
 	dropNoArticle14Notice = "no_article14_notice_path"
 	dropEmptyValueKey     = "empty_value_key"
 	dropZeroedStat        = "zeroed_stat"

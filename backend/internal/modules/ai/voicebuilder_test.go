@@ -133,7 +133,7 @@ func (s *validatedStubBrain) CompleteValidated(ctx context.Context, req model.Re
 }
 
 func TestDeriveVoicePrefersTheValidatedPipeline(t *testing.T) {
-	brain := &validatedStubBrain{stubVoiceBrain: stubVoiceBrain{inference: validInference()}}
+	brain := &validatedStubBrain{inference: validInference()}
 	artifact, err := DeriveVoice(context.Background(), brain, "", "hash-1", builderSamples())
 	if err != nil {
 		t.Fatal(err)

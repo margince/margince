@@ -148,7 +148,7 @@ export const CorrectionRefused: Story = {
     await user.type(field, "Automotive tier-one supply");
     await user.click(canvas.getByRole("button", { name: en["evidence.save"] }));
     const refusal = await canvas.findByRole("alert");
-    await expect(refusal).toHaveTextContent(en["edit.versionSkew"]);
+    await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
     await expect(field).toHaveAttribute("aria-invalid", "true");
   },
@@ -202,7 +202,27 @@ export const RowMovedUnderYou: Story = {
       await canvas.findByRole("button", { name: en["evidence.confirm"] }),
     );
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      en["edit.versionSkew"],
+      en["common.versionSkew"],
+    );
+  },
+};
+
+/** An agent corrected this value under a passport. It is attributed to the
+ *  agent and not to the human who granted the passport, who never saw the
+ *  value, and it carries no time because nothing was verified. No verdict is
+ *  offered: like a contact's correction, it is already protected from the
+ *  automatic refresh, so there is nothing here awaiting a decision. */
+export const SetByAnAgent: Story = {
+  render: () => {
+    installFetchStub({});
+    return (
+      <StoryProviders>
+        <EvidenceVerdict
+          companyId={COMPANY}
+          claim={profileFieldClaim(COMPANY, { ...EXTRACTED, source: "agent" })}
+          canEdit
+        />
+      </StoryProviders>
     );
   },
 };

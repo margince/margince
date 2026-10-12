@@ -4,7 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { worklistKey } from "./worklist.queries";
 
 export type DealSuggestion = components["schemas"]["DealSuggestion"];
@@ -32,12 +32,11 @@ export function useDealSuggestions(filter: SuggestionFilter, enabled = true) {
     queryKey: [...dealSuggestionsKey, filter],
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/deal-suggestions", {
-        params: { query: { ...filter, limit: SUGGESTION_PAGE } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/deal-suggestions", {
+          params: { query: { ...filter, limit: SUGGESTION_PAGE } },
+        }),
+      );
       return data.data;
     },
   });
@@ -67,17 +66,15 @@ export function useAcceptDealSuggestion() {
       idempotencyKey: string;
       body: AcceptDealSuggestionBody;
     }): Promise<DealSuggestionAcceptance> => {
-      const { data, error } = await api.POST("/deal-suggestions/{id}/accept", {
-        params: {
-          path: { id: input.id },
-          header: { "Idempotency-Key": input.idempotencyKey },
-        },
-        body: input.body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deal-suggestions/{id}/accept", {
+          params: {
+            path: { id: input.id },
+            header: { "Idempotency-Key": input.idempotencyKey },
+          },
+          body: input.body,
+        }),
+      );
     },
     onSuccess: decided,
   });
@@ -88,15 +85,14 @@ export function useDismissDealSuggestion() {
   const decided = useDecided();
   return useMutation({
     mutationFn: async (input: { id: string; idempotencyKey: string }) => {
-      const { error } = await api.POST("/deal-suggestions/{id}/dismiss", {
-        params: {
-          path: { id: input.id },
-          header: { "Idempotency-Key": input.idempotencyKey },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/deal-suggestions/{id}/dismiss", {
+          params: {
+            path: { id: input.id },
+            header: { "Idempotency-Key": input.idempotencyKey },
+          },
+        }),
+      );
     },
     onSuccess: decided,
   });

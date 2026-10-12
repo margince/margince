@@ -99,10 +99,12 @@ func (h Handlers) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 
 // GetHiddenBacklogRows answers WHICH threads one hiding rule is holding back.
 //
-// The rule arrives typed: the generated router validates it against the
-// contract's enum before this runs, so an unknown word is a 400 from the
-// chassis rather than a question reaching the store. The store refuses one
-// anyway — it is reachable from a seam that has no router in front of it.
+// The rule arrives typed, and the generated router does not validate it
+// against the contract's enum, whatever the type suggests.
+//
+// So an unknown word reaches the store, which is the one place that decides
+// which rules exist. Its refusal names the `rule` parameter and answers 422;
+// before it carried a field, a mistyped rule read as a server fault.
 func (h Handlers) GetHiddenBacklogRows(
 	w http.ResponseWriter, r *http.Request, rule crmcontracts.GetHiddenBacklogRowsParamsRule,
 ) {

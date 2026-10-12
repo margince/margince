@@ -78,3 +78,9 @@ export const RecipientBouncingDark: Story = {
   globals: { theme: "dark" },
   render: () => <Head deadRecipients={["ada@brandt.example"]} />,
 };
+
+export const Narrow: Story = {
+  ...Default,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

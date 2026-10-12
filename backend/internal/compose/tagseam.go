@@ -78,11 +78,9 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 		return agents.TagDetail{}, err
 	}
 	out := agents.TagDetail{
-		Tag: agents.Tag{
-			TagID:    row.ID.UUID,
-			Name:     row.Name,
-			Archived: row.ArchivedAt != nil,
-		},
+		TagID:     row.ID.UUID,
+		Name:      row.Name,
+		Archived:  row.ArchivedAt != nil,
 		Contacts:  usage.Contacts,
 		Companies: usage.Companies,
 		Deals:     usage.Deals,
@@ -169,7 +167,8 @@ func (a tagAdapter) ApplyTag(ctx context.Context, tagID ids.UUID, entityType str
 }
 
 func (a tagAdapter) RemoveTag(ctx context.Context, tagID ids.UUID, entityType string, entityID ids.UUID) error {
-	return a.store.RemoveTag(ctx, ids.From[ids.TagKind](tagID), entityType, entityID)
+	_, err := a.store.RemoveTag(ctx, ids.From[ids.TagKind](tagID), entityType, entityID)
+	return err
 }
 
 // --- the vocabulary verbs ---
@@ -196,11 +195,10 @@ func tagOf(id ids.TagID, name string, color *string, archived bool) agents.Tag {
 	return out
 }
 
-// The description is nil because `create_tag`'s schema does not offer one: a
-// tool that advertised the field would have to explain a word in a sentence
-// the model invented, and the HTTP door is where a curator writes that.
-func (a tagAdapter) CreateTag(ctx context.Context, name string, color *string) (agents.Tag, error) {
-	row, err := a.store.CreateTag(ctx, name, color, nil)
+// The description is read as the HTTP door reads it, so a tag's description
+// cannot depend on which door wrote it.
+func (a tagAdapter) CreateTag(ctx context.Context, name string, color, description *string) (agents.Tag, error) {
+	row, err := a.store.CreateTag(ctx, name, color, collections.TagDescriptionOrNone(description))
 	if err != nil {
 		return agents.Tag{}, err
 	}

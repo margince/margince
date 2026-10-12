@@ -70,7 +70,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-26 columns · primary key `(id)` · referenced by 0 foreign keys
+27 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -89,6 +89,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `fx_rate` | `numeric(20,10)` |  |  |
 | `in_best_case` | `boolean`, default `false` | yes |  |
 | `in_evidence` | `boolean`, default `false` | yes |  |
+| `in_lost` | `boolean`, default `false` | yes |  |
 | `in_open` | `boolean`, default `false` | yes |  |
 | `in_won` | `boolean`, default `false` | yes |  |
 | `owner_id` | `uuid` |  |  |

@@ -22,7 +22,7 @@ import (
 )
 
 func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
-	patchType := reflect.TypeOf(InstallationPatch{})
+	patchType := reflect.TypeFor[InstallationPatch]()
 
 	// A patch with EVERY field set, built by reflection so no field can be
 	// missed here either. A hand-written literal would have the same gap as

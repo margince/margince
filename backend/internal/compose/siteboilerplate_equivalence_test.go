@@ -36,7 +36,7 @@ var chromeCorpusBreakers = []string{"\xff", "\xe2\x82", "\x80", "\xc3"}
 
 func chromeWords(r *rand.Rand, n int, breakers bool) string {
 	var b strings.Builder
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if i > 0 {
 			b.WriteByte(' ')
 		}
@@ -95,7 +95,7 @@ func legacyPanicked(f func()) (panicked bool) {
 
 func TestTheChromeStripperAnswersExactlyAsItDidBefore(t *testing.T) {
 	compared, crashed := 0, 0
-	for seed := int64(0); seed < 160; seed++ {
+	for seed := range int64(160) {
 		r := rand.New(rand.NewSource(seed))
 		pages := chromeCorpus(r, seed%2 == 1)
 		gotPages, gotBlocks := stripSharedPrefixBlocks(pages)
@@ -128,7 +128,7 @@ func TestTheChromeStripperAnswersExactlyAsItDidBefore(t *testing.T) {
 // texts shorter than the window, and a window landing on a broken byte.
 func TestTheRuneWindowsMatchTheOldConversions(t *testing.T) {
 	r := rand.New(rand.NewSource(1))
-	for i := 0; i < 5000; i++ {
+	for i := range 5000 {
 		breakers := i%2 == 1
 		head := chromeWords(r, r.Intn(120), breakers)
 		other := chromeWords(r, r.Intn(10), breakers) + " " + head[:r.Intn(len(head)+1)] + chromeWords(r, r.Intn(80), breakers)
@@ -215,7 +215,7 @@ func TestAPageWithBrokenBytesInItsOpeningDoesNotCrashTheStripper(t *testing.T) {
 
 func TestFirstDifferenceFindsTheFirstMismatchingByte(t *testing.T) {
 	r := rand.New(rand.NewSource(3))
-	for i := 0; i < 3000; i++ {
+	for range 3000 {
 		a := []byte(chromeWords(r, r.Intn(300), true))
 		b := slices.Clone(a)
 		if len(b) > 0 && r.Intn(4) > 0 {

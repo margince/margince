@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -115,7 +116,7 @@ func (c *decisionClient) typeSafeModels(ctx context.Context) ([]model.Info, erro
 		return nil, fmt.Errorf("ai: jev: decode model list: %w", err)
 	}
 	if out.Models == nil {
-		return nil, fmt.Errorf("ai: jev: the answer carries no model list")
+		return nil, errors.New("ai: jev: the answer carries no model list")
 	}
 	models := make([]model.Info, 0, len(*out.Models))
 	for _, m := range *out.Models {

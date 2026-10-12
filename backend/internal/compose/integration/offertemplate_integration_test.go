@@ -262,8 +262,7 @@ func TestOfferTemplateUpdate_HappyVersionSkewAndDefaultConflict(t *testing.T) {
 	_, err = e.Deals.UpdateOfferTemplate(ctx, id, deals.UpdateOfferTemplateInput{
 		Name: "Other Default", Locale: "de-DE", Layout: map[string]any{}, IfVersion: &v2,
 	})
-	var dup *deals.DuplicateTemplateNameError
-	if !errors.As(err, &dup) {
+	if _, ok := errors.AsType[*deals.DuplicateTemplateNameError](err); !ok {
 		t.Fatalf("renaming onto a live sibling's name must answer DuplicateTemplateNameError, got %v", err)
 	}
 	unchanged, err := e.Deals.UpdateOfferTemplate(ctx, id, deals.UpdateOfferTemplateInput{

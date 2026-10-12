@@ -153,8 +153,7 @@ func TestTheUnknownArgumentRefusalIsOurOwnTypedOne(t *testing.T) {
 	// have matched it and written the value.
 	for _, in := range []string{`{"limitt":1}`, `{"LIMIT":1}`} {
 		err := decodeArgs(json.RawMessage(in), &args)
-		var unknown *datasource.UnknownFieldError
-		if !errors.As(err, &unknown) {
+		if _, ok := errors.AsType[*datasource.UnknownFieldError](err); !ok {
 			t.Fatalf("arguments %s → %v, want a datasource.UnknownFieldError the surface may echo verbatim", in, err)
 		}
 	}
@@ -321,5 +320,18 @@ func TestEchoSafeLeavesAMessageThatFitsAlone(t *testing.T) {
 		if got := echoSafe(s, 300); got != s {
 			t.Errorf("echoSafe(%q) = %q, want it unchanged", s, got)
 		}
+	}
+}
+
+// A tool argument shares the REST body's date-time bound, and the refusal names
+// the argument so the agent can correct it.
+func TestADateTimeArgumentNoZoneCanRenderIsRefusedByName(t *testing.T) {
+	var args struct {
+		DueAt *time.Time `json:"due_at"`
+	}
+	err := decodeArgs(json.RawMessage(`{"due_at":"9999-12-31T23:59:59Z"}`), &args)
+	bad, ok := errors.AsType[*BadArgsError](err)
+	if !ok || bad.Field != "due_at" {
+		t.Fatalf("decodeArgs → %v, want a BadArgsError naming due_at", err)
 	}
 }

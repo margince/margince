@@ -9,7 +9,7 @@ import {
   type ListPopoverOption,
 } from "../design-system/listpopover";
 import { useT } from "../i18n";
-import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { useUpdateRecord } from "./edit";
 import type { Project } from "./projects.form";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./roster";
@@ -40,17 +40,15 @@ export function AssignProjectOwnerAction({
 
   const mutation = useUpdateRecord<Project>({
     update: async (values) => {
-      const { data, error } = await api.PATCH("/projects/{id}", {
-        params: {
-          path: { id: project.id },
-          ...ifMatch(requireVersion(project.version)),
-        },
-        body: { owner_id: values.owner_id as string },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/projects/{id}", {
+          params: {
+            path: { id: project.id },
+            ...ifMatch(requireVersion(project.version)),
+          },
+          body: { owner_id: values.owner_id as string },
+        }),
+      );
     },
     invalidate: "projects",
     recordKey: "project",
@@ -66,11 +64,8 @@ export function AssignProjectOwnerAction({
       ? [{ id: entry.id, name: entry.display_name, keywords: [entry.email] }]
       : [],
   );
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : undefined;
 
   return (

@@ -57,7 +57,7 @@ import (
 // jobActorUnbound: workers that reach a store and bind no actor because they
 // need none. The audit behind the one entry left is in this file's doc.
 var jobActorUnbound = gatekit.Waive(map[string]string{
-	"webhookRetryWorker": "the retry sweep resolves no principal of its own and reaches no RBAC gate under one. Its path is dueRetries → loadTarget → stillVisible → markVisibilityRevoked → deliverOnce, and none of those asks auth.Require; the two entry points in that store which do (ListDeliveries, requireReplay) are the human dead-letter surfaces this pass never touches. The one authority question it DOES ask — may this subscription's owner still see the record this delivery carries — is asked under the OWNER's principal, resolved per delivery from the row (Deliverer.canSee binds it with principal.WithActor from EffectiveRBAC). An actor bound here would be a second, wrong answer to that question. Held by webhookretry_pass_integration_test.go, whose webhookSweepCtx binds the tenant and nothing else",
+	"webhookRetryWorker": "the retry sweep resolves no principal of its own and reaches no RBAC gate under one. Its path is dueRetries → loadTarget → stillVisible → markVisibilityRevoked → deliverOnce, and none of those asks auth.Require; the two entry points in that store which do (ListDeliveries, requireReplay) are the human dead-letter surfaces this pass never touches. The one authority question it DOES ask — may this subscription's owner still see the record this delivery carries — is asked under the OWNER's principal, resolved per delivery from the row (Deliverer.canSee binds it with principal.WithActor from EffectiveRBAC). An actor bound here would be a second, wrong answer to that question. SweepOnce binds the tenant from its own handle and nothing else. Held by webhookretry_unreachable_integration_test.go, whose job-runner test calls the sweep through this worker and whose other tests call it with a bare context",
 })
 
 // storeBuilders are the handle constructors a store is built on. A Work method
@@ -283,7 +283,7 @@ func withCalledHelpers(body string, pkg map[string]string) string {
 func namesBoundIn(body string) map[string]bool {
 	bound := map[string]bool{}
 	for _, m := range localBinding.FindAllStringSubmatch(codeOnly(body), -1) {
-		for _, part := range strings.Split(m[1], ",") {
+		for part := range strings.SplitSeq(m[1], ",") {
 			// The LAST word of each comma-separated part. The capture is
 			// deliberately loose enough to reach a name introduced in a control
 			// clause, which means it also takes the keyword in front of it —

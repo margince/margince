@@ -22,8 +22,6 @@ func on(t *testing.T, value string) time.Time {
 	return parsed
 }
 
-func ptr(t time.Time) *time.Time { return &t }
-
 // FIN-FORM-1's worked example: three issued invoices of 8.750, 9.820 and
 // 12.430 euro, plus a credit note of 1.000 pointing at the first, whose
 // credited total therefore carries that same 1.000. Expected: 30.000 over
@@ -187,9 +185,9 @@ func TestNetInvoicedLifetimeKeepsTheFoldsHonestyRules(t *testing.T) {
 func TestOpenBalanceSeparatesWhatIsOverdueFromWhatIsMerelyOwed(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	out := OpenBalanceAt([]Invoice{
-		{Status: "open", OpenMinorBase: 1975000, DueOn: ptr(on(t, "2026-09-01"))},
-		{Status: "open", OpenMinorBase: 1243000, DueOn: ptr(on(t, "2026-07-21"))},
-		{Status: "open", OpenMinorBase: 200000, DueOn: ptr(on(t, "2026-08-20"))},
+		{Status: "open", OpenMinorBase: 1975000, DueOn: new(on(t, "2026-09-01"))},
+		{Status: "open", OpenMinorBase: 1243000, DueOn: new(on(t, "2026-07-21"))},
+		{Status: "open", OpenMinorBase: 200000, DueOn: new(on(t, "2026-08-20"))},
 	}, asOf)
 
 	if out.OpenMinorBase != 3418000 {
@@ -210,7 +208,7 @@ func TestOpenBalanceSeparatesWhatIsOverdueFromWhatIsMerelyOwed(t *testing.T) {
 func TestADisputedInvoiceStillCountsAsOwed(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	out := OpenBalanceAt([]Invoice{
-		{Status: "disputed", OpenMinorBase: 500000, DueOn: ptr(on(t, "2026-07-01")), Disputed: true},
+		{Status: "disputed", OpenMinorBase: 500000, DueOn: new(on(t, "2026-07-01")), Disputed: true},
 	}, asOf)
 
 	if out.OpenMinorBase != 500000 {
@@ -222,14 +220,14 @@ func TestADisputedInvoiceStillCountsAsOwed(t *testing.T) {
 // settled on 13 April is 0, not early.
 func TestDaysLateCountsFromTheDueDate(t *testing.T) {
 	late, ok := DaysLate(Invoice{
-		DueOn: ptr(on(t, "2026-05-15")), FullyPaidAt: ptr(on(t, "2026-05-23")),
+		DueOn: new(on(t, "2026-05-15")), FullyPaidAt: new(on(t, "2026-05-23")),
 	})
 	if !ok || late != 8 {
 		t.Fatalf("days late = %d (ok=%v), want +8", late, ok)
 	}
 
 	onDay, ok := DaysLate(Invoice{
-		DueOn: ptr(on(t, "2026-04-13")), FullyPaidAt: ptr(on(t, "2026-04-13")),
+		DueOn: new(on(t, "2026-04-13")), FullyPaidAt: new(on(t, "2026-04-13")),
 	})
 	if !ok || onDay != 0 {
 		t.Fatalf("days late = %d (ok=%v), want 0 — settled on the due date is not early", onDay, ok)
@@ -240,11 +238,11 @@ func TestDaysLateCountsFromTheDueDate(t *testing.T) {
 // partially paid one has no settlement date; a disputed one's delay is an
 // argument rather than a habit.
 func TestAnUnsettledOrDisputedInvoiceHasNoPunctuality(t *testing.T) {
-	if _, ok := DaysLate(Invoice{DueOn: ptr(on(t, "2026-05-15"))}); ok {
+	if _, ok := DaysLate(Invoice{DueOn: new(on(t, "2026-05-15"))}); ok {
 		t.Fatal("an unsettled invoice reported a punctuality it cannot have")
 	}
 	if _, ok := DaysLate(Invoice{
-		DueOn: ptr(on(t, "2026-05-15")), FullyPaidAt: ptr(on(t, "2026-06-15")), Disputed: true,
+		DueOn: new(on(t, "2026-05-15")), FullyPaidAt: new(on(t, "2026-06-15")), Disputed: true,
 	}); ok {
 		t.Fatal("a disputed invoice reported punctuality; the delay is a disagreement")
 	}
@@ -257,7 +255,7 @@ func TestMedianAndOnTimeRateReadTheSameSample(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	settle := func(daysLate int) Invoice {
 		due := on(t, "2026-06-01")
-		return Invoice{DueOn: ptr(due), FullyPaidAt: ptr(due.AddDate(0, 0, daysLate))}
+		return Invoice{DueOn: new(due), FullyPaidAt: new(due.AddDate(0, 0, daysLate))}
 	}
 	out := TimelinessOver([]Invoice{
 		settle(-2), settle(0), settle(3), settle(8), settle(12),
@@ -288,7 +286,7 @@ func TestTooFewSettledInvoicesAnswerInsufficientSample(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	settle := func(daysLate int) Invoice {
 		due := on(t, "2026-06-01")
-		return Invoice{DueOn: ptr(due), FullyPaidAt: ptr(due.AddDate(0, 0, daysLate))}
+		return Invoice{DueOn: new(due), FullyPaidAt: new(due.AddDate(0, 0, daysLate))}
 	}
 	out := TimelinessOver([]Invoice{settle(-2), settle(0), settle(8)}, asOf)
 
@@ -315,7 +313,7 @@ func TestOneVeryLateInvoiceDoesNotMoveTheMedian(t *testing.T) {
 	asOf := on(t, "2026-10-30")
 	settle := func(daysLate int) Invoice {
 		due := on(t, "2026-05-03")
-		return Invoice{DueOn: ptr(due), FullyPaidAt: ptr(due.AddDate(0, 0, daysLate))}
+		return Invoice{DueOn: new(due), FullyPaidAt: new(due.AddDate(0, 0, daysLate))}
 	}
 	out := TimelinessOver([]Invoice{
 		settle(0), settle(1), settle(2), settle(3), settle(180),
@@ -365,8 +363,8 @@ func TestDaysLateSurvivesADaylightSavingTransition(t *testing.T) {
 func TestOneUnconvertibleInvoiceRefusesTheOpenBalance(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	out := OpenBalanceAt([]Invoice{
-		{Status: "open", OpenMinorBase: 100000, DueOn: ptr(on(t, "2026-07-01"))},
-		{Status: "open", OpenMinorBase: 900000, DueOn: ptr(on(t, "2026-07-01")), RateMissing: true},
+		{Status: "open", OpenMinorBase: 100000, DueOn: new(on(t, "2026-07-01"))},
+		{Status: "open", OpenMinorBase: 900000, DueOn: new(on(t, "2026-07-01")), RateMissing: true},
 	}, asOf)
 
 	if !out.RateUnavailable {
@@ -382,9 +380,9 @@ func TestOneUnconvertibleInvoiceRefusesTheOpenBalance(t *testing.T) {
 func TestTheOldestOverdueAgeIsTheLongestOutstandingOne(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	out := OpenBalanceAt([]Invoice{
-		{Status: "open", OpenMinorBase: 100000, DueOn: ptr(on(t, "2026-07-21"))},
-		{Status: "open", OpenMinorBase: 100000, DueOn: ptr(on(t, "2026-03-01"))},
-		{Status: "open", OpenMinorBase: 100000, DueOn: ptr(on(t, "2026-08-01"))},
+		{Status: "open", OpenMinorBase: 100000, DueOn: new(on(t, "2026-07-21"))},
+		{Status: "open", OpenMinorBase: 100000, DueOn: new(on(t, "2026-03-01"))},
+		{Status: "open", OpenMinorBase: 100000, DueOn: new(on(t, "2026-08-01"))},
 	}, asOf)
 
 	if out.OverdueCount != 3 {
@@ -402,7 +400,7 @@ func TestAnEvenSampleOfEarlyPaymentsRoundsAwayFromZero(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	settle := func(daysLate int) Invoice {
 		due := on(t, "2026-06-01")
-		return Invoice{DueOn: ptr(due), FullyPaidAt: ptr(due.AddDate(0, 0, daysLate))}
+		return Invoice{DueOn: new(due), FullyPaidAt: new(due.AddDate(0, 0, daysLate))}
 	}
 	out := TimelinessOver([]Invoice{
 		settle(-9), settle(-6), settle(-4), settle(-3), settle(-2), settle(-1),
@@ -418,7 +416,7 @@ func TestAnEvenSampleTakesTheMeanOfTheTwoMiddleValues(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	settle := func(daysLate int) Invoice {
 		due := on(t, "2026-05-01")
-		return Invoice{DueOn: ptr(due), FullyPaidAt: ptr(due.AddDate(0, 0, daysLate))}
+		return Invoice{DueOn: new(due), FullyPaidAt: new(due.AddDate(0, 0, daysLate))}
 	}
 	out := TimelinessOver([]Invoice{
 		settle(0), settle(2), settle(3), settle(4), settle(10), settle(20),
@@ -441,7 +439,7 @@ func TestOneDayLateIsLate(t *testing.T) {
 	asOf := on(t, "2026-08-09")
 	settle := func(daysLate int) Invoice {
 		due := on(t, "2026-06-01")
-		return Invoice{DueOn: ptr(due), FullyPaidAt: ptr(due.AddDate(0, 0, daysLate))}
+		return Invoice{DueOn: new(due), FullyPaidAt: new(due.AddDate(0, 0, daysLate))}
 	}
 
 	// Five paid exactly on the due date: the whole sample is on time.

@@ -1,0 +1,82 @@
+# CASE 59 — File it on the meeting and the contract.
+#
+# Case 57 keeps a file on a company. A signed contract belongs somewhere
+# narrower: on the meeting where it was signed, and filed against the agreement
+# it is paper for, which is where finance looks. attach_document takes an
+# activity as its parent and a contract_id beside it, and this case asks a model
+# to find both and send both.
+#
+# THE IDS ARE THE RUN'S TO FIND. An agent reads contracts only through
+# read_project_360, so the seed puts the contract and the meeting on one project
+# (seed-llm-fixtures.sh, case 59): one read of "Leitstand Goslar" names both.
+# The scenario cannot know the ids, which the seed mints fresh, so the call is
+# held to carrying a contract_id at all, and the end state says whose it is.
+#
+# THE FILE ARRIVES AS BASE64 IN THE PROMPT, for the reason case 57 gives: a CLI
+# candidate has no file tool, so the bytes it sends are the bytes it copied.
+# A small but well-formed PDF.
+#
+# WHAT IS HELD, and where:
+#   - the call names the meeting as the parent and carries a contract id:
+#     must_call_with;
+#   - the PDF is on the meeting, byte for byte, and only once: must_end_with,
+#     by the sha256 below, read through the project's timeline;
+#   - that one file is filed against "Servicevertrag Leitstand Goslar" and not
+#     some other contract: must_end_with's document_contract;
+#   - the file's bytes did not go into a note: must_not_call_with;
+#   - what the answer tells the user is judged.
+#
+# Fixture checksum (sha256 of the decoded bytes):
+#   servicevertrag-signiert.pdf  418 bytes  0f955ace05f1d83c7f3c99fa432be3e44f00a2161a0c81f6662e42e666f88219
+name: case59_file_it_on_the_meeting_and_the_contract
+criteria: [1, 2]
+
+writes: true
+
+prompt: |
+  We signed the service contract for the Leitstand Goslar project with Katrin
+  Albers yesterday. Here is the signed scan. Please keep it in the CRM on the
+  signing meeting, and file it against the Servicevertrag so finance can find
+  it from the contract. This chat only takes text, so it is base64 encoded.
+
+  servicevertrag-signiert.pdf (application/pdf):
+  JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgNTk1IDg0Ml0vQ29udGVudHMgNCAwIFIvUmVzb3VyY2VzPDwvRm9udDw8L0YxIDUgMCBSPj4+Pj4+ZW5kb2JqCjQgMCBvYmo8PC9MZW5ndGggNzI+PnN0cmVhbQpCVCAvRjEgMTIgVGYgNzIgNzcwIFRkIChTZXJ2aWNldmVydHJhZyBIU1QtMjAyNi0wMTQgdW50ZXJ6ZWljaG5ldCkgVGogRVQKZW5kc3RyZWFtZW5kb2JqCjUgMCBvYmo8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PmVuZG9iagp0cmFpbGVyPDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==
+
+must_call:
+  - attach_document
+
+must_call_with:
+  - attach_document.entity_type=activity
+  - attach_document.contract_id=*
+
+may_call:
+  - read_project_360
+  - list_documents
+  - list_records
+  - search_records
+  - resolve_entities
+  - read_record
+  - catch_me_up_on
+  - query_workspace
+  - whoami
+  - list_approvals
+
+must_mention:
+  - "Vertragsunterzeichnung|meeting"
+  - "Servicevertrag|HST-2026-014|service contract"
+
+# The base64 or the PDF's own markup in a note is the file retyped.
+must_not_call_with:
+  - "log_activity~JVBERi0|%PDF|BaseFont|endobj"
+
+must_end_with:
+  - activity "Vertragsunterzeichnung Leitstand Goslar" on project "Leitstand Goslar" document=0f955ace05f1d83c7f3c99fa432be3e44f00a2161a0c81f6662e42e666f88219 *.pdf
+  - activity "Vertragsunterzeichnung Leitstand Goslar" on project "Leitstand Goslar" document_contract=0f955ace05f1d83c7f3c99fa432be3e44f00a2161a0c81f6662e42e666f88219 Servicevertrag Leitstand Goslar
+  - activity "Vertragsunterzeichnung Leitstand Goslar" on project "Leitstand Goslar" documents=1
+
+judge:
+  - "Criterion 1. The answer tells the reader that the signed PDF is now stored as a file on the signing meeting (Vertragsunterzeichnung Leitstand Goslar). Answer no if it says the file was stored only on the project, the company or Katrin Albers, says it was saved as a note, or never says where the file was stored."
+  - "Criterion 2. The answer tells the reader that the file is filed against the Servicevertrag Leitstand Goslar contract (HST-2026-014). Answer no if it says the file could not be linked to the contract, names another contract, or says nothing about the contract."
+
+runs: 3
+pass_at: 2

@@ -15,11 +15,12 @@ package gates
 // it. That is the false-uniqueness pair CLAUDE.md names: the next author greps,
 // finds a comment claiming the question is settled, and stops looking.
 //
-// identity owns app_user, so identity.LiveMemberSQL is the definition. This
-// gate judges STATEMENTS that read app_user, in two arms:
+// workforce.LiveMemberSQL is the definition, in the shared kernel so that every
+// module can call it; identity.LiveMemberSQL delegates to it. This gate judges
+// STATEMENTS that read app_user, in two arms:
 //
 //   - A statement constraining app_user's liveness must not name BOTH halves
-//     itself — it calls the helper, or it is ratified as unable to.
+//     itself — it calls the helper.
 //   - A statement naming ONE half without the other is the half-spelling, and
 //     it is the actual regression: deactivation sets status and leaves
 //     archived_at NULL, so `archived_at IS NULL` alone goes on offering a
@@ -56,39 +57,14 @@ const (
 	// is the one way this census must not break — it would read a smaller tree,
 	// report PASS, and leave no failing assertion to notice.
 	activatableMemberHelper = "ActivatableMemberSQL"
-	liveMemberOwner         = "internal/modules/identity/livemember.go"
-	identityPath            = "github.com/margince/margince/backend/internal/modules/identity"
+	// liveMemberOwner holds the one literal spelling. identity's livemember.go
+	// delegates to it and passes its alias through. That is the single call the
+	// literal-alias test must not judge.
+	liveMemberOwner    = "internal/shared/kernel/workforce/livemember.go"
+	liveMemberDelegate = "internal/modules/identity/livemember.go"
+	identityPath       = "github.com/margince/margince/backend/internal/modules/identity"
+	workforcePath      = "github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
-
-// cannotReachIdentity ratifies the statements that spell the predicate out
-// because the module DAG forbids them the helper.
-//
-// identity owns app_user and a module never imports a sibling (ADR-0054 §3).
-// compose may reach identity and now does — company360 and the extension-job seam
-// both call the helper — but seven statements sit in sibling modules, and the
-// predicate would have to move tier before they could adopt it. That is an
-// architecture decision with an owner rather than something to smuggle in here.
-//
-// Each entry is a FILE and not a package, which is narrower but NOT narrow
-// enough to say what an earlier version of this comment said: a new
-// hand-spelled copy added to one of these files is excused along with the ones
-// already there. The key ratifies the file. Splitting it finer would mean
-// keying on statement text, which changes with every whitespace edit and
-// ratifies nothing stable.
-var cannotReachIdentity = gatekit.Waive(map[string]string{
-	"internal/modules/activities/audience.go":          "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/activities/assignee.go":          "activities cannot import identity (ADR-0054 §3); the predicate must move tier first. This one asks a second question of the same row — whether the seat is an agent — which identity.LiveMemberSQL does not answer and which the assignee refusal is entirely about",
-	"internal/modules/dealrooms/store_public.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/dealrooms/room_write.go":         "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
-	"internal/modules/capture/owneridentitystore.go":   "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/capture/registry_connections.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first. This one is the poll's own refusal to read a departed seat's mailbox — the SECOND lock on it, beside the cascade that disconnects the connection on deactivation (identity/capturewithdrawal.go). It is deliberately both: the cascade is what ends the connection, and this is what makes a row the cascade missed — one written before it existed, or flipped back by hand — stop being polled anyway. A connection outliving its seat means a former colleague's mail keeps arriving, which is the one thing an operator who deactivated them is entitled to assume stopped",
-	"internal/modules/contacts/counterpartyname.go":    "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/contacts/domainadmissionlist.go": "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first. It decides which unanswered domain questions the operator's list carries: one whose owner can no longer sign in has no queue left to reach, so liveness is exactly the question being asked",
-	"internal/modules/contacts/leadrouting.go":         "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/contacts/linkedinmatch.go":       "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/surface.go":             "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/search/graphedge.go":             "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
-})
 
 // deliberatelyNotLiveness ratifies the half-spellings that are not answering
 // the workforce question at all.
@@ -127,12 +103,14 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // with what, so it is issue margince/margince#2596 rather than a change made
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
-	"internal/modules/dealrooms/preview.go":      "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
-	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
-	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
-	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
-	"internal/modules/identity/userrole.go":      "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
-	"internal/modules/identity/usersessions.go":  "ensureUserExists resolves the admin's named target for a session review; a deactivated member is exactly whose sessions an admin inspects after suspending them, and their live sessions are what the revoke beside it exists to end. archived_at alone, because an archived row is genuinely gone",
+	"internal/modules/capture/sentbycolleague.go":   "names the seat who wrote a mail another seat holds a copy of; most colleagues are invited and never sign in, and a departed one's reply was still the workspace's answer, while an archived row is gone",
+	"internal/modules/consent/noticeacquisition.go": "names the seat that recorded the acquisition a disclosure duty rests on; a deactivated colleague still labels what they recorded, and an archived row is gone, as identity's SeatNames answers",
+	"internal/modules/dealrooms/preview.go":         "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
+	"internal/modules/identity/actoridentity.go":    "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
+	"internal/modules/identity/seatnames.go":        "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
+	"internal/modules/identity/userlocale.go":       "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
+	"internal/modules/identity/userrole.go":         "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
+	"internal/modules/identity/usersessions.go":     "ensureUserExists resolves the admin's named target for a session review; a deactivated member is exactly whose sessions an admin inspects after suspending them, and their live sessions are what the revoke beside it exists to end. archived_at alone, because an archived row is genuinely gone",
 })
 
 // appUserAlias finds what app_user is called in a statement, so a sibling
@@ -159,7 +137,6 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	t.Parallel()
 	// A ratification that stops matching covers a site that has moved or been
 	// fixed, and leaving it in place quietly re-exempts whatever takes its name.
-	defer cannotReachIdentity.AssertAllMatched(t)
 	defer deliberatelyNotLiveness.AssertAllMatched(t)
 	defer namesTheSeatRatherThanOffersIt.AssertAllMatched(t)
 
@@ -178,7 +155,8 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 		}
 		scope := helperScope{
 			qualifier: importAliasOf(file, identityPath),
-			inside:    file.Name != nil && file.Name.Name == "identity",
+			other:     importAliasOf(file, workforcePath),
+			inside:    file.Name != nil && (file.Name.Name == "identity" || file.Name.Name == "workforce"),
 			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true},
 		}
 		for _, decl := range file.Decls {
@@ -194,14 +172,8 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 					// a compliant statement never reaches here — and excusing
 					// one that does would make calling the definition a licence
 					// to write a second predicate beside it.
-					if cannotReachIdentity.Waived(t, slash) {
-						continue
-					}
 					copies = append(copies, fmt.Sprintf("%s: %s", path, firstLiveMemberLine(sql)))
 				case "activatable-copy":
-					if cannotReachIdentity.Waived(t, slash) {
-						continue
-					}
 					activatableCopies = append(activatableCopies, fmt.Sprintf("%s: %s", path, firstLiveMemberLine(sql)))
 				case "half":
 					if deliberatelyNotLiveness.Waived(t, slash) ||
@@ -226,13 +198,13 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	}
 	if len(copies) > 0 {
 		t.Errorf("these statements spell \"someone who still works here\" out themselves:\n  %s\n\n"+
-			"identity.%s is the definition and identity owns app_user. compose may call it; a sibling "+
-			"module may not (ADR-0054 §3) and is ratified by name in this gate with that reason.",
-			strings.Join(copies, "\n  "), liveMemberHelper)
+			"workforce.%s is the definition, in the shared kernel so any module may call it "+
+			"(identity.%s delegates to it).",
+			strings.Join(copies, "\n  "), liveMemberHelper, liveMemberHelper)
 	}
 	if len(activatableCopies) > 0 {
 		t.Errorf("these statements spell \"may still become active\" out themselves:\n  %s\n\n"+
-			"identity.%s is the definition. Do NOT answer this by adding status = 'active': that is "+
+			"workforce.%s is the definition. Do NOT answer this by adding status = 'active': that is "+
 			"the set which EXCLUDES an invited member, and it would refuse an invitation its own link "+
 			"was minted to redeem.",
 			strings.Join(activatableCopies, "\n  "), activatableMemberHelper)
@@ -246,12 +218,20 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	}
 }
 
+// aliasHandedDown ratifies a file whose rule takes the table alias as its own
+// parameter and hands it to the helper. The literal is then at that rule's
+// callers, which pass a compile-time alias of their own.
+var aliasHandedDown = gatekit.Waive(map[string]string{
+	"internal/platform/auth/assignscope.go": "AssigneeEligibleSQL takes the alias its callers choose and hands it to the helper",
+})
+
 // TestEveryLiveMemberAliasIsALiteral holds the one thing LiveMemberSQL cannot
 // hold itself: its argument is formatted into the statement as an identifier,
 // not bound as a parameter, so a caller that passed request input would inject.
 // Every call site names a table alias it wrote itself, and this says so.
 func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 	t.Parallel()
+	defer aliasHandedDown.AssertAllMatched(t)
 	fset := gatekit.SourceFileSet()
 	var findings []string
 	calls := 0
@@ -259,7 +239,7 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 		// A test drives the function with its own table, which is the point of
 		// a table: livemember_test.go passes tc.alias and injects into nothing,
 		// because the string it builds is compared rather than executed.
-		if strings.HasSuffix(path, "_test.go") {
+		if strings.HasSuffix(path, "_test.go") || filepath.ToSlash(path) == liveMemberDelegate {
 			continue
 		}
 		file, err := gatekit.ParseFile(path, 0)
@@ -298,6 +278,9 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 			}
 			calls++
 			if lit, ok := call.Args[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				return true
+			}
+			if aliasHandedDown.Waived(t, filepath.ToSlash(path)) {
 				return true
 			}
 			findings = append(findings, fmt.Sprintf("%s:%d", path, fset.Position(call.Pos()).Line))
@@ -347,6 +330,16 @@ func liveMemberVerdict(sql string) string {
 	if bareActivatablePredicate(sql) {
 		return "activatable-copy"
 	}
+	// The pair beside seat columns, in a statement that never names app_user
+	// because its alias is a parameter. Auth's assignee rule had this shape, and
+	// a table-keyed walk cannot reach it.
+	if verdict := unnamedSeatVerdict(sql); verdict != "" {
+		return verdict
+	}
+	// The pair negated, as a select-list flag: "this seat has left".
+	if negatedLivenessCopy(sql) {
+		return "copy"
+	}
 	// Judged BEFORE the halves, because the two questions overlap and the wrong
 	// answer here is actively harmful. A hand-spelled activatable pair carries
 	// `archived_at IS NULL` without `status = 'active'`, so the halves below
@@ -383,6 +376,42 @@ func activatableCopy(sql string) bool {
 		appUserColumn(prefix, `status\s+IN\s+\(\s*'active'\s*,\s*'invited'\s*\)`).MatchString(sql)
 	archived := appUserColumn(prefix, `archived_at\s+IS\s+NULL`).MatchString(sql)
 	return invitedOrActive && archived && offersAUser(sql)
+}
+
+// seatOnlyColumn names columns of a seat row. A statement carrying one reads a
+// seat whether or not it says app_user.
+var (
+	seatOnlyColumn = regexp.MustCompile(`(?i)\b(?:is_agent|seat_type)\b`)
+	anyStatusLive  = regexp.MustCompile(`(?i)\bstatus\s*=\s*'active'`)
+	anyStatusIn    = regexp.MustCompile(`(?i)\bstatus\s+IN\s+\(\s*'(?:invited|active)'\s*,\s*'(?:invited|active)'\s*\)`)
+	anyArchivedNil = regexp.MustCompile(`(?i)\barchived_at\s+IS\s+NULL`)
+)
+
+// unnamedSeatVerdict judges a statement that never names app_user but carries a
+// seat column beside a liveness pair on some alias. A rule written for a
+// caller-chosen alias does. Another table with the same two column names
+// carries no seat-only column, so it is not reported.
+func unnamedSeatVerdict(sql string) string {
+	if readsAppUser.MatchString(sql) || !seatOnlyColumn.MatchString(sql) || !anyArchivedNil.MatchString(sql) {
+		return ""
+	}
+	switch {
+	case anyStatusLive.MatchString(sql):
+		return "copy"
+	case anyStatusIn.MatchString(sql):
+		return "activatable-copy"
+	}
+	return ""
+}
+
+// negatedLivenessCopy reports the pair written the other way round, on
+// app_user's own columns: `status <> 'active' OR archived_at IS NOT NULL`. It
+// is a second spelling of the helper's predicate and drifts from it.
+func negatedLivenessCopy(sql string) bool {
+	sql = stripAssignments(sql)
+	prefix := appUserPrefix(sql)
+	return appUserColumn(prefix, `status\s*(?:<>|!=)\s*'active'`).MatchString(sql) &&
+		appUserColumn(prefix, `archived_at\s+IS\s+NOT\s+NULL`).MatchString(sql)
 }
 
 // bareLivenessPredicate matches the shape that started all of this: the pair
@@ -449,7 +478,8 @@ func appUserStatements(decl ast.Decl, owner helperScope) []string {
 			return false
 		}
 		text, ok := flattenSQL(n, seen, owner)
-		if !ok || (!readsAppUser.MatchString(text) && !bareLivenessPredicate(text) && !bareActivatablePredicate(text)) {
+		if !ok || (!readsAppUser.MatchString(text) && !bareLivenessPredicate(text) && !bareActivatablePredicate(text) &&
+			unnamedSeatVerdict(text) == "") {
 			return true
 		}
 		out = append(out, text)
@@ -603,7 +633,7 @@ func isSQLKeyword(word string) bool {
 // firstLiveMemberLine points the report at the line that names a half rather
 // than dumping the statement.
 func firstLiveMemberLine(sql string) string {
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if strings.Contains(line, "archived_at") || strings.Contains(line, "status = 'active'") {
 			return strings.TrimSpace(line)
 		}
@@ -625,6 +655,8 @@ type liveMemberProbe struct {
 	//   "identity" package identity — the one place a bare call is the helper's
 	//   "noimport" package probe, NOT importing identity — most of the tree,
 	//              and where a bare helper name is somebody else's function
+	//   "workforce" package probe, importing the shared kernel's helper — how a
+	//              sibling module that cannot import identity reaches it
 	mode string
 	src  string
 }
@@ -715,6 +747,33 @@ func read() string {
 	{"a write whose SET makes someone live", "", "", `
 func read() string {
 	return ` + "`" + `UPDATE app_user SET status = 'active' WHERE id = $1` + "`" + `
+}`},
+	{"the pair beside seat columns with no app_user token", "copy", "", `
+func read() string {
+	return ` + "`" + `%[1]s.status = 'active' AND %[1]s.archived_at IS NULL
+		AND NOT %[1]s.is_agent AND %[1]s.seat_type <> 'read'` + "`" + `
+}`},
+	{"the invited-or-active pair beside seat columns with no app_user token", "activatable-copy", "", `
+func read() string {
+	return ` + "`" + `u.status IN ('active', 'invited') AND u.archived_at IS NULL AND NOT u.is_agent` + "`" + `
+}`},
+	{"another table's status and archived_at pair is not a seat", "", "", `
+func read() string {
+	return ` + "`" + `SELECT id FROM voice_profile_version WHERE status = 'active' AND archived_at IS NULL` + "`" + `
+}`},
+	{"the pair negated as a select-list flag", "copy", "", `
+func read() string {
+	return ` + "`" + `SELECT COALESCE(u.status <> 'active' OR u.archived_at IS NOT NULL, false)
+		  FROM record_assignment a LEFT JOIN app_user u ON u.id = a.user_id` + "`" + `
+}`},
+	{"the shared kernel's helper, called from a sibling module", "", "workforce", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + workforce.LiveMemberSQL("")
+}`},
+	{"the shared helper called, and both halves hand-written beside it", "copy", "workforce", `
+func read() string {
+	return ` + "`" + `SELECT id FROM app_user WHERE ` + "`" + ` + workforce.LiveMemberSQL("") +
+		` + "`" + ` AND status = 'active' AND archived_at IS NULL` + "`" + `
 }`},
 	{"the helper called, and both halves hand-written beside it", "copy", "", `
 func read() string {
@@ -830,6 +889,9 @@ func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
 				head, scope = "package identity\n", helperScope{inside: true, names: names}
 			case "noimport":
 				scope = helperScope{names: names}
+			case "workforce":
+				scope = helperScope{other: "workforce", names: names}
+				head += "import (\n\t\"fmt\"\n\n\t\"" + workforcePath + "\"\n)\n"
 			default:
 				head += "import (\n\t\"fmt\"\n\n\t\"" + identityPath + "\"\n)\n"
 			}

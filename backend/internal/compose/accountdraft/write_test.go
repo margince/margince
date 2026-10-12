@@ -261,3 +261,23 @@ func TestAFencedAnswerIsRead(t *testing.T) {
 		t.Errorf("subject = %q, want the model's own", draft.Subject)
 	}
 }
+
+// A task title is internal, so one logged after their mail neither opens the
+// floor draft nor is cited as the conversation.
+func TestATaskAfterTheirMailNeverReachesTheAccountFloorDraft(t *testing.T) {
+	in := sampleInput()
+	in.Deal = nil
+	in.Recent = []ActIn{
+		{ID: "t1", Kind: "task", Subject: "Call Sarah back about pricing", At: "2026-08-11T09:00:00Z"},
+		{ID: "a1", Kind: "email", Subject: "Pricing question", At: "2026-08-10T09:00:00Z", Inbound: true},
+	}
+	draft := Deterministic(in)
+	if strings.Contains(draft.Body, "Call Sarah back") || !strings.Contains(draft.Body, "Pricing question") {
+		t.Errorf("body = %q, want their mail's subject and not the task title", draft.Body)
+	}
+	for _, r := range draft.Reasoning {
+		if r.EntityID == "t1" {
+			t.Errorf("the task is cited as the conversation: %+v", r)
+		}
+	}
+}

@@ -84,7 +84,10 @@ type IssuedConfirm struct {
 // link went to, and the token row itself — which a submission cites as the
 // capability it arrived through.
 type ConfirmRef struct {
-	ContactID   ids.ContactID
+	ContactID ids.ContactID
+	// LeadID is set instead of ContactID on a website lead's privacy notice,
+	// the one link a lead can hold.
+	LeadID      ids.LeadID
 	TokenID     ids.UUID
 	DeliveredTo string
 	// Kind says which question the spent link asked, and PurposeID names the

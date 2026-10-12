@@ -195,7 +195,7 @@ it cannot use its whole output cap on thinking (`backend/internal/modules/ai/gem
 
 Changing the thinking level or the tier is step 3 of the fix order below, never step 1. A cut can
 cost as much as it saves: `reasoning_effort: low` cost 20 points of the judge score (85 → 65) on a drafting task
-([openrouter.md](../reference/openrouter.md)).
+([openrouter-upstream-choice.md](openrouter-upstream-choice.md)).
 
 *Checked by* a certification run against the changed binding.
 

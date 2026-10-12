@@ -250,6 +250,7 @@ func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relat
 }
 
 type UpdateRelationshipInput struct {
+	ClearRole        bool
 	ClearStartedAt   bool
 	ClearEndedAt     bool
 	EmploymentStatus *string

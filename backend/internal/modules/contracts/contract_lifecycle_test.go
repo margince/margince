@@ -35,8 +35,7 @@ func TestTerminalStatusesDoNotReopen(t *testing.T) {
 func TestSupersededIsNotDirectlyAssertable(t *testing.T) {
 	err := refuseInvalidTransition(StatusActive, StatusSuperseded)
 
-	var transition *InvalidStatusTransitionError
-	if !errors.As(err, &transition) {
+	if _, ok := errors.AsType[*InvalidStatusTransitionError](err); !ok {
 		t.Fatalf("asserting superseded directly: err = %v, want InvalidStatusTransitionError", err)
 	}
 }

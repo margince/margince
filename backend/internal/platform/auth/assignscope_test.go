@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // newRecordOwnerSQL swaps the status clause and nothing else. If the swap
@@ -20,13 +21,13 @@ func TestANewRecordMayNameAnInvitedOwner(t *testing.T) {
 	routing := AssigneeEligibleSQL(p, "u", arg)
 	owner := newRecordOwnerSQL(p, "u", arg)
 
-	if !strings.Contains(owner, "u.status IN ('active', 'invited')") {
+	if !strings.Contains(owner, workforce.ActivatableMemberSQL("u")) {
 		t.Fatalf("a new record's owner check does not admit an invited seat:\n%s", owner)
 	}
 	if strings.Contains(routing, "invited") {
 		t.Errorf("routing admits an invited seat; only a new record's owner may:\n%s", routing)
 	}
-	if strings.Replace(owner, "u.status IN ('active', 'invited')", "u.status = 'active'", 1) != routing {
+	if strings.Replace(owner, workforce.ActivatableMemberSQL("u"), workforce.LiveMemberSQL("u"), 1) != routing {
 		t.Errorf("the owner check differs from the routing check beyond the status clause:\nrouting: %s\nowner:   %s", routing, owner)
 	}
 }

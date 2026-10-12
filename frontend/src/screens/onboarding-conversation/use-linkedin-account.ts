@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { throwProblem } from "../common";
+import { unwrap } from "../common";
 
 // Saving the member's own LinkedIn answer (ADR-0078 §2.1b).
 //
@@ -41,13 +41,11 @@ export function useSaveLinkedInAccount() {
       profileUrl: string;
       connected: boolean;
     }): Promise<LinkedInAccount> => {
-      const { data, error } = await api.PUT("/me/linkedin-account", {
-        body: { profile_url: input.profileUrl, connected: input.connected },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/me/linkedin-account", {
+          body: { profile_url: input.profileUrl, connected: input.connected },
+        }),
+      );
     },
     // The server's answer IS the account now, whichever surface asked. Written
     // rather than invalidated: the response carries the stored row, so a

@@ -16,6 +16,7 @@ package compose
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -66,12 +67,14 @@ func pair(from, to, rate string) string {
 
 func fxReply(pairs ...string) string {
 	out := `{"pairs":[`
+	var outSb69 strings.Builder
 	for i, p := range pairs {
 		if i > 0 {
-			out += ","
+			outSb69.WriteString(",")
 		}
-		out += p
+		outSb69.WriteString(p)
 	}
+	out += outSb69.String()
 	return out + `]}`
 }
 

@@ -102,10 +102,7 @@ func splitVoiceHeldOut(samples []ai.VoiceSample, sourceHash string) (heldOut, bu
 	sort.SliceStable(ordered, func(i, j int) bool { return rank(ordered[i]) < rank(ordered[j]) })
 	// Held-out samples must leave a buildable corpus behind: never reserve
 	// more than half the samples or drop the build below its word floor.
-	maxHeld := len(ordered) / 2
-	if maxHeld > voiceEvalHeldOutPrompts {
-		maxHeld = voiceEvalHeldOutPrompts
-	}
+	maxHeld := min(len(ordered)/2, voiceEvalHeldOutPrompts)
 	buildWords := 0
 	for _, sample := range ordered {
 		buildWords += sample.WordCount
@@ -295,7 +292,7 @@ func evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.Vo
 	for _, sample := range heldOut {
 		prompt := evalPromptFor(sample)
 		var bodies []string
-		for repeat := 0; repeat < voiceEvalRepeatsPerPrompt; repeat++ {
+		for repeat := range voiceEvalRepeatsPerPrompt {
 			resp, err := ai.Ask(ctx, brain, voiceEvalDraftRequest(personality, artifact, sample, repeat),
 				func(text string) error {
 					_, err := readVoiceEvalDraft(text)

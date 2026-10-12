@@ -6,6 +6,7 @@ package compose
 import (
 	"encoding/json"
 	"go/ast"
+	"log/slog"
 	"maps"
 	"slices"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
@@ -354,5 +356,32 @@ func TestThePeriodicInsertCapsAPassNobodyElseCaps(t *testing.T) {
 		t.Errorf("the periodic insert gave a caller-owned pass MaxAttempts %d, not periodicPassMaxAttempts "+
 			"(%d): nothing else caps it, so anything but this leaves it on River's %d-rung default",
 			got, periodicPassMaxAttempts, river.MaxAttemptsDefault)
+	}
+}
+
+// The journal export needs an object store on both halves of its wiring.
+//
+// The worker is withheld by the composer and the schedule by the kind's own
+// declaration.
+//
+// A store missing from one and present to the other would place a schedule
+// nothing serves, or a worker nothing calls.
+func TestTheSuppressionJournalNeedsAnObjectStoreForBothHalves(t *testing.T) {
+	t.Parallel()
+	log := slog.New(slog.DiscardHandler)
+
+	if got := periodicFor(JobRunnerConfig{}, SuppressionJournalArgs{}); len(got) != 0 {
+		t.Errorf("with no object store: got %d periodic jobs, want 0", len(got))
+	}
+	if got := suppressionJournalExporterFor(nil, nil, log); got != nil {
+		t.Error("with no object store: got a worker, want nil — there is nowhere to write the journal")
+	}
+
+	blob := blobstore.NewMemory()
+	if got := periodicFor(JobRunnerConfig{Blobstore: blob}, SuppressionJournalArgs{}); len(got) != 1 {
+		t.Errorf("with an object store: got %d periodic jobs, want 1", len(got))
+	}
+	if got := suppressionJournalExporterFor(nil, blob, log); got == nil {
+		t.Error("with an object store: got no worker, want one")
 	}
 }

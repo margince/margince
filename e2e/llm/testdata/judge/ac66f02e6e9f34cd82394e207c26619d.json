@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer explicitly states the file could not be linked to the Servicevertrag, which falls under the criterion's disqualifying conditions.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer tells the reader that the file is filed against the Servicevertrag Leitstand Goslar contract (HST-2026-014). Answer no if it says the file could not be linked to the contract, names another contract, or says nothing about the contract.",
+  "answer": "servicevertrag-signiert.pdf is now stored as a file on the signing meeting, Vertragsunterzeichnung Leitstand Goslar. I could not link it to the Servicevertrag from here; please do that in the app."
+}

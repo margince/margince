@@ -195,8 +195,7 @@ func (s *Store) mailResubscribeConfirmationTx(
 		//
 		// A ValidationError is exactly that class. Anything else is a genuine
 		// fault and still rolls back.
-		var invalid *ValidationError
-		if errors.As(err, &invalid) {
+		if _, ok := errors.AsType[*ValidationError](err); ok {
 			return errNoConfirmationLane
 		}
 		return err

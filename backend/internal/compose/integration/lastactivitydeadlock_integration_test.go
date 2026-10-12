@@ -94,7 +94,7 @@ func employForLockOrder(t *testing.T, e *Env, contact, company ids.UUID) {
 	t.Helper()
 	contactID, companyID := ids.From[ids.ContactKind](contact), companyIDOf(company)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: BoolPtr(true), Source: "manual",
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: new(true), Source: "manual",
 	}); err != nil {
 		t.Fatalf("employing the seed contact: %v", err)
 	}
@@ -130,11 +130,9 @@ func runConcurrently(t *testing.T, e *Env, barrier pgx.Tx, writers ...func(conte
 	errs := make([]error, len(writers))
 	var wg sync.WaitGroup
 	for i, write := range writers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			errs[i] = runWriter(e, write)
-		}()
+		})
 	}
 	waitForParkedWriters(t, len(writers))
 	if err := barrier.Rollback(context.Background()); err != nil {

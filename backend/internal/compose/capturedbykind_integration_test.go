@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -208,12 +209,7 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 		return out
 	}
 	has := func(list []string, want string) bool {
-		for _, n := range list {
-			if n == want {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(list, want)
 	}
 
 	yes, no := true, false

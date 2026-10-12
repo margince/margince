@@ -56,8 +56,7 @@ func wireDelivery(d Delivery) crmcontracts.WebhookDelivery {
 // a 422; the not-configured case is a 503 (the feature needs a deployment
 // signing key); everything else flows through the sentinel mapper.
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
-	var bad *BadInputError
-	if errors.As(err, &bad) {
+	if bad, ok := errors.AsType[*BadInputError](err); ok {
 		httperr.Write(w, r, httperr.Validation(bad.Field, "invalid", bad.Reason))
 		return
 	}

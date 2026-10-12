@@ -2,13 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { useState } from "react";
-import { afterEach, expect, it } from "vitest";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { afterEach, expect, it, vi } from "vitest";
 import { Button } from "./atoms";
 import { Switch } from "./switch";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 // The `pending` a caller passes answers one render late, so it cannot be the
 // whole guard. These presses land in ONE task, which is what "however fast the
@@ -95,4 +98,105 @@ it("takes the next press once the one before it has settled", async () => {
   await waitFor(() => expect(screen.getByRole("status").textContent).toBe("1"));
   count.click();
   await waitFor(() => expect(screen.getByRole("status").textContent).toBe("2"));
+});
+
+// A mutation reports `pending` a task after the press, so two presses a task
+// apart both reach the handler unless the latch waits for that report.
+function SlowWriter({ onWrite }: Readonly<{ onWrite: () => void }>) {
+  const [out, setOut] = useState(false);
+  return (
+    <Button
+      pending={out}
+      onClick={() => {
+        onWrite();
+        setTimeout(() => setOut(true), 0);
+        setTimeout(() => setOut(false), 200);
+      }}
+    >
+      Save
+    </Button>
+  );
+}
+
+it("refuses a press that lands after the click's commit but before pending is drawn", async () => {
+  vi.useFakeTimers();
+  const writes = vi.fn();
+  render(<SlowWriter onWrite={writes} />);
+  const save = screen.getByRole("button", { name: "Save" });
+
+  save.click();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  save.click();
+
+  expect(writes).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  expect(save.getAttribute("aria-busy")).toBe("true");
+  save.click();
+  expect(writes).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(200);
+  });
+  expect(save.getAttribute("aria-busy")).toBeNull();
+  save.click();
+  expect(writes).toHaveBeenCalledTimes(2);
+});
+
+function PressWhenReady({
+  pending,
+  onWrite,
+}: Readonly<{
+  pending: boolean;
+  onWrite: () => void;
+}>) {
+  const button = useRef<HTMLButtonElement>(null);
+  const wasPending = useRef(false);
+  useLayoutEffect(() => {
+    if (wasPending.current && !pending) button.current?.click();
+    wasPending.current = pending;
+  }, [pending]);
+  return (
+    <Button ref={button} pending={pending} onClick={onWrite}>
+      Save
+    </Button>
+  );
+}
+
+it("accepts a press in the commit that makes the control ready", () => {
+  vi.useFakeTimers();
+  const writes = vi.fn();
+  const { rerender } = render(
+    <PressWhenReady pending={false} onWrite={writes} />,
+  );
+  screen.getByRole("button", { name: "Save" }).click();
+  rerender(<PressWhenReady pending onWrite={writes} />);
+  expect(writes).toHaveBeenCalledTimes(1);
+  rerender(<PressWhenReady pending={false} onWrite={writes} />);
+  expect(writes).toHaveBeenCalledTimes(2);
+});
+
+it("takes the next press one task later when a press started no write", async () => {
+  vi.useFakeTimers();
+  try {
+    const presses = vi.fn();
+    render(
+      <Button pending={false} onClick={presses}>
+        Count
+      </Button>,
+    );
+    const count = screen.getByRole("button", { name: "Count" });
+    count.click();
+    count.click();
+    expect(presses).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    count.click();
+    expect(presses).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
 });

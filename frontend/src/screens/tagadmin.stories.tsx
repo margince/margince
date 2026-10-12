@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 
 import {
   installFetchStub,
@@ -31,6 +33,7 @@ const WORDS = [
     name: "Key Account",
     color: "amber",
     version: 3,
+    carried_by: 60,
   },
   {
     id: "t-2",
@@ -38,6 +41,7 @@ const WORDS = [
     name: "Churn Risk",
     color: "rose",
     version: 1,
+    carried_by: 14,
   },
   {
     id: "t-3",
@@ -45,17 +49,17 @@ const WORDS = [
     name: "Trade Fair 2025",
     version: 1,
     archived_at: "2026-01-01T00:00:00Z",
+    carried_by: 1,
+  },
+  {
+    id: "t-4",
+    workspace_id: "w",
+    name: "Partner programme for regional resellers in the DACH market",
+    color: "sky",
+    version: 2,
+    carried_by: 1280,
   },
 ];
-
-const USAGE: Record<
-  string,
-  { contacts: number; companies: number; deals: number }
-> = {
-  "t-1": { contacts: 41, companies: 12, deals: 7 },
-  "t-2": { contacts: 3, companies: 9, deals: 2 },
-  "t-3": { contacts: 0, companies: 0, deals: 0 },
-};
 
 function Card({
   words = WORDS,
@@ -64,29 +68,69 @@ function Card({
   installFetchStub({
     "GET /me": meRoute(grants as never),
     "POST /tags/t-2/merge": () => jsonResponse({ moved: 9, collapsed: 2 }),
+    "DELETE /tags/t-2": () => new Response(null, { status: 204 }),
+    "POST /tags/t-2/restore": () => new Response(null, { status: 204 }),
     "GET /tags": () =>
       jsonResponse({
         data: words,
         page: { has_more: false, next_cursor: null },
       }),
-    ...Object.fromEntries(
-      words.map((word) => [
-        `GET /tags/${word.id}`,
-        () => jsonResponse({ ...word, usage: USAGE[word.id] }),
-      ]),
-    ),
   });
   return (
     <StoryProviders>
-      <TagVocabularyCard />
+      <ToastProvider>
+        <TagVocabularyCard />
+        <ToastRegion />
+      </ToastProvider>
     </StoryProviders>
   );
+}
+
+// The row's own menu, so a play cannot pass by opening another row's.
+async function pressRowVerb(canvasElement: HTMLElement, verb: string) {
+  const body = within(canvasElement.ownerDocument.body);
+  await userEvent.click(
+    await body.findByRole("button", { name: "Actions for Churn Risk" }),
+  );
+  await userEvent.click(await body.findByRole("button", { name: verb }));
+  return body;
 }
 
 /** The vocabulary as an admin meets it: live words, a retired one, and how
  * much of the workspace carries each. */
 export const Governed: Story = {
   render: () => <Card />,
+};
+
+/** The same table in dark: the row hairlines and the hover ground are tokens. */
+export const GovernedDark: Story = {
+  globals: { theme: "dark" },
+  render: () => <Card />,
+};
+
+/** A row's verbs, in the one menu at its end. */
+export const RowMenu: Story = {
+  render: () => <Card />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Actions for Churn Risk" }),
+    );
+    await expect(
+      await body.findByRole("button", { name: "Merge" }),
+    ).toBeVisible();
+  },
+};
+
+/** Retire runs at once: no dialog, and the toast's Undo is the way back. */
+export const RetireOffersUndo: Story = {
+  render: () => <Card />,
+  play: async ({ canvasElement }) => {
+    const body = await pressRowVerb(canvasElement, "Retire");
+    const undo = await body.findByRole("button", { name: "Undo" });
+    await waitFor(() => expect(undo).toBeVisible());
+    await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
+  },
 };
 
 /**
@@ -138,8 +182,8 @@ export const VocabularyWithheld: Story = {
 };
 
 /**
- * At a phone width. The row wraps rather than pushing its verbs out of the
- * settings column, which a narrow window cannot scroll back to.
+ * At a phone width. Each row folds onto two lines: the word and its menu, then
+ * how many records carry it.
  */
 export const Narrow: Story = {
   globals: { viewport: { value: "phone" } },
@@ -155,12 +199,7 @@ export const Narrow: Story = {
 export const Merged: Story = {
   render: () => <Card />,
   play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const row = (await body.findByText("Churn Risk")).closest("li");
-    if (!row) {
-      throw new Error("the Churn Risk word is not drawn as a list row");
-    }
-    await userEvent.click(within(row).getByRole("button", { name: "Merge" }));
+    const body = await pressRowVerb(canvasElement, "Merge");
     await userEvent.click(
       await body.findByRole("combobox", { name: "Keep this tag" }),
     );
@@ -177,12 +216,7 @@ export const Merged: Story = {
 export const EditingTag: Story = {
   render: () => <Card />,
   play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    const row = (await body.findByText("Churn Risk")).closest("li");
-    if (!row) {
-      throw new Error("the Churn Risk word is not drawn as a list row");
-    }
-    await userEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    const body = await pressRowVerb(canvasElement, "Edit");
     await body.findByRole("dialog", { name: "Edit tag" });
   },
 };

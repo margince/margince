@@ -228,8 +228,11 @@ func TestTheRecheckSeesAThreadSharedAfterTheScan(t *testing.T) {
 			if err := tx.QueryRow(strip, `SELECT id FROM activity WHERE source_id = $1`, source).Scan(&id); err != nil {
 				return err
 			}
-			var err error
-			due, err = capture.PrivateThreadFilesStillDueTx(strip, tx, capture.DefaultPersonalPurgeWindows(), statutoryFloor(), id)
+			floor, _, err := purgeFloorTx(strip, tx)
+			if err != nil {
+				return err
+			}
+			due, err = capture.PrivateThreadFilesStillDueTx(strip, tx, capture.DefaultPersonalPurgeWindows(), floor, id)
 			return err
 		}); err != nil {
 			t.Fatalf("rechecking: %v", err)

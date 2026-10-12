@@ -26,6 +26,7 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -71,15 +72,7 @@ func declaresUI(capabilities json.RawMessage) bool {
 	if err := json.Unmarshal(members["mimeTypes"], &offeredTypes); err != nil {
 		return false
 	}
-	for _, offered := range offeredTypes {
-		// Compared exactly. The profile parameter is the whole discriminator —
-		// a client declaring bare `text/html` is declaring it can show a
-		// document, which is not the same as being able to run an App.
-		if offered == mcp.AppMIMEType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(offeredTypes, mcp.AppMIMEType)
 }
 
 // assertViewDeclaration holds a tool's own view declaration to the three things
@@ -147,12 +140,7 @@ func assertViewDeclaration(spec mcp.ToolSpec) error {
 // exactly as it did before any view existed, which is the same conditional
 // wiring every other injected capability takes.
 func (s *Dispatcher) appsServed() bool {
-	for _, spec := range s.registry.Specs() {
-		if s.viewIsHeld(spec) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(s.registry.Specs(), s.viewIsHeld)
 }
 
 // viewIsHeld reports whether THIS tool's view is one the server is serving.

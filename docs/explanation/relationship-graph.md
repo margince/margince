@@ -10,8 +10,9 @@ coverage read turns that into named risk findings on a deal, and a user can open
 The data comes from two places. Captured mail and calls logged by hand make *participants*; see
 [capture-connectors.md](capture-connectors.md) for the capture side. A member's own LinkedIn export
 makes *ghosts*, a second tier that never becomes a contact; see
-[how-to/import-your-linkedin-network.md](../how-to/import-your-linkedin-network.md). What follows is
-about the first: the graph built from recorded contact.
+[The second tier: an imported LinkedIn network](#the-second-tier-an-imported-linkedin-network). Most of
+what follows is about the first: the graph built from recorded contact. The user steps are in the
+handbook, [Relationships, introductions and research](../handbook/relationships-and-research.md).
 
 ## The question it answers
 
@@ -346,6 +347,98 @@ the same on the deal card and in the AI chat. The client does not change the ord
 Either would be a second copy of the score formula or the rule text, and the two would disagree as
 soon as either changed.
 
+## The second tier: an imported LinkedIn network
+
+A member's own LinkedIn export answers one question: does someone here know someone at this account?
+Its rows are **ghosts** in `linkedin_connection`. An export lists third parties who never agreed to be in
+any CRM, so turning them into contacts would be a consent problem. The migration that made the table
+states that rule.
+
+A ghost is in no search, list, contact screen or record tool of the assistant. Nothing writes to it,
+and no send path reaches it. Confirming a match is the one thing it gives a real record. The
+connection's own profile URL goes on the contact as a `linkedin` handle, unless the contact already has one.
+The member's own URL is never used, because it would put the wrong address on every confirmed contact.
+
+### Ownership: `/me` and human-only
+
+The owner of every row is the signed-in caller, never a field in the file. Every path is under `/me/…`
+and marked `x-agent-access: human-only`, so it takes a session cookie and refuses an agent passport.
+No path leads to another member's account or connections, for any seat, admin too. The onboarding
+LinkedIn card only stores the profile URL with `PUT /me/linkedin-account`, and `connected` stays false.
+
+```sh
+curl -X POST http://localhost:8080/v1/me/linkedin-connections \
+  --cookie 'crm_session=<session>' \
+  -F 'file=@Connections.csv;type=text/csv' \
+  | jq '{rows, imported, skipped, confirmed, suggested}'
+
+curl --cookie 'crm_session=<session>' http://localhost:8080/v1/me/linkedin-account \
+  | jq '{connected, connected_at, profile_url, connections}'
+```
+
+The upload is `multipart/form-data` with a part named `file`. Its limit is `uploads.linkedin_import_mb`,
+8 MB by default; see [configuration.md](../reference/configuration.md). `confirmed` and `suggested` are the
+member's totals, not the change from this upload.
+
+The importer finds the header row by its content, not its place, and knows English and German headers.
+It allows the `Notes:` text LinkedIn puts above the header.
+
+| Answer | Cause |
+|---|---|
+| `422 unreadable_export` | No header row the importer knows; nothing is imported |
+| `422 invalid_multipart` / `422 required` | Not `multipart/form-data`, or the `file` part is missing |
+| `413 body_too_large` | Over the upload limit; the message names the limit that applies |
+
+### Matching
+
+Matching runs inside the upload. Only an email address is an exact key, as on the capture path. An
+exact name with a matched employer and no other candidate confirms on its own. A folded name ("André"
+and "Andre") becomes a `linkedin_match` approval, one for each match. Two candidates, or a name with no
+employer match, give nothing.
+
+The employment must be live today: `archived_at IS NULL` and `(ended_at IS NULL OR ended_at > today)`.
+The matcher never suggests a contact that another ghost of the same owner is already confirmed against.
+It skips a ghost that already has a decided proposal, so a refusal lasts across imports.
+
+An approval goes to any user who may write the contact and see it. The decider learns only that a
+contact they can already read is in someone's network. The link always goes on the exporter's network.
+
+Two passes match ghosts that waited on records not yet captured. The `cg:linkedin-match` consumer acts
+on contact and company events already in the outbox. The `linkedin_rematch` sweep runs every hour for
+each workspace, so an export uploaded at onboarding meets the capture backfill the same day. Both look
+only at ghosts with no match, and both run with the **owner's** rights. With system rights, a one-row
+CSV of a guessed address would reveal whether a hidden contact exists.
+
+### The reach read and the unresolved count
+
+`GET /me/linkedin-reach` counts, per account, the owner's ghosts and the confirmed matches among them.
+Rows sort by connection count, then name, then id, so two reads give the same order.
+
+```sh
+curl --cookie 'crm_session=<session>' 'http://localhost:8080/v1/me/linkedin-reach?limit=25' \
+  | jq '{accounts_total, unresolved_connections,
+         accounts: [.accounts[] | {display_name, connections, contacts_on_file}]}'
+```
+
+`unresolved_connections` holds every ghost not placed at an account the caller can read. That covers
+an employer that matched nothing, useless employer text, and an account outside the caller's row
+scope. The three are one number. Counting the last apart would let a member upload one row
+per guessed company name and list accounts they may not see. `accounts_total` counts every account
+reached, not only the returned page.
+
+### Importing again
+
+Importing again updates rows instead of copying them. CSV rows key on (owner, normalized name,
+normalized company, connected-on date). That is a dedupe key, not an identity claim. Stale keys are
+fixed before the upsert, so rows an older normalizer wrote still match. A later export wins on the
+profile URL and keeps the stored email when the new row has none. A row an earlier export dropped comes
+back, and its tombstone is cleared.
+
+A row with no usable name is counted in `skipped`. A row matching the erasure block list by address is
+refused and not counted in `imported`. So an erased subject cannot return through a colleague's export.
+The audit row and outbox event for an import carry only `rows`, `imported` and `skipped`. Saving the
+profile puts the URL in the member's own audit row, but not in the event.
+
 ## Privacy: dropped in the transaction, not by a consumer
 
 The graph tables exist to hold a party who is *not a record*. That is what the address arm of a
@@ -393,8 +486,8 @@ See [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
   and the linked counterparty. Reading attendees out of stored originals is separate work.
 - **`CompanyLinkedInReach` is wired to nothing.** The ghost count per team member, per account,
   exists in `contacts`, and tests run it. But no HTTP surface, agent tool or screen reads it today.
-  The shipped answer at account level is the member's own
-  [`/me/linkedin-reach`](../how-to/import-your-linkedin-network.md).
+  The shipped answer at account level is the member's own `/me/linkedin-reach`; see
+  [The reach read](#the-reach-read-and-the-unresolved-count).
 
 ## Short rules
 
@@ -434,8 +527,8 @@ See [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 
 ## Where to go next
 
-- How to import a personal network as the second evidence tier beside this one, with a clear label:
-  [how-to/import-your-linkedin-network.md](../how-to/import-your-linkedin-network.md).
+- How a user imports their network and reads its reach:
+  [handbook/relationships-and-research.md](../handbook/relationships-and-research.md).
 - Where the participant rows come from (the connector seam, the one Sink, the three capture modes):
   [capture-connectors.md](capture-connectors.md).
 - The write shape every change to a source table commits through, and the outbox both consumers read from:
