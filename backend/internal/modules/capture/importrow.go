@@ -162,7 +162,7 @@ func (s *Sink) recordThisImport(
 	if err := recordImportTx(ctx, tx, id, owner, birth, rec.ProviderReceivedAt); err != nil {
 		return err
 	}
-	if err := stampCaptureParticipants(ctx, tx, id, owner, fields.Kind, fields.Direction, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec.Counterparty); err != nil {
 		return err
 	}
 	// The confidentiality question for THIS seat's view of the thread, opened

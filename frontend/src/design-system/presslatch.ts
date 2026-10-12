@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type SyntheticEvent, useEffect, useRef, useState } from "react";
+import {
+  type SyntheticEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { flushSync } from "react-dom";
 
 type Press<E extends SyntheticEvent> = (event: E) => void;
@@ -37,7 +43,8 @@ export function useSinglePress(
   // The tick is never read. It guarantees a commit after the wait, so the
   // release below runs even for a press that changed no state at all.
   const [, settle] = useState(0);
-  useEffect(() => {
+  // Release with the ready commit so a visible control accepts the next press.
+  useLayoutEffect(() => {
     if (held.current && pending === true) {
       drawn.current = true;
     } else if (!held.current || drawn.current || waited.current) {

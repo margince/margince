@@ -184,6 +184,20 @@ func (s *Service) worklistIn(
 	return out, nil
 }
 
+// stampSources files each missing source under its category and says whether
+// it is a lane. Only a side read marks itself, so every unmarked entry is one.
+func stampSources(missing []crmcontracts.WorklistSourceUnavailable) []crmcontracts.WorklistSourceUnavailable {
+	for i := range missing {
+		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
+		missing[i].Category = &category
+		if missing[i].ContributesRows == nil {
+			lane := true
+			missing[i].ContributesRows = &lane
+		}
+	}
+	return missing
+}
+
 // worklistFrom projects an already-assembled day, so a test can drive the
 // ranking, the paging and the summary without standing up every lane's reader.
 func (s *Service) worklistFrom(
@@ -340,11 +354,7 @@ func (s *Service) worklistFrom(
 	// decided over the rows that actually survive to the page: the folds above
 	// turn several rows into one, and a group is one thing to read rather than
 	// the three it was assembled from.
-	for i := range missing {
-		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
-		missing[i].Category = &category
-	}
-	missing = withRosterRefusal(missing, scoped)
+	missing = withRosterRefusal(stampSources(missing), scoped)
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(

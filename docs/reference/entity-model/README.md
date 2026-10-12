@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 300 |
-| Columns | 3564 |
-| Foreign keys | 499 |
+| Columns | 3565 |
+| Foreign keys | 500 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -39,10 +39,10 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 128 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 129 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 34 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 59 | 34 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 24 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
@@ -61,6 +61,7 @@ erDiagram
     app_user ||--o{ company : source_author_id
     app_user ||--o{ activity : assignee_id
     app_user ||--o{ activity : host_user_id
+    app_user ||--o{ activity : sent_by_colleague
     app_user ||--o{ activity : source_author_id
     company ||--o{ deal : company_id
     app_user ||--o{ deal : owner_id
@@ -128,7 +129,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 58 | 34 |
+| [`activity`](activities.md#activity) | activities | 59 | 34 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
@@ -159,7 +160,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 25 | 128 |
+| [`app_user`](identity.md#app_user) | identity | 25 | 129 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |

@@ -6,6 +6,8 @@ package capture
 import (
 	"math"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The typed Fields payloads a NormalizedRecord carries (the port keeps
@@ -41,6 +43,10 @@ type ActivityFields struct {
 	// event without one. Deciding what a message asks of its reader is a
 	// judgement made later, from this fact among others.
 	HasCalendarPart bool
+
+	// SentByColleague is the live seat who wrote a mail this mailbox holds a
+	// copy of (asSentByColleagueTx); zero for every other record.
+	SentByColleague ids.UUID
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never

@@ -16,6 +16,7 @@ import {
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ExplainDrawer } from "./analytics.explain.drawer";
+import { isMoneyField, isNativeMoneyField } from "./analytics.questions.vocab";
 import { unwrap } from "./common";
 import { EntityRef, useEntityName } from "./entityref";
 
@@ -149,14 +150,25 @@ export function derivationColumns(
 
 const IDENTITY_COLUMNS = ["label", "id"];
 
-// A `_base_minor` measure was converted into the base currency; a plain `_minor`
-// is the deal's OWN amount, in the currency its row carries beside it.
+// Which currency a money cell is counted in.
+//
+// Read from the declared native set rather than from the column's name.
+//
+// Two project measures are named `_minor` and are already folded into the base
+// currency. A name-based rule labelled them with whatever currency the row
+// carried beside them.
+//
+// A `_base_minor` name still answers base: it says so, and nothing native is
+// spelled that way.
 export function derivationCellCurrency(
   col: string,
   row: Record<string, unknown>,
   baseCurrency: string | null,
 ): string | null {
   if (col.endsWith("_base_minor")) {
+    return baseCurrency;
+  }
+  if (isMoneyField(col) && !isNativeMoneyField(col)) {
     return baseCurrency;
   }
   const own = row.currency;
