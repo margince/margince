@@ -56,17 +56,17 @@ func repairMessage(from, to, messageID string, received bool) []byte {
 	return []byte(strings.Join(lines, "\r\n"))
 }
 
-// seedReceivedMail lands one message as the seat's Gmail connection stores mail
-// it was not told it sent, and places the pass's cutoff after it, as the
-// migration does for mail captured before it ran.
-func seedReceivedMail(t *testing.T, e *integration.Env, from, messageID string, received bool) ids.UUID {
+// seedReceivedMail lands one message from the seat's former address as their
+// Gmail connection stores mail it was not told it sent, and places the pass's
+// cutoff after it, as the migration does for mail captured before it ran.
+func seedReceivedMail(t *testing.T, e *integration.Env, messageID string) ids.UUID {
 	t.Helper()
-	return seedReceivedMailTo(t, e, from, repairBuyer, messageID, received)
+	return seedReceivedMailTo(t, e, repairBuyer, messageID, false)
 }
 
-func seedReceivedMailTo(t *testing.T, e *integration.Env, from, to, messageID string, received bool) ids.UUID {
+func seedReceivedMailTo(t *testing.T, e *integration.Env, to, messageID string, received bool) ids.UUID {
 	t.Helper()
-	raw := repairMessage(from, to, messageID, received)
+	raw := repairMessage(repairFormerSelf, to, messageID, received)
 	msg, err := mailmap.Parse(raw, repairSeatMailbox)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", messageID, err)
@@ -125,7 +125,7 @@ func repairClaims(t *testing.T, e *integration.Env, id ids.UUID) int {
 func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
 	e := integration.Setup(t)
 	seedRepairSeat(t, e)
-	id := seedReceivedMail(t, e, repairFormerSelf, "former-sent@previous-employer.example", false)
+	id := seedReceivedMail(t, e, "former-sent@previous-employer.example")
 	if got := storedEndsOf(t, e, id); got.direction != "inbound" || got.counterparty != repairFormerSelf {
 		t.Fatalf("seeded as %+v, want the shape such mail was stored in: inbound from %s", got, repairFormerSelf)
 	}
@@ -150,7 +150,7 @@ func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
 func TestTheOwnSentMailRepairReplaysWithoutASecondClaim(t *testing.T) {
 	e := integration.Setup(t)
 	seedRepairSeat(t, e)
-	id := seedReceivedMail(t, e, repairFormerSelf, "replayed@previous-employer.example", false)
+	id := seedReceivedMail(t, e, "replayed@previous-employer.example")
 
 	runOwnSentMailRepair(t, e)
 	runOwnSentMailRepair(t, e)
@@ -195,7 +195,7 @@ func TestTheOwnSentMailRepairLeavesMailItCannotClaim(t *testing.T) {
 				e.WsExec(t, `INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1)`,
 					storekit.SuppressionHash(repairBuyer))
 			}
-			id := seedReceivedMailTo(t, e, repairFormerSelf, tc.to, "kept@"+strings.ReplaceAll(tc.name, " ", "-")+".example", tc.received)
+			id := seedReceivedMailTo(t, e, tc.to, "kept@"+strings.ReplaceAll(tc.name, " ", "-")+".example", tc.received)
 
 			runOwnSentMailRepair(t, e)
 
@@ -237,7 +237,7 @@ func TestTheOwnSentMailRepairDoesNotOfferMailOutsideItsReach(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
 			tc.setUp(t, e)
-			id := seedReceivedMail(t, e, repairFormerSelf, "unreached@"+strings.ReplaceAll(tc.name, " ", "-")+".example", false)
+			id := seedReceivedMail(t, e, "unreached@"+strings.ReplaceAll(tc.name, " ", "-")+".example")
 
 			runOwnSentMailRepair(t, e)
 
@@ -250,7 +250,7 @@ func TestTheOwnSentMailRepairDoesNotOfferMailOutsideItsReach(t *testing.T) {
 	t.Run("captured after the cutoff", func(t *testing.T) {
 		e := integration.Setup(t)
 		seedRepairSeat(t, e)
-		id := seedReceivedMail(t, e, repairFormerSelf, "after-cutoff@previous-employer.example", false)
+		id := seedReceivedMail(t, e, "after-cutoff@previous-employer.example")
 		e.WsExec(t, `UPDATE activity_own_sent_mail_repair_cutoff SET captured_before = now() - interval '1 hour'`)
 
 		runOwnSentMailRepair(t, e)
@@ -266,7 +266,7 @@ func TestTheOwnSentMailRepairDoesNotOfferMailOutsideItsReach(t *testing.T) {
 func TestMailFromAnAddressTheSeatProvesLaterIsClaimed(t *testing.T) {
 	e := integration.Setup(t)
 	connectMailbox(t, e, e.AdminUser, "gmail", repairSeatMailbox)
-	id := seedReceivedMail(t, e, repairFormerSelf, "proved-later@previous-employer.example", false)
+	id := seedReceivedMail(t, e, "proved-later@previous-employer.example")
 
 	runOwnSentMailRepair(t, e)
 	if got := storedEndsOf(t, e, id); got.direction != "inbound" {
@@ -287,7 +287,7 @@ func TestMailFromAnAddressTheSeatProvesLaterIsClaimed(t *testing.T) {
 func TestTheOwnSentMailRepairReachesARowFromBeforeProvenanceNamedTheSeat(t *testing.T) {
 	e := integration.Setup(t)
 	seedRepairSeat(t, e)
-	id := seedReceivedMail(t, e, repairFormerSelf, "legacy@previous-employer.example", false)
+	id := seedReceivedMail(t, e, "legacy@previous-employer.example")
 	e.WsExec(t, `UPDATE activity SET captured_by = 'connector:gmail', raw_capture_id = NULL WHERE id = $1`, id)
 
 	runOwnSentMailRepair(t, e)
