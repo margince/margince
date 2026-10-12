@@ -5863,21 +5863,9 @@ export const en = {
     "Only an administrator or operations user can import files.",
   "import.title": "Import file",
   "import.back": "Back to data import",
-  "import.objectLabel": "Row type",
   "import.object.lead": "Prospects",
   "import.object.company": "Companies",
   "import.object.contact": "Contacts",
-  "import.objectHint.lead":
-    "Imports an unworked list as leads, for a user to qualify before they become contacts.",
-  "import.objectHint.company":
-    "Matched by the mapped name, so a re-upload updates instead of duplicating.",
-  "import.objectHint.contact":
-    "For existing contacts. Matched by email, so a re-upload updates instead of duplicating, and addresses already stored stay unchanged.",
-  "import.fileLabel": "CSV file",
-  "import.choose": "Choose file",
-  "import.chooseAnother": "Choose another file",
-  "import.discardFile":
-    "Starting over clears the import in progress from this page: its file, column mapping and report.",
   "import.profiled": "Rows profiled from the start of the file: {rows}.",
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
@@ -5888,50 +5876,21 @@ export const en = {
   "import.dontImport": "Do not import",
   "import.noSamples": "Empty",
   "import.destinationFor": "Field for {column}",
-  "import.identifiedBy":
-    "Rows are identified by {column}, so re-importing this file updates rows instead of duplicating them.",
-  "import.needsIdentifier":
-    "Map a column to {field}. Without it, rows cannot be matched on a later upload or undone.",
-  "import.validate": "Preview import",
-  "import.validating": "Checking…",
-  "import.previewTitle": "Import preview",
-  "import.outcomeTitle": "Import result",
   // Shown when the card read this run back on mount instead of the reader
   // having just caused it: an outcome with no press behind it reads as an
   // import that ran by itself.
-  "import.resumedRun":
-    "This import ran on {when}. All actions below remain available.",
-  "import.count.created": "Create",
-  "import.count.updated": "Update",
-  "import.count.unchanged": "Unchanged",
-  "import.count.skipped": "Skipped",
-  "import.rowsRead": "{rows} rows read, identified by {column}.",
-  "import.linksOffered":
-    "{offered} rows name an employer; {unresolved} name a company not yet in the CRM.",
   "import.linksApplied": "{applied} of {offered} employer links written.",
-  "import.issuesLead":
-    "Some rows cannot be imported. Each is listed with its line number in the file.",
-  "import.issueLine": "Line {line}:",
-  "import.commit_one": "Import 1 row",
-  "import.commit_other": "Import {rows} rows",
   "import.importing": "Importing…",
   "import.done": "Import complete",
   "import.failed":
     "The import stopped. Rows processed: {checkpoint}. Resume continues from that point.",
   "import.resume": "Resume import",
   "import.uploadFailed": "File could not be read",
-  "import.resumedRunTitle": "Earlier import",
   "import.failedTitle": "Import stopped partway",
   "import.commitFailed": "Import did not run",
-  "import.undoInterruptedTitle": "Undo stopped partway",
   "import.undoFailed": "Undo did not run",
-  "import.validateFailed": "Preview did not run",
   "import.another": "Import another file",
-  "import.undo_one": "Undo import (1 row)",
-  "import.undo_other": "Undo import ({rows} rows)",
   "import.undoing": "Undoing…",
-  "import.undoInterrupted":
-    "The undo was interrupted. Continue resumes where it stopped.",
   "import.continueUndo": "Continue undo",
   "import.undone": "Import undone",
   "import.undoReversed_one": "1 row reversed.",
@@ -6034,6 +5993,52 @@ export const en = {
   "import.map.run": "Run test",
   "import.map.running": "Running test…",
   "import.map.stageFailed": "Test run did not start",
+  "import.step.hintStaged":
+    "A test run is staged, so the files and the map are fixed. Fix and re-upload starts again.",
+  "import.progress.waiting": "Waiting",
+  "import.progress.running": "In progress",
+  "import.progress.done": "Done",
+  "import.progress.rows": "{type}: {done} of {total} rows",
+  "import.progress.leave":
+    "You can leave this page. The import keeps going, and Recent imports shows when it is done.",
+  "import.result.detail": "{created} created · {updated} updated",
+  "import.result.skipped_one": "1 row was skipped. problems.csv lists it.",
+  "import.result.skipped_other":
+    "{count} rows were skipped. problems.csv lists each one.",
+  "import.result.undoing":
+    "Undo is running. If it stops, Continue undo picks it up from there.",
+  "import.result.undo": "Undo this import",
+  "import.result.done": "Done",
+  "import.test.detail": "{created} new · {updated} update · {unchanged} same",
+  "import.test.invalid_one": "1 row has invalid values and will be skipped",
+  "import.test.invalid_other":
+    "{count} rows have invalid values and will be skipped",
+  "import.test.invalidBody":
+    "Fix them in the file and upload it again to bring them in.",
+  "import.test.anyway_one":
+    "Import the 1 row with a broken link anyway, without the link. The result lists every link left out.",
+  "import.test.anyway_other":
+    "Import the {count} rows with broken links anyway, without those links. The result lists every link left out.",
+  "import.test.reupload": "Fix and re-upload",
+  "import.test.import_one": "Import 1 row",
+  "import.test.import_other": "Import {count} rows",
+  "import.test.importAnyway": "Import anyway",
+  "import.test.counts": "Rows per record type",
+  "import.test.problems_one": "1 problem",
+  "import.test.problems_other": "{count} problems",
+  "import.test.col.where": "Where",
+  "import.test.col.problem": "Problem",
+  "import.test.col.value": "Value",
+  "import.test.row": "Row {line}",
+  "import.test.rowColumn": "Row {line} · {column}",
+  "import.problem.broken_link": "Broken link",
+  "import.problem.dropped_link": "Link left out",
+  "import.problem.invalid_value": "Invalid value",
+  "import.problem.unknown_owner": "Unknown owner",
+  "import.problem.new_tag": "New tag",
+  "import.problem.duplicate": "Duplicate",
+  "import.problem.permission": "No permission",
+  "import.problem.unusable_row": "Unusable row",
   "settings.dangerZone": "Danger zone",
   "settings.dangerZoneSub":
     "Non-production installations only. Cannot be undone.",

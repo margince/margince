@@ -13,6 +13,7 @@ import {
 } from "../vitest.budget";
 import { meFixture } from "./app/mefixture";
 import { navigate } from "./app/router";
+import { formatFixture } from "./screens/import.fixtures";
 import { memoryStorage, renderApp } from "./testing/appharness";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
@@ -38,29 +39,36 @@ const run = {
   updated_at: "2026-08-13T10:00:00Z",
 };
 
-const answers: Readonly<Record<string, unknown>> = {
-  "GET /v1/me": meFixture({
-    allow: { import_run: ["create", "update", "read"] },
-  }),
-  "POST /v1/imports/sources": {
-    source_ref: "ws/import/abc",
-    object: "lead",
-    rows_profiled: 1,
-    columns: [{ header: "Email", fill_rate: 1, samples: ["ada@x.test"] }],
-    suggested_mapping: { Email: "email" },
-    targets: ["full_name", "email"],
-  },
-  "POST /v1/imports": run,
-  "POST /v1/imports/019ff-run/approve": { ...run, status: "complete" },
-  "GET /v1/imports/019ff-run/report": {
-    run_id: run.id,
-    status: "awaiting_approval",
-    rows_read: 1,
-    disposition: { created: 1, updated: 0, unchanged: 0, skipped: 0 },
-    issues: [],
-    source_key_used: "Email",
-  },
-};
+// The run's status as the server holds it: approving it lands it.
+let status = "awaiting_approval";
+
+function answers(): Readonly<Record<string, unknown>> {
+  return {
+    "GET /v1/me": meFixture({
+      allow: { import_run: ["create", "update", "read"] },
+    }),
+    "GET /v1/imports/format": formatFixture,
+    "POST /v1/imports/sources": {
+      source_ref: "ws/import/abc",
+      object: "lead",
+      file_name: "estate.csv",
+      rows_profiled: 1,
+      columns: [{ header: "Email", fill_rate: 1, samples: ["ada@x.test"] }],
+      suggested_mapping: { Email: "email" },
+      targets: ["full_name", "email"],
+    },
+    "POST /v1/imports": run,
+    "GET /v1/imports/019ff-run": { ...run, status },
+    "GET /v1/imports/019ff-run/report": {
+      run_id: run.id,
+      status,
+      rows_read: 1,
+      disposition: { created: 1, updated: 0, unchanged: 0, skipped: 0 },
+      issues: [],
+      source_key_used: "Email",
+    },
+  };
+}
 
 // Every read the shell makes besides these fails, so each screen falls to its
 // own error state rather than to an answer nobody wrote.
@@ -68,7 +76,14 @@ async function importFetch(input: Request | string | URL, init?: RequestInit) {
   const request = input instanceof Request ? input : null;
   const url = new URL(request ? request.url : String(input), "https://t.test");
   const method = request?.method ?? init?.method ?? "GET";
-  const body = answers[`${method} ${url.pathname}`];
+  const key = `${method} ${url.pathname}`;
+  if (key === "POST /v1/imports/019ff-run/approve") {
+    status = "complete";
+  }
+  const body =
+    key === "POST /v1/imports/019ff-run/approve"
+      ? { ...run, status }
+      : answers()[key];
   return body === undefined
     ? new Response(JSON.stringify({ code: "unavailable" }), {
         status: 503,
@@ -83,19 +98,15 @@ async function importFetch(input: Request | string | URL, init?: RequestInit) {
 async function arriveAtRunPage() {
   window.location.hash = RUN_PAGE;
   renderApp();
-  return screen.findByRole(
-    "button",
-    { name: "Choose file" },
-    { timeout: SETTLE_MS },
-  );
+  return screen.findByLabelText("Upload your data", {}, { timeout: SETTLE_MS });
 }
 
 async function profileAFile(user: ReturnType<typeof userEvent.setup>) {
   await user.upload(
-    screen.getByLabelText("CSV file"),
+    screen.getByLabelText("Upload your data"),
     new File(["Email\nada@x.test\n"], "estate.csv"),
   );
-  await screen.findByRole("row", { name: /Email/ });
+  await screen.findByRole("combobox", { name: "Record type for estate.csv" });
 }
 
 async function leaveForTheRow(user: ReturnType<typeof userEvent.setup>) {
@@ -110,6 +121,7 @@ const browserLanguages = Object.getOwnPropertyDescriptor(
 );
 
 beforeEach(() => {
+  status = "awaiting_approval";
   vi.stubGlobal("localStorage", memoryStorage());
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
   Object.defineProperty(globalThis.navigator, "languages", {
@@ -143,7 +155,9 @@ describe("the CSV import page in the shell", () => {
       expect(
         await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
       ).toBeInTheDocument();
-      expect(screen.getByRole("row", { name: /Email/ })).toBeInTheDocument();
+      expect(
+        screen.getByRole("combobox", { name: "Record type for estate.csv" }),
+      ).toBeInTheDocument();
     },
     SETTLE_MS * 2,
   );
@@ -162,12 +176,10 @@ describe("the CSV import page in the shell", () => {
       );
       await arriveAtRunPage();
       await user.upload(
-        screen.getByLabelText("CSV file"),
+        screen.getByLabelText("Upload your data"),
         new File(["Email\nada@x.test\n"], "estate.csv"),
       );
-      expect(
-        screen.getByRole("button", { name: "Choose file" }),
-      ).toBeDisabled();
+      expect(await screen.findByText("Reading file…")).toBeInTheDocument();
 
       await leaveForTheRow(user);
 
@@ -200,11 +212,12 @@ describe("the CSV import page in the shell", () => {
       const user = userEvent.setup();
       await arriveAtRunPage();
       await profileAFile(user);
-      await user.click(screen.getByRole("button", { name: "Preview import" }));
+      await user.click(screen.getByRole("button", { name: /Next: map/ }));
+      await user.click(screen.getByRole("button", { name: "Run test" }));
       await user.click(
         await screen.findByRole("button", { name: "Import 1 row" }),
       );
-      await screen.findByText("Import complete");
+      await screen.findByText("Import complete", {}, { timeout: SETTLE_MS });
 
       await leaveForTheRow(user);
 
@@ -223,16 +236,16 @@ describe("the CSV import page in the shell", () => {
       renderApp();
       await screen.findByText("New import", {}, { timeout: SETTLE_MS });
       navigate({ screen: "settings", id: "import", id2: "run" });
-      await screen.findByRole("button", { name: "Choose file" });
+      await screen.findByLabelText("Upload your data");
 
       globalThis.history.back();
       await screen.findByText("New import", {}, { timeout: SETTLE_MS });
       globalThis.history.forward();
 
       expect(
-        await screen.findByRole(
-          "button",
-          { name: "Choose file" },
+        await screen.findByLabelText(
+          "Upload your data",
+          {},
           { timeout: SETTLE_MS },
         ),
       ).toBeInTheDocument();

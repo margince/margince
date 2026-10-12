@@ -16,30 +16,6 @@ import type { ImportObject, ImportReport } from "./importtypes";
 type UndoOutcome = NonNullable<ImportReport["undo"]>;
 
 /**
- * The reversal stopped part-way, so continuing picks up where it stopped.
- *
- * An `event`: it reports a run that halted rather than a press the reader has
- * just made, and it is mentioned rather than allowed to interrupt.
- */
-export function UndoInterruptedNotice({
-  interrupted,
-}: Readonly<{ interrupted: boolean }>) {
-  const t = useT();
-  if (!interrupted) {
-    return null;
-  }
-  return (
-    <Callout
-      tone="warning"
-      kind="event"
-      title={t("import.undoInterruptedTitle")}
-    >
-      {t("import.undoInterrupted")}
-    </Callout>
-  );
-}
-
-/**
  * The rows a reversal could not put back, named with why — under ONE heading,
  * as the notice's own body.
  *

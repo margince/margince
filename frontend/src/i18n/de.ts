@@ -5714,21 +5714,9 @@ export const de = {
   "import.withheld": "Nur Admins und Operations können Dateien importieren.",
   "import.title": "Datei importieren",
   "import.back": "Zurück zum Datenimport",
-  "import.objectLabel": "Zeilentyp",
   "import.object.lead": "Interessenten",
   "import.object.company": "Unternehmen",
   "import.object.contact": "Kontakte",
-  "import.objectHint.lead":
-    "Importiert eine unbearbeitete Liste als Leads, die ein Teammitglied qualifiziert, bevor sie zu Kontakten werden.",
-  "import.objectHint.company":
-    "Abgleich über den zugeordneten Namen: Erneutes Hochladen aktualisiert, statt Duplikate anzulegen.",
-  "import.objectHint.contact":
-    "Für bestehende Kontakte. Abgleich über die E-Mail-Adresse: Erneutes Hochladen aktualisiert, statt Duplikate anzulegen, und bereits gespeicherte Adressen bleiben unverändert.",
-  "import.fileLabel": "CSV-Datei",
-  "import.choose": "Datei auswählen",
-  "import.chooseAnother": "Andere Datei auswählen",
-  "import.discardFile":
-    "Neu beginnen entfernt den angefangenen Import von dieser Seite, samt Datei, Spaltenzuordnung und Bericht.",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
@@ -5738,48 +5726,19 @@ export const de = {
   "import.dontImport": "Nicht importieren",
   "import.noSamples": "Leer",
   "import.destinationFor": "Feld für {column}",
-  "import.identifiedBy":
-    "Zeilen werden über {column} erkannt, daher aktualisiert ein erneuter Import dieser Datei die Zeilen, statt sie zu duplizieren.",
-  "import.needsIdentifier":
-    "Ordne {field} eine Spalte zu. Ohne sie lassen sich Zeilen bei einem späteren Hochladen nicht abgleichen oder rückgängig machen.",
-  "import.validate": "Importvorschau anzeigen",
-  "import.validating": "Wird geprüft…",
-  "import.previewTitle": "Importvorschau",
-  "import.outcomeTitle": "Importergebnis",
-  "import.resumedRun":
-    "Dieser Import lief am {when}. Alle Aktionen unten sind weiterhin verfügbar.",
-  "import.count.created": "Anlegen",
-  "import.count.updated": "Aktualisieren",
-  "import.count.unchanged": "Unverändert",
-  "import.count.skipped": "Übersprungen",
-  "import.rowsRead": "Gelesene Zeilen: {rows}, erkannt über {column}.",
-  "import.linksOffered":
-    "Zeilen mit Arbeitgeber: {offered}. Zeilen mit einem Unternehmen, das noch nicht im CRM ist: {unresolved}.",
   "import.linksApplied":
     "{applied} von {offered} Arbeitgeber-Verknüpfungen geschrieben.",
-  "import.issuesLead":
-    "Einige Zeilen können nicht importiert werden. Jede ist mit ihrer Zeilennummer in der Datei aufgeführt.",
-  "import.issueLine": "Zeile {line}:",
-  "import.commit_one": "1 Zeile importieren",
-  "import.commit_other": "{rows} Zeilen importieren",
   "import.importing": "Wird importiert…",
   "import.done": "Import abgeschlossen",
   "import.failed":
     "Der Import wurde angehalten. Verarbeitete Zeilen: {checkpoint}. Fortsetzen macht an dieser Stelle weiter.",
   "import.resume": "Import fortsetzen",
   "import.uploadFailed": "Datei konnte nicht gelesen werden",
-  "import.resumedRunTitle": "Früherer Import",
   "import.failedTitle": "Import vorzeitig angehalten",
   "import.commitFailed": "Import nicht ausgeführt",
-  "import.undoInterruptedTitle": "Import nur teilweise rückgängig gemacht",
   "import.undoFailed": "Import nicht rückgängig gemacht",
-  "import.validateFailed": "Vorschau nicht erstellt",
   "import.another": "Weitere Datei importieren",
-  "import.undo_one": "Import rückgängig machen (1 Zeile)",
-  "import.undo_other": "Import rückgängig machen ({rows} Zeilen)",
   "import.undoing": "Wird rückgängig gemacht…",
-  "import.undoInterrupted":
-    "Das Rückgängigmachen wurde unterbrochen. Mit „Weiter rückgängig machen“ geht es dort weiter, wo es angehalten hat.",
   "import.continueUndo": "Weiter rückgängig machen",
   "import.undone": "Import rückgängig gemacht",
   "import.undoReversed_one": "1 Zeile rückgängig gemacht.",
@@ -5887,6 +5846,55 @@ export const de = {
   "import.map.run": "Testlauf starten",
   "import.map.running": "Testlauf läuft…",
   "import.map.stageFailed": "Testlauf nicht gestartet",
+  "import.step.hintStaged":
+    "Ein Testlauf ist angelegt, Dateien und Zuordnung stehen fest. Korrigieren und neu hochladen fängt von vorn an.",
+  "import.progress.waiting": "Wartet",
+  "import.progress.running": "Läuft",
+  "import.progress.done": "Fertig",
+  "import.progress.rows": "{type}: {done} von {total} Zeilen",
+  "import.progress.leave":
+    "Du kannst diese Seite verlassen. Der Import läuft weiter, und unter „Letzte Importe“ siehst du, wann er fertig ist.",
+  "import.result.detail": "{created} angelegt · {updated} aktualisiert",
+  "import.result.skipped_one":
+    "1 Zeile wurde übersprungen. problems.csv nennt sie.",
+  "import.result.skipped_other":
+    "{count} Zeilen wurden übersprungen. problems.csv nennt jede.",
+  "import.result.undoing":
+    "Das Rückgängigmachen läuft. Hält es an, macht „Weiter rückgängig machen“ dort weiter.",
+  "import.result.undo": "Diesen Import rückgängig machen",
+  "import.result.done": "Fertig",
+  "import.test.detail":
+    "{created} neu · {updated} aktualisiert · {unchanged} gleich",
+  "import.test.invalid_one":
+    "1 Zeile hat ungültige Werte und wird übersprungen",
+  "import.test.invalid_other":
+    "{count} Zeilen haben ungültige Werte und werden übersprungen",
+  "import.test.invalidBody":
+    "Korrigiere sie in der Datei und lade sie erneut hoch, um sie zu übernehmen.",
+  "import.test.anyway_one":
+    "Die 1 Zeile mit fehlerhafter Verknüpfung trotzdem importieren, ohne die Verknüpfung. Das Ergebnis nennt jede ausgelassene Verknüpfung.",
+  "import.test.anyway_other":
+    "Die {count} Zeilen mit fehlerhaften Verknüpfungen trotzdem importieren, ohne diese Verknüpfungen. Das Ergebnis nennt jede ausgelassene Verknüpfung.",
+  "import.test.reupload": "Korrigieren und neu hochladen",
+  "import.test.import_one": "1 Zeile importieren",
+  "import.test.import_other": "{count} Zeilen importieren",
+  "import.test.importAnyway": "Trotzdem importieren",
+  "import.test.counts": "Zeilen je Datensatztyp",
+  "import.test.problems_one": "1 Problem",
+  "import.test.problems_other": "{count} Probleme",
+  "import.test.col.where": "Ort",
+  "import.test.col.problem": "Problem",
+  "import.test.col.value": "Wert",
+  "import.test.row": "Zeile {line}",
+  "import.test.rowColumn": "Zeile {line} · {column}",
+  "import.problem.broken_link": "Fehlerhafte Verknüpfung",
+  "import.problem.dropped_link": "Verknüpfung ausgelassen",
+  "import.problem.invalid_value": "Ungültiger Wert",
+  "import.problem.unknown_owner": "Unbekannter Inhaber",
+  "import.problem.new_tag": "Neuer Tag",
+  "import.problem.duplicate": "Duplikat",
+  "import.problem.permission": "Keine Berechtigung",
+  "import.problem.unusable_row": "Unbrauchbare Zeile",
   "settings.dangerZone": "Gefahrenbereich",
   "settings.dangerZoneSub":
     "Nur für nicht produktive Installationen. Kann nicht rückgängig gemacht werden.",

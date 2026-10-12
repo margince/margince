@@ -2,11 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  UndoConfirm,
-  UndoErrors,
-  UndoInterruptedNotice,
-} from "./import.notices";
+import { UndoConfirm, UndoErrors } from "./import.notices";
 import { StoryProviders } from "./story-utils";
 
 // What a reversal says about itself. Both frames need a run that has already
@@ -38,15 +34,6 @@ const ERRORED = [
   },
 ];
 
-/** The reversal halted, and continuing picks up where it stopped. */
-export const Interrupted: Story = {
-  render: () => (
-    <StoryProviders>
-      <UndoInterruptedNotice interrupted />
-    </StoryProviders>
-  ),
-};
-
 /** The rows that could not be put back, named with why. */
 export const RowsLeftStanding: Story = {
   render: () => (
@@ -66,11 +53,10 @@ export const RowsLeftStandingDark: Story = {
   ),
 };
 
-/** A clean reversal says neither thing. */
+/** A clean reversal names no row. */
 export const Quiet: Story = {
   render: () => (
     <StoryProviders>
-      <UndoInterruptedNotice interrupted={false} />
       <UndoErrors rows={[]} />
     </StoryProviders>
   ),

@@ -2,11 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type RenderResult, render as rtlRender } from "@testing-library/react";
+import {
+  type RenderResult,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { ImportCard } from "./import";
 import { formatFixture } from "./import.fixtures";
 
 // The import screens' test harness: one fetch stub that records what was sent,
@@ -33,6 +39,7 @@ export function render(ui: ReactNode): RenderResult {
 export const profile = {
   source_ref: "ws/import/abc",
   object: "lead",
+  file_name: "leads.csv",
   rows_profiled: 4,
   columns: [
     { header: "Email", fill_rate: 1, samples: ["ada@x.test", "grace@x.test"] },
@@ -132,27 +139,36 @@ const EXACT_DEFAULTS: Routes = {
   "POST /imports": () => jsonResponse(run, 202),
 };
 
+const RUN_PATH = /^GET \/imports\/([^/]+)$/;
+
 // The answers for a run named by its id.
-function runDefault(key: string): Response {
+function runDefault(key: string): Response | undefined {
+  const read = RUN_PATH.exec(key);
+  if (read) return jsonResponse({ ...run, id: read[1] });
   if (key.startsWith("POST /imports/") && key.endsWith("/approve")) {
     return jsonResponse({ ...run, status: "complete" }, 202);
   }
-  if (key.endsWith("/report")) return jsonResponse(dryRun);
-  return jsonResponse({});
+  if (key.startsWith("GET /imports/") && key.endsWith("/report")) {
+    return jsonResponse(dryRun);
+  }
+  return undefined;
 }
 
 // A request is answered by the route that names it exactly, the test's or the
-// default's, before any route answers it by prefix: a stub "GET /imports" does
-// not answer "GET /imports/format", and "GET /imports/r1" does not answer
+// default's, then by the default for a run named by its id, and only then by a
+// test route that is a prefix of it: a stub "GET /imports" does not answer
+// "GET /imports/format", and "GET /imports/r1" does not answer
 // "GET /imports/r1/report".
 function answer(routes: Routes, key: string): Response {
   const exact = routes[key] ?? EXACT_DEFAULTS[key];
   if (exact) return exact();
+  const byRun = runDefault(key);
+  if (byRun) return byRun;
   const prefix = Object.keys(routes).find((candidate) =>
     key.startsWith(candidate),
   );
   const byPrefix = prefix === undefined ? undefined : routes[prefix];
-  return byPrefix ? byPrefix() : runDefault(key);
+  return byPrefix ? byPrefix() : jsonResponse({});
 }
 
 // Every request the screens make, recorded, so a test can assert what went to
@@ -195,4 +211,28 @@ async function bodyOf(
     );
   }
   return undefined;
+}
+
+const RUN_PAGE = "#/settings/import/run";
+
+/**
+ * The run page at the test step, reached the way a reader reaches it: a CSV
+ * dropped, its type kept, its map kept, and a test run staged. The staged run
+ * is whatever the "POST /imports" route answers (`run` by default).
+ */
+export async function renderAtTestRun(user: UserEvent): Promise<void> {
+  globalThis.location.hash = RUN_PAGE;
+  render(<ImportCard subpage="run" />);
+  await user.upload(
+    await screen.findByLabelText("Upload your data"),
+    new File(["Email\nada@x.test\n"], "leads.csv"),
+  );
+  await user.click(await screen.findByRole("button", { name: /Next: map/ }));
+  await user.click(screen.getByRole("button", { name: "Run test" }));
+}
+
+/** The run page opened on one run by its address, as Recent imports opens it. */
+export function renderAtImport(id: string): RenderResult {
+  globalThis.location.hash = `${RUN_PAGE}?run=${id}`;
+  return render(<ImportCard subpage="run" />);
 }

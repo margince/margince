@@ -45,8 +45,8 @@ export function ImportMappingTable({
   // An option's value is the key the mapping sends (`cf_tier`); its text is
   // the label a person reads (`Tier`).
   targets: readonly ImportFormatColumn[];
-  /** The file the targets belong to; with it, a chosen field opens its guide. */
-  file?: string;
+  /** The file the targets belong to, named in a chosen field's guide. */
+  file: string;
   mapping: Record<string, string>;
   // While the mapping is being validated it stops accepting changes: a choice
   // made now cannot reach the request already in flight, and a table showing a
@@ -110,7 +110,7 @@ export function ImportMappingTable({
                           column: column.header,
                         })}
                       />
-                      {target && file ? (
+                      {target ? (
                         <TargetMarks target={target} file={file} />
                       ) : null}
                     </div>

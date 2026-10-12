@@ -81,9 +81,30 @@ export const formatFixture: ImportFormat = {
       object: "lead",
       columns: [
         {
+          name: "full_name",
+          description: "The prospect’s whole name.",
+          example: "Jo Tran",
+          required_on_new_row: false,
+          custom: false,
+        },
+        {
           name: "email",
           description: "The prospect’s email address.",
           example: "jo@acme.com",
+          required_on_new_row: false,
+          custom: false,
+        },
+        {
+          name: "title",
+          description: "The prospect’s job title.",
+          example: "Head of Purchasing",
+          required_on_new_row: false,
+          custom: false,
+        },
+        {
+          name: "company_name",
+          description: "The company the prospect names, as text.",
+          example: "Acme",
           required_on_new_row: false,
           custom: false,
         },

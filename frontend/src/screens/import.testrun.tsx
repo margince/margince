@@ -1,0 +1,275 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { Badge, Button, Checkbox } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { DataTable } from "../design-system/datatable";
+import { StatCard } from "../design-system/statcard";
+import { StatStrip } from "../design-system/statstrip";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf, QueryStates } from "./common";
+import { ImportContextTagSummary } from "./import.contexttag";
+import type { ImportWizardState } from "./importflow";
+import type {
+  ImportFormat,
+  ImportPartReport,
+  ImportProblemKind,
+  ImportReport,
+  ImportRowIssue,
+  ImportRun,
+} from "./importtypes";
+
+/** Where the server builds one run's problems as a spreadsheet. */
+export function problemsHref(id: string): string {
+  return `/v1/imports/${encodeURIComponent(id)}/problems.csv`;
+}
+
+const PROBLEM_TONE = {
+  broken_link: "warning",
+  dropped_link: "default",
+  invalid_value: "danger",
+  unknown_owner: "info",
+  new_tag: "info",
+  duplicate: "info",
+  permission: "danger",
+  unusable_row: "danger",
+} as const satisfies Record<ImportProblemKind, string>;
+
+// The report's parts in the format's order. An older report of one CSV has no
+// parts, so its whole disposition is the one part.
+export function partsOf(
+  report: ImportReport,
+  run: ImportRun | undefined,
+  order: ImportFormat["order"],
+): ImportPartReport[] {
+  const parts = report.parts?.length
+    ? report.parts
+    : [
+        {
+          file: run?.file_name ?? "",
+          object: run?.object ?? order[0] ?? "company",
+          rows_read: report.rows_read,
+          disposition: report.disposition,
+        },
+      ];
+  return [...parts].sort(
+    (a, b) => order.indexOf(a.object) - order.indexOf(b.object),
+  );
+}
+
+function countOf(
+  issues: readonly ImportRowIssue[],
+  ...kinds: ImportProblemKind[]
+): number {
+  return issues.filter((issue) => issue.kind && kinds.includes(issue.kind))
+    .length;
+}
+
+/**
+ * What the run will do, before anything is written: the counts per type, every
+ * problem with where it is, and the choice to bring rows with broken links in
+ * without the link. Import approves this report and no other.
+ */
+export function TestRunStep({
+  wizard,
+  format,
+}: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
+  const t = useT();
+  const { report, runId } = wizard;
+  return (
+    <QueryStates query={report} pendingLabel={t("common.loading")}>
+      {report.data && runId ? (
+        <TestRunBody
+          wizard={wizard}
+          format={format}
+          report={report.data}
+          runId={runId}
+        />
+      ) : null}
+    </QueryStates>
+  );
+}
+
+function TestRunBody({
+  wizard,
+  format,
+  report,
+  runId,
+}: Readonly<{
+  wizard: ImportWizardState;
+  format: ImportFormat;
+  report: ImportReport;
+  runId: string;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const invalid = countOf(report.issues, "invalid_value");
+  const linkless = countOf(report.issues, "broken_link", "dropped_link");
+  const restaging = wizard.stage.isPending;
+  const landing = report.disposition.created + report.disposition.updated;
+  return (
+    <div className="import">
+      <PartCounts
+        parts={partsOf(report, wizard.run.data, format.order)}
+        detail={(part) =>
+          t("import.test.detail", {
+            created: formatNumber(part.disposition.created, locale),
+            updated: formatNumber(part.disposition.updated, locale),
+            unchanged: formatNumber(part.disposition.unchanged, locale),
+          })
+        }
+      />
+      <ImportContextTagSummary tagID={wizard.contextTagID} />
+      {invalid > 0 ? (
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={plural("import.test.invalid", invalid, {
+            count: formatNumber(invalid, locale),
+          })}
+        >
+          {t("import.test.invalidBody")}
+        </Callout>
+      ) : null}
+      <ProblemTable issues={report.issues} />
+      {wizard.profile && linkless > 0 ? (
+        <Checkbox
+          checked={wizard.anyway}
+          disabled={restaging}
+          onChange={(event) => wizard.setAnyway(event.target.checked)}
+          label={plural("import.test.anyway", linkless, {
+            count: formatNumber(linkless, locale),
+          })}
+        />
+      ) : null}
+      <div className="import__actions">
+        {report.issues.length > 0 ? (
+          <a className="link-button" href={problemsHref(runId)} download>
+            problems.csv
+          </a>
+        ) : null}
+        <Button variant="ghost" onClick={wizard.reset}>
+          {t("import.test.reupload")}
+        </Button>
+        <Button
+          variant="primary"
+          disabled={restaging}
+          pending={wizard.approve.isPending}
+          busyLabel={t("import.importing")}
+          onClick={() => wizard.approve.mutate(runId)}
+        >
+          {wizard.anyway
+            ? t("import.test.importAnyway")
+            : plural("import.test.import", landing, {
+                count: formatNumber(landing, locale),
+              })}
+        </Button>
+      </div>
+      {wizard.approve.error ? (
+        <Callout tone="danger" kind="outcome" title={t("import.commitFailed")}>
+          {problemMessageOf(wizard.approve.error, t)}
+        </Callout>
+      ) : null}
+      {wizard.stage.error ? (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("import.map.stageFailed")}
+        >
+          {problemMessageOf(wizard.stage.error, t)}
+        </Callout>
+      ) : null}
+    </div>
+  );
+}
+
+/** One reading per file: the rows it writes, and how they split. */
+export function PartCounts({
+  parts,
+  detail,
+}: Readonly<{
+  parts: readonly ImportPartReport[];
+  detail: (part: ImportPartReport) => string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <StatStrip label={t("import.test.counts")}>
+      {parts.map((part) => (
+        <StatCard
+          key={`${part.object}-${part.file}`}
+          label={t(`import.object.${part.object}`)}
+          value={formatNumber(
+            part.disposition.created + part.disposition.updated,
+            locale,
+          )}
+          detail={detail(part)}
+        />
+      ))}
+    </StatStrip>
+  );
+}
+
+/** Every problem the report names, with the file, row and column it is in. */
+export function ProblemTable({
+  issues,
+}: Readonly<{ issues: readonly ImportRowIssue[] }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (issues.length === 0) return null;
+  return (
+    <DataTable<ImportRowIssue>
+      label={plural("import.test.problems", issues.length, {
+        count: formatNumber(issues.length, locale),
+      })}
+      rows={[...issues]}
+      rowKey={(issue) =>
+        `${issue.file ?? ""}-${issue.line}-${issue.column ?? ""}-${issue.kind ?? ""}`
+      }
+      columns={[
+        {
+          key: "where",
+          header: t("import.test.col.where"),
+          render: (issue) => (
+            <>
+              {issue.file ? <code>{issue.file}</code> : null}
+              <div className="t-caption">
+                {issue.column
+                  ? t("import.test.rowColumn", {
+                      line: formatNumber(issue.line, locale),
+                      column: issue.column,
+                    })
+                  : t("import.test.row", {
+                      line: formatNumber(issue.line, locale),
+                    })}
+              </div>
+            </>
+          ),
+        },
+        {
+          key: "problem",
+          header: t("import.test.col.problem"),
+          grow: true,
+          render: (issue) => (
+            <>
+              {issue.kind ? (
+                <Badge tone={PROBLEM_TONE[issue.kind]}>
+                  {t(`import.problem.${issue.kind}`)}
+                </Badge>
+              ) : null}
+              <div className="t-sub">{issue.reason}</div>
+            </>
+          ),
+        },
+        {
+          key: "value",
+          header: t("import.test.col.value"),
+          render: (issue) => (issue.value ? <code>{issue.value}</code> : null),
+        },
+      ]}
+    />
+  );
+}

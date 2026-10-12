@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { routeHash } from "../app/router";
+import { useUnsavedGuard } from "../app/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -11,8 +12,11 @@ import { StageLadder } from "../design-system/stageladder";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryStates } from "./common";
 import { FilesStep, ImportDropzone } from "./import.files";
+import { ImportProgress, ImportResult } from "./import.result";
+import { TestRunStep } from "./import.testrun";
 import {
   type ImportWizardState,
+  takeHandedOverUpload,
   uploadObjectFor,
   useImportFormat,
   useImportWizard,
@@ -35,6 +39,31 @@ const STEPS: readonly WizardStep[] = [
 /** The run flow's page: it owns the flow's state and draws the flow. */
 export function ImportWizardPage() {
   const wizard = useImportWizard();
+  const { locale } = useLocale();
+  const format = useImportFormat(locale);
+  const recent = useRecentImports();
+  // A profiled file is work a reader would lose by leaving; a staged run is
+  // kept by the server. Read from the stage, not the address: leaving drops
+  // the run from the address before the page unmounts.
+  useUnsavedGuard(
+    (wizard.profile !== null || wizard.upload.isPending) &&
+      !wizard.stage.isSuccess,
+  );
+  // The file the hub's drop zone took starts here, once the format can say
+  // which type a CSV's name gives.
+  const { upload } = wizard;
+  useEffect(() => {
+    if (!format.data) return;
+    const file = takeHandedOverUpload();
+    if (file) {
+      upload.mutate({
+        file,
+        object: uploadObjectFor(file.name, format.data),
+        recent: recent.data,
+        retype: false,
+      });
+    }
+  }, [format.data, recent.data, upload]);
   return <ImportWizard wizard={wizard} />;
 }
 
@@ -60,7 +89,13 @@ export function ImportWizard({
       />
       <StageLadder
         label={t("import.step.label")}
-        hint={<span id={hintId}>{t("import.step.hint")}</span>}
+        hint={
+          <span id={hintId}>
+            {wizard.runId === null
+              ? t("import.step.hint")
+              : t("import.step.hintStaged")}
+          </span>
+        }
         steps={STEPS.map((step, index) => {
           const back =
             index < here &&
@@ -106,16 +141,31 @@ function StepBody({
   wizard,
   format,
 }: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
-  switch (wizard.step) {
-    case "upload":
-      return <UploadStep wizard={wizard} format={format} />;
-    case "files":
-      return <FilesStep wizard={wizard} format={format} />;
-    case "map":
-      return <MapStep wizard={wizard} format={format} />;
-    default:
-      return null;
+  const t = useT();
+  if (wizard.runId === null) {
+    switch (wizard.step) {
+      case "files":
+        return <FilesStep wizard={wizard} format={format} />;
+      case "map":
+        return <MapStep wizard={wizard} format={format} />;
+      default:
+        return <UploadStep wizard={wizard} format={format} />;
+    }
   }
+  const run = wizard.run.data;
+  return (
+    <QueryStates query={wizard.run} pendingLabel={t("common.loading")}>
+      {run && wizard.step === "test" ? (
+        <TestRunStep wizard={wizard} format={format} />
+      ) : null}
+      {run && wizard.step === "import" ? (
+        <ImportProgress wizard={wizard} format={format} run={run} />
+      ) : null}
+      {run && wizard.step === "result" ? (
+        <ImportResult wizard={wizard} format={format} run={run} />
+      ) : null}
+    </QueryStates>
+  );
 }
 
 function UploadStep({
