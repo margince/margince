@@ -8,6 +8,13 @@
   gap: var(--space-3);
 }
 
+/* The readings strip measures its own width as a container, so it has no
+   content width to shrink to: in this flex-start column it must be stretched
+   or every card collapses to nothing. */
+.import__counts {
+  align-self: stretch;
+}
+
 .import__hint {
   margin: 0;
 }

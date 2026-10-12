@@ -4,6 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
+import { readFileSync } from "node:fs";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -103,6 +104,22 @@ describe("the test run", () => {
     expect(strip).toHaveTextContent(
       /Companies2.*1 new · 1 update · 0 same.*Contacts2.*2 new · 0 update · 0 same/,
     );
+  });
+
+  it("lays the counts across the step's width, not at their content's width", async () => {
+    // The strip measures its own width as a container, so in the step's
+    // align-items:flex-start column it has no content width and every card
+    // collapses. jsdom cannot lay this out; the class and its rule are what
+    // keep the wrapper stretched.
+    const user = userEvent.setup();
+    stubRoutes({ [REPORT]: () => jsonResponse(bundleReportFixture) });
+    await renderAtTestRun(user);
+    const strip = await screen.findByRole("region", {
+      name: "Rows per record type",
+    });
+    expect(strip.parentElement).toHaveClass("import__counts");
+    const importCss = readFileSync("src/screens/import.css", "utf8");
+    expect(importCss).toMatch(/\.import__counts\s*{[^}]*align-self:\s*stretch/);
   });
 
   it("warns that rows with invalid values are left out", async () => {

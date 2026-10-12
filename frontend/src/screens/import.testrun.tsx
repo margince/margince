@@ -199,7 +199,7 @@ export function PartCounts({
   const t = useT();
   const { locale } = useLocale();
   return (
-    <StatStrip label={t("import.test.counts")}>
+    <StatStrip className="import__counts" label={t("import.test.counts")}>
       {parts.map((part) => (
         <StatCard
           key={`${part.object}-${part.file}`}
