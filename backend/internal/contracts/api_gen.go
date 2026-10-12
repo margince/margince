@@ -10216,6 +10216,21 @@ func (e HistoryEdgeOtherEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ImportFormatVersion.
+const (
+	ImportFormatVersionMarginceImport1 ImportFormatVersion = "margince-import/1"
+)
+
+// Valid indicates whether the value is a known member of the ImportFormatVersion enum.
+func (e ImportFormatVersion) Valid() bool {
+	switch e {
+	case ImportFormatVersionMarginceImport1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportIgnoredEntryReason.
 const (
 	ImportIgnoredEntryReasonNotYetImportable ImportIgnoredEntryReason = "not_yet_importable"
@@ -21019,6 +21034,27 @@ func (e GetForecastMovementParamsReading) Valid() bool {
 	case GetForecastMovementParamsReadingOpen:
 		return true
 	case GetForecastMovementParamsReadingWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetImportFormatParamsLang.
+const (
+	GetImportFormatParamsLangDe GetImportFormatParamsLang = "de"
+	GetImportFormatParamsLangEn GetImportFormatParamsLang = "en"
+	GetImportFormatParamsLangVi GetImportFormatParamsLang = "vi"
+)
+
+// Valid indicates whether the value is a known member of the GetImportFormatParamsLang enum.
+func (e GetImportFormatParamsLang) Valid() bool {
+	switch e {
+	case GetImportFormatParamsLangDe:
+		return true
+	case GetImportFormatParamsLangEn:
+		return true
+	case GetImportFormatParamsLangVi:
 		return true
 	default:
 		return false
@@ -35916,6 +35952,90 @@ type ImportColumn struct {
 
 	// Samples Up to three non-empty values, in file order. Values, not statistics — a human recognizes their own data.
 	Samples []string `json:"samples"`
+}
+
+// ImportFormat The files an import takes, for this workspace. The template ZIP, the
+// column guide and the screen's file order are all read from it.
+type ImportFormat struct {
+	// Files One file per object, in `order`.
+	Files []ImportFormatFile `json:"files"`
+
+	// KeyRules How a row is recognised on a second upload and how files link to each other, one sentence each.
+	KeyRules []string `json:"key_rules"`
+
+	// Order The order the files land in, so a link can name a record an earlier file made.
+	Order []ImportObject `json:"order"`
+
+	// SizeLimitMb The largest upload this installation accepts, in MB.
+	SizeLimitMb int                 `json:"size_limit_mb"`
+	Version     ImportFormatVersion `json:"version"`
+}
+
+// ImportFormatVersion defines model for ImportFormat.Version.
+type ImportFormatVersion string
+
+// ImportFormatColumn One column and its guide. `name` is the mapping target a column is
+// mapped onto; `label` is what a person reads, set for a custom field.
+// A header shows `label` when present, else `name`.
+type ImportFormatColumn struct {
+	// Custom Whether this is one of the workspace's custom fields.
+	Custom bool `json:"custom"`
+
+	// Description What goes in the column.
+	Description string `json:"description"`
+
+	// Example An example value, or several separated by " · ".
+	Example string `json:"example"`
+
+	// Label A custom field's label. Absent for a core column.
+	Label *string `json:"label,omitempty"`
+
+	// Name The mapping target: a core field, or a custom field's `cf_` key.
+	Name string `json:"name"`
+
+	// Options A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise.
+	Options *[]string `json:"options,omitempty"`
+
+	// RequiredOnNewRow Whether a row that creates a record needs this column filled.
+	RequiredOnNewRow bool `json:"required_on_new_row"`
+
+	// Type A custom field's type. Absent for a core column.
+	Type *string `json:"type,omitempty"`
+}
+
+// ImportFormatFile One file of the import and its columns.
+type ImportFormatFile struct {
+	Columns []ImportFormatColumn `json:"columns"`
+
+	// File The file name a ZIP entry needs for this object to be detected.
+	File string `json:"file"`
+
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `company` creates companies.
+	//
+	// `lead` and `contact` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as contacts would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `contact` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `contact` run runs the same identity
+	// ladder every other contact create runs, refuses a row whose email
+	// already belongs to another contact, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
+	Object ImportObject `json:"object"`
 }
 
 // ImportIgnoredEntry One ZIP entry no part was made from.
@@ -53065,6 +53185,15 @@ type ListImportRunsParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// GetImportFormatParams defines parameters for GetImportFormat.
+type GetImportFormatParams struct {
+	// Lang The language of the guide text. The installation's language when absent.
+	Lang *GetImportFormatParamsLang `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// GetImportFormatParamsLang defines parameters for GetImportFormat.
+type GetImportFormatParamsLang string
+
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
 	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header.
@@ -68821,15 +68950,24 @@ type ServerInterface interface {
 	// Create an import run from an uploaded source and a column mapping, and dry-run it.
 	// (POST /imports)
 	CreateImportRun(w http.ResponseWriter, r *http.Request)
+	// Describe the files an import takes, column by column, for this workspace.
+	// (GET /imports/format)
+	GetImportFormat(w http.ResponseWriter, r *http.Request, params GetImportFormatParams)
 	// Upload a file to import, and read back what its columns actually contain.
 	// (POST /imports/sources)
 	UploadImportSource(w http.ResponseWriter, r *http.Request)
+	// Download the import template for this workspace.
+	// (GET /imports/template)
+	DownloadImportTemplate(w http.ResponseWriter, r *http.Request)
 	// Read one import run's lifecycle state.
 	// (GET /imports/{id})
 	GetImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Approve a validated import run and commit it.
 	// (POST /imports/{id}/approve)
 	ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Download the run's row problems as a CSV.
+	// (GET /imports/{id}/problems.csv)
+	DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Read the run's report — what will happen, or what did.
 	// (GET /imports/{id}/report)
 	GetImportRunReport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -72655,9 +72793,21 @@ func (_ Unimplemented) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Describe the files an import takes, column by column, for this workspace.
+// (GET /imports/format)
+func (_ Unimplemented) GetImportFormat(w http.ResponseWriter, r *http.Request, params GetImportFormatParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Upload a file to import, and read back what its columns actually contain.
 // (POST /imports/sources)
 func (_ Unimplemented) UploadImportSource(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download the import template for this workspace.
+// (GET /imports/template)
+func (_ Unimplemented) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72670,6 +72820,12 @@ func (_ Unimplemented) GetImportRun(w http.ResponseWriter, r *http.Request, id o
 // Approve a validated import run and commit it.
 // (POST /imports/{id}/approve)
 func (_ Unimplemented) ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download the run's row problems as a CSV.
+// (GET /imports/{id}/problems.csv)
+func (_ Unimplemented) DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -94548,6 +94704,45 @@ func (siw *ServerInterfaceWrapper) CreateImportRun(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetImportFormat operation middleware
+func (siw *ServerInterfaceWrapper) GetImportFormat(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetImportFormatParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "lang", r.URL.Query(), &params.Lang, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lang"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImportFormat(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UploadImportSource operation middleware
 func (siw *ServerInterfaceWrapper) UploadImportSource(w http.ResponseWriter, r *http.Request) {
 
@@ -94559,6 +94754,26 @@ func (siw *ServerInterfaceWrapper) UploadImportSource(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadImportSource(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadImportTemplate operation middleware
+func (siw *ServerInterfaceWrapper) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadImportTemplate(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -94627,6 +94842,38 @@ func (siw *ServerInterfaceWrapper) ApproveImportRun(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ApproveImportRun(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadImportProblems operation middleware
+func (siw *ServerInterfaceWrapper) DownloadImportProblems(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadImportProblems(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -111294,13 +111541,22 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/imports", wrapper.CreateImportRun)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/format", wrapper.GetImportFormat)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/sources", wrapper.UploadImportSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/template", wrapper.DownloadImportTemplate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports/{id}", wrapper.GetImportRun)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/{id}/approve", wrapper.ApproveImportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/{id}/problems.csv", wrapper.DownloadImportProblems)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports/{id}/report", wrapper.GetImportRunReport)

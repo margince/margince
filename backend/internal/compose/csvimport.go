@@ -301,13 +301,9 @@ func (h importHandlers) GetImportRun(w http.ResponseWriter, r *http.Request, id 
 // GetImportRunReport reads what the run will do, or did (IEM-WIRE-4) — one
 // shape for both, so a human comparing them compares like with like.
 func (h importHandlers) GetImportRunReport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	run, err := h.staged(r, id)
+	run, err := h.reported(r, id)
 	if err != nil {
 		httperr.Write(w, r, err)
-		return
-	}
-	if run.Report == nil {
-		httperr.Write(w, r, fmt.Errorf("import run %s has not been validated yet: %w", run.ID, apperrors.ErrConflict))
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractImportReport(run))

@@ -18941,6 +18941,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/imports/format": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Describe the files an import takes, column by column, for this workspace.
+         * @description The import format as data: the order the files land in, each file's
+         *     name and columns, and the rules that key a row. Each column carries a
+         *     guide (what goes in it, an example, and whether a new row needs it).
+         *     The workspace's active custom fields are columns too, by their `cf_`
+         *     key, with their label, type and, for a caller who may read custom
+         *     fields, their allowed values.
+         *
+         *     The template ZIP and the column guide on the screen are built from this
+         *     same answer. Gated on reading `import_run`; it creates nothing.
+         */
+        get: operations["getImportFormat"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the import template for this workspace.
+         * @description A ZIP holding one CSV per file of `getImportFormat`, each with its
+         *     header row only, and a README.txt that lists the import order, the key
+         *     rules, every picklist's allowed values, the size limit and each
+         *     column's guide. A header cell is the column's label when it has one,
+         *     else its name. In the installation's language. Gated on reading
+         *     `import_run`.
+         */
+        get: operations["downloadImportTemplate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/imports/{id}": {
         parameters: {
             query?: never;
@@ -18988,6 +19041,31 @@ export interface paths {
          *     file half-ignored under a success message is worse than a refusal.
          */
         get: operations["getImportRunReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/problems.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download the run's row problems as a CSV.
+         * @description The report's `issues` as a spreadsheet: `file,row,column,problem,value`,
+         *     one line per issue. A cell that a spreadsheet would read as a formula
+         *     is prefixed with an apostrophe. Same grants and the same not-found as
+         *     `getImportRunReport`.
+         */
+        get: operations["downloadImportProblems"];
         put?: never;
         post?: never;
         delete?: never;
@@ -23248,6 +23326,52 @@ export interface components {
             /** @description Matched, and every mapped value already equal. Counted separately from `updated` because reporting work that never happened inflates both the report and the audit trail. */
             unchanged: number;
             skipped: number;
+        };
+        /**
+         * @description The files an import takes, for this workspace. The template ZIP, the
+         *     column guide and the screen's file order are all read from it.
+         */
+        ImportFormat: {
+            /** @enum {string} */
+            version: "margince-import/1";
+            /** @description The order the files land in, so a link can name a record an earlier file made. */
+            order: components["schemas"]["ImportObject"][];
+            /** @description One file per object, in `order`. */
+            files: components["schemas"]["ImportFormatFile"][];
+            /** @description How a row is recognised on a second upload and how files link to each other, one sentence each. */
+            key_rules: string[];
+            /** @description The largest upload this installation accepts, in MB. */
+            size_limit_mb: number;
+        };
+        /** @description One file of the import and its columns. */
+        ImportFormatFile: {
+            /** @description The file name a ZIP entry needs for this object to be detected. */
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            columns: components["schemas"]["ImportFormatColumn"][];
+        };
+        /**
+         * @description One column and its guide. `name` is the mapping target a column is
+         *     mapped onto; `label` is what a person reads, set for a custom field.
+         *     A header shows `label` when present, else `name`.
+         */
+        ImportFormatColumn: {
+            /** @description The mapping target: a core field, or a custom field's `cf_` key. */
+            name: string;
+            /** @description A custom field's label. Absent for a core column. */
+            label?: string;
+            /** @description What goes in the column. */
+            description: string;
+            /** @description An example value, or several separated by " · ". */
+            example: string;
+            /** @description Whether a row that creates a record needs this column filled. */
+            required_on_new_row: boolean;
+            /** @description Whether this is one of the workspace's custom fields. */
+            custom: boolean;
+            /** @description A custom field's type. Absent for a core column. */
+            type?: string;
+            /** @description A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise. */
+            options?: string[];
         };
         /** @description One row the import could not take, named by its line so a human can go fix it. */
         ImportRowIssue: {
@@ -73067,6 +73191,54 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getImportFormat: {
+        parameters: {
+            query?: {
+                /** @description The language of the guide text. The installation's language when absent. */
+                lang?: "en" | "de" | "vi";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportFormat"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    downloadImportTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The template as a downloadable ZIP attachment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
     getImportRun: {
         parameters: {
             query?: never;
@@ -73110,6 +73282,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportRunReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    downloadImportProblems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The problems as a downloadable CSV attachment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             401: components["responses"]["Unauthorized"];
