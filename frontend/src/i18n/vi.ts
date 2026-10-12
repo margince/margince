@@ -420,6 +420,7 @@ export const vi = {
   "scheduling.proposalUpdate": "Tạo đề xuất cập nhật",
   "scheduling.calendar": "Lịch sự kiện",
   "scheduling.bookContact": "Đặt lịch họp",
+  "scheduling.bookPickContact": "Tìm liên hệ của công ty này",
   "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
 
   "scheduling.chooseProvider": "Chọn nhà cung cấp lịch",
@@ -4518,6 +4519,8 @@ export const vi = {
   "log.body": "Chi tiết",
   "log.dueAt": "Ngày đến hạn",
   "log.date": "Ngày",
+  "log.dateHint":
+    "Ngày việc này đã diễn ra; để lên kế hoạch cho ngày sau, hãy thêm việc cần làm.",
   "log.assignee": "Giao cho",
   "log.unassigned": "Chưa giao",
   "log.save": "Ghi nhận",

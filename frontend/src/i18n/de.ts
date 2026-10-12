@@ -422,6 +422,7 @@ export const de = {
   "scheduling.proposalUpdate": "Aktualisierten Vorschlag erstellen",
   "scheduling.calendar": "Kalender für Einladungen",
   "scheduling.bookContact": "Termin buchen",
+  "scheduling.bookPickContact": "Kontakte dieses Unternehmens durchsuchen",
   "scheduling.setupCalendar": "Buchungskalender auswählen",
 
   "scheduling.chooseProvider": "Kalenderanbieter auswählen",
@@ -4602,6 +4603,8 @@ export const de = {
   "log.body": "Details",
   "log.dueAt": "Fälligkeitsdatum",
   "log.date": "Datum",
+  "log.dateHint":
+    "Der Tag, an dem es stattfand; für einen späteren Tag lege eine Aufgabe an.",
   "log.assignee": "Zugewiesen an",
   "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",

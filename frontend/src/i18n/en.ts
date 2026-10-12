@@ -414,6 +414,7 @@ export const en = {
   "scheduling.proposalUpdate": "Create updated proposal",
   "scheduling.calendar": "Event calendar",
   "scheduling.bookContact": "Book a meeting",
+  "scheduling.bookPickContact": "Search this company’s contacts",
   "scheduling.setupCalendar": "Choose your booking calendar",
 
   "scheduling.chooseProvider": "Choose a calendar provider",
@@ -4701,6 +4702,7 @@ export const en = {
     "File could not be read. Paste the text instead.",
   "log.dueAt": "Due date",
   "log.date": "Date",
+  "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
   "log.unassigned": "Unassigned",
   "log.save": "Log",
