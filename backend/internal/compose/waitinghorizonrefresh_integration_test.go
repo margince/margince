@@ -5,9 +5,9 @@
 
 package compose
 
-// The refresh pass driven through its worker, with the wiring River gets. A
-// store built without the own-domain reader would count colleagues' fast replies
-// as customers being answered, and no unit over the store alone would show it.
+// The refresh pass driven through its worker, with the wiring River gets.
+// A store built without the own-domain reader counts colleagues' fast replies
+// as customers being answered. No unit over the store alone would show it.
 
 import (
 	"context"
