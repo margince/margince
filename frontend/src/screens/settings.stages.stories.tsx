@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useQuery } from "@tanstack/react-query";
 import { expect, userEvent, within } from "storybook/test";
+import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { unwrap } from "./common";
+import { SETTINGS_PIPELINES } from "./settings.pipelineorder";
 import { StageLadderEditor } from "./settings.stages";
 import "./settings.pipelines.css";
 import {
@@ -105,33 +109,93 @@ const CRITERIA = {
   page: { next_cursor: null },
 };
 
+function stageIdsIn(body: unknown): string[] {
+  if (typeof body !== "object" || body === null || !("stage_ids" in body)) {
+    return [];
+  }
+  const ids = body.stage_ids;
+  return Array.isArray(ids)
+    ? ids.filter((id): id is string => typeof id === "string")
+    : [];
+}
+
+// The server keeps the order it was sent and moves every version. The re-read
+// after a save then draws what was saved.
+function reordered(pipeline: Pipeline, ids: readonly string[]): Pipeline {
+  const stages = pipeline.stages ?? [];
+  return {
+    ...pipeline,
+    version: (pipeline.version ?? 0) + 1,
+    stages: ids.flatMap((id, index) => {
+      const found = stages.find((each) => each.id === id);
+      return found
+        ? [{ ...found, position: index + 1, version: (found.version ?? 0) + 1 }]
+        : [];
+    }),
+  };
+}
+
+// The ladder reads its pipeline from the page's own query, as the page does.
+// An optimistic order and the re-read after it both land there.
+function LiveLadder({
+  id,
+  canEdit,
+}: Readonly<{ id: string; canEdit: boolean }>) {
+  const query = useQuery({
+    queryKey: SETTINGS_PIPELINES,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/pipelines", {
+          params: { query: { include_archived: true } },
+        }),
+      ).data,
+  });
+  const pipeline = query.data?.find((each) => each.id === id);
+  if (!pipeline) {
+    return null;
+  }
+  return (
+    <Panel title={pipeline.name}>
+      <PanelBody>
+        <PanelIntro>
+          <span id={HINT_ID}>
+            Drag a stage by its handle, or focus the handle and press the up or
+            down arrow.
+          </span>
+        </PanelIntro>
+      </PanelBody>
+      <StageLadderEditor
+        pipeline={pipeline}
+        canEdit={canEdit}
+        hintId={HINT_ID}
+      />
+    </Panel>
+  );
+}
+
 function served(pipeline: Pipeline, canEdit: boolean) {
   return () => {
     globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
+    let current = pipeline;
     installFetchStub({
       "GET /me": meRoute({
         pipeline: canEdit ? ["read", "update", "delete"] : ["read"],
       }),
+      "GET /pipelines": () =>
+        jsonResponse({
+          data: [current],
+          page: { next_cursor: null, has_more: false },
+        }),
+      [`PUT /pipelines/${pipeline.id}/stage-order`]: (body) => {
+        current = reordered(current, stageIdsIn(body));
+        return jsonResponse(current);
+      },
       [`GET /stages/${DISCOVERY.id}/exit-criteria`]: () =>
         jsonResponse(CRITERIA),
     });
     return (
       <StoryProviders>
-        <Panel title={pipeline.name}>
-          <PanelBody>
-            <PanelIntro>
-              <span id={HINT_ID}>
-                Drag a stage by its handle, or focus the handle and press the up
-                or down arrow.
-              </span>
-            </PanelIntro>
-          </PanelBody>
-          <StageLadderEditor
-            pipeline={pipeline}
-            canEdit={canEdit}
-            hintId={HINT_ID}
-          />
-        </Panel>
+        <LiveLadder id={pipeline.id} canEdit={canEdit} />
       </StoryProviders>
     );
   };
@@ -161,7 +225,9 @@ export const Editable: Story = {
       await canvas.findByText("Proposal is now step 2 of 4"),
     ).toBeInTheDocument();
     await expect(
-      within(table).getByRole("button", { name: "Move Proposal, step 2 of 4" }),
+      await within(table).findByRole("button", {
+        name: "Move Proposal, step 2 of 4",
+      }),
     ).toHaveFocus();
   },
 };
