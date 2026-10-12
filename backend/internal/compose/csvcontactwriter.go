@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -44,9 +45,6 @@ import (
 //nolint:dupl // createCompany has the same SHAPE and not the same job: a
 func (w *csvWriters) createContact(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
 	in := contactCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
-	if in.FullName == "" {
-		return migration.EnsureResult{Skipped: true, SkipReason: "the row carries neither a name nor an email, so it names no contact"}, nil
-	}
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
@@ -116,6 +114,32 @@ func contactCandidateOf(fields map[string]string, consumerMail *freemail.Matcher
 		QueueNameCollisions: false,
 	}
 }
+
+// leadEmailAlreadyHeld answers whether a live lead already holds this lead
+// row's address. Not visibility-filtered, for the reason the contact check
+// gives: the store refuses a second lead on one address whoever holds it.
+func (w *csvWriters) leadEmailAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
+	if w.object != migration.ObjectLead {
+		return false, nil
+	}
+	email := canonicalFor(fieldEmail, textFields(row.Fields)[fieldEmail])
+	if email == "" {
+		return false, nil
+	}
+	var held bool
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		_, found, err := storekit.LiveLeadByEmail(ctx, tx, email, nil)
+		held = found
+		return err
+	}); err != nil {
+		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)
+	}
+	return held, nil
+}
+
+// leadEmailClaimedReason names the row's own address and nothing about the
+// lead that holds it.
+const leadEmailClaimedReason = "this email address is already held by a lead in the CRM, so the row cannot create a second lead under it"
 
 // contactEmailClaimedReason is what the report says for such a row. It names the
 // address the file supplied and nothing else — not the incumbent, not their

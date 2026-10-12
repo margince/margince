@@ -194,6 +194,15 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	if found {
 		return w.reconcile(ctx, id, row)
 	}
+	// Refusals first and in the preview's order, so a row refused for a held key
+	// reads the same whoever holds it.
+	refused, err := w.createRefusal(ctx, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if refused != "" {
+		return migration.EnsureResult{Skipped: true, SkipReason: refused}, nil
+	}
 	// Not a row this importer has landed before — but the estate may hold the
 	// record anyway, and the run says what to do about that. The check runs on
 	// the commit as well as the dry run so the two cannot disagree.
@@ -205,13 +214,6 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	// whole reason a duplicate count is worth reading. The cost is one
 	// dedupe query per row this importer has not landed before, which is what
 	// the preview already spends on the same rows.
-	taken, err := w.keyTakenReason(ctx, row)
-	if err != nil {
-		return migration.EnsureResult{}, err
-	}
-	if taken != "" {
-		return migration.EnsureResult{Skipped: true, SkipReason: taken}, nil
-	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -420,6 +422,9 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 	if errors.Is(err, errImportReplayed) {
 		return migration.EnsureResult{Skipped: true, SkipReason: skipReasonNaturalKeyTaken}, nil
 	}
+	if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
+		return migration.EnsureResult{Skipped: true, SkipReason: leadEmailClaimedReason}, nil
+	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
@@ -433,9 +438,6 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 //nolint:dupl // createContact has the same SHAPE and not the same job: a
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
 	in := companyCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
-	if in.DisplayName == "" {
-		return migration.EnsureResult{Skipped: true, SkipReason: "the mapped display_name is empty, so the row names no company"}, nil
-	}
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err

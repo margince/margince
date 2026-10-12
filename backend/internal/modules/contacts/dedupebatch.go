@@ -13,7 +13,12 @@ import "slices"
 
 // CompanyBatch is the companies a batch will create, in the order it decided.
 type CompanyBatch struct {
-	members []CompanyCandidate
+	members []batchCompany
+}
+
+type batchCompany struct {
+	names   companyNamePair
+	domains []string
 }
 
 // Add records a company the batch will create.
@@ -22,8 +27,7 @@ func (b *CompanyBatch) Add(c CompanyCandidate) {
 	for _, d := range c.Domains {
 		domains = append(domains, normalizeDomain(d))
 	}
-	c.Domains = domains
-	b.members = append(b.members, c)
+	b.members = append(b.members, batchCompany{names: companyNamePairOf(c.DisplayName, c.LegalName), domains: domains})
 }
 
 // HasRival answers whether DedupeCompany would name an earlier member as a
@@ -33,12 +37,13 @@ func (b *CompanyBatch) HasRival(c CompanyCandidate) bool {
 	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
 		return false
 	}
+	candidate := companyNamePairOf(c.DisplayName, c.LegalName)
 	spelled, spellsDomain := displayNameDomain(c.DisplayName)
 	for _, held := range b.members {
-		if spellsDomain && slices.Contains(held.Domains, spelled) {
+		if spellsDomain && slices.Contains(held.domains, spelled) {
 			return true
 		}
-		if _, rival := companyNameRival(c, held.DisplayName, held.LegalName); rival {
+		if _, rival := companyPairRival(candidate, held.names); rival {
 			return true
 		}
 	}
@@ -55,13 +60,14 @@ type ContactBatch struct {
 	namesByDomain map[string][]string
 }
 
-// Add records a contact the batch will create.
+// Add records a contact the batch will create. A consumer mail domain is not
+// filed: the ladder never reads one as a shared employer.
 func (b *ContactBatch) Add(c ContactCandidate) {
 	if b.namesByDomain == nil {
 		b.namesByDomain = map[string][]string{}
 	}
 	for _, e := range c.Emails {
-		if domain := emailDomain(e); domain != "" {
+		if domain := emailDomain(e); domain != "" && sharedEmployerDomain(c, domain) {
 			b.namesByDomain[domain] = append(b.namesByDomain[domain], c.FullName)
 		}
 	}

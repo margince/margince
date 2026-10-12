@@ -244,6 +244,7 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	}
 	defer rows.Close()
 
+	candidate := companyNamePairOf(c.DisplayName, c.LegalName)
 	var ranked []CompanyCandidateScore
 	for rows.Next() {
 		var id ids.CompanyID
@@ -251,7 +252,7 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 		if err := rows.Scan(&id, &name, &rowLegal); err != nil {
 			return CompanyMatch{}, fmt.Errorf("scan company candidate: %w", err)
 		}
-		if score, rival := companyNameRival(c, name, rowLegal); rival {
+		if score, rival := companyPairRival(candidate, companyNamePairOf(name, rowLegal)); rival {
 			score.CompanyID = id
 			ranked = append(ranked, score)
 		}
@@ -403,13 +404,6 @@ func companyTrigramArms(args *[]any, axes ...string) []string {
 	return arms
 }
 
-// companyNameRival is the fuzzy tier's verdict on one incumbent's names: the
-// score, and whether it clears the review threshold.
-func companyNameRival(c CompanyCandidate, display, legal string) (CompanyCandidateScore, bool) {
-	score := bestCompanyNamePairing(c.DisplayName, c.LegalName, display, legal)
-	return score, score.Confidence >= dedupeReviewThreshold
-}
-
 // bestCompanyNamePairing scores every pairing of the two name axes and reports
 // which one won, with the raw values behind it so the queue can show the
 // comparison that was actually made.
@@ -430,39 +424,43 @@ func companyNameRival(c CompanyCandidate, display, legal string) (CompanyCandida
 // strongest, so scoring the unstripped name put two unrelated companies over
 // the threshold on their boilerplate alone.
 func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal string) CompanyCandidateScore {
+	return bestCompanyFormPairing(companyNamePairOf(candidateDisplay, candidateLegal), companyNamePairOf(rowDisplay, rowLegal))
+}
+
+func bestCompanyFormPairing(candidate, row companyNamePair) CompanyCandidateScore {
 	sides := []struct {
-		value string
+		form  companyNameForm
 		field string
-	}{{rowDisplay, fieldDisplayName}, {rowLegal, fieldLegalName}}
+	}{{row.display, fieldDisplayName}, {row.legal, fieldLegalName}}
 
 	var best CompanyCandidateScore
 	var exact bool
-	for _, left := range []string{candidateDisplay, candidateLegal} {
+	for _, left := range []companyNameForm{candidate.display, candidate.legal} {
 		for _, right := range sides {
-			normalizedLeft, normalizedRight := companyNameForMatching(left), companyNameForMatching(right.value)
-			if normalizedLeft == "" || normalizedRight == "" {
+			if left.matching == "" || right.form.matching == "" {
 				continue
 			}
 			// BEFORE the score, not a filter applied after it: a pair with no
 			// word in common has said nothing about being one company, whatever
 			// their letters do.
-			if !sharesADistinctiveWord(left, right.value) {
+			if !formsShareADistinctiveWord(left, right.form) {
 				continue
 			}
 			// Asked of every eligible pairing and carried out separately: the
 			// winner below is chosen on score alone, so a pairing that ties
 			// the best score would otherwise take exactness away from the one
 			// that actually had it.
-			if companyNamesAreTheSame(left, right.value) {
+			if foldedKeysAreTheSame(left.folded, right.form.folded) {
 				exact = true
 			}
-			score := nameSimilarity(normalizedLeft, normalizedRight)
+			// nameSimilarity over the prepared forms.
+			score := jaroWinkler(left.scored, right.form.scored)
 			if score > best.Confidence {
 				best = CompanyCandidateScore{
 					Confidence:     score,
 					MatchedField:   right.field,
-					CandidateValue: left,
-					IncumbentValue: right.value,
+					CandidateValue: left.value,
+					IncumbentValue: right.form.value,
 				}
 			}
 		}
@@ -477,9 +475,11 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 // everything else is signal. A legal suffix is NOT folded away — see
 // CompanyCandidateScore.ExactName for why that distinction is the whole point.
 func companyNamesAreTheSame(left, right string) bool {
-	l, r := foldedNameKey(left), foldedNameKey(right)
-	return l != "" && l == r
+	return foldedKeysAreTheSame(foldedNameKey(left), foldedNameKey(right))
 }
+
+// foldedKeysAreTheSame is companyNamesAreTheSame over keys already folded.
+func foldedKeysAreTheSame(left, right string) bool { return left != "" && left == right }
 
 // collapseSpaces reduces every run of whitespace to one space. A name read off
 // a web page carries the spacing of its markup, and "Baqend  GmbH" is not a

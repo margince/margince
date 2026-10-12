@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -109,12 +110,12 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 // through reported invisible companies as duplicates on a `skip` run, one CSV
 // row at a time.
 func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
-	taken, err := w.keyTakenReason(ctx, row)
+	refused, err := w.createRefusal(ctx, row)
 	if err != nil {
 		return predictCreate, "", err
 	}
-	if taken != "" {
-		return predictUnwritable, taken, nil
+	if refused != "" {
+		return predictUnwritable, refused, nil
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
@@ -129,11 +130,14 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (
 	return predictCollides, "", nil
 }
 
-// keyTakenReason is why the store refuses a create whose unique key the estate
-// already holds, or "" when it holds none. The preview and the commit both ask
-// it before the collision check. A refused row then reads the same whoever
-// holds the key.
-func (w *csvWriters) keyTakenReason(ctx context.Context, row migration.Row) (string, error) {
+// createRefusal is why a create is refused before the collision check, or "".
+// It refuses a row naming no record, or a unique key the estate already holds.
+// The preview and the commit both ask it first, so a refused row reads the
+// same whoever holds the key.
+func (w *csvWriters) createRefusal(ctx context.Context, row migration.Row) (string, error) {
+	if reason := unnamedReason(w.object, textFields(row.Fields)); reason != "" {
+		return reason, nil
+	}
 	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
 	if err != nil {
 		return "", err
@@ -142,10 +146,29 @@ func (w *csvWriters) keyTakenReason(ctx context.Context, row migration.Row) (str
 		return contactEmailClaimedReason, nil
 	}
 	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
-	if err != nil || !takenDomain {
+	if err != nil {
 		return "", err
 	}
-	return domainClaimedReason, nil
+	if takenDomain {
+		return domainClaimedReason, nil
+	}
+	leadClaimed, err := w.leadEmailAlreadyHeld(ctx, row)
+	if err != nil || !leadClaimed {
+		return "", err
+	}
+	return leadEmailClaimedReason, nil
+}
+
+// unnamedReason is why a create is refused for naming no record, or "". An
+// update is not refused for it: an absent name leaves the stored one alone.
+func unnamedReason(object string, fields map[string]string) string {
+	switch {
+	case object == migration.ObjectCompany && strings.TrimSpace(fields[fieldDisplayName]) == "":
+		return "the mapped display_name is empty, so the row names no company"
+	case object == migration.ObjectContact && contactFullName(fields) == "":
+		return "the row carries neither a name nor an email, so it names no contact"
+	}
+	return ""
 }
 
 // predictReconcile is what reconcile would do to this record, without writing.

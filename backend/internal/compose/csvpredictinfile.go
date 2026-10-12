@@ -78,12 +78,19 @@ func (f *inFileCreates) reconsider(row migration.Row, outcome predictedOutcome, 
 	return predictCollides, ""
 }
 
-// record files a row the prediction says will land.
+// record files a row the prediction says will land. A row that updates files
+// its key too: once it commits, the estate holds that key for its record.
 func (f *inFileCreates) record(row migration.Row, outcome predictedOutcome) {
+	fields := textFields(row.Fields)
+	if outcome == predictUpdate {
+		if key, _ := f.keyOf(fields); key != "" {
+			f.keys[key] = true
+		}
+		return
+	}
 	if outcome != predictCreate && outcome != predictCollides {
 		return
 	}
-	fields := textFields(row.Fields)
 	key, _ := f.keyOf(fields)
 	if key != "" {
 		f.keys[key] = true
@@ -111,6 +118,10 @@ func (f *inFileCreates) keyOf(fields map[string]string) (string, string) {
 	case migration.ObjectContact:
 		if email := canonicalFor(fieldEmail, fields[fieldEmail]); email != "" {
 			return email, contactEmailClaimedReason
+		}
+	case migration.ObjectLead:
+		if email := canonicalFor(fieldEmail, fields[fieldEmail]); email != "" {
+			return email, leadEmailClaimedReason
 		}
 	}
 	return "", ""

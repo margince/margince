@@ -379,8 +379,8 @@ func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontra
 // cannot be written, so a preview cannot promise a create the commit then
 // fails on.
 //
-// size_band started it. A headcount column mapped onto that closed vocabulary
-// ("240") previewed as a clean create and then failed at write time.
+// size_band is a closed vocabulary behind a CHECK constraint, so a headcount
+// ("240") mapped onto it is refused here rather than at write time.
 //
 // The vocabulary is read off the generated contract, not hand-copied, for the
 // same reason contacts.validSizeBands is: a band added to crm.yaml must not
@@ -399,8 +399,8 @@ func unwritableReason(object string, fields map[string]string) string {
 	}
 	// A company's domains are parsed before the write transaction opens
 	// (parseCompanyDomains), so a value the parser refuses fails the row at commit.
-	// The same argument as the email arm above and the size_band one below: a dry
-	// run whose job is to say what WILL happen may not report the opposite.
+	// A company's domain is parsed before the write, so a value the parser
+	// refuses fails the row at commit and is refused here too.
 	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
 		if _, err := values.ParseDomain(domain); err != nil {
 			return fmt.Sprintf("%q is not a domain that can be written", domain)

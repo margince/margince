@@ -165,3 +165,81 @@ func TestAReImportOfAPhoneSpelledWithSpacesChangesNothing(t *testing.T) {
 
 	assertPreviewIsTheCommit(t, preview, final, dispositionOf(0, 1, 0, 0))
 }
+
+func TestTheDryRunRefusesALeadAddressAnEarlierRowTakes(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Full Name,Email\nAda Lovelace,ada@lovelace.example\nAda L.,ADA@lovelace.example\n"
+
+	preview, final := previewThenCommit(t, e, "lead", file, map[string]any{
+		"mapping":    map[string]string{"Full Name": "full_name", "Email": "email"},
+		"source_key": "Full Name",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+}
+
+// The store refuses a second live lead on one address. The run skips that row
+// and completes rather than failing at it.
+func TestALeadAddressAlreadyHeldIsSkippedNotAFailedRun(t *testing.T) {
+	e := setupImportApp(t)
+	if status := e.Call(t, http.MethodPost, "/v1/leads", map[string]any{
+		"full_name": "Ada Lovelace", "email": "ada@lovelace.example", "source": "manual",
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent lead → %d, want 201", status)
+	}
+	const file = "Email,Full Name\nada@lovelace.example,Ada Byron\ngrace@hopper.example,Grace Hopper\n"
+
+	preview, final := previewThenCommit(t, e, "lead", file, map[string]any{
+		"mapping": map[string]string{"Email": "email", "Full Name": "full_name"},
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+}
+
+// A company row with no name is refused at create. Its domain must not then
+// refuse a later row that the commit lands.
+func TestAnUnnamedCompanyRowHoldsNoDomain(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Note,Company,Legal,Website\nfirst,,Acme GmbH,acme.example\nsecond,Acme,,acme.example\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, map[string]any{
+		"mapping": map[string]string{
+			"Note": "description", "Company": "display_name", "Legal": "legal_name", "Website": "domain",
+		},
+		"source_key": "Note",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+	for name, report := range map[string]importReportDTO{"preview": preview, "commit": final} {
+		if len(report.Issues) != 1 || report.Issues[0].Line != 2 ||
+			report.Issues[0].Reason != "the mapped display_name is empty, so the row names no company" {
+			t.Errorf("%s issues = %+v, want only line 2 refused for naming no company", name, report.Issues)
+		}
+	}
+}
+
+// A skip run refuses a held address for the address. The reason then does not
+// depend on whether the caller can see who holds it.
+func TestASkipRunRefusesAHeldAddressForTheAddress(t *testing.T) {
+	e := setupImportApp(t)
+	if status := e.Call(t, http.MethodPost, "/v1/contacts", map[string]any{
+		"source": "manual", "full_name": "Ada Lovelace",
+		"emails": []map[string]any{{"email": "ada@lovelace.example", "is_primary": true}},
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent contact → %d, want 201", status)
+	}
+	const file = "Full Name,Email\nAda Byron,ada@lovelace.example\n"
+
+	preview, final := previewThenCommit(t, e, "contact", file, map[string]any{
+		"mapping":    map[string]string{"Full Name": "full_name", "Email": "email"},
+		"source_key": "Full Name", "on_duplicate": "skip",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(0, 0, 1, 0))
+	for _, report := range []importReportDTO{preview, final} {
+		if len(report.Issues) != 1 || report.Issues[0].Reason != "this email address is already held in the CRM, "+
+			"so the row cannot create a second contact under it" {
+			t.Errorf("issues = %+v, want the held-address refusal", report.Issues)
+		}
+	}
+}
