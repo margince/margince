@@ -11,11 +11,11 @@ package contacts
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -72,7 +72,7 @@ func TestEveryListedReasonTravelsAsACode(t *testing.T) {
 	e.releaseQuestion(ctx, t, "unevidenced.example")
 
 	e.openTriage(ctx, t, "hello@stale.example", "", "stale.example")
-	decadeAgo := time.Now().AddDate(-10, 0, 0)
+	decadeAgo := clocktest.Now(t).AddDate(-10, 0, 0)
 	e.inTx(ctx, t, "withholding for stale evidence", func(tx pgx.Tx) error {
 		withheld, err := withholdForStaleEvidence(ctx, tx,
 			ResolveDomainTriageInput{Domain: "stale.example", Source: DomainSourceSiteRead},

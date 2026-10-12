@@ -27,6 +27,10 @@ import "fmt"
 // filing of the message as sent there; a header can forge neither. capture's
 // wroteBackTx refuses the same forgery on the same column.
 //
+// A colleague's mail held as a copy (`sent_by_colleague`) counts as ours too.
+// It rests on the From header naming a live seat, so it is trusted only here,
+// inside one correspondent's conversation, and never as an attestation.
+//
 // PLAIN EQUALITY on the key, never IS NOT DISTINCT FROM. NULL-matching would
 // join every threadless row to every other, so one unthreaded outbound of ours
 // would answer for every unthreaded conversation in the workspace. The
@@ -41,6 +45,6 @@ func ourOutboundInThisThread(row, anchor string) string {
      AND %[1]s.channel_provider IS NOT DISTINCT FROM %[2]s.channel_provider
      AND %[1]s.direction = 'outbound'
      AND %[1]s.counterparty_email = %[2]s.counterparty_email
-     AND %[1]s.counterparty_outbound_attested
+     AND (%[1]s.counterparty_outbound_attested OR %[1]s.sent_by_colleague IS NOT NULL)
      AND %[1]s.archived_at IS NULL`, row, anchor)
 }

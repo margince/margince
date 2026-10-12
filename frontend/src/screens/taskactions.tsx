@@ -27,6 +27,7 @@ import { useLocale, useT } from "../i18n";
 import { CLAIM_SETTLED_KEYS } from "./activitykeys";
 import { problemCodeOf, provenanceOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
+import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "./activityread";
@@ -171,10 +172,8 @@ export function TaskQuickActions({
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
   // Whether the reader may name a day, rather than only step the due date on.
-  // OFF by default, and the default is the point: this is a per-row action slot
-  // on the 360 next-steps lists, where a date box in every row is heavier than
-  // the surface intends. The detail modal opts in, because that is where a
-  // reader already came to work on one task.
+  // Off by default, since a date box in every next-steps row is too heavy.
+  // The detail modal opts in: a reader came there to work on one task.
   showDuePicker?: boolean;
 }>) {
   const t = useT();
@@ -265,17 +264,10 @@ function TaskDueDatePick({
           onChange={(event) => {
             const day = event.target.value;
             // Narrowed with the control's own guard, not merely tested for
-            // empty. A `type="date"` box clears itself for anything it cannot
-            // parse — `2026-02-30` arrives as "" — but HTML permits a year of
-            // FOUR OR MORE digits, so `10000-09-15` is a value the element
-            // reports happily and `dueInstant` throws a RangeError on. A year
-            // typo would have reached an uncaught exception with nothing on
-            // screen to say the date was refused.
-            //
-            // isISODate requires exactly four, which refuses that and the
-            // cleared box in one question — and clearing IS a case to refuse:
-            // it is the browser's own empty state, not a request to undate the
-            // task.
+            // empty. HTML permits a year of four or more digits, so
+            // `10000-09-15` reaches here and `dueInstant` throws on it.
+            // isISODate requires four, and also refuses the cleared
+            // box: the browser's empty state, not a request to undate the task.
             if (!isISODate(day)) {
               return;
             }
@@ -339,6 +331,13 @@ export function TaskDetailModal({
               </div>
             )}
             <div className="t-caption task-detail-meta">
+              {/* In the same tab: the reader opened the panel to learn what the
+                  task is about, and following its record is leaving for it. */}
+              {task.links && task.links.length > 0 && (
+                <span>
+                  <RecordLinks links={mostSpecificFirst(task.links)} />
+                </span>
+              )}
               {task.due_at ? (
                 <span>
                   {t("co.next.due", {

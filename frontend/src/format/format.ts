@@ -97,33 +97,31 @@ export function formatMoneyOrAbsent(
  * strip renders `formatMoney` in full, and it is one scroll away — this is the
  * scale of the account, that is the amount.
  *
- * Under 10,000 it stays exact: "€8,332" is as short as "€8k" and says more.
+ * Under 10,000 it stays exact, cents included: "€8,332" is as short as "€8k"
+ * and says more, and a one-cent deal rounded to "€0" reads as no value.
  */
 export function formatMoneyCompact(
   amountMinor: number,
   currency: string,
   locale: Locale,
 ): string {
-  // Our scale, Intl's formatting — see formatMoney for why the two are
-  // deliberately not the same source.
+  // Our scale, Intl's formatting: see formatMoney for why.
   const major = toMajorUnits(amountMinor, currency);
+  const abbreviated = Math.abs(major) >= 10_000;
+  if (!abbreviated && !Number.isInteger(major)) {
+    return formatMoney(amountMinor, currency, locale);
+  }
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency,
-    // `compact` only kicks in at 1000; below 10_000 the long form is no wider
-    // and carries every digit, so the threshold is where abbreviating buys
-    // something.
-    notation: Math.abs(major) >= 10_000 ? "compact" : "standard",
-    // SPELLED OUT, because the currency style does not default it to zero.
-    // `minimumFractionDigits` starts at the currency's own minor-unit digits —
-    // two for EUR — and ECMA-402 only clamps that DOWN to
-    // `maximumFractionDigits`. So `maximumFractionDigits: 1` alone reads as "at
-    // most one digit" and resolves to EXACTLY one: €420,000 rendered "€420.0k",
-    // and in German, where 420k does not abbreviate at all, "420.000,0 €". The
-    // digit is only ever there to carry a remainder the compact form would
-    // otherwise drop.
+    notation: abbreviated ? "compact" : "standard",
+    // Spelled out: the currency style starts the minimum at the currency's own
+    // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
-    maximumFractionDigits: Math.abs(major) >= 10_000 ? 1 : 0,
+    maximumFractionDigits: abbreviated ? 1 : 0,
+    // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
+    // not reach; truncating drops digits but never adds any.
+    roundingMode: "trunc",
   }).format(major);
 }
 

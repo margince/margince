@@ -64,7 +64,7 @@
 568 frontend/src/app/account.tsx
 534 frontend/src/screens/logactivity.tsx
 580 frontend/src/screens/dealroomaccess.tsx
-581 frontend/src/screens/taskactions.tsx
+580 frontend/src/screens/taskactions.tsx
 614 frontend/src/screens/onboarding-connect-panels.tsx
 568 frontend/src/screens/retention.tsx
 506 frontend/src/screens/leads.list.tsx
@@ -72,7 +72,7 @@
 661 frontend/src/screens/record360/citations.tsx
 529 frontend/src/screens/contractform.tsx
 662 frontend/src/screens/worklist.dispositions.tsx
-653 frontend/src/format/format.ts
+651 frontend/src/format/format.ts
 734 frontend/src/screens/companytoday.tsx
 708 frontend/src/screens/installation-settings.tsx
 531 frontend/src/screens/extension-access.tsx

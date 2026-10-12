@@ -7,11 +7,33 @@
   gap: var(--space-3);
 }
 
-/* The card that says a machine wrote what is below it. The indigo edge, the
-   indigo head band and its ink are `Panel tone="ai"` — the one spelling of
-   machine authorship in the product — so all that is left here is how its block
-   stacks inside it. The space around it is the column's own gap: a margin on
-   top of that doubled it and pushed the fields under the card further down. */
+/* Supporting fields keep their height; the message gets a usable writing floor. */
+.compose-fields > * {
+  flex-shrink: 0;
+}
+.compose-fields > .richtext {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  min-block-size: clamp(22rem, 50dvh, 40rem);
+}
+.compose-fields > .richtext > .richtext-input {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  scroll-margin-block-end: calc(var(--controlHeight) + var(--space-3));
+}
+.compose-fields > .richtext > .richtext-foot {
+  flex-shrink: 0;
+}
+
+@media (max-height: 32rem) {
+  .compose-fields > .richtext {
+    flex: 0 0 auto;
+    block-size: 35dvh;
+    min-block-size: 0;
+  }
+}
+
 .compose-band-body {
   display: flex;
   flex-direction: column;
@@ -130,11 +152,13 @@
 
 .compose-draftbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 .compose-draftbar .input {
-  flex: 1;
+  flex: 1 1 12rem;
+  min-inline-size: 0;
 }
 
 /* The AI provenance notice card: the offer surface's banner treatment, stacked to

@@ -158,7 +158,7 @@ func readingsOf(
 	// arm is FIRST because it is the one a reader loses silently: a refused lane
 	// leaves no rows to notice missing, so the strip reads as a clear day rather
 	// than as a day nobody could see.
-	if len(unread) > 0 {
+	if hidesRows(unread) {
 		out.MoreAvailable = true
 		return out
 	}
@@ -173,6 +173,17 @@ func readingsOf(
 		}
 	}
 	return out
+}
+
+// hidesRows is whether any unread source is a lane. A side read that failed
+// leaves no row missing, so it cannot make a queue figure a floor.
+func hidesRows(unread []crmcontracts.WorklistSourceUnavailable) bool {
+	for _, source := range unread {
+		if source.ContributesRows == nil || *source.ContributesRows {
+			return true
+		}
+	}
+	return false
 }
 
 func unpricedDeals(rows []ranked) int {

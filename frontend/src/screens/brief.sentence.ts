@@ -3,6 +3,7 @@
 
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { laneUnread } from "./brief.readings.honesty";
 import { itemTitle, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
@@ -96,9 +97,7 @@ export function briefSentence(
     return null;
   }
   const waiting = waitingRows(day);
-  const partial = Boolean(
-    day.readings?.more_available || day.sources_unavailable?.length,
-  );
+  const partial = Boolean(day.readings?.more_available || laneUnread(day));
   if (waiting.length === 0 && partial) return null;
   if (waiting.length === 0) {
     return { key: "brief.sentence.clear", values: {} };

@@ -12,6 +12,7 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { identity, Triage } from "./brief.focus";
+import { laneUnread } from "./brief.readings.honesty";
 import { isBriefUpdate, waitingRows } from "./brief.sentence";
 import { worklistLaneHref } from "./worklist.header";
 import {
@@ -57,9 +58,7 @@ export function BriefFeed({
   );
   const lead = rows[at];
   const partial = Boolean(
-    !day?.focus ||
-      day?.readings?.more_available ||
-      day?.sources_unavailable?.length,
+    !day?.focus || day.readings?.more_available || laneUnread(day),
   );
   return (
     <section id="brief-today">

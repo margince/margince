@@ -35,7 +35,7 @@ export type Inline =
   | { kind: "code"; text: string }
   | { kind: "strong"; children: Inline[] }
   | { kind: "em"; children: Inline[] }
-  | { kind: "link"; href: string; external: boolean; children: Inline[] }
+  | { kind: "link"; href: string; children: Inline[] }
   | { kind: "mark"; children: Inline[] };
 
 /**
@@ -402,7 +402,7 @@ function takeLink(rest: string): { node: Inline; length: number } | null {
     return { node: { kind: "em", children }, length: match[0].length };
   }
   return {
-    node: { kind: "link", href, external: /^https?:/i.test(href), children },
+    node: { kind: "link", href, children },
     length: match[0].length,
   };
 }
