@@ -48,15 +48,18 @@ func parseAuthenticationResults(value string) connector.SenderAuthentication {
 		return connector.SenderAuthentication{}
 	}
 	out := connector.SenderAuthentication{Server: strings.ToLower(server[0])}
+	// Every dmarc clause, in each spelling RFC 8601 allows ("dmarc=", "dmarc =",
+	// "dmarc/1="). A server writes one; two mean this reading split the header
+	// somewhere the server did not, so neither is believed.
 	var verdicts [][]string
 	for _, clause := range clauses[1:] {
-		if tokens := strings.Fields(strings.ToLower(clause)); len(tokens) > 0 && strings.HasPrefix(tokens[0], "dmarc=") {
-			verdicts = append(verdicts, tokens)
+		name, result, found := strings.Cut(clause, "=")
+		method, _, _ := strings.Cut(name, "/")
+		if found && strings.EqualFold(strings.TrimSpace(method), "dmarc") {
+			verdicts = append(verdicts, strings.Fields(strings.ToLower(result)))
 		}
 	}
-	// A server writes one dmarc result. Two mean this reading split the header
-	// somewhere the server did not, so neither is believed.
-	if len(verdicts) != 1 || verdicts[0][0] != "dmarc=pass" {
+	if len(verdicts) != 1 || len(verdicts[0]) == 0 || verdicts[0][0] != "pass" {
 		return out
 	}
 	for _, token := range verdicts[0][1:] {

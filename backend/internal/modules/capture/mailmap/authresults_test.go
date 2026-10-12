@@ -66,6 +66,21 @@ func TestOnlyTheTopmostAuthenticationResultIsRead(t *testing.T) {
 			want:  connector.SenderAuthentication{Server: "mx.google.com"},
 		},
 		{
+			name:  "a second dmarc result spelled with spaces or a version",
+			lines: []string{"Authentication-Results: mx.google.com; dmarc=pass header.from=acme.example; dmarc/1 = fail header.from=acme.example"},
+			want:  connector.SenderAuthentication{Server: "mx.google.com"},
+		},
+		{
+			name:  "a result that only starts with pass",
+			lines: []string{"Authentication-Results: mx.google.com; dmarc=pass-extra header.from=acme.example"},
+			want:  connector.SenderAuthentication{Server: "mx.google.com"},
+		},
+		{
+			name:  "a property that only ends in header.from",
+			lines: []string{"Authentication-Results: mx.google.com; dmarc=pass xheader.from=acme.example"},
+			want:  connector.SenderAuthentication{Server: "mx.google.com"},
+		},
+		{
 			name:  "a quote this reading cannot pair",
 			lines: []string{`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="x@evil.example; dmarc=pass header.from=acme.example`},
 			want:  connector.SenderAuthentication{},
