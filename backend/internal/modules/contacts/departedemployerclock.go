@@ -52,14 +52,18 @@ func (s *Store) RefoldDepartedEmployerClocks(ctx context.Context) (int, error) {
 // order, the lock order every last-activity writer takes.
 func refoldDepartedEmployerBatch(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]ids.UUID, error) {
 	end := employment.EffectiveEndSQL("r.ended_at", "r.ended_precision")
+	// OFFSET 0 fences the candidates: unfenced, the planner folds the clock of
+	// every company before the departure filter narrows them.
 	rows, err := tx.Query(ctx, `
-		SELECT c.id FROM company c
-		 WHERE c.id > $1
-		   AND EXISTS (SELECT 1 FROM relationship r
-		                WHERE r.company_id = c.id AND r.kind = 'employment' AND r.archived_at IS NULL
-		                  AND `+end+` BETWEEN current_date - $2::int AND current_date)
-		   AND c.last_activity_at IS DISTINCT FROM last_activity_of_company(c.id)
-		 ORDER BY c.id
+		SELECT cand.id FROM (
+		  SELECT c.id, c.last_activity_at FROM company c
+		   WHERE c.id > $1
+		     AND EXISTS (SELECT 1 FROM relationship r
+		                  WHERE r.company_id = c.id AND r.kind = 'employment' AND r.archived_at IS NULL
+		                    AND `+end+` BETWEEN current_date - $2::int AND current_date)
+		  OFFSET 0) cand
+		 WHERE cand.last_activity_at IS DISTINCT FROM last_activity_of_company(cand.id)
+		 ORDER BY cand.id
 		 LIMIT $3`,
 		after, departureLookbackDays, departedEmployerBatch)
 	if err != nil {
