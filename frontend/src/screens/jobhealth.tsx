@@ -24,7 +24,6 @@ import type { MessageKey } from "../i18n/en";
 import { unwrap } from "./common";
 import { HealthCard } from "./healthcard";
 import { DeadWorkCallout } from "./jobhealthdead";
-import "./jobhealth.css";
 
 // GET /admin/job-health — the operator's only window onto the background
 // system, for Settings → Maintenance. Until this card existed a stalled queue
@@ -56,11 +55,7 @@ const FAILURE_STATE: Record<
 function JobKind({ kind }: Readonly<{ kind: string }>) {
   const t = useT();
   const name = jobKindNameKey(kind);
-  return (
-    <span className="jobhealth-kind">
-      <KeyedName name={name === undefined ? kind : t(name)} code={kind} />
-    </span>
-  );
+  return <KeyedName name={name === undefined ? kind : t(name)} code={kind} />;
 }
 
 const COUNTED = ["waiting", "running", "retrying", "dead"] as const;

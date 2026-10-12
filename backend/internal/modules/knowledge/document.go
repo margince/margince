@@ -34,6 +34,10 @@ type NewDocument struct {
 	Content     io.ReadSeeker
 }
 
+// ErrDocumentShipped is a delete aimed at a page that ships with Margince. The
+// next boot's reconciliation would file it again, so the delete could only hide it.
+var ErrDocumentShipped = errors.New("this page ships with Margince, so it cannot be deleted; it comes back with every update")
+
 // QueueIngest is how the composition layer enqueues the ingest job inside the
 // transaction that writes the document row. The module declares the seam and
 // never learns what a job is: an ingest queued outside the row's transaction
@@ -212,7 +216,10 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
 	}
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		_, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
+		corpus, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
+		if err == nil && corpus.corpus.Shipped {
+			return errUploadShippedCorpus
+		}
 		return err
 	}); err != nil {
 		return "", "", 0, err

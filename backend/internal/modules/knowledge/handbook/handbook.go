@@ -86,16 +86,34 @@ func Open(filename string) ([]byte, bool) {
 	return content, true
 }
 
-// Title is a page's own heading, its first `# ` line, or "" when this build
-// does not ship the page. Every shipped page has one; handbook_test.go holds it.
+// Title is a page's own heading: its first `# ` line outside a code fence or an
+// HTML comment. It is "" when this build does not ship the page, and
+// handbook_test.go requires one on every shipped page.
 func Title(filename string) string {
 	content, ok := Open(filename)
 	if !ok {
 		return ""
 	}
-	for line := range strings.SplitSeq(string(content), "\n") {
-		if heading, found := strings.CutPrefix(line, "# "); found {
-			return strings.TrimSpace(heading)
+	return firstHeading(string(content))
+}
+
+// firstHeading skips fences and comments, where a `# ` line is code or a note.
+func firstHeading(markdown string) string {
+	var fenced, commented bool
+	for line := range strings.SplitSeq(markdown, "\n") {
+		trimmed := strings.TrimSpace(line)
+		switch {
+		case commented:
+			commented = !strings.Contains(trimmed, "-->")
+		case strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~"):
+			fenced = !fenced
+		case fenced:
+		case strings.HasPrefix(trimmed, "<!--"):
+			commented = !strings.Contains(trimmed, "-->")
+		default:
+			if heading, found := strings.CutPrefix(line, "# "); found {
+				return strings.TrimSpace(heading)
+			}
 		}
 	}
 	return ""

@@ -51,6 +51,7 @@ func TestOnlyAShippedPageIsNamedByItsHeading(t *testing.T) {
 		t.Fatalf("reconcile: %v", err)
 	}
 	shippedCorpus := handbookCorpusID(bootCtx, t, ie.env)
+	// Raw, because only an older release's reconcile files a page this build lacks.
 	ie.env.WsExec(t, `INSERT INTO knowledge_document
 	    (corpus_id, filename, content_type, byte_size, storage_key, checksum, managed_source, captured_by)
 	  VALUES ($1, 'withdrawn.md', 'text/markdown', 12, 'handbook:withdrawn.md', 'old-release', $2, 'system:test')`,
@@ -162,6 +163,17 @@ func TestAShippedPageCannotBeDeleted(t *testing.T) {
 	rec := httptest.NewRecorder()
 	newKnowledgeHTTP(e).handlers.DeleteCorpusDocument(rec,
 		httptest.NewRequest(http.MethodDelete, "/v1/knowledge/documents/x", nil).WithContext(human), openapi_types.UUID(page))
+	if code, detail := problemOf(t, rec); rec.Code != http.StatusConflict || code != "document_shipped" || detail == "" {
+		t.Fatalf("delete over HTTP = %d %s, want 409 document_shipped with a reader sentence", rec.Code, code)
+	}
+	if _, still := filedPages(bootCtx, t, e)["README.md"]; !still {
+		t.Fatal("the refused delete removed the page anyway")
+	}
+}
+
+// problemOf decodes a refusal's code and detail.
+func problemOf(t *testing.T, rec *httptest.ResponseRecorder) (string, string) {
+	t.Helper()
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
@@ -169,10 +181,5 @@ func TestAShippedPageCannotBeDeleted(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
 		t.Fatalf("decode the refusal: %v (%s)", err, rec.Body.String())
 	}
-	if rec.Code != http.StatusConflict || problem.Code != "document_shipped" || problem.Detail == "" {
-		t.Fatalf("delete over HTTP = %d %+v, want 409 document_shipped with a reader sentence", rec.Code, problem)
-	}
-	if _, still := filedPages(bootCtx, t, e)["README.md"]; !still {
-		t.Fatal("the refused delete removed the page anyway")
-	}
+	return problem.Code, problem.Detail
 }

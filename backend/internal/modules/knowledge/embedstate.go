@@ -12,11 +12,18 @@ import (
 // ingestInFlight is a document whose ingest has not settled, over alias d.
 const ingestInFlight = `d.ingest_status IN ('queued', 'running')`
 
+// chunkScope picks the chunks, over alias k, that one coverage reading counts.
+type chunkScope string
+
+const (
+	corpusChunks   chunkScope = "k.corpus_id = c.id"
+	documentChunks chunkScope = "k.document_id = d.id"
+)
+
 // passageColumns selects live passage totals, vectored passages and the
 // identities those vectors were computed under, over the chunks scope matches.
-// scope is always a compile-time literal naming the alias k.
-func passageColumns(scope string) string {
-	live := `FROM knowledge_chunk k WHERE ` + scope + ` AND k.archived_at IS NULL`
+func passageColumns(scope chunkScope) string {
+	live := `FROM knowledge_chunk k WHERE ` + string(scope) + ` AND k.archived_at IS NULL`
 	return `(SELECT count(*) ` + live + `),
 	(SELECT count(*) ` + live + ` AND k.embed_identity IS NOT NULL),
 	(SELECT array_agg(DISTINCT k.embed_identity) ` + live + ` AND k.embed_identity IS NOT NULL)`

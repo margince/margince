@@ -231,9 +231,13 @@ func writeKnowledgeErr(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	if errors.Is(err, ErrDocumentShipped) {
 		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict,
-			Code:   "document_shipped",
-			Detail: "This page ships with Margince, so it cannot be deleted. It comes back with every update.",
+			Status: http.StatusConflict, Code: "document_shipped", Detail: err.Error(),
+		})
+		return
+	}
+	if errors.Is(err, ErrCorpusShipped) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "corpus_shipped", Detail: err.Error(),
 		})
 		return
 	}
@@ -274,7 +278,7 @@ func (h Handlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, i
 // it archived together.
 func (h Handlers) ArchiveCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if err := h.store.ArchiveCorpus(r.Context(), ids.UUID(id)); err != nil {
-		httperr.Write(w, r, err)
+		writeKnowledgeErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -26,18 +26,14 @@ import {
 } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import {
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-  WriteRefused,
-} from "./common";
+import type { MessageKey } from "../i18n/en";
+import { QueryGate, throwProblem, unwrap, WriteRefused } from "./common";
 import {
   DocumentList,
   INGEST_POLL_MS,
   NOT_SEARCHABLE,
   SETS_KEY,
+  shippedRefusal,
 } from "./knowledge.documents";
 import { ReindexingNotice } from "./knowledge.notices";
 import "./knowledge.css";
@@ -110,6 +106,10 @@ function useArchiveDocumentSet(onArchived: () => void) {
     },
   });
 }
+
+const ARCHIVE_SHIPPED = new Map<string, MessageKey>([
+  ["corpus_shipped", "knowledge.archiveShipped"],
+]);
 
 export function KnowledgeCard() {
   const t = useT();
@@ -228,7 +228,8 @@ function DocumentSet({
         <span className="knowledge-set-passages">
           <Passages set={set} />
         </span>
-        {canManage && (
+        {/* A shipped set is filed again by the next update, so archiving it undoes nothing. */}
+        {canManage && !set.shipped && (
           <span className="knowledge-set-menu cell-actions">
             <OverflowMenu label={t("table.rowActions", { name: set.name })}>
               <Button
@@ -271,6 +272,7 @@ function DocumentSet({
             corpusId={set.id}
             setName={set.name}
             setState={set.coverage.embed_state}
+            shipped={set.shipped}
             canManage={canManage}
             afterDelete={() =>
               document.getElementById(toggleId)?.querySelector("button") ?? null
@@ -285,7 +287,11 @@ function DocumentSet({
         title={t("knowledge.archiveConfirm.title", { name: set.name })}
         confirmLabel={t("knowledge.archive")}
         pending={archive.isPending}
-        error={archive.isError ? problemMessageOf(archive.error, t) : null}
+        error={
+          archive.isError
+            ? shippedRefusal(archive.error, t, ARCHIVE_SHIPPED)
+            : null
+        }
         onClose={() => setConfirming(false)}
         returnFocusTo={() => (archived.current ? afterArchive() : null)}
         onConfirm={() =>

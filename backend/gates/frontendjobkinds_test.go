@@ -28,8 +28,9 @@ var frontendJobKinds = filepath.Join(repoRoot, "frontend", "src", "format", "job
 
 var tsCommentInJobKinds = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
-// tsJobKindEntry is one line of the literal: the kind and the catalog key that names it.
-var tsJobKindEntry = regexp.MustCompile(`^"?([a-z0-9_]+)"?\s*:\s*"jobs\.kind\.([a-z0-9_]+)",?$`)
+// tsJobKindEntry is one line of the literal: the kind and the catalog key that
+// names it. That key is its own, or the label of the principal it runs as.
+var tsJobKindEntry = regexp.MustCompile(`^"?([a-z0-9_]+)"?\s*:\s*"(?:jobs\.kind|systemJob)\.([a-z0-9_]+)",?$`)
 
 // jobKindCensusFloor sits well under what the contract declares, so retiring a
 // few kinds passes and a read that finds almost nothing fails loudly.
@@ -39,9 +40,18 @@ func TestEveryDeclaredJobKindHasAFrontendName(t *testing.T) {
 	t.Parallel()
 	declared := map[string]bool{}
 	for kind := range jobs.Declared() {
-		declared[kind] = true
+		if !jobs.IsExtensionKind(kind) {
+			declared[kind] = true
+		}
 	}
-	named := tsJobKindNames(t)
+	source, err := os.ReadFile(frontendJobKinds)
+	if err != nil {
+		t.Fatalf("reading the frontend job kind names: %v", err)
+	}
+	named, problems := tsJobKindNames(string(source))
+	for _, problem := range problems {
+		t.Error(problem)
+	}
 	if len(declared) < jobKindCensusFloor || len(named) < jobKindCensusFloor {
 		t.Fatalf("read %d declared kinds and %d named ones, expected at least %d of each: a census that reads almost nothing agrees with everything",
 			len(declared), len(named), jobKindCensusFloor)
@@ -83,36 +93,65 @@ func jobKindNameDrift(declared, named map[string]bool) []string {
 }
 
 // tsJobKindNames reads the JOB_KIND_NAME literal one entry per line. A line it
-// cannot read fails, because an entry the parser skips is one the gate agrees with.
-func tsJobKindNames(t *testing.T) map[string]bool {
-	t.Helper()
-	source, err := os.ReadFile(frontendJobKinds)
-	if err != nil {
-		t.Fatalf("reading the frontend job kind names: %v", err)
-	}
+// cannot read is a problem, because an entry the parser skips is one the gate agrees with.
+func tsJobKindNames(source string) (map[string]bool, []string) {
 	const opener = "const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {"
-	_, rest, opened := strings.Cut(string(source), opener)
+	_, rest, opened := strings.Cut(source, opener)
 	if !opened {
-		t.Fatalf("%s no longer declares %s: this gate is reading a shape that is gone", frontendJobKinds, opener)
+		return nil, []string{fmt.Sprintf("%s no longer declares %s: this gate is reading a shape that is gone", frontendJobKinds, opener)}
 	}
 	body, _, closed := strings.Cut(rest, "\n};")
 	if !closed {
-		t.Fatalf("%s: JOB_KIND_NAME is not closed by `};` on its own line", frontendJobKinds)
+		return nil, []string{fmt.Sprintf("%s: JOB_KIND_NAME is not closed by `};` on its own line", frontendJobKinds)}
 	}
 	named := map[string]bool{}
+	var problems []string
 	for line := range strings.SplitSeq(tsCommentInJobKinds.ReplaceAllString(body, ""), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
 		match := tsJobKindEntry.FindStringSubmatch(line)
-		if match == nil {
-			t.Fatalf("%s: JOB_KIND_NAME holds %q, which is not a `kind: \"jobs.kind.kind\"` entry this gate can read", frontendJobKinds, line)
+		switch {
+		case match == nil:
+			problems = append(problems, fmt.Sprintf("%s: JOB_KIND_NAME holds %q, which is not a `kind: \"jobs.kind.kind\"` or `kind: \"systemJob.kind\"` entry this gate can read", frontendJobKinds, line))
+		case match[1] != match[2]:
+			problems = append(problems, fmt.Sprintf("%s names %q with the message of %q: each kind keys a message of its own name", frontendJobKinds, match[1], match[2]))
+		default:
+			named[match[1]] = true
 		}
-		if match[1] != match[2] {
-			t.Errorf("%s names %q with jobs.kind.%s: each kind keys its own message", frontendJobKinds, match[1], match[2])
-		}
-		named[match[1]] = true
 	}
-	return named
+	return named, problems
+}
+
+// Each shape the parser could misread, planted. It reads it right or says so.
+func TestTheJobKindParserReadsOrRefusesEveryShape(t *testing.T) {
+	t.Parallel()
+	const opener = "const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {\n"
+	for name, tc := range map[string]struct {
+		body string
+		want []string
+	}{
+		"a comment line":                      {"  // a note\n  a: \"jobs.kind.a\",\n};", []string{"a"}},
+		"a comment holding };":                {"  // ends at };\n  a: \"jobs.kind.a\",\n};", []string{"a"}},
+		"a block comment holding };":          {"  a: \"jobs.kind.a\",\n  /* ends\n};\n  */\n  b: \"jobs.kind.b\",\n};", nil},
+		"a multi-line entry":                  {"  a:\n    \"jobs.kind.a\",\n};", nil},
+		"a spread":                            {"  ...OTHER,\n  a: \"jobs.kind.a\",\n};", nil},
+		"single quotes":                       {"  a: 'jobs.kind.a',\n};", nil},
+		"two entries on one line":             {"  a: \"jobs.kind.a\", b: \"jobs.kind.b\",\n};", nil},
+		"a key naming another kind's message": {"  a: \"jobs.kind.b\",\n};", nil},
+		"a namesake principal's label":        {"  a: \"systemJob.a\",\n  b: \"jobs.kind.b\",\n};", []string{"a", "b"}},
+		"another principal's label":           {"  a: \"systemJob.b\",\n};", nil},
+	} {
+		named, problems := tsJobKindNames(opener + tc.body)
+		if tc.want == nil {
+			if len(problems) == 0 {
+				t.Errorf("%s: parsed %v without a problem; this shape must fail loudly", name, named)
+			}
+			continue
+		}
+		if len(problems) != 0 || !slices.Equal(slices.Sorted(maps.Keys(named)), tc.want) {
+			t.Errorf("%s: named %v, problems %q, want %v and none", name, named, problems, tc.want)
+		}
+	}
 }

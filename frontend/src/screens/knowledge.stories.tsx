@@ -65,6 +65,7 @@ const handbook: Corpus = {
     "How this installation is run, and what it promises the contacts who use it.",
   min_similarity: 0.35,
   default_ask: true,
+  shipped: false,
   coverage: {
     documents_total: 12,
     chunks_total: 1_180,
@@ -83,6 +84,7 @@ const priceBook: Corpus = {
     "What each line costs, and which discounts are ours to give.",
   min_similarity: 0.42,
   default_ask: false,
+  shipped: false,
   coverage: {
     documents_total: 4,
     chunks_total: 210,
@@ -246,6 +248,26 @@ export const DocumentsFiled: Story = {
           "queued",
         ),
         refused,
+      ]),
+    ),
+  ),
+  play: showDocuments,
+};
+
+// The set Margince ships: no archive verb and no dropzone, because the next
+// update files it again. Its pages are named by their headings.
+export const ShippedSet: Story = {
+  render: card(
+    sets(
+      administers,
+      [{ ...handbook, shipped: true }, priceBook],
+      documents([
+        {
+          ...searchable,
+          filename: "approvals.md",
+          title: "Approving agent proposals",
+          shipped: true,
+        },
       ]),
     ),
   ),

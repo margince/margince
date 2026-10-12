@@ -22,7 +22,7 @@ var documentColumns = `d.id, d.corpus_id, d.filename, d.content_type, d.byte_siz
 	d.ingest_status, d.ingest_detail, d.chunk_count, d.created_at, d.managed_source,
 	` + ingestInFlight + `,
 	(SELECT c.reindexing FROM knowledge_corpus c WHERE c.id = d.corpus_id),
-	` + passageColumns("k.document_id = d.id")
+	` + passageColumns(documentChunks)
 
 func readDocument(ctx context.Context, tx pgx.Tx, id ids.UUID, identity string) (crmcontracts.KnowledgeDocument, error) {
 	doc, err := scanDocument(tx.QueryRow(ctx,

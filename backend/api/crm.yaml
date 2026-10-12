@@ -28212,11 +28212,20 @@ paths:
       description: >-
         Cascades in one transaction: every live document archives, their chunks are
         stamped, and any in-flight ingest self-cancels on its next state re-read.
+
+        The set that ships with Margince is refused: the next update would file it
+        again as a new set.
       responses:
         '204': { description: Archived. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            `corpus_shipped`: the set ships with Margince and cannot be archived.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /knowledge/corpora/{id}/documents:
     parameters:
@@ -28232,7 +28241,8 @@ paths:
         text/csv, application/json. Anything else is refused naming what is accepted;
         there is no parser in this product, and a PDF arriving as an empty corpus is
         worse than a PDF refused. Ingest is asynchronous: the document lands `queued`
-        and its progress is read back from this path's GET.
+        and its progress is read back from this path's GET. The set that ships with
+        Margince takes no uploads: only Margince files pages in it.
       requestBody:
         required: true
         content:
@@ -28251,6 +28261,13 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            `corpus_shipped`: the set ships with Margince, and only Margince files
+            pages in it.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
         '415': { $ref: '#/components/responses/UnsupportedMediaType' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -59042,10 +59059,16 @@ components:
             absent as true.
     KnowledgeCorpus:
       type: object
-      required: [id, name, topic_statement, min_similarity, default_ask, coverage, created_at]
+      required: [id, name, topic_statement, min_similarity, default_ask, shipped, coverage, created_at]
       properties:
         id: { type: string, format: uuid }
         name: { type: string, maxLength: 200 }
+        shipped:
+          type: boolean
+          description: >-
+            True for the handbook set that ships with Margince. It cannot be archived
+            and takes no uploads. Its name, topic, floor and default can still be edited,
+            and an update keeps those edits.
         description: { type: [string, 'null'], maxLength: 2000 }
         topic_statement:
           type: string

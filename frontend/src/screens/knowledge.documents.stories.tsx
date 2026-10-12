@@ -13,8 +13,9 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// One set's documents as its row opens them, A to Z. Only a document still
-// waiting, one that failed, or one searchable unlike its set carries a badge.
+// One set's documents as its row opens them, A to Z. A document still waiting
+// or one that failed carries a badge. So does each one not yet searchable,
+// unless the set states that for every row.
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
 type EmbedState = components["schemas"]["KnowledgeEmbedState"];
@@ -95,6 +96,7 @@ function story(
             corpusId={SET_ID}
             setName="Operator handbook"
             setState={setState}
+            shipped={false}
             canManage={canManage}
             afterDelete={() => null}
           />
@@ -128,14 +130,14 @@ export const ReadOnly: Story = { render: story(DOCUMENTS, false) };
 
 export const NothingFiled: Story = { render: story([], true) };
 
-// No embedding model bound: the set says so with its reason, so no row repeats it.
+// No embedding model bound: the set says so for every row, so no row repeats it.
 export const NotSearchable: Story = {
   render: story(
-    DOCUMENTS.map((doc) =>
-      doc.ingest_status === "done"
-        ? { ...doc, chunks_embedded: 0, embed_state: "no_embedding_model" }
-        : doc,
-    ),
+    DOCUMENTS.map((doc) => ({
+      ...doc,
+      chunks_embedded: 0,
+      embed_state: "no_embedding_model",
+    })),
     true,
     "no_embedding_model",
   ),

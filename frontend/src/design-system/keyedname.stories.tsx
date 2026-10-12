@@ -28,21 +28,80 @@ export const KeyWithoutName: Story = {
   },
 };
 
-// A long key wraps only after an underscore, and still reads as one string.
-export const LongKeyInANarrowColumn: Story = {
-  args: {
+type Job = { name: string; key: string; waiting: number; running: number };
+
+const JOBS: Job[] = [
+  {
     name: "Expired confirmation link cleanup",
-    code: "comms_controller_payload_sweep",
+    key: "comms_controller_payload_sweep",
+    waiting: 1,
+    running: 0,
   },
-  render: (args) => (
+  {
+    name: "Mail confidentiality check",
+    key: "capture_confidentiality_verdict",
+    waiting: 12,
+    running: 3,
+  },
+];
+
+// Each run between two `<wbr>` is its own text node. A run laid out on more
+// than one line broke inside a word.
+function keyLayout(key: HTMLElement) {
+  const walker = key.ownerDocument.createTreeWalker(key, NodeFilter.SHOW_TEXT);
+  const lines = new Set<number>();
+  const brokenMidWord: string[] = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const range = key.ownerDocument.createRange();
+    range.selectNodeContents(node);
+    const tops = new Set([...range.getClientRects()].map((rect) => rect.top));
+    for (const top of tops) lines.add(top);
+    if (tops.size > 1) brokenMidWord.push(node.textContent ?? "");
+  }
+  return { lines: lines.size, brokenMidWord };
+}
+
+// Long keys in a table squeezed narrower than they are: each key wraps, and
+// only after an underscore.
+export const LongKeysUnderWidthPressure: Story = {
+  render: () => (
     <div style={{ width: 160 }}>
-      <KeyedName {...args} />
+      <DataTable
+        label="Background jobs"
+        rows={JOBS}
+        rowKey={(row) => row.key}
+        columns={[
+          {
+            key: "job",
+            header: "Job",
+            render: (row) => <KeyedName name={row.name} code={row.key} />,
+          },
+          {
+            key: "waiting",
+            header: "Waiting",
+            align: "end",
+            render: (row) => row.waiting,
+          },
+          {
+            key: "running",
+            header: "Running",
+            align: "end",
+            render: (row) => row.running,
+          },
+        ]}
+      />
     </div>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const key = await canvas.findByText("comms_controller_payload_sweep");
-    await expect(key.querySelectorAll("wbr")).toHaveLength(3);
+    await canvas.findByRole("table", { name: "Background jobs" });
+    for (const job of JOBS) {
+      const key = canvas.getByText(job.key);
+      const layout = keyLayout(key);
+      // Wrapped at all, or the squeeze proves nothing.
+      await expect(layout.lines).toBeGreaterThan(1);
+      await expect(layout.brokenMidWord).toEqual([]);
+    }
   },
 };
 

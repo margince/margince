@@ -35,6 +35,14 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// The server's own detail is English; the screen words each code itself.
+function shippedProblem(code: string) {
+  return jsonResponse(
+    { type: "about:blank", title: "Conflict", status: 409, code, detail: code },
+    409,
+  );
+}
+
 const ADMIN: GrantSpec = {
   knowledge_corpus: ["create", "read", "update", "delete"],
   knowledge_document: ["create", "read", "update", "delete"],
@@ -55,6 +63,7 @@ function corpus(over: Record<string, unknown> = {}) {
     topic_statement: "How this product is operated.",
     min_similarity: 0.35,
     default_ask: false,
+    shipped: false,
     created_at: "2026-08-01T00:00:00Z",
     coverage: {
       documents_total: 1,
@@ -89,7 +98,7 @@ function backendFor(
   opts: {
     sets?: ReturnType<typeof corpus>[];
     documents?: ReturnType<typeof document>[];
-    deleteRefusal?: () => Response;
+    refuse?: Partial<Record<"archive" | "upload" | "delete", () => Response>>;
   } = {},
 ) {
   const posts: string[] = [];
@@ -105,13 +114,14 @@ function backendFor(
       }
       if (req.url.includes("/knowledge/documents/")) {
         deletes.push(req.url);
-        if (opts.deleteRefusal) return opts.deleteRefusal();
+        if (opts.refuse?.delete) return opts.refuse.delete();
         documents = documents.filter((doc) => !req.url.endsWith(doc.id));
         return new Response(null, { status: 204 });
       }
       if (req.url.includes("/documents")) {
         if (req.method === "POST") {
           posts.push(req.url);
+          if (opts.refuse?.upload) return opts.refuse.upload();
           return jsonResponse(document({ ingest_status: "queued" }), 202);
         }
         return jsonResponse({ items: documents });
@@ -123,6 +133,7 @@ function backendFor(
         }
         if (req.method === "DELETE") {
           deletes.push(req.url);
+          if (opts.refuse?.archive) return opts.refuse.archive();
           sets = sets.filter((set) => !req.url.endsWith(set.id));
           return new Response(null, { status: 204 });
         }
@@ -477,7 +488,7 @@ describe("KnowledgeCard documents", () => {
     ).toBeInTheDocument();
   });
 
-  it("marks only a document whose searchability differs from its set's", async () => {
+  it("marks each document that is not searchable when its set's rows differ", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor(ADMIN, {
@@ -529,7 +540,7 @@ describe("KnowledgeCard documents", () => {
     expect(status("d-queued.md")).toEqual(["Queued"]);
   });
 
-  it("repeats no searchability state its set already states", async () => {
+  it("repeats no searchability state that its set states for every row", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor(ADMIN, {
@@ -577,21 +588,52 @@ describe("KnowledgeCard documents", () => {
     expect(screen.getAllByText("Not searchable")).toHaveLength(1);
   });
 
+  it("marks the one stale document under a set still indexing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        sets: [
+          corpus({
+            coverage: {
+              documents_total: 2,
+              chunks_total: 8,
+              chunks_embedded: 5,
+              embed_state: "indexing",
+            },
+          }),
+        ],
+        documents: [
+          document({ id: "a", filename: "a-searchable.md" }),
+          document({
+            id: "b",
+            filename: "b-stale.md",
+            chunks_embedded: 1,
+            embed_state: "indexing",
+          }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    const table = await screen.findByRole("table", {
+      name: "Documents in How-to",
+    });
+    const stale = within(table)
+      .getAllByRole("row")
+      .find((row) => row.textContent?.includes("b-stale.md"));
+    expect(stale && within(stale).getByText("Indexing")).toBeInTheDocument();
+    expect(table.querySelectorAll(".badge")).toHaveLength(1);
+  });
+
   it("says why a delete was refused when the page turned out to ship", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor(ADMIN, {
-        deleteRefusal: () =>
-          jsonResponse(
-            {
-              type: "about:blank",
-              title: "Conflict",
-              status: 409,
-              code: "document_shipped",
-              detail: "document ships with the product",
-            },
-            409,
-          ),
+        refuse: { delete: () => shippedProblem("document_shipped") },
       }).fetchMock,
     );
     const user = userEvent.setup();
@@ -609,6 +651,74 @@ describe("KnowledgeCard documents", () => {
     expect(
       await dialog.findByText(
         "This page ships with Margince, so it cannot be deleted.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("KnowledgeCard, a set Margince ships", () => {
+  it("offers no archive and no upload on it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, { sets: [corpus({ shipped: true })] }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await screen.findByRole("table", { name: "Documents in How-to" });
+    expect(
+      screen.queryByRole("button", { name: "Actions for How-to" }),
+    ).toBeNull();
+    expect(screen.queryByLabelText(/add document/i)).toBeNull();
+  });
+
+  it("says why an archive was refused when the set turned out to ship", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        refuse: { archive: () => shippedProblem("corpus_shipped") },
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
+    );
+    await user.click(screen.getByRole("button", { name: /archive set/i }));
+    const dialog = within(screen.getByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: /^archive set$/i }));
+    expect(
+      await dialog.findByText(
+        "This set ships with Margince, so it cannot be archived.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says why an upload was refused when the set turned out to ship", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        refuse: { upload: () => shippedProblem("corpus_shipped") },
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await user.upload(
+      await screen.findByLabelText(/add document/i),
+      new File(["notes"], "notes.md", { type: "text/markdown" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+    expect(
+      await screen.findByText(
+        "notes.md: This set ships with Margince, so only Margince adds documents to it.",
       ),
     ).toBeInTheDocument();
   });

@@ -292,6 +292,15 @@ func clearDefaultAsk(ctx context.Context, tx pgx.Tx, keep ids.UUID) error {
 	return nil
 }
 
+// ErrCorpusShipped is a write to the set that ships with Margince which the
+// boot reconciliation would undo or break. Its edits are honoured and not refused.
+var ErrCorpusShipped = errors.New("this set ships with Margince")
+
+var (
+	errArchiveShippedCorpus = fmt.Errorf("%w, so it cannot be archived; it comes back with every update", ErrCorpusShipped)
+	errUploadShippedCorpus  = fmt.Errorf("%w, and only Margince files pages in it; upload into a set of your own", ErrCorpusShipped)
+)
+
 // ArchiveCorpus archives the corpus and everything filed in it, in one
 // transaction: the documents, and their chunks with them.
 //
@@ -312,6 +321,9 @@ func (s *Store) ArchiveCorpus(ctx context.Context, id ids.UUID) error {
 		}
 		if current.ArchivedAt() != nil {
 			return nil
+		}
+		if current.corpus.Shipped {
+			return errArchiveShippedCorpus
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE knowledge_chunk SET archived_at = now()
@@ -385,11 +397,11 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 // Not a GROUP BY join: it drops a corpus with no documents, which must stay in
 // the list reporting zeros.
 var corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
-	c.default_ask, c.reindexing, c.created_at, c.archived_at,
+	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT NULL,
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL),
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL
 	    AND ` + ingestInFlight + `),
-	` + passageColumns("k.corpus_id = c.id")
+	` + passageColumns(corpusChunks)
 
 // corpusRow is the scanned row. It exists because the contract type carries no
 // archived_at and the archive path needs to know — an already-archived corpus
@@ -436,7 +448,7 @@ func scanCorpus(row pgx.Row) (corpusRow, error) {
 	if err := row.Scan(
 		&id, &out.corpus.Name, &out.corpus.Description, &out.corpus.TopicStatement,
 		&out.override, &out.corpus.DefaultAsk, &p.reindexing,
-		&out.corpus.CreatedAt, &out.archivedAt,
+		&out.corpus.CreatedAt, &out.archivedAt, &out.corpus.Shipped,
 		&out.corpus.Coverage.DocumentsTotal, &documentsInFlight,
 		&p.total, &p.embedded, &p.identities,
 	); err != nil {

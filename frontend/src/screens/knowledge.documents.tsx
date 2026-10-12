@@ -158,18 +158,17 @@ export const NOT_SEARCHABLE: Record<
   },
 };
 
-// An importing or failed document already wears that badge. A searchability
-// state its set already states, with its reason, is not repeated per row.
+// An importing or failed document already wears that badge.
 function documentBadge(
   doc: CorpusDocument,
-  setState: EmbedState,
+  setSpeaksForAll: boolean,
 ): Readonly<{
   label: MessageKey;
   tone?: "danger" | "info" | "warning";
 }> | null {
   const ingest = INGEST_BADGE[doc.ingest_status];
   if (ingest) return ingest;
-  return doc.embed_state === "complete" || doc.embed_state === setState
+  return doc.embed_state === "complete" || setSpeaksForAll
     ? null
     : NOT_SEARCHABLE[doc.embed_state];
 }
@@ -183,7 +182,7 @@ function documentColumns({
   plural,
   locale,
   zone,
-  setState,
+  setSpeaksForAll,
   canManage,
   onDelete,
 }: Readonly<{
@@ -191,7 +190,7 @@ function documentColumns({
   plural: PluralTranslator;
   locale: Locale;
   zone: string;
-  setState: EmbedState;
+  setSpeaksForAll: boolean;
   canManage: boolean;
   onDelete: (doc: CorpusDocument) => void;
 }>): DataTableColumn<CorpusDocument>[] {
@@ -242,7 +241,7 @@ function documentColumns({
       header: t("knowledge.col.status"),
       fold: "end",
       render: (doc) => {
-        const badge = documentBadge(doc, setState);
+        const badge = documentBadge(doc, setSpeaksForAll);
         return (
           badge && (
             <CellStack>
@@ -288,12 +287,15 @@ export function DocumentList({
   corpusId,
   setName,
   setState,
+  shipped,
   canManage,
   afterDelete,
 }: Readonly<{
   corpusId: string;
   setName: string;
   setState: EmbedState;
+  // Only Margince files pages in a set it ships.
+  shipped: boolean;
   canManage: boolean;
   // A deleted document takes its row's menu with it; focus lands here instead.
   afterDelete: () => HTMLElement | null;
@@ -310,6 +312,11 @@ export function DocumentList({
   const documents = [...(query.data?.items ?? [])].sort((a, b) =>
     forReader(documentName(a), documentName(b), locale),
   );
+  // The set states its searchability once, with its reason. Rows repeat it only
+  // when some differ, so the one stale document can be found.
+  const setSpeaksForAll =
+    setState !== "complete" &&
+    documents.every((doc) => doc.embed_state === setState);
   return (
     <>
       {documents.length > 0 ? (
@@ -322,7 +329,7 @@ export function DocumentList({
             plural,
             locale,
             zone: viewerZone(),
-            setState,
+            setSpeaksForAll,
             canManage,
             onDelete: (doc) => {
               remove.reset();
@@ -340,7 +347,7 @@ export function DocumentList({
           </QueryStates>
         </PanelBody>
       )}
-      {canManage && query.isSuccess && (
+      {canManage && !shipped && query.isSuccess && (
         <PanelBody>
           <UploadDocument corpusId={corpusId} />
         </PanelBody>
@@ -353,7 +360,11 @@ export function DocumentList({
         confirmLabel={t("knowledge.deleteDocument")}
         confirmVariant="danger"
         pending={remove.isPending}
-        error={remove.isError ? deleteRefusal(remove.error, t) : null}
+        error={
+          remove.isError
+            ? shippedRefusal(remove.error, t, DELETE_SHIPPED)
+            : null
+        }
         onClose={() => setDeleting(null)}
         returnFocusTo={() => (deleted.current ? afterDelete() : null)}
         onConfirm={() => {
@@ -376,12 +387,23 @@ export function DocumentList({
   );
 }
 
-// A row can turn shipped between the list read and the press.
-function deleteRefusal(error: unknown, t: Translator): string {
-  return problemCodeOf(error) === "document_shipped"
-    ? t("knowledge.deleteShipped")
-    : problemMessageOf(error, t);
+// A write to what ships with Margince is refused in catalog copy, by code. The
+// list read can predate the shipped flag the press meets.
+export function shippedRefusal(
+  error: unknown,
+  t: Translator,
+  copy: ReadonlyMap<string, MessageKey>,
+): string {
+  const key = copy.get(problemCodeOf(error) ?? "");
+  return key ? t(key) : problemMessageOf(error, t);
 }
+
+const DELETE_SHIPPED = new Map<string, MessageKey>([
+  ["document_shipped", "knowledge.deleteShipped"],
+]);
+const UPLOAD_SHIPPED = new Map<string, MessageKey>([
+  ["corpus_shipped", "knowledge.uploadShipped"],
+]);
 
 // Two distinct files agreeing on all three are the same bytes for every
 // purpose here, and the server would refuse both identically.
@@ -414,7 +436,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         refused.push({
           id: fileIdentity(file),
           filename: file.name,
-          message: problemMessageOf(err, t),
+          message: shippedRefusal(err, t, UPLOAD_SHIPPED),
         });
       }
     }
