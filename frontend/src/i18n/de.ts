@@ -5913,6 +5913,7 @@ export const de = {
   "import.test.col.value": "Wert",
   "import.test.row": "Zeile {line}",
   "import.test.rowColumn": "Zeile {line} · {column}",
+  "import.test.wholeFile": "Ganze Datei",
   "import.problem.broken_link": "Fehlerhafte Verknüpfung",
   "import.problem.dropped_link": "Verknüpfung ausgelassen",
   "import.problem.invalid_value": "Ungültiger Wert",

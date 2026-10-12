@@ -33361,10 +33361,10 @@ components:
 
     ImportRowIssue:
       type: object
-      description: One row the import could not take, named by its line so a human can go fix it.
-      required: [line, reason]
+      description: One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
+      required: [reason]
       properties:
-        line:   { type: integer, minimum: 1, description: 'The line in the uploaded file, counting the header as line 1.' }
+        line:   { type: integer, minimum: 1, description: 'The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file.' }
         file:   { type: string, description: 'The ZIP entry the line is in. Absent for a single CSV.' }
         column: { type: [string, 'null'], description: 'The offending column, when one is to blame.' }
         kind:   { $ref: '#/components/schemas/ImportProblemKind' }

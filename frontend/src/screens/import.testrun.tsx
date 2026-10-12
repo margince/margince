@@ -8,6 +8,7 @@ import { StatCard } from "../design-system/statcard";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import type { Locale } from "../i18n/locale";
 import { problemMessageOf, QueryStates } from "./common";
 import { ImportContextTagSummary } from "./import.contexttag";
 import type { ImportWizardState } from "./importflow";
@@ -212,6 +213,19 @@ export function PartCounts({
   );
 }
 
+/** Where a problem is: its row and column, or the whole file when it has no row. */
+function issueWhere(
+  issue: ImportRowIssue,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
+  if (issue.line === undefined) return t("import.test.wholeFile");
+  const line = formatNumber(issue.line, locale);
+  return issue.column
+    ? t("import.test.rowColumn", { line, column: issue.column })
+    : t("import.test.row", { line });
+}
+
 /** Every problem the report names, with the file, row and column it is in. */
 export function ProblemTable({
   issues,
@@ -227,7 +241,7 @@ export function ProblemTable({
       })}
       rows={[...issues]}
       rowKey={(issue) =>
-        `${issue.file ?? ""}-${issue.line}-${issue.column ?? ""}-${issue.kind ?? ""}`
+        `${issue.file ?? ""}-${issue.line ?? ""}-${issue.column ?? ""}-${issue.kind ?? ""}-${issue.value ?? ""}`
       }
       columns={[
         {
@@ -237,14 +251,7 @@ export function ProblemTable({
             <>
               {issue.file ? <code>{issue.file}</code> : null}
               <div className="t-caption">
-                {issue.column
-                  ? t("import.test.rowColumn", {
-                      line: formatNumber(issue.line, locale),
-                      column: issue.column,
-                    })
-                  : t("import.test.row", {
-                      line: formatNumber(issue.line, locale),
-                    })}
+                {issueWhere(issue, t, locale)}
               </div>
             </>
           ),

@@ -52,6 +52,14 @@ func (h importHandlers) reported(r *http.Request, id openapi_types.UUID) (migrat
 //nolint:goconst // column headings of a downloaded file; the constant goconst offers names an extraction key
 var importProblemsHeader = []string{"file", "row", "column", "problem", "value"}
 
+// lineText is a problem's row cell, empty for a problem of the whole file.
+func lineText(line *int) string {
+	if line == nil {
+		return ""
+	}
+	return strconv.Itoa(*line)
+}
+
 // writeImportProblems writes a report's issues as a spreadsheet, one line per
 // issue. Every cell is the uploader's own text, so each is formula-guarded.
 func writeImportProblems(w io.Writer, rep crmcontracts.ImportRunReport) error {
@@ -61,7 +69,7 @@ func writeImportProblems(w io.Writer, rep crmcontracts.ImportRunReport) error {
 	}
 	for _, issue := range rep.Issues {
 		row := []string{
-			derefString(issue.File), strconv.Itoa(issue.Line), derefString(issue.Column), issue.Reason, derefString(issue.Value),
+			derefString(issue.File), lineText(issue.Line), derefString(issue.Column), issue.Reason, derefString(issue.Value),
 		}
 		for i := range row {
 			row[i] = guardCSVFormula(row[i])

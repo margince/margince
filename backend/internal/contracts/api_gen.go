@@ -36417,7 +36417,7 @@ type ImportPartRequest struct {
 // ImportProblemKind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
 type ImportProblemKind string
 
-// ImportRowIssue One row the import could not take, named by its line so a human can go fix it.
+// ImportRowIssue One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
 type ImportRowIssue struct {
 	// Column The offending column, when one is to blame.
 	Column *string `json:"column,omitempty"`
@@ -36428,8 +36428,8 @@ type ImportRowIssue struct {
 	// Kind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
 	Kind *ImportProblemKind `json:"kind,omitempty"`
 
-	// Line The line in the uploaded file, counting the header as line 1.
-	Line int `json:"line"`
+	// Line The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file.
+	Line *int `json:"line,omitempty"`
 
 	// Reason What is wrong, in terms of the file the human uploaded — never a database or driver message.
 	Reason string `json:"reason"`

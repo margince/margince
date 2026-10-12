@@ -6056,6 +6056,7 @@ export const en = {
   "import.test.col.value": "Value",
   "import.test.row": "Row {line}",
   "import.test.rowColumn": "Row {line} · {column}",
+  "import.test.wholeFile": "Whole file",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
   "import.problem.invalid_value": "Invalid value",

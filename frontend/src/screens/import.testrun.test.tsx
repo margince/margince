@@ -113,6 +113,34 @@ describe("the test run", () => {
     expect(within(row).getByText("Invalid value")).toBeVisible();
   });
 
+  it("names the file alone for a problem of the whole file, one row per tag", async () => {
+    const user = userEvent.setup();
+    const consoleError = vi.spyOn(console, "error");
+    const newTag = (value: string) => ({
+      file: "companies.csv",
+      kind: "new_tag",
+      value,
+      reason: `The tag “${value}” does not exist yet.`,
+    });
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...bundleReportFixture,
+          issues: [newTag("vip"), newTag("partner")],
+        }),
+    });
+    await renderAtTestRun(user);
+    for (const value of ["vip", "partner"]) {
+      const row = await screen.findByRole("row", { name: new RegExp(value) });
+      expect(within(row).getByText("Whole file")).toBeVisible();
+      expect(within(row).queryByText(/Row/)).toBeNull();
+    }
+    const duplicateKeys = consoleError.mock.calls.filter((call) =>
+      String(call[0]).includes("same key"),
+    );
+    expect(duplicateKeys).toEqual([]);
+  });
+
   it("offers no choice about links when no link is broken", async () => {
     const user = userEvent.setup();
     stubRoutes();

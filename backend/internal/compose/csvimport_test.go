@@ -676,6 +676,23 @@ func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 	}
 }
 
+func TestAProblemOfAWholeFileIsReportedWithNoLine(t *testing.T) {
+	var issues []crmcontracts.ImportRowIssue
+	companies := migration.ObjectReport{Object: migration.ObjectCompany, File: "companies.csv"}
+	appendIssues(&issues, map[string]bool{}, warningKey, companies, []migration.SkippedRow{
+		{Kind: string(crmcontracts.ImportProblemKindNewTag), Value: "vip", Reason: "a new tag"},
+		{Kind: string(crmcontracts.ImportProblemKindNewTag), Value: "partner", Reason: "a new tag"},
+	})
+	if len(issues) != 2 {
+		t.Fatalf("issues = %+v, want one per new tag", issues)
+	}
+	for _, issue := range issues {
+		if issue.Line != nil {
+			t.Errorf("issue %q has line %d, want none: a new tag belongs to the file, not a row", *issue.Value, *issue.Line)
+		}
+	}
+}
+
 // A resumed run keeps every refusal it recorded.
 //
 // A finished report can carry more outcomes than the file has rows, from two

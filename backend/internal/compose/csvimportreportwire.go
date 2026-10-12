@@ -239,7 +239,7 @@ func appendIssues(
 		}
 		seen[key] = true
 		*issues = append(*issues, crmcontracts.ImportRowIssue{
-			Line:   lineOf(row),
+			Line:   lineOrAbsent(lineOf(row)),
 			Reason: row.Reason,
 			File:   textOrAbsent(o.File),
 			Column: textOrAbsent(row.Column),
@@ -268,6 +268,15 @@ func issueKey(o migration.ObjectReport, row migration.SkippedRow) string {
 // warnings, and a part's new tags belong to no row at all.
 func warningKey(o migration.ObjectReport, row migration.SkippedRow) string {
 	return issueKey(o, row) + "\x00" + row.Kind + "\x00" + row.Value
+}
+
+// lineOrAbsent leaves out the line of a problem that names no row, such as a
+// tag the whole file refers to.
+func lineOrAbsent(line int) *int {
+	if line == 0 {
+		return nil
+	}
+	return &line
 }
 
 func textOrAbsent(text string) *string {

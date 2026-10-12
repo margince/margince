@@ -23422,10 +23422,10 @@ export interface components {
             /** @description A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise. */
             options?: string[];
         };
-        /** @description One row the import could not take, named by its line so a human can go fix it. */
+        /** @description One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
         ImportRowIssue: {
-            /** @description The line in the uploaded file, counting the header as line 1. */
-            line: number;
+            /** @description The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file. */
+            line?: number;
             /** @description The ZIP entry the line is in. Absent for a single CSV. */
             file?: string;
             /** @description The offending column, when one is to blame. */

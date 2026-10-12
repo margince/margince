@@ -8779,7 +8779,6 @@
                     }
                   },
                   "required": [
-                    "line",
                     "reason"
                   ]
                 }

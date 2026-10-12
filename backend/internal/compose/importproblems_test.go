@@ -12,8 +12,9 @@ import (
 
 func TestProblemsCSVDefusesAFormulaInAValue(t *testing.T) {
 	rep := crmcontracts.ImportRunReport{Issues: []crmcontracts.ImportRowIssue{
-		{Line: 3, Reason: "not a number", Column: new("Value"), Value: new(`=HYPERLINK("x")`), File: new("deals.csv")},
-		{Line: 7, Reason: "-1 is not a size"},
+		{Line: new(3), Reason: "not a number", Column: new("Value"), Value: new(`=HYPERLINK("x")`), File: new("deals.csv")},
+		{Line: new(7), Reason: "-1 is not a size"},
+		{Reason: "a new tag", File: new("companies.csv"), Value: new("vip")},
 	}}
 	var buf bytes.Buffer
 	if err := writeImportProblems(&buf, rep); err != nil {
@@ -21,7 +22,8 @@ func TestProblemsCSVDefusesAFormulaInAValue(t *testing.T) {
 	}
 	want := "file,row,column,problem,value\n" +
 		"deals.csv,3,Value,not a number,\"'=HYPERLINK(\"\"x\"\")\"\n" +
-		",7,,'-1 is not a size,\n"
+		",7,,'-1 is not a size,\n" +
+		"companies.csv,,,a new tag,vip\n"
 	if buf.String() != want {
 		t.Fatalf("csv = %q, want %q", buf.String(), want)
 	}

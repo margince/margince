@@ -5784,6 +5784,7 @@ export const vi = {
   "import.test.col.value": "Giá trị",
   "import.test.row": "Dòng {line}",
   "import.test.rowColumn": "Dòng {line} · {column}",
+  "import.test.wholeFile": "Toàn bộ tệp",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",
   "import.problem.invalid_value": "Giá trị không hợp lệ",
