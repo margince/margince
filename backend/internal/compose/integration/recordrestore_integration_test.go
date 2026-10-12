@@ -929,7 +929,7 @@ func readLeadPhone(t *testing.T, e *apptest.AppEnv, id string) leadPhoneRecord {
 	return lead
 }
 
-// A lead's number comes off both ways a person reaches for: a null on the
+// A lead's number comes off both ways a contact reaches for: a null on the
 // update, and putting back the change that filled it in.
 func TestEndToEnd_aLeadsPhoneClearsByNullAndByRestore(t *testing.T) {
 	e := apptest.SetupApp(t)
