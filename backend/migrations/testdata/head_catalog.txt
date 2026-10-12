@@ -4762,7 +4762,8 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
        AND a.origin NOT IN ('system_remediation', 'system_notice')
        AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')))
      WHERE r.company_id = cid AND r.kind = 'employment'
-       AND r.ended_at IS NULL AND r.archived_at IS NULL
+       AND (coalesce(r.employment_status, 'current') = 'current' AND (r.ended_at IS NULL OR CASE WHEN r.ended_precision = 'month' THEN (date_trunc('month', r.ended_at::date) + interval '1 month')::date ELSE r.ended_at END > current_date))
+       AND r.archived_at IS NULL
        AND coalesce(r.started_at::timestamp AT TIME ZONE 'UTC', r.first_observed_at, a.occurred_at) <= a.occurred_at
   ) arms
 
@@ -4800,7 +4801,8 @@ public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid
          WHERE d.id = ANY (deal_ids) AND d.company_id IS NOT NULL
   UNION SELECT 'company', r.company_id FROM relationship r
          WHERE r.contact_id = ANY (contact_ids) AND r.kind = 'employment'
-           AND r.ended_at IS NULL AND r.archived_at IS NULL
+           AND (coalesce(r.employment_status, 'current') = 'current' AND (r.ended_at IS NULL OR CASE WHEN r.ended_precision = 'month' THEN (date_trunc('month', r.ended_at::date) + interval '1 month')::date ELSE r.ended_at END > current_date))
+           AND r.archived_at IS NULL
 
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead.archived_at timestamp with time zone gen=- def=-

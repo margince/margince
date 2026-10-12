@@ -443,6 +443,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, ApprovalExpiryArgs{}),
 		periodicFor(cfg, IntroExpiryArgs{}),
 		periodicFor(cfg, ApprovalAutoApplyArgs{}),
+		periodicFor(cfg, DepartedEmployerClockRefoldArgs{}),
 		periodicFor(cfg, CaptureAutoEnrichSweepArgs{}),
 		periodicFor(cfg, CaptureClassifyArgs{}),
 		periodicFor(cfg, OwedVerdictArgs{}),

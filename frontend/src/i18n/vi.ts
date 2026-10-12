@@ -865,6 +865,7 @@ export const vi = {
   "systemJob.deal_key_names": "Bổ sung tên deal",
   "systemJob.deal_room_link_request": "Yêu cầu liên kết Deal Room",
   "systemJob.deal_room_timeline": "Lịch sử Deal Room",
+  "systemJob.departed_employer_clock": "Hoạt động gần nhất sau khi nghỉ việc",
   "systemJob.deployment_secret_seal": "Niêm phong thông tin bí mật",
   "systemJob.domain_triage": "Phân loại trang web",
   "systemJob.employment_import_worker": "Nhập lịch sử công tác",

@@ -868,6 +868,7 @@ export const en = {
   "systemJob.deal_key_names": "Deal key fill-in",
   "systemJob.deal_room_link_request": "Deal Room link request",
   "systemJob.deal_room_timeline": "Deal Room timeline",
+  "systemJob.departed_employer_clock": "Last activity after a departure",
   "systemJob.deployment_secret_seal": "Secret sealing",
   "systemJob.domain_triage": "Website triage",
   "systemJob.employment_import_worker": "Employment history import",

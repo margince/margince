@@ -99,6 +99,12 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 // currentRecencyBodies returns each function's newest definition, keyed by name.
 func currentRecencyBodies(t *testing.T) map[string]string {
 	t.Helper()
+	return newestFunctionBodies(t, recencyFunctions...)
+}
+
+// newestFunctionBodies returns each named function's newest core definition.
+func newestFunctionBodies(t *testing.T, functions ...string) map[string]string {
+	t.Helper()
 	dir := filepath.Join("migrations", "core")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -120,7 +126,7 @@ func currentRecencyBodies(t *testing.T) map[string]string {
 		if err != nil {
 			t.Fatalf("reading %s: %v", fn, err)
 		}
-		for _, want := range recencyFunctions {
+		for _, want := range functions {
 			if body, ok := extractFunctionBody(string(raw), want); ok {
 				bodies[want] = body
 			}
