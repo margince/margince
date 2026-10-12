@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { UndoErrors, UndoInterruptedNotice } from "./import.notices";
+import {
+  UndoConfirm,
+  UndoErrors,
+  UndoInterruptedNotice,
+} from "./import.notices";
 import { StoryProviders } from "./story-utils";
 
 // What a reversal says about itself. Both frames need a run that has already
@@ -68,6 +72,22 @@ export const Quiet: Story = {
     <StoryProviders>
       <UndoInterruptedNotice interrupted={false} />
       <UndoErrors rows={[]} />
+    </StoryProviders>
+  ),
+};
+
+/** What an undo will do, asked before it starts, in reverse import order. */
+export const UndoAsked: Story = {
+  render: () => (
+    <StoryProviders>
+      <UndoConfirm
+        open
+        order={["company", "contact", "lead"]}
+        pending={false}
+        error={null}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
     </StoryProviders>
   ),
 };

@@ -4,139 +4,26 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
-import { parseHash, useRoute } from "../app/router";
-import { LocaleProvider } from "../i18n";
+import { navigate, parseHash, useRoute } from "../app/router";
 import { ImportCard } from "./import";
+import {
+  dryRun,
+  jsonResponse,
+  profile,
+  render,
+  run,
+  stubRoutes,
+} from "./import.testkit";
 import { tabContent } from "./settings";
-import { settingsRouteTarget } from "./settingsrouting";
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function render(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-const profile = {
-  source_ref: "ws/import/abc",
-  object: "lead",
-  rows_profiled: 4,
-  columns: [
-    { header: "Email", fill_rate: 1, samples: ["ada@x.test", "grace@x.test"] },
-    { header: "Full Name", fill_rate: 0.75, samples: ["Ada Lovelace"] },
-    { header: "Notes", fill_rate: 0.25, samples: [] },
-  ],
-  suggested_mapping: { Email: "email", "Full Name": "full_name" },
-  targets: ["full_name", "email", "title", "company_name"],
-};
-
-const run = {
-  id: "019ff-run",
-  connector: "csv",
-  object: "lead",
-  status: "awaiting_approval",
-  checkpoint: 0,
-  source: "import_api",
-  created_at: "2026-08-13T10:00:00Z",
-  updated_at: "2026-08-13T10:00:00Z",
-};
-
-const dryRun = {
-  run_id: run.id,
-  status: "awaiting_approval",
-  rows_read: 4,
-  disposition: { created: 3, updated: 0, unchanged: 0, skipped: 1 },
-  issues: [{ line: 3, reason: 'the "Email" column is empty' }],
-  source_key_used: "Email",
-};
-
-type Sent = { method: string; path: string; body?: unknown };
-
-// Every request the card could make, recorded, so a test can assert what
-// actually went to the server — including the mapping, which is the one thing
-// the screen composes rather than echoes.
-function stubRoutes(overrides: Record<string, () => Response> = {}) {
-  const sent: Sent[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      // The typed client calls fetch with a Request; the hand-rolled multipart
-      // upload calls it with a url + init. Both shapes reach here.
-      const request = input instanceof Request ? input : null;
-      const url = new URL(
-        request ? request.url : String(input),
-        "https://test.local",
-      );
-      const method = request?.method ?? init?.method ?? "GET";
-      const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
-
-      let body: unknown;
-      const raw = request ? await request.clone().text() : init?.body;
-      if (typeof raw === "string" && raw.length > 0) {
-        body = JSON.parse(raw);
-      } else if (init?.body instanceof FormData) {
-        body = Object.fromEntries(
-          [...init.body.entries()].map(([k, v]) => [
-            k,
-            v instanceof File ? v.name : v,
-          ]),
-        );
-      }
-      sent.push({ method, path: key, body });
-
-      for (const [prefix, make] of Object.entries(overrides)) {
-        if (key.startsWith(prefix)) {
-          return make();
-        }
-      }
-      if (key === "GET /me") {
-        return jsonResponse(
-          meFixture({
-            roles: ["admin"],
-            allow: { import_run: ["create", "update", "read"] },
-          }),
-        );
-      }
-      if (key === "POST /imports/sources") {
-        return jsonResponse(profile);
-      }
-      if (key.startsWith("POST /imports/") && key.endsWith("/approve")) {
-        return jsonResponse({ ...run, status: "complete" }, 202);
-      }
-      if (key === "POST /imports") {
-        return jsonResponse(run, 202);
-      }
-      if (key.endsWith("/report")) {
-        return jsonResponse(dryRun);
-      }
-      return jsonResponse({});
-    }),
-  );
-  return sent;
-}
+import {
+  IMPORT_RUN_SUBPAGE,
+  settingsHref,
+  settingsRouteTarget,
+} from "./settingsrouting";
 
 // The settings screen hands the card the segment the shell is showing.
 function RoutedImport() {
@@ -145,11 +32,11 @@ function RoutedImport() {
 
 const RUN_PAGE = "#/settings/import/run";
 
-// The card itself is one row carrying the verb; every step of the flow lives on
-// the page that verb opens. Nothing is on screen until /me has answered whether
-// this seat may import at all, so the verb is waited for rather than looked up.
-async function openWizard(user: UserEvent) {
-  await user.click(await screen.findByRole("button", { name: "Start import" }));
+// The run page is a page of its own under the hub. Nothing is on screen until
+// /me has answered whether this seat may import at all, so the page is waited
+// for rather than looked up.
+async function openWizard() {
+  navigate({ ...settingsHref("import"), id2: IMPORT_RUN_SUBPAGE });
   await screen.findByRole("link", { name: "Back to data import" });
 }
 
@@ -178,7 +65,7 @@ describe("the import card", () => {
     stubRoutes();
     render(<RoutedImport />);
 
-    await openWizard(user);
+    await openWizard();
     await upload(user);
 
     // The fill rate is what separates a column worth mapping from one that is
@@ -194,7 +81,7 @@ describe("the import card", () => {
     const user = userEvent.setup();
     const sent = stubRoutes();
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
     await upload(user);
     await screen.findByRole("row", { name: /Notes/ });
 
@@ -236,7 +123,7 @@ describe("the import card", () => {
     const user = userEvent.setup();
     const sent = stubRoutes();
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
     await upload(user);
     await screen.findByRole("row", { name: /Notes/ });
     await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -263,7 +150,7 @@ describe("the import card", () => {
         }),
     });
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
     await upload(user);
     await screen.findByRole("row", { name: /Notes/ });
     await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -287,7 +174,7 @@ describe("the import card", () => {
         }),
     });
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
     await upload(user);
 
     expect(
@@ -323,7 +210,7 @@ describe("the import card", () => {
         jsonResponse({ ...run, status: "failed", checkpoint: 2 }),
     });
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
     await upload(user);
     await screen.findByRole("row", { name: /Notes/ });
     await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -342,7 +229,7 @@ describe("the import card", () => {
     const user = userEvent.setup();
     const sent = stubRoutes();
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
     await upload(user);
     await screen.findByRole("row", { name: /Notes/ });
 
@@ -382,7 +269,7 @@ describe("the import card", () => {
         }),
     });
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
     await upload(user);
 
     expect(
@@ -412,7 +299,7 @@ describe("the import card", () => {
       },
     });
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
     await upload(user);
     await screen.findByRole("row", { name: /Notes/ });
     await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -448,7 +335,7 @@ describe("the import card", () => {
     });
     render(<RoutedImport />);
 
-    await openWizard(user);
+    await openWizard();
     await upload(user, new File([""], "empty.csv"));
 
     expect(
@@ -471,7 +358,7 @@ describe("the import card", () => {
 
     // The grant is what decides, not the admin role — an ops seat holds
     // import_run and would be accepted by the store.
-    expect(await screen.findByText("Import file")).toBeInTheDocument();
+    expect(await screen.findByText("New import")).toBeInTheDocument();
   });
 
   // The flow creates a run, parks it, and approves it — three actions, not one.
@@ -520,7 +407,7 @@ describe("the import card", () => {
           }),
       });
       render(<RoutedImport />);
-      await openWizard(user);
+      await openWizard();
       await upload(user);
       await screen.findByRole("row", { name: /Notes/ });
       await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -560,7 +447,7 @@ describe("the import card", () => {
           }),
       });
       render(<RoutedImport />);
-      await openWizard(user);
+      await openWizard();
       await upload(user);
       await screen.findByRole("row", { name: /Notes/ });
       await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -587,7 +474,7 @@ describe("the import card", () => {
           jsonResponse({ ...dryRun, status: "undoing" }),
       });
       render(<RoutedImport />);
-      await openWizard(user);
+      await openWizard();
       await upload(user);
       await screen.findByRole("row", { name: /Notes/ });
       await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -631,7 +518,7 @@ describe("the import card", () => {
           }),
       });
       render(<RoutedImport />);
-      await openWizard(user);
+      await openWizard();
       await upload(user);
       await screen.findByRole("row", { name: /Notes/ });
       await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -668,22 +555,6 @@ describe("the import card", () => {
       };
     }
 
-    // A run stopped part-way, as the two endpoints answer for it after a
-    // remount: the state with the most left to lose, because the estate is
-    // half-written until somebody resumes it.
-    function interruptedRunRoutes() {
-      return {
-        "GET /imports/019ff-run/report": () =>
-          jsonResponse({
-            ...dryRun,
-            status: "failed",
-            disposition: { created: 2, updated: 0, unchanged: 0, skipped: 1 },
-          }),
-        "GET /imports/019ff-run": () =>
-          jsonResponse({ ...run, status: "failed", checkpoint: 2 }),
-      };
-    }
-
     it("is read back on mount, with the undo it still carries", async () => {
       localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
       globalThis.location.hash = RUN_PAGE;
@@ -716,42 +587,11 @@ describe("the import card", () => {
       expect(globalThis.location.hash).toBe(`${RUN_PAGE}?object=lead`);
     });
 
-    // Behind a verb that reads "Start", a recovered run is only as visible as
-    // the reader's guess that there is something to finish.
-    it("turns the settings row's verb into continuing the run it picked up", async () => {
-      const user = userEvent.setup();
-      localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
-      stubRoutes(interruptedRunRoutes());
-      render(<RoutedImport />);
-
-      await user.click(
-        await screen.findByRole("button", { name: "Continue import" }),
-      );
-
-      expect(globalThis.location.hash).toBe(RUN_PAGE);
-      expect(
-        await screen.findByRole("button", { name: "Resume import" }),
-      ).toBeInTheDocument();
-      expect(screen.getByText(/Rows processed: 2\./)).toBeInTheDocument();
-    });
-
-    it("offers to start rather than continue when there is no run to pick up", async () => {
-      stubRoutes();
-      render(<RoutedImport />);
-
-      expect(
-        await screen.findByRole("button", { name: "Start import" }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Continue import" }),
-      ).toBeNull();
-    });
-
     it("is remembered as the commit lands, not only while the card is mounted", async () => {
       const user = userEvent.setup();
       stubRoutes();
       render(<RoutedImport />);
-      await openWizard(user);
+      await openWizard();
       await upload(user);
       await screen.findByRole("row", { name: /Notes/ });
       await user.click(screen.getByRole("button", { name: "Preview import" }));
@@ -763,7 +603,6 @@ describe("the import card", () => {
     });
 
     it("is forgotten once it has been undone, so undo is never offered twice", async () => {
-      const user = userEvent.setup();
       localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
       stubRoutes({
         "GET /imports/019ff-run/report": () =>
@@ -771,6 +610,7 @@ describe("the import card", () => {
         "GET /imports/019ff-run": () =>
           jsonResponse({ ...run, status: "undone" }),
       });
+      globalThis.location.hash = RUN_PAGE;
       render(<RoutedImport />);
 
       // Forgetting is what proves the recovery was considered, so it is what the
@@ -780,7 +620,7 @@ describe("the import card", () => {
       );
       // A reversed run has nothing left to offer, so the row offers a fresh
       // start and the page it opens finds the first step, not a spent affordance.
-      await openWizard(user);
+      await openWizard();
       expect(screen.queryByText("Import result")).toBeNull();
       expect(
         screen.getByRole("button", { name: "Choose file" }),
@@ -788,7 +628,6 @@ describe("the import card", () => {
     });
 
     it("is forgotten when the server will not answer for it", async () => {
-      const user = userEvent.setup();
       // The run of another company or another seat, a deleted one, or one
       // whose grant this reader has lost: existence is hidden as a 404, and a
       // reference nobody can open is one to drop rather than ask about again.
@@ -800,12 +639,13 @@ describe("the import card", () => {
             404,
           ),
       });
+      globalThis.location.hash = RUN_PAGE;
       render(<RoutedImport />);
 
       await waitFor(() =>
         expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBeNull(),
       );
-      await openWizard(user);
+      await openWizard();
       expect(screen.queryByText("Import result")).toBeNull();
       expect(
         screen.getByRole("button", { name: "Choose file" }),
@@ -813,7 +653,6 @@ describe("the import card", () => {
     });
 
     it("keeps the reference when the read itself failed, rather than dropping a live run", async () => {
-      const user = userEvent.setup();
       // A 500 says nothing about whether the run is there. Forgetting on it
       // would turn one bad answer into a permanently unreachable undo.
       localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
@@ -824,6 +663,7 @@ describe("the import card", () => {
             500,
           ),
       });
+      globalThis.location.hash = RUN_PAGE;
       render(<RoutedImport />);
 
       // Wait for the recovery to have been asked and answered before judging
@@ -836,7 +676,7 @@ describe("the import card", () => {
       expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBe(run.id);
       // No run was recovered, so there is no outcome to read: the reference is
       // kept for the next visit, not rendered as one.
-      await openWizard(user);
+      await openWizard();
       expect(screen.queryByText("Import result")).toBeNull();
     });
   });
@@ -869,21 +709,18 @@ describe("the import page", () => {
     expect(
       screen.getByRole("link", { name: "Back to data import" }),
     ).toHaveAttribute("href", "#/settings/import");
-    expect(screen.queryByRole("button", { name: "Start import" })).toBeNull();
+    expect(screen.queryByText("New import")).toBeNull();
   });
 
   it("returns to the settings row on the browser's Back", async () => {
-    const user = userEvent.setup();
     globalThis.location.hash = "#/settings/import";
     stubRoutes();
     render(<RoutedImport />);
-    await openWizard(user);
+    await openWizard();
 
     globalThis.history.back();
 
-    expect(
-      await screen.findByRole("button", { name: "Start import" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("New import")).toBeInTheDocument();
     expect(globalThis.location.hash).toBe("#/settings/import");
   });
 
@@ -902,16 +739,24 @@ describe("the import page", () => {
     expect(globalThis.location.hash).toBe(`${RUN_PAGE}?object=contact`);
   });
 
-  // Pressing the verb unmounts it, so focus would otherwise fall to the body.
-  it("hands focus to the page's title when the row's verb opens it", async () => {
+  // The hub's drop zone unmounts as the page opens, so focus would otherwise
+  // fall to the body; and the file it took is the one the page profiles.
+  it("starts the file dropped on the hub, with focus on the page's title", async () => {
     const user = userEvent.setup();
     globalThis.location.hash = "#/settings/import";
-    stubRoutes();
+    const sent = stubRoutes();
     render(<RoutedImport />);
-    await openWizard(user);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "estate.csv"),
+    );
 
-    const title = screen.getByRole("heading", { name: "Import file" });
+    const title = await screen.findByRole("heading", { name: "Import file" });
     expect(within(title).getByText("Import file")).toHaveFocus();
+    await screen.findByRole("row", { name: /Notes/ });
+    expect(
+      sent.find((s) => s.path === "POST /imports/sources")?.body,
+    ).toMatchObject({ file: "estate.csv" });
   });
 
   it("keeps the address's other parameters on the choice", async () => {

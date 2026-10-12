@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ImportCard } from "./import";
+import { formatFixture, recentRunsFixture } from "./import.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,21 +12,32 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Bringing a customer's file in. On the settings page the import is one row —
-// an import is an ACT, not an answer this installation holds — and the wizard
-// that performs it is the page behind the row's verb, at #/settings/import/run.
+// Bringing a customer's data in. The settings page is the hub: the template,
+// the drop zone, the import order and the recent runs. The wizard that performs
+// an import is the page behind it, at #/settings/import/run.
 //
-// What is catalogued here is the row, the two answers the card gives before
-// anybody chooses a file, the run an earlier visit left parked, and the question
-// asked before a profiled file is thrown away.
-function story(allow: Parameters<typeof meRoute>[0], subpage?: string) {
+// What is catalogued here is the hub with and without runs, the withheld
+// answer, the run an earlier visit left parked, and the question asked before a
+// profiled file is thrown away.
+function story(
+  allow: Parameters<typeof meRoute>[0],
+  subpage?: string,
+  runs: readonly unknown[] = recentRunsFixture,
+) {
   return () => {
     // A story states its own preconditions, including the absence of one.
     // `PickedUpFromEarlier` plants a run id in storage, and storage outlives a
     // story: the capture harness drives every story through ONE page, so the
     // next one inherits it and shows a run this story never mentioned.
     globalThis.localStorage.removeItem("margince.import.run");
-    installFetchStub({ "GET /me": meRoute(allow) });
+    installFetchStub({
+      "GET /me": meRoute(allow),
+      "GET /imports/format": () => jsonResponse(formatFixture),
+      "GET /imports": () =>
+        jsonResponse({ data: runs, page: { has_more: false } }),
+      "GET /users/names": () =>
+        jsonResponse({ data: [{ id: "u-ada", display_name: "Ada Lovelace" }] }),
+    });
     return (
       <StoryProviders>
         <ImportCard subpage={subpage} />
@@ -45,10 +57,19 @@ const meta: Meta<typeof ImportCard> = {
 export default meta;
 type Story = StoryObj<typeof ImportCard>;
 
-// The card at rest: one row, naming the act on the left and carrying the verb on
-// the right, at the same x as every other row on the page. Nothing about a file
-// is on screen yet, because nothing about a file is a setting.
-export const TheRow: Story = { render: story(OPERATOR) };
+// The hub with two runs behind it: one complete that may still be undone, and
+// one already undone.
+export const Hub: Story = { render: story(OPERATOR) };
+
+// The same hub in dark: the order badges, the status badges and the drop zone
+// all read off derived tokens.
+export const HubDark: Story = {
+  globals: { theme: "dark" },
+  render: story(OPERATOR),
+};
+
+// No import has run yet.
+export const HubEmpty: Story = { render: story(OPERATOR, undefined, []) };
 
 // Maintenance opens on the admin role OR an embedding-reindex read, so a seat
 // holding only the latter reaches this page. It is told the import exists and is
@@ -121,10 +142,6 @@ function parked(subpage?: string) {
 }
 
 export const PickedUpFromEarlier: Story = { render: parked(RUN) };
-
-// The row while that run is parked: an operator who does not know their last
-// import stopped half-way cannot finish it, so the verb says there is one.
-export const ParkedRunRow: Story = { render: parked() };
 
 // Another row type starts the flow over, so a profiled file is asked about
 // before it is dropped rather than lost to a misclick.

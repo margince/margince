@@ -11,6 +11,13 @@ export type ImportColumn = components["schemas"]["ImportColumn"];
 export type ImportRun = components["schemas"]["ImportRun"];
 export type ImportReport = components["schemas"]["ImportRunReport"];
 export type ImportUndoReport = components["schemas"]["ImportUndoReport"];
+export type ImportFormat = components["schemas"]["ImportFormat"];
+export type ImportFormatColumn = components["schemas"]["ImportFormatColumn"];
+export type ImportPartProfile = components["schemas"]["ImportPartProfile"];
+export type ImportRunPart = components["schemas"]["ImportRunPart"];
+export type ImportPartReport = components["schemas"]["ImportPartReport"];
+export type ImportProblemKind = components["schemas"]["ImportProblemKind"];
+export type ImportRowIssue = components["schemas"]["ImportRowIssue"];
 
 // DONT_IMPORT is the mapping table's resting choice: a column nobody has
 // assigned a destination to is LEFT OUT, never guessed into a field. It is a

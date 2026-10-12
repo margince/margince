@@ -12,6 +12,7 @@ import {
   SLOWEST_MEASURED_TEST_MS,
 } from "../vitest.budget";
 import { meFixture } from "./app/mefixture";
+import { navigate } from "./app/router";
 import { memoryStorage, renderApp } from "./testing/appharness";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
@@ -186,11 +187,7 @@ describe("the CSV import page in the shell", () => {
       await leaveForTheRow(user);
 
       expect(
-        await screen.findByRole(
-          "button",
-          { name: "Start import" },
-          { timeout: SETTLE_MS },
-        ),
+        await screen.findByText("New import", {}, { timeout: SETTLE_MS }),
       ).toBeInTheDocument();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     },
@@ -212,11 +209,7 @@ describe("the CSV import page in the shell", () => {
       await leaveForTheRow(user);
 
       expect(
-        await screen.findByRole(
-          "button",
-          { name: "Start import" },
-          { timeout: SETTLE_MS },
-        ),
+        await screen.findByText("New import", {}, { timeout: SETTLE_MS }),
       ).toBeInTheDocument();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     },
@@ -226,24 +219,14 @@ describe("the CSV import page in the shell", () => {
   it(
     "returns to the run page on the browser's Forward after Back",
     async () => {
-      const user = userEvent.setup();
       window.location.hash = "#/settings/import";
       renderApp();
-      await user.click(
-        await screen.findByRole(
-          "button",
-          { name: "Start import" },
-          { timeout: SETTLE_MS },
-        ),
-      );
+      await screen.findByText("New import", {}, { timeout: SETTLE_MS });
+      navigate({ screen: "settings", id: "import", id2: "run" });
       await screen.findByRole("button", { name: "Choose file" });
 
       globalThis.history.back();
-      await screen.findByRole(
-        "button",
-        { name: "Start import" },
-        { timeout: SETTLE_MS },
-      );
+      await screen.findByText("New import", {}, { timeout: SETTLE_MS });
       globalThis.history.forward();
 
       expect(
@@ -271,9 +254,7 @@ describe("the CSV import page in the shell", () => {
           { timeout: SETTLE_MS },
         ),
       ).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Start import" }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("New import")).not.toBeInTheDocument();
       expect(window.location.hash).toBe("#/settings/import/junk");
     },
     SETTLE_MS * 2,

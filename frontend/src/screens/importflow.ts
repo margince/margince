@@ -15,6 +15,7 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../app/storage";
+import type { Locale } from "../i18n";
 import { throwProblem, unwrap } from "./common";
 import type {
   ImportObject,
@@ -497,6 +498,86 @@ export function useImportFlow(initialObject: ImportObject) {
     undo,
     restart,
   };
+}
+
+// Every read of the import surface sits under this key, so one invalidation
+// after a write refreshes the run, its report and the recent list together.
+const IMPORTS_KEY = "imports";
+
+// The files an import takes, their columns and their order, in the reader's
+// language: the template preview, the guide and every screen that orders
+// types read it, so none of them keeps a list of its own.
+export function useImportFormat(lang: Locale) {
+  return useQuery({
+    queryKey: [IMPORTS_KEY, "format", lang],
+    queryFn: async () =>
+      unwrap(await api.GET("/imports/format", { params: { query: { lang } } })),
+    staleTime: 60_000,
+  });
+}
+
+// A run that is still moving under the server's hand. The commit and the undo
+// both run detached, so only a read tells the screen when they finish.
+function moving(status: ImportRun["status"] | undefined): boolean {
+  return status === "running" || status === "undoing";
+}
+
+const POLL_MS = 2000;
+
+// The newest runs first, as the server lists them. Polled while one of them is
+// still moving, so the list shows the end of a run the reader walked away from.
+export function useRecentImports() {
+  return useQuery({
+    queryKey: [IMPORTS_KEY, "recent"],
+    queryFn: async () =>
+      unwrap(await api.GET("/imports", { params: { query: { limit: 20 } } }))
+        .data,
+    refetchInterval: (query) =>
+      query.state.data?.some((one) => moving(one.status)) ? POLL_MS : false,
+  });
+}
+
+// One run, read again every two seconds while it is moving.
+export function useImportRun(id: string | null) {
+  return useQuery({
+    queryKey: [IMPORTS_KEY, "run", id],
+    queryFn:
+      id === null
+        ? skipToken
+        : async () =>
+            unwrap(
+              await api.GET("/imports/{id}", { params: { path: { id } } }),
+            ),
+    refetchInterval: (query) =>
+      moving(query.state.data?.status) ? POLL_MS : false,
+  });
+}
+
+// Starts the reversal of one run. It answers at once with the run `undoing`;
+// the reads above follow it to `undone`.
+export function useUndoImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap(
+        await api.POST("/imports/{id}/undo", { params: { path: { id } } }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
+  });
+}
+
+// The file the hub's drop zone took, held for the run page to start with. A
+// File cannot ride an address, and the two are separate routes.
+let handedOver: File | null = null;
+
+export function handOverUpload(file: File): void {
+  handedOver = file;
+}
+
+export function takeHandedOverUpload(): File | null {
+  const file = handedOver;
+  handedOver = null;
+  return file;
 }
 
 // mappedOnly drops the columns the human left on "don't import": the wire

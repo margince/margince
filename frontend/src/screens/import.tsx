@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Upload } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCan, useCanWrite } from "../app/capability";
 import { navigate, routeHash } from "../app/router";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import {
+  Badge,
   Button,
   EmptyState,
   Field,
@@ -14,12 +15,18 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable } from "../design-system/datatable";
+import { FileDropzone } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordBack } from "../design-system/recordview";
 import { Select } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatNumber,
+  ordinalNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
@@ -28,35 +35,50 @@ import {
   usePlural,
   useT,
 } from "../i18n";
-import { problemMessageOf, useMe } from "./common";
-import { UndoErrors, UndoInterruptedNotice } from "./import.notices";
+import { problemMessageOf, QueryStates, useMe } from "./common";
+import {
+  UndoConfirm,
+  UndoErrors,
+  UndoInterruptedNotice,
+} from "./import.notices";
+import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
 import { useAddressedImportFlow } from "./importaddress";
-import { useImportFlow } from "./importflow";
+import {
+  handOverUpload,
+  takeHandedOverUpload,
+  useImportFormat,
+  useRecentImports,
+  useUndoImport,
+} from "./importflow";
 import { ImportMappingTable } from "./importmapping";
 import type {
+  ImportFormat,
   ImportObject,
   ImportProfile,
   ImportReport,
   ImportRun,
 } from "./importtypes";
-import { identifyingFieldFor, UNNAMED_IMPORT_OBJECT } from "./importtypes";
-import { IMPORT_RUN_SUBPAGE, settingsHref } from "./settingsrouting";
+import { identifyingFieldFor } from "./importtypes";
+import { useMemberNames } from "./membernames";
+import {
+  IMPORT_RUN_SUBPAGE,
+  IMPORT_TEMPLATE_SUBPAGE,
+  settingsHref,
+} from "./settingsrouting";
 import { useTagVocabulary } from "./tags.queries";
 import "./import.css";
 
-// Bringing a customer's file into the estate (S-E11.6): upload it, see what its
-// columns actually hold, map them, read what the import WILL do, then commit.
+// Bringing a customer's data into the estate: download the template or upload
+// a file on the hub, then check, map, test and import on the run page.
 //
-// The dry run is the point of the whole screen. An import is the least
-// reversible write in the product — thousands of rows across several entity
-// types in one act — so nothing is written until a human has read a report of
+// The dry run is the point of the whole flow. An import is the least
+// reversible write in the product, thousands of rows across several record
+// types in one act, so nothing is written until a human has read a report of
 // what will happen and pressed the button again.
-//
-// On the settings page it is one row, because an import is an ACT rather than
-// an answer this installation holds: the row carries the verb, and the steps
-// that make up the act belong to the page that verb opens.
 const IMPORT_HOME = settingsHref("import");
 const openRun = () => navigate({ ...IMPORT_HOME, id2: IMPORT_RUN_SUBPAGE });
+const openTemplate = () =>
+  navigate({ ...IMPORT_HOME, id2: IMPORT_TEMPLATE_SUBPAGE });
 
 export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   const t = useT();
@@ -92,27 +114,210 @@ export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   if (!mayImport) {
     return null;
   }
-  return subpage === IMPORT_RUN_SUBPAGE ? <ImportRunPage /> : <ImportStart />;
+  if (subpage === IMPORT_RUN_SUBPAGE) {
+    return <ImportRunPage />;
+  }
+  if (subpage === IMPORT_TEMPLATE_SUBPAGE) {
+    return (
+      <div>
+        <RecordBack href={routeHash(IMPORT_HOME)} label={t("import.back")} />
+        <TemplatePreview />
+      </div>
+    );
+  }
+  return <ImportHub />;
 }
 
-function ImportStart() {
+// The hub: the two ways in (a template to fill, or a file to upload), the
+// order every import lands its files in, and the runs already made.
+function ImportHub() {
   const t = useT();
-  // The flow reads a parked run back on mount, so the row can say one is left
-  // to finish: an operator who does not know it stopped cannot finish it.
-  const { resumed } = useImportFlow(UNNAMED_IMPORT_OBJECT);
+  const { locale } = useLocale();
+  const format = useImportFormat(locale);
+  // The file goes to the run page, which starts the upload. The drop zone
+  // unmounts with the hub, and the run page's title takes the focus.
+  const start = (file: File) => {
+    handOverUpload(file);
+    openRun();
+  };
   return (
-    <Panel title={t("import.title")}>
-      <SettingList bleed="settings">
-        <SettingRow
-          label={t("import.startLabel")}
-          description={t("import.sub")}
-          control={
-            <Button variant="ghost" onClick={openRun}>
-              {resumed ? t("import.continue") : t("import.start")}
-            </Button>
-          }
-        />
-      </SettingList>
+    <>
+      <Panel title={t("import.hub.title")}>
+        <PanelBody>
+          <div className="import-hub__ways">
+            <div className="import-hub__way">
+              <Heading size="small" as="h3">
+                {t("import.hub.templateTitle")}
+              </Heading>
+              <p className="import__hint t-sub">
+                {t("import.hub.templateBody")}
+              </p>
+              <div className="import-hub__verbs">
+                <Button variant="ghost" onClick={openTemplate}>
+                  {t("import.hub.preview")}
+                </Button>
+                <a className="link-button" href={IMPORT_TEMPLATE_HREF} download>
+                  {t("import.template.download")}
+                </a>
+              </div>
+            </div>
+            <FileDropzone
+              label={t("import.hub.uploadLabel")}
+              hint={
+                format.data
+                  ? t("import.hub.uploadHint", {
+                      mb: formatNumber(format.data.size_limit_mb, locale),
+                    })
+                  : undefined
+              }
+              emptyLabel={t("import.hub.uploadEmpty")}
+              accept=".zip,.csv"
+              onPick={start}
+            />
+          </div>
+          {format.data ? <ImportOrder order={format.data.order} /> : null}
+        </PanelBody>
+      </Panel>
+      <RecentImports format={format.data} />
+    </>
+  );
+}
+
+// The order the engine lands files in, read from the format: a link can only
+// name a record an earlier file made, so a reader planning a ZIP needs it.
+function ImportOrder({ order }: Readonly<{ order: ImportFormat["order"] }>) {
+  const t = useT();
+  return (
+    <p className="import-hub__order t-sub">
+      <span>{t("import.hub.order")}</span>
+      {order.map((object, index) => (
+        <span key={object} className="import-hub__step">
+          {index > 0 ? <span aria-hidden>→</span> : null}
+          <Badge>{t(`import.object.${object}`)}</Badge>
+        </span>
+      ))}
+    </p>
+  );
+}
+
+const STATUS_TONE = {
+  pending: "default",
+  validating: "info",
+  awaiting_approval: "default",
+  running: "info",
+  complete: "success",
+  failed: "danger",
+  undoing: "info",
+  undone: "default",
+} as const satisfies Record<ImportRun["status"], string>;
+
+// The rows a run holds, once a dry run has counted them.
+function rowsOf(run: ImportRun): number {
+  return (run.parts ?? []).reduce((sum, part) => sum + part.row_count, 0);
+}
+
+// The runs made so far, newest first. Undo is offered on a complete run only:
+// every other state either is still moving or has nothing left to reverse.
+function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const recent = useRecentImports();
+  const runs = recent.data ?? [];
+  const names = useMemberNames(runs.map((one) => one.captured_by));
+  const undo = useUndoImport();
+  const [undoing, setUndoing] = useState<string | null>(null);
+  const close = () => {
+    setUndoing(null);
+    undo.reset();
+  };
+  return (
+    <Panel title={t("import.recent.title")}>
+      <PanelBody>
+        <QueryStates query={recent} pendingLabel={t("common.loading")}>
+          {runs.length === 0 ? (
+            <EmptyState>{t("import.recent.empty")}</EmptyState>
+          ) : (
+            <DataTable<ImportRun>
+              label={t("import.recent.title")}
+              rows={runs}
+              rowKey={(one) => one.id}
+              columns={[
+                {
+                  key: "date",
+                  header: t("import.recent.col.date"),
+                  render: (one) =>
+                    formatDate(one.created_at, locale, viewerZone()),
+                },
+                {
+                  key: "file",
+                  header: t("import.recent.col.file"),
+                  grow: true,
+                  render: (one) => {
+                    const files = plural(
+                      "import.recent.files",
+                      one.parts?.length ?? 0,
+                      { count: formatNumber(one.parts?.length ?? 0, locale) },
+                    );
+                    const by = names.get(one.captured_by);
+                    return (
+                      <>
+                        <div>{one.file_name || one.source_name || one.id}</div>
+                        <div className="t-caption">
+                          {by
+                            ? t("import.recent.filesBy", { files, name: by })
+                            : files}
+                        </div>
+                      </>
+                    );
+                  },
+                },
+                {
+                  key: "rows",
+                  header: t("import.recent.col.rows"),
+                  align: "end",
+                  render: (one) => formatNumber(rowsOf(one), locale),
+                },
+                {
+                  key: "status",
+                  header: t("import.recent.col.status"),
+                  render: (one) => (
+                    <Badge tone={STATUS_TONE[one.status]}>
+                      {t(`import.status.${one.status}`)}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: "actions",
+                  header: t("import.recent.col.actions"),
+                  headerHidden: true,
+                  render: (one) =>
+                    one.status === "complete" ? (
+                      <div className="cell-actions">
+                        <Button
+                          variant="ghost"
+                          onClick={() => setUndoing(one.id)}
+                        >
+                          {t("import.recent.undo")}
+                        </Button>
+                      </div>
+                    ) : null,
+                },
+              ]}
+            />
+          )}
+        </QueryStates>
+      </PanelBody>
+      <UndoConfirm
+        open={undoing !== null}
+        order={format?.order ?? []}
+        pending={undo.isPending}
+        error={undo.error ? problemMessageOf(undo.error, t) : null}
+        onClose={close}
+        onConfirm={() => {
+          if (undoing !== null) undo.mutate(undoing, { onSuccess: close });
+        }}
+      />
     </Panel>
   );
 }
@@ -121,6 +326,12 @@ function ImportRunPage() {
   const t = useT();
   const flow = useAddressedImportFlow();
   const title = useArrivalFocus<HTMLSpanElement>();
+  // A file the hub's drop zone took, started here once.
+  const { chooseFile } = flow;
+  useEffect(() => {
+    const file = takeHandedOverUpload();
+    if (file) chooseFile(file);
+  }, [chooseFile]);
   return (
     <div>
       <RecordBack href={routeHash(IMPORT_HOME)} label={t("import.back")} />

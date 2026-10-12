@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Callout } from "../design-system/callout";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import type { ImportReport } from "./importtypes";
+import type { ImportObject, ImportReport } from "./importtypes";
 
 // What an UNDO says about itself: that it stopped part-way, and which rows it
 // could not put back.
@@ -63,5 +64,52 @@ export function UndoErrors({
         ))}
       </ul>
     </Callout>
+  );
+}
+
+/**
+ * What an undo will do, asked before it starts. `order` is the import order
+ * from the format; the undo walks it backwards, so the list is reversed here.
+ */
+export function UndoConfirm({
+  open,
+  order,
+  pending,
+  error,
+  onClose,
+  onConfirm,
+}: Readonly<{
+  open: boolean;
+  order: readonly ImportObject[];
+  pending: boolean;
+  error: string | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}>) {
+  const t = useT();
+  const reversed = [...order]
+    .reverse()
+    .map((object) => t(`import.object.${object}`));
+  return (
+    <ConfirmModal
+      open={open}
+      title={t("import.undoConfirm.title")}
+      confirmLabel={t("import.undoConfirm.confirm")}
+      confirmVariant="danger"
+      pending={pending}
+      error={error}
+      onClose={onClose}
+      onConfirm={onConfirm}
+    >
+      {reversed.length > 0 ? (
+        <p>{t("import.undoConfirm.order", { order: reversed.join(", ") })}</p>
+      ) : null}
+      <ul className="import__issues">
+        <li>{t("import.undoConfirm.archived")}</li>
+        <li>{t("import.undoConfirm.kept")}</li>
+        <li>{t("import.undoConfirm.updated")}</li>
+        <li>{t("import.undoConfirm.tags")}</li>
+      </ul>
+    </ConfirmModal>
   );
 }
