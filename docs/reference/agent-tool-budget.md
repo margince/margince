@@ -55,9 +55,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 90 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 90 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 90 |  | 31728 |  |  | 96% |  |  |  |
+| `morning_brief` | 5 | 5 of 91 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 91 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 91 |  | 32139 |  |  | 98% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 298 tokens, mean 352, across 90 served tools.
+Median 303 tokens, mean 352, across 91 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -179,6 +179,7 @@ listing once. Read a row as what that tool costs a menu.
 | `forecast_movement` | 443 |  |
 | `annotate_brief` | 417 | 2 scenarios |
 | `advance_project_phase` | 416 |  |
+| `decide_approvals` | 410 |  |
 | `review_commitments` | 401 |  |
 | `attach_document` | 397 |  |
 | `enrich` | 396 |  |
@@ -209,7 +210,7 @@ listing once. Read a row as what that tool costs a menu.
 | `prepare_handoff` | 267 |  |
 | `describe_query_vocabulary` | 266 |  |
 | `invite_meeting` | 264 |  |
-| `relink_activities` | 259 |  |
+| `relink_activities` | 260 |  |
 | `company_coverage` | 246 |  |
 | `describe_report_blocks` | 245 |  |
 | `relink_thread` | 240 |  |

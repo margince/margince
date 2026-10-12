@@ -120,7 +120,7 @@ var relinkActivityCopy = toolCopy{
 		"the wrong record or on none.",
 	Limits: "Changes only the association; content is untouched. By default the new link is " +
 		"ADDED beside existing ones. Onto a project it waits for the user's yes; the answer says " +
-		"whether you may relay it with decide_approval.",
+		"whether you may relay it with decide_approvals.",
 	Instead: "log_activity records an event not recorded yet; relink_activities moves a " +
 		"picked set, such as a whole thread's activities.",
 	Retain: "Set replace_existing_of_type to move rather than associate.",
@@ -138,7 +138,7 @@ var relinkActivitiesCopy = toolCopy{
 	Purpose: "Move up to 500 named activities onto one record, all or nothing.",
 	Limits: "Each id must be visible and writable to you. A project destination, or any move the " +
 		"installation's policy raises, is staged for confirmation and the retry moves exactly " +
-		"these ids; once the user says yes, relay it with decide_approval. A filing under a " +
+		"these ids; once the user says yes, relay it with decide_approvals. A filing under a " +
 		"project can be undone by a member from the activity.",
 	Instead: "relink_activity moves one message.",
 	Retain:  "The answer is the count moved.",

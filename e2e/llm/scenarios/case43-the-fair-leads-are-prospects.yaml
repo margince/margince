@@ -18,13 +18,13 @@
 # THE PROMPT GIVES THE SIGN-OFF IN ADVANCE, and that is what makes the second
 # half a case rather than a stop. The credential acts for its human with that
 # human's permissions, and a record change can be undone, so it may release the
-# proposal it staged itself: decide_approval to approve, then update_record
+# proposal it staged itself: decide_approvals to approve, then update_record
 # again carrying the approval_id, which is the call that actually writes. An
 # assistant that stages, then hands the item back with "approve it in the web
 # app", has refused the authority it was given in words. Outbound effects (a
 # send, a fetch) stay the human's to release and are deliberately not here.
 #
-# WHY decide_approval IS REQUIRED. A run that reports four prospects without it
+# WHY decide_approvals IS REQUIRED. A run that reports four prospects without it
 # either never met the held one or wrote around it, and neither is possible on
 # a correct product: the fourth change cannot land without a release.
 name: case43_the_fair_leads_are_prospects
@@ -47,7 +47,7 @@ prompt: |
 
 must_call:
   - update_record
-  - decide_approval
+  - decide_approvals
 may_call:
   # Finding four companies by name. Any of these is honest; none is the test.
   - search_records
@@ -76,11 +76,11 @@ may_call:
 # this stays because the free replay (make test-e2e-llm-check) has no world to
 # read: it is the only thing that holds the run that approved and stopped there.
 #
-# The staged_action_id on decide_approval is not pinned for the same reason.
+# The staged_action_id on decide_approvals is not pinned for the same reason.
 must_call_with:
   - update_record.record_type=company
   - update_record.fields={"lifecycle":"prospect"}
-  - decide_approval.decision=approve
+  - decide_approvals.decision=approve
   - update_record.approval_id=*
 
 # THE WORLD AFTER THE RUN, read through the lane's own passport before the

@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 67 |
+| Tools | 66 |
 | Resources | 9 |
-| Tool catalog | 215.0 KB |
+| Tool catalog | 210.7 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 55918 |
+| Approx. wire tokens | 54818 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 88.4 KB | 41% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 56.8 KB | 26% | Yes, every step |
-| Input schemas | 53.6 KB | 24% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.1 KB | 7% | Partly |
-| **Description + input schema** | **110.4 KB** | **51%** | **the recurring cost** |
+| Output schemas | 85.2 KB | 40% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 56.3 KB | 26% | Yes, every step |
+| Input schemas | 53.3 KB | 25% | Yes, every step |
+| _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
+| **Description + input schema** | **109.6 KB** | **52%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -52,7 +52,7 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (67)
+### Tools (66)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -73,8 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
-| [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
-| [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 3.0 KB |
+| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 1.9 KB |
 | [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
 | [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 1.5 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
@@ -3841,248 +3840,32 @@ reminder, no deal move; unlinked, it sits on no timeline. log_activity is for wh
 
 </details>
 
-### decide_approval
+### decide_approvals
 
-**Approve or reject one staged action**
+**Approve or reject staged actions**
 
 ```text
-Answer one staged action for the colleague asking you: approve it, which lets it happen, or reject
-it, which discards it. The verdict is theirs — take an explicit approve or reject rather than
-deciding what they would have wanted. Approving is what makes the change real, including sending a
-message that was only drafted; a rejection cannot be taken back. You may approve your own proposal
-only when it is a change that would have gone straight through but for a human's earlier edit — no
-deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the
-CRM. An item already answered, or lapsed, is reported as such and nothing is written. read_approval
-when they have not seen what it holds; decide_approval_bundle for every proposal one act staged. If
-the proposal is your OWN refused call, approving does not perform it — re-issue that same call
-with approval_id set. (Governance: runs immediately; requires passport scope "write".)
+Answer staged actions for the colleague asking you: approve, which lets the change happen, or
+reject, which discards it. Name staged_action_id for one action, or bundle_id for every
+still-waiting proposal one act staged together. The verdict is theirs — take an explicit approve
+or reject rather than deciding what they would have wanted. Approving is what makes the change real,
+including sending a message that was only drafted; a rejection cannot be taken back. You may approve
+your own proposal only when it is a change that would have gone straight through but for a human's
+earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is
+theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing
+is written; each bundle member is answered and reported on its own. read_approval when they have not
+seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN refused
+call, approving does not perform it — re-issue that same call with approval_id set. (Governance:
+runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
 
 ```json
 {
-  "additionalProperties": false,
-  "properties": {
-    "decision": {
-      "enum": [
-        "approve",
-        "reject"
-      ],
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "reason": {
-      "description": "Why, in the decider's own words. Recorded with the decision.",
-      "type": "string"
-    },
-    "staged_action_id": {
-      "description": "From list_approvals.",
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "required": [
-    "staged_action_id",
-    "decision"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "bundle_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string"
-        },
-        "decided_at": {
-          "type": "string"
-        },
-        "decided_by": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "diff_hash": {
-          "type": "string"
-        },
-        "evidence": {
-          "items": {
-            "properties": {
-              "evidence_snippet": {
-                "type": "string"
-              },
-              "source_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "source_type": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "evidence_snippet"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "expires_at": {
-          "type": "string"
-        },
-        "kind": {
-          "type": "string"
-        },
-        "proposed_by": {
-          "type": "string"
-        },
-        "proposed_change": {
-          "type": "object"
-        },
-        "staged_action_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "summary": {
-          "type": "string"
-        },
-        "target_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "target_type": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "created_at",
-        "kind",
-        "proposed_by",
-        "staged_action_id",
-        "status"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### decide_approval_bundle
-
-**Approve or reject one act's proposals together**
-
-```text
-Answer every still-waiting proposal that one act staged together — the overnight run that proposed
-six corrections is six proposals under one bundle_id. Each member is answered on its own terms and
-reported on its own; one already decided, or lapsed, is left as it is. Members the colleague could
-not decide alone are not decided here, and a bundle holding none of theirs reads as not found.
-decide_approval answers a single item; list_approvals is where a bundle_id comes from. Each member
-carries its own outcome — decided here, already decided, or expired. (Governance: runs
-immediately; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
   "properties": {
     "bundle_id": {
+      "description": "Every still-waiting proposal one act staged; leave out when naming staged_action_id",
       "format": "uuid",
       "type": "string"
     },
@@ -4101,192 +3884,15 @@ immediately; requires passport scope "write".)
     "reason": {
       "description": "Why, in the decider's own words. Recorded against every member.",
       "type": "string"
+    },
+    "staged_action_id": {
+      "description": "One staged action; leave out when naming bundle_id",
+      "format": "uuid",
+      "type": "string"
     }
   },
   "required": [
-    "bundle_id",
     "decision"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "members": {
-          "items": {
-            "properties": {
-              "bundle_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "created_at": {
-                "type": "string"
-              },
-              "decided_at": {
-                "type": "string"
-              },
-              "decided_by": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "diff_hash": {
-                "type": "string"
-              },
-              "evidence": {
-                "items": {
-                  "properties": {
-                    "evidence_snippet": {
-                      "type": "string"
-                    },
-                    "source_id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "source_type": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "evidence_snippet"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "expires_at": {
-                "type": "string"
-              },
-              "kind": {
-                "type": "string"
-              },
-              "outcome": {
-                "type": "string"
-              },
-              "proposed_by": {
-                "type": "string"
-              },
-              "proposed_change": {
-                "type": "object"
-              },
-              "staged_action_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "status": {
-                "type": "string"
-              },
-              "summary": {
-                "type": "string"
-              },
-              "target_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "target_type": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "created_at",
-              "kind",
-              "outcome",
-              "proposed_by",
-              "staged_action_id",
-              "status"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "members"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
   ],
   "type": "object"
 }
@@ -5918,7 +5524,7 @@ where a proposal that is already waiting turns up — a message staged and unsen
 needs writing again. It lists what the colleague you act for could decide themselves; anything else
 is absent rather than refused. A proposal past its expiry reads as expired and can no longer be
 answered. Each item carries its one-line summary, not the change itself. read_approval opens one and
-shows what it holds; decide_approval answers it. Keep the staged_action_id you mean to act on, the
+shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act on, the
 bundle_id when one act staged several, and next_cursor. (Governance: runs immediately; requires
 passport scope "read".)
 ```
@@ -9575,7 +9181,7 @@ it as theirs to decide rather than advising an approach as though the record wer
 Read one staged action in full: the exact change proposed, the record it acts on, and the evidence
 it was formed on — enough to answer it without opening the app. Reading performs nothing. An id
 the colleague you act for could not decide answers as not found, exactly as an id naming nothing
-does. list_approvals yields the id; decide_approval answers it. Keep the staged_action_id, and the
+does. list_approvals yields the id; decide_approvals answers it. Keep the staged_action_id, and the
 bundle_id if the item names one. (Governance: runs immediately; requires passport scope "read".)
 ```
 
@@ -11516,7 +11122,7 @@ scope "read".)
 Move up to 500 named activities onto one record, all or nothing. Each id must be visible and
 writable to you. A project destination, or any move the installation's policy raises, is staged for
 confirmation and the retry moves exactly these ids; once the user says yes, relay it with
-decide_approval. A filing under a project can be undone by a member from the activity.
+decide_approvals. A filing under a project can be undone by a member from the activity.
 relink_activity moves one message. The answer is the count moved. (Governance: some calls run
 immediately and others a human approves first, decided per call from its arguments; requires
 passport scope "write".)
@@ -11684,7 +11290,7 @@ passport scope "write".)
 Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or
 on none. Changes only the association; content is untouched. By default the new link is ADDED beside
 existing ones. Onto a project it waits for the user's yes; the answer says whether you may relay it
-with decide_approval. log_activity records an event not recorded yet; relink_activities moves a
+with decide_approvals. log_activity records an event not recorded yet; relink_activities moves a
 picked set, such as a whole thread's activities. Set replace_existing_of_type to move rather than
 associate. (Governance: some calls run immediately and others a human approves first, decided per
 call from its arguments; requires passport scope "write".)

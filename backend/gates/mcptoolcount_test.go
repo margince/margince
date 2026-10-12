@@ -104,7 +104,10 @@ const clientToolCeiling = 100
 //
 // read_input_checks fronts the three answers on the forecast's inputs, and
 // read_import the two reads of an import run, lowering it to 67.
-const publishedToolCeiling = 67
+//
+// decide_approvals answers one staged action or a bundle, chosen by the id the
+// call names, and lowers it to 66.
+const publishedToolCeiling = 66
 
 type mcpInfoFile struct {
 	Totals struct {

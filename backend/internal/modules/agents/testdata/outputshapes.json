@@ -2782,6 +2782,7 @@
       "warnings"
     ]
   },
+  "decide_approvals": null,
   "decide_duplicate": {
     "type": "object",
     "properties": {

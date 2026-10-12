@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package agents
+
+import (
+	"encoding/json"
+	"errors"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
+
+// decideApprovals fronts deciding one staged action and deciding a bundle. The
+// id a call names says which it is, so there is no field to choose by.
+type decideApprovals struct{ routed }
+
+func (decideApprovals) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "decide_approvals", Title: "Approve or reject staged actions", Version: toolVersionV1,
+		Description: decideApprovalsCopy.render(),
+		Instead:     decideApprovalsCopy.Instead,
+		InputSchema: schema(`{"type":"object","properties":{
+			"staged_action_id":{"type":"string","format":"uuid","description":"One staged action; leave out when naming bundle_id"},
+			"bundle_id":{"type":"string","format":"uuid","description":"Every still-waiting proposal one act staged; leave out when naming staged_action_id"}}}`),
+	}
+}
+
+func (decideApprovals) routeField() string { return "" }
+
+func (decideApprovals) routeTargets() map[string]string {
+	return map[string]string{"one": "decide_approval", "bundle": "decide_approval_bundle"}
+}
+
+var errDecideNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of staged_action_id or bundle_id")}
+
+func (decideApprovals) chooseTarget(members map[string]json.RawMessage) (string, error) {
+	_, one := members["staged_action_id"]
+	_, bundle := members["bundle_id"]
+	switch {
+	case one && !bundle:
+		return "decide_approval", nil
+	case bundle && !one:
+		return "decide_approval_bundle", nil
+	}
+	return "", errDecideNamesOneID
+}

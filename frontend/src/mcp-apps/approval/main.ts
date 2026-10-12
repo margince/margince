@@ -1,5 +1,5 @@
 // The approval card: a change an assistant proposed and a human has to release,
-// with the two answers it can be given. It draws what read_approval returns, and Approve and Reject call decide_approval through the
+// with the two answers it can be given. It draws what read_approval returns, and Approve and Reject call decide_approvals through the
 // host, so the same engine, authority checks and audit row apply as when the
 // decision is made in the inbox.
 //
@@ -161,7 +161,7 @@ function choices(
   const decide = (approve: boolean) => {
     outcomes.set(item.id, { kind: "busy" });
     again();
-    void callServerTool("decide_approval", {
+    void callServerTool("decide_approvals", {
       staged_action_id: item.id,
       decision: approve ? "approve" : "reject",
     }).then((result) => {

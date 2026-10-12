@@ -126,15 +126,16 @@ func routedSchema(field string, choices []string, own json.RawMessage, targets [
 			required = slices.DeleteFunc(required, func(name string) bool { return !slices.Contains(own.Required, name) })
 		}
 	}
-	enum, err := json.Marshal(map[string]any{"type": "string", "enum": choices})
-	if err != nil {
-		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-		panic(err)
+	if field != "" {
+		enum, err := json.Marshal(map[string]any{"type": "string", "enum": choices})
+		if err != nil {
+			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+			panic(err)
+		}
+		properties[field] = enum
+		required = append([]string{field}, required...)
 	}
-	properties[field] = enum
-	out, err := json.Marshal(map[string]any{
-		"type": "object", "required": append([]string{field}, required...), "properties": properties,
-	})
+	out, err := json.Marshal(map[string]any{"type": "object", "required": required, "properties": properties})
 	if err != nil {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(err)
@@ -169,18 +170,11 @@ func (r *Registry) resolve(name string, in json.RawMessage) (string, json.RawMes
 		}
 		return "", nil, &BadArgsError{Cause: safe}
 	}
-	field := rt.routeField()
-	var choice string
-	target, ok := "", false
-	if json.Unmarshal(members[field], &choice) == nil {
-		target, ok = rt.routeTargets()[choice]
+	target, err := pickTarget(rt, members)
+	if err != nil {
+		return "", nil, err
 	}
-	if !ok {
-		choices := slices.Sorted(maps.Keys(rt.routeTargets()))
-		return "", nil, &BadArgsError{Field: field,
-			Cause: fmt.Errorf("%s must be one of %s", field, strings.Join(choices, ", "))}
-	}
-	delete(members, field)
+	delete(members, rt.routeField())
 	out, err := json.Marshal(members)
 	if err != nil {
 		return "", nil, errors.Join(errRouteArguments, err)
@@ -189,6 +183,28 @@ func (r *Registry) resolve(name string, in json.RawMessage) (string, json.RawMes
 }
 
 var errRouteArguments = errors.New("crmagents: re-encoding routed arguments")
+
+// targetChooser is a router whose target follows from which arguments a call
+// names, so it has no route field of its own.
+type targetChooser interface {
+	chooseTarget(members map[string]json.RawMessage) (string, error)
+}
+
+func pickTarget(rt router, members map[string]json.RawMessage) (string, error) {
+	if chooser, ok := rt.(targetChooser); ok {
+		return chooser.chooseTarget(members)
+	}
+	field := rt.routeField()
+	var choice string
+	if json.Unmarshal(members[field], &choice) == nil {
+		if target, ok := rt.routeTargets()[choice]; ok {
+			return target, nil
+		}
+	}
+	choices := slices.Sorted(maps.Keys(rt.routeTargets()))
+	return "", &BadArgsError{Field: field,
+		Cause: fmt.Errorf("%s must be one of %s", field, strings.Join(choices, ", "))}
+}
 
 // routed gives a router the Handle every tool must have. Registry.resolve
 // sends every call on to a target first, so this answer means a router was

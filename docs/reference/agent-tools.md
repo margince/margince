@@ -51,7 +51,7 @@ ways.
     cannot pin a version, so a named set always waits.
   - `relink_thread` is not offered. It refuses at every target, because the retry reads a thread key again, and sends
     the caller to `relink_activities`, whose approval binds the named IDs.
-  - A credential may give the approval for its own staged relink with `decide_approval`, on a call with a human there.
+  - A credential may give the approval for its own staged relink with `decide_approvals`, on a call with a human there.
     The same checks the decision applies must pass: the decision grants, and the target is visible. The change must
     also be one a user can undo. Margince records the approval as the decision of the member, made through the agent.
   - A member takes a filing under a project back with *Undo filing*, a `human-only` decision whose written reason is
@@ -92,6 +92,7 @@ ways.
 | `create_tag` | 🟢 | `write` | no |
 | `create_task` | 🟢 | `write` | no |
 | `decide_approval` | 🟢 | `write` | no |
+| `decide_approvals` | 🟢 | `write` | no |
 | `decide_duplicate` | 🟢 | `write` | no |
 | `decide_approval_bundle` | 🟢 | `write` | no |
 | `describe_query_vocabulary` | 🟢 | `read` | no |
@@ -166,9 +167,8 @@ ways.
   The fields a human *did* write last wait for approval. The result names them in `staged_approval`, with the replay
   call that uses the approval. A machine never undoes the edit of a human unless asked, and the edit of a human never
   blocks the own fields of the machine.
-- **The dynamic pair reads the *meaning* of the stage, not its label.** A custom pipeline column renamed to `"Won"`
-  still gets 🟡, because `advanceDealTier` trusts the meaning set up for the stage. Anything Margince cannot prove is
-  `open` gets 🟡, so a meaning it cannot read goes to the approval gate.
+- **A deal move reads the *meaning* of the stage, not its label.** A column renamed `"Won"` still gets 🟡, because
+  `advanceDealTier` trusts the meaning set up for the stage, and a stage it cannot prove is `open` gets 🟡.
 - **Margince works out the `list_records` filters at boot.** They are the overlap of the `crm.yaml` query fields of
   each list operation and what the record store can bind. They are published in the schema of the tool, not written
   here or in the tool.

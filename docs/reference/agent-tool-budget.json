@@ -29,10 +29,10 @@
     }
   ],
   "catalog": {
-    "tools": 90,
+    "tools": 91,
     "system_frame_tokens": 586,
-    "tokens": 31728,
-    "median_tool_tokens": 298,
+    "tokens": 32139,
+    "median_tool_tokens": 303,
     "mean_tool_tokens": 352
   },
   "agents": [
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 90,
+      "of_served_tools": 91,
       "tokens": 3810,
       "listing_tokens": 1913,
       "step_schema_tokens": 1311,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 90,
+      "of_served_tools": 91,
       "tokens": 5292,
       "listing_tokens": 2818,
       "step_schema_tokens": 1888,
@@ -185,6 +185,10 @@
     {
       "name": "advance_project_phase",
       "tokens": 416
+    },
+    {
+      "name": "decide_approvals",
+      "tokens": 410
     },
     {
       "name": "review_commitments",
@@ -308,7 +312,7 @@
     },
     {
       "name": "relink_activities",
-      "tokens": 259
+      "tokens": 260
     },
     {
       "name": "company_coverage",

@@ -399,7 +399,7 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 	if staged.ReleasableByCaller {
 		return "This change can be undone, so once the user says yes you can release it yourself with " +
-			"decide_approval (list_approvals is the same queue), or they can release it in the CRM."
+			"decide_approvals (list_approvals is the same queue), or they can release it in the CRM."
 	}
 	return "It is not yours to answer: the contact releases it in the CRM (list_approvals shows the same queue)."
 }
