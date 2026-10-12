@@ -21,7 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -145,7 +145,7 @@ func (a extensionActivities) Create(ctx context.Context, in crm.CreateActivityRe
 // handed, and refuses on a Runtime the call has finished with.
 func (c extensionCore) authorised(ctx context.Context) (context.Context, error) {
 	if c.authority == nil {
-		return nil, fmt.Errorf("compose: this core port was built without the invocation's authority, so no write can be checked against it")
+		return nil, errors.New("compose: this core port was built without the invocation's authority, so no write can be checked against it")
 	}
 	bound, err := c.authority(ctx)
 	if err != nil {
@@ -200,14 +200,13 @@ func portRefusal(err error) error {
 	// same interface httperr turns into a 422 — so it maps to the same class
 	// here. Its MESSAGE does not travel: the three strings it carries are
 	// written for the product's own clients, and a unit is not one.
-	var fault apperrors.FieldFault
-	if errors.As(err, &fault) {
+	if _, ok := errors.AsType[apperrors.FieldFault](err); ok {
 		return extension.ErrInvalid
 	}
 	// A fault with no class is the core's own — a broken connection, a
 	// constraint nobody mapped. The unit is told the write failed and nothing
 	// about how; the detail belongs in the core's logs, where it is already.
-	return fmt.Errorf("extension: the core refused this write")
+	return errors.New("extension: the core refused this write")
 }
 
 // transcode carries a value between the internal contract types and the

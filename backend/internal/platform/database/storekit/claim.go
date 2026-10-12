@@ -60,7 +60,7 @@ func ClaimOwnership(ctx context.Context, tx pgx.Tx, table string, id, me ids.UUI
 	if tag.RowsAffected() != 1 {
 		return Claim{}, ids.Nil, fmt.Errorf("%w: the record was claimed by somebody else", apperrors.ErrConflict)
 	}
-	auditID, err := Audit(ctx, tx, "assign", table, id, map[string]any{"owner_id": before}, map[string]any{"owner_id": me})
+	auditID, err := Audit(ctx, tx, "assign", table, id, map[string]any{ownerIDColumn: before}, map[string]any{ownerIDColumn: me})
 	if err != nil {
 		return Claim{}, ids.Nil, err
 	}

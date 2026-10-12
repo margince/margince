@@ -8,7 +8,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { type OpenReceipt, SentenceList, WrittenBy } from "./record360";
 
 type Dossier = components["schemas"]["CompanyDossier"];
@@ -61,24 +61,20 @@ export function DossierPanel({
   const dossier = useQuery({
     queryKey: ["company-dossier", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/dossier", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}/dossier", {
+          params: { path: { id: companyId } },
+        }),
+      );
     },
   });
   const rewrite = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/companies/{id}/dossier", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/companies/{id}/dossier", {
+          params: { path: { id: companyId } },
+        }),
+      );
     },
     onSuccess: (data) =>
       queryClient.setQueryData(["company-dossier", companyId], data),

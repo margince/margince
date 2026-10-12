@@ -108,7 +108,7 @@ func TestTheConsumerFoldsAnActivityEventAndIgnoresWhatIsNotItsBusiness(t *testin
 
 	// Redelivery is free: the bus is at-least-once, and the fold recomputes
 	// rather than counting.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "activity.captured", "activity", activityID)); err != nil {
 			t.Fatalf("redelivery %d: %v", i, err)
 		}

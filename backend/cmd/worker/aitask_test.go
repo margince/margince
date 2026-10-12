@@ -177,7 +177,7 @@ func TestAITaskListCarriesTheLadderAndScope(t *testing.T) {
 		t.Fatalf("listSites: %v", err)
 	}
 	var row string
-	for _, line := range strings.Split(out.String(), "\n") {
+	for line := range strings.SplitSeq(out.String(), "\n") {
 		if strings.HasPrefix(line, "rate_extract/fx") {
 			row = line
 			break

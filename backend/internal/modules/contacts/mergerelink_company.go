@@ -59,7 +59,10 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := moveCompanyScans(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	return moveCompanyDedupeCandidates(ctx, tx, sourceID, targetID)
+	if err := moveCompanyDedupeCandidates(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	return moveKindIDRows(ctx, tx, "company", sourceID.UUID, targetID.UUID)
 }
 
 // repointCompanyReferences moves the rows whose only tie to a company is the

@@ -36,8 +36,7 @@ type companyRollupHandlers struct {
 
 // GetCompanyHierarchyRollup implements (GET
 // /companies/{id}/hierarchy-rollup). An absent scope defaults to the
-// contract's "tree"; anything else reaches CompanyHierarchyRollup verbatim,
-// which is the read's own refusal point for an out-of-vocabulary value.
+// contract's "tree"; a value outside the enum was refused before this ran.
 func (h companyRollupHandlers) GetCompanyHierarchyRollup(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetCompanyHierarchyRollupParams) {
 	scope := companyRollupScopeTree
 	if params.Scope != nil {
@@ -50,8 +49,7 @@ func (h companyRollupHandlers) GetCompanyHierarchyRollup(w http.ResponseWriter, 
 		// machine-readable details a fault cannot carry. Detail is the error's OWN
 		// text, never a re-worded copy — that is what keeps both surfaces saying
 		// the same thing about the same condition.
-		var fxErr *FXRateUnavailableError
-		if errors.As(err, &fxErr) {
+		if fxErr, ok := errors.AsType[*FXRateUnavailableError](err); ok {
 			asOf := fxErr.AsOf.Format(time.DateOnly)
 			httperr.Write(w, r, &httperr.DetailedError{
 				Status: http.StatusUnprocessableEntity,

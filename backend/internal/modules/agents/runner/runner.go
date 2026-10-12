@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -409,15 +410,12 @@ func truncate(s string) string { return truncateTo(s, traceObservationLimit) }
 // small to carry the marker: a function that exists to enforce a cap must not
 // exceed it while saying it does.
 func truncateTo(s string, limit int) string {
-	if limit < 0 {
-		limit = 0
-	}
 	if len(s) <= limit {
 		return s
 	}
 	if limit <= len(truncationMarker) {
 		// No room to say "elided" without breaking the bound; the bound wins.
-		return s[:limit]
+		return textcut.Bytes(s, limit)
 	}
-	return s[:limit-len(truncationMarker)] + truncationMarker
+	return textcut.Bytes(s, limit-len(truncationMarker)) + truncationMarker
 }

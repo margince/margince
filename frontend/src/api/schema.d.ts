@@ -4,6 +4,29 @@
  */
 
 export interface paths {
+    "/whoami": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who this caller acts for.
+         * @description The answer the `whoami` agent tool gives, run by the same tool on both doors: the
+         *     acting human's id, name, email, language and timezone. A passport learns whom it
+         *     acts for; a session learns its own seat. `GET /me` is a session's fuller view of
+         *     itself and stays human-only.
+         */
+        get: operations["getActingIdentity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -11,7 +34,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the current authenticated principal (user or agent). */
+        /** Get the signed-in human's own profile, roles and settings. */
         get: operations["getCurrentPrincipal"];
         put?: never;
         post?: never;
@@ -378,6 +401,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/recovery-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * When the restore procedure was last rehearsed, and what it measured.
+         * @description Admin and ops only (`job_health:read`). Reports the most recent restore drill from the installation's drill ledger, against the two published recovery targets: back within four hours, and no more than one hour of data lost. The recovery time is measured by the database clock between drill-start and drill-finish. The data lost is the start minus the restore point the operator gave to drill-start. `last_drill` is null on an installation that has never recorded a drill. Drills are recorded by the operator with `margince-migrate drill-start` and `drill-finish`; there is no HTTP write. Margince does not observe backups, so this report names none. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getRecoveryHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports": {
         parameters: {
             query?: never;
@@ -443,6 +486,35 @@ export interface paths {
          *     kill switch belongs to the granting human, never to the agent it bounds.
          */
         delete: operations["revokePassport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the Margince skill for an AI tool, as a ZIP.
+         * @description The skill an AI tool (Claude, Codex, Gemini) installs to call this API with a passport. The
+         *     ZIP holds one folder, `margince/`, with `README.md` (how to save a passport and install the
+         *     skill), `SKILL.md` (the rules an agent follows), `INDEX.md` (one row per operation a passport
+         *     can call) and `openapi.yaml` (those operations in full, generated from this contract).
+         *     `servers` in `openapi.yaml` and the base URL in both guides are this install's API address,
+         *     the same value `GET /passports` answers as `api_base_url`.
+         *
+         *     It carries no credential. The passport is saved apart from the skill, so one download serves
+         *     every passport and a revoked passport leaves nothing to delete. Human-only: the bundle is how a
+         *     human hands an agent the API, and an agent that can call the API already has it.
+         */
+        get: operations["downloadAgentSkillBundle"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1895,6 +1967,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/{id}/intro-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The colleagues who could introduce you at this company, warmest first.
+         * @description The answer the `intro_path_to` agent tool gives, run by the same tool on both doors.
+         *     Each route names a contact at the company and the colleague who knows them, ranked
+         *     by how warm that relationship is. Warmth is computed over a bounded read of the
+         *     company's contacts; `candidates_truncated` says a warmer route may exist past it.
+         */
+        get: operations["listIntroPaths"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/graph": {
         parameters: {
             query?: never;
@@ -1920,7 +2018,7 @@ export interface paths {
          *
          *     **Authorization is per group**, the same posture `GET /companies/{id}/360`
          *     takes for its sections. Reading the company itself is mandatory. Contacts
-         *     need the contact grant, deals need the deal grant, and the intro path needs the
+         *     need the contact grant, deals need the deal grant, and the signal route needs the
          *     signal grant; a group the caller may not read is left out of `nodes`/`edges` and
          *     named in `groups_omitted`, so the card can say "hidden from you" instead of
          *     drawing a company with no contacts. Within a group every row carries that
@@ -3191,6 +3289,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/slipping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open deals going quiet or past their expected close date, worst first.
+         * @description The answer the `whats_slipping_this_week` agent tool gives, run by the same tool on
+         *     both doors, so a passport here and over MCP gets the same deals for the same input.
+         *     Each deal carries the evidence that puts it on the list. A deal whose risk cannot be
+         *     evidenced from its own fields is left out rather than guessed.
+         *
+         *     A deal is on the list when it has had no recorded activity for longer than
+         *     `quiet_days`, or when its expected close date has passed. `quiet_days` defaults to
+         *     60, the product-wide stalled threshold. The home screen's quiet-deals lane asks at
+         *     19 days. Only the deals the caller may see are read.
+         */
+        get: operations["listSlippingDeals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/at-risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open deals whose relationships are going cold, and why.
+         * @description The answer the `at_risk_relationships` agent tool gives, run by the same tool on both
+         *     doors: the caller's open deals that rest on a single contact, have no engaged
+         *     champion, or are carried almost entirely by one colleague on our side. Each deal
+         *     carries the findings that put it on the list. The sweep reads the deals the caller
+         *     may see and stops at its cap; `truncated` says when it did.
+         *     `coverage_withheld` says a deal could not be judged because the caller may not read
+         *     its relationships, so it is missing from the list rather than clean.
+         */
+        get: operations["listAtRiskRelationships"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/follow-up-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+         * @description The answer the `draft_follow_ups_for` agent tool gives, run by the same tool on both
+         *     doors. The deals are the ones `GET /deals/slipping` lists at its default window, worst
+         *     first, up to `limit` (at most 25). Each draft lands on its deal's timeline as a draft
+         *     activity and is never sent. A deal whose risk cannot be evidenced gets no draft.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's drafts and writes
+         *     none. An `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["draftDealFollowUps"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}": {
         parameters: {
             query?: never;
@@ -3241,6 +3419,39 @@ export interface paths {
          *     close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
          */
         post: operations["advanceDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a deal to a stage and note why, in one call.
+         * @description The answer the `progress_deal` agent tool gives, run by the same tool on both doors:
+         *     the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
+         *     timeline. The answer is the deal as it now stands and the note's activity id.
+         *
+         *     The tier is the advance's. A move to or from a won or lost stage is confirm-first for
+         *     an agent: the call stages one approval and answers 403 `approval_required` naming it.
+         *     Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
+         *     header, once a human has approved it. A human's own call is its approval.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result and moves
+         *     nothing. An `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["progressDeal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3554,6 +3765,32 @@ export interface paths {
          *     transition is recorded. Closing without a `reason` is `422 closed_reason_required`.
          */
         post: operations["advanceProjectPhase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What delivery needs to take this project over.
+         * @description The answer the `prepare_handoff` agent tool gives, run by the same tool on both doors:
+         *     the project, the deals it was sold through, its stakeholders, the promises still
+         *     open, and the gaps a handoff should close first. It reads and writes nothing; moving
+         *     the project into delivery is a separate act.
+         */
+        get: operations["prepareProjectHandoff"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6225,6 +6462,29 @@ export interface paths {
         patch: operations["updateFollowUpSettings"];
         trace?: never;
     };
+    "/email-signature-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The workspace's signature template.
+         * @description The layout every member's mail signs with when it is set, filled in with each member's
+         *     own name, title and phone. Read by a seat that may read installation settings; changed
+         *     by admin/ops. Governed by the `installation_settings` RBAC object.
+         */
+        get: operations["getEmailSignatureTemplate"];
+        /** Set the workspace's signature template (admin/ops). */
+        put: operations["saveEmailSignatureTemplate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/settings": {
         parameters: {
             query?: never;
@@ -6299,6 +6559,35 @@ export interface paths {
          *     floor on `promote_lead`.
          */
         post: operations["promoteLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/qualify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fill a lead's empty qualification fields that its own data settles, and name the rest.
+         * @description The answer the `qualify_lead` agent tool gives, run by the same tool on both doors. A
+         *     field is filled only when it is empty and the lead's own data settles it, such as a
+         *     company name from a corporate email domain; each fill names its evidence. A value is
+         *     never overwritten. `gaps` lists the fields still empty, for a human to fill.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result. An
+         *     `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["qualifyLead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7941,6 +8230,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tag-suggestions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One open tag suggestion the caller may see, with the mail and notes it cites.
+         * @description A suggestion proposes a suggestible tag on a contact or company because captured
+         *     mail or a meeting note filed under that record matched the tag's description. It
+         *     is shown only to a reader who may read the record and EVERY activity it cites, so
+         *     a suggestion built from mail only its owner can read is shown to that owner alone.
+         *     Nothing is applied until somebody accepts it. `404` for a suggestion the caller
+         *     may not see, that was decided, or that no longer stands.
+         */
+        get: operations["getTagSuggestion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tag-suggestions/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply the suggested tag, as the caller.
+         * @description Applies the tag exactly as `applyTag` would, with the caller as the one who
+         *     applied it, and records the decision. The tag's audit row names the suggestion.
+         *     Needs write authority over the record. `409 suggestion_decided` when the
+         *     suggestion was already decided.
+         */
+        post: operations["acceptTagSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tag-suggestions/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the evidence does not earn the tag, for the whole workspace.
+         * @description Audited. The tag is suggested on this record again only on evidence newer than
+         *     the dismissal. Needs write authority over the record, like accepting does.
+         *     `409 suggestion_decided` when the suggestion was already decided.
+         */
+        post: operations["dismissTagSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tags": {
         parameters: {
             query?: never;
@@ -8208,6 +8576,190 @@ export interface paths {
          *     group). An out-of-vocabulary key returns `422 code: report_field_not_allowed`.
          */
         get: operations["explainReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/query-vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything a workspace query plan may say, for this caller.
+         * @description The answer the `describe_query_vocabulary` agent tool gives, run by the same tool on
+         *     both doors: the record types this caller can ask about, the fields each one names,
+         *     the operators each field admits, and the one relationship hop a plan may take. It
+         *     is the document `margince://schema/query` publishes, composed for the caller, so it
+         *     lists only what they can already read.
+         */
+        get: operations["describeQueryVocabulary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catch-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What has been going on with one record, in one cited picture.
+         * @description The answer the `catch_me_up_on` agent tool gives, run by the same tool on both doors:
+         *     the recent activity, open tasks and related records around one record, each with the
+         *     passages it rests on. Name the record by `record_id`, or by `record_name` as
+         *     `search_records` would find it; a name that matches more than one record is refused
+         *     with the candidates rather than guessed at.
+         */
+        get: operations["catchUpOnRecord"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meeting-prep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get ready for a meeting about one record.
+         * @description The answer the `prep_for_meeting` agent tool gives, run by the same tool on both
+         *     doors. Given a meeting, the written brief a rep reads before it; given any other
+         *     record, the picture `GET /catch-up` assembles, plus the open items pulled out as the
+         *     things to raise. The record is named as `GET /catch-up` names it.
+         */
+        get: operations["prepForMeeting"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commitments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The promises still open, overdue first.
+         * @description The answer the `review_commitments` agent tool gives, run by the same tool on both
+         *     doors: open tasks and the promises read from conversations, each with when it is
+         *     due and how far past it. Only what the caller may see is read.
+         */
+        get: operations["listOpenCommitments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/context-search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The records most relevant to a description, ranked by meaning as well as words.
+         * @description The answer the `search_context` agent tool gives, run by the same tool on both doors.
+         *     The ranking is the top of an ordering, never every match, so `coverage` is never
+         *     `complete_exact`. A question with conditions on fields belongs to
+         *     `POST /workspace-queries`.
+         */
+        get: operations["searchContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspace-queries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a query plan over the workspace's records.
+         * @description The answer the `query_workspace` agent tool gives, run by the same tool on both
+         *     doors. The plan is written in the grammar `GET /query-vocabulary` publishes for this
+         *     caller; a name outside it is refused by name. A POST because a plan does not fit a
+         *     query string. It reads and stores nothing.
+         */
+        post: operations["queryWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/entity-resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Whether the contacts and companies in a payload are already records here.
+         * @description The answer the `resolve_entities` agent tool gives, run by the same tool on both
+         *     doors. Each candidate is matched by its keys (email, phone, domain) and its name;
+         *     only a match on a unique key can be acted on alone. A POST because a batch of
+         *     candidates does not fit a query string. It reads and stores nothing.
+         */
+        post: operations["resolveEntities"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/record-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The fields a record create or update may write, for each record type.
+         * @description The answer the `describe_record_fields` agent tool gives, run by the same tool on
+         *     both doors: for each record type, the fields a `create_record` or `update_record`
+         *     body may name, their types and their closed vocabularies.
+         */
+        get: operations["describeRecordFields"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10181,8 +10733,10 @@ export interface paths {
          * @description Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
          *     review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
          *     the connector health strip. `404 no_digest_yet` before the first nightly run — the
-         *     client renders the honest empty state. v1 delivery is in-app; email is delivery-only
-         *     later, same object.
+         *     client renders the honest empty state. A `date` the nightly run has not reached
+         *     answers `404 no_digest_for_date`, which is a different state: digests exist, that day
+         *     has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
+         *     year one. v1 delivery is in-app; email is delivery-only later, same object.
          */
         get: operations["getMorningDigest"];
         put?: never;
@@ -10390,6 +10944,50 @@ export interface paths {
          *     Audit-only write (no event stream, EVT-NOEVT-3).
          */
         delete: operations["deleteOauthApp"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/jurisdiction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The installation's jurisdiction and what it puts in force.
+         * @description Which jurisdiction pack applies, what it changes (retention floor, messaging rules,
+         *     request deadlines) and the documents it ships. Changed through
+         *     `PATCH /installation/settings` with `country`. Gated on `installation_settings` read.
+         */
+        get: operations["getInstallationJurisdiction"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/jurisdiction/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download one of the selected jurisdiction's documents.
+         * @description The document's bytes. Only the selected jurisdiction's documents are served; any other id is 404.
+         */
+        get: operations["downloadJurisdictionDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -11917,8 +12515,36 @@ export interface paths {
         /** List GDPR data-subject requests (B-E11.30). */
         get: operations["listDataSubjectRequests"];
         put?: never;
-        /** Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention/erasure (B-EP07.13/.16). */
+        /**
+         * Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+         * @description The server computes the deadline from `received_at` under the installation's
+         *     jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
+         *
+         *     BEHAVIOUR CHANGE: a `due_at` later than the computed deadline is refused with 422. It
+         *     used to be stored as sent. An earlier `due_at` is stored and marked `due_overridden`.
+         */
         post: operations["createDataSubjectRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/data-subject-requests/deadline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The deadline a request would get, and the rule that sets it.
+         * @description What the request form shows before filing: the same resolver `POST /data-subject-requests`
+         *     applies. Gated like the queue, on `privacy_request` read.
+         */
+        get: operations["getDataSubjectRequestDeadline"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13549,6 +14175,8 @@ export interface paths {
          * Revoke a manual record grant (human-only).
          * @description Deletes the grant; the subject loses the widened access immediately (the next query no longer
          *     matches the `OR EXISTS (record_grant …)` clause). Audited (`action: record_unshare`).
+         *     An `If-Match` naming a version the grant no longer holds answers `409 version_skew` and
+         *     deletes nothing: a re-assert since the caller read it changed what is being revoked.
          */
         delete: operations["revokeRecordGrant"];
         options?: never;
@@ -16447,6 +17075,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/runs/{run_id}/evidence-search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Which records behind a saved run carry the words, and which do not.
+         * @description The answer the `search_report_evidence` agent tool gives, run by the same tool on
+         *     both doors. The records a saved run measured, or one cell of them, are judged
+         *     against the words: the ones that carry them are cited, the ones that do not are
+         *     counterexamples, and the ones that cannot be judged are named as such. The share
+         *     is given only when every record the caller can read was judged.
+         *
+         *     A POST because a cell's group key values do not fit a query string. It reads and
+         *     stores nothing.
+         */
+        post: operations["searchReportEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/runs/{run_id}/cells/explain": {
         parameters: {
             query?: never;
@@ -16515,6 +17170,71 @@ export interface paths {
          *     different from the report that was composed.
          */
         post: operations["renderAnalyticsReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What an analytics query may name, for this caller.
+         * @description The answer the `describe_analytics_vocabulary` agent tool gives, run by the same
+         *     tool on both doors: the populations, their group keys and measures, and the functions
+         *     and operators `POST /analytics/query` takes, for this caller.
+         */
+        get: operations["describeAnalyticsVocabulary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The block grammar a report document is written in.
+         * @description The answer the `describe_report_blocks` agent tool gives, run by the same tool on
+         *     both doors: every block `POST /analytics/reports/render` accepts, and what each one
+         *     carries.
+         */
+        get: operations["describeReportBlocks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/vocabulary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The prebuilt reports, and the names each one's plan may use.
+         * @description The answer the `describe_report_vocabulary` agent tool gives, run by the same tool
+         *     on both doors: the document `margince://schema/reports` publishes.
+         */
+        get: operations["describeReportVocabulary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16963,6 +17683,10 @@ export interface paths {
          *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
          *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
          *     answers 422 `unsupported_file_type`.
+         *
+         *     An agent may file one no larger than the `attach_document` tool takes: what one MCP
+         *     request carries inline, or the operator's attachment limit when that is smaller. A
+         *     larger file answers 422 on `file`, as the tool refuses it.
          */
         post: operations["uploadAttachment"];
         delete?: never;
@@ -19155,6 +19879,14 @@ export interface components {
         UpdateInstallationSettingsRequest: {
             /** @description Rename the company. */
             name?: string;
+            /**
+             * @description The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
+             *     compiled into this build, or the empty string for no pack. A code with no
+             *     compiled-in pack is refused with 422. When the change weakens the correspondence
+             *     retention floor, the old floor keeps binding mail that occurred before the change
+             *     (`GET /installation/jurisdiction` reports it as `floor.carried`).
+             */
+            country?: string;
             /** @description The IANA reporting zone. */
             timezone?: string;
             /**
@@ -21728,7 +22460,7 @@ export interface components {
              *     rebound to another model drops the attempts of the one before it.
              */
             calls: number;
-            /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached. */
+            /** @description How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`), the provider's refusal of a malformed request (`request_rejected`), and the model outcomes `output_withheld` and `output_rejected` are not failures. */
             failures: number;
             /**
              * @description The most recent error this tier reported, absent when it reported none. It is the
@@ -21891,7 +22623,7 @@ export interface components {
             total: number;
             /**
              * Format: int64
-             * @description Logical calls whose last attempt failed.
+             * @description Logical calls whose last attempt served the caller nothing: it failed, or its answer was withheld or refused.
              */
             unanswered: number;
             /** @description The decision model first, then each tier in ladder order. */
@@ -21906,7 +22638,7 @@ export interface components {
             attempts: number;
             /**
              * Format: int64
-             * @description Logical calls this step answered.
+             * @description Logical calls this step answered and served to the caller.
              */
             answered: number;
             /** Format: int64 */
@@ -22036,6 +22768,8 @@ export interface components {
              */
             kind: "completion" | "embedding" | "decision";
             task: string;
+            /** @description What a screen calls the task, the same name the usage lines carry. Absent for a task with no name, which a screen shows by its key. */
+            task_display_name?: string | null;
             /** @description Empty when the call failed before routing. */
             tier: string;
             provider: string;
@@ -22055,7 +22789,7 @@ export interface components {
             /**
              * @description Stable failure code; null on success. New codes are added as failure classes are told apart, so read an unrecognized one as "some failure" rather than refusing it.
              *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
-             *     Two codes are outcomes rather than failures: a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request malformed, which is a defect on the calling side.
+             *     Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
              *     `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
              *     `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
              */
@@ -22162,6 +22896,15 @@ export interface components {
             payload_capture_enabled: boolean;
             /** @description Every task with at least one terminal call, sorted — the complete filter option set (matches the terminal-only list), independent of the current page. */
             tasks: string[];
+            /** @description The same tasks in the same order, each with the name a screen shows for it. */
+            task_options: components["schemas"]["AiCallTaskOption"][];
+        };
+        /** @description One task the call log can be filtered to. */
+        AiCallTaskOption: {
+            /** @description The key the task filter takes. */
+            task: string;
+            /** @description What a screen calls the task, as task_display_name on a call. Absent for a task with no name, which a screen shows by its key. */
+            display_name?: string | null;
         };
         /** @description One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds. */
         ChannelConnection: {
@@ -22473,6 +23216,12 @@ export interface components {
          *     list S-E15.4c requires, not a diff of what changed), or errored
          *     because it could not be reversed — a single irreversible row never
          *     aborts the rest of the run.
+         *
+         *     A row the run CORRECTED rather than created is in none of them: undo
+         *     archives what a run landed, and a correction to a record another run
+         *     landed has nothing to archive and no previous value to restore.
+         *     `updates_not_reversed` counts those rows, so a reader is not told a
+         *     correction was taken back while it stands.
          */
         ImportUndoReport: {
             /** Format: uuid */
@@ -22480,6 +23229,8 @@ export interface components {
             status: components["schemas"]["ImportRunStatus"];
             /** @description Import-created rows that were untouched since and have been reversed (archived). */
             reversed_count: number;
+            /** @description Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`. */
+            updates_not_reversed?: number;
             /** @description Import-created rows a human edited since import, therefore left in place (A93). */
             kept: {
                 object: components["schemas"]["ImportObject"];
@@ -23124,9 +23875,13 @@ export interface components {
              *     a company, so the provider has nothing to match on; an automatic trigger declines
              *     rather than spending a call that can only answer "no match". A human pressing the
              *     button on the contact is still allowed to try.
+             *     `category_in_flight` means a live run for this contact and provider was already
+             *     buying at least one of the categories asked for. The request is refused whole
+             *     rather than narrowed, nothing was reserved, and asking again once that run has
+             *     finished is admitted.
              * @enum {string|null}
              */
-            skip_reason?: "budget_exhausted" | "low_balance" | "suppressed" | "not_eligible" | "duplicate_subject_candidate" | "rate_limited" | "already_fresh" | "no_identifiers" | null;
+            skip_reason?: "budget_exhausted" | "low_balance" | "suppressed" | "not_eligible" | "duplicate_subject_candidate" | "rate_limited" | "already_fresh" | "no_identifiers" | "category_in_flight" | null;
             /** Format: int64 */
             connection_version: number;
             configuration_snapshot: components["schemas"]["ProviderConfiguration"];
@@ -25067,10 +25822,10 @@ export interface components {
              * @description `company`, `contact` and `deal` are the account's own records.
              *     `user` is a member of THIS workspace — someone on our side who is connected to the
              *     account. A user node carries its display name as the `label` and nothing else:
-             *     `detail`, `strength` and `strength_bucket` are null and `intro_path` is ABSENT,
+             *     `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
              *     because §4 measures our relationship with the account's contacts, not with each
-             *     other. `intro_path` is a plain boolean and is never sent as null on any node —
-             *     a client reads its absence as "not on the warm-intro path".
+             *     other. `on_signal_route` is a plain boolean and is never sent as null on any node —
+             *     a client reads its absence as "not on the signal's route".
              * @enum {string}
              */
             kind: "company" | "contact" | "deal" | "user";
@@ -25102,11 +25857,13 @@ export interface components {
              */
             strength_bucket?: null | "none" | "weak" | "moderate" | "strong";
             /**
-             * @description This contact is the route in the active signal's warm-intro path proposes.
-             *     At most one node carries it, and only when `intro_path` at the top level is
+             * @description This contact is the route the account's most recent open signal proposes.
+             *     At most one node carries it, and only when `signal_route` at the top level is
              *     present. Absent on every other node — there is nothing to say about them.
+             *     It is not an introduction path: `GET /companies/{id}/intro-paths` answers who
+             *     should introduce us, by ranking the colleagues who know someone there.
              */
-            intro_path?: boolean;
+            on_signal_route?: boolean;
             /**
              * @description The company node's resolved logo (A55), same value `Company.logo_url` carries.
              *     Absent on a company with no resolved logo and on every contact or deal node —
@@ -26634,6 +27391,514 @@ export interface components {
              */
             occurred_at: string;
         };
+        /** @description What `search_report_evidence` takes beside the run the path names. */
+        ReportEvidenceSearchRequest: {
+            /** @description The words the evidence would carry. */
+            query: string;
+            /** @description One cell's group key values, in the run's `group_by` order. Omit it to search every record the run measured. */
+            cell?: unknown[];
+            /** @description How many citations, counterexamples and abstentions to return, each. */
+            limit?: number;
+        };
+        /** @description What `query_workspace` takes. */
+        WorkspaceQueryRequest: {
+            /** @description A query plan, in the grammar `GET /query-vocabulary` publishes for this caller. */
+            plan: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `resolve_entities` takes. */
+        EntityResolutionRequest: {
+            candidates: components["schemas"]["EntityResolutionCandidate"][];
+        };
+        /** @description One contact or company named in a payload, by every key it carries. */
+        EntityResolutionCandidate: {
+            /**
+             * @description Which record type this candidate is. Leads are not resolved.
+             * @enum {string}
+             */
+            kind: "contact" | "company";
+            /** @description Your own label, echoed back on its answer so a batch lines up. Never stored. */
+            ref?: string;
+            /** @description Full name for a contact, trading name for a company. */
+            name?: string;
+            /** @description The registered company name, when it differs from the trading name. Read for a company only. */
+            legal_name?: string;
+            /** @description Every address on the payload. For a company each address also gives its domain, unless it is a consumer mail domain. */
+            emails?: string[];
+            /** @description Phone numbers in E.164 form. One that does not normalize is ignored. */
+            phones?: string[];
+            /** @description Company domains the payload claims. Read for a company only. */
+            domains?: string[];
+        };
+        /** @description One record an agent answer rests on. */
+        AgentRecordRef: {
+            /** Format: uuid */
+            record_id: string;
+            record_type: string;
+        };
+        /** @description A quoted passage and the field or record it was read from. */
+        AgentExcerpt: {
+            snippet: string;
+            source: string;
+        };
+        /** @description One record in an assembled picture, summarised, with the passages that put it there. */
+        AgentContextItem: {
+            evidence: components["schemas"]["AgentExcerpt"][];
+            occurred_at?: string;
+            /** Format: uuid */
+            record_id: string;
+            record_type: string;
+            summary: string;
+        };
+        /** @description One heading of an assembled picture: recent activity, open tasks, related records. */
+        AgentContextSection: {
+            items: components["schemas"]["AgentContextItem"][];
+            name: string;
+        };
+        /** @description What `catch_me_up_on` answers: the record asked about and the sections assembled around it. */
+        AgentAssembledContext: {
+            anchor: components["schemas"]["AgentRecordRef"];
+            sections: components["schemas"]["AgentContextSection"][];
+        };
+        /** @description One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact. */
+        AgentGroundedLine: {
+            evidence: components["schemas"]["AgentRecordRef"][];
+            nature?: string;
+            text: string;
+        };
+        /** @description A named way the conversation can go and what to do then. */
+        AgentPlay: {
+            evidence: components["schemas"]["AgentRecordRef"][];
+            label: string;
+            play: string;
+        };
+        /** @description A record a commitment is about. */
+        AgentCommitmentSubject: {
+            /** Format: uuid */
+            entity_id: string;
+            entity_type: string;
+            name?: string;
+        };
+        /** @description One open promise: a task, or a promise read from a conversation, with when it is due. */
+        AgentCommitment: {
+            about: components["schemas"]["AgentCommitmentSubject"][];
+            /** Format: uuid */
+            assignee_id?: string;
+            assignee_name?: string;
+            /** Format: uuid */
+            claim_id?: string;
+            days_overdue?: number;
+            due_at?: string;
+            quote?: string;
+            source: string;
+            /** Format: uuid */
+            source_activity_id?: string;
+            state: string;
+            subject: string;
+            /** Format: uuid */
+            task_id?: string;
+        };
+        /** @description A record as the agent tool surface hands it over: its type, id, version and readable fields. */
+        AgentRecord: {
+            fields: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            id: string;
+            record_type: string;
+            trust_tier?: string;
+            version?: number;
+        };
+        /** @description One ranked record and the passages that matched. */
+        AgentContextHit: {
+            excerpts: components["schemas"]["AgentExcerpt"][];
+            record: components["schemas"]["AgentRecord"];
+            score: number;
+        };
+        /** @description What to do in the room, built over the same records as the brief. */
+        AgentMeetingPlan: {
+            advance: {
+                best: components["schemas"]["AgentGroundedLine"];
+                fallback: components["schemas"]["AgentGroundedLine"];
+                minimum: components["schemas"]["AgentGroundedLine"];
+            };
+            company_arc?: {
+                from: string;
+                summary: components["schemas"]["AgentGroundedLine"];
+                title?: string;
+                to: string;
+            }[];
+            likely_asks?: {
+                basis: components["schemas"]["AgentGroundedLine"];
+                prepare: string;
+                question: string;
+                relevance: string;
+            }[];
+            manager_coaching?: {
+                failure_mode: string;
+                focus: string;
+                intervene_if: string;
+                listen_for: string;
+                paths?: components["schemas"]["AgentPlay"][];
+                watch_for: string;
+            };
+            meeting_type: string;
+            meeting_type_confidence: string;
+            objective?: components["schemas"]["AgentGroundedLine"];
+            objective_caveat?: string;
+            opening?: components["schemas"]["AgentGroundedLine"];
+            questions?: {
+                ask: string;
+                evidence: components["schemas"]["AgentRecordRef"][];
+                listen_for: string;
+                why: string;
+            }[];
+            readiness: string;
+            scenarios?: components["schemas"]["AgentPlay"][];
+            top_risk?: {
+                avoid: string;
+                say: string;
+                show: string;
+                text: components["schemas"]["AgentGroundedLine"];
+            };
+            unknowns?: {
+                kind: string;
+                question: string;
+            }[];
+        };
+        /** @description The written brief for the booked meeting the record leads to, when there is one. */
+        AgentMeetingBrief: {
+            /** Format: uuid */
+            activity_id: string;
+            generated_at: string;
+            generated_by: string;
+            plan?: components["schemas"]["AgentMeetingPlan"];
+            /** Format: uuid */
+            project_id?: string;
+            sections: {
+                kind: string;
+                sentences: components["schemas"]["AgentGroundedLine"][];
+            }[];
+        };
+        /** @description Why an answer is partial or shaped as it is. `code` is a machine key; `path` names the input it is about. */
+        AgentQueryNote: {
+            code: string;
+            detail: string;
+            path?: string;
+        };
+        /** @description What `at_risk_relationships` answers: the deals whose relationships are going cold, and how much of the pipeline was read. */
+        AtRiskRelationships: {
+            coverage_withheld: boolean;
+            deals: {
+                /** Format: uuid */
+                deal_id: string;
+                name: string;
+                risks: {
+                    contact_ids?: string[];
+                    contacts?: {
+                        /** Format: uuid */
+                        contact_id: string;
+                        name: string;
+                    }[];
+                    days_since_touch?: number;
+                    kind: string;
+                    summary: string;
+                    user_ids?: string[];
+                }[];
+            }[];
+            deals_scanned: number;
+            truncated: boolean;
+        };
+        /** @description What `prep_for_meeting` answers: the assembled picture, the open items to act on, and the written brief when one exists. */
+        MeetingPrep: {
+            brief?: components["schemas"]["AgentMeetingBrief"];
+            briefing: components["schemas"]["AgentAssembledContext"];
+            meeting_focus: {
+                /** Format: uuid */
+                record_id: string;
+                summary: string;
+            }[];
+        };
+        /** @description What `prepare_handoff` answers: the project, the deals it was sold through, the stakeholders, the open promises and the gaps. */
+        ProjectHandoff: {
+            as_of: string;
+            /** Format: uuid */
+            company_id?: string;
+            deals: {
+                amount_minor?: number;
+                currency?: string;
+                /** Format: uuid */
+                deal_id: string;
+                name: string;
+                status: string;
+            }[];
+            description?: string;
+            gaps: {
+                code: string;
+                message: string;
+                source: string;
+            }[];
+            key?: string;
+            name: string;
+            open_commitments: components["schemas"]["AgentCommitment"][];
+            /** Format: uuid */
+            owner_id?: string;
+            owner_name?: string;
+            phase: string;
+            /** Format: uuid */
+            project_id: string;
+            /** @description The lists the caller may not read, named as `GET /projects/{id}/360` names them. A list left out for that reason is withheld, not empty. */
+            sections_omitted: components["schemas"]["Project360Section"][];
+            stakeholders: {
+                /** Format: uuid */
+                contact_id: string;
+                name?: string;
+                role?: string;
+            }[];
+            started_at?: string;
+            target_end_date?: string;
+        };
+        /** @description What `review_commitments` answers: the open promises, overdue first, as of one instant. */
+        OpenCommitments: {
+            as_of: string;
+            commitments: components["schemas"]["AgentCommitment"][];
+        };
+        /** @description What `intro_path_to` answers: the colleagues who know someone at the company, warmest first. */
+        IntroPaths: {
+            candidates_truncated: boolean;
+            /** Format: uuid */
+            company_id: string;
+            routes: {
+                /** Format: uuid */
+                contact_id: string;
+                contact_name: string;
+                display_name: string;
+                interactions_90d: number;
+                strength?: number;
+                strength_bucket: string;
+                /** Format: uuid */
+                user_id: string;
+            }[];
+        };
+        /** @description What `search_context` answers: ranked records and the passages that matched. */
+        ContextSearchResult: {
+            coverage: string;
+            hits: components["schemas"]["AgentContextHit"][];
+            notes: components["schemas"]["AgentQueryNote"][];
+        };
+        /** @description What `search_report_evidence` answers: the records of a saved run that carry the words, those that do not, and the share. */
+        ReportEvidenceResult: {
+            abstentions: {
+                /** Format: uuid */
+                id: string;
+                record_type: string;
+            }[];
+            citations: components["schemas"]["AgentContextHit"][];
+            counterexamples: components["schemas"]["AgentRecord"][];
+            coverage: string;
+            notes: components["schemas"]["AgentQueryNote"][];
+            /** @description Absent from the count unless `coverage` is `complete_exact`; a note says why. */
+            prevalence?: {
+                matched: number;
+                of: number;
+                share: number;
+            } | null;
+            tally: {
+                matched: number;
+                unjudged: number;
+                unmatched: number;
+            };
+        };
+        /** @description What `query_workspace` answers: the rows the plan matched, the plan as run, and how complete the answer is. */
+        WorkspaceQueryResult: {
+            coverage: string;
+            executed_plan: string;
+            limit: number;
+            notes: components["schemas"]["AgentQueryNote"][];
+            rows: {
+                distance_km?: number;
+                evidence: {
+                    /** Format: uuid */
+                    id: string;
+                    record_type: string;
+                    relation: string;
+                    title: string;
+                    trust_tier?: string;
+                }[];
+                owner?: {
+                    /** Format: uuid */
+                    id: string;
+                    is_you: boolean;
+                    name?: string;
+                };
+                record: components["schemas"]["AgentRecord"];
+                score?: number;
+            }[];
+        };
+        /** @description What `resolve_entities` answers: for each candidate, the records it matches and whether one match can be acted on. */
+        EntityResolutionResult: {
+            candidates: {
+                decision: string;
+                matches: {
+                    confidence: number;
+                    matched_on: string;
+                    record: components["schemas"]["AgentRecord"];
+                }[];
+                ref?: string;
+            }[];
+        };
+        /** @description What `describe_analytics_vocabulary` answers. */
+        AnalyticsVocabulary: {
+            vocabulary: string;
+        };
+        /** @description What `describe_record_fields` answers. */
+        RecordFieldsVocabulary: {
+            fields: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `describe_report_blocks` answers. */
+        ReportBlockGrammar: {
+            blocks: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `describe_report_vocabulary` answers. */
+        ReportVocabulary: {
+            vocabulary: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `whoami` answers: the human this caller acts for. */
+        ActingIdentity: {
+            /** Format: uuid */
+            acting_user_id: string;
+            display_name: string;
+            email: string;
+            locale?: string;
+            prose_language: string;
+            timezone?: string;
+        };
+        /** @description What `describe_query_vocabulary` answers. */
+        QueryVocabulary: {
+            /** @description The query vocabulary document, as `margince://schema/query` publishes it. */
+            vocabulary: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `whats_slipping_this_week` answers, worst first. */
+        SlippingDealList: {
+            deals: components["schemas"]["SlippingDeal"][];
+        };
+        /** @description One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id, so the order is the same on every read of the same data. */
+        SlippingDeal: {
+            rank: number;
+            /** Format: uuid */
+            deal_id: string;
+            name: string;
+            /**
+             * Format: int64
+             * @description Absent for a deal that carries no amount yet.
+             */
+            amount_minor?: number;
+            /** @description Present when amount_minor is, and only then. */
+            currency?: string;
+            evidence: components["schemas"]["SlippingEvidence"][];
+        };
+        /** @description One reason the deal is on the list, and the field or read it comes from. */
+        SlippingEvidence: {
+            /** @description The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`. */
+            source: string;
+            snippet: string;
+        };
+        /** @description What `draft_follow_ups_for` takes. */
+        DealFollowUpDraftRequest: {
+            /**
+             * @description The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+             * @enum {string}
+             */
+            segment: "slipping";
+            /** @description How many of the worst deals to draft for. Omit it for 25, the most one call writes. */
+            limit?: number;
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `draft_follow_ups_for` answers. */
+        DealFollowUpDrafts: {
+            segment: string;
+            drafts: components["schemas"]["DealFollowUpDraft"][];
+        };
+        /** @description One drafted follow-up, the activity it was saved as, and why the deal is on the list. */
+        DealFollowUpDraft: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            draft_activity_id: string;
+            summary: string;
+            evidence: components["schemas"]["AgentExcerpt"][];
+        };
+        /** @description What `progress_deal` takes besides the deal, which the path names. */
+        ProgressDealRequest: {
+            /**
+             * Format: uuid
+             * @description The stage to move to. Its semantic decides whether the move is confirm-first.
+             */
+            to_stage_id: string;
+            /** @description Required when the stage closes the deal as lost. */
+            lost_reason?: string;
+            /**
+             * @description Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+             * @enum {string}
+             */
+            won_without_contract_reason?: "imported" | "purchase_order" | "verbal" | "renewal_by_email" | "other";
+            /** @description What the reason was, required when it is `other`. */
+            won_without_contract_detail?: string;
+            /** @description Logged as a note on the deal's timeline after the move. */
+            note?: string;
+            /** @description The deal's version the move was decided on. A deal that has changed since is refused. */
+            if_version?: number;
+            /**
+             * Format: uuid
+             * @description The approval a human gave this exact call, on its retry.
+             */
+            approval_id?: string;
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `progress_deal` answers. */
+        ProgressDealResult: {
+            deal: components["schemas"]["AgentRecord"];
+            /**
+             * Format: uuid
+             * @description The note logged on the deal, absent when the call carried none.
+             */
+            note_activity_id?: string;
+        };
+        /** @description What `qualify_lead` takes besides the lead, which the path names. */
+        QualifyLeadRequest: {
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /** @description What `qualify_lead` answers. */
+        LeadQualification: {
+            /**
+             * Format: uuid
+             * @description The lead.
+             */
+            record_id: string;
+            /** @description The fields this call filled, by name. */
+            filled: {
+                [key: string]: components["schemas"]["LeadQualifiedField"];
+            };
+            /** @description The qualification fields still empty, for a human to fill. */
+            gaps: string[];
+        };
+        /** @description The value a field was filled with and what it was read from. */
+        LeadQualifiedField: {
+            value: string;
+            evidence: components["schemas"]["AgentExcerpt"][];
+        };
         DealCoverage: {
             /** Format: uuid */
             deal_id: string;
@@ -26665,14 +27930,48 @@ export interface components {
              *     the member's display name when one is on file.
              */
             body: string;
+            /** @description The member's title, filled into the workspace template's `{title}`. */
+            title: string;
+            /** @description The member's phone number, filled into the workspace template's `{phone}`. */
+            phone: string;
+            /**
+             * @description The workspace has a signature template. Every send this member makes then signs
+             *     with the template, filled in with their name, title and phone, instead of `body`.
+             *     An agent's send carries no sign-off.
+             */
+            template_active: boolean;
             /** Format: date-time */
             updated_at?: string | null;
+        };
+        EmailSignatureTemplate: {
+            /**
+             * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+             *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
+             *     mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+             *     and spans with a colour and a pixel size, and drops everything else. Empty means
+             *     none: each member signs with their own plain-text signature.
+             */
+            template: string;
         };
         EmailSignOffRequest: {
             /** @description The message as written so far, plain text. Read only for its language. */
             body: string;
             /** @description The subject, read for its language when the body is too short to tell. */
             subject?: string;
+            draft?: components["schemas"]["EmailSignatureDraft"];
+        };
+        /**
+         * @description Values a settings form has typed and not saved. Each field present stands in for
+         *     the stored one, so the preview shows what saving would produce. Writes nothing,
+         *     and a send never reads it.
+         */
+        EmailSignatureDraft: {
+            /** @description The workspace template as edited. Empty previews a workspace with none. */
+            template?: string;
+            /** @description The caller's title as edited. */
+            title?: string;
+            /** @description The caller's phone as edited. */
+            phone?: string;
         };
         EmailSignOff: {
             /**
@@ -26681,12 +27980,18 @@ export interface components {
              */
             text: string;
             /**
+             * @description The same block as the sanitized markup the HTML part carries. Present only when
+             *     `kind` is `template`.
+             */
+            html?: string;
+            /**
              * @description `signature`: the caller's own, from Settings. `closing`: the caller has written
-             *     none, so the send closes with a plain greeting and their name when available. `none`: this
-             *     send appends nothing.
+             *     none, so the send closes with a plain greeting and their name when available.
+             *     `template`: the workspace's template, filled in with the caller's values. `none`:
+             *     this send appends nothing.
              * @enum {string}
              */
-            kind: "signature" | "closing" | "none";
+            kind: "signature" | "closing" | "template" | "none";
         };
         SaveEmailSignatureRequest: {
             /**
@@ -26695,6 +28000,10 @@ export interface components {
              *     is a document riding on every message.
              */
             body: string;
+            /** @description The member's title, for the workspace template. Omitted leaves it as it is. */
+            title?: string;
+            /** @description The member's phone number, for the workspace template. Omitted leaves it as it is. */
+            phone?: string;
         };
         SaveMyDisplayNameRequest: {
             /**
@@ -26972,8 +28281,9 @@ export interface components {
             strength_bucket?: "none" | "weak" | "moderate" | "strong" | null;
         };
         /**
-         * @description The warm-intro route the account's most recent open signal proposes: which signal,
-         *     and which contact is the way in. The contact is ranked exactly as
+         * @description The route the account's most recent open signal proposes: which signal, and
+         *     which contact is the way in. It is not an introduction path: `GET /companies/{id}/intro-paths`
+         *     answers who should introduce us. The contact is ranked exactly as
          *     `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
          *     the card and the warm room can never name different contacts.
          *
@@ -26985,12 +28295,12 @@ export interface components {
          *     never names a DIFFERENT contact than the warm room: it either shows that contact or
          *     says nothing.
          */
-        CompanyGraphIntroPath: {
+        CompanyGraphSignalRoute: {
             /** Format: uuid */
             signal_id: string;
             /**
              * Format: uuid
-             * @description The route-in contact. Always present in `nodes`, carrying `intro_path: true`.
+             * @description The route-in contact. Always present in `nodes`, carrying `on_signal_route: true`.
              */
             contact_id: string;
         };
@@ -27231,7 +28541,7 @@ export interface components {
             /**
              * @description The groups withheld for lack of a grant — so a client can say "you can't see
              *     this" instead of "there is none". `contacts` withheld also withholds
-             *     `deal_stakeholder` edges and the intro path, because both name a contact.
+             *     `deal_stakeholder` edges and the signal route, because both name a contact.
              *
              *     `our_side` is the workspace members connected to the account — the owner and the
              *     teammates who have interacted with its contacts. It needs BOTH the contact and the
@@ -27242,8 +28552,8 @@ export interface components {
              *     grant beyond the company read this whole endpoint already demands, so they
              *     are row-scope pruned like every other node and can never be withheld wholesale.
              */
-            groups_omitted: ("contacts" | "deals" | "intro_path" | "our_side")[];
-            intro_path?: components["schemas"]["CompanyGraphIntroPath"];
+            groups_omitted: ("contacts" | "deals" | "signal_route" | "our_side")[];
+            signal_route?: components["schemas"]["CompanyGraphSignalRoute"];
         };
         /**
          * @description The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
@@ -28716,9 +30026,17 @@ export interface components {
             source_type: components["schemas"]["StageEvidenceSource"];
             /**
              * Format: uuid
-             * @description The activity, contract or deal-room decision this was read from.
+             * @description The activity or contract this was read from.
              */
             source_id: string;
+            /**
+             * @description True when the caller cannot open the activity or contract
+             *     `source_id` names: it was deleted, or it is not visible to them.
+             *     The two read the same, so this never tells a hidden record from a
+             *     missing one. The observation stays on the ledger either way,
+             *     because a stage decision may rest on it.
+             */
+            source_missing: boolean;
             /** @description 1-based transcript lines, when the claim quotes one. */
             source_lines?: number[] | null;
             /** @description The cited words, at most 500 characters. */
@@ -30986,6 +32304,8 @@ export interface components {
              * @description Lowercased; lead-internal dedupe key.
              */
             email?: string | null;
+            /** @description E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes. */
+            phone?: string | null;
             /** @description Normalized LinkedIn profile URL; the exact-match dedupe key. */
             linkedin_url?: string | null;
             title?: string | null;
@@ -31119,6 +32439,8 @@ export interface components {
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
+            /** @description E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes. */
+            phone?: string | null;
             /** @description Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads. */
             linkedin_url?: string | null;
             title?: string | null;
@@ -31162,6 +32484,8 @@ export interface components {
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
+            /** @description E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes. */
+            phone?: string | null;
             title?: string | null;
             company_name?: string | null;
             /** @description Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK. */
@@ -31432,6 +32756,8 @@ export interface components {
             active: boolean;
             /** @description Seeded with the installation. Fully editable; it simply cannot be removed. */
             readonly system: boolean;
+            /** @description Live deals carrying this key that the caller may see. Absent when the caller may not read deals, because a zero would claim no deal carries it. Set on the list read; absent on the record a write answers. */
+            readonly deal_count?: number;
             /** Format: int64 */
             readonly version: number;
             /** Format: date-time */
@@ -32582,6 +33908,12 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
+            /**
+             * @description Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+             *     carries a description of what interest looks like, and that description is what
+             *     the suggestion is matched against. Only Admin and Ops set it.
+             */
+            suggestible?: boolean;
             /** Format: int64 */
             version?: number;
             /** Format: date-time */
@@ -32590,6 +33922,8 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /** @description How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read that asks `with_carried_by`; absent otherwise. */
+            readonly carried_by?: number;
         };
         CreateTagRequest: {
             name: string;
@@ -32647,6 +33981,12 @@ export interface components {
             /** @enum {string|null} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | null;
             description?: string | null;
+            /**
+             * @description Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+             *     carries a description of what interest looks like, and that description is what
+             *     the suggestion is matched against. Only Admin and Ops set it.
+             */
+            suggestible?: boolean;
             /** Format: int64 */
             version?: number;
             /** Format: date-time */
@@ -32656,6 +33996,36 @@ export interface components {
             /** Format: date-time */
             archived_at?: string | null;
             usage: components["schemas"]["TagUsage"];
+        };
+        /**
+         * @description A suggestible tag proposed on one contact or company from captured mail or meeting
+         *     notes, waiting for somebody to accept or dismiss it.
+         */
+        TagSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            state: "open" | "accepted" | "dismissed" | "superseded";
+            tag: components["schemas"]["RowTag"];
+            /** @enum {string} */
+            entity_type: "contact" | "company";
+            /** Format: uuid */
+            entity_id: string;
+            entity_name: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The activities the suggestion cites, newest first. */
+            evidence: components["schemas"]["TagSuggestionEvidence"][];
+        };
+        TagSuggestionEvidence: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @description The activity kind: email, meeting, note or call. */
+            kind: string;
+            /** @description Absent when the activity has none or it was redacted. */
+            subject?: string | null;
+            /** Format: date-time */
+            occurred_at: string;
         };
         /**
          * @description How many records of each advertised type carry this tag, counted within what the
@@ -32683,6 +34053,8 @@ export interface components {
             /** @enum {string} */
             color?: "teal" | "amber" | "rose" | "slate" | "sky" | "violet" | "lime" | "orange" | "none";
             description?: string;
+            /** @description Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held. */
+            suggestible?: boolean;
         };
         MergeTagsRequest: {
             /**
@@ -33250,6 +34622,12 @@ export interface components {
             team_ids?: string[];
             /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
             allowed_actions?: ("change_role" | "issue_password_link" | "deactivate" | "reactivate")[];
+            /**
+             * Format: date-time
+             * @description When this member last used the product: the latest request any of their sign-in sessions made, including a session since signed out, revoked or expired. Clearing dead sessions records the latest of their requests on the member first, so the value outlives the sessions. Signing in counts as activity. Work an agent or a connected app did on their behalf does not.
+             *     Present only to a caller who administers members and could list this member's sessions (`listUserSessions`): the `user_admin` grant, and the ceiling over the target (a non-admin never sees an admin's). Carried by `listUsers`'s management view for a human caller and by the member-administration writes; absent everywhere else, including `MeResponse.user`. Absent or null also when the member never signed in, so a client renders the column only on the management view.
+             */
+            last_active_at?: string | null;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -34637,6 +36015,45 @@ export interface components {
             /** @description One row per composed unit with anything refused in the window. */
             units: components["schemas"]["ExtensionUnitIngestHealth"][];
         };
+        /**
+         * @description The installation's restore-drill evidence, read against the published recovery
+         *     targets. Margince does not observe backups; this report carries none.
+         */
+        RecoveryHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description The published recovery target, in seconds. */
+            recovery_target_seconds: number;
+            /** @description The published data-loss target, in seconds. */
+            data_loss_target_seconds: number;
+            /** @description The most recent drill, or null when none was ever recorded. */
+            last_drill: components["schemas"]["RestoreDrill"] | null;
+        };
+        /** @description One rehearsal of the restore procedure, as the drill ledger holds it. */
+        RestoreDrill: {
+            /** Format: date-time */
+            started_at: string;
+            /**
+             * Format: date-time
+             * @description Null while the drill runs, and on a drill nobody closed.
+             */
+            finished_at: string | null;
+            /**
+             * Format: date-time
+             * @description The point in time the backup was restored to.
+             */
+            restored_to: string;
+            /** @enum {string} */
+            outcome: "running" | "passed" | "failed";
+            /** @description Who ran the drill, as the operator named themselves on the command line. */
+            operator: string;
+            /** @description What the drill checked, or why it failed. */
+            notes: string | null;
+            /** @description Finished minus started. Null until the drill finishes. */
+            recovery_seconds: number | null;
+            /** @description Started minus the restore point. The restore point is what the operator gave to drill-start, so this figure is only as true as that input. */
+            data_loss_seconds: number;
+        };
         ExtensionUnitIngestHealth: {
             /** @description The composed unit's name. */
             unit: string;
@@ -34727,6 +36144,14 @@ export interface components {
              */
             passport_id?: string | null;
             /**
+             * @description The tool a delegated change was typed through, as AuditHistoryEntry
+             *     carries it and with the same nulls. Read from the passport the row
+             *     itself recorded, so a token rotated or revoked since the change
+             *     still names its client; resolving through the passport list would
+             *     name only the newest token of each connection.
+             */
+            agent_client?: string | null;
+            /**
              * Format: uuid
              * @description The human authority for an agent action.
              */
@@ -34754,6 +36179,16 @@ export interface components {
              * @description Every audit_log row names the record it mutated (NOT NULL since 0075).
              */
             entity_id: string;
+            /**
+             * @description The record's current display name, read on the read path from the
+             *     record's own live row under the reader's grants: a contact, lead or
+             *     user's name, a company, deal, project, team, role, tag, list,
+             *     pipeline, stage or product's name, an activity's subject. Null when
+             *     the reader may not see the record, when it is archived, erased or
+             *     gone, when it has no name, and for every other entity type. It is
+             *     never taken from the row's `before` or `after` image.
+             */
+            entity_label?: string | null;
             /**
              * @description The record image before the change. For an `activity` row this read
              *     REDACTS content the caller's audience does not admit. What survives
@@ -34829,6 +36264,14 @@ export interface components {
              * @description Agent Seat Passport that authorized the change; present for agent actors only.
              */
             passport_id?: string | null;
+            /**
+             * @description The tool a delegated change was typed through, as AuditHistoryEntry
+             *     carries it and with the same nulls. Read from the passport the row
+             *     itself recorded, so a token rotated or revoked since the change
+             *     still names its client; resolving through the passport list would
+             *     name only the newest token of each connection.
+             */
+            agent_client?: string | null;
             /** @description Grounding evidence for an agent-authored change; present for agent actors only. */
             evidence?: {
                 [key: string]: unknown;
@@ -35483,6 +36926,11 @@ export interface components {
              * @enum {string}
              */
             scope?: "read" | "draft" | "write" | "send" | "enrich";
+            /**
+             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. Absent means the operation's own handler runs and the gate admits it.
+             * @enum {string}
+             */
+            served_by?: "registry";
         };
         /**
          * @description EXACTLY ONE input source (B-E01.2b/.13): `url` (fetch+parse a website, ADR-0006), `text` (the
@@ -35759,7 +37207,7 @@ export interface components {
             field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
             value: string;
             /** @enum {string} */
-            source: "human" | "site_read" | "connector" | "migration" | "technical_lookup";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup";
             readonly captured_by: string;
             evidence_snippet?: string | null;
             /** Format: uri */
@@ -35820,7 +37268,7 @@ export interface components {
             value: string;
             value_key: string;
             /** @enum {string} */
-            source: "human" | "site_read" | "connector" | "migration" | "technical_lookup";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup";
             readonly captured_by: string;
             evidence_snippet?: string | null;
             /** Format: uri */
@@ -35850,7 +37298,7 @@ export interface components {
             key: string;
             value: string;
             /** @enum {string} */
-            source: "human" | "site_read" | "connector" | "migration";
+            source: "human" | "agent" | "site_read" | "connector" | "migration";
             readonly captured_by: string;
             /** Format: uri */
             source_url?: string | null;
@@ -35917,7 +37365,7 @@ export interface components {
             classification: "new" | "machine_change" | "human_conflict" | "unchanged";
             current_value: string | null;
             /** @enum {string|null} */
-            current_source: "human" | "site_read" | "connector" | "migration" | "technical_lookup" | null;
+            current_source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | null;
             proposed_value: string;
         };
         CompanySiteReadResolution: {
@@ -36553,6 +38001,8 @@ export interface components {
             edited_payload?: {
                 [key: string]: unknown;
             };
+            /** @description Why, in the approver's own words. Recorded with the decision, as a rejection's reason is. */
+            reason?: string;
         };
         ApprovalListResponse: {
             data: components["schemas"]["Approval"][];
@@ -37051,7 +38501,7 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             /** Format: int64 */
-            version?: number;
+            version: number;
         };
         CreateRecordGrantRequest: {
             /** @enum {string} */
@@ -37374,6 +38824,18 @@ export interface components {
             kind: "access" | "rectify" | "erasure";
             /** @description The data subject: a contact id or external identifier. */
             subject_ref: string;
+            /**
+             * @description The display name of the contact or lead `subject_ref` names. Absent or null when the
+             *     reference names no record, or names one the caller may not read: a hidden subject and an
+             *     external identifier read the same, so the queue discloses no more than the record would.
+             */
+            subject_label?: string | null;
+            /**
+             * @description Which kind of record `subject_label` was read from. Null when nothing resolved: an
+             *     external identifier, an erased subject, or one the caller may not read.
+             * @enum {string|null}
+             */
+            subject_kind?: null | "contact" | "lead";
             /** @enum {string} */
             status: "open" | "in_progress" | "fulfilled" | "rejected";
             /**
@@ -37381,6 +38843,14 @@ export interface components {
              * @description Statutory deadline (e.g. 30 days).
              */
             due_at: string;
+            /**
+             * @description The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or
+             *     `<jurisdiction> v<version>` for a pack's own deadline. Null on a request filed before
+             *     deadlines were computed, whose date was typed by hand.
+             */
+            due_rule?: string | null;
+            /** @description True when the officer chose an earlier deadline than `due_rule` gives. */
+            due_overridden: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
             resolution?: string | null;
@@ -37443,6 +38913,13 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             /**
+             * @description The contact's display name. Absent or null when the caller may not read that contact, or
+             *     it no longer resolves: the privacy queue reaches duties outside the caller's CRM view, and
+             *     the name stays as visible as the record.
+             */
+            contact_name?: string | null;
+            acquisition?: components["schemas"]["NoticeAcquisition"];
+            /**
              * @description Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
              * @enum {string}
              */
@@ -37468,6 +38945,31 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
+         *     `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
+         *     happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+         *     such rather than presenting a bare deadline. On an attention or worklist item only the
+         *     `notice_case` source sends it.
+         */
+        NoticeAcquisition: {
+            /** @description How the contact was obtained, in the closed vocabulary `contact_acquisition_evidence.kind` uses. */
+            kind: string;
+            /**
+             * Format: date-time
+             * @description When the acquisition happened. Null when the door that recorded it did not know.
+             */
+            occurred_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the evidence was recorded.
+             */
+            captured_at: string;
+            /** @description The principal that recorded it: `human:<uuid>`, `agent:<id>`, `connector:<name>` or `system`. */
+            captured_by: string;
+            /** @description The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves. */
+            captured_by_name?: string | null;
+        } | null;
         AssignNoticeCase: {
             /** Format: uuid */
             owner_user_id: string;
@@ -37513,16 +39015,142 @@ export interface components {
             /** @enum {string} */
             kind: "access" | "rectify" | "erasure";
             subject_ref: string;
-            /** Format: date-time */
-            due_at: string;
+            /**
+             * Format: date-time
+             * @description When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.
+             */
+            received_at?: string;
+            /**
+             * Format: date-time
+             * @description An earlier deadline than the one the server computes from `received_at`. Absent takes
+             *     the computed deadline. A date LATER than the computed deadline is refused with 422
+             *     naming `due_at`; an earlier one is stored with `due_overridden: true`.
+             */
+            due_at?: string;
             /** Format: uuid */
             assignee_id?: string | null;
         };
+        /** @description The deadline a request of one kind received at one instant gets, and the rule that set it. */
+        RequestDeadline: {
+            /** Format: date-time */
+            due_at: string;
+            /** @description `gdpr`, or `<jurisdiction> v<version>` for a pack's own deadline. */
+            rule: string;
+        };
+        /**
+         * @description Which jurisdiction this installation runs under and what that selection puts in force.
+         *     Each section names its own source: the unit that ships the pack, the pack's retention
+         *     classes, the messaging rule set with its own version, and the request deadlines.
+         */
+        InstallationJurisdiction: {
+            /** @description The selected pack code, or null when no jurisdiction is set. */
+            selected: string | null;
+            /** @description Every jurisdiction pack compiled into this build. */
+            available: components["schemas"]["JurisdictionUnit"][];
+            /** @description The extension unit that ships the selected pack. Absent when nothing is selected. */
+            unit?: components["schemas"]["JurisdictionUnit"];
+            /** @description Every retention class the selected pack declares. Empty when nothing is selected or the pack declares none. */
+            retention_classes?: components["schemas"]["JurisdictionRetentionClass"][];
+            floor: components["schemas"]["RetentionFloorPolicy"];
+            /** @description The selected pack's messaging rule set. Absent when it declares none. */
+            messaging?: components["schemas"]["JurisdictionMessagingRules"];
+            /** @description The request deadline per kind, each with the rule that sets it. */
+            deadlines: components["schemas"]["JurisdictionDeadline"][];
+            /** @description The documents the selected pack ships. */
+            documents: components["schemas"]["JurisdictionDocument"][];
+        };
+        JurisdictionUnit: {
+            /** @description The pack's ISO 3166-1 alpha-2 code. */
+            code: string;
+            /** @description The extension unit that ships it. */
+            unit_name: string;
+            /** @description The unit's own version, not a rule set's. */
+            unit_version: string;
+            description: string;
+            /** @description The commercial-correspondence floor selecting this pack puts in force. Absent when it declares none. */
+            correspondence_floor?: components["schemas"]["JurisdictionRetentionClass"];
+        };
+        JurisdictionRetentionClass: {
+            /** @description The class, e.g. `commercial_correspondence`. */
+            name: string;
+            /** @description The ISO 8601 period the class keeps, e.g. `P6Y`. */
+            keep: string;
+            /** @description The period counts from the end of the calendar year. */
+            from_year_end: boolean;
+        };
+        /**
+         * @description The correspondence floor in force. With no jurisdiction selected it is the strictest floor
+         *     of every compiled-in pack. `known` false means no floor binds new mail.
+         */
+        RetentionFloorPolicy: {
+            known: boolean;
+            class?: string;
+            /** @description ISO 8601 period. Absent when `known` is false. */
+            keep?: string;
+            from_year_end: boolean;
+            /** @description Every compiled-in pack code. */
+            packs: string[];
+            /** @description A floor an earlier, stricter jurisdiction left on mail that occurred before the change. */
+            carried?: components["schemas"]["CarriedRetentionFloor"];
+        };
+        CarriedRetentionFloor: {
+            class: string;
+            /** @description ISO 8601 period. */
+            keep: string;
+            from_year_end: boolean;
+            /**
+             * Format: date-time
+             * @description Mail that occurred before this instant stays bound.
+             */
+            before: string;
+            /**
+             * Format: date-time
+             * @description When the youngest bound message leaves the window.
+             */
+            binds_until: string;
+        };
+        JurisdictionMessagingRules: {
+            /** @description The rule set's own version, which decisions record. */
+            version: number;
+            instruments: components["schemas"]["JurisdictionInstrument"][];
+        };
+        JurisdictionInstrument: {
+            /** @description The law or decree, as a regulator cites it. */
+            name: string;
+            /** Format: date */
+            effective_from?: string;
+        };
+        JurisdictionDeadline: {
+            /** @enum {string} */
+            kind: "access" | "rectify" | "erasure";
+            /** @description `gdpr`, or `<jurisdiction> v<version>`. */
+            rule: string;
+            /** @description ISO 8601 calendar period, when the deadline counts in calendar units. */
+            period?: string;
+            /** @description Hours, when the deadline counts in hours. */
+            hours?: number;
+        };
+        JurisdictionDocument: {
+            id: string;
+            title: string;
+            language: string;
+            /** @enum {string} */
+            audience: "employer" | "operator" | "employee";
+            /** @enum {string} */
+            kind: "template" | "reading_copy" | "record";
+            media_type: string;
+            size_bytes: number;
+        };
+        /** @description A sparse patch: an absent field is left as it is, and an explicit null clears a nullable one. */
         UpdateDataSubjectRequest: {
             /** @enum {string} */
             status?: "open" | "in_progress" | "fulfilled" | "rejected";
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description null hands the request back to the unassigned pool.
+             */
             assignee_id?: string | null;
+            /** @description null clears the answer, which a fulfilled or rejected request refuses with 422: a closed request keeps its answer. */
             resolution?: string | null;
         };
         /**
@@ -37809,6 +39437,18 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the rule last ran: fired, queued for approval, failed or was blocked. A skipped firing never counts. Only GET /automations carries it, to every caller who may read automations; a single read, a create and an update leave it out. Absent on a list item whose rule has never run.
+             */
+            last_run_at?: string | null;
+            /**
+             * @description How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
+             * @enum {string|null}
+             */
+            last_run_outcome?: "fired" | "queued_for_approval" | "failed" | "blocked" | null;
+            /** @description Runs other than skipped ones in the 30 days before the server read the list. Every GET /automations item carries it, 0 for a rule that has not run; a single read, a create and an update leave it out. */
+            runs_last_30_days?: number;
         };
         CreateAutomationRequest: {
             key: string;
@@ -40402,6 +42042,14 @@ export interface components {
              *     page where sending it again lives. A send filed under no contact still
              *     appears, named by its subject line, without the verb.
              *
+             *     Channel sends appear too, and a channel message has no subject line. One
+             *     is titled by its channel and the counterparty that channel knows, for
+             *     example `Telegram to buyer`, and the record it was filed under is the
+             *     card's own `subject`. No part of the message text appears: it is unsent,
+             *     and this queue is read by colleagues. The counterparty is named as the
+             *     provider knows them rather than by the CRM record's own name, which a
+             *     reader of this lane may not be permitted to see.
+             *
              *     Withheld — named in `lanes_omitted` — for a caller with no human behind
              *     it. Absent — not empty — on an installation whose feed does not read
              *     delivery outcomes.
@@ -40482,6 +42130,8 @@ export interface components {
             duplicates_open?: number;
             /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`. */
             deal_suggestions_open?: number;
+            /** @description Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`. */
+            tag_suggestions_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
             /** @description How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
@@ -40548,7 +42198,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -40659,6 +42309,7 @@ export interface components {
             /** @description How sure the detector was, 0..1, where an item rests on a detection rather than a rule. */
             confidence?: number;
             subject?: components["schemas"]["AttentionSubject"];
+            acquisition?: components["schemas"]["NoticeAcquisition"];
             pair?: components["schemas"]["AttentionPair"];
             deal?: components["schemas"]["AttentionDealFacts"];
             /**
@@ -41092,7 +42743,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -41978,7 +43629,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -42052,6 +43703,7 @@ export interface components {
              */
             consequence: "buyer_waits" | "promise_breaks" | "deal_drifts" | "deal_slips_past_close" | "meeting_unprepared" | "task_slips" | "work_blocked" | "customer_never_received" | "you_believe_it_happened" | "legal_deadline_missed" | "mailbox_blind" | "data_drifts" | "none";
             subject?: components["schemas"]["AttentionSubject"];
+            acquisition?: components["schemas"]["NoticeAcquisition"];
             lead?: components["schemas"]["WorklistLeadFacts"];
             /** @description The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
@@ -43076,6 +44728,16 @@ export interface components {
         };
     };
     parameters: {
+        /** @description The type of the record to build around. */
+        AnchorRecordType: "contact" | "company" | "deal" | "lead" | "project" | "activity";
+        /** @description The record to build around. Give this or `record_name`, not both. */
+        AnchorRecordId: string;
+        /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+        AnchorRecordName: string;
+        /** @description Cap the items in each section. */
+        AnchorMaxItems: number;
+        /** @description Keep only what is filed under this project or under none. */
+        AnchorProjectId: string;
         /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
         BriefProjectId: string;
         /** @description The profile field's key — the same closed vocabulary `ContactProfileField.field` carries. */
@@ -43223,6 +44885,12 @@ export interface components {
          */
         IdempotencyKey: string;
         /**
+         * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+         *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+         *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+         */
+        ToolIdempotencyKey: string;
+        /**
          * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
          *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
          *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
@@ -43247,6 +44915,28 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getActingIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The acting human. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActingIdentity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getCurrentPrincipal: {
         parameters: {
             query?: never;
@@ -43821,6 +45511,36 @@ export interface operations {
             };
         };
     };
+    getRecoveryHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The installation's restore-drill evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listPassports: {
         parameters: {
             query?: never;
@@ -43838,6 +45558,11 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PassportSummary"][];
+                        /**
+                         * Format: uri
+                         * @description The address a passport calls this API at, `/v1` included: the configured API base URL, else the public base URL, else the origin this request arrived on. The skill bundle's `openapi.yaml` names the same address.
+                         */
+                        api_base_url: string;
                     };
                 };
             };
@@ -43900,6 +45625,28 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    downloadAgentSkillBundle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The skill as a downloadable ZIP attachment, `margince-skill.zip`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getConsentRequest: {
@@ -46195,6 +47942,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listIntroPaths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The introduction routes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroPaths"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getCompanyGraph: {
         parameters: {
             query?: never;
@@ -47717,6 +49490,20 @@ export interface operations {
                 /** @description Read one Kanban column. */
                 stage_id?: string;
                 owner_id?: string;
+                /**
+                 * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+                 *     a team the caller cannot see returns their own visible rows filtered to nothing, not a
+                 *     wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+                 *     and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+                 *     (DM-VOCAB-OWN-1).
+                 */
+                owner_team_id?: string;
+                /**
+                 * @description `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+                 *     (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+                 *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+                 */
+                unassigned?: boolean;
                 company_id?: string;
                 /** @description Full-text query over the deal's name and description, plus a substring match on the name. */
                 q?: string;
@@ -47779,6 +49566,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createDeal: {
@@ -47833,6 +49621,101 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listSlippingDeals: {
+        parameters: {
+            query?: {
+                /** @description Days without recorded activity after which an open deal counts as gone quiet. */
+                quiet_days?: number;
+                /** @description Cap the ranked list. Omit it for every evidenced deal. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The slipping deals, worst first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlippingDealList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listAtRiskRelationships: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The at-risk deals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AtRiskRelationships"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    draftDealFollowUps: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DealFollowUpDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description The drafts written, one per deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealFollowUpDrafts"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getDeal: {
@@ -48024,6 +49907,55 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    progressDeal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProgressDealRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal at its new stage, and the note logged on it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressDealResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listDealStakeholders: {
         parameters: {
             query?: never;
@@ -48084,6 +50016,20 @@ export interface operations {
                 /** @description The anchor company. A project has exactly one. */
                 company_id?: string;
                 owner_id?: string;
+                /**
+                 * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+                 *     a team the caller cannot see returns their own visible rows filtered to nothing, not a
+                 *     wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+                 *     and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+                 *     (DM-VOCAB-OWN-1).
+                 */
+                owner_team_id?: string;
+                /**
+                 * @description `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+                 *     (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+                 *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+                 */
+                unassigned?: boolean;
                 /** @description Omit for all phases; `phase != closed` is the open-projects slice the link ladder probes. */
                 phase?: "initiative" | "pursuing" | "delivering" | "closed";
                 /** @description Exact (case-insensitive) key lookup. */
@@ -48108,15 +50054,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description A sort or filter field outside the allow-list. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            422: components["responses"]["ValidationError"];
         };
     };
     createProject: {
@@ -48630,6 +50568,32 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    prepareProjectHandoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The handoff brief. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHandoff"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getProject360: {
@@ -49615,6 +51579,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listTransitionPolicies: {
@@ -53435,6 +55400,55 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getEmailSignatureTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignatureTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    saveEmailSignatureTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailSignatureTemplate"];
+            };
+        };
+        responses: {
+            /** @description The saved template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailSignatureTemplate"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getLeadSettings: {
         parameters: {
             query?: never;
@@ -53670,6 +55684,55 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    qualifyLead: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QualifyLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description What was filled and what is still empty. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadQualification"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     previewLeadPromotion: {
@@ -54577,6 +56640,15 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
+            /** @description Another reason already holds this label, compared trimmed and ignoring case. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -54649,6 +56721,15 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description Another reason already holds this label, compared trimmed and ignoring case. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -56816,11 +58897,93 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    acceptTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The accepted suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    dismissTagSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dismissed suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     listTags: {
         parameters: {
             query?: {
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
+                /** @description Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in the workspace, so a caller that only needs the words leaves it off. */
+                with_carried_by?: boolean;
             };
             header?: never;
             path?: never;
@@ -57235,6 +59398,233 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    describeQueryVocabulary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The query vocabulary for this caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    catchUpOnRecord: {
+        parameters: {
+            query: {
+                /** @description The type of the record to build around. */
+                record_type: components["parameters"]["AnchorRecordType"];
+                /** @description The record to build around. Give this or `record_name`, not both. */
+                record_id?: components["parameters"]["AnchorRecordId"];
+                /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+                record_name?: components["parameters"]["AnchorRecordName"];
+                /** @description Cap the items in each section. */
+                max_items?: components["parameters"]["AnchorMaxItems"];
+                /** @description Keep only what is filed under this project or under none. */
+                project_id?: components["parameters"]["AnchorProjectId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assembled picture. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAssembledContext"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    prepForMeeting: {
+        parameters: {
+            query: {
+                /** @description The type of the record to build around. */
+                record_type: components["parameters"]["AnchorRecordType"];
+                /** @description The record to build around. Give this or `record_name`, not both. */
+                record_id?: components["parameters"]["AnchorRecordId"];
+                /** @description The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at. */
+                record_name?: components["parameters"]["AnchorRecordName"];
+                /** @description Cap the items in each section. */
+                max_items?: components["parameters"]["AnchorMaxItems"];
+                /** @description Keep only what is filed under this project or under none. */
+                project_id?: components["parameters"]["AnchorProjectId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The meeting preparation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingPrep"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listOpenCommitments: {
+        parameters: {
+            query?: {
+                /** @description Narrow to one owner's promises. Omit it for everyone's. */
+                assignee_id?: string;
+                /** @description Keep only promises filed under this project or under none. */
+                project_id?: string;
+                /** @description Cap the set. 50 is also the ceiling. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open commitments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenCommitments"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    searchContext: {
+        parameters: {
+            query: {
+                /** @description What to look for, in your own words. */
+                query: string;
+                /** @description Restrict the sweep to these types. Omit it to sweep all of them. */
+                record_types?: ("contact" | "company" | "deal" | "lead" | "project")[];
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ranked records. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContextSearchResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    queryWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description The rows the plan matched. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceQueryResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resolveEntities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntityResolutionRequest"];
+            };
+        };
+        responses: {
+            /** @description The matches for each candidate, in the order sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityResolutionResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    describeRecordFields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record write vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordFieldsVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     search: {
@@ -59747,6 +62137,53 @@ export interface operations {
             };
         };
     };
+    getInstallationJurisdiction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The jurisdiction and its effects. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationJurisdiction"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    downloadJurisdictionDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file bytes; Content-Disposition names the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     getLicenseEntitlement: {
         parameters: {
             query?: never;
@@ -61476,6 +63913,33 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDataSubjectRequestDeadline: {
+        parameters: {
+            query: {
+                kind: "access" | "rectify" | "erasure";
+                /** @description When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`. */
+                received_at?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The computed deadline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestDeadline"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getControllerParticulars: {
@@ -61782,6 +64246,7 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     listConfirmSubmissions: {
@@ -63561,6 +66026,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
         };
     };
     listUsers: {
@@ -68174,6 +70640,37 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    searchReportEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A saved run, as `POST /analytics/query` with `save` answers one. */
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportEvidenceSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description The evidence for and against. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportEvidenceResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     explainReportRunCell: {
         parameters: {
             query?: never;
@@ -68248,6 +70745,72 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    describeAnalyticsVocabulary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The analytics vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    describeReportBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report block grammar. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportBlockGrammar"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    describeReportVocabulary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     explainAnalyticsCell: {

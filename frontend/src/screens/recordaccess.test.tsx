@@ -540,7 +540,7 @@ describe("RecordAccess — the switch", () => {
     const panel = await open(user);
     await choose(user, panel, "workspace");
     expect((await within(panel).findByRole("alert")).textContent).toBe(
-      en["edit.versionSkew"],
+      en["common.versionSkew"],
     );
     await user.click(saveButton(panel));
     await within(panel).findByText(en["recordAccess.contact.shared"]);

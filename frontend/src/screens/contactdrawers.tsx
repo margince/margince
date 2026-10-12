@@ -18,7 +18,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber, ordinalNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, usePlural, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { ContactProviderSection } from "./contactprovider";
 
 // The research drawer the contact page opens over itself.
@@ -239,13 +239,11 @@ export function ContactResearchDrawer({
     enabled: open,
     queryKey: ["contactResearch", contactId],
     queryFn: async () => {
-      const { data, error } = await api.POST("/contacts/{id}/research", {
-        params: { path: { id: contactId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/contacts/{id}/research", {
+          params: { path: { id: contactId } },
+        }),
+      );
     },
   });
 
@@ -254,13 +252,12 @@ export function ContactResearchDrawer({
     // state: the click belongs to the committed render, so what it carries
     // cannot be older than the button that carried it.
     mutationFn: async (claims: SaveClaim[]) => {
-      const { data, error } = await api.POST("/contacts/{id}/research/save", {
-        params: { path: { id: contactId } },
-        body: { claims },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.POST("/contacts/{id}/research/save", {
+          params: { path: { id: contactId } },
+          body: { claims },
+        }),
+      );
       return data?.saved ?? claims.length;
     },
     onSuccess: async (saved) => {

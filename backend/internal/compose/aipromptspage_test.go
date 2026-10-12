@@ -30,6 +30,7 @@ package compose_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -335,7 +336,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePrompt, refused error, err error) {
 	factory, bound := census.CaseFor(ai.Task(sc.Task), sc.Site)
 	if !bound {
-		return sitePrompt{}, nil, fmt.Errorf("no case is bound to this site")
+		return sitePrompt{}, nil, errors.New("no case is bound to this site")
 	}
 	prepared, prepErr := factory.Prepare(json.RawMessage(sc.Fixture), json.RawMessage(sc.Expect.Answer))
 	if prepErr != nil {
@@ -351,7 +352,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 		refused = runErr
 	}
 	if len(recorder.requests) == 0 {
-		return sitePrompt{}, refused, fmt.Errorf("the case issued no request, so it has no prompt to publish")
+		return sitePrompt{}, refused, errors.New("the case issued no request, so it has no prompt to publish")
 	}
 	var systems []string
 	seen := map[string]bool{}
@@ -422,7 +423,7 @@ func canonicalSchema(raw json.RawMessage) string {
 	if len(raw) == 0 {
 		return ""
 	}
-	var decoded interface{}
+	var decoded any
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		// Unreadable is a fact worth publishing rather than hiding: a request
 		// carrying a schema no parser accepts is a defect, and a blank cell

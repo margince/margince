@@ -459,12 +459,21 @@ describe("ShareScreen", () => {
     ).toBeNull();
   });
 
-  it("revoke on a row, confirmed, fires DELETE /record-grants/{id}", async () => {
-    let deletedId: string | null = null;
+  async function confirmRevoke() {
+    await userEvent.click(await screen.findByTestId("revoke-grant"));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Revoke" }),
+    );
+    return dialog;
+  }
+
+  it("revoke on a row, confirmed, fires DELETE /record-grants/{id} behind the version it showed", async () => {
+    let deletedIfMatch: string | null = null;
     installBaseFetch({
       "/record-grants/g-1": (request) => {
         if (request.method === "DELETE") {
-          deletedId = "g-1";
+          deletedIfMatch = request.headers.get("If-Match");
           return new Response(null, { status: 204 });
         }
         return jsonResponse({}, 404);
@@ -472,16 +481,71 @@ describe("ShareScreen", () => {
     });
     render(<ShareScreen recordType="deal" recordId="d-1" />);
 
-    const revokeBtn = await screen.findByTestId("revoke-grant");
-    await userEvent.click(revokeBtn);
+    await confirmRevoke();
 
-    const dialog = await screen.findByRole("dialog");
-    const confirmBtn = within(dialog).getByRole("button", {
-      name: "Revoke",
+    await waitFor(() => expect(deletedIfMatch).toBe("1"));
+  });
+
+  it("a revoke refused as version_skew says the access changed and re-reads the list", async () => {
+    let listReads = 0;
+    installBaseFetch({
+      "/record-grants/g-1": () =>
+        jsonResponse(
+          { title: "Conflict", status: 409, code: "version_skew" },
+          409,
+        ),
+      "/record-grants": () => {
+        listReads += 1;
+        return jsonResponse({
+          data: [existingGrant],
+          page: { next_cursor: null, has_more: false },
+        });
+      },
     });
-    await userEvent.click(confirmBtn);
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    await screen.findByTestId("revoke-grant");
+    const readsBefore = listReads;
 
-    await waitFor(() => expect(deletedId).toBe("g-1"));
+    const dialog = await confirmRevoke();
+
+    expect(
+      await within(dialog).findByText(
+        /changed this access after you opened it/,
+      ),
+    ).toBeTruthy();
+    await waitFor(() => expect(listReads).toBeGreaterThan(readsBefore));
+  });
+
+  it("a revoke confirmed again after version_skew carries the version the list re-read", async () => {
+    const ifMatches: (string | null)[] = [];
+    let refreshed = false;
+    installBaseFetch({
+      "/record-grants/g-1": (request) => {
+        ifMatches.push(request.headers.get("If-Match"));
+        if (ifMatches.length === 1) {
+          refreshed = true;
+          return jsonResponse(
+            { title: "Conflict", status: 409, code: "version_skew" },
+            409,
+          );
+        }
+        return new Response(null, { status: 204 });
+      },
+      "/record-grants": () =>
+        jsonResponse({
+          data: [{ ...existingGrant, version: refreshed ? 2 : 1 }],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    const dialog = await confirmRevoke();
+    await within(dialog).findByText(/changed this access after you opened it/);
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Revoke" }),
+    );
+
+    await waitFor(() => expect(ifMatches).toEqual(["1", "2"]));
   });
 
   it("renders honest copy (not a raw string) for a 403 approval_required grant response", async () => {

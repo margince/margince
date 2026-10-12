@@ -10,7 +10,7 @@ package aicert
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -99,6 +99,6 @@ func sortedTasks(byTask map[ai.Task][]Scenario) []ai.Task {
 	for t := range byTask {
 		tasks = append(tasks, t)
 	}
-	sort.Slice(tasks, func(i, j int) bool { return tasks[i] < tasks[j] })
+	slices.Sort(tasks)
 	return tasks
 }

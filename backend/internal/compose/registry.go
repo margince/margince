@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -143,7 +144,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
 	agents.RegisterDocumentTools(registry, documentSeam{srv: features.served, db: db})
-	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider))
+	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider), deals.StalledThresholdDays)
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
 	agents.RegisterProject360Tool(registry, project360Reader(pool))

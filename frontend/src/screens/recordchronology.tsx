@@ -11,40 +11,31 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { LoadMoreButton, useViewerId } from "./common";
 import { changeTimeline, useFieldHistory } from "./history";
-import { mergeChronology } from "./history.logic";
 import { historyFieldLabel } from "./historyfieldlabels";
 import type { HistoryValueCtx } from "./historyvalues";
 
-// A record has ONE chronology, and this is where it is assembled — for any
-// record, not for the account page alone. What was said to a record and what
-// was changed about it are one story to the reader reading them: kept apart,
-// a reader comparing "we told them X" against "someone set stage to Y" had to
-// hold two orderings in their head.
-//
-// It lives here rather than in the account page because the contact page asks
-// the same question of the same two feeds. A second copy would answer it
-// slightly differently the first time either half moved.
+// A record's History, for every record page. All is what was said: threads,
+// mail, calls, meetings, notes and tasks. Field changes stand under Changes
+// alone. A reader opens History for the conversation, and an edited name above
+// every mail pushes it out of view.
 
 type Activity = components["schemas"]["Activity"];
 type ChangesQuery = ReturnType<typeof useFieldHistory>;
 
-// All first: it is where a reader starts, and a row of cuts reads left to
-// right from the whole to its parts. `conversations` is in the vocabulary
-// but not in the base row — a page offers it through `ChronologyFilter`'s
-// own flag once it wires a renderer for the cut, because a pill whose press
-// changes nothing teaches the reader the row is broken.
-export const TIMELINE_FILTERS = ["all", "activities", "changes"] as const;
+// `conversations` is in the vocabulary but not in the base row. A page offers
+// it through `ChronologyFilter`'s own flag once it renders the cut. A pill
+// whose press changes nothing reads as a broken row.
+export const TIMELINE_FILTERS = ["all", "changes"] as const;
 export type TimelineFilter =
   | (typeof TIMELINE_FILTERS)[number]
   | "conversations";
 
-// Whether the cut reads the EXCHANGES alone — Activities, and Conversations,
-// which is a narrowing of it. ONE predicate rather than the comparison spelled
-// again at each decision it drives (whether the change feed is read at all,
-// what draws as loading or failed, what a retry offers, which feed "load
-// older" lengthens), so a cut added to the vocabulary is answered everywhere.
+// Whether the cut reads the exchanges alone, which is every cut but Changes.
+// One predicate answers whether the change feed is read, what draws as loading
+// or failed, and which feed "load older" lengthens. A cut added to the
+// vocabulary is then answered everywhere.
 export function readsExchangesOnly(filter: TimelineFilter): boolean {
-  return filter === "activities" || filter === "conversations";
+  return filter !== "changes";
 }
 
 /**
@@ -56,10 +47,7 @@ export function readsExchangesOnly(filter: TimelineFilter): boolean {
 export function useChronologyFilter(
   recordId: string,
 ): [TimelineFilter, (next: TimelineFilter) => void] {
-  // ALL by default. The record's history is read to find out what happened,
-  // and a default that hid every field change answered a narrower question
-  // than the one the reader opened the tab with — they had to know a cut
-  // existed before they could see the whole.
+  // All by default: the conversation is what a reader opens History for.
   const [filter, setFilter] = useState<TimelineFilter>("all");
   const [filterFor, setFilterFor] = useState(recordId);
   if (filterFor !== recordId) {
@@ -90,13 +78,12 @@ export function ChronologyFilter({
   const labels: Record<TimelineFilter, string> = {
     all: t("chronology.all"),
     conversations: t("chronology.conversations"),
-    activities: t("chronology.activities"),
     changes: t("chronology.changes"),
   };
   // Conversations sits between the whole and the parts: it is a READING of
   // the exchanges, narrower than All and wider than one kind.
   const cuts: readonly TimelineFilter[] = conversations
-    ? ["all", "conversations", "activities", "changes"]
+    ? ["all", "conversations", "changes"]
     : TIMELINE_FILTERS;
   return (
     <FilterPills
@@ -119,41 +106,29 @@ export type RecordChronology = {
   entries: TimelineEntry[];
   truncated: boolean;
   changes: ChangesQuery;
-  // What the CURRENT filter is waiting on or failed at. A query that is
-  // switched off never resolves — it reports pending forever — so the caller
-  // must not read the query's own flags. Reading them turned the default
-  // Activities view into a skeleton that never became a timeline.
+  // What the current filter is waiting on or failed at. A query that is
+  // switched off reports pending forever. A caller reading the query's own
+  // flags would draw a skeleton under All that never becomes a timeline.
   loading: boolean;
   failed: boolean;
-  // The CHANGE read errored, whether or not the section as a whole is drawn as
-  // failed. On the combined cut the exchanges that DID load stay on screen —
-  // taking them away because a second feed fell over serves nobody — but the
-  // reader still has to be told that half the chronology is missing, or they
-  // read a partial record as a complete one.
-  changesUnread: boolean;
-  // Whether fetching more CHANGES would lengthen the merged view. When the
-  // activity feed is the shorter of the two, it is not: the merge cuts at its
-  // oldest row and every extra change page falls below that line.
-  changesAreTheLimit: boolean;
-  // The activity feed's own next page, when the caller can fetch one. Under
-  // "all" it is offered exactly when the changes are NOT the limit — the
-  // activity feed is the cut, so another page of activities lengthens the
-  // merged view and another page of changes would not.
+  // Whether this hook reads and pages the change feed, so its footer offers
+  // the next page. False where the page draws Changes with its own panel.
+  readsChanges: boolean;
+  // The activity feed's own next page, when the caller can fetch one.
   activities?: RecordTimeline;
 };
 
 /**
- * useRecordChronology reads the change feed for the record and folds it in
- * with the activities the caller already holds. The activities arrive as a
- * prop because the composite record read (the 360) has already fetched them:
- * a second fetch here would show the reader a different moment in the two
- * halves of one list.
+ * useRecordChronology draws the activities the caller already holds, or the
+ * record's change feed under Changes. The activities arrive as a prop because
+ * the composite record read (the 360) has already fetched them. A second fetch
+ * here could show a different moment than the rest of the page.
  */
 export function useRecordChronology({
   kind,
   recordId,
   filter,
-  narrowed = false,
+  changesInPanel = false,
   activities,
   activitiesHaveMore,
   loadMore,
@@ -164,14 +139,9 @@ export function useRecordChronology({
   kind: EntityKind;
   recordId: string;
   filter: TimelineFilter;
-  // Whether the caller has narrowed the exchanges — by kind, by words, by a
-  // date range. A narrowed read is a question about what was SAID, and a field
-  // edit is not a meeting: left in, the reader who picked Meetings got a list
-  // of record edits with two meetings in it.
-  //
-  // It also stops the change feed from being READ, which is the honest
-  // consequence: rows that cannot appear should not be fetched.
-  narrowed?: boolean;
+  // True where the page draws Changes with RecordHistoryTab, which reads and
+  // pages its own feed. A second read here would fetch rows nobody sees.
+  changesInPanel?: boolean;
   /**
    * Opens one message in the record's drawer. Handed in rather than mounted
    * here, because the drawer belongs to the page — one over the record, with
@@ -197,21 +167,16 @@ export function useRecordChronology({
 }>): RecordChronology {
   const t = useT();
   const viewerId = useViewerId();
-  // Only the cuts that DRAW change rows read them, and never a narrowed read.
-  const wantsChanges = !readsExchangesOnly(filter) && !narrowed;
+  // Only the Changes cut reads the change feed. The kind, word and date dials
+  // narrow the exchanges, so they never hide a change.
+  const wantsChanges = !readsExchangesOnly(filter) && !changesInPanel;
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
-  // `page.data ?? []`, not `page.data`: a 200 with no body is a shape the
-  // contract permits, and flattening it yielded an `undefined` row that the
-  // mapper below dereferenced. The
-  // activity timeline has guarded this since the same payload crashed it; the
-  // change list only started meeting it now that ALL is the default filter and
-  // every record page reads changes on open.
+  // `page.data ?? []`: a 200 with no body is a shape the contract permits, and
+  // flattening it would hand the mapper below an `undefined` row.
   const changeRows =
     changes.data?.pages.flatMap((page) => page.data ?? []) ?? [];
-  // The contacts on each exchange, named through the same resolver the change
-  // rows use for their stored ids. One resolver for both feeds, because a
-  // chronology that named a contact on a mail and not on the field edit beside
-  // it would look like two different lists.
+  // The contacts on each exchange, named through the resolver the change rows
+  // use for their stored ids. Both cuts then name a contact the same way.
   const activityEntries = activityTimeline(
     activities,
     viewerId,
@@ -242,27 +207,8 @@ export function useRecordChronology({
     t("timeline.fieldUpdated"),
     viewerId,
   );
-  // Loading means NOTHING IS ON SCREEN YET, not "one of the two reads is still
-  // out": rows already on screen are what makes a second feed's wait bearable.
-  // Only the COMBINED cut has any — the 360 seeds its activities, which arrive
-  // first — and since ALL is the default, blanking them behind a skeleton
-  // would open every record page on one. On the changes cut the change feed is
-  // the whole list, so its wait is the section's own.
-  const holdingRows = filter === "all" && activityEntries.length > 0;
-  const loading = wantsChanges && changes.isPending && !holdingRows;
-  // Failure is judged the same way, and for the same reason: on the combined
-  // view a change history that could not be read must not erase the exchanges
-  // that WERE read. A reader who can see the conversation is better served by
-  // it than by a page saying the whole chronology is unavailable when half of
-  // it is on screen.
-  //
-  // The half that failed still goes unreported here, which is the gap worth
-  // naming: the notice belongs beside the rows rather than instead of them,
-  // and that is a change to what the footer says rather than to this test.
-  const failed = wantsChanges && changes.isError && !holdingRows;
-
-  // The renderer, not this hook, is what narrows these rows to threads.
   if (readsExchangesOnly(filter)) {
+    // The renderer, not this hook, narrows these rows to threads.
     return {
       entries: activityEntries,
       // A capped list that says nothing reads as the whole history: a reader
@@ -271,58 +217,18 @@ export function useRecordChronology({
       changes,
       loading: false,
       failed: false,
-      // Neither cut reads changes: no failure of theirs to report.
-      changesUnread: false,
-      changesAreTheLimit: false,
+      readsChanges: false,
       activities: loadMore,
     };
   }
-  if (filter === "changes") {
-    return {
-      entries: changeEntries,
-      truncated: false,
-      changes,
-      loading,
-      failed,
-      changesUnread: false,
-      changesAreTheLimit: changes.hasNextPage,
-      activities: undefined,
-    };
-  }
-  // The change feed joins the merge only once it has ANSWERED. A feed that has
-  // more rows and has loaded none is blind — its newest row is unknown, so no
-  // part of the merge is provably ordered and mergeChronology correctly
-  // returns nothing. But a read still in flight, or one that failed, is not a
-  // feed with more rows: it is a feed with no rows yet, and treating the two
-  // alike blanked the whole chronology on every record open once ALL became
-  // the default.
-  //
-  // The exchanges still say they are cut, because they are.
-  const changesAnswered =
-    wantsChanges && !changes.isPending && !changes.isError;
-  const merged = mergeChronology<TimelineEntry>(
-    changesAnswered
-      ? [
-          { rows: activityEntries, hasMore: activitiesHaveMore },
-          { rows: changeEntries, hasMore: changes.hasNextPage },
-        ]
-      : [{ rows: activityEntries, hasMore: activitiesHaveMore }],
-    (entry) => entry.atIso,
-  );
   return {
-    entries: merged.rows,
-    truncated: merged.truncated,
+    entries: changeEntries,
+    truncated: false,
     changes,
-    loading,
-    failed,
-    changesUnread: wantsChanges && changes.isError,
-    changesAreTheLimit: changesOwnTheCut(
-      changes.hasNextPage,
-      activitiesHaveMore,
-      changeEntries,
-      activityEntries,
-    ),
-    activities: loadMore,
+    loading: wantsChanges && changes.isPending,
+    failed: wantsChanges && changes.isError,
+    readsChanges: wantsChanges,
+    activities: undefined,
   };
 }
 
@@ -337,15 +243,14 @@ export function hasChronologyFooter(
 ): boolean {
   return (
     chronology.truncated ||
-    filter === "changes" ||
-    (filter === "all" && chronology.changesAreTheLimit) ||
+    chronology.readsChanges ||
     activitiesCanGrow(filter, chronology)
   );
 }
 
 /**
- * ChronologyFooter is what the list owes the reader underneath it: where the
- * merged view stops being complete, and the one button that can lengthen it.
+ * ChronologyFooter is what the list owes the reader underneath it: whether it
+ * stops short of the record's whole history, and the button that lengthens it.
  * Silence here would read as the end of the record's history.
  */
 export function ChronologyFooter({
@@ -356,22 +261,9 @@ export function ChronologyFooter({
   return (
     <>
       {chronology.truncated && (
-        <p className="t-caption">
-          {t(
-            filter === "activities"
-              ? "chronology.truncatedActivities"
-              : "chronology.truncated",
-          )}
-        </p>
+        <p className="t-caption">{t("chronology.truncatedActivities")}</p>
       )}
-      {/* Only where fetching more changes actually lengthens the list. Under
-          "all" the merge is cut at whichever feed is shorter, so if the
-          ACTIVITY feed is the constraint, another page of changes is filtered
-          straight back out and the button does nothing. */}
-      {(filter === "changes" ||
-        (filter === "all" && chronology.changesAreTheLimit)) && (
-        <LoadMoreButton query={chronology.changes} />
-      )}
+      {chronology.readsChanges && <LoadMoreButton query={chronology.changes} />}
       {activitiesCanGrow(filter, chronology) && chronology.activities && (
         <LoadMoreButton query={chronology.activities} />
       )}
@@ -379,68 +271,26 @@ export function ChronologyFooter({
   );
 }
 
-// Another page of ACTIVITIES lengthens the list under Activities whenever the
-// server holds one, and under All only while the activity feed owns the cut.
 function activitiesCanGrow(
   filter: TimelineFilter,
   chronology: RecordChronology,
 ): boolean {
-  if (!chronology.activities?.hasNextPage) {
-    return false;
-  }
   return (
-    readsExchangesOnly(filter) ||
-    (filter === "all" && !chronology.changesAreTheLimit)
+    readsExchangesOnly(filter) && Boolean(chronology.activities?.hasNextPage)
   );
 }
 
 /**
- * chronologyEmptyKey is what "there is none" says under each filter. Only the
- * Activities view takes the caller's own word, because only that view is
- * about a relationship somebody has to recognise; the other two are about the
- * record and read the same everywhere.
+ * CHRONOLOGY_EMPTY_KEYS is what "there is none" says under each filter. All
+ * takes the caller's own word, because it is about a relationship somebody has
+ * to recognise; the other two read the same on every record.
  */
 export const CHRONOLOGY_EMPTY_KEYS: Readonly<
-  Record<Exclude<TimelineFilter, "activities">, MessageKey>
+  Record<Exclude<TimelineFilter, "all">, MessageKey>
 > = {
   changes: "chronology.changesEmpty",
-  all: "chronology.allEmpty",
   conversations: "chronology.conversationsEmpty",
 };
-
-// The merged view is cut at the newest "oldest loaded" among the feeds that
-// still have more. Another page of changes only reaches the reader when the
-// change feed owns that cut — i.e. its oldest loaded row is not older than
-// the activity feed's.
-function changesOwnTheCut(
-  changesHaveMore: boolean,
-  activitiesHaveMore: boolean,
-  changeEntries: TimelineEntry[],
-  activityEntries: TimelineEntry[],
-): boolean {
-  // Instants, not the strings that spell them — the same reason
-  // mergeChronology compares numbers: two feeds written by two stores spell
-  // one moment two ways. Seeded with the first row rather than left to throw
-  // on an empty one.
-  const oldest = (rows: TimelineEntry[]) =>
-    rows.length > 0
-      ? Date.parse(
-          rows.reduce(
-            (a, b) => (Date.parse(a.atIso) < Date.parse(b.atIso) ? a : b),
-            rows[0],
-          ).atIso,
-        )
-      : undefined;
-  const oldestChange = oldest(changeEntries);
-  const oldestActivity = oldest(activityEntries);
-  return (
-    changesHaveMore &&
-    (!activitiesHaveMore ||
-      oldestChange === undefined ||
-      oldestActivity === undefined ||
-      oldestChange >= oldestActivity)
-  );
-}
 
 /**
  * chronologyNotice keeps four things apart that all render as an empty list
@@ -452,42 +302,44 @@ function changesOwnTheCut(
  * The empty sentence names what the filter was looking for. "Nothing logged
  * on this account" under the Changes filter would be a claim about the
  * activity feed the reader is not looking at. `activitiesEmptyKey` is the
- * caller's own word for the Activities view, for the same reason
+ * caller's own word for the All view, for the same reason
  * CHRONOLOGY_EMPTY_KEYS leaves that one out.
+ *
+ * `exchanges` is the state of the activity read, and only the exchange cuts
+ * are judged by it. Changes is judged by the change feed alone, so withheld
+ * or failed activities never hide field changes that loaded.
  */
 export function chronologyNotice(
   activitiesEmptyKey: MessageKey,
-  timeline: {
-    loading: boolean;
-    failed: boolean;
-    assembled: boolean;
-    filter: TimelineFilter;
-  },
-  count: number,
+  filter: TimelineFilter,
+  chronology: RecordChronology,
+  exchanges: { loading: boolean; failed: boolean; assembled: boolean },
   t: ReturnType<typeof useT>,
 ): ReactNode {
+  const timeline = readsExchangesOnly(filter)
+    ? exchanges
+    : {
+        loading: chronology.loading,
+        failed: chronology.failed,
+        assembled: true,
+      };
   if (timeline.loading) {
-    // What is being waited for, not a mute bar. This arm is only reached on
-    // the cuts where the change feed IS the section — a combined view that
-    // already has rows keeps them — so the reader is waiting on one named
-    // thing and the placeholder can say which.
+    // What is being waited for, not a mute bar: the reader is waiting on one
+    // named feed, and the placeholder can say which.
     return <PendingBody label={t("record.chronologyLoading")} />;
   }
   if (timeline.failed || !timeline.assembled) {
     return <EmptyState>{t("co.section.unavailable")}</EmptyState>;
   }
-  if (count > 0) {
+  if (chronology.entries.length > 0) {
     return undefined;
   }
-  // The caller's own sentence covers the combined cut as well as the narrow
-  // one: an empty ALL is an empty RECORD, and what a reader needs then is what
-  // would land here and how — which is the sentence the caller wrote about its
-  // own record, not the generic one about a merge. Only the changes cut has a
-  // fact of its own to state.
+  // An empty All is an empty record, and the caller's own sentence says what
+  // would land here and how. Only the Changes cut has a fact of its own.
   return (
     <EmptyState>
       {t(
-        timeline.filter === "changes"
+        filter === "changes"
           ? CHRONOLOGY_EMPTY_KEYS.changes
           : activitiesEmptyKey,
       )}

@@ -26,7 +26,7 @@ func TestOverdueDealIsFoundBehindMoreThanOnePageOfCurrentDeals(t *testing.T) {
 		t.Fatal(err)
 	}
 	future := now.AddDate(0, 0, 30)
-	for i := 0; i < 105; i++ {
+	for i := range 105 {
 		if _, err := store.CreateDeal(e.Admin(), deals.CreateDealInput{Name: fmt.Sprintf("Current deal %d", i), PipelineID: pipeline, StageID: stage, Source: "manual", ExpectedClose: &future}); err != nil {
 			t.Fatal(err)
 		}

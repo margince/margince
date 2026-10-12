@@ -54,6 +54,7 @@ var sourceAnswersForTheActorOnly = map[crmcontracts.WorklistItemSource]bool{
 	sourceWaiting:        false,
 	sourceAtRisk:         false,
 	sourceDealSuggestion: false,
+	sourceTagSuggestion:  false,
 	sourceDuplicate:      false,
 	"dsr":                false,
 	sourceLeadResponse:   false,

@@ -40,8 +40,13 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useClaimRecord } from "./claimrecord";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
-import type { CreateField } from "./create";
+import {
+  problemMessageOf,
+  QueryGate,
+  throwProblem,
+  unwrap,
+  useMe,
+} from "./common";
 import { EntityRef, useEntityName } from "./entityref";
 import { useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
@@ -59,6 +64,7 @@ import { LeadDealsProjectsTab, LeadRail } from "./leadraillinks";
 import { LeadReadings } from "./leadreadings";
 import { ACTION_PARAM, CALL_ACTION } from "./leads.address";
 import { DisqualifyDialog } from "./leads.disqualify";
+import { leadEditFields, mapLeadUpdate } from "./leads.form";
 import { QualifyDialog } from "./leads.qualify";
 import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
@@ -119,37 +125,6 @@ function promotionTriggerLabel(
       return null;
   }
 }
-
-function stringField(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-// Status and score use their domain actions; Details sends only submitted identity fields.
-export function mapLeadUpdate(
-  values: Record<string, unknown>,
-): UpdateLeadRequest {
-  const field = (key: string) =>
-    Object.hasOwn(values, key)
-      ? stringField(values[key]).trim() || null
-      : undefined;
-  return {
-    full_name: field("full_name"),
-    email: field("email"),
-    title: field("title"),
-    company_name: field("company_name"),
-    source: stringField(values.source).trim() || undefined,
-    candidate_company_key: field("candidate_company_key"),
-    project_id: field("project_id"),
-    owner_id: stringField(values.owner_id).trim() || undefined,
-  };
-}
-
-const leadEditFields: CreateField[] = [
-  { key: "full_name", label: "create.fullName", required: true },
-  { key: "email", label: "create.email", type: "email" },
-  { key: "title", label: "create.contactTitle" },
-  { key: "company_name", label: "create.companyName" },
-];
 
 // The decision-maker title pattern the score uses (formulas §3.1). Mirrored
 // here ONLY to say why a title earned nothing; the score itself is computed
@@ -213,13 +188,11 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   const explain = useQuery({
     queryKey: leadScoreKey(id),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}/score", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}/score", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 
@@ -586,14 +559,12 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
         // sentence for whoever reads this file, not for whoever is refused.
         throwProblem({ detail: t("lead.terminalReadOnly") });
       }
-      const { data, error } = await api.PATCH("/leads/{id}", {
-        params: { path: { id }, ...ifMatch(requireVersion(version)) },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/leads/{id}", {
+          params: { path: { id }, ...ifMatch(requireVersion(version)) },
+          body,
+        }),
+      );
     },
     onSuccess: onChanged,
   });
@@ -816,14 +787,13 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
   const [reason, setReason] = useState("");
   const demote = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/leads/{id}/demote", {
-        params: { path: { id } },
-        body: { reason: reason.trim() },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/leads/{id}/demote", {
+          params: { path: { id } },
+          body: { reason: reason.trim() },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const key of leadWriteKeys(id)) {
@@ -1516,13 +1486,11 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const leadQuery = useQuery({
     queryKey: leadKey(id),
     queryFn: async () => {
-      const { data, error } = await api.GET("/leads/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/leads/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 

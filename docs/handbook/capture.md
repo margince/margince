@@ -194,7 +194,7 @@ rule above.
 
 ### How do I see all emails with a contact?
 To see every email with a contact in Margince, open the contact and choose its **History** tab. There is no Mail tab of its own.
-1. Under **Timeline filter**, choose **Threads** to see the email conversations, or **All** for everything.
+1. Under **Timeline filter**, choose **Threads** to see the email conversations, or **All** for every email, call, meeting, note and task.
 2. Or set **Activity kind** to **Email**, and use **Search this timeline** to find one message.
 You see only the messages whose audience includes you; a held message stays with those who were on it. See [Who can see an email](who-can-see-an-email.md).
 Also called: email history, correspondence, all mails with a customer.

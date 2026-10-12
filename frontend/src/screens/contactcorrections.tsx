@@ -11,7 +11,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Row } from "../design-system/stack";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./contactcorrections.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -112,31 +112,27 @@ function EnrichedField({
       verdict: "corrected" | "confirmed";
       value?: string;
     }) => {
-      const { error } = await api.POST("/ai/feedback", {
-        body: {
-          subject_type: "contact",
-          subject_id: contactId,
-          claim_kind: "profile_field",
-          // The server's own key for this claim, echoed back rather than
-          // rebuilt here: a path this client spelled differently would file
-          // the verdict against a claim nothing ever consults again.
-          claim_path: field.claim_key ?? `profile_field:${field.field}`,
-          verdict: input.verdict,
-          corrected_value: input.value,
-          // WHAT THE READER WAS LOOKING AT, snapshotted when the editor
-          // opened rather than read off `field` now. It is what lets the ledger
-          // ask whether the human was looking at the value their verdict is
-          // applied to, rather than inferring it from the order two clocks fell
-          // in — and reading it live would defeat the whole point in exactly
-          // the case it exists for: a page open while something else writes the
-          // field, and the correction submitted afterwards.
-          value_shown: shown.value,
-          value_captured_at: shown.capturedAt,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/ai/feedback", {
+          body: {
+            subject_type: "contact",
+            subject_id: contactId,
+            claim_kind: "profile_field",
+            // The server's own key for this claim, echoed back, not rebuilt here. A
+            // path spelled differently would file the verdict against a claim nothing
+            // reads.
+            claim_path: field.claim_key ?? `profile_field:${field.field}`,
+            verdict: input.verdict,
+            corrected_value: input.value,
+            // What the reader was looking at, snapshotted when the editor opened. It
+            // lets the ledger check that the verdict applies to the value the human
+            // saw. Read live, it would fail when something else writes the field while
+            // the page is open and the correction is submitted afterwards.
+            value_shown: shown.value,
+            value_captured_at: shown.capturedAt,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       setEditing(false);
@@ -149,19 +145,15 @@ function EnrichedField({
   // is refused rather than reached past.
   const restore = useMutation({
     mutationFn: async () => {
-      const { error } = await api.POST(
-        "/contacts/{id}/profile-fields/{field}/restore",
-        {
+      unwrap(
+        await api.POST("/contacts/{id}/profile-fields/{field}/restore", {
           params: {
             path: { id: contactId, field: field.field },
             // Which number, for a phone: each number has its own undo.
             query: field.value_key ? { value_key: field.value_key } : {},
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contact360", contactId] });

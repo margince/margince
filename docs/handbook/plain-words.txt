@@ -354,7 +354,6 @@ disqualify
 do
 doctor
 document
-documentation
 dollars
 domain
 done
@@ -443,7 +442,6 @@ fact
 fail
 fall
 fallback
-false
 far
 feature
 fee
@@ -962,7 +960,6 @@ reassign
 receipt
 receive
 recent
-recheck
 recipient
 reconnect
 record

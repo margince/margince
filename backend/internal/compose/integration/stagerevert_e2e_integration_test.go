@@ -161,8 +161,7 @@ func TestUndoAfterTheWindowIsRefusedAndTheAuditStays(t *testing.T) {
 	if err == nil {
 		t.Fatal("a move older than its undo window was taken back anyway")
 	}
-	var closed *deals.UndoWindowClosedError
-	if !errors.As(err, &closed) {
+	if _, ok := errors.AsType[*deals.UndoWindowClosedError](err); !ok {
 		t.Fatalf("the refusal is %v, want an UndoWindowClosedError so the caller "+
 			"gets a 409 naming what to do instead", err)
 	}
@@ -203,8 +202,7 @@ func TestAHumanApprovedMoveIsNotTakenBackByTheUndoVerb(t *testing.T) {
 	if err == nil {
 		t.Fatal("the undo verb took back a move a contact had approved")
 	}
-	var closed *deals.UndoWindowClosedError
-	if !errors.As(err, &closed) {
+	if _, ok := errors.AsType[*deals.UndoWindowClosedError](err); !ok {
 		t.Fatalf("the refusal is %v, want an UndoWindowClosedError", err)
 	}
 }
@@ -317,8 +315,7 @@ func TestAnUndoIsRefusedOnceTheDealHasMovedOn(t *testing.T) {
 		t.Fatal("an old card sent a deal backwards from a stage the move never " +
 			"touched: choosing which approval to revert chooses where the deal lands")
 	}
-	var closed *deals.UndoWindowClosedError
-	if !errors.As(err, &closed) {
+	if _, ok := errors.AsType[*deals.UndoWindowClosedError](err); !ok {
 		t.Fatalf("the refusal is %v, want an UndoWindowClosedError", err)
 	}
 	if got := stageOf(t, e, deal); got != onward {
@@ -396,7 +393,7 @@ func TestTheUndoWindowIsTheOneTheMoveWasMadeUnder(t *testing.T) {
 
 	// The admin shortens the window to an hour, and ages the move past it.
 	if _, err := e.Deals.SetTransitionPolicy(e.Admin(), deals.SetTransitionPolicyInput{
-		TransitionRef: ref, Mode: deals.ModeAuto, UndoWindowHours: ptrTo(1),
+		TransitionRef: ref, Mode: deals.ModeAuto, UndoWindowHours: new(1),
 	}); err != nil {
 		t.Fatalf("shortening the window: %v", err)
 	}
@@ -414,8 +411,6 @@ func TestTheUndoWindowIsTheOneTheMoveWasMadeUnder(t *testing.T) {
 			"back finds it closed because somebody edited a setting", err)
 	}
 }
-
-func ptrTo[T any](v T) *T { return &v }
 
 // An AGENT moving a deal back is not a contact taking a move back.
 //

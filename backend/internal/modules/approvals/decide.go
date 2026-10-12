@@ -71,10 +71,16 @@ func (s *Service) Decide(ctx context.Context, id ids.ApprovalID, approve bool, r
 // principal, so the stores' own RBAC and row-scope gates cannot be relied on
 // to re-check what the human wrote.
 func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited json.RawMessage) (row, error) {
+	return s.DecideEditedFor(ctx, id, edited, nil)
+}
+
+// DecideEditedFor is DecideEdited with the approver's reason, which is recorded
+// with the decision as a rejection's is.
+func (s *Service) DecideEditedFor(ctx context.Context, id ids.ApprovalID, edited json.RawMessage, reason *string) (row, error) {
 	if len(edited) == 0 {
 		return row{}, &InvalidEditError{Cause: errors.New("empty payload")}
 	}
-	return s.recordDecision(ctx, id, true, nil, edited, decidedByContact)
+	return s.recordDecision(ctx, id, true, reason, edited, decidedByContact)
 }
 
 // decider says whether a contact answered this or the product applied it under
@@ -158,6 +164,23 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 		// approved with its precheck never run, and an edit the precheck would
 		// refuse would land.
 		return err
+	}
+	// A decided card is answered as decided, before the kind's precheck runs.
+	// The precheck asks whether the effect COULD run.
+	//
+	// Without this, a stale second click on a rejected draft is told to
+	// reconnect a mailbox that is not the problem.
+	//
+	// The refusal inside the transaction is still the authority. This is the
+	// same question asked early, so the answer names the card's state rather
+	// than the estate's.
+	// An approved row still owed its effect passes on to the re-drive, whose
+	// effect asks every question of its write again (effectIsStillOwed).
+	if st := a.effectiveStatus(s.now()); st != "pending" {
+		if st == approvalStatusApproved && s.owesItsEffect(a) {
+			return nil
+		}
+		return &AlreadyDecidedError{Status: st}
 	}
 	check, ok := s.prechecks[a.Kind]
 	if !ok || !serverProposed(a) {

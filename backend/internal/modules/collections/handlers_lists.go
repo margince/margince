@@ -102,6 +102,15 @@ func (h Handlers) UpdateList(w http.ResponseWriter, r *http.Request, id crmcontr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	for _, err := range []error{
+		httperr.RequireSent(r, versionField, "name the version you read, so a change nobody saw is not overwritten"),
+		httperr.RefuseNull(r, nameField),
+	} {
+		if err != nil {
+			writeErr(w, r, err)
+			return
+		}
+	}
 	cleared := httperr.ClearedFields(r)
 	in := UpdateListInput{
 		Name: req.Name, Purpose: req.Purpose, IfVersion: &req.Version,

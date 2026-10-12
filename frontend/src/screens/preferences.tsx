@@ -8,7 +8,7 @@ import { SaveBar } from "../design-system/savebar";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "./common";
 import { PreferenceRow } from "./preferencerow";
 import {
   type Draft,
@@ -166,16 +166,14 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
   // reported was false: the subject's choices were on the screen.
   const save = useMutation({
     mutationFn: async (choices: Draft) => {
-      const { data, error } = await api.PUT("/public/preferences/{token}", {
-        params: { path: { token } },
-        body: {
-          choices: toChoices(purposes, choices, (key) => wordingByKey[key]),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/public/preferences/{token}", {
+          params: { path: { token } },
+          body: {
+            choices: toChoices(purposes, choices, (key) => wordingByKey[key]),
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       // The server's latest body is authoritative — never the draft that

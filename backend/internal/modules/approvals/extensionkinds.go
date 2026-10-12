@@ -36,6 +36,7 @@ package approvals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -141,7 +142,7 @@ func RegisterExtensionKinds(kinds []ExtensionKind) error {
 
 func (k ExtensionKind) validate() error {
 	if k.Verb == "" {
-		return fmt.Errorf("crmapprovals: an extension kind with no verb names nothing a staged row could be")
+		return errors.New("crmapprovals: an extension kind with no verb names nothing a staged row could be")
 	}
 	if !extensionTableGrammar.MatchString(k.TargetTable) {
 		return fmt.Errorf("crmapprovals: extension verb %q stages against %q, which is not a namespaced table "+

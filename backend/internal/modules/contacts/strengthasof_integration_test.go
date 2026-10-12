@@ -113,7 +113,7 @@ func TestStrengthAsOfExcludesWhatHadNotHappenedYet(t *testing.T) {
 	contact := e.seedVisibleContact(t, "Cold Contact")
 
 	// A burst of two-way traffic ending 40 days ago, then silence.
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		direction := "inbound"
 		if i%2 == 0 {
 			direction = "outbound"
@@ -146,7 +146,7 @@ func TestStrengthAsOfIgnoresInteractionsAfterTheInstantAsked(t *testing.T) {
 	contact := e.seedVisibleContact(t, "Recent Contact")
 
 	// Everything happened in the last week.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		e.seedInteraction(t, contact, now.AddDate(0, 0, -i), "inbound")
 	}
 

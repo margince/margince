@@ -73,11 +73,13 @@ func goConstValue(t *testing.T, path, name string) int {
 			"which reads as a pass; repoint it rather than deleting it", name, path)
 	}
 	digits := ""
+	var digitsSb76 strings.Builder
 	for _, r := range string(match[1]) {
 		if r != '_' {
-			digits += string(r)
+			digitsSb76.WriteString(string(r))
 		}
 	}
+	digits += digitsSb76.String()
 	value, err := strconv.Atoi(digits)
 	if err != nil {
 		t.Fatalf("const %s in %s is not a number: %v", name, path, err)

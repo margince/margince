@@ -18,7 +18,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { type RosterKind, useRoster, useRosterPartial } from "./entityref";
 
 /** The record type an id field points at, as the vocabulary reports it. */
@@ -41,12 +41,11 @@ export type ReferenceOption = Readonly<{ value: string; label: string }>;
 export async function searchCompanies(
   query: string,
 ): Promise<readonly ReferenceOption[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q: query, limit: 20 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: { query: { q: query, limit: 20 } },
+    }),
+  );
   return data.data.map((company) => ({
     value: company.id,
     label: company.display_name,
@@ -162,36 +161,26 @@ async function readOptions(
 ): Promise<ReferenceOption[]> {
   switch (reference) {
     case "tag": {
-      const { data, error } = await api.GET("/tags");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/tags"));
       return data.data.map((tag) => ({ value: tag.id, label: tag.name }));
     }
     case "pipeline": {
-      const { data, error } = await api.GET("/pipelines");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/pipelines"));
       return data.data.map((pipeline) => ({
         value: pipeline.id,
         label: pipeline.name,
       }));
     }
     case "stage": {
-      const { data, error } = await api.GET("/stages");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/stages"));
       return data.data.map((stage) => ({ value: stage.id, label: stage.name }));
     }
     case "project": {
-      const { data, error } = await api.GET("/projects", {
-        params: { query: { limit: PROJECT_LIMIT } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/projects", {
+          params: { query: { limit: PROJECT_LIMIT } },
+        }),
+      );
       return data.data.map((project) => ({
         value: project.id,
         label: project.name,

@@ -91,7 +91,7 @@ func TestTheQueueGateIsWhatKeepsTheExportAdminOnly(t *testing.T) {
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind:       "access",
 		SubjectRef: contact.String(),
-		DueAt:      time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
+		DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("seeding an access request: %v", err)
@@ -143,7 +143,7 @@ func TestOnlyAnAccessRequestHasAPackage(t *testing.T) {
 		created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 			Kind:       kind,
 			SubjectRef: contact.String(),
-			DueAt:      time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
+			DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 		})
 		if err != nil {
 			t.Fatalf("seeding a %s request: %v", kind, err)
@@ -167,7 +167,7 @@ func TestAnAccessRequestNamingNobodyHasNothingToAssemble(t *testing.T) {
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind:       "access",
 		SubjectRef: subjectAddress,
-		DueAt:      time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
+		DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("seeding an access request naming an address: %v", err)
@@ -288,7 +288,7 @@ func TestTheHandlerRefusesARequestOfTheWrongKind(t *testing.T) {
 	store := consent.NewStore(e.DB())
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind: "erasure", SubjectRef: contact.String(),
-		DueAt: time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
+		DueAt: new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("seeding an erasure request: %v", err)
@@ -326,7 +326,7 @@ func seedAccessRequest(t *testing.T, e *Env, subjectRef string) ids.UUID {
 	t.Helper()
 	created, err := consent.NewStore(e.DB()).CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind: "access", SubjectRef: subjectRef,
-		DueAt: time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
+		DueAt: new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("seeding an access request: %v", err)

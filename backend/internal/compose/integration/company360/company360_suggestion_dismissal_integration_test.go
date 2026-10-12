@@ -18,6 +18,7 @@ package company360
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -123,7 +124,7 @@ func TestNoDismissalIsEverResurrected(t *testing.T) {
 	// Work the card the way a rep does: dismiss what it offers, re-read, repeat,
 	// until it stops offering stalled deals.
 	judged := map[string]bool{}
-	for round := 0; round < stalled+2; round++ {
+	for round := range stalled + 2 {
 		view, err := svc.Assemble(rep, company)
 		if err != nil {
 			t.Fatalf("assemble in round %d: %v", round, err)
@@ -670,9 +671,7 @@ func TestASuggestionDismissedOnAScopedPageStaysDismissed(t *testing.T) {
 	// copy shares the Objects map with every one of them.
 	perms := integration.AccountRepPerms
 	perms.Objects = make(map[string]principal.ObjectGrant, len(integration.AccountRepPerms.Objects)+1)
-	for object, grant := range integration.AccountRepPerms.Objects {
-		perms.Objects[object] = grant
-	}
+	maps.Copy(perms.Objects, integration.AccountRepPerms.Objects)
 	perms.Objects["project"] = principal.ObjectGrant{Read: true}
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 

@@ -132,29 +132,60 @@ func TestAMaskedWriterEditsAPartnerWithoutWipingTheTier(t *testing.T) {
 	}
 }
 
-// The tier is not clearable through this endpoint by ANYONE, masked or not: the
-// coalesce that preserves it above has no counterpart gesture, and the request
-// schema's `null` member is inert for this field. Pinned rather than left for
-// the next author to discover from a write that silently did nothing.
-func TestAnExplicitNullTierDoesNotClearItForAnUnmaskedWriterEither(t *testing.T) {
+// A null on a nullable partner field clears it. The tier sets the commission
+// rate, so a cleared tier must stop accruing. The empty string is no clear.
+func TestAnExplicitNullClearsTheTierAndTheNextStepForAnUnmaskedWriter(t *testing.T) {
 	e := Setup(t)
 	tier := "tier1_15"
 	company := ids.From[ids.CompanyKind](e.SeedPartnerCompany(t, "Vestergaard", &tier, nil))
-	cleared := ""
+	step := "renew the agreement"
+	writer := e.As(e.AdminUser, nil, partnerWritingPerms())
 
-	if _, err := e.Contacts.UpsertPartner(e.As(e.AdminUser, nil, partnerWritingPerms()),
-		contacts.UpsertPartnerInput{
-			CompanyID: company, PartnerRole: "consulting", MarginTier: &cleared,
-		}); err == nil {
+	if _, err := e.Contacts.UpsertPartner(writer, contacts.UpsertPartnerInput{
+		CompanyID: company, PartnerRole: "consulting", NextStep: &step,
+	}); err != nil {
+		t.Fatalf("setting the next step: %v", err)
+	}
+	empty := ""
+	if _, err := e.Contacts.UpsertPartner(writer, contacts.UpsertPartnerInput{
+		CompanyID: company, PartnerRole: "consulting", MarginTier: &empty,
+	}); err == nil {
 		t.Fatal("an empty tier was accepted; the column's CHECK holds the vocabulary closed")
 	}
 
+	if _, err := e.Contacts.UpsertPartner(writer, contacts.UpsertPartnerInput{
+		CompanyID: company, PartnerRole: "consulting", Cleared: []string{"margin_tier", "next_step"},
+	}); err != nil {
+		t.Fatalf("clearing the tier and the next step: %v", err)
+	}
+	after, err := e.Contacts.GetPartner(e.As(e.AdminUser, nil, partnerReadingPerms()), company)
+	if err != nil {
+		t.Fatalf("reading the partner back: %v", err)
+	}
+	if after.MarginTier != nil || after.NextStep != nil {
+		t.Errorf("margin_tier = %v, next_step = %v, want both cleared", after.MarginTier, after.NextStep)
+	}
+}
+
+// A masked writer sends back the null it was handed for the tier. That null
+// names no decision, so the tier stays.
+func TestAMaskedWritersNullTierDoesNotClearIt(t *testing.T) {
+	e := Setup(t)
+	tier := "tier2_20"
+	company := ids.From[ids.CompanyKind](e.SeedPartnerCompany(t, "Northgate Partners", &tier, &e.Rep1))
+
+	if _, err := e.Contacts.UpsertPartner(e.As(e.Rep1, []ids.UUID{e.Team1}, marginMaskedWriter()),
+		contacts.UpsertPartnerInput{
+			CompanyID: company, PartnerRole: "consulting", Cleared: []string{"margin_tier"},
+		}); err != nil {
+		t.Fatalf("a masked seat sending the null it was handed: %v", err)
+	}
 	after, err := e.Contacts.GetPartner(e.As(e.AdminUser, nil, partnerReadingPerms()), company)
 	if err != nil {
 		t.Fatalf("reading the partner back: %v", err)
 	}
 	if after.MarginTier == nil || string(*after.MarginTier) != tier {
-		t.Errorf("margin_tier = %v, want %q: this endpoint has no gesture that clears it", after.MarginTier, tier)
+		t.Errorf("margin_tier = %v, want %q kept: a seat that cannot read the tier cannot clear it", after.MarginTier, tier)
 	}
 }
 

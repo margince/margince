@@ -68,13 +68,26 @@ func TestEveryShippedLanguageSummarisesTechnicalChanges(t *testing.T) {
 				}
 			}
 			for _, key := range techprofile.ServiceKeys() {
-				if said.serviceNames[key] == "" {
+				if serviceVocabulary[key].in(lang) == "" {
 					t.Errorf("service %q has no %s name — its sentence would carry the record's label in whatever language the record stored", key, lang)
 				}
 			}
 			for _, key := range []string{techprofile.MailSelfHosted, techprofile.MailOther} {
-				if said.mailNames[key] == "" {
+				if mailSentenceVocabulary[key].in(lang) == "" {
 					t.Errorf("mail fallback %q has no %s name — the one mail label that is prose rather than a vendor name", key, lang)
+				}
+				if mailRecordVocabulary[key].in(lang) == "" {
+					t.Errorf("mail fallback %q has no %s record label, so the fact row would carry its key", key, lang)
+				}
+			}
+			// The postures are stored on the record, so a missing one is a
+			// fact row naming its own key at a reader.
+			for _, key := range techprofile.SecurityPostureKeys() {
+				if securityVocabulary[key].in(lang) == "" {
+					t.Errorf("posture %q has no %s label, so the fact row would carry its key", key, lang)
+				}
+				if securityEvidenceVocabulary[key].in(lang) == "" {
+					t.Errorf("posture %q has no %s evidence, so the row would cite nothing", key, lang)
 				}
 			}
 		})
@@ -94,8 +107,7 @@ func englishFrame(english technicalSummaryCopy, name string) string {
 // fallbacks, so a real provider's label passes through as recorded.
 func TestVendorNamesAreNeverTranslated(t *testing.T) {
 	for _, lang := range textlang.Shipped {
-		said := technicalSummaryByLang[lang]
-		if got := nameOr(said.mailNames, "microsoft365", "Microsoft 365"); got != "Microsoft 365" {
+		if got := nameOr(mailSentenceVocabulary, lang, "microsoft365", "Microsoft 365"); got != "Microsoft 365" {
 			t.Errorf("%s renames Microsoft 365 to %q", lang, got)
 		}
 	}

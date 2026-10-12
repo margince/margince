@@ -7,12 +7,12 @@ package compose
 // what turns an HTTP request into the operation's typed command.
 //
 // The door decodes; it does not interpret. What the approval binds to, and what
-// would be refused anyway, come back from the resolver the command is bound to
-// — the same resolver the tool door reaches for the same operation. Where the
-// contract states a tier outright, the generated policy answers it; where the
+// would be refused anyway, come back from the resolver the command is bound to.
+// It is the same resolver the tool door reaches for the same operation. Where the
+// contract states a tier outright, the generated policy answers it. Where the
 // tier turns on the record's own state, the command answers that too
-// (agents.DynamicTierInput). Only the inbox line is still this door's own
-// (restSummary), and stagedTarget says why.
+// (agents.DynamicTierInput). The inbox line is the resolver's too, with the body
+// fields the command erased appended (stagedSentence).
 
 import (
 	"context"
@@ -249,6 +249,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"runReport":              runReportCommand,
 	"runAnalyticsQuery":      analyticsQueryCommand,
 	"renderAnalyticsReport":  composeReportCommand,
+	"uploadAttachment":       uploadAttachmentCommand,
 
 	// The two decisions, over four routes. They are the only entries here whose
 	// command names no target record, and the resolver says why: the row a

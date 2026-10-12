@@ -188,7 +188,7 @@ func TestBeingCopiedCountsButRanksBelowARealExchange(t *testing.T) {
 	// exactly those contacts from "who here knows them".
 	ccOnly := v.contact(t, "Cc Contact")
 	var ccIDs []ids.UUID
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		ccIDs = append(ccIDs, v.interaction(t, v.e.Rep1, ccOnly, now.AddDate(0, 0, -i), "outbound", "cc"))
 	}
 	v.recompute(t, ccIDs...)
@@ -203,7 +203,7 @@ func TestBeingCopiedCountsButRanksBelowARealExchange(t *testing.T) {
 	// ranked where they belong, rather than vanishing.
 	direct := v.contact(t, "Direct Contact")
 	var directIDs []ids.UUID
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		dir, role := "outbound", "to"
 		if i%2 == 0 {
 			dir, role = "inbound", "from"
@@ -236,7 +236,7 @@ func TestRecomputingIsIdempotentUnderRedelivery(t *testing.T) {
 
 	// The bus is at-least-once. If the fold adjusted counters instead of
 	// recomputing them, every redelivery would inflate the relationship.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		v.recompute(t, a1, a2)
 	}
 	if got := v.snapshot(t); !equalSnapshots(got, first) {
@@ -320,7 +320,7 @@ func TestTheNightlyRebuildAgreesWithTheIncrementalPath(t *testing.T) {
 	c1 := v.contact(t, "Contact One")
 	c2 := v.contact(t, "Contact Two")
 	var all []ids.UUID
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		all = append(all, v.interaction(t, v.e.Rep1, c1, now.AddDate(0, 0, -i), "inbound", "from"))
 		all = append(all, v.interaction(t, v.e.Rep2, c1, now.AddDate(0, 0, -i-10), "outbound", "to"))
 		all = append(all, v.interaction(t, v.e.Rep1, c2, now.AddDate(0, 0, -i-20), "outbound", "cc"))

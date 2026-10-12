@@ -143,7 +143,7 @@ func TestARepsOldestWalksAreSweptAway(t *testing.T) {
 	ctx := repCtx(e, e.Rep1)
 
 	minted := make([]ids.UUID, 0, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		clock.at = clock.at.Add(time.Minute)
 		id, err := snaps.Freeze(ctx, "question-one", clock.at,
 			worklistsnap.Buckets{}, []worklistsnap.Row{{Source: "task", RowID: "a"}})

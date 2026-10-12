@@ -47,10 +47,7 @@ func (w *siteDeepReadWorker) Work(ctx context.Context, job *river.Job[SiteDeepRe
 	if w.now != nil {
 		now = w.now()
 	}
-	delay := until.Sub(now)
-	if delay < 0 {
-		delay = 0
-	}
+	delay := max(until.Sub(now), 0)
 	return river.JobSnooze(delay)
 }
 

@@ -167,14 +167,12 @@ func inOrder[T any](
 		}
 	}()
 	for range min(backfillFetchWorkers, n) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for i := range next {
 				v, err := fetch(ctx, i)
 				slots[i] <- result{v: v, err: err}
 			}
-		}()
+		})
 	}
 	for i := range n {
 		var r result

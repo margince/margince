@@ -88,7 +88,8 @@ func lockSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	return err
 }
 
-func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool) ([]ids.UUID, error) {
+func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floor FloorPolicy) ([]ids.UUID, error) {
+	floorCurrent, floorCarried := floor.sqlArgs()
 	// Redact the subject's own timeline rows, the unlinked mail about them — in
 	// both directions, captured and sent (unlinkedSubjectMail) — and the
 	// unlinked CHANNEL messages from them (unlinkedSubjectChannel), but shield
@@ -136,7 +137,7 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 		    OR a.id IN (`+unlinkedSubjectMail+`)
 		    OR a.id IN (`+unlinkedSubjectChannel+`))
 		  `+correspondenceFloorPredicate(3, 4)+`
-		RETURNING a.id`, contactID, emails, floorInterval, floorAnchor, erasedName, channelKeys)
+		RETURNING a.id`, contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +152,7 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM field_provenance
 		WHERE object_type = 'activity' AND object_id IN (`+subjectOnlyDestroyable+`)`,
-		contactID, floorInterval, floorAnchor); err != nil {
+		contactID, floorCurrent, floorCarried); err != nil {
 		return nil, err
 	}
 	// And how the reply verdict came to be what it was. DELETED rather than

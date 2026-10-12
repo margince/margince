@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -288,8 +289,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		// A walk that ends on the failure that blocked its provider (or kept
 		// it blocked, when the call was the probe) is a deferral already: the
 		// tracked client dressed it as one, and the item did nothing wrong.
-		var down *ProviderDownError
-		if errors.As(lastErr, &down) {
+		if _, ok := errors.AsType[*ProviderDownError](lastErr); ok {
 			return model.Response{}, lastTier, false, lastErr
 		}
 		return model.Response{}, lastTier, false, fmt.Errorf("%w for %s: %w", ErrAllTiersFailed, task, lastErr)
@@ -428,12 +428,7 @@ func finishReasonFor(reported string, callErr error) string {
 // tierOnLadder reports whether t survives on the budget- and
 // profile-adjusted ladder.
 func tierOnLadder(ladder []Tier, t Tier) bool {
-	for _, rung := range ladder {
-		if rung == t {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ladder, t)
 }
 
 // flushDetached wraps flush in a context that outlives the request: a

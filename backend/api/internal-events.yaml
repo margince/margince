@@ -282,6 +282,48 @@ components:
         A rep dismissed a suggestion for the whole workspace. The company is
         suggested again only on evidence newer than the dismissal.
       additionalProperties: false
+    InternalEventTagSuggestionCreated:
+      type: object
+      x-event-type: tag_suggestion.created
+      x-entity-type: ""
+      description: >-
+        The tag scout suggested a tag on a contact or company. Entity-less and
+        without the tag or the record, which keeps it off the subscribable set:
+        a suggestion built from mail only its owner may read is visible only to
+        that owner, and no webhook consumer can be held to that.
+      required:
+        - evidence_count
+      properties:
+        evidence_count:
+          type: integer
+          minimum: 1
+          description: How many activities the suggestion cites.
+      additionalProperties: false
+    InternalEventTagSuggestionAccepted:
+      type: object
+      x-event-type: tag_suggestion.accepted
+      x-entity-type: ""
+      description: >-
+        A user accepted a tag suggestion. The tagging itself is audited on the
+        tag; this records the decision.
+      additionalProperties: false
+    InternalEventTagSuggestionDismissed:
+      type: object
+      x-event-type: tag_suggestion.dismissed
+      x-entity-type: ""
+      description: >-
+        A user dismissed a tag suggestion for the whole workspace. The tag is
+        suggested on that record again only on evidence newer than the dismissal.
+      additionalProperties: false
+    InternalEventTagSuggestionSuperseded:
+      type: object
+      x-event-type: tag_suggestion.superseded
+      x-entity-type: ""
+      description: >-
+        A tag suggestion stopped standing without anybody deciding it: its tag
+        was retired or made unsuggestible, its record was archived or tagged, or
+        a cited activity went away.
+      additionalProperties: false
     InternalEventDealSuggestionSuperseded:
       type: object
       x-event-type: deal_suggestion.superseded
@@ -290,4 +332,36 @@ components:
         A suggestion stopped standing without anybody deciding it: its company
         gained an open deal or was archived, or a piece of its evidence was
         erased.
+      additionalProperties: false
+    InternalEventLeadPrivacyNoticeCreated:
+      type: object
+      x-event-type: lead_privacy_notice.created
+      x-entity-type: ""
+      description: >-
+        A website lead's Art. 14 notice was queued, or could not be given and
+        nothing about the lead was kept. Entity-less and without the lead,
+        which keeps it off the subscribable set: a named lead's unmet legal
+        obligation is not a subscriber's to read. The proof row stays on the
+        audit row the emit points at.
+      required:
+        - state
+      properties:
+        state:
+          type: string
+          enum: [queued, failed]
+          x-enum-varnames: [LeadNoticeQueued, LeadNoticeFailed]
+          description: Whether the notice is on its way or could not be given.
+        failure:
+          type: string
+          enum: [no_address, collision, refused]
+          x-enum-varnames: [LeadNoticeNoAddress, LeadNoticeCollision, LeadNoticeRefused]
+          description: Why the notice could not be given, when it could not.
+      additionalProperties: false
+    InternalEventLeadPrivacyNoticeFailed:
+      type: object
+      x-event-type: lead_privacy_notice.failed
+      x-entity-type: ""
+      description: >-
+        A website lead's queued notice bounced, so the lead is deleted in the
+        same transaction. Entity-less for the reason the created event gives.
       additionalProperties: false

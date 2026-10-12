@@ -148,13 +148,25 @@ func redeemIfPresented(w http.ResponseWriter, r *http.Request, next http.Handler
 	// forward as the request's own If-Match makes the store re-check it
 	// inside the transaction that actually mutates, where a concurrent write
 	// loses to the version compare instead of to timing.
-	if redemption.pinned {
+	if redemption.pinned && !refusesAPin(pol.Op) {
 		r.Header.Set(ifMatchHeader, strconv.FormatInt(redemption.pin, 10))
 	}
 	// WithContext shares the header map set just above, so the pin travels with
 	// the released request.
 	next.ServeHTTP(w, r.WithContext(redemption.released))
 	return true, true
+}
+
+const (
+	opRelinkActivities = "relinkActivities"
+	opRelinkThread     = "relinkThread"
+)
+
+// refusesAPin names the operations whose handler answers any If-Match with 422,
+// because one version cannot condition the many activities they move. The
+// approval's own pin still binds the redemption, inside the approvals engine.
+func refusesAPin(op string) bool {
+	return op == opRelinkActivities || op == opRelinkThread
 }
 
 // stageRefusal stages the refused call as a pending approval and answers
@@ -194,7 +206,9 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 		DiffHash:       diffHash,
 		TargetType:     target.TargetType,
 		TargetID:       target.TargetID,
-		Summary:        restSummary(commands.summaryCopy(ctx), pol, r, body),
+		CoTargetType:   target.CoTargetType,
+		CoTargetID:     target.CoTargetID,
+		Summary:        stagedSentence(target, commands.summaryCopy(ctx), pol, r, body),
 	})
 	if sErr != nil {
 		httperr.Write(w, r, sErr)
@@ -223,14 +237,10 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 // run here too, refusing a target the caller cannot see before a human is asked
 // about it.
 //
-// Only the target is taken from the resolver. The line the human reads stays
-// this door's own (restSummary), which now names the ACT — the contract's tool
-// verb and record type — plus the body fields this door's diff_hash binds. The
-// method and path it used to print are gone: a uuid names a record the reader
-// cannot open from it, and an operationId is the contract's word rather than
-// theirs. Adopting the resolver's line here instead is still blocked on the six
-// types the record seam does not serve: it labels those by id alone, which is
-// the same defect one layer over.
+// The line the human reads is the resolver's too (stagedSentence), so both
+// doors say the same thing about one operation. Body fields the command erased
+// follow it as key=value. A resolver with no usable line gives way to this
+// door's own.
 //
 // It writes the refusal itself and reports ok=false, so a caller that cannot
 // name a target stages nothing.

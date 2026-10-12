@@ -15,10 +15,12 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -30,12 +32,35 @@ import (
 //
 // Guarded on the row still being `unsure`: one a human has already decided must
 // never have a fresh proposal attached to it.
+// declinedProposalLink answers a link the `unsure` guard turned away.
+//
+// The row was decided between staging the offer and attaching it, so the offer
+// describes a question nobody is asking any more. Answering nil leaves a
+// proposal no row points at, and the review queue cannot show what was
+// proposed.
+func declinedProposalLink(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	var status string
+	switch err := tx.QueryRow(ctx,
+		`SELECT status FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&status); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return fmt.Errorf("%w: capture disposition %s", apperrors.ErrNotFound, id)
+	case err != nil:
+		return fmt.Errorf("capture: reading the disposition that refused the proposal link %s: %w", id, err)
+	default:
+		return fmt.Errorf("%w: capture disposition %s was decided as %q before the proposal was attached",
+			apperrors.ErrConflict, id, status)
+	}
+}
+
 func (s *PendingStore) LinkProposal(ctx context.Context, id, proposalID ids.UUID) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			UPDATE capture_pending_counterparty
 			   SET proposal_id = $2, updated_at = now()
 			 WHERE id = $1 AND status = 'unsure'`, id, proposalID)
+		if err == nil && tag.RowsAffected() == 0 {
+			return declinedProposalLink(ctx, tx, id)
+		}
 		return err
 	})
 	if err != nil {
@@ -115,7 +140,7 @@ func (s *PendingStore) ResolveReviewed(ctx context.Context, tx pgx.Tx, id ids.UU
 // ResolveReviewedAs is ResolveReviewed that also records the sender kind the
 // human's decision implies. An empty kind leaves whatever the model recorded.
 func (s *PendingStore) ResolveReviewedAs(ctx context.Context, tx pgx.Tx, id ids.UUID, status, kind, reason string) error {
-	_, err := tx.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		UPDATE capture_pending_counterparty
 		   SET status = $2, disposition_reason = NULLIF($3, ''),
 		       kind = COALESCE(NULLIF($4, ''), kind),
@@ -124,5 +149,34 @@ func (s *PendingStore) ResolveReviewedAs(ctx context.Context, tx pgx.Tx, id ids.
 	if err != nil {
 		return fmt.Errorf("capture: resolving reviewed disposition %s: %w", id, err)
 	}
+	if tag.RowsAffected() == 0 {
+		return declinedReview(ctx, tx, id, status)
+	}
 	return nil
+}
+
+// declinedReview answers a resolution the CAS on `unsure` turned away.
+//
+// Two different things land here and they are not the same answer. A redeemed
+// approval replayed asks for the decision the row already carries, and the
+// no-op is what makes the replay safe. A SECOND reviewer asks for a different
+// one, and answering nil there drops a human's decision while their screen
+// says saved.
+//
+// So the stored disposition decides: the same status is a replay, a different
+// one is a conflict, and a row that is gone is gone.
+func declinedReview(ctx context.Context, tx pgx.Tx, id ids.UUID, wanted string) error {
+	var stored string
+	switch err := tx.QueryRow(ctx,
+		`SELECT status FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&stored); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return fmt.Errorf("%w: capture disposition %s", apperrors.ErrNotFound, id)
+	case err != nil:
+		return fmt.Errorf("capture: reading the disposition that refused the review %s: %w", id, err)
+	case stored == wanted:
+		return nil
+	default:
+		return fmt.Errorf("%w: capture disposition %s was already reviewed as %q, not %q",
+			apperrors.ErrConflict, id, stored, wanted)
+	}
 }

@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -369,12 +370,7 @@ func sharesATeamWith(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.
 }
 
 func containsID(haystack []ids.UUID, needle ids.UUID) bool {
-	for _, id := range haystack {
-		if id == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 // labelScope names the resolved population for the reader.

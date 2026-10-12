@@ -247,7 +247,7 @@ func TestOnlyAMissingPublisherModelReadsAsNotServed(t *testing.T) {
 // throttle or an outage is not, and the save goes through unchecked.
 func TestARefusedKeyRefusesTheSaveAndAnOutageDoesNot(t *testing.T) {
 	t.Parallel()
-	p := labelledProbe{label: "tier premium", vertexProbe: vertexProbe{location: "eu", model: "gemini-3.5-flash"}}
+	p := labelledProbe{label: "tier premium", location: "eu", model: "gemini-3.5-flash"}
 	for status, refused := range map[int]bool{
 		http.StatusBadRequest: true, http.StatusUnauthorized: true, http.StatusForbidden: true,
 		http.StatusTooManyRequests: false, http.StatusServiceUnavailable: false,

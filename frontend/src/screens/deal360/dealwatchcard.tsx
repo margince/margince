@@ -19,7 +19,7 @@ import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { DEAL_COMMITMENTS_KEY } from "../activitykeys";
 import { DismissClaimButton } from "../claimdismiss";
-import { throwProblem } from "../common";
+import { unwrap } from "../common";
 import "./deal360.css";
 
 type DealCommitments = components["schemas"]["DealCommitments"];
@@ -29,13 +29,11 @@ export function useDealCommitments(dealId: string) {
   return useQuery({
     queryKey: [...DEAL_COMMITMENTS_KEY, dealId],
     queryFn: async (): Promise<DealCommitments> => {
-      const { data, error } = await api.GET("/deals/{id}/commitments", {
-        params: { path: { id: dealId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/commitments", {
+          params: { path: { id: dealId } },
+        }),
+      );
     },
   });
 }

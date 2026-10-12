@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -276,7 +275,7 @@ func scalarDateOperand(value any, invalid func(string) error) (any, error) {
 	if !ok {
 		return nil, invalid("an ISO date (YYYY-MM-DD) or {\"days_ago\": N}")
 	}
-	if _, err := time.Parse("2006-01-02", s); err != nil {
+	if !isStorableCalendarDay(s) {
 		return nil, invalid("an ISO date (YYYY-MM-DD)")
 	}
 	return s, nil

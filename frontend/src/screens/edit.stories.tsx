@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { EditRecordModal } from "./edit";
 
 // EditRecordModal is prop-driven (no react-query/fetch inside it — the
@@ -63,7 +64,7 @@ export const VersionSkewError: Story = {
       fields={fields}
       record={record}
       pending={false}
-      error="This record changed since it was opened. Reload and retry."
+      error={en["common.versionSkew"]}
       onSubmit={() => undefined}
     />
   ),

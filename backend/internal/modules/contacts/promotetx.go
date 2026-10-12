@@ -17,21 +17,23 @@ import (
 
 // promoteLeadTx is QualifyLead's transactional body, for a caller that has
 // already asked for the grants and opened the transaction the promotion
-// must land in.
-func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, by string, active []fieldcatalog.Column) (PromoteOutcome, error) {
+// must land in. candidate is the contact the lead's email matched before any
+// lock, or zero for none. A different match under the locks is
+// promoteTargetMovedError.
+func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, by string, active []fieldcatalog.Column, candidate ids.ContactID) (PromoteOutcome, error) {
 	var out PromoteOutcome
-	// The lead lock comes BEFORE the promotability read: two
-	// concurrent promotes of one lead must serialize here, so the
-	// loser re-reads status=promoted and answers 409 instead of
-	// minting a second contact. IncludeArchived keeps the re-promote
-	// 409-with-pointer diagnostic reachable.
-	//
-	// The lead's stop lock comes before even that, for the reason
-	// mergeContactTx gives.
-	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, commsauthz.LeadStopSubject(id)); err != nil {
+	// Consent's stop locks come before any row, for the reason
+	// mergeContactTx gives. A zero candidate names no contact subject.
+	subjects := []commsauthz.StopSubject{commsauthz.LeadStopSubject(id)}
+	if !candidate.IsZero() {
+		subjects = append(subjects, commsauthz.ContactStopSubject(candidate))
+	}
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
 		return PromoteOutcome{}, err
 	}
-	if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.IncludeArchived); err != nil {
+	// The lead lock comes before the promotability read. Two promotes of one
+	// lead serialize here, and the loser reads status=promoted and answers 409.
+	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id); err != nil {
 		return PromoteOutcome{}, err
 	}
 	lead, err := promotableLead(ctx, tx, id, in)
@@ -47,7 +49,7 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, err
 	}
 
-	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, &out.Merged)
+	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, candidate, &out.Merged)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}

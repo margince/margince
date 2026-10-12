@@ -57,23 +57,35 @@ func (s *Store) ResolveConfirmToken(
 	// the read open would hand whoever holds a consent link everything the
 	// record page shows, which is wider than the mail that carried it.
 	var purposeID *ids.PurposeID
+	var contactID *ids.ContactID
+	var leadID *ids.LeadID
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+		// A lead's link is live while the lead is. The only link a lead holds
+		// is a website lead's privacy notice.
 		err := tx.QueryRow(ctx, `
 			UPDATE confirm_token ct
 			   SET first_fetched_at = coalesce(ct.first_fetched_at, $2),
 			       fetch_count = ct.fetch_count + 1,
 			       opened_at = CASE WHEN $3 THEN coalesce(ct.opened_at, $2) ELSE ct.opened_at END
 			WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
-			  AND EXISTS (SELECT 1 FROM contact p
-			               WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
-			RETURNING ct.contact_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
+			  AND (EXISTS (SELECT 1 FROM contact p
+			                WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
+			    OR EXISTS (SELECT 1 FROM lead l
+			                WHERE l.id = ct.lead_id AND l.archived_at IS NULL))
+			RETURNING ct.contact_id, ct.lead_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
 			hashPublicToken(token), s.now().UTC(), by == FetchByAHuman).Scan(
-			&ref.ContactID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
+			&contactID, &leadID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if purposeID != nil {
 			ref.PurposeID = *purposeID
+		}
+		if contactID != nil {
+			ref.ContactID = *contactID
+		}
+		if leadID != nil {
+			ref.LeadID = *leadID
 		}
 		return err
 	})

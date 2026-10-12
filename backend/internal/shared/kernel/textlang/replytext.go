@@ -14,6 +14,8 @@ package textlang
 import (
 	"strings"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // quoteMarkers are the ways a mail client announces that what follows is the
@@ -257,7 +259,7 @@ func authoredText(text string) string {
 	if offset < 0 {
 		return text
 	}
-	return string(runes[:offset])
+	return textcut.Runes(text, offset)
 }
 
 // isAttributionLine reports whether the line is a client's "On <date>, <name>
@@ -274,10 +276,7 @@ func isAttributionLine(line string) bool {
 		return false
 	}
 
-	head := line
-	if runes := []rune(line); len(runes) > attributionMaxRunes {
-		head = string(runes[:attributionMaxRunes])
-	}
+	head := textcut.Runes(line, attributionMaxRunes)
 	for _, verb := range attributionVerbs {
 		if strings.Contains(head, verb) {
 			return true

@@ -74,7 +74,7 @@ func TestEveryRetriggerableProducerRemembersARefusal(t *testing.T) {
 	t.Parallel()
 	found := 0
 	for path, body := range goSourcesUnder(t, "internal/compose") {
-		for _, line := range strings.Split(body, "\n") {
+		for line := range strings.SplitSeq(body, "\n") {
 			if !plainStageCall.MatchString(line) {
 				continue
 			}

@@ -59,6 +59,7 @@ func (s *Store) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLin
 // confirmMailInput is one confirm link, ready to be turned into a message.
 type confirmMailInput struct {
 	contactID  ids.ContactID
+	leadID     ids.LeadID
 	recipient  string
 	kind       string
 	tokenRowID ids.UUID
@@ -96,6 +97,7 @@ func (s *Store) stageConfirmMail(
 	}
 	deliveryID, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
 		ContactID: in.contactID,
+		LeadID:    in.leadID,
 		Recipient: in.recipient,
 		Category:  category,
 		LinkID:    in.tokenRowID,

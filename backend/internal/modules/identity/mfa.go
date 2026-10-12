@@ -310,7 +310,7 @@ func (s *Service) selfWorkspace(ctx context.Context) (ids.UserID, ids.WorkspaceI
 		return ids.UserID{}, ids.WorkspaceID{}, err
 	}
 	if s.vault == nil {
-		return ids.UserID{}, ids.WorkspaceID{}, fmt.Errorf("identity: no secret vault is configured for multi-factor authentication")
+		return ids.UserID{}, ids.WorkspaceID{}, errors.New("identity: no secret vault is configured for multi-factor authentication")
 	}
 	return ids.From[ids.UserKind](human), ids.From[ids.WorkspaceKind](wsID.UUID), nil
 }

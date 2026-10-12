@@ -78,7 +78,7 @@ func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters) func(
 				next.ServeHTTP(w, r)
 				return
 			}
-			operation := strings.SplitN(strings.TrimPrefix(r.URL.Path, publicDealRoomPrefix), "/", 2)[0]
+			operation, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, publicDealRoomPrefix), "/")
 			if !limits.perIP.Allow(httpserver.ClientIP(r)) {
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return

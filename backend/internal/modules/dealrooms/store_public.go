@@ -26,23 +26,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // sessionObject is the table the session writes audit against.
 const sessionObject = "deal_room_session"
 
-// exchangeablePredicate is the one rule for "this credential admits its
-// bearer right now", spelled once so peek and exchange cannot disagree. The
-// room's state is deliberately NOT part of it beyond `archived`: a paused or
-// closed room still exchanges, and the session then reports the state to the
+// exchangeablePredicate is the one rule for "this credential admits its bearer
+// right now", spelled once so peek and exchange cannot disagree.
+//
+// Held by: TestPeekAndExchangeApplyTheOneExchangeablePredicate (backend/internal/modules/dealrooms/exchangeable_test.go)
+//
+// The room's state is not part of it beyond `archived`. A paused
+// or closed room still exchanges, and the session then reports the state to the
 // authenticated buyer. Refusing here instead would make the anonymous edge an
 // oracle for whether a room is paused.
-const exchangeablePredicate = `i.token_hash = $1
+var exchangeablePredicate = `i.token_hash = $1
 	  AND i.consumed_at IS NULL AND i.superseded_at IS NULL AND i.expires_at > now()
 	  AND p.id = i.participant_id AND p.revoked_at IS NULL
 	  AND (NOT p.preview OR EXISTS (
 	        SELECT 1 FROM app_user u
-	         WHERE u.id = p.invited_by AND u.status = 'active' AND u.archived_at IS NULL))
+	         WHERE u.id = p.invited_by AND ` + workforce.LiveMemberSQL("u") + `))
 	  AND r.id = p.room_id AND r.archived_at IS NULL AND r.state <> 'archived'`
 
 // PeekCredential answers whether a credential can be exchanged, and nothing
@@ -174,7 +178,7 @@ func (s *Store) ResolveSession(ctx context.Context, token string) (Session, erro
 			    AND p.revoked_at IS NULL
 			    AND (NOT p.preview OR EXISTS (
 			          SELECT 1 FROM app_user u
-			           WHERE u.id = p.invited_by AND u.status = 'active' AND u.archived_at IS NULL))`,
+			           WHERE u.id = p.invited_by AND `+workforce.LiveMemberSQL("u")+`))`,
 			digestOfCredential(token)).Scan(&out.ID, &out.ParticipantID, &out.RoomID, &out.Capability, &out.Preview, &lastSeen)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrSessionRefused

@@ -222,8 +222,8 @@ func declaredJSONNames[T any]() map[string]bool {
 	if t.Kind() != reflect.Struct {
 		return names
 	}
-	for i := range t.NumField() {
-		name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ",")
+	for field := range t.Fields() {
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 		if name != "" && name != "-" {
 			names[name] = true
 		}

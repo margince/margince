@@ -5,7 +5,7 @@ package search
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 )
@@ -55,12 +55,9 @@ func MeasureQuery(name string, budget time.Duration, runs []time.Duration) (Quer
 		return QueryStats{}, fmt.Errorf("search: perfbench: query %s recorded no samples", name)
 	}
 	sorted := append([]time.Duration(nil), runs...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	slices.Sort(sorted)
 	rank := func(q float64) time.Duration {
-		idx := int(float64(len(sorted))*q+0.999999) - 1
-		if idx < 0 {
-			idx = 0
-		}
+		idx := max(int(float64(len(sorted))*q+0.999999)-1, 0)
 		if idx >= len(sorted) {
 			idx = len(sorted) - 1
 		}

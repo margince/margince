@@ -4,6 +4,7 @@
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
+import type { components } from "../api/schema";
 
 import { Button } from "../design-system/atoms";
 import { useFocusHandoff } from "../design-system/focushandoff";
@@ -13,6 +14,8 @@ import { useTooltip } from "../design-system/tooltip";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import type { PickedTag } from "./bulktag";
+import { ContactsTagOffer, EmployerTagOffer } from "./tagfollow";
 import { AddTagPicker } from "./tagpicker";
 import type { RecordTag, TaggableType, TagRestore } from "./tags.queries";
 import { useRecordTags, useRemoveTag, useRestoreTag } from "./tags.queries";
@@ -37,6 +40,7 @@ export function TagsPanel({
   entityID,
   canEdit,
   bare = false,
+  employer,
 }: Readonly<{
   entityType: TaggableType;
   entityID: string;
@@ -47,10 +51,13 @@ export function TagsPanel({
   /** Whether this reader may change the record. Applying a tag writes to the
    * RECORD, so a reader who may only look at it sees the words and no verbs. */
   canEdit: boolean;
+  /** A contact's current company, which a tag just applied here is offered to. */
+  employer?: components["schemas"]["ContactEmployer"];
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
+  const [applied, setApplied] = useState<PickedTag | null>(null);
   // Where focus lands once a pill is gone: the Add tag row, which stays
   // mounted whenever a tag can be removed, including after the last one goes
   // and the row of tags unmounts with it.
@@ -137,11 +144,47 @@ export function TagsPanel({
             entityType={entityType}
             entityID={entityID}
             current={tags}
+            onApplied={setApplied}
           />
         </div>
       )}
+      {applied && (
+        <TagFollowOffer
+          key={applied.id}
+          entityType={entityType}
+          entityID={entityID}
+          employer={employer}
+          tag={applied}
+          onClose={() => setApplied(null)}
+        />
+      )}
     </TagsFrame>
   );
+}
+
+/** The offer to carry a word just applied to the record's company or its contacts. */
+function TagFollowOffer({
+  entityType,
+  entityID,
+  employer,
+  tag,
+  onClose,
+}: Readonly<{
+  entityType: TaggableType;
+  entityID: string;
+  employer?: components["schemas"]["ContactEmployer"];
+  tag: PickedTag;
+  onClose: () => void;
+}>) {
+  if (entityType === "contact" && employer) {
+    return <EmployerTagOffer employer={employer} tag={tag} onClose={onClose} />;
+  }
+  if (entityType === "company") {
+    return (
+      <ContactsTagOffer companyID={entityID} tag={tag} onClose={onClose} />
+    );
+  }
+  return null;
 }
 
 /**

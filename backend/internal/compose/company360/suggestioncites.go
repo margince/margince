@@ -13,17 +13,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"strings"
-	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
-
-// A title and a date are OPTIONAL on the wire, so both are pointers. Taken
-// through a helper rather than inline, because a suggestion that carried a
-// zero time would render as "due 1 January year one" — a date is either the
-// evidence's or it is absent.
-func ptrString(v string) *string     { return &v }
-func ptrTime(v time.Time) *time.Time { return &v }
 
 // nonEmpty is a citation field that is either the record's own words or
 // absent. An empty string on the wire would draw an empty quote block, which

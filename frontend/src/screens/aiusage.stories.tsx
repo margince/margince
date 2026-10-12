@@ -72,17 +72,40 @@ export const Empty: Story = { render: story("normal", []) };
 // may read it.
 export const Withheld: Story = { render: story("normal", [task], {}) };
 
-// The per-day breakdown, opened. It is the card's diagnostic half and lives in
-// a disclosure standing in the row list, so this is the only story where the day
-// lines are on screen — and the one that shows the opened section indented from
-// its own summary rather than from the card.
+// The per-day breakdown, opened: the card's diagnostic half, a small table of
+// days and their calls behind its own summary.
 export const DaysOpen: Story = {
   render: story("normal", [task]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("Show days"));
-    await canvas.findByText(/2026-07-20/);
+    await canvas.findByRole("columnheader", { name: "Task" });
+    await userEvent.click(canvas.getByText("Show days"));
+    await canvas.findByRole("columnheader", { name: "Day" });
   },
+};
+
+const grouped = [
+  { ...task, cost_est_minor: 312 },
+  { ...task, tier: "premium", calls: 3, tokens_in: 9400, cost_est_minor: 1890 },
+  {
+    task: "weekly_review",
+    task_display_name: "Weekly review narrative",
+    tier: "premium",
+    calls: 4,
+    tokens_in: 3676,
+    tokens_out: 1200,
+    cost_est_minor: 840,
+  },
+];
+export const GroupedByTask: Story = { render: story("normal", grouped) };
+export const GroupedByTaskDark: Story = {
+  globals: { theme: "dark" },
+  render: story("normal", grouped),
+};
+export const GroupedByTaskPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story("normal", grouped),
 };
 
 // Economy mode in dark. The band is carried twice and both times by colour: the
@@ -94,10 +117,8 @@ export const EconomyModeDark: Story = {
   render: story("degraded", [task]),
 };
 
-// The widest the table gets — the cost column exists only when the server
-// priced the calls — at 390px. Seven columns do not fit a phone and no spend row
-// is reconcilable in pieces, so DataTable's `.table-scroll` has to keep them
-// inside the card; this is the story that shows whether the claim holds.
+// The widest the table gets, at 390px. No spend row is reconcilable in pieces,
+// so the table scrolls inside the card with the task column pinned.
 export const WithCostPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

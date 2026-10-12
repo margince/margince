@@ -299,9 +299,11 @@ func TestRunToolCallThenFinal(t *testing.T) {
 	// The observation entered the window spotlighted as data.
 	last := brain.requests[len(brain.requests)-1]
 	joined := ""
+	var joinedSb302 strings.Builder
 	for _, m := range last.Messages {
-		joined += m.Content
+		joinedSb302.WriteString(m.Content)
 	}
+	joined += joinedSb302.String()
 	// Spotlighted inside the very boundary this call's system prompt names —
 	// a marker in the transcript that the system prompt does not name is not a
 	// boundary, it is decoration.
@@ -334,9 +336,11 @@ func TestRefusalFedBackAsObservation(t *testing.T) {
 	}
 	last := brain.requests[len(brain.requests)-1]
 	joined := ""
+	var joinedSb337 strings.Builder
 	for _, m := range last.Messages {
-		joined += m.Content
+		joinedSb337.WriteString(m.Content)
 	}
+	joined += joinedSb337.String()
 	if !strings.Contains(joined, "tool call refused") {
 		t.Fatalf("refusal not observed: %q", joined)
 	}
@@ -369,9 +373,11 @@ func TestUnsupportedBySoRIsObservedAsTerminal(t *testing.T) {
 	}
 	last := brain.requests[len(brain.requests)-1]
 	joined := ""
+	var joinedSb372 strings.Builder
 	for _, m := range last.Messages {
-		joined += m.Content
+		joinedSb372.WriteString(m.Content)
 	}
+	joined += joinedSb372.String()
 	if !strings.Contains(joined, "do not call it again") {
 		t.Errorf("the model was not told the refusal is terminal: %q", joined)
 	}
@@ -485,9 +491,11 @@ func TestResumeRejectedObservesAndReplans(t *testing.T) {
 		t.Fatalf("rejected action must NOT be invoked: %+v", surface.calls)
 	}
 	joined := ""
+	var joinedSb488 strings.Builder
 	for _, m := range brain.requests[0].Messages {
-		joined += m.Content
+		joinedSb488.WriteString(m.Content)
 	}
+	joined += joinedSb488.String()
 	if !strings.Contains(joined, "REJECTED") {
 		t.Fatalf("rejection not observed: %q", joined)
 	}
@@ -514,9 +522,11 @@ func TestResumeApprovedVersionSkewIsObservedNotFatal(t *testing.T) {
 		t.Fatalf("skew must be observed, not fatal: %+v", res)
 	}
 	joined := ""
+	var joinedSb517 strings.Builder
 	for _, m := range brain.requests[0].Messages {
-		joined += m.Content
+		joinedSb517.WriteString(m.Content)
 	}
+	joined += joinedSb517.String()
 	if !strings.Contains(joined, "could not be applied") {
 		t.Fatalf("skew not observed: %q", joined)
 	}
@@ -576,9 +586,11 @@ func TestInvalidModelOutputRetriesThenDegrades(t *testing.T) {
 		t.Fatalf("expected %d attempts, got %d", consecutiveInvalidLimit, len(brain.requests))
 	}
 	joined := ""
+	var joinedSb579 strings.Builder
 	for _, m := range brain.requests[len(brain.requests)-1].Messages {
-		joined += m.Content
+		joinedSb579.WriteString(m.Content)
 	}
+	joined += joinedSb579.String()
 	if !strings.Contains(joined, "failed validation") {
 		t.Fatalf("validator feedback missing: %q", joined)
 	}
@@ -632,7 +644,7 @@ func TestFencedJSONAndUnknownFieldHandling(t *testing.T) {
 
 func TestWindowBoundingElidesOldestKeepsGoal(t *testing.T) {
 	win := newWindow(Job{Goal: "the goal survives"}, nil, nil)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		win.observe("read_record", strings.Repeat("x", 4000)+fmt.Sprintf("-%d", i))
 	}
 	req := win.asRequest(1000, MinimumPromptWindow)

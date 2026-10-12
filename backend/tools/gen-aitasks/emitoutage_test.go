@@ -41,7 +41,7 @@ func TestTheOutagePageSaysADecisionTaskFallsToItsLadder(t *testing.T) {
 		t.Fatalf("parseContract: %v", err)
 	}
 	rows := map[string]string{}
-	for _, line := range strings.Split(string(emitOutageDoc(c)), "\n") {
+	for line := range strings.SplitSeq(string(emitOutageDoc(c)), "\n") {
 		if rest, ok := strings.CutPrefix(line, "| `"); ok {
 			task, _, _ := strings.Cut(rest, "`")
 			rows[task] = line

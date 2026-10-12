@@ -41,6 +41,7 @@ package gates
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -83,11 +84,8 @@ func TestNoPendingWriterHasAWriter(t *testing.T) {
 					" — an INSERT whose columns could not be read, "+owner+" at "+w.pos)
 				continue
 			}
-			for _, col := range w.cols {
-				if col == column {
-					landed = append(landed, w.table+"."+column+" — "+owner+" at "+w.pos)
-					break
-				}
+			if slices.Contains(w.cols, column) {
+				landed = append(landed, w.table+"."+column+" — "+owner+" at "+w.pos)
 			}
 		}
 	}
@@ -144,8 +142,8 @@ func TestEveryPendingWriterTableIsStillClassified(t *testing.T) {
 		// and it is the moment this table stops belonging here.
 		rest := text[strings.Index(text, entry)+len(entry):]
 		line := rest
-		if end := strings.Index(rest, "\n"); end >= 0 {
-			line = rest[:end]
+		if before, _, ok := strings.Cut(rest, "\n"); ok {
+			line = before
 		}
 		if !strings.Contains(line, "PENDING WRITER") {
 			t.Errorf("%s.%s is no longer classified PENDING WRITER — drop it "+

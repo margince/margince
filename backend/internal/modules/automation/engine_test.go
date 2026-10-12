@@ -98,8 +98,7 @@ func TestApplyActionsRequestApprovalActionAlsoStages(t *testing.T) {
 
 	_, err := ApplyActions(context.Background(), Executors{Approvals: fake}, workflow.Effect{Actions: []workflow.Action{action}})
 
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
+	if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
 		t.Fatalf("ApplyActions err = %v, want a *workflow.StagedApprovalError", err)
 	}
 	if len(fake.calls) != 1 {
@@ -125,8 +124,7 @@ func TestApplyActionsNeverSwallowsAStageFailure(t *testing.T) {
 	if !errors.Is(err, stageErr) {
 		t.Fatalf("ApplyActions err = %v, want it to wrap the Stage failure %v", err, stageErr)
 	}
-	var staged *workflow.StagedApprovalError
-	if errors.As(err, &staged) {
+	if _, ok := errors.AsType[*workflow.StagedApprovalError](err); ok {
 		t.Error("a failed Stage call must not be reported as a successful staging")
 	}
 }
@@ -155,8 +153,7 @@ func TestAKindNoAutomationCanPlanRefusesInsteadOfStaging(t *testing.T) {
 			if err == nil {
 				t.Fatal("a kind with no executor reported success")
 			}
-			var staged *workflow.StagedApprovalError
-			if errors.As(err, &staged) {
+			if _, ok := errors.AsType[*workflow.StagedApprovalError](err); ok {
 				t.Error("the kind staged a card nothing can execute on approval")
 			}
 			if len(fake.calls) != 0 {

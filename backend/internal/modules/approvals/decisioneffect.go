@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // effectIsStillOwed reports whether a decision this call could not make was
@@ -69,6 +70,13 @@ func (s *Service) effectIsStillOwed(a row, approve bool, err error) bool {
 	if !errors.As(err, &decided) || !approve || decided.Status != approvalStatusApproved {
 		return false
 	}
+	return s.owesItsEffect(a)
+}
+
+// owesItsEffect is the row half of effectIsStillOwed: unredeemed, server
+// proposed, and of a kind with a registered effect. runPrecheck asks it too,
+// so its status guard lets this row, and no other, through to the re-drive.
+func (s *Service) owesItsEffect(a row) bool {
 	if a.ConsumedAt != nil || !serverProposed(a) {
 		return false
 	}
@@ -104,7 +112,7 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 		return nil
 	}
 	if effect, ok := s.effects[a.Kind]; ok && approve && serverProposed(a) {
-		if err := effect(ctx, id, a.ProposedChange, a.DiffHash); err != nil {
+		if err := effect(releasing(ctx, id), id, a.ProposedChange, a.DiffHash); err != nil {
 			return s.recordEffectFailure(ctx, id,
 				"this was approved, but the work it released did not run",
 				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))
@@ -190,3 +198,23 @@ func serverProposed(a row) bool { return a.PassportID == nil }
 // modify-then-approve edit, the status write, and the write shape. It
 // returns the re-read row so the follow-on effect runs against committed
 // state.
+
+// releasingKey marks the context runDecisionEffect hands a kind's effect, naming
+// the approval that decision released.
+type releasingKey struct{}
+
+func releasing(ctx context.Context, id ids.ApprovalID) context.Context {
+	return context.WithValue(ctx, releasingKey{}, id)
+}
+
+// redeemerFor is who a redemption's passport binding is checked against. A
+// server-proposed row names no passport, and its own decision's effect spends
+// it. An agent that decided it for its human carries a passport the row never
+// named, which binds nothing here. Any other redemption is checked as it came.
+func redeemerFor(ctx context.Context, a row, p principal.Principal) principal.Principal {
+	released, ok := ctx.Value(releasingKey{}).(ids.ApprovalID)
+	if ok && released == a.ID && serverProposed(a) {
+		p.PassportID = ids.UUID{}
+	}
+	return p
+}

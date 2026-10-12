@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../api/client";
 import { useModelCallsInFlight } from "../api/model-inflight";
 import type { components } from "../api/schema";
-import { throwProblem } from "../screens/common";
+import { unwrap } from "../screens/common";
 import { displayedKinds } from "./ai-activity-speak";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];
@@ -187,13 +187,11 @@ export function useAiActivity(): AiActivity {
           "the rail narrates no kinds, so asking the server for them would silently ask for all of them",
         );
       }
-      const { data, error } = await api.GET("/me/ai-activity", {
-        params: { query: { kinds } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/me/ai-activity", {
+          params: { query: { kinds } },
+        }),
+      );
     },
     // Coalesced through NOTHING for the same reason the result below is: the
     // cached body is whatever the server sent, and reaching into it for a

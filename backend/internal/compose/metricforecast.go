@@ -5,7 +5,7 @@ package compose
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -88,7 +88,7 @@ func forecastMetricFacts(readings forecasting.Readings, landing forecasting.Land
 			fact.Row = crmcontracts.ReportingEvidenceRow{Key: contribution.DealID, Label: "Forecast contribution", SourceId: ptrUUID(id), SourceType: &fact.SourceType, OwnerId: ptrUUID(owner)}
 			if contribution.BaseMinor != nil {
 				if *contribution.BaseMinor > reportingExactInteger || *contribution.BaseMinor < -reportingExactInteger {
-					return nil, fmt.Errorf("forecast exceeds exact reporting range")
+					return nil, errors.New("forecast exceeds exact reporting range")
 				}
 				number := float64(*contribution.BaseMinor)
 				fact.Row.Value = &number
@@ -139,7 +139,7 @@ func forecastAuthoredFacts(out []reporting.Fact, landing forecasting.Landing, ca
 			continue
 		}
 		if *reading.amount > reportingExactInteger || *reading.amount < -reportingExactInteger {
-			return nil, fmt.Errorf("forecast exceeds exact reporting range")
+			return nil, errors.New("forecast exceeds exact reporting range")
 		}
 		value := float64(*reading.amount)
 		out = append(out, reporting.Fact{Metric: reportingForecastLanding, ContextID: reading.context, SourceType: reportingForecastProjection, Provenance: string(landing.Measure), Money: reading.amount, Row: crmcontracts.ReportingEvidenceRow{Key: reading.context, Label: reading.context, Value: &value}})

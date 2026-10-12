@@ -1,6 +1,13 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -39,9 +46,13 @@ function mount(
   allow: GrantSpec = fullSignInGrants,
 ) {
   const calls: unknown[] = [];
+  const refusing = { writes: false, reads: false };
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
       return jsonResponse(meFixture({ allow }));
+    }
+    if (request.method === "PATCH" ? refusing.writes : refusing.reads) {
+      return jsonResponse({ title: "Unavailable", status: 503 }, 503);
     }
     if (request.method === "PATCH") {
       calls.push(JSON.parse(await request.text()));
@@ -69,7 +80,7 @@ function mount(
     </QueryClientProvider>
   );
   render(<SignInMethodsCard />, { wrapper: Wrap });
-  return { calls };
+  return { calls, refusing, qc };
 }
 
 describe("the sign-in methods card", () => {
@@ -119,6 +130,26 @@ describe("the sign-in methods card", () => {
     );
   });
 
+  // A failed refetch replaces the switches with the gate's error arm; a save
+  // failure about those switches has nothing left to stand beside.
+  it("drops a save failure once the settings themselves fail to load", async () => {
+    const { refusing, qc } = mount([
+      { key: "google", label: "Google", enabled: true },
+    ]);
+    const user = userEvent.setup();
+    refusing.writes = true;
+    await user.click(await screen.findByRole("switch", { name: /google/i }));
+    expect(await screen.findByText("Change not saved")).toBeTruthy();
+
+    refusing.reads = true;
+    await act(() => qc.refetchQueries());
+
+    expect(
+      await screen.findByText("Could not load this view. Reload the page."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Change not saved")).toBeNull();
+  });
+
   // An admin cannot add a provider here, so a deployment with none has nothing
   // to offer and the card says so rather than rendering an empty list.
   it("says so when the deployment configured no provider", async () => {
@@ -134,6 +165,12 @@ describe("the group role grant editor", () => {
   it("renders each stored mapping with its group and granted role", async () => {
     mount([], { engineering: "manager" });
     expect(await screen.findByDisplayValue("engineering")).toBeTruthy();
+    // Its own region, with headings that outlast whatever is typed in a row.
+    const panel = screen.getByRole("region", { name: "Group role grants" });
+    const headers = within(panel)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(headers).toEqual(["IdP group", "Granted role", "Actions"]);
     // The role reads under its product name, the same label the roster uses.
     const role = screen.getByRole("combobox", { name: /granted role/i });
     expect(role.textContent).toContain("Team lead");
@@ -172,7 +209,7 @@ describe("the group role grant editor", () => {
     const { calls } = mount([], { sales: "rep", engineering: "manager" });
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /remove the sales mapping/i }),
+      await screen.findByRole("button", { name: "Remove the sales mapping" }),
     );
     await user.click(
       screen.getByRole("button", { name: /save group grants/i }),

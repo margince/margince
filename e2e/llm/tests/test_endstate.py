@@ -168,6 +168,86 @@ class DocumentTest(unittest.TestCase):
                 endstate.end_state(session, [FILED])
 
 
+SIGNED = "b" * 64
+SERVICE = "00000000-0000-0000-0000-00000000c001"
+OTHER = "00000000-0000-0000-0000-00000000c002"
+MEETING = "00000000-0000-0000-0000-00000000a001"
+ON_MEETING = 'activity "Signing" on project "Rollout" '
+FILED_ON_MEETING = ON_MEETING + f"document={SIGNED} *.pdf"
+AGAINST_SERVICE = ON_MEETING + f"document_contract={SIGNED} Service contract"
+
+
+def project_world(files, timeline=None, contracts=None, truncated=False):
+    """One project, its 360 read and the files on the activities it lists.
+
+    files maps an activity id to [(filename, checksum, contract_id)], so a file
+    on the wrong activity is on the record, just not the one asked about.
+    """
+    timeline = [("Signing", MEETING)] if timeline is None else timeline
+    contracts = [("Service contract", SERVICE), ("Old contract", OTHER)] if contracts is None else contracts
+
+    def list_records(_arguments):
+        rows = [{"record_type": "project", "id": "p1", "fields": {"name": "Rollout"}}]
+        return json.dumps({"data": {"records": rows}}), False
+
+    def read_project_360(arguments):
+        if arguments.get("project_id") != "p1":
+            return "not found", True
+        view = {
+            "activities": {"items": [{"activity_id": i, "subject": s} for s, i in timeline], "truncated": truncated},
+            "contracts": {"items": [{"contract_id": i, "title": t} for t, i in contracts], "truncated": False},
+        }
+        return json.dumps({"data": view}), False
+
+    def list_documents(arguments):
+        rows = [{"filename": n, "checksum": c, "contract_id": k} for n, c, k in files.get(arguments.get("entity_id"), [])]
+        return json.dumps({"data": {"documents": rows}}), False
+
+    return {"list_records": list_records, "read_project_360": read_project_360, "list_documents": list_documents}
+
+
+class FoundOnAProjectTest(unittest.TestCase):
+    def read(self, replies, entries=(FILED_ON_MEETING, AGAINST_SERVICE)):
+        tools = [{"name": n, "inputSchema": {"type": "object"}} for n in replies]
+        with FakeMcp(tools, replies=replies) as server:
+            session = mcpclient.Session(server.url, "tok")
+            session.open()
+            return endstate.end_state(session, list(entries))
+
+    def test_the_file_on_the_meeting_against_the_contract_holds(self):
+        held, problems = self.read(project_world({MEETING: [("signed.pdf", SIGNED, SERVICE)]}))
+        self.assertEqual((held, problems), ([FILED_ON_MEETING, AGAINST_SERVICE], []))
+
+    def test_a_file_against_another_contract_names_it(self):
+        _, problems = self.read(project_world({MEETING: [("signed.pdf", SIGNED, OTHER)]}), [AGAINST_SERVICE])
+        self.assertEqual(problems, ['ended with the file on activity "Signing" on project "Rollout" '
+                                    'filed against "Old contract", wanted "Service contract"'])
+
+    def test_a_file_against_no_contract_fails(self):
+        _, problems = self.read(project_world({MEETING: [("signed.pdf", SIGNED, None)]}), [AGAINST_SERVICE])
+        self.assertEqual(problems, ['ended with the file on activity "Signing" on project "Rollout" '
+                                    'filed against no contract, wanted "Service contract"'])
+
+    def test_a_file_on_another_activity_is_not_on_the_meeting(self):
+        timeline = [("Signing", MEETING), ("Kickoff", "a2")]
+        _, problems = self.read(project_world({"a2": [("signed.pdf", SIGNED, SERVICE)]}, timeline), [FILED_ON_MEETING])
+        self.assertEqual(problems, ['ended with no file on activity "Signing" on project "Rollout" '
+                                    f'whose checksum is {SIGNED}'])
+
+    def test_a_meeting_not_on_the_timeline_is_a_scored_failure(self):
+        _, problems = self.read(project_world({}, timeline=[("Kickoff", "a2")]), [FILED_ON_MEETING])
+        self.assertEqual(problems, ['ended with no activity "Signing" on project "Rollout"'])
+
+    def test_a_timeline_cut_short_is_a_harness_fault(self):
+        with self.assertRaisesRegex(endstate.Unreadable, "cut the activities"):
+            self.read(project_world({}, truncated=True), [FILED_ON_MEETING])
+
+    def test_a_contract_the_seed_did_not_write_is_a_harness_fault(self):
+        replies = project_world({MEETING: [("signed.pdf", SIGNED, SERVICE)]}, contracts=[("Old contract", OTHER)])
+        with self.assertRaisesRegex(endstate.Unreadable, '0 contracts titled "Service contract"'):
+            self.read(replies, [AGAINST_SERVICE])
+
+
 class ParseTest(unittest.TestCase):
     def test_an_entry_reads_as_type_name_field_and_value(self):
         self.assertEqual(endstate.parse(EMSLAND),
@@ -179,9 +259,20 @@ class ParseTest(unittest.TestCase):
             with self.assertRaises(ValueError, msg=entry):
                 endstate.parse(entry)
 
+    def test_an_entry_on_a_parent_reads_the_parent_too(self):
+        self.assertEqual(endstate.parse('activity "Signing" on project "Rollout" documents=1'),
+                         endstate.Expectation("activity", "Signing", "documents", "1", "project", "Rollout"))
+
+    def test_a_type_on_a_parent_it_is_not_found_on_is_refused(self):
+        for entry in ('activity "Signing" documents=1', 'activity "Signing" on company "E" documents=1',
+                      'company "E" on project "Rollout" documents=1'):
+            with self.assertRaises(ValueError, msg=entry):
+                endstate.parse(entry)
+
     def test_a_malformed_document_entry_is_refused(self):
         for entry in (f'company "E" document={NOTES}', 'company "E" document=ABC *.md',
-                      'company "E" documents=one'):
+                      'company "E" documents=one', f'company "E" document_contract={NOTES} Service',
+                      f'activity "S" on project "P" document_contract={NOTES}'):
             with self.assertRaises(ValueError, msg=entry):
                 endstate.parse(entry)
 

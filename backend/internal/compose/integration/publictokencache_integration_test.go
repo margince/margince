@@ -142,7 +142,7 @@ func declaredCovers(t *testing.T, prefix string) []string {
 // the first time a prefix is added there — and the placeholder is normalized to
 // the contract's own {token} spelling rather than re-deciding anything.
 func redactToken(path string) string {
-	withoutQuery := strings.SplitN(path, "?", 2)[0]
+	withoutQuery, _, _ := strings.Cut(path, "?")
 	return strings.Replace(capabilitypath.Redact(withoutQuery), "[redacted]", "{token}", 1)
 }
 

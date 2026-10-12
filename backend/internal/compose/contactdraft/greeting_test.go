@@ -23,8 +23,6 @@ func contactNamed(full string, first, last *string) crmcontracts.Contact {
 	return crmcontracts.Contact{Id: openapi_types.UUID(ids.NewV7()), FullName: full, FirstName: first, LastName: last}
 }
 
-func ptr(s string) *string { return &s }
-
 // With no stored first name, the display name is still split.
 //
 // Most of what capture writes carries a full name and nothing else, so the
@@ -51,7 +49,7 @@ func TestTheGreetingUsesTheStoredFirstName(t *testing.T) {
 // greeting somebody "Hi ," is worse than greeting them by a split display name.
 func TestABlankStoredFirstNameFallsBack(t *testing.T) {
 	in := contactdraft.FromView(
-		viewOf(contactNamed("Marcus Greven", ptr("   "), nil)),
+		viewOf(contactNamed("Marcus Greven", new("   "), nil)),
 		contactdraft.Request{},
 	)
 	if in.Recipient.FirstName != "Marcus" {

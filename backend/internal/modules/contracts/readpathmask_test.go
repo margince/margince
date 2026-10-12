@@ -105,7 +105,7 @@ func TestEveryReferenceInTheProjectionIsMasked(t *testing.T) {
 		t.Fatal("maskedReferences is empty, so this gate compares the projection against nothing")
 	}
 	var unmaskedColumns []string
-	for _, column := range strings.Split(contractColumns, ",") {
+	for column := range strings.SplitSeq(contractColumns, ",") {
 		column = strings.TrimSpace(strings.ReplaceAll(column, "\n", ""))
 		column = strings.TrimSpace(strings.Trim(column, "\t"))
 		if !strings.HasSuffix(column, "_id") || masked[column] || slices.Contains(notAReference, column) {

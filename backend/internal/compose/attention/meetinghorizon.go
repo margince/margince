@@ -95,7 +95,7 @@ func (s *Service) horizonSide(
 	if err == nil || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return nil
 	}
-	slog.ErrorContext(ctx, "a meeting-horizon read failed", "source", source, "error", err)
+	slog.Log(ctx, laneFailureLevel(ctx), "a meeting-horizon read failed", "source", source, "error", err)
 	return &crmcontracts.WorklistSourceUnavailable{
 		Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 	}

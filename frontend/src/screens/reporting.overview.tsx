@@ -14,7 +14,7 @@ import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { AnalyticsAttention } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
-import { problemCodeOf, QueryGate, throwProblem } from "./common";
+import { problemCodeOf, QueryGate, unwrap } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExportButton } from "./reporting.export";
@@ -37,18 +37,14 @@ export function ReportingOverview({
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const pipelines = useReportingPipelines();
   const setup = useQuery({
     queryKey: ["reporting-overview-setup"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/framework");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/framework"));
     },
   });
   return (
@@ -212,11 +208,11 @@ function OverviewBody({
     enabled: validPeriod,
     queryKey: ["reporting-evaluation", selection],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/evaluate", {
-        params: { query: reportingQuery(selection) },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/analytics/evaluate", {
+          params: { query: reportingQuery(selection) },
+        }),
+      );
     },
   });
   const contextKey = JSON.stringify(selection);

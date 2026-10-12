@@ -16,7 +16,7 @@ import { useToast } from "../design-system/toast";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 
 type WorkingHours = components["schemas"]["WorkingHours"];
 
@@ -152,13 +152,11 @@ export function useSaveWorkingHours() {
   return useMutation({
     scope: { id: "working-hours" },
     mutationFn: async (next: WorkingHours) => {
-      const { data, error } = await api.PUT("/me/working-hours", {
-        body: next,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/me/working-hours", {
+          body: next,
+        }),
+      );
     },
     onSuccess: async (data) => {
       queryClient.setQueryData(["working-hours"], data);

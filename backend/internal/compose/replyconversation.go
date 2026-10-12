@@ -10,6 +10,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 const replyContextTurns = 6
@@ -46,10 +47,10 @@ func replyConversationText(anchor crmcontracts.Activity, rows []crmcontracts.Act
 			relation = "later than the selected message"
 		}
 		turns = append(turns, fmt.Sprintf("%s | %s | %s | %s\n%s", relation, row.OccurredAt.Format("2006-01-02T15:04:05Z07:00"),
-			direction, boundedRunes(stringValue(row.Subject), 200), boundedRunes(stringValue(row.Body), 1200)))
+			direction, textcut.Runes(stringValue(row.Subject), 200), textcut.Runes(stringValue(row.Body), 1200)))
 		if len(turns) == replyContextTurns {
 			break
 		}
 	}
-	return boundedRunes(strings.Join(turns, "\n\n"), replyActivityMaxRunes)
+	return textcut.Runes(strings.Join(turns, "\n\n"), replyActivityMaxRunes)
 }

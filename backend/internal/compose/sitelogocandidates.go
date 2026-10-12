@@ -144,7 +144,7 @@ func iconURLsByRel(icons []webread.IconRef, rel string) []string {
 // edge, which is what "largest" has to mean for the ordering to hold.
 func declaredIconEdge(sizes string) int {
 	largest := 0
-	for _, token := range strings.Fields(sizes) {
+	for token := range strings.FieldsSeq(sizes) {
 		width, height, found := strings.Cut(token, "x")
 		if !found {
 			continue

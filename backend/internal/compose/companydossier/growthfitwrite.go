@@ -172,9 +172,11 @@ func keepSubScores(
 func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 	selfConfirmed bool, now nowFunc, lang string,
 ) (Assessment, crmcontracts.WrittenBy, bool) {
-	if lane == nil {
-		return Assess(in, crmcontracts.GrowthFitBandUnknown, selfConfirmed, AbstainedNoWriter, now()),
-			crmcontracts.WrittenByDeterministic, false
+	floor := Assess(in, crmcontracts.GrowthFitBandUnknown, selfConfirmed, AbstainedNoWriter, now())
+	// Below the floor Assess abstains whatever band is proposed, so asking the
+	// model cannot change the answer. With no records every rung refuses it.
+	if lane == nil || !aboveFloor(floor.Completeness) {
+		return floor, crmcontracts.WrittenByDeterministic, false
 	}
 	assessed, err := assessWithModel(ctx, lane, in, selfConfirmed, now, lang)
 	if err != nil {

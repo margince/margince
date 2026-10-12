@@ -248,7 +248,13 @@ export function useCanUpsert(object: RbacObject): boolean {
  * Any OTHER surface reaching for this instead of a grant is a bug.
  */
 export function useHoldsAdminRole(): boolean {
-  return (useMe().data?.roles ?? []).includes("admin");
+  return holdsAdminRole(useMe().data?.roles);
+}
+
+// The roster asks it of a target member to name the last-admin lock, which
+// `allowed_actions` withholds without saying why.
+export function holdsAdminRole(roles: readonly string[] | undefined): boolean {
+  return (roles ?? []).includes("admin");
 }
 
 /**

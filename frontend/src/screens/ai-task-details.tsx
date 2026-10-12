@@ -8,6 +8,7 @@ import type { MessageKey } from "../i18n/en";
 import { decisionSkipLabel } from "./ai-decision-labels";
 import { laneRung, TaskState } from "./ai-lane-state";
 import { ProviderHealthNotice } from "./ai-provider-health-notice";
+import { providerName } from "./ai-provider-names";
 import { TermChip } from "./ai-terms";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
 
@@ -108,7 +109,9 @@ export function TaskDetails({
       {row.decision_first && row.decision_candidate ? (
         <span className="ai-task-details-badges">
           <Badge>{t("aiTasks.decisionFirst")}</Badge>
-          <TermChip term="provider">{row.decision_candidate.provider}</TermChip>
+          <TermChip term="provider">
+            {providerName(row.decision_candidate.provider, t)}
+          </TermChip>
           <code>{row.decision_candidate.model}</code>
         </span>
       ) : null}

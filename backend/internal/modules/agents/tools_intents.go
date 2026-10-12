@@ -12,7 +12,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -107,11 +106,9 @@ func (a anchorArgs) validate() error {
 	byName := strings.TrimSpace(a.RecordName) != ""
 	switch {
 	case byID && byName:
-		return &BadArgsError{Cause: fmt.Errorf(
-			"name the record by `record_id` or by `record_name`, not both")}
+		return &BadArgsError{Cause: errors.New("name the record by `record_id` or by `record_name`, not both")}
 	case !byID && !byName:
-		return &BadArgsError{Cause: fmt.Errorf(
-			"name the record by `record_id` or by `record_name`")}
+		return &BadArgsError{Cause: errors.New("name the record by `record_id` or by `record_name`")}
 	default:
 		return nil
 	}
@@ -189,7 +186,7 @@ func (t catchMeUpOn) Spec() mcp.ToolSpec {
 		Description:   catchMeUpOnCopy.render(),
 		Instead:       catchMeUpOnCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getContact/getCompany/getDeal + listActivities",
+		OpenAPIOp:    "catchUpOnRecord",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[AssembledContextResult](),
 	}
@@ -226,7 +223,7 @@ func (t prepForMeeting) Spec() mcp.ToolSpec {
 		Description:   prepForMeetingCopy.render(),
 		Instead:       prepForMeetingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp:    "getMeetingBrief | getContact/getCompany/getDeal + listActivities",
+		OpenAPIOp:    "prepForMeeting",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[PrepForMeetingResult](),
 	}

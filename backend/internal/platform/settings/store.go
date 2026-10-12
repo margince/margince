@@ -246,6 +246,18 @@ func LockForWrite(ctx context.Context, tx pgx.Tx, key string) error {
 	return nil
 }
 
+// ShareLockForDecision holds one key stable for the rest of the transaction
+// without reading it through a gate. It takes the shared form of the advisory
+// lock LockForWrite takes exclusively. So a writer of the key waits for this
+// transaction to end, and this waits for a writer already in flight. It holds
+// whether or not the row exists yet.
+func ShareLockForDecision(ctx context.Context, tx pgx.Tx, key string) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(hashtext($1))`, key); err != nil {
+		return fmt.Errorf("settings: holding %s stable for a decision: %w", key, err)
+	}
+	return nil
+}
+
 // ReadForDecision resolves a setting a caller is about to DECIDE something
 // against, holding the row until that decision commits.
 //

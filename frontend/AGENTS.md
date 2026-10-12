@@ -14,6 +14,11 @@ runs daily on `main` (`scheduled.yml`), not on your PR, because the calendar bre
 a diff. A test file you add today can turn that lane red many days from now. Run it on your machine
 when a test you touch reads a date.
 
+Biome holds the size of a function in product code: 300 lines, blank lines not counted
+(`noExcessiveLinesPerFunction`), and a score of 15 (`noExcessiveCognitiveComplexity`). Test code has
+no such limit. A `biome-ignore` for either rule in product
+code names the issue that splits the function, and `scripts/complexity-waivers.test.ts` checks it.
+
 ## Read the design system before you build something a user can see
 
 Read [`src/design-system/README.md`](src/design-system/README.md) before you build a control, every
@@ -62,9 +67,11 @@ thing.
 ## Text follows the writing guides
 
 English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
-German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md). `copy-style.test.ts` and
-`copy-style-de.test.ts` hold only the rules a program can check. The tone, the words, the length and
-the shape of a message are yours to check before you add or change a value.
+German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md) and Vietnamese adds
+[`ui-copy-style-vi.md`](../docs/reference/ui-copy-style-vi.md). `copy-style.test.ts`,
+`copy-style-de.test.ts` and `copy-style-vi.test.ts` hold only the rules a program can check. The
+tone, the words, the length and the shape of a message are yours to check before you add or change
+a value.
 
 ## A test must pass on a slow machine
 

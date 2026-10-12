@@ -362,7 +362,7 @@ describe("deciding a commission entry", () => {
     const dialog = await confirmApprove();
 
     expect(
-      await within(dialog).findByText(en["edit.versionSkew"]),
+      await within(dialog).findByText(en["common.versionSkew"]),
     ).toBeTruthy();
     await vi.waitFor(() => expect(ledgerReads.length).toBe(2));
     await act(async () => {
@@ -391,7 +391,7 @@ describe("deciding a commission entry", () => {
     expect(
       await within(dialog).findByText("This entry is already settled."),
     ).toBeTruthy();
-    expect(screen.queryByText(en["edit.versionSkew"])).toBeNull();
+    expect(screen.queryByText(en["common.versionSkew"])).toBeNull();
     expect(ledgerReads.length).toBe(1);
   });
 });

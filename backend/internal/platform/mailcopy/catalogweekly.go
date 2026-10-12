@@ -22,7 +22,7 @@ func weeklyCoverageLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyNotRecorded },
 		"Not recorded",
 		"Nicht erfasst",
-		"Không được ghi nhận")
+		"Không ghi nhận")
 	line(func(c *Copy) *string { return &c.WeeklyRecordedFrom },
 		"Recorded from {date}",
 		"Erfasst ab {date}",
@@ -30,7 +30,7 @@ func weeklyCoverageLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyNoRecords },
 		"No records from this source",
 		"Keine Datensätze aus dieser Quelle",
-		"Nguồn này chưa có bản ghi")
+		"Nguồn này không có dữ liệu")
 	line(func(c *Copy) *string { return &c.WeeklyPartialFrom },
 		"Partial week: counted from {date}",
 		"Teilwoche: gezählt ab {date}",
@@ -42,11 +42,11 @@ func weeklyCoverageLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyBeforeHistory },
 		"This week falls before the first records, so it has no figures to report.",
 		"Diese Woche liegt vor den ersten Datensätzen und hat daher keine Zahlen.",
-		"Tuần này nằm trước các bản ghi đầu tiên nên không có số liệu để báo cáo.")
+		"Tuần này nằm trước thời điểm có dữ liệu đầu tiên nên không có số liệu để báo cáo.")
 	line(func(c *Copy) *string { return &c.WeeklyUnavailable },
 		"Unavailable",
 		"Nicht verfügbar",
-		"Không có dữ liệu")
+		"Không khả dụng")
 }
 
 // weeklyFigureLines are the counted outcomes: what was delivered, won, lost,
@@ -63,7 +63,7 @@ func weeklyFigureLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
 		"Tasks delivered",
 		"Aufgaben erledigt",
-		"Công việc đã hoàn thành")
+		"Việc cần làm đã hoàn tất")
 	line(func(c *Copy) *string { return &c.WeeklyOfDue },
 		"%d of %d",
 		"%d von %d",
@@ -83,7 +83,7 @@ func weeklyFigureLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyDecided },
 		"Proposals decided",
 		"Entschiedene Vorschläge",
-		"Bạn đã quyết")
+		"Đề xuất đã có quyết định")
 	weeklyDecisionLines(line)
 }
 
@@ -112,7 +112,7 @@ func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
 		"Morning brief items",
 		"Einträge im Morgenbericht",
-		"Danh sách buổi sáng")
+		"Việc trong Bản tin sáng")
 	line(func(c *Copy) *string { return &c.WeeklyActed },
 		"acted",
 		"bearbeitet",
@@ -124,7 +124,7 @@ func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyCarried },
 		"Carried over",
 		"Übertragen",
-		"Chuyển tiếp")
+		"Chuyển sang tuần sau")
 }
 
 // weeklyMovementLines are what actually moved, the way on to the rest of it,

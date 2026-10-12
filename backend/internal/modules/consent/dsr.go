@@ -38,6 +38,9 @@ const (
 	fieldStatus     = "status"
 	fieldSubjectRef = "subject_ref"
 	fieldResolution = "resolution"
+	fieldDueAt      = "due_at"
+	fieldReceivedAt = "received_at"
+	fieldAssigneeID = "assignee_id"
 
 	// The request kinds the handlers branch on. Constants for the same reason
 	// as the field names above, and dsrKindErasure carries the higher stake:
@@ -57,17 +60,21 @@ func illegalTransition(from, to string) *ValidationError {
 	}
 }
 
-const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id`
+const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id, due_rule, due_overridden`
 
-// dsrSelectByID is the single-row fetch shared by GetDSR and UpdateDSR — one
-// spelling so the projected columns cannot drift between the two paths.
+// dsrSelectByID is the single-row fetch GetDSR and lockDSR share, so their
+// projected columns cannot drift.
 const dsrSelectByID = "SELECT " + dsrColumns + " FROM data_subject_request WHERE id = $1"
 
-// dsrSelectForUpdate locks the request row for the length of the enclosing
-// transaction. FulfilErasure holds this lock across the irreversible erase so
-// no concurrent transition can interleave between "this erasure is legal to
-// fulfil" and the scrub itself.
-const dsrSelectForUpdate = dsrSelectByID + " FOR UPDATE"
+// lockDSR reads a request FOR UPDATE for both update writers, so the row they
+// validate cannot change before they write over it.
+func lockDSR(ctx context.Context, tx pgx.Tx, id ids.UUID) (dsrRow, error) {
+	current, err := scanDSR(tx.QueryRow(ctx, dsrSelectByID+" FOR UPDATE", id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return dsrRow{}, apperrors.ErrNotFound
+	}
+	return current, err
+}
 
 type dsrRow struct {
 	// ID is the data_subject_request case id — a compliance workflow row,
@@ -84,12 +91,17 @@ type dsrRow struct {
 	// link carries. NIL on one an officer opened by hand, which is why
 	// resolveDSRSubject reads the reference as well.
 	ContactID *ids.UUID
+	// DueRule names the rule set the deadline came from; nil on a request
+	// filed before deadlines were computed.
+	DueRule *string
+	// DueOverridden marks a deadline the officer set earlier than the rule's.
+	DueOverridden bool
 }
 
 func scanDSR(r pgx.Row) (dsrRow, error) {
 	var d dsrRow
 	err := r.Scan(&d.ID, &d.Kind, &d.Status, &d.SubjectRef, &d.AssigneeID, &d.DueAt, &d.Resolution,
-		&d.CreatedAt, &d.ContactID)
+		&d.CreatedAt, &d.ContactID, &d.DueRule, &d.DueOverridden)
 	return d, err
 }
 
@@ -204,7 +216,11 @@ type CreateDSRInput struct {
 	Kind       string
 	SubjectRef string
 	AssigneeID *ids.UserID
-	DueAt      time.Time
+	// ReceivedAt is when the request arrived; nil is now.
+	ReceivedAt *time.Time
+	// DueAt is an earlier deadline than the computed one; nil takes the
+	// computed one.
+	DueAt *time.Time
 }
 
 // CreateDSR files a request into the queue, behind the queue's own gate.
@@ -226,19 +242,31 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 	if strings.TrimSpace(in.SubjectRef) == "" {
 		return dsrRow{}, &ValidationError{Field: fieldSubjectRef, Reason: "required"}
 	}
+	received, err := receivedAtFor(in.ReceivedAt, time.Now())
+	if err != nil {
+		return dsrRow{}, err
+	}
 	var out dsrRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		computed, rule, err := s.requestDeadlineTx(ctx, tx, in.Kind, received)
+		if err != nil {
+			return err
+		}
+		due, overridden, err := dueAtFor(in.DueAt, computed, rule)
+		if err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, `
-			INSERT INTO data_subject_request (kind, subject_ref, assignee_id, due_at)
-			VALUES ($1, $2, $3, $4)
+			INSERT INTO data_subject_request (kind, subject_ref, assignee_id, received_at, due_at, due_rule, due_overridden)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING `+dsrColumns,
-			in.Kind, strings.TrimSpace(in.SubjectRef), in.AssigneeID, in.DueAt)
-		var err error
+			in.Kind, strings.TrimSpace(in.SubjectRef), in.AssigneeID, received, due, rule, overridden)
 		if out, err = scanDSR(row); err != nil {
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "data_subject_request", out.ID, nil, map[string]any{
-			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, "due_at": in.DueAt,
+			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, fieldReceivedAt: received, fieldDueAt: due,
+			"due_rule": rule, "due_overridden": overridden,
 		})
 		return err
 	})
@@ -268,6 +296,10 @@ type UpdateDSRInput struct {
 	Status     *string
 	AssigneeID *ids.UserID
 	Resolution *string
+	// ClearAssignee and ClearResolution carry an explicit null, which a nil
+	// pointer cannot tell apart from a field the caller left out.
+	ClearAssignee   bool
+	ClearResolution bool
 }
 
 // hasResolution reports whether an update carries (or the row already
@@ -278,24 +310,49 @@ func hasResolution(value *string) bool {
 	return value != nil && strings.TrimSpace(*value) != ""
 }
 
-// validateDSRUpdate is the one spelling of every UpdateDSR precondition:
-// the closed transition map and the "closing needs an answer" rule. It is
-// called twice — inside UpdateDSR's own transaction (the authoritative
-// gate, every caller must clear it) and by the handler ahead of fulfilling
-// an erasure (an early refusal, so a request that could never legally
-// close never triggers the irreversible erase).
+// validateDSRUpdate holds every UpdateDSR precondition: the transition map,
+// and a nonblank answer on any request it leaves closed. FulfilErasure runs it
+// before the erase, so a request that cannot close is never erased.
 func validateDSRUpdate(current dsrRow, in UpdateDSRInput) *ValidationError {
-	if in.Status == nil || *in.Status == current.Status {
+	next := current.Status
+	if in.Status != nil && *in.Status != current.Status {
+		if !dsrTransitions[current.Status][*in.Status] {
+			return illegalTransition(current.Status, *in.Status)
+		}
+		next = *in.Status
+	}
+	if !closedDSRStatus(next) {
 		return nil
 	}
-	if !dsrTransitions[current.Status][*in.Status] {
-		return illegalTransition(current.Status, *in.Status)
+	answer := current.Resolution
+	switch {
+	case in.ClearResolution:
+		answer = nil
+	case in.Resolution != nil:
+		answer = in.Resolution
+	case next == current.Status:
+		// A patch that neither closes nor writes the answer leaves the stored one as it is.
+		return nil
 	}
-	if (*in.Status == "fulfilled" || *in.Status == "rejected") &&
-		!hasResolution(in.Resolution) && !hasResolution(current.Resolution) {
+	if hasResolution(answer) {
+		return nil
+	}
+	if next != current.Status {
 		return &ValidationError{Field: fieldResolution, Reason: "closing a request needs its answer"}
 	}
-	return nil
+	return &ValidationError{Field: fieldResolution, Reason: "a closed request keeps its answer"}
+}
+
+// closedDSRStatus reports the two statuses a request ends in.
+func closedDSRStatus(status string) bool {
+	return status == "fulfilled" || status == "rejected"
+}
+
+// dsrAssigneeSet is the assignee assignment both update writers share: an
+// explicit clear empties it, an absent value keeps what is stored.
+func dsrAssigneeSet(in UpdateDSRInput, arg func(any) int) string {
+	return storekit.SQLf("assignee_id = CASE WHEN $%d THEN NULL ELSE coalesce($%d, assignee_id) END",
+		arg(in.ClearAssignee), arg(in.AssigneeID))
 }
 
 func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (dsrRow, error) {
@@ -304,52 +361,43 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 	}
 	var out dsrRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		current, err := scanDSR(tx.QueryRow(ctx,
-			dsrSelectByID, id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		current, err := lockDSR(ctx, tx, id)
 		if err != nil {
 			return err
 		}
 		if verr := validateDSRUpdate(current, in); verr != nil {
 			return verr
 		}
-		sql := `
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		assignee := dsrAssigneeSet(in, arg)
+		sql := storekit.SQLf(`
 			UPDATE data_subject_request SET
-			  status = coalesce($2, status),
-			  assignee_id = coalesce($3, assignee_id),
-			  resolution = coalesce($4, resolution)
-			WHERE id = $1`
-		args := []any{id, in.Status, in.AssigneeID, in.Resolution}
-		if in.Status != nil {
-			// Nothing holds this row locked between the read above and the
-			// write below, so require it to still be in the state we just
-			// validated the transition against — a status change that lands
-			// in that window (another officer closing or rejecting the same
-			// request) is refused as illegal rather than silently overwritten.
-			args = append(args, current.Status)
-			sql += storekit.SQLf(" AND status = $%d", len(args))
-		}
-		sql += " RETURNING " + dsrColumns
-		row := tx.QueryRow(ctx, sql, args...)
-		if out, err = scanDSR(row); err != nil {
-			if in.Status != nil && errors.Is(err, pgx.ErrNoRows) {
-				return illegalTransition(current.Status, *in.Status)
-			}
+			  status = coalesce($%d, status),
+			  %s,
+			  resolution = CASE WHEN $%d THEN NULL ELSE coalesce($%d, resolution) END
+			WHERE id = $%d
+			RETURNING `+dsrColumns, arg(in.Status), assignee, arg(in.ClearResolution), arg(in.Resolution), arg(id))
+		if out, err = scanDSR(tx.QueryRow(ctx, sql, args...)); err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "data_subject_request", id, map[string]any{
-			fieldStatus: current.Status,
-		}, map[string]any{
-			fieldStatus: out.Status, fieldResolution: in.Resolution != nil,
-		})
-		return err
+		return auditDSRUpdate(ctx, tx, current, out, in.Resolution != nil || in.ClearResolution)
 	})
 	return out, err
 }
 
-func wireDSR(d dsrRow) crmcontracts.DataSubjectRequest {
+// auditDSRUpdate is the update audit both writers share. The images carry the
+// assignee, so a hand-back says who let the request go.
+func auditDSRUpdate(ctx context.Context, tx pgx.Tx, current, out dsrRow, resolutionTouched bool) error {
+	_, err := storekit.Audit(ctx, tx, "update", "data_subject_request", out.ID, map[string]any{
+		fieldStatus: current.Status, fieldAssigneeID: current.AssigneeID,
+	}, map[string]any{
+		fieldStatus: out.Status, fieldAssigneeID: out.AssigneeID, fieldResolution: resolutionTouched,
+	})
+	return err
+}
+
+func wireDSR(d dsrRow, subjects map[ids.UUID]dsrSubject) crmcontracts.DataSubjectRequest {
 	out := crmcontracts.DataSubjectRequest{
 		Id:         openapi_types.UUID(d.ID),
 		Kind:       crmcontracts.DataSubjectRequestKind(d.Kind),
@@ -358,10 +406,26 @@ func wireDSR(d dsrRow) crmcontracts.DataSubjectRequest {
 		DueAt:      d.DueAt,
 		Resolution: d.Resolution,
 		CreatedAt:  d.CreatedAt,
+		// Null on a request filed before deadlines were computed, which the
+		// screen reads as "set by hand, rule unknown".
+		DueRule:       d.DueRule,
+		DueOverridden: d.DueOverridden,
 	}
 	if d.AssigneeID != nil {
 		assignee := openapi_types.UUID(d.AssigneeID.UUID)
 		out.AssigneeId = &assignee
+	}
+	subjectID, ok := resolveDSRSubject(d)
+	if !ok {
+		return out
+	}
+	if subject, resolved := subjects[subjectID]; resolved {
+		kind := subject.kind
+		out.SubjectKind = &kind
+		if subject.label != "" {
+			label := subject.label
+			out.SubjectLabel = &label
+		}
 	}
 	return out
 }

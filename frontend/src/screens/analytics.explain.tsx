@@ -16,7 +16,7 @@ import {
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ExplainDrawer } from "./analytics.explain.drawer";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { EntityRef, useEntityName } from "./entityref";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
@@ -82,16 +82,14 @@ function useDerivation(url: string | null) {
     queryFn: async () => {
       // Every predicate is forwarded: dropping one explains a broader slice
       // than the figure, or 422s on a bound grouping dimension.
-      const { data, error } = await api.GET("/reports/{report}/derivation", {
-        params: {
-          path: { report: derivationReportKey(url ?? "") },
-          query: parseDerivationQuery(url ?? ""),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/reports/{report}/derivation", {
+          params: {
+            path: { report: derivationReportKey(url ?? "") },
+            query: parseDerivationQuery(url ?? ""),
+          },
+        }),
+      );
     },
   });
 }
@@ -208,11 +206,11 @@ function DerivationPipelineName({
   const pipeline = useQuery({
     queryKey: ["pipeline", pipelineId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines/{id}", {
-        params: { path: { id: pipelineId } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/pipelines/{id}", {
+          params: { path: { id: pipelineId } },
+        }),
+      );
     },
   });
   if (pipeline.isPending) return <>{t("common.loading")}</>;

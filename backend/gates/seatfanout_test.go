@@ -43,6 +43,7 @@ import (
 	"go/ast"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -253,12 +254,7 @@ func rootedIn(expr ast.Expr, names []string) bool {
 		case *ast.SelectorExpr:
 			expr = e.X
 		case *ast.Ident:
-			for _, name := range names {
-				if e.Name == name {
-					return true
-				}
-			}
-			return false
+			return slices.Contains(names, e.Name)
 		default:
 			return false
 		}

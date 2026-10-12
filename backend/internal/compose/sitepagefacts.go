@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -191,7 +192,7 @@ func pageFactsExcerpt(page crawlPage) (excerptPages, int) {
 		return excerptPages{page}, 0
 	}
 	unread := len(runes) - pageFactsExcerptRunes
-	page.Text = string(runes[:pageFactsExcerptRunes])
+	page.Text = textcut.Runes(page.Text, pageFactsExcerptRunes)
 	return excerptPages{page}, unread
 }
 

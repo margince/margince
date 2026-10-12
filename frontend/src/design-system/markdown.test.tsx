@@ -121,6 +121,18 @@ describe("the syntax the shipped handbook uses", () => {
   });
 });
 
+describe("an ordered list's numbering", () => {
+  it("starts from the number its source was written from", () => {
+    const { container } = render(<Markdown source={"5. Fifth\n6. Sixth"} />);
+    expect(container.querySelector("ol")?.getAttribute("start")).toBe("5");
+  });
+
+  it("carries no start when the list begins at one", () => {
+    const { container } = render(<Markdown source={"1. First\n2. Second"} />);
+    expect(container.querySelector("ol")?.hasAttribute("start")).toBe(false);
+  });
+});
+
 describe("a link is only a link when its scheme is one we allow", () => {
   it("renders an http link, opening it away from the answer", () => {
     render(<Markdown source="See [the docs](https://example.com/a)." />);

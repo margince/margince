@@ -18,7 +18,7 @@ The product site is [margince.com](https://margince.com). This repository holds 
 
 The [handbook](docs/handbook/README.md) explains the app for the teams who use it. It has no code.
 
-To run your own copy, start with [docs/deployment.md](docs/deployment.md).
+To run your own copy, start with [docs/how-to/deploy-margince.md](docs/how-to/deploy-margince.md).
 
 ## Run it on your machine
 

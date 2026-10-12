@@ -59,17 +59,33 @@ func (s FilterSet[I]) Apply(in *I, filters map[string]string) error {
 	for _, name := range slices.Sorted(maps.Keys(filters)) {
 		bind, ok := s[name]
 		if !ok {
-			return fmt.Errorf("storekit: %q is not a filter this record type can be listed by", name)
+			return &FilterError{Name: name, detail: fmt.Sprintf("%q is not a filter this record type can be listed by", name)}
 		}
 		if err := bind(&narrowed, filters[name]); err != nil {
 			// The FILTER is named here and the SHAPE by the binding, so neither
 			// half has to know the other's — and the operand itself is named by
 			// nobody, since it is caller text on its way back to the caller.
-			return fmt.Errorf("storekit: the %s filter %w", name, err)
+			return &FilterError{Name: name, detail: fmt.Sprintf("the %s filter %s", name, err)}
 		}
 	}
 	*in = narrowed
 	return nil
+}
+
+// FilterError is a filter the caller got wrong: an unknown name or an operand of
+// the wrong shape. It declares its own verdict (apperrors.FieldFault).
+type FilterError struct {
+	// Name is the filter the caller named, which is the field to correct.
+	Name   string
+	detail string
+}
+
+func (e *FilterError) Error() string { return "storekit: " + e.detail }
+
+// FieldFault names the filter and says what it takes. The operand is never
+// echoed.
+func (e *FilterError) FieldFault() (field, code, message string) {
+	return e.Name, "invalid", e.detail
 }
 
 // FilterWord binds a closed-vocabulary or free-text operand. The VALUE is not
@@ -110,7 +126,7 @@ func FilterID[K ids.EntityKind, I any](set func(*I, *ids.ID[K])) FilterBinding[I
 func FilterIDList[K ids.EntityKind, I any](set func(*I, []ids.UUID)) FilterBinding[I] {
 	return func(in *I, value string) error {
 		var out []ids.UUID
-		for _, raw := range strings.Split(value, ",") {
+		for raw := range strings.SplitSeq(value, ",") {
 			raw = strings.TrimSpace(raw)
 			if raw == "" {
 				continue

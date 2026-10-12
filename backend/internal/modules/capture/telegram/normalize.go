@@ -13,6 +13,7 @@ package telegram
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -162,7 +163,7 @@ func Normalize(_ context.Context, raw connector.RawRecord) ([]connector.Normaliz
 		return nil, fmt.Errorf("telegram: decoding the ingest envelope: %w", err)
 	}
 	if env.BotID == "" {
-		return nil, fmt.Errorf("telegram: normalize envelope carries no bot id")
+		return nil, errors.New("telegram: normalize envelope carries no bot id")
 	}
 
 	var update telegramUpdate

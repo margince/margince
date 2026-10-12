@@ -483,7 +483,7 @@ the account, as a node and edge set the browser draws. It is separate from the 3
 profile does not always want the graph, and its unit of authorization is a **node group**, not a section.
 
 The posture is the same: one transaction, one point in time, grants per group, and a cap that reports what it
-left out. The groups are `contacts`, `deals`, `intro_path` and `our_side`, named in `groups_omitted` when
+left out. The groups are `contacts`, `deals`, `signal_route` and `our_side`, named in `groups_omitted` when
 refused.
 
 **One hop means one edge from the account.** A contact's other companies, a deal's other accounts and a

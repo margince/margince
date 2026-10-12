@@ -385,6 +385,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
+	addSuppressionJournalJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)
 	addGraphWatchJobs(reg, pool, cfg, log)
 	addAuthzDisagreementWorker(reg, pool, log)
@@ -410,6 +411,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
 		addDealScoutJobs(reg, pool, cfg, log),
+		addTagScoutJobs(reg, pool, cfg, log),
 		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
 		addAIPriceSyncJobs(reg, pool, cfg, log),
@@ -433,6 +435,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, AIBudgetResumeArgs{}),
 		periodicFor(cfg, IdempotencyRetentionArgs{}),
 		periodicFor(cfg, StoredObjectReapArgs{}),
+		periodicFor(cfg, SuppressionJournalArgs{}),
 		periodicFor(cfg, AgentTaskRetentionArgs{}),
 		periodicFor(cfg, AIActivityReconcileArgs{}),
 		periodicFor(cfg, AIActivityRetentionArgs{}),

@@ -72,7 +72,7 @@ export const company: Company = {
  */
 export const company360: Company360 = {
   as_of: "2026-06-01T09:00:00Z",
-  company: company,
+  company,
   sections_omitted: [],
   contacts: emptySection,
   deals: {

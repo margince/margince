@@ -10,7 +10,7 @@ import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
-import { LoadMoreButton, throwProblem } from "./common";
+import { LoadMoreButton, unwrap } from "./common";
 import "./contact360.css";
 
 // The contact's own files: unlike the sibling tabs in contacttabs.tsx, this one
@@ -60,20 +60,18 @@ export function ContactFilesTab({
     queryKey: ["attachments", "contact", contactId],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/attachments", {
-        params: {
-          query: {
-            entity_type: "contact",
-            entity_id: contactId,
-            limit: PAGE_LIMIT,
-            ...(pageParam ? { cursor: pageParam } : {}),
+      return unwrap(
+        await api.GET("/attachments", {
+          params: {
+            query: {
+              entity_type: "contact",
+              entity_id: contactId,
+              limit: PAGE_LIMIT,
+              ...(pageParam ? { cursor: pageParam } : {}),
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });

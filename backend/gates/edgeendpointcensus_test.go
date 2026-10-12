@@ -31,6 +31,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -117,9 +118,7 @@ func endpointColumnsFromShapeConstraints(t *testing.T) ([]string, []string) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for name, body := range shapeCheckBodies(t, path, withCurrentNames(string(raw))) {
-			bodies[name] = body
-		}
+		maps.Copy(bodies, shapeCheckBodies(t, path, withCurrentNames(string(raw))))
 	}
 	columns := map[string]bool{}
 	names := make([]string, 0, len(bodies))
@@ -500,9 +499,7 @@ func dirStringConsts(t *testing.T, dir string) map[string]string {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
 			continue
 		}
-		for name, value := range constValuesIn(t, filepath.Join(dir, entry.Name())) {
-			values[name] = value
-		}
+		maps.Copy(values, constValuesIn(t, filepath.Join(dir, entry.Name())))
 	}
 	return values
 }

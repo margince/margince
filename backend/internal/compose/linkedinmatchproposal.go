@@ -24,6 +24,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -260,7 +261,7 @@ func linkedInMatchAcceptEffect(svc *approvals.Service) approvals.ApprovedEffect 
 			return fmt.Errorf("compose: unreadable LinkedIn match proposal: %w", err)
 		}
 		if _, ok := principal.Actor(ctx); !ok {
-			return fmt.Errorf("compose: LinkedIn match effect without a deciding principal")
+			return errors.New("compose: LinkedIn match effect without a deciding principal")
 		}
 		// ONE TRANSACTION, which is what RedeemAndApply is for. Redeem-then-apply
 		// was two: the redemption committed, and a failure in the apply left the

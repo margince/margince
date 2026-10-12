@@ -42,9 +42,14 @@ import (
 // consent cannot itself require consent, or no one could ever be asked.
 func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if subject.Kind != entityContact {
-		// Only a contact holds a confirm_token: the table's foreign key says so.
-		// A lead has no link to show and therefore no confirmation to send.
+	// A lead holds one kind of link, the privacy notice a website lead is sent;
+	// the table refuses any other kind for one. Both columns are compile-time
+	// literals.
+	column := subjectColumnContact
+	switch {
+	case subject.Kind == entityLead && category == commsauthz.CategoryPrivacyNotice:
+		column = subjectColumnLead
+	case subject.Kind != entityContact:
 		return unsupported, nil
 	}
 	kind, ok := confirmKindFor(category)
@@ -52,14 +57,14 @@ func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, ca
 		return unsupported, nil
 	}
 	var live bool
-	if err := tx.QueryRow(ctx, `
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT EXISTS (
 		    SELECT 1 FROM confirm_token
-		    WHERE contact_id = $1
+		    WHERE %s = $1
 		      AND kind = $2
 		      AND consumed_at IS NULL
 		      AND expires_at > now()
-		)`, subject.ID, kind).Scan(&live); err != nil {
+		)`, column), subject.ID, kind).Scan(&live); err != nil {
 		return resolution{}, fmt.Errorf("consent: reading the confirmation link: %w", err)
 	}
 	if !live {

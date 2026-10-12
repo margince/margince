@@ -215,7 +215,7 @@ const assignmentAttempts = 3
 func (s *Store) assignSystemTask(
 	ctx context.Context, id ids.ActivityID, version int64, owner ids.UserID,
 ) (bool, error) {
-	for attempt := 0; attempt < assignmentAttempts; attempt++ {
+	for range assignmentAttempts {
 		_, err := s.UpdateActivity(ctx, id, UpdateActivityInput{
 			AssigneeID: &owner,
 			IfVersion:  &version,

@@ -9,7 +9,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { navigate } from "../app/router";
-import { Badge, Button } from "../design-system/atoms";
+import { Badge } from "../design-system/atoms";
 import {
   type BoardColumn,
   type BoardRecord,
@@ -20,12 +20,13 @@ import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { LoadMoreButton, unwrap } from "./common";
 import {
   LEAD_STATUS_COUNTS_KEY,
   leadTerminalKey,
   leadWriteKeys,
 } from "./leadkeys";
+import { openTaskCountLabel } from "./leadopentasks";
 import { DisqualifyDialog } from "./leads.disqualify";
 import { QualifyDialog } from "./leads.qualify";
 import { sourceLabelFor } from "./leadsources";
@@ -137,14 +138,15 @@ function useLeadStatusCounts() {
   return useQuery({
     queryKey: LEAD_STATUS_COUNTS_KEY,
     queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "leads-by-status" } },
-        body: {
-          group_by: ["status"],
-          aggregates: [{ fn: "count", as: "leads" }],
-        },
-      });
-      if (error) throwProblem(error);
+      const data = unwrap(
+        await api.POST("/reports/{report}", {
+          params: { path: { report: "leads-by-status" } },
+          body: {
+            group_by: ["status"],
+            aggregates: [{ fn: "count", as: "leads" }],
+          },
+        }),
+      );
       const counts = new Map<string, number>();
       for (const row of data.rows) {
         const status = row.status;
@@ -172,18 +174,13 @@ function useTerminalLeads(status: TerminalStatus, enabled: boolean) {
     enabled,
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/leads", {
-        params: {
-          query: {
-            status,
-            include_archived: true,
-            limit: 50,
-            cursor: pageParam ?? undefined,
-          },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
+      const query = {
+        status,
+        include_archived: true,
+        limit: 50,
+        cursor: pageParam ?? undefined,
+      };
+      return unwrap(await api.GET("/leads", { params: { query } }));
     },
     // The cursor the page hands back, so a column whose count runs to
     // thousands is reachable past its first fifty. A list that stopped there
@@ -236,9 +233,7 @@ function LeadCard({
         <span>
           {lead.next_task_subject ?? t("lead.noNextTask")}
           {lead.open_task_count
-            ? ` · ${t("lead.openTaskCount", {
-                count: formatNumber(lead.open_task_count, locale),
-              })}`
+            ? ` · ${openTaskCountLabel(locale, lead.open_task_count)}`
             : ""}
         </span>
       </span>
@@ -281,17 +276,18 @@ export function LeadBoard({
       version?: number;
       status: "new" | "contacted" | "engaged";
     }) => {
-      const { data, error } = await api.PATCH("/leads/{id}", {
-        // Refused rather than sent unpinned: a row the server did not version is
-        // one this client can make no concurrency claim about.
-        params: {
-          path: { id: moved.id },
-          ...ifMatch(requireVersion(moved.version)),
-        },
-        body: { status: moved.status },
-      });
-      if (error) throwProblem(error, t);
-      return data;
+      return unwrap(
+        await api.PATCH("/leads/{id}", {
+          // Refused rather than sent unpinned: a row the server did not version is
+          // one this client can make no concurrency claim about.
+          params: {
+            path: { id: moved.id },
+            ...ifMatch(requireVersion(moved.version)),
+          },
+          body: { status: moved.status },
+        }),
+        t,
+      );
     },
     // The moved lead is named on BOTH arms. The board reads
     // `["leads", query]` and the detail page reads the sibling `["lead", id]`,
@@ -401,14 +397,8 @@ export function LeadBoard({
         variant="plain"
         columns={columns}
         columnExtras={(column) =>
-          column.stage === openTerminal && terminalRows.hasNextPage ? (
-            <Button
-              onClick={() => {
-                terminalRows.fetchNextPage();
-              }}
-            >
-              {t("list.loadMore")}
-            </Button>
+          column.stage === openTerminal ? (
+            <LoadMoreButton query={terminalRows} />
           ) : null
         }
         countLabel={(count) =>
@@ -480,7 +470,13 @@ export function LeadBoard({
           },
         })}
       />
-      {hasMore && <Button onClick={loadMore}>{t("list.loadMore")}</Button>}
+      <LoadMoreButton
+        query={{
+          hasNextPage: hasMore,
+          isFetchingNextPage: false,
+          fetchNextPage: loadMore,
+        }}
+      />
       {/* Keyed by lead so a half-filled deal block for one never carries to
           the next, the same reason the detail screen keys its pair. */}
       {pending?.dialog === "qualify" && (

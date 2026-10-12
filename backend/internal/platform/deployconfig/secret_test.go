@@ -232,11 +232,11 @@ func TestSMTPPasswordResolvesEachConfiguredSource(t *testing.T) {
 		want  string
 	}{
 		"a reference to the environment": {
-			email: Email{SMTP: SMTP{Password: mustSecret(t, "${env:"+smtpPasswordVar+"}")}},
+			email: Email{SMTP: SMTP{Password: mustRemovable(t, "${env:"+smtpPasswordVar+"}")}},
 			want:  "from-the-environment",
 		},
 		"a reference to a mounted file": {
-			email: Email{SMTP: SMTP{Password: mustSecret(t, "${file:"+mounted+"}")}},
+			email: Email{SMTP: SMTP{Password: mustRemovable(t, "${file:"+mounted+"}")}},
 			want:  "from-the-secret-store",
 		},
 		// The legacy spelling keeps working: a deployment that already names a
@@ -273,7 +273,7 @@ func TestTheReferenceWinsOverTheLegacyPath(t *testing.T) {
 		t.Fatalf("writing the stale file: %v", err)
 	}
 	email := Email{SMTP: SMTP{
-		Password:     mustSecret(t, "${env:"+smtpPasswordVar+"}"),
+		Password:     mustRemovable(t, "${env:"+smtpPasswordVar+"}"),
 		PasswordFile: stale,
 	}}
 	got, err := email.SMTPPassword(config.Static(map[string]string{smtpPasswordVar: "the-new-credential"}))

@@ -39,7 +39,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
-	"github.com/margince/margince/backend/internal/platform/mailer"
 )
 
 func main() {
@@ -312,6 +311,9 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	case cfg.metricsToken == "":
 		logger.Info("api: /metrics refuses every scrape — set MARGINCE_METRICS_TOKEN to require a Bearer credential, or MARGINCE_METRICS_ACCESS=open where the port is already contained")
 	}
+	if cfg.apiBaseURL != "" {
+		opts = append(opts, compose.WithAPIBaseURL(cfg.apiBaseURL))
+	}
 	if cfg.publicBaseURL != "" {
 		opts = append(opts, compose.WithPublicBaseURL(cfg.publicBaseURL))
 		// The canonical MCP resource (RFC 9728) is the same configured
@@ -389,16 +391,9 @@ func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, po
 	}
 	// The relay password is sealed into the vault on the boot that first sees
 	// it, and read back from there once the deployment stops declaring it.
-	smtpPassword, err := compose.SealedSMTPPassword(ctx, pool, vault, deployCfg, config.FromOS, logger)
+	m, err := compose.OperatorMailer(ctx, pool, vault, deployCfg, config.FromOS, logger)
 	if err != nil {
 		return nil, err
-	}
-	m := mailer.SMTP{
-		Host:        deployCfg.Email.SMTP.Host,
-		Port:        deployCfg.Email.SMTP.Port,
-		Username:    deployCfg.Email.SMTP.Username,
-		Password:    smtpPassword,
-		FromAddress: deployCfg.Email.FromAddress,
 	}
 	_, _ = fmt.Fprintln(stdout, "api operator mail enabled (password reset, invites)")
 	// The link base rides compose.WithPublicBaseURL, assembled with the base

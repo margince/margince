@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -133,7 +134,7 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 		   AND ((e.kind = 'address' AND e.value = ANY($1::text[]))
 		     OR (e.kind = 'domain' AND EXISTS (
 		           SELECT 1 FROM unnest($2::text[]) d
-		            WHERE d = e.value OR d LIKE '%.' || e.value))
+		            WHERE d = e.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("e.value")+`))
 		     OR (e.kind = 'container' AND e.value = ANY($4::text[])))
 		 ORDER BY e.kind LIMIT 1`,
 		addresses, domains, nilToNull(actorUserID(ctx)), rec.Containers).Scan(&kind)

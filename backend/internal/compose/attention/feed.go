@@ -87,9 +87,11 @@ type Service struct {
 	duplicates Duplicates
 	// suggestions is OPTIONAL: an unbound feed shows none (suggestionlane.go).
 	suggestions DealSuggestions
-	tasks       Tasks
-	receipts    Receipts
-	briefing    Briefing
+	// tagSuggestions is OPTIONAL the same way (tagsuggestionlane.go).
+	tagSuggestions TagSuggestions
+	tasks          Tasks
+	receipts       Receipts
+	briefing       Briefing
 	// commitments is OPTIONAL: nil means no commitments lane, and Assemble
 	// leaves the field unset rather than sending an empty array.
 	commitments Commitments
@@ -349,6 +351,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 			out.Counts.DuplicatesOpen = &open
 		}
 		out.Counts.DealSuggestionsOpen = count.suggestions
+		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
 	beside := besideDay{failed: count.failed, until: until}
 	if err != nil {
@@ -397,8 +400,8 @@ type laneCount struct {
 	duplicates int
 	// suggestions is nil when the reader may not read suggestions at all, or
 	// when the read failed — and then failed names it.
-	suggestions *int
-	failed      []*crmcontracts.WorklistSourceUnavailable
+	suggestions, tagSuggestions *int
+	failed                      []*crmcontracts.WorklistSourceUnavailable
 }
 
 // decisions is the needs_you lane: staged approvals, open duplicate pairs and
@@ -469,15 +472,9 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	suggestions, openSuggested, failed := s.openSuggestionItems(ctx, depth)
-	count := laneCount{items: openPairs + openStaged, duplicates: openPairs, suggestions: openSuggested}
-	if failed != nil {
-		count.failed = append(count.failed, failed)
-	}
-	if openSuggested != nil {
-		count.items += *openSuggested
-	}
-	return interleave(depth, duplicates, approvals, suggestions), count, nil
+	count := laneCount{items: openPairs + openStaged, duplicates: openPairs}
+	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
+	return interleave(depth, duplicates, approvals, suggestions, tagged), count, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { LANE_LABEL } from "./rate-manual";
 
 type SheetRow = components["schemas"]["AiModelRate"];
@@ -33,18 +33,17 @@ export function RemovePriceDialog({
   const qc = useQueryClient();
   const remove = useMutation({
     mutationFn: async (entry: SheetRow) => {
-      const { error } = await api.DELETE("/ai-model-rates", {
-        params: {
-          query: {
-            provider: entry.provider,
-            model_id: entry.model_id,
-            lane: entry.lane,
+      unwrap(
+        await api.DELETE("/ai-model-rates", {
+          params: {
+            query: {
+              provider: entry.provider,
+              model_id: entry.model_id,
+              lane: entry.lane,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+        }),
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ai-model-rates"] });

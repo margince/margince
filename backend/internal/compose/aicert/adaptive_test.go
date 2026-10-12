@@ -119,7 +119,7 @@ func TestAResumedRunReplaysTheSameExtensions(t *testing.T) {
 	journalOf := func(runs int) taskJournal {
 		j := &runJournal{loaded: map[resumeKey]runOutcome{}}
 		for run := 1; run <= runs; run++ {
-			j.loaded[resumeKeyFor("c", "j", "summarize", sc.Name, stamp, run)] = runOutcome{RunResult: RunResult{HardPass: true, Score: 90}}
+			j.loaded[resumeKeyFor("c", "j", "summarize", sc.Name, stamp, run)] = runOutcome{HardPass: true, Score: 90}
 		}
 		return taskJournal{j: j, task: "summarize", candidate: "c", judge: "j"}
 	}

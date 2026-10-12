@@ -2,7 +2,14 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -57,7 +64,11 @@ const HELD_BY_PROJECT_ONLY = {
 
 type Sent = { key: string; body: unknown };
 
-function backend(allow: GrantSpec, records: unknown[]): Sent[] {
+function backend(
+  allow: GrantSpec,
+  records: unknown[],
+  overrides: Record<string, () => Response> = {},
+): Sent[] {
   const sent: Sent[] = [];
   vi.stubGlobal(
     "fetch",
@@ -71,6 +82,10 @@ function backend(allow: GrantSpec, records: unknown[]): Sent[] {
         body = await request.json().catch(() => null);
       }
       sent.push({ key, body });
+      const override = overrides[key];
+      if (override) {
+        return override();
+      }
       if (key === "GET /me") {
         return jsonResponse(meFixture({ allow }));
       }
@@ -82,7 +97,7 @@ function backend(allow: GrantSpec, records: unknown[]): Sent[] {
       }
       if (
         request.method === "POST" &&
-        key.startsWith("/retention/restrictions")
+        key.startsWith("POST /retention/restrictions")
       ) {
         return new Response(null, { status: 204 });
       }
@@ -159,7 +174,9 @@ describe("RestrictedRecordsCard", () => {
     const user = userEvent.setup();
     render(<RestrictedRecordsCard />);
 
-    await user.click(await screen.findByRole("button", { name: "Release" }));
+    await user.click(
+      await screen.findByRole("button", { name: /^Release email of/i }),
+    );
     // The reason is what makes it a decision rather than a toggle, so the
     // confirm is inert until one is typed.
     const confirm = screen.getByRole("button", { name: "Release and erase" });
@@ -173,10 +190,106 @@ describe("RestrictedRecordsCard", () => {
     expect(confirm).toBeEnabled();
     await user.click(confirm);
 
-    const release = sent.find((call) => call.key.endsWith("/release"));
-    expect(release?.body).toEqual({
-      reason: "wrongly classified: marketing enquiry",
+    await waitFor(() =>
+      expect(sent.find((call) => call.key.endsWith("/release"))?.body).toEqual({
+        reason: "wrongly classified: marketing enquiry",
+      }),
+    );
+  });
+
+  it("keeps the release dialog open over the server's refusal", async () => {
+    backend({ retention_policy: ["read", "update"] }, [HELD_ANGEBOT], {
+      [`POST /retention/restrictions/${HELD_ANGEBOT.activity_id}/release`]:
+        () =>
+          jsonResponse(
+            {
+              title: "Forbidden",
+              status: 403,
+              code: "permission_denied",
+              detail: "no",
+            },
+            403,
+          ),
     });
+    const user = userEvent.setup();
+    render(<RestrictedRecordsCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /^Release email of/i }),
+    );
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getByRole("textbox", { name: /Why/ }), "x");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Release and erase" }),
+    );
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      /do not have permission/i,
+    );
+  });
+
+  it("says since when a record has been held, under the date it is held to", async () => {
+    backend({ retention_policy: ["read"] }, [HELD_ANGEBOT]);
+    render(<RestrictedRecordsCard />);
+
+    const row = (await screen.findByText("Acme rollout, Acme renewal")).closest(
+      "tr",
+    );
+    expect(row).not.toBeNull();
+    if (row) {
+      expect(within(row).getByText(/^Since /)).toBeVisible();
+      expect(within(row).getByText("Email")).toBeVisible();
+    }
+  });
+
+  it("says a failed read failed, with a retry, rather than that nothing is held", async () => {
+    backend({ retention_policy: ["read"] }, [], {
+      "GET /retention/restrictions": () =>
+        jsonResponse(
+          {
+            title: "Bad Gateway",
+            status: 502,
+            code: "internal",
+            detail: "the restriction list is unreachable",
+          },
+          502,
+        ),
+    });
+    render(<RestrictedRecordsCard />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /restriction list is unreachable/,
+    );
+    expect(screen.getByRole("button", { name: /retry/i })).toBeVisible();
+    expect(screen.queryByText(/No records held/)).not.toBeInTheDocument();
+  });
+
+  it("refuses to pin a malformed id even when the form is submitted", async () => {
+    const sent = backend({ retention_policy: ["read", "update"] }, []);
+    const user = userEvent.setup();
+    render(<RestrictedRecordsCard />);
+
+    const id = await screen.findByPlaceholderText("Record ID");
+    await user.type(id, "not-a-record");
+    const form = id.closest("form");
+    if (!(form instanceof HTMLFormElement)) throw new Error("no pin form");
+    fireEvent.submit(form);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.clear(id);
+    await user.type(id, HELD_ANGEBOT.activity_id);
+    fireEvent.submit(form);
+    await user.type(
+      await screen.findByRole("textbox", { name: /Why/ }),
+      "missed by the derivation",
+    );
+    await user.click(screen.getByRole("button", { name: "Pin and hold" }));
+    await waitFor(() =>
+      expect(sent.find((call) => call.key.endsWith("/pin"))).toEqual({
+        key: `POST /retention/restrictions/${HELD_ANGEBOT.activity_id}/pin`,
+        body: { reason: "missed by the derivation" },
+      }),
+    );
   });
 
   it("offers no decision to a role that may read the list but not decide", async () => {
@@ -184,7 +297,7 @@ describe("RestrictedRecordsCard", () => {
     render(<RestrictedRecordsCard />);
     expect(await screen.findByText("Acme rollout, Acme renewal")).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Release" }),
+      screen.queryByRole("button", { name: /^Release/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Pin a record" }),

@@ -25,4 +25,7 @@
 // one-method authority interface; the composition root injects this module's
 // Gate and unsubscribe linker — consent never becomes an import edge between
 // siblings.
+//
+// It also owns lead_privacy_notice, the record of a website lead's notice.
+// That record names nobody.
 package consent

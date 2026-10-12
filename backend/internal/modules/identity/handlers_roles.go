@@ -120,6 +120,10 @@ func (h Handlers) UpdateRole(w http.ResponseWriter, r *http.Request, key string,
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	if err := httperr.RequireAnyField(r); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	change := RoleChange{Name: req.Name}
 	if req.RowScope != nil {
 		scope := principal.RowScope(*req.RowScope)

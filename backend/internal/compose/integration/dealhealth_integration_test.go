@@ -63,7 +63,7 @@ func seedHealthyDeal(t *testing.T, e *Env, owner *pgx.Conn) (deal ids.UUID, enga
 
 	// Two stakeholders with BOTH directions inside the 90-day window →
 	// engaged; a third who only ever received our outbound → not.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		engaged = append(engaged, SeedStakeholder(t, e, owner, deal, "inbound", "outbound"))
 	}
 	SeedStakeholder(t, e, owner, deal, "outbound", "outbound")

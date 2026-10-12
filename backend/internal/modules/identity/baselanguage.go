@@ -5,7 +5,7 @@ package identity
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -39,7 +39,7 @@ var BaseLanguage = settings.Define[string](
 	string(textlang.English),
 	func(v string) error {
 		if !textlang.Known(v) {
-			return fmt.Errorf("a base language is one of en, de, vi")
+			return errors.New("a base language is one of en, de, vi")
 		}
 		return nil
 	},

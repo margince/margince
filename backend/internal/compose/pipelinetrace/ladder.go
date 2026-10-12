@@ -175,7 +175,7 @@ func (a *Assembler) ByActivityID(ctx context.Context, id ids.UUID) (Ladder, erro
 	if err != nil {
 		return Ladder{}, err
 	}
-	stored.ActivityID = ptr(id)
+	stored.ActivityID = new(id)
 	return a.assemble(ctx, view{stored: stored, owned: owned})
 }
 
@@ -274,5 +274,3 @@ func (a *Assembler) threadReading(
 	}
 	return reading, true, nil
 }
-
-func ptr[T any](v T) *T { return &v }

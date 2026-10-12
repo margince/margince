@@ -172,6 +172,9 @@ func (s *Store) advanceOnTx(
 		// with the deal as it stands makes a retried call safe, where running the
 		// move again would close a closed deal a second time and move its day.
 		if ids.UUID(*current.StageId) == in.ToStageID.UUID {
+			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
 			return err
 		}

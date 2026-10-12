@@ -143,7 +143,7 @@ func (c *openAICompatClient) completeChat(ctx context.Context, req model.Request
 		return model.Response{}, fmt.Errorf("ai: openai-compat: decode response: %w", err)
 	}
 	if len(out.Choices) == 0 {
-		return model.Response{}, fmt.Errorf("ai: openai-compat: response has no choices")
+		return model.Response{}, errors.New("ai: openai-compat: response has no choices")
 	}
 	resp := model.Response{
 		InputTokens:     out.Usage.PromptTokens,

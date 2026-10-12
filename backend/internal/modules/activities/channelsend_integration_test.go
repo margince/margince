@@ -143,8 +143,7 @@ func TestSendMessageRefusesAnAnchorThatIsNotAChannelConversation(t *testing.T) {
 	_, err := e.channelStore(reaches(map[ids.UUID]string{contact: testChannelAccount})).SendMessage(
 		e.as(principal.RowScopeAll), anchor, channelInput(), stubConsentGate{}, stager)
 
-	var refusal *NotAChannelConversationError
-	if !errors.As(err, &refusal) {
+	if _, ok := errors.AsType[*NotAChannelConversationError](err); !ok {
 		t.Fatalf("reply on a mail anchor → %v, want a NotAChannelConversationError", err)
 	}
 	if len(stager.staged) != 0 || e.outboundCount(t) != 0 {

@@ -173,8 +173,7 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 
 	booked, err := h.store.BookMeeting(r.Context(), in)
 	if err != nil {
-		var slotTaken *SlotTakenError
-		if errors.As(err, &slotTaken) {
+		if _, ok := errors.AsType[*SlotTakenError](err); ok {
 			httperr.Write(w, r, httperr.Duplicate("slot_taken", ""))
 			return
 		}

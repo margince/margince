@@ -325,6 +325,19 @@ var catalog = map[string]struct {
 	"deal_suggestion.accepted":   {dealStreamEntity, 1},
 	"deal_suggestion.dismissed":  {dealStreamEntity, 1},
 	"deal_suggestion.superseded": {dealStreamEntity, 1},
+
+	// The tag scout's suggestions and the decisions on them. Internal only, and
+	// entity-less for the reason api/internal-events.yaml gives. Tags ride the
+	// contact stream, as lists do.
+	"tag_suggestion.created":    {contactStreamEntity, 1},
+	"tag_suggestion.accepted":   {contactStreamEntity, 1},
+	"tag_suggestion.dismissed":  {contactStreamEntity, 1},
+	"tag_suggestion.superseded": {contactStreamEntity, 1},
+
+	// A website lead's Art. 14 notice: queued, not given, or bounced. Internal
+	// only, and entity-less for the reason api/internal-events.yaml gives.
+	"lead_privacy_notice.created": {leadStreamEntity, 1},
+	"lead_privacy_notice.failed":  {leadStreamEntity, 1},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less

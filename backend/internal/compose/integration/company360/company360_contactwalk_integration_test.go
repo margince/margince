@@ -174,8 +174,7 @@ func TestAForgedWalkInstantIsRefused(t *testing.T) {
 			token := forgeCursor(t, forged)
 			_, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
 				company360svc.ContactListQuery{Limit: &limit, Cursor: &token})
-			var malformed *storekit.MalformedCursorError
-			if !errors.As(err, &malformed) {
+			if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 				t.Errorf("a cursor carrying %s answered %v, want a malformed-cursor refusal — the "+
 					"token is unsigned, so an instant nobody was served from is a client's "+
 					"invention rather than a position to resume from", name, err)
@@ -333,8 +332,7 @@ func TestAContactWalkResumesATokenMintedBeforeTheAnchorCarriedItsPosition(t *tes
 
 	_, err = svc.ContactPage(ctx, ids.CompanyID{UUID: company},
 		company360svc.ContactListQuery{Limit: &limit, Cursor: &legacy})
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
 		t.Errorf("an old token whose anchor has left answered %v, want a malformed-cursor refusal — "+
 			"without the anchor's sort values there is no position to resume from, and guessing "+
 			"one is how a page silently skips contacts", err)

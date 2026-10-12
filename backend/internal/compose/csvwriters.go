@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -94,7 +95,8 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		// An imported contact can take a lead over, which carries the lead's
 		// stops and consent links (see newCounterpartyStore).
 		contacts: contacts.NewStore(db).WithStopCarrier(consent.NewStore(db)).
-			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)),
+			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
+			WithGrantCarrier(identity.NewServiceFor(db)),
 		tags:        collections.NewStore(db),
 		identities:  migration.NewRunStore(db),
 		runID:       runID,
@@ -133,6 +135,9 @@ func (w *csvWriters) Updated() int { return w.updated }
 // outside the reserved namespace is client-writable.
 func (w *csvWriters) Exists(ctx context.Context, object, externalID string) (bool, error) {
 	_, found, err := w.lookup(ctx, object, externalID)
+	if errors.Is(err, errBoundRecordArchived) {
+		return true, nil
+	}
 	return found, err
 }
 
@@ -159,23 +164,6 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 	}, nil
 }
 
-func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids.UUID, bool, error) {
-	if object != w.object {
-		return ids.UUID{}, false, fmt.Errorf("import: this run carries %q, not %q", w.object, object)
-	}
-	if id, ok := w.nativeIDs[externalID]; ok {
-		return id, true, nil
-	}
-	id, found, err := w.identities.LookupIdentity(ctx, csvSourceSystem(), object, externalID)
-	if err != nil {
-		return ids.UUID{}, false, err
-	}
-	if found {
-		w.nativeIDs[externalID] = id
-	}
-	return id, found, nil
-}
-
 // Ensure lands one row: created the first time, updated when the file has
 // since changed, unchanged when it has not.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
@@ -197,6 +185,9 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 		return w.reconcile(ctx, target.id, row)
 	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
+	if errors.Is(err, errBoundRecordArchived) {
+		return migration.EnsureResult{Skipped: true, SkipReason: boundArchivedReason}, nil
+	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
@@ -281,12 +272,10 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		// is one bad row, not a failed run: skip it with the reason and let the
 		// rest of the file land. Unhandled, this error aborts the whole
 		// migration, which is the wrong answer to a typo in a spreadsheet.
-		var dup *contacts.DuplicateEmailError
-		if errors.As(err, &dup) {
+		if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
 			return migration.EnsureResult{Skipped: true, SkipReason: skipReasonDuplicateEmail}, nil
 		}
-		var takenDomain *contacts.DuplicateDomainError
-		if errors.As(err, &takenDomain) {
+		if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
 			// The company half of the same case: a corrected file moving a domain
 			// onto a company that is not its owner.
 			return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
@@ -450,8 +439,7 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migr
 		}
 		return ids.UUID(company.Id), nil
 	})
-	var dup *contacts.DuplicateDomainError
-	if errors.As(err, &dup) {
+	if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
 		// A domain names ONE company across the estate, so a row claiming one
 		// another company already holds is refused by the store — the same shape
 		// a contact's claimed email has. One bad row is a skip with a reason, not

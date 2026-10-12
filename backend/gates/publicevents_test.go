@@ -313,7 +313,7 @@ func parseContractEntityTypes(t *testing.T) map[string]string {
 	}
 	out := map[string]string{}
 	var pendingEvent string
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		if m := contractEventKey.FindStringSubmatch(line); m != nil {
 			if pendingEvent != "" {
 				t.Errorf("%s: x-event-type %q has no x-entity-type before the next event", publicEventsPath, pendingEvent)

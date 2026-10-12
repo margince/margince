@@ -241,7 +241,7 @@ func (s *Service) waitingCustomers(
 		// nothing in the log leaves an operator with a warning they cannot act
 		// on — which is how this one went a whole verification round without
 		// anybody being able to say what broke.
-		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
+		slog.Log(ctx, laneFailureLevel(ctx), "the who-is-waiting read failed", "error", err)
 		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
@@ -313,9 +313,10 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 // answer for the same reason: a reader without the tier must be told they may
 // not ask, rather than handed an empty list they would read as a clear queue.
 //
-// An unknown rule reaches the module, which refuses it. Validating the word
-// here too would be a second list of the rules to keep in step with the one
-// that measures them.
+// An unknown rule reaches the module, which refuses it with the field named.
+//
+// Validating the word here too would be a second list of the rules to keep in
+// step with the one that measures them.
 func (s *Service) HiddenBacklogRows(
 	ctx context.Context, rule string,
 ) (crmcontracts.HiddenBacklogRows, error) {

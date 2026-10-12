@@ -135,29 +135,10 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 			continue
 		}
 		seen[link] = struct{}{}
-		column := linkColumn(link.EntityType)
-		if column == "" {
-			return &InvalidLinkTypeError{EntityType: link.EntityType}
-		}
-		// The project grant is checked BEFORE the insert it gates, not after.
-		// A refusal returned later is undone only because every caller runs
-		// this inside a transaction it aborts — correct today, and the wrong
-		// thing to hang an authorization check on. The sibling writer asks
-		// first (capture/sinkproject.go), and two doors onto one act must not
-		// disagree about WHEN they ask either.
-		if link.EntityType == linkEntityProject {
-			if err := refuseAnUnattendedFiling(ctx); err != nil {
-				return err
-			}
-			if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-				return err
-			}
-		}
-		// ATTACH: the named record gains an activity that every reader of it
-		// will see, so a share marked read-only does not confer this.
-		if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+		if err := mayAttach(ctx, tx, link); err != nil {
 			return err
 		}
+		column := linkColumn(link.EntityType)
 		// AFTER the target probe, not before it. A caller naming a company they
 		// cannot see must get the answer their row scope gives — the same
 		// not-found every other unreachable target gets — rather than a
@@ -177,6 +158,42 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		}
 	}
 	return nil
+}
+
+// mayAttach asks everything the caller must be allowed before one link is
+// inserted. It runs ahead of the insert it gates, so no refusal depends on the
+// caller aborting its transaction.
+func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
+	if linkColumn(link.EntityType) == "" {
+		return &InvalidLinkTypeError{EntityType: link.EntityType}
+	}
+	if link.EntityType == linkEntityProject {
+		if err := refuseAnUnattendedFiling(ctx); err != nil {
+			return err
+		}
+		if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+			return err
+		}
+	}
+	// ATTACH: the named record gains an activity that every reader of it
+	// will see, so a share marked read-only does not confer this.
+	return auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID)
+}
+
+// ProbeLinkWrites asks every question a write's link inserts will ask of the
+// caller. Asked ahead, a refusal arrives before work that cannot be undone.
+func (s *Store) ProbeLinkWrites(ctx context.Context, links []ActivityLinkInput) error {
+	if len(links) > maxActivityLinks {
+		return &TooManyLinksError{Count: len(links)}
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		for _, link := range links {
+			if err := mayAttach(ctx, tx, link); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // lastActivityTargets groups the links by the record types a last-activity

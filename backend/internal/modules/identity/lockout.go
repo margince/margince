@@ -28,12 +28,8 @@ const (
 	lockoutDuration  = 15 * time.Minute
 )
 
-// lockoutState mirrors the app_user lockout columns. LastFailure is the
-// row's updated_at: while a failure streak runs, the counter update is
-// the row's last write, so updated_at IS the last-failure stamp; an
-// unrelated profile write between failures can only stretch the §27
-// window (keeping stale failures countable longer), never unlock early
-// or lock a clean account — the error stays on the cautious side.
+// lockoutState mirrors app_user's lockout columns, with updated_at as LastFailure. Any other write
+// between failures, such as a profile edit or another sign-in's session reap, only stretches the window.
 type lockoutState struct {
 	FailedCount int
 	LastFailure time.Time

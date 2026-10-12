@@ -38,8 +38,7 @@ func TestOtherWithoutDetailIsRefused(t *testing.T) {
 		"blank":  &blank,
 	} {
 		t.Run(name, func(t *testing.T) {
-			var needsDetail *WonReasonDetailRequiredError
-			if !errors.As(validateWonReason("other", detail), &needsDetail) {
+			if _, ok := errors.AsType[*WonReasonDetailRequiredError](validateWonReason("other", detail)); !ok {
 				t.Error("an unexplained \"other\" was accepted; it answers the report with nothing")
 			}
 		})
@@ -105,8 +104,7 @@ func TestADetailOfInvisibleCharactersIsRefused(t *testing.T) {
 		"soft hyphen":        "\u00ad",
 	} {
 		t.Run(name, func(t *testing.T) {
-			var needsDetail *WonReasonDetailRequiredError
-			if !errors.As(validateWonReason("other", &detail), &needsDetail) {
+			if _, ok := errors.AsType[*WonReasonDetailRequiredError](validateWonReason("other", &detail)); !ok {
 				t.Errorf("%q was accepted as an explanation", detail)
 			}
 		})
@@ -183,8 +181,7 @@ func TestTheDetailsBoundCountsCharactersRatherThanBytes(t *testing.T) {
 // a reason that does not require it, and the column takes whatever arrives.
 func TestTheBoundHoldsForAReasonThatNeedsNoDetail(t *testing.T) {
 	over := strings.Repeat("x", maxWonReasonDetail+1)
-	var tooLong *WonReasonDetailTooLongError
-	if !errors.As(validateWonReason("purchase_order", &over), &tooLong) {
+	if _, ok := errors.AsType[*WonReasonDetailTooLongError](validateWonReason("purchase_order", &over)); !ok {
 		t.Error("an over-long detail rode in on a reason that requires none")
 	}
 }
@@ -204,10 +201,9 @@ func TestTheBoundHoldsForAReasonThatNeedsNoDetail(t *testing.T) {
 func TestAnOverlongDetailIsRefusedEvenWhenNoReasonIsStated(t *testing.T) {
 	over := strings.Repeat("x", maxWonReasonDetail+1)
 
-	var tooLong *WonReasonDetailTooLongError
 	err := ensureWinEvidence(context.Background(), nil, ids.DealID{UUID: ids.NewV7()},
 		AdvanceDealInput{WonWithoutContractDetail: &over})
-	if !errors.As(err, &tooLong) {
+	if _, ok := errors.AsType[*WonReasonDetailTooLongError](err); !ok {
 		t.Fatalf("a %d-character detail with no stated reason was admitted (%v) — a win with a signed contract would have written it, past the bound the schema advertises",
 			maxWonReasonDetail+1, err)
 	}

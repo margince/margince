@@ -45,6 +45,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"maps"
 	"strconv"
 	"strings"
 	"testing"
@@ -188,9 +189,7 @@ func privacyPackageConstants(t *testing.T) map[string]string {
 		Roots:   []string{privacyRoot},
 		Subject: fileAuditsUnderAVerb,
 	}).Files(t) {
-		for name, value := range privacyStringConstants(parsed.File) {
-			consts[name] = value
-		}
+		maps.Copy(consts, privacyStringConstants(parsed.File))
 	}
 	return consts
 }

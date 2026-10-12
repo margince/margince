@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -343,21 +344,15 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		// audit_log.evidence long after the event has been consumed, so an
 		// event-only basis renders a correction with no stated reason.
 		auditEvidence := map[string]any{CloseDateCorrectionKind: correction}
-		for k, v := range extra {
-			auditEvidence[k] = v
-		}
+		maps.Copy(auditEvidence, extra)
 		auditID, err := storekit.AuditWithEvidence(
 			ctx, tx, "update", "deal", cand.id.UUID, patch.Before(), patch.After(), auditEvidence)
 		if err != nil {
 			return fmt.Errorf("audit %s: %w", correction, err)
 		}
 		changedFields := map[string]any{CloseDateCorrectionKind: correction}
-		for field, v := range patch.After() {
-			changedFields[field] = v
-		}
-		for k, v := range extra {
-			changedFields[k] = v
-		}
+		maps.Copy(changedFields, patch.After())
+		maps.Copy(changedFields, extra)
 		if err := storekit.EmitEvent(ctx, tx, auditID, cand.id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}); err != nil {
 			return fmt.Errorf("emit %s: %w", correction, err)
 		}

@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/subjectrightsrules"
 )
 
 // caseRow is the parts of a rights case these tests assert on.
@@ -170,8 +171,8 @@ func TestTheDeadlineIsOneCalendarMonthFromReceipt(t *testing.T) {
 	if len(cases) != 1 {
 		t.Fatalf("%d case(s), want 1", len(cases))
 	}
-	// Computed HERE rather than through oneCalendarMonthAfter, which is the
-	// function under test: asserting a value against the code that produced it
+	// Computed here rather than through subjectrightsrules.GDPR, the function
+	// under test. Asserting a value against the code that produced it
 	// passes whatever that code does. Substituting thirty days for one calendar
 	// month left the earlier spelling of this test green.
 	received := cases[0].received
@@ -231,7 +232,7 @@ func TestOneCalendarMonthFollowsTheShortMonths(t *testing.T) {
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			if got := oneCalendarMonthAfter(c.received); !got.Equal(c.want) {
+			if got := subjectrightsrules.GDPR.Due(c.received); !got.Equal(c.want) {
 				t.Errorf("a request received %s is due %s, want %s", c.received, got, c.want)
 			}
 		})
@@ -279,7 +280,7 @@ func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
 	})
 
 	replayed, err := openRightsCaseTx(context.Background(), tx, e.contact, submissionID,
-		submissionErasure, time.Now())
+		submissionErasure, time.Now(), e.store.requestDeadlineTx)
 	if err != nil {
 		t.Fatalf("replaying the case: %v", err)
 	}
@@ -430,7 +431,7 @@ func TestAFailureThatIsNotAReceiptCollisionIsNotRedrawn(t *testing.T) {
 	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		counted = &savepointCounter{Tx: tx}
 		_, caseErr := openRightsCaseTx(context.Background(), counted, stranger, ids.NewV7(),
-			submissionErasure, time.Now())
+			submissionErasure, time.Now(), e.store.requestDeadlineTx)
 		return caseErr
 	})
 	if err == nil {

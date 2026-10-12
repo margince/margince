@@ -240,7 +240,7 @@ func TestAReplayedConnectorEventRecordsOneTransition(t *testing.T) {
 
 	in := LogActivityInput{
 		Kind:          string(crmcontracts.ActivityKindMeeting),
-		Subject:       ptr("Synced meeting"),
+		Subject:       new("Synced meeting"),
 		OccurredAt:    &start,
 		MeetingStatus: &booked,
 		Source:        "connector",
@@ -284,8 +284,8 @@ func TestTheWriterCarriesTheConnectorIdentityOntoTheTransition(t *testing.T) {
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
 	out, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
 		Kind:          string(crmcontracts.ActivityKindMeeting),
-		Subject:       ptr("Synced with identity"),
-		OccurredAt:    ptr(time.Now().Add(24 * time.Hour)),
+		Subject:       new("Synced with identity"),
+		OccurredAt:    new(time.Now().Add(24 * time.Hour)),
 		MeetingStatus: &booked,
 		Source:        "connector",
 		SourceSystem:  &system,
@@ -422,8 +422,8 @@ func TestBothMeetingStatusDoorsRecordHistory(t *testing.T) {
 	// Door two: the update, on a meeting that arrived with no status at all.
 	out, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
 		Kind:       string(crmcontracts.ActivityKindMeeting),
-		Subject:    ptr("Statusless at capture"),
-		OccurredAt: ptr(time.Now().Add(48 * time.Hour)),
+		Subject:    new("Statusless at capture"),
+		OccurredAt: new(time.Now().Add(48 * time.Hour)),
 		Source:     "manual",
 	})
 	if err != nil {

@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // maxMailErrorRunes bounds the stored cause, matching the column's CHECK.
@@ -135,9 +136,7 @@ func (e *BriefEngine) MailFailed(ctx context.Context, runID ids.UUID, cause stri
 	if err != nil {
 		return err
 	}
-	if n := len([]rune(cause)); n > maxMailErrorRunes {
-		cause = string([]rune(cause)[:maxMailErrorRunes])
-	}
+	cause = textcut.Runes(cause, maxMailErrorRunes)
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE brief_run SET mail_error = $3

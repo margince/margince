@@ -182,7 +182,7 @@ The AI group in Settings has the pages **AI usage**, **AI models**, **AI call lo
 
 **Model routing**, on **AI models**, shows which model does each kind of work, listed by activity. What you see is the current setting; **AI call log** shows what ran. Settings that several kinds of work share sit under **Advanced**, and changing one can move several kinds of work at once. Prices show the cost of the text sent in and the text that comes back, per million tokens. To know where data goes and what it costs, check the model and provider shown on each row, not the tier name.
 
-Each row in **AI tasks** names its tier. Its name opens its state, what it does when the provider is down, and **View calls**. **Edit** sets how hard it reasons, and its time limits. Search and retrieval has neither: set its model under **Model tiers**.
+Each row in **AI tasks** names its tier. Its name opens its state, what it does when the provider is down, and **View calls**. Opening the row sets how hard it reasons, and its time limits. Search and retrieval has neither: set its model under **Model tiers**.
 
 Changes start to work in about 60 seconds; a call already running keeps its old setting.
 
@@ -248,6 +248,11 @@ System health and Reset data sit in the **Governance** group, and Data import in
   back in the whole installation. It shows counts only; the contacts and messages stay
   in view to their mailbox owner alone. The same readers as Background jobs see
   it.
+- **Restore drills**: when a restore from a backup was last tested, if it
+  passed, and how long it took against the targets. Whoever runs the
+  installation records each test. Margince does not see backups, so the card
+  says "Not observed by Margince" for the last backup. The same readers as
+  Background jobs see it.
 - **Reset data**: takes an installation back to how it was on its first start.
   It deletes every record and setting, but keeps the company and its users, so
   everyone can still sign in. It appears only where whoever runs the

@@ -75,7 +75,7 @@ func setupBrief(t *testing.T) *briefEnv {
 		stageA:   stages[0],
 		repCtx:   e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
 	}
-	b.dealA = b.seedBriefDeal(t, owner, "Deal A", stages[0], int64Ptr(60_000_00), closeOn(briefClock, 5), &e.Rep1)
+	b.dealA = b.seedBriefDeal(t, owner, "Deal A", stages[0], new(int64(60_000_00)), closeOn(briefClock, 5), &e.Rep1)
 	b.dealB = b.seedBriefDeal(t, owner, "Deal B", stages[1], nil, closeOn(briefClock, 200), &e.Rep1)
 	b.dealC = b.seedBriefDeal(t, owner, "Deal C", stages[2], nil, closeOn(briefClock, 200), &e.Rep1)
 
@@ -404,7 +404,7 @@ func TestTheQueueRanksTheReadersOwnWorkRatherThanEverythingVisible(t *testing.T)
 
 	// Deliberately the most attractive deal in the fixture: if value alone
 	// still decided the queue, this would take the top slot.
-	foreign := b.seedBriefDeal(t, owner, "Foreign", b.stageA, int64Ptr(90_000_00), closeOn(briefClock, 3), &b.Rep3)
+	foreign := b.seedBriefDeal(t, owner, "Foreign", b.stageA, new(int64(90_000_00)), closeOn(briefClock, 3), &b.Rep3)
 
 	scoped, err := b.engine.Rank(b.As(b.Rep1, []ids.UUID{b.Team1}, integration.RepPerms), briefClock)
 	if err != nil {

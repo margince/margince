@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -235,7 +236,7 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND a.occurred_at <= now() + $3::interval
 		   AND (lower(split_part(ap.address, '@', 2)) = $1
-		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || $1
+		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || `+storekit.EscapeLikeSQL("$1")+`
 		    OR a.id = $2)`, domain, activityID, mailClockSkewAllowance).Scan(&occurred)
 	if err != nil {
 		return nil

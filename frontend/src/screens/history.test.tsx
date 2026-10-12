@@ -68,11 +68,11 @@ const updated = {
 // identifiers with no name in them, which no tag may print at a reader.
 const OPAQUE = "0191c3a2-7f4b-4c19-9a5e-6d2f8b1e40aa";
 
-// The installation's own processing, naming the job that ran.
+// The installation's own processing, naming the job that ran by its kind.
 const sweptBySystem = {
   id: "h3",
   actor_type: "system",
-  actor_id: "system:retention-sweep",
+  actor_id: "system:participant_backfill",
   action: "delete",
   occurred_at: "2026-07-15T10:00:00Z",
   summary: "A retention sweep cleared the note",
@@ -148,7 +148,11 @@ describe("RecordHistory", () => {
       ),
     );
     render(<RecordHistory kind="deal" id="d1" />);
-    expect(await screen.findByText("System task retention-sweep")).toBeTruthy();
+    // The job by its words in the catalogue, never by its key.
+    expect(
+      await screen.findByText("System task: Mail participant fill-in"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/participant_backfill/)).toBeNull();
     expect(screen.getByText("Via zalo-oa")).toBeTruthy();
     // Only the row that IS an agent reads as one.
     expect(screen.getAllByText(/Automated by/)).toHaveLength(1);
@@ -249,6 +253,33 @@ const fhCreated = {
   actor_type: "human",
   actor_id: "u1",
 };
+// The reader's own passport, which GET /passports lists, and a colleague's,
+// which it does not.
+const READERS_PASSPORT = "5d1c7a40-2b8e-4f3a-9c61-0e7f2a9b3d18";
+const COLLEAGUES_PASSPORT = "a3f09e12-6c4d-4b7e-8a25-91d0c7e6f4b2";
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+// Answers the field-history read with `changes` and the passport list with the
+// reader's one passport.
+function fieldHistoryFetch(changes: (url: string) => unknown[]) {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes("/passports")) {
+      return jsonResponse({
+        data: [
+          {
+            id: READERS_PASSPORT,
+            label: "Marcus's Claude",
+            scopes: [],
+            created_at: "2026-07-01T10:00:00Z",
+          },
+        ],
+      });
+    }
+    return jsonResponse({ data: changes(url), page: { next_cursor: null } });
+  });
+}
+
 const fhUpdated = {
   id: "f1",
   entity_type: "deal",
@@ -259,42 +290,68 @@ const fhUpdated = {
   changed_at: "2026-07-14T10:00:00Z",
   actor_type: "agent",
   actor_id: "sdr",
-  passport_id: "psp_7Q3fa91",
+  passport_id: READERS_PASSPORT,
   evidence: { snippet: "renewal signed", source: "email#42" },
 };
 
 describe("FieldHistoryTimeline", () => {
-  it("groups by field and shows old→new diffs with agent passport", async () => {
+  it("groups by field and shows old→new diffs with the agent passport's name", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        jsonResponse({
-          data: [fhUpdated, fhCreated],
-          page: { next_cursor: null },
-        }),
-      ),
+      fieldHistoryFetch(() => [fhUpdated, fhCreated]),
     );
-    render(<FieldHistoryTimeline kind="deal" id="d1" />);
+    const { container } = render(<FieldHistoryTimeline kind="deal" id="d1" />);
     await waitFor(() =>
       expect(screen.getByText("Globex Renewal (updated)")).toBeTruthy(),
     );
     expect(screen.getByText("(created)")).toBeTruthy(); // empty-origin diff
-    expect(screen.getByText(/psp_7Q3fa91/)).toBeTruthy(); // PassportChip
+    expect(await screen.findByText("Marcus's Claude")).toBeTruthy();
+    expect(container.textContent).not.toMatch(UUID);
+  });
+
+  it("says an agent acted under a passport the reader may not see", async () => {
+    vi.stubGlobal(
+      "fetch",
+      fieldHistoryFetch(() => [
+        { ...fhUpdated, passport_id: COLLEAGUES_PASSPORT },
+      ]),
+    );
+    const { container } = render(<FieldHistoryTimeline kind="deal" id="d1" />);
+    expect(await screen.findByText("An agent")).toBeTruthy();
+    expect(container.textContent).not.toMatch(UUID);
+  });
+
+  it("names the system job behind a change by its words", async () => {
+    vi.stubGlobal(
+      "fetch",
+      fieldHistoryFetch(() => [
+        {
+          ...fhCreated,
+          actor_type: "system",
+          actor_id: "system:participant_backfill",
+        },
+      ]),
+    );
+    render(<FieldHistoryTimeline kind="deal" id="d1" />);
+    expect(
+      await screen.findByText("System task: Mail participant fill-in"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/participant_backfill/)).toBeNull();
   });
 
   it("filters to human-only changes via the actor control", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input instanceof Request ? input.url : input);
-      const data = url.includes("actor_type=human")
-        ? [fhCreated]
-        : [fhUpdated, fhCreated];
-      return jsonResponse({ data, page: { next_cursor: null } });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal(
+      "fetch",
+      fieldHistoryFetch((url) =>
+        url.includes("actor_type=human") ? [fhCreated] : [fhUpdated, fhCreated],
+      ),
+    );
     render(<FieldHistoryTimeline kind="deal" id="d1" />);
-    await waitFor(() => expect(screen.getByText(/psp_7Q3fa91/)).toBeTruthy());
+    expect(await screen.findByText("Marcus's Claude")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: /human/i }));
-    await waitFor(() => expect(screen.queryByText(/psp_7Q3fa91/)).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByText("Marcus's Claude")).toBeNull(),
+    );
   });
 });
 

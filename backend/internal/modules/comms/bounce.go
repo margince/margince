@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -74,10 +75,7 @@ func (s *Store) RecordBounce(ctx context.Context, report connector.BounceReport)
 	if actor.UserID.IsZero() {
 		return false, errors.New("comms: a bounce report carries no capturing mailbox owner")
 	}
-	reason := report.Reason
-	if runes := []rune(reason); len(runes) > bounceReasonCap {
-		reason = string(runes[:bounceReasonCap])
-	}
+	reason := textcut.Runes(report.Reason, bounceReasonCap)
 
 	var marked bool
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {

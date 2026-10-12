@@ -81,9 +81,10 @@ const channelRowOf = `a.source_system || ':' || split_part(coalesce(a.thread_key
 // It returns what it held so the caller can drop the derived copies (vectors,
 // readings, proposals) and write the tombstone and the event per record. The
 // placeholders are erasuretimeline.go's: $1 contact, $2 addresses, $3/$4 the
-// floor interval and anchor, $5 the class, $6 the channel keys.
-func restrictShieldedTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool, payloads PayloadPurger) ([]restrictedRecord, error) {
-	args := []any{contactID, emails, floorInterval, floorAnchor, retentionClassCorrespondence, channelKeys}
+// floor policy (FloorPolicy.sqlArgs), $5 the class, $6 the channel keys.
+func restrictShieldedTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floor FloorPolicy, payloads PayloadPurger) ([]restrictedRecord, error) {
+	floorCurrent, floorCarried := floor.sqlArgs()
+	args := []any{contactID, emails, floorCurrent, floorCarried, retentionClassCorrespondence, channelKeys}
 	if err := stampLegacyHandelsbriefe(ctx, tx, args); err != nil {
 		return nil, err
 	}
@@ -274,8 +275,8 @@ func tombstoneRestrictions(ctx context.Context, tx pgx.Tx, held []restrictedReco
 // similarity probe or a proposal), and write the tombstone and the event per
 // record. It answers with what it held so the caller can withdraw the
 // proposals citing those rows and count them on the contact's tombstone.
-func holdShieldedTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool, payloads PayloadPurger) ([]ids.UUID, error) {
-	held, err := restrictShieldedTimeline(ctx, tx, contactID, emails, channelKeys, floorInterval, floorAnchor, payloads)
+func holdShieldedTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floor FloorPolicy, payloads PayloadPurger) ([]ids.UUID, error) {
+	held, err := restrictShieldedTimeline(ctx, tx, contactID, emails, channelKeys, floor, payloads)
 	if err != nil || len(held) == 0 {
 		return nil, err
 	}

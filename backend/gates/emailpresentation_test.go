@@ -142,7 +142,7 @@ func entrySchemas(t *testing.T) []string {
 	var names []string
 	var current string
 	schemaLine := regexp.MustCompile(`^    ([A-Za-z][A-Za-z0-9]*):\s*$`)
-	for _, line := range strings.Split(string(source), "\n") {
+	for line := range strings.SplitSeq(string(source), "\n") {
 		if match := schemaLine.FindStringSubmatch(line); match != nil {
 			current = match[1]
 			continue
@@ -189,7 +189,7 @@ func carrierFields(t *testing.T, schemas []string) []string {
 	var fields []string
 	var current string
 	judged := false
-	for _, line := range strings.Split(string(source), "\n") {
+	for line := range strings.SplitSeq(string(source), "\n") {
 		if schemaLine.MatchString(line) {
 			current, judged = "", false
 			continue
@@ -423,7 +423,7 @@ func topLevelFunctions(source string) []string {
 		}
 		current, started = nil, false
 	}
-	for _, line := range strings.Split(source, "\n") {
+	for line := range strings.SplitSeq(source, "\n") {
 		if topLevelDeclaration.MatchString(line) {
 			// A body ends at the next top-level declaration of ANY kind, not
 			// only the next function. Ending it only at the next `function` let

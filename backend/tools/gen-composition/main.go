@@ -22,6 +22,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -231,7 +232,7 @@ func materializeWorkSum(root, outRoot string) error {
 	//nolint:staticcheck // SA1019: the replacement resolves through PATH, which this deliberately refuses to trust
 	goRoot := runtime.GOROOT()
 	if goRoot == "" {
-		return fmt.Errorf("cannot locate the go toolchain (empty GOROOT)")
+		return errors.New("cannot locate the go toolchain (empty GOROOT)")
 	}
 	cmd := exec.Command(filepath.Join(goRoot, "bin", "go"), "list", "-m", "all") // #nosec G204 -- GOROOT/bin/go with literal args; refusing PATH is the point
 	cmd.Dir = root
@@ -452,10 +453,10 @@ func readManifest(root string) (manifest, error) {
 
 func compareInputs(recorded, current manifestInputs) error {
 	if recorded.Core != current.Core {
-		return fmt.Errorf("core inputs changed since generation")
+		return errors.New("core inputs changed since generation")
 	}
 	if recorded.ApprovalsLock != current.ApprovalsLock {
-		return fmt.Errorf("extensions/approvals.lock changed since generation")
+		return errors.New("extensions/approvals.lock changed since generation")
 	}
 	for name, row := range current.Extensions {
 		rec, ok := recorded.Extensions[name]

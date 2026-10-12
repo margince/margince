@@ -22,6 +22,7 @@ type partnerWire struct {
 	CertStatus        string         `json:"cert_status"`
 	PartnerRole       string         `json:"partner_role"`
 	RelationshipStage string         `json:"relationship_stage"`
+	MarginTier        *string        `json:"margin_tier"`
 	NextStep          *string        `json:"next_step"`
 	NextStepDueAt     *string        `json:"next_step_due_at"`
 	ServedSegments    []string       `json:"served_segments"`
@@ -87,5 +88,105 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 	}
 	if after.RelationshipStage != "in_conversation" {
 		t.Fatalf("a refused stage write landed anyway: %q", after.RelationshipStage)
+	}
+}
+
+// A gate metric the column cannot hold is refused, not wrapped.
+//
+// JSON numbers decode to float64 and the columns are smallint, so a plain cast
+// wrapped. 1e30 landed as -1, which reads as a partner failing a gate it was
+// never measured against. A negative seat count stored as sent.
+//
+// The handler refuses all five of these. The column's own CHECK catches four
+// of them, for any writer that bypasses the handler.
+//
+// 2.5 is the one the column cannot see. It truncates to a 2 the column accepts.
+func TestPartnerGateMetricsRefuseWhatTheColumnCannotHold(t *testing.T) {
+	e := setupRelationships(t)
+
+	// A programme that fits: the baseline every refusal below is measured
+	// against, so a test that refuses everything cannot pass.
+	var ok partnerWire
+	if status := e.Call(t, "PUT", "/v1/companies/"+e.companyID+"/partner", AnyMap{
+		"partner_role": "consulting", "cert_status": "applied",
+		"gate_metrics": AnyMap{"certified_staff": 4, "retention_rate": 87},
+	}, nil, &ok); status != http.StatusOK {
+		t.Fatalf("a programme inside the bounds → %d, want 200", status)
+	}
+
+	for _, tc := range []struct {
+		name    string
+		metrics AnyMap
+	}{
+		{"a negative seat count", AnyMap{"certified_staff": -5}},
+		{"a seat count past the column", AnyMap{"certified_staff": 1e30}},
+		{"a fractional seat count", AnyMap{"certified_staff": 2.5}},
+		{"a retention rate above a hundred", AnyMap{"retention_rate": 150}},
+		{"a negative retention rate", AnyMap{"retention_rate": -1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var ignored map[string]any
+			status := e.Call(t, "PUT", "/v1/companies/"+e.companyID+"/partner", AnyMap{
+				"partner_role": "consulting", "cert_status": "applied",
+				"gate_metrics": tc.metrics,
+			}, nil, &ignored)
+			if status != http.StatusUnprocessableEntity {
+				t.Errorf("%v → %d, want 422", tc.metrics, status)
+			}
+		})
+	}
+
+	// The refusals left the programme that fits standing.
+	var after partnerWire
+	if status := e.Call(t, "GET", "/v1/companies/"+e.companyID+"/partner", nil, nil, &after); status != http.StatusOK {
+		t.Fatalf("read the partner back → %d, want 200", status)
+	}
+	if after.GateMetrics["certified_staff"] != 4 || after.GateMetrics["retention_rate"] != 87 {
+		t.Errorf("gate_metrics read back as %v, want the 4 / 87 the refusals should not have touched",
+			after.GateMetrics)
+	}
+}
+
+// A nullable lifecycle field sent as null is cleared; one the body leaves out
+// is kept.
+func TestPartnerNullableFieldsClearOnNullAndKeepWhenOmitted(t *testing.T) {
+	e := setupRelationships(t)
+	path := "/v1/companies/" + e.companyID + "/partner"
+	if status := e.Call(t, "PUT", path, AnyMap{
+		"partner_role": "consulting", "margin_tier": "tier2_20", "next_step": "Send the one-pager",
+		"next_step_due_at": "2026-08-01", "served_segments": []string{"fintech"},
+		"gate_metrics": AnyMap{"certified_staff": 4, "retention_rate": 87},
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("seeding the partner → %d", status)
+	}
+
+	var kept partnerWire
+	if status := e.Call(t, "PUT", path, AnyMap{"partner_role": "consulting"}, nil, &kept); status != http.StatusOK {
+		t.Fatalf("an edit that names no nullable field → %d", status)
+	}
+	if kept.MarginTier == nil || kept.GateMetrics["retention_rate"] != 87 || kept.NextStep == nil || kept.NextStepDueAt == nil || len(kept.ServedSegments) != 1 {
+		t.Fatalf("an omitted field was cleared: %+v", kept)
+	}
+
+	var cleared partnerWire
+	if status := e.Call(t, "PUT", path, AnyMap{
+		"partner_role": "consulting", "margin_tier": nil, "next_step": nil,
+		"next_step_due_at": nil, "served_segments": nil, "gate_metrics": nil,
+	}, nil, &cleared); status != http.StatusOK {
+		t.Fatalf("a body of nulls → %d", status)
+	}
+	if cleared.MarginTier != nil || cleared.NextStep != nil || cleared.NextStepDueAt != nil || len(cleared.ServedSegments) != 0 {
+		t.Fatalf("a null left a value behind: %+v", cleared)
+	}
+	if _, ok := cleared.GateMetrics["retention_rate"]; ok {
+		t.Fatalf("gate_metrics null left retention_rate behind: %v", cleared.GateMetrics)
+	}
+
+	// A null on a field this record cannot clear is a stated refusal, never a
+	// 200 that changed nothing.
+	for _, field := range []string{"cert_status", "relationship_stage"} {
+		if status := e.Call(t, "PUT", path, AnyMap{"partner_role": "consulting", field: nil}, nil, nil); status != 422 {
+			t.Fatalf("%s: null → %d, want 422", field, status)
+		}
 	}
 }

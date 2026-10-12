@@ -90,16 +90,27 @@ func LastTouchFor(
 	// An ordered LIMIT-1 arm per direction rather than a FILTERed max(): an
 	// aggregate sees every qualifying row, each arm stops at the newest, so the
 	// cost per company is bounded by how far back that message is.
+	//
+	// Both arms skip a called-off meeting, which the last_contact lateral below
+	// already does through InteractionCountsSQL. A meeting nobody attended is
+	// not a touch in either direction, and leaving it in moved these clocks
+	// while the tile beside them stood still.
+	//
+	// NotCalledOffSQL rather than InteractionCountsSQL: a direction clock
+	// answers when a message last went each way, so any directed kind counts.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT %[1]s.id,
-		       (SELECT a.occurred_at %[2]s AND a.direction = 'inbound' ORDER BY a.occurred_at DESC LIMIT 1),
-		       (SELECT a.occurred_at %[2]s AND a.direction = 'outbound' ORDER BY a.occurred_at DESC LIMIT 1),
+		       (SELECT a.occurred_at %[2]s AND a.direction = 'inbound' AND %[6]s
+		          ORDER BY a.occurred_at DESC LIMIT 1),
+		       (SELECT a.occurred_at %[2]s AND a.direction = 'outbound' AND %[6]s
+		          ORDER BY a.occurred_at DESC LIMIT 1),
 		       lc.id, lc.occurred_at, lc.kind
 		FROM company %[1]s
 		LEFT JOIN LATERAL (SELECT a.id, a.occurred_at, a.kind %[2]s AND %[5]s
 		                   ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1) lc ON true
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
-		activities.OuterCompanyAlias, reached, wantedPos, visible, relstrength.InteractionCountsSQL("a")), args...)
+		activities.OuterCompanyAlias, reached, wantedPos, visible,
+		relstrength.InteractionCountsSQL("a"), relstrength.NotCalledOffSQL("a")), args...)
 	if err != nil {
 		return nil, err
 	}

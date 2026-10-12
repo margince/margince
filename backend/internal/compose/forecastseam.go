@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -73,7 +74,7 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	// rather than in the module: the rate sheet is a table, and forecasting
 	// owns no tables. Without it every priced deal reaches the arithmetic with
 	// no base amount, counts as fx_missing, and every money headline is zero.
-	baseValue := BaseValueSQL(
+	baseValue := deals.BaseValueSQL(
 		fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d")
 
 	// A deal belongs to this read if it is EXPECTED in the period or CLOSED in
@@ -232,14 +233,10 @@ func resolveWindow(
 	if kind != forecasting.PeriodWeek {
 		return forecasting.ResolvePeriod(kind, at, fiscalStart, zone)
 	}
-	// `at` is a real instant by the time it reaches here: a caller-supplied
-	// `as_of` DATE is anchored at midday UTC by forecasting.DayNamed before the
-	// transport hands it on, and a caller who sent none is asking about their
-	// own moment. So this converts through the zone like any instant, with no
-	// guess about which kind of value arrived — the guess was the bug, in both
-	// directions: reading every input as a date moved Monday morning in Tokyo
-	// back a week, and reading every input as an instant moved a named Monday
-	// in Los Angeles back a week.
+	// `at` is a real instant here. A caller's `as_of` date is anchored at midday
+	// UTC by forecasting.DayNamed, in the route and in the tool alike. So the
+	// week converts through the zone like any instant, with no guess about
+	// which kind of value arrived.
 	monday, err := weekly.WeekStartOf(ctx, tx, at)
 	if err != nil {
 		return forecasting.Period{}, err

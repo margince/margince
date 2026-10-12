@@ -144,6 +144,33 @@ describe("KnowledgeCard", () => {
     expect(await screen.findByText(/4 of 4 passages/i)).toBeTruthy();
   });
 
+  it("does not call a read document searchable while none of its set's passages are", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        sets: [
+          corpus({
+            coverage: {
+              documents_total: 1,
+              chunks_total: 4,
+              chunks_embedded: 0,
+            },
+          }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    expect(await screen.findByText(/0 of 4 passages searchable/)).toBeTruthy();
+    await user.click(
+      await screen.findByRole("button", { name: /show documents/i }),
+    );
+    expect(await screen.findByText("operating.md")).toBeTruthy();
+    expect(screen.getByText("Imported")).toBeTruthy();
+    expect(screen.queryByText("Searchable")).toBeNull();
+  });
+
   it("offers no verbs to a reader who may ask but not administer", async () => {
     vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
     render(<KnowledgeCard />);

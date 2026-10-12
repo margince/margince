@@ -11,7 +11,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import { throwProblem } from "../common";
+import { unwrap } from "../common";
 import { dealRecipientSeat } from "./dealrecipient";
 import type { useDealCoverage } from "./usedealcoverage";
 
@@ -41,13 +41,11 @@ export function useDealRecipientAddress(
   const contact = useQuery({
     queryKey: ["contact", seat?.contact_id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}", {
-        params: { path: { id: seat?.contact_id as string } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/contacts/{id}", {
+          params: { path: { id: seat?.contact_id as string } },
+        }),
+      );
     },
     enabled: seat?.contact_id != null,
   });

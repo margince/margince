@@ -1,4 +1,6 @@
-import type { useT } from "../i18n";
+import { formatMoney } from "../format/format";
+import { toMinorUnits } from "../format/minorunits";
+import type { Locale, useT } from "../i18n";
 import {
   type CreateField,
   type FormRows,
@@ -35,10 +37,15 @@ export function groupValue(
   fields: CreateField[],
   record: Record<string, unknown>,
   t: ReturnType<typeof useT>,
+  locale: Locale,
   maskedFields: readonly string[] = [],
   readOnlyFields: Readonly<Record<string, string>> = {},
 ): string {
   const values = prefillFromRecord(fields, record);
+  const code = values.currency ?? "";
+  // A group that pairs figures with a currency code reads as money. The code
+  // is inside each figure, so it is not repeated as its own part.
+  const moneyLocale = /^[A-Z]{3}$/.test(code) ? locale : undefined;
   const rows = prefillRowsFromRecord(fields, record);
   if (
     isAddressGroup(fields) &&
@@ -51,23 +58,22 @@ export function groupValue(
       if (field.searchTargets)
         return optionLabel(field, values[field.key] ?? "", values, t);
       const value = values[field.key] ?? "";
-      switch (field.type) {
-        case "repeatable":
-          return repeatableValue(field, rows);
-        case "multiselect":
-          return splitMultiselectValue(value, field.multiselectEncoding)
-            .map((item) => optionLabel(field, item, values, t))
-            .join(", ");
-        case "select":
-          return value || field.key in readOnlyFields
-            ? optionLabel(field, value, values, t)
-            : "";
-        case "number":
-          return value && fields.length > 1
-            ? `${fieldLabel(field, t)}: ${value}`
-            : value;
-      }
-      return value;
+      const money = moneyPart(
+        field,
+        value,
+        code,
+        moneyLocale,
+        fields.length,
+        t,
+      );
+      if (money !== undefined) return money;
+      return plainPart(field, value, {
+        values,
+        rows,
+        readOnlyFields,
+        partCount: fields.length,
+        t,
+      });
     })
     .map((value, index) =>
       maskedFields.includes(fields[index].key)
@@ -76,6 +82,57 @@ export function groupValue(
     )
     .filter(Boolean)
     .join(" · ");
+}
+
+function plainPart(
+  field: CreateField,
+  value: string,
+  ctx: {
+    values: Record<string, string>;
+    rows: FormRows;
+    readOnlyFields: Readonly<Record<string, string>>;
+    partCount: number;
+    t: ReturnType<typeof useT>;
+  },
+): string {
+  const { values, rows, readOnlyFields, partCount, t } = ctx;
+  switch (field.type) {
+    case "repeatable":
+      return repeatableValue(field, rows);
+    case "multiselect":
+      return splitMultiselectValue(value, field.multiselectEncoding)
+        .map((item) => optionLabel(field, item, values, t))
+        .join(", ");
+    case "select":
+      return value || field.key in readOnlyFields
+        ? optionLabel(field, value, values, t)
+        : "";
+    case "number":
+      return value && partCount > 1
+        ? `${fieldLabel(field, t)}: ${value}`
+        : value;
+  }
+  return value;
+}
+
+// One part of a money group. A figure is written in its currency, the
+// currency field itself is empty, and a part that is not money is undefined.
+function moneyPart(
+  field: CreateField,
+  value: string,
+  code: string,
+  locale: Locale | undefined,
+  partCount: number,
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  if (!locale) return undefined;
+  if (field.key === "currency") return "";
+  if (field.type !== "number" || !value) return undefined;
+  const minor = toMinorUnits(Number(value), code);
+  const shown = Number.isFinite(minor)
+    ? formatMoney(minor, code, locale)
+    : `${value} ${code}`;
+  return partCount > 2 ? `${fieldLabel(field, t)}: ${shown}` : shown;
 }
 
 function repeatableValue(field: CreateField, rows: FormRows): string {

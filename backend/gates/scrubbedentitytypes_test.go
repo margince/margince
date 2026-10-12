@@ -94,6 +94,10 @@ var scrubbedEntityTypes = map[string]bool{
 	"voice_learning_signal": true,
 	"ai_call":               true,
 	"ai_call_payload":       true,
+	// A stage-evidence row whose quotation of an erased message was cleared.
+	// The weekly review rebuilds a DEAL from its own audit images, never an
+	// evidence row. The evidence create images never carried the quotation.
+	"deal_stage_evidence": true,
 }
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {

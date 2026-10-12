@@ -37,7 +37,7 @@ import {
   type AttachmentParent,
   uploadAttachment,
 } from "./attachmentupload";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 
 // Adding a document to the record the dialog was opened from — an account's
 // document library, or a contact's.
@@ -200,19 +200,17 @@ export function AddDocumentDialog({
         queryKey: ["dealsForCompany", anchor.id, cursor],
         staleTime: DEAL_PAGE_FRESH_MS,
         queryFn: async (): Promise<DealPage> => {
-          const { data, error } = await api.GET("/deals", {
-            params: {
-              query: {
-                company_id: anchor.id,
-                limit: DEAL_PAGE_SIZE,
-                ...(cursor ? { cursor } : {}),
+          return unwrap(
+            await api.GET("/deals", {
+              params: {
+                query: {
+                  company_id: anchor.id,
+                  limit: DEAL_PAGE_SIZE,
+                  ...(cursor ? { cursor } : {}),
+                },
               },
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
+            }),
+          );
         },
       }),
     [anchor.id, queryClient],

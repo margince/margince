@@ -45,7 +45,7 @@ func uncachedPackages(t *testing.T) map[string]bool {
 		t.Fatal("backend/Makefile declares no UNCACHED_TEST_PKGS — this gate cannot tell which packages replay")
 	}
 	dirs := map[string]bool{}
-	for _, pkg := range strings.Fields(string(line[1])) {
+	for pkg := range strings.FieldsSeq(string(line[1])) {
 		dirs[path.Join("backend", strings.TrimSuffix(pkg, "/"))] = true
 	}
 	return dirs
@@ -171,7 +171,7 @@ func TestTheScriptAndGatekitNameEveryTreeDigestAlike(t *testing.T) {
 		t.Fatalf("asking scripts/ci-stable-mtimes.sh for its digest names: %v", err)
 	}
 	named := 0
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		top, name, found := strings.Cut(line, "\t")
 		if !found {
 			t.Fatalf("scripts/ci-stable-mtimes.sh --names printed %q, not an entry and its variable", line)

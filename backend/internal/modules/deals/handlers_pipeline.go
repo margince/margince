@@ -36,13 +36,14 @@ func (h Handlers) CreatePipeline(w http.ResponseWriter, r *http.Request, _ crmco
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.Name == "" {
-		httperr.Write(w, r, httperr.Validation("name", "required", "name is required"))
+	name, err := cleanLadderName("name", req.Name)
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 
 	in := CreatePipelineInput{
-		Name:      req.Name,
+		Name:      name,
 		IsDefault: req.IsDefault != nil && *req.IsDefault,
 	}
 	if req.Position != nil {
@@ -50,7 +51,12 @@ func (h Handlers) CreatePipeline(w http.ResponseWriter, r *http.Request, _ crmco
 	}
 	if req.Stages != nil {
 		for i, st := range *req.Stages {
-			stage := StageInput{Name: st.Name, Position: i + 1, Semantic: string(SemanticOpen)}
+			stageName, err := cleanLadderName("stages", st.Name)
+			if err != nil {
+				httperr.Write(w, r, err)
+				return
+			}
+			stage := StageInput{Name: stageName, Position: i + 1, Semantic: string(SemanticOpen)}
 			if st.Position != nil && *st.Position != 0 {
 				stage.Position = *st.Position
 			}

@@ -12,9 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
-	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/capture/gcal"
-	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T) {
@@ -31,10 +28,7 @@ func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T
 	if status := publicCall(t, e, "POST", "/v1/public/booking/"+bookingSlug(t, e), body, nil, &result); status != 201 {
 		t.Fatal(status)
 	}
-	db := compose.InstallationDB(e.Pool)
-	registry := capture.NewRegistry(db, capture.NewSink(db), identity.NewServiceFor(db), e.Vault)
-	registry.Register(gcal.New(gcal.NewOAuth(gcal.OAuthConfig{ClientID: "calendar-fixture", ClientSecret: "calendar-fixture"}), gcal.NewAPI(nil, "")))
-	runner, completed, failed := jobtest.StartTestJobRunner(t, e.Pool, compose.JobRunnerConfig{GmailRegistry: registry, ControllerVault: e.Vault, SendOrigin: compose.SendOrigin{PublicBaseURL: "https://mail.example.test"}})
+	runner, completed, failed := startBookingWorker(t, e)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	if err := runner.Enqueue(ctx, compose.MeetingDeliveryArgs{}, nil); err != nil {

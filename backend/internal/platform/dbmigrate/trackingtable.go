@@ -9,6 +9,7 @@ package dbmigrate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -29,7 +30,7 @@ func trackingTable(ctx context.Context, conn *pgx.Conn, namespace string) (strin
 		}
 	}
 	if namespace == "" {
-		return "", fmt.Errorf("pgmigrate: empty namespace: it keys the tracking table")
+		return "", errors.New("pgmigrate: empty namespace: it keys the tracking table")
 	}
 	table := "schema_migrations_" + namespace
 	_, err := conn.Exec(ctx, fmt.Sprintf(

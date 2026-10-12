@@ -51,8 +51,7 @@ func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspac
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: scheduledSendMaxAttempts},
 		Args:   ScheduledSendArgs{Workspace: workspace, ScheduledSendID: id.String()},
 	})
-	var snooze *river.JobSnoozeError
-	if errors.As(err, &snooze) {
+	if _, ok := errors.AsType[*river.JobSnoozeError](err); ok {
 		// Its moment moved: the alarm asked to come back later, which is an
 		// outcome and not a failure.
 		return nil

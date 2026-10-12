@@ -192,7 +192,7 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 		add(BucketArchived, delta)
 		out.Deals = append(out.Deals, DealDelta{
 			DealID: dealID, Bucket: BucketArchived, AmountMinor: delta,
-			FromMinor: ptr(contributionOf(reading, was)), ToMinor: ptr(int64(0)),
+			FromMinor: new(contributionOf(reading, was)), ToMinor: new(int64(0)),
 		})
 	}
 
@@ -345,14 +345,12 @@ func dealDelta(
 ) DealDelta {
 	out := DealDelta{
 		DealID: dealID, Bucket: bucket, AmountMinor: delta,
-		ToMinor:    ptr(contributionOf(reading, now)),
+		ToMinor:    new(contributionOf(reading, now)),
 		AuditID:    now.AuditID,
 		ApprovalID: now.ApprovalID,
 	}
 	if existed {
-		out.FromMinor = ptr(contributionOf(reading, was))
+		out.FromMinor = new(contributionOf(reading, was))
 	}
 	return out
 }
-
-func ptr[T any](v T) *T { return &v }

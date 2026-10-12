@@ -46,6 +46,8 @@ import (
 	"github.com/klippa-app/go-pdfium/requests"
 	"github.com/klippa-app/go-pdfium/webassembly"
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // ErrNoTextLayer is a PDF this package opened and found no text in — almost
@@ -144,7 +146,7 @@ func (r *Reader) Read(ctx context.Context, raw []byte, maxChars int) (string, er
 	if text == "" {
 		return "", ErrNoTextLayer
 	}
-	return truncateRunes(text, maxChars+1), nil
+	return textcut.Runes(text, maxChars+1), nil
 }
 
 // readPages opens the document and walks it until the caller's budget is met.
@@ -221,19 +223,4 @@ func (r *Reader) readPages(ctx context.Context, raw []byte, maxChars int) (strin
 		}
 	}
 	return out.String(), nil
-}
-
-// truncateRunes cuts a string to at most limit runes, never mid-rune.
-func truncateRunes(s string, limit int) string {
-	if utf8.RuneCountInString(s) <= limit {
-		return s
-	}
-	count := 0
-	for i := range s {
-		if count == limit {
-			return s[:i]
-		}
-		count++
-	}
-	return s
 }

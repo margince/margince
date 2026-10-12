@@ -127,7 +127,7 @@ func TestAiCallDetailCarriesLadderAndPayload(t *testing.T) {
 	if !detail.PayloadCaptured || detail.Payload == nil {
 		t.Fatalf("payload shape = %+v", detail)
 	}
-	request, ok := detail.Payload.Request.(map[string]interface{})
+	request, ok := detail.Payload.Request.(map[string]any)
 	if !ok || request["system"] != "classify safely" {
 		t.Fatalf("payload request = %#v", detail.Payload.Request)
 	}

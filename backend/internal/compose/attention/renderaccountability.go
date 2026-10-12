@@ -90,6 +90,7 @@ func noticeCaseItem(owed NoticeCase, asOf time.Time) crmcontracts.AttentionItem 
 		item.OccurredAt = &opened
 	}
 	item.Subject = subjectOf("contact", owed.ContactID)
+	item.Acquisition = owed.Acquisition
 	if owed.OwnerID != nil {
 		owner := openapi_types.UUID(*owed.OwnerID)
 		item.AssigneeId = &owner

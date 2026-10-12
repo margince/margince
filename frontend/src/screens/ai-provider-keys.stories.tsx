@@ -23,6 +23,16 @@ const READER: GrantSpec = { ai_routing: ["read"] };
 // Reaches the AI tab on another grant and holds no ai_routing at all.
 const NO_GRANT: GrantSpec = { automation: ["read"] };
 
+const ROUTING = {
+  profile: "cloud_frontier",
+  tiers: {
+    cheap_cloud: { provider: "gemini", model: "gemini-3.5-flash" },
+    premium: { provider: "gemini", model: "gemini-3.1-pro-preview" },
+    frontier: { provider: "anthropic", model: "claude-opus-4-1" },
+  },
+  embeddings: { provider: "gemini", model: "gemini-embedding-001" },
+};
+
 function story(
   providers: {
     provider: string;
@@ -33,11 +43,13 @@ function story(
     credential_kind: "api_key" | "service_account";
   }[],
   allow: GrantSpec = MANAGER,
+  routing: object | null = null,
 ) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
       "GET /ai/provider-keys": () => jsonResponse({ providers }),
+      ...(routing ? { "GET /ai/routing": () => jsonResponse(routing) } : {}),
       "POST /ai/provider-keys/gemini/test": () =>
         jsonResponse({ provider: "gemini", ok: true, model_count: 42 }),
     });
@@ -95,6 +107,29 @@ type Story = StoryObj<typeof AiProviderKeysCard>;
 // One provider keyed, one not — the ordinary reading, and the one that has to
 // distinguish the two states without printing either key.
 export const Mixed: Story = { render: story([gemini, anthropic]) };
+
+export const InUse: Story = {
+  render: story([gemini, anthropic, jevCompatible, vertex], MANAGER, ROUTING),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table");
+    await canvas.findByText("Everyday cloud");
+  },
+};
+
+export const InUsePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story([gemini, anthropic, jevCompatible, vertex], MANAGER, ROUTING),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("table");
+  },
+};
+
+export const InUseDark: Story = {
+  globals: { theme: "dark" },
+  render: story([gemini, anthropic, jevCompatible, vertex], MANAGER, ROUTING),
+};
 
 // Every bound provider still unkeyed: the state a fresh installation is in,
 // where the AI lanes are absent until somebody pastes a key. It must read as

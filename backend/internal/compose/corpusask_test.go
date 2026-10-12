@@ -452,7 +452,7 @@ func TestTheReplySchemaAndTheParserAgreeOnEveryKey(t *testing.T) {
 	// The struct tags are the third spelling, read from the type itself rather
 	// than restated here.
 	tags := map[string]bool{}
-	for _, f := range reflect.VisibleFields(reflect.TypeOf(askedClaim{})) {
+	for _, f := range reflect.VisibleFields(reflect.TypeFor[askedClaim]()) {
 		tags[f.Tag.Get("json")] = true
 	}
 	for key := range claim.Properties {
@@ -513,7 +513,7 @@ func (l *reAskingLane) CompleteValidated(
 func TestAnUnreadableReplyIsReAskedThroughTheSitesOwnRefusal(t *testing.T) {
 	passages := askPassages()
 	lane := &reAskingLane{
-		fixedLane: fixedLane{text: "here you go: {claims: none}"},
+		text: "here you go: {claims: none}",
 		second: corpusReply(askedClaim{
 			Text:  "Messages are kept for 400 days.",
 			ID:    passages[0].ChunkID.String(),
@@ -545,7 +545,7 @@ func TestAnUnreadableReplyIsReAskedThroughTheSitesOwnRefusal(t *testing.T) {
 // pushing a model that obeyed the prompt to disobey it.
 func TestAnAnswerWithNoClaimsIsNotReAsked(t *testing.T) {
 	passages := askPassages()
-	lane := &reAskingLane{fixedLane: fixedLane{text: corpusReply()}, second: "never sent"}
+	lane := &reAskingLane{text: corpusReply(), second: "never sent"}
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "what does it cost",
 		passages, string(textlang.English), corpusQuietLog())
 
@@ -629,7 +629,7 @@ func TestAReplyWithNoCoverageKeyIsRefused(t *testing.T) {
 func TestAReplyWithoutAClaimsKeyIsReAsked(t *testing.T) {
 	passages := askPassages()
 	lane := &reAskingLane{
-		fixedLane: fixedLane{text: `{}`},
+		text: `{}`,
 		second: corpusReply(askedClaim{
 			Text:  "Messages are kept for 400 days.",
 			ID:    passages[0].ChunkID.String(),

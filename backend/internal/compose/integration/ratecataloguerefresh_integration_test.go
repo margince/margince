@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 const refreshHost = "https://openrouter.ai/api/v1"
@@ -37,7 +36,7 @@ func brokerRouting(models ...string) ai.RoutingConfig {
 }
 
 func listed(id, input, output string, cacheRead *string) ai.AvailableModel {
-	return ai.AvailableModel{Info: model.Info{ID: id}, InputPerMtok: &input, OutputPerMtok: &output, CacheReadPerMtok: cacheRead}
+	return ai.AvailableModel{ID: id, InputPerMtok: &input, OutputPerMtok: &output, CacheReadPerMtok: cacheRead}
 }
 
 func catalogueOf(models ...ai.AvailableModel) ai.AvailableModels {
@@ -208,7 +207,7 @@ func TestSyncPricesReportsAModelTheListDoesNotPriceAsNotAvailable(t *testing.T) 
 		BaseURL: "https://openrouter.ai/api/alpha/decisions",
 	}}
 
-	report, err := store.SyncPrices(e.Admin(), ai.PriceSources{Routing: cfg, Broker: catalogueOf(ai.AvailableModel{Info: model.Info{ID: "typesafe/jev-router"}})}, discardRun)
+	report, err := store.SyncPrices(e.Admin(), ai.PriceSources{Routing: cfg, Broker: catalogueOf(ai.AvailableModel{ID: "typesafe/jev-router"})}, discardRun)
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}

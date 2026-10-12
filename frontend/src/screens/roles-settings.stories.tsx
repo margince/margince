@@ -56,15 +56,62 @@ const ROLES = [
   },
 ];
 
+// An archived custom role, and one whose name runs past a phone's line.
+const MORE_ROLES = [
+  ...ROLES,
+  {
+    key: "custom_partner_enablement",
+    name: "Regional field sales and channel partner enablement, DACH and Benelux",
+    is_system: false,
+    version: 2,
+    row_scope: "team",
+    objects: { contact: READ, deal: READ },
+  },
+  {
+    key: "custom_seasonal",
+    name: "Seasonal temps",
+    is_system: false,
+    version: 5,
+    row_scope: "own",
+    archived_at: "2026-09-01T09:00:00Z",
+    objects: { contact: READ, deal: NONE },
+  },
+];
+
+function member(email: string, roles: string[]) {
+  return {
+    id: `id-${email}`,
+    email,
+    display_name: email,
+    status: "active",
+    is_agent: false,
+    roles,
+  };
+}
+
+const ROSTER = [
+  member("ada@brandt.example", ["admin"]),
+  member("bo@brandt.example", ["custom_field_sales"]),
+  member("cy@brandt.example", ["custom_field_sales"]),
+  member("di@brandt.example", ["rep"]),
+];
+
 const ROLE_ADMIN: GrantSpec = {
   role_admin: ["read", "create", "update", "delete"],
+  user_admin: ["read"],
 };
 
-function story(allow: GrantSpec, roles: string[]) {
+function story(
+  allow: GrantSpec,
+  roles: string[],
+  directory: readonly unknown[] = ROLES,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow, { roles }),
-      "GET /roles": () => jsonResponse({ roles: ROLES }),
+      "GET /roles": () => jsonResponse({ roles: directory }),
+      "GET /users": () =>
+        jsonResponse({ data: ROSTER, page: { has_more: false } }),
       "GET /users/access-preview": () =>
         jsonResponse({
           role: "custom_field_sales",
@@ -88,7 +135,7 @@ async function openFieldSales({
 }: Readonly<{ canvasElement: HTMLElement }>) {
   const canvas = within(canvasElement);
   await userEvent.click(
-    await canvas.findByRole("button", { name: "Open Field sales" }),
+    await canvas.findByRole("button", { name: "Field sales" }),
   );
 }
 
@@ -130,4 +177,28 @@ export const NewRoleDialog: Story = {
     );
     await within(document.body).findByRole("dialog");
   },
+};
+
+// Archived roles shown: the archived one keeps its type and says it is archived.
+export const ArchivedShown: Story = {
+  render: story(ROLE_ADMIN, ["admin"], MORE_ROLES),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("switch", { name: /show archived/i }),
+    );
+    await canvas.findByText("Seasonal temps");
+  },
+};
+
+// A reader without the member grant: no roster read, so no counts.
+export const WithoutMemberCounts: Story = {
+  render: story({ role_admin: ["read"] }, ["ops"]),
+};
+
+// On a phone the name keeps the width and the count stands over the badge.
+export const Phone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(ROLE_ADMIN, ["admin"], MORE_ROLES),
 };

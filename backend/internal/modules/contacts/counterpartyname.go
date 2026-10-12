@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // KnownHumanName is what the installation already knows a mail address belongs
@@ -51,8 +52,7 @@ func KnownHumanName(ctx context.Context, tx pgx.Tx, email string) (string, error
 	err := tx.QueryRow(ctx, `
 		SELECT display_name FROM app_user
 		 WHERE lower(email) = $1
-		   AND archived_at IS NULL
-		   AND status = 'active'`, normalized).Scan(&name)
+		   AND `+workforce.LiveMemberSQL(""), normalized).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}

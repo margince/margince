@@ -41,7 +41,7 @@ func TestACommitmentEditReachesOnlyTheWordingAndTheDay(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			edited := staged
 			c.edit(&edited)
-			err := commitmentTaskPrecheck()(context.Background(), mustJSON(t, staged), mustJSON(t, edited))
+			err := refuseCommitmentEdit(mustJSON(t, staged), mustJSON(t, edited))
 			var invalid *approvals.InvalidEditError
 			if c.refuse && !errors.As(err, &invalid) {
 				t.Errorf("editing %s: err = %v, want an invalid edit", c.name, err)
@@ -66,13 +66,13 @@ func mustJSON(t *testing.T, v CommitmentTaskProposal) json.RawMessage {
 func TestACommitmentEditThatIsNotAProposalIsRefused(t *testing.T) {
 	staged := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc"})
 	var invalid *approvals.InvalidEditError
-	if err := commitmentTaskPrecheck()(context.Background(), staged, json.RawMessage(`{"summary":`)); !errors.As(err, &invalid) {
+	if err := refuseCommitmentEdit(staged, json.RawMessage(`{"summary":`)); !errors.As(err, &invalid) {
 		t.Errorf("an edit that is not JSON: err = %v, want an invalid edit", err)
 	}
-	if err := commitmentTaskPrecheck()(context.Background(), json.RawMessage(`[`), staged); err == nil {
+	if err := refuseCommitmentEdit(json.RawMessage(`[`), staged); err == nil {
 		t.Error("a staged payload that is not JSON was compared as if it were")
 	}
-	if err := commitmentTaskPrecheck()(context.Background(), staged, nil); err != nil {
+	if err := refuseCommitmentEdit(staged, nil); err != nil {
 		t.Errorf("accepting with no edit: %v", err)
 	}
 }

@@ -18,7 +18,7 @@ import (
 func TestDataSubjectRequestLifecycle(t *testing.T) {
 	c := setupConsent(t)
 
-	due := time.Now().AddDate(0, 0, 30).UTC().Format(time.RFC3339)
+	due := time.Now().AddDate(0, 0, 7).UTC().Format(time.RFC3339)
 	var dsr struct {
 		ID     string `json:"id"`
 		Status string `json:"status"`

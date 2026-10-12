@@ -172,11 +172,33 @@ tags:
 paths:
 
   # ------------------------------- /me --------------------------------------
+  /whoami:
+    get:
+      tags: [Identity]
+      operationId: getActingIdentity
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Who this caller acts for.
+      description: |
+        The answer the `whoami` agent tool gives, run by the same tool on both doors: the
+        acting human's id, name, email, language and timezone. A passport learns whom it
+        acts for; a session learns its own seat. `GET /me` is a session's fuller view of
+        itself and stays human-only.
+      x-mcp-tool: { verb: whoami, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The acting human.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActingIdentity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /me:
     get:
       tags: [Identity]
       operationId: getCurrentPrincipal
-      summary: Get the current authenticated principal (user or agent).
+      security: [ { cookieAuth: [] } ]   # human session only — a passport never binds the session identity this reads
+      x-agent-access: human-only
+      summary: Get the signed-in human's own profile, roles and settings.
       responses:
         '200':
           description: The current principal.
@@ -798,6 +820,37 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /admin/recovery-health:
+    get:
+      tags: [Identity]
+      operationId: getRecoveryHealth
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: When the restore procedure was last rehearsed, and what it measured.
+      description: >
+        Admin and ops only (`job_health:read`). Reports the most recent restore drill from the installation's drill
+        ledger, against the two published recovery targets: back within four hours, and
+        no more than one hour of data lost. The recovery time is measured by the database
+        clock between drill-start and drill-finish. The data lost is the start minus the
+        restore point the operator gave to drill-start. `last_drill` is null on an installation that has never
+        recorded a drill. Drills are recorded by the operator with `margince-migrate
+        drill-start` and `drill-finish`; there is no HTTP write. Margince does not observe
+        backups, so this report names none. Human session only (x-agent-access: human-only).
+      responses:
+        '200':
+          description: The installation's restore-drill evidence.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecoveryHealth' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Refused: the caller is an agent/passport principal (this endpoint is human-only)
+            or a seat without `job_health:read` (held by the admin and ops roles).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ------------------------------ /passports --------------------------------
   /passports:
     get:
@@ -829,11 +882,18 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, api_base_url]
                 properties:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/PassportSummary' }
+                  api_base_url:
+                    type: string
+                    format: uri
+                    description: >-
+                      The address a passport calls this API at, `/v1` included: the configured
+                      API base URL, else the public base URL, else the origin this request
+                      arrived on. The skill bundle's `openapi.yaml` names the same address.
         '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [Identity]
@@ -889,6 +949,33 @@ paths:
           description: Passport revoked (or already revoked).
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /agent-bundle:
+    get:
+      tags: [Identity]
+      operationId: downloadAgentSkillBundle
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Download the Margince skill for an AI tool, as a ZIP.
+      description: |
+        The skill an AI tool (Claude, Codex, Gemini) installs to call this API with a passport. The
+        ZIP holds one folder, `margince/`, with `README.md` (how to save a passport and install the
+        skill), `SKILL.md` (the rules an agent follows), `INDEX.md` (one row per operation a passport
+        can call) and `openapi.yaml` (those operations in full, generated from this contract).
+        `servers` in `openapi.yaml` and the base URL in both guides are this install's API address,
+        the same value `GET /passports` answers as `api_base_url`.
+
+        It carries no credential. The passport is saved apart from the skill, so one download serves
+        every passport and a revoked passport leaves nothing to delete. Human-only: the bundle is how a
+        human hands an agent the API, and an agent that can call the API already has it.
+      responses:
+        '200':
+          description: The skill as a downloadable ZIP attachment, `margince-skill.zip`.
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /oauth/consent-request:
     get:
@@ -1388,8 +1475,6 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContact360
-      x-agent-access: human-only
-      security: [{ cookieAuth: [] }]
       summary: The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
       description: |
         The contact half of the one-composite-read doctrine (PO-EXT-3), assembled inside ONE
@@ -1994,8 +2079,6 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactGraph
-      x-agent-access: human-only
-      security: [{ cookieAuth: [] }]
       summary: Who around this contact could open a door, and through whom.
       description: |
         The local graph answers one question a rep actually asks: *who here can introduce me,
@@ -3035,6 +3118,29 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /companies/{id}/intro-paths:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Companies]
+      operationId: listIntroPaths
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The colleagues who could introduce you at this company, warmest first.
+      description: |
+        The answer the `intro_path_to` agent tool gives, run by the same tool on both doors.
+        Each route names a contact at the company and the colleague who knows them, ranked
+        by how warm that relationship is. Warmth is computed over a bounded read of the
+        company's contacts; `candidates_truncated` says a warmer route may exist past it.
+      x-mcp-tool: { verb: intro_path_to, record_type: company, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The introduction routes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroPaths' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /companies/{id}/graph:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3056,7 +3162,7 @@ paths:
 
         **Authorization is per group**, the same posture `GET /companies/{id}/360`
         takes for its sections. Reading the company itself is mandatory. Contacts
-        need the contact grant, deals need the deal grant, and the intro path needs the
+        need the contact grant, deals need the deal grant, and the signal route needs the
         signal grant; a group the caller may not read is left out of `nodes`/`edges` and
         named in `groups_omitted`, so the card can say "hidden from you" instead of
         drawing a company with no contacts. Within a group every row carries that
@@ -4673,6 +4779,22 @@ paths:
         - name: owner_id
           in: query
           schema: { type: string, format: uuid }
+        - name: owner_team_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+            (DM-VOCAB-OWN-1).
+        - name: unassigned
+          in: query
+          schema: { type: boolean }
+          description: |
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+            (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: company_id
           in: query
           schema: { type: string, format: uuid }
@@ -4757,6 +4879,7 @@ paths:
               schema: { $ref: '#/components/schemas/DealListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Deals]
       operationId: createDeal
@@ -4810,6 +4933,98 @@ paths:
                       errors:
                         - { field: stage_id, code: stage_not_in_pipeline }
 
+  /deals/slipping:
+    get:
+      tags: [Deals]
+      operationId: listSlippingDeals
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The open deals going quiet or past their expected close date, worst first.
+      description: |
+        The answer the `whats_slipping_this_week` agent tool gives, run by the same tool on
+        both doors, so a passport here and over MCP gets the same deals for the same input.
+        Each deal carries the evidence that puts it on the list. A deal whose risk cannot be
+        evidenced from its own fields is left out rather than guessed.
+
+        A deal is on the list when it has had no recorded activity for longer than
+        `quiet_days`, or when its expected close date has passed. `quiet_days` defaults to
+        60, the product-wide stalled threshold. The home screen's quiet-deals lane asks at
+        19 days. Only the deals the caller may see are read.
+      x-mcp-tool: { verb: whats_slipping_this_week, record_type: deal, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - name: quiet_days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 60 }
+          description: Days without recorded activity after which an open deal counts as gone quiet.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50 }
+          description: Cap the ranked list. Omit it for every evidenced deal.
+      responses:
+        '200':
+          description: The slipping deals, worst first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SlippingDealList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/at-risk:
+    get:
+      tags: [Deals]
+      operationId: listAtRiskRelationships
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The open deals whose relationships are going cold, and why.
+      description: |
+        The answer the `at_risk_relationships` agent tool gives, run by the same tool on both
+        doors: the caller's open deals that rest on a single contact, have no engaged
+        champion, or are carried almost entirely by one colleague on our side. Each deal
+        carries the findings that put it on the list. The sweep reads the deals the caller
+        may see and stops at its cap; `truncated` says when it did.
+        `coverage_withheld` says a deal could not be judged because the caller may not read
+        its relationships, so it is missing from the list rather than clean.
+      x-mcp-tool: { verb: at_risk_relationships, record_type: deal, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The at-risk deals.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AtRiskRelationships' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /deals/follow-up-drafts:
+    post:
+      tags: [Deals]
+      operationId: draftDealFollowUps
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Draft a follow-up on each slipping deal, worst first. Nothing is sent.
+      description: |
+        The answer the `draft_follow_ups_for` agent tool gives, run by the same tool on both
+        doors. The deals are the ones `GET /deals/slipping` lists at its default window, worst
+        first, up to `limit` (at most 25). Each draft lands on its deal's timeline as a draft
+        activity and is never sent. A deal whose risk cannot be evidenced gets no draft.
+
+        A retry with the same `idempotency_key` answers the first call's drafts and writes
+        none. An `Idempotency-Key` header is taken as that key.
+      x-mcp-tool: { verb: draft_follow_ups_for, record_type: deal, tier: auto_execute, scope: draft, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealFollowUpDraftRequest' }
+      responses:
+        '200':
+          description: The drafts written, one per deal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealFollowUpDrafts' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -4932,6 +5147,47 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /deals/{id}/progress:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: progressDeal
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Move a deal to a stage and note why, in one call.
+      description: |
+        The answer the `progress_deal` agent tool gives, run by the same tool on both doors:
+        the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
+        timeline. The answer is the deal as it now stands and the note's activity id.
+
+        The tier is the advance's. A move to or from a won or lost stage is confirm-first for
+        an agent: the call stages one approval and answers 403 `approval_required` naming it.
+        Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
+        header, once a human has approved it. A human's own call is its approval.
+
+        A retry with the same `idempotency_key` answers the first call's result and moves
+        nothing. An `Idempotency-Key` header is taken as that key.
+      x-mcp-tool: { verb: progress_deal, record_type: deal, tier: dynamic, scope: write, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProgressDealRequest' }
+      responses:
+        '200':
+          description: The deal at its new stage, and the note logged on it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProgressDealResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/stakeholders:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -4966,6 +5222,22 @@ paths:
         - name: owner_id
           in: query
           schema: { type: string, format: uuid }
+        - name: owner_team_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
+            a team the caller cannot see returns their own visible rows filtered to nothing, not a
+            wider set. Distinct from the `team` row scope itself, which also admits unassigned rows
+            and rows reached by a record grant (AAD-ROLE-2). One dial for every owner-scoped list
+            (DM-VOCAB-OWN-1).
+        - name: unassigned
+          in: query
+          schema: { type: boolean }
+          description: |
+            `true` returns only rows with no owner. Unassigned rows are visible at every row scope
+            (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
+            Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: phase
           in: query
           schema: { type: string, enum: [initiative, pursuing, delivering, closed] }
@@ -4986,11 +5258,7 @@ paths:
               schema: { $ref: '#/components/schemas/ProjectListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '422':
-          description: A sort or filter field outside the allow-list.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Projects]
       operationId: createProject
@@ -5366,6 +5634,29 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /projects/{id}/handoff:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Projects]
+      operationId: prepareProjectHandoff
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: What delivery needs to take this project over.
+      description: |
+        The answer the `prepare_handoff` agent tool gives, run by the same tool on both doors:
+        the project, the deals it was sold through, its stakeholders, the promises still
+        open, and the gaps a handoff should close first. It reads and writes nothing; moving
+        the project into delivery is a separate act.
+      x-mcp-tool: { verb: prepare_handoff, record_type: project, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The handoff brief.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectHandoff' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /projects/{id}/360:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5610,6 +5901,7 @@ paths:
       tags: [Pipelines]
       operationId: listPipelines
       summary: List pipelines.
+      x-mcp-tool: { verb: list_pipelines, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/IncludeArchived'
       responses:
@@ -6139,6 +6431,7 @@ paths:
               schema: { $ref: '#/components/schemas/StageAutomationReport' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------- /stage-automation/policies/{id} ----------------------
   /stage-automation/policies/{id}:
@@ -9410,6 +9703,44 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /email-signature-template:
+    get:
+      tags: [Contacts]
+      operationId: getEmailSignatureTemplate
+      summary: The workspace's signature template.
+      description: |
+        The layout every member's mail signs with when it is set, filled in with each member's
+        own name, title and phone. Read by a seat that may read installation settings; changed
+        by admin/ops. Governed by the `installation_settings` RBAC object.
+      responses:
+        '200':
+          description: The template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailSignatureTemplate' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Contacts]
+      operationId: saveEmailSignatureTemplate
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Set the workspace's signature template (admin/ops).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailSignatureTemplate' }
+      responses:
+        '200':
+          description: The saved template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailSignatureTemplate' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /leads/settings:
     get:
       tags: [Leads]
@@ -9557,6 +9888,43 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /leads/{id}/qualify:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Leads]
+      operationId: qualifyLead
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Fill a lead's empty qualification fields that its own data settles, and name the rest.
+      description: |
+        The answer the `qualify_lead` agent tool gives, run by the same tool on both doors. A
+        field is filled only when it is empty and the lead's own data settles it, such as a
+        company name from a corporate email domain; each fill names its evidence. A value is
+        never overwritten. `gaps` lists the fields still empty, for a human to fill.
+
+        A retry with the same `idempotency_key` answers the first call's result. An
+        `Idempotency-Key` header is taken as that key.
+      x-mcp-tool: { verb: qualify_lead, record_type: lead, tier: auto_execute, scope: write, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QualifyLeadRequest' }
+      responses:
+        '200':
+          description: What was filled and what is still empty.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeadQualification' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}/promote-preview:
     parameters:
@@ -10260,6 +10628,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LeadDisqualifyReason' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Another reason already holds this label, compared trimmed and ignoring case.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /lead-disqualify-reasons/{id}:
@@ -10286,6 +10659,11 @@ paths:
               schema: { $ref: '#/components/schemas/LeadDisqualifyReason' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Another reason already holds this label, compared trimmed and ignoring case.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Leads]
@@ -12444,6 +12822,81 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ------------------------------ /tags -------------------------------------
+  /tag-suggestions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Tags]
+      operationId: getTagSuggestion
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: One open tag suggestion the caller may see, with the mail and notes it cites.
+      description: |
+        A suggestion proposes a suggestible tag on a contact or company because captured
+        mail or a meeting note filed under that record matched the tag's description. It
+        is shown only to a reader who may read the record and EVERY activity it cites, so
+        a suggestion built from mail only its owner can read is shown to that owner alone.
+        Nothing is applied until somebody accepts it. `404` for a suggestion the caller
+        may not see, that was decided, or that no longer stands.
+      responses:
+        '200':
+          description: The suggestion.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tag-suggestions/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Tags]
+      operationId: acceptTagSuggestion
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Apply the suggested tag, as the caller.
+      description: |
+        Applies the tag exactly as `applyTag` would, with the caller as the one who
+        applied it, and records the decision. The tag's audit row names the suggestion.
+        Needs write authority over the record. `409 suggestion_decided` when the
+        suggestion was already decided.
+      responses:
+        '200':
+          description: The accepted suggestion.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /tag-suggestions/{id}/dismiss:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Tags]
+      operationId: dismissTagSuggestion
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Record that the evidence does not earn the tag, for the whole workspace.
+      description: |
+        Audited. The tag is suggested on this record again only on evidence newer than
+        the dismissal. Needs write authority over the record, like accepting does.
+        `409 suggestion_decided` when the suggestion was already decided.
+      responses:
+        '200':
+          description: The dismissed suggestion.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /tags:
     get:
       tags: [Tags]
@@ -12457,6 +12910,13 @@ paths:
       x-mcp-tool: { verb: list_tags, record_type: tag, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/IncludeArchived'
+        - name: with_carried_by
+          in: query
+          schema: { type: boolean, default: false }
+          description: >
+            Also count, per tag, the records this caller may see carrying it, as `carried_by`.
+            The count reads every tagging in the workspace, so a caller that only needs the words
+            leaves it off.
       responses:
         '200':
           description: Tags.
@@ -12907,6 +13367,226 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /query-vocabulary:
+    get:
+      tags: [Search]
+      operationId: describeQueryVocabulary
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Everything a workspace query plan may say, for this caller.
+      description: |
+        The answer the `describe_query_vocabulary` agent tool gives, run by the same tool on
+        both doors: the record types this caller can ask about, the fields each one names,
+        the operators each field admits, and the one relationship hop a plan may take. It
+        is the document `margince://schema/query` publishes, composed for the caller, so it
+        lists only what they can already read.
+      x-mcp-tool: { verb: describe_query_vocabulary, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The query vocabulary for this caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QueryVocabulary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /catch-up:
+    get:
+      tags: [Search]
+      operationId: catchUpOnRecord
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: What has been going on with one record, in one cited picture.
+      description: |
+        The answer the `catch_me_up_on` agent tool gives, run by the same tool on both doors:
+        the recent activity, open tasks and related records around one record, each with the
+        passages it rests on. Name the record by `record_id`, or by `record_name` as
+        `search_records` would find it; a name that matches more than one record is refused
+        with the candidates rather than guessed at.
+      x-mcp-tool: { verb: catch_me_up_on, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/AnchorRecordType'
+        - $ref: '#/components/parameters/AnchorRecordId'
+        - $ref: '#/components/parameters/AnchorRecordName'
+        - $ref: '#/components/parameters/AnchorMaxItems'
+        - $ref: '#/components/parameters/AnchorProjectId'
+      responses:
+        '200':
+          description: The assembled picture.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentAssembledContext' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /meeting-prep:
+    get:
+      tags: [Search]
+      operationId: prepForMeeting
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Get ready for a meeting about one record.
+      description: |
+        The answer the `prep_for_meeting` agent tool gives, run by the same tool on both
+        doors. Given a meeting, the written brief a rep reads before it; given any other
+        record, the picture `GET /catch-up` assembles, plus the open items pulled out as the
+        things to raise. The record is named as `GET /catch-up` names it.
+      x-mcp-tool: { verb: prep_for_meeting, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/AnchorRecordType'
+        - $ref: '#/components/parameters/AnchorRecordId'
+        - $ref: '#/components/parameters/AnchorRecordName'
+        - $ref: '#/components/parameters/AnchorMaxItems'
+        - $ref: '#/components/parameters/AnchorProjectId'
+      responses:
+        '200':
+          description: The meeting preparation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingPrep' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /commitments:
+    get:
+      tags: [Activities]
+      operationId: listOpenCommitments
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The promises still open, overdue first.
+      description: |
+        The answer the `review_commitments` agent tool gives, run by the same tool on both
+        doors: open tasks and the promises read from conversations, each with when it is
+        due and how far past it. Only what the caller may see is read.
+      x-mcp-tool: { verb: review_commitments, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - name: assignee_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Narrow to one owner's promises. Omit it for everyone's.
+        - name: project_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Keep only promises filed under this project or under none.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 50 }
+          description: Cap the set. 50 is also the ceiling.
+      responses:
+        '200':
+          description: The open commitments.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OpenCommitments' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /context-search:
+    get:
+      tags: [Search]
+      operationId: searchContext
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The records most relevant to a description, ranked by meaning as well as words.
+      description: |
+        The answer the `search_context` agent tool gives, run by the same tool on both doors.
+        The ranking is the top of an ordering, never every match, so `coverage` is never
+        `complete_exact`. A question with conditions on fields belongs to
+        `POST /workspace-queries`.
+      x-mcp-tool: { verb: search_context, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema: { type: string, maxLength: 1000 }
+          description: What to look for, in your own words.
+        - name: record_types
+          in: query
+          schema:
+            type: array
+            items: { type: string, enum: [contact, company, deal, lead, project] }
+          description: Restrict the sweep to these types. Omit it to sweep all of them.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 25 }
+      responses:
+        '200':
+          description: The ranked records.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContextSearchResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /workspace-queries:
+    post:
+      tags: [Search]
+      operationId: queryWorkspace
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Answer a query plan over the workspace's records.
+      description: |
+        The answer the `query_workspace` agent tool gives, run by the same tool on both
+        doors. The plan is written in the grammar `GET /query-vocabulary` publishes for this
+        caller; a name outside it is refused by name. A POST because a plan does not fit a
+        query string. It reads and stores nothing.
+      x-mcp-tool: { verb: query_workspace, tier: auto_execute, scope: read, served_by: registry }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkspaceQueryRequest' }
+      responses:
+        '200':
+          description: The rows the plan matched.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceQueryResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /entity-resolutions:
+    post:
+      tags: [Search]
+      operationId: resolveEntities
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Whether the contacts and companies in a payload are already records here.
+      description: |
+        The answer the `resolve_entities` agent tool gives, run by the same tool on both
+        doors. Each candidate is matched by its keys (email, phone, domain) and its name;
+        only a match on a unique key can be acted on alone. A POST because a batch of
+        candidates does not fit a query string. It reads and stores nothing.
+      x-mcp-tool: { verb: resolve_entities, tier: auto_execute, scope: read, served_by: registry }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EntityResolutionRequest' }
+      responses:
+        '200':
+          description: The matches for each candidate, in the order sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntityResolutionResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /record-fields:
+    get:
+      tags: [Search]
+      operationId: describeRecordFields
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The fields a record create or update may write, for each record type.
+      description: |
+        The answer the `describe_record_fields` agent tool gives, run by the same tool on
+        both doors: for each record type, the fields a `create_record` or `update_record`
+        body may name, their types and their closed vocabularies.
+      x-mcp-tool: { verb: describe_record_fields, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The record write vocabulary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordFieldsVocabulary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ----------------------------- /search ------------------------------------
   /search:
@@ -15447,8 +16127,10 @@ paths:
         Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
         review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
         the connector health strip. `404 no_digest_yet` before the first nightly run — the
-        client renders the honest empty state. v1 delivery is in-app; email is delivery-only
-        later, same object.
+        client renders the honest empty state. A `date` the nightly run has not reached
+        answers `404 no_digest_for_date`, which is a different state: digests exist, that day
+        has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
+        year one. v1 delivery is in-app; email is delivery-only later, same object.
       parameters:
         - { name: date, in: query, schema: { type: string, format: date }, description: 'A specific digest day; default: the latest generated.' }
       responses:
@@ -15748,6 +16430,44 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /installation/jurisdiction:
+    get:
+      tags: [Identity]
+      operationId: getInstallationJurisdiction
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: The installation's jurisdiction and what it puts in force.
+      description: |
+        Which jurisdiction pack applies, what it changes (retention floor, messaging rules,
+        request deadlines) and the documents it ships. Changed through
+        `PATCH /installation/settings` with `country`. Gated on `installation_settings` read.
+      responses:
+        '200':
+          description: The jurisdiction and its effects.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstallationJurisdiction' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /installation/jurisdiction/documents/{documentId}:
+    parameters:
+      - { name: documentId, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Identity]
+      operationId: downloadJurisdictionDocument
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Download one of the selected jurisdiction's documents.
+      description: 'The document''s bytes. Only the selected jurisdiction''s documents are served; any other id is 404.'
+      responses:
+        '200':
+          description: The file bytes; Content-Disposition names the file.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /installation/license:
     get:
       tags: [Identity]
@@ -17646,7 +18366,13 @@ paths:
       operationId: createDataSubjectRequest
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention/erasure (B-EP07.13/.16).
+      summary: Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+      description: |
+        The server computes the deadline from `received_at` under the installation's
+        jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
+
+        BEHAVIOUR CHANGE: a `due_at` later than the computed deadline is refused with 422. It
+        used to be stored as sent. An earlier `due_at` is stored and marked `due_overridden`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -17660,6 +18386,28 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /data-subject-requests/deadline:
+    get:
+      tags: [Compliance]
+      operationId: getDataSubjectRequestDeadline
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: The deadline a request would get, and the rule that sets it.
+      description: |
+        What the request form shows before filing: the same resolver `POST /data-subject-requests`
+        applies. Gated like the queue, on `privacy_request` read.
+      parameters:
+        - { name: kind, in: query, required: true, schema: { type: string, enum: [access, rectify, erasure] } }
+        - { name: received_at, in: query, required: false, schema: { type: string, format: date-time }, description: 'When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.' }
+      responses:
+        '200':
+          description: The computed deadline.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequestDeadline' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /privacy/controller-particulars:
     get:
       tags: [Compliance]
@@ -18104,6 +18852,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /confirm-submissions:
     get:
       tags: [Compliance]
@@ -20015,6 +20764,8 @@ paths:
       description: |
         Deletes the grant; the subject loses the widened access immediately (the next query no longer
         matches the `OR EXISTS (record_grant …)` clause). Audited (`action: record_unshare`).
+        An `If-Match` naming a version the grant no longer holds answers `409 version_skew` and
+        deletes nothing: a re-assert since the caller read it changed what is being revoked.
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       x-agent-access: human-only   # the grant verbs reject any non-human principal
@@ -20034,6 +20785,7 @@ paths:
                     code: approval_required
                     detail: Revoking a share is confirm-first for an agent; supply an approval token.
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
 
   /users:
     get:
@@ -22547,7 +23299,6 @@ paths:
       tags: [Activities]
       operationId: listActivityReviewTemplates
       summary: The question sets an outcome review can ask.
-      x-mcp-tool: { verb: describe_query_vocabulary, tier: auto_execute, scope: read }
       responses:
         '200':
           description: Every live template.
@@ -24232,6 +24983,43 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/runs/{run_id}/evidence-search:
+    post:
+      tags: [Reports]
+      operationId: searchReportEvidence
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Which records behind a saved run carry the words, and which do not.
+      description: |
+        The answer the `search_report_evidence` agent tool gives, run by the same tool on
+        both doors. The records a saved run measured, or one cell of them, are judged
+        against the words: the ones that carry them are cited, the ones that do not are
+        counterexamples, and the ones that cannot be judged are named as such. The share
+        is given only when every record the caller can read was judged.
+
+        A POST because a cell's group key values do not fit a query string. It reads and
+        stores nothing.
+      x-mcp-tool: { verb: search_report_evidence, tier: auto_execute, scope: read, served_by: registry }
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: A saved run, as `POST /analytics/query` with `save` answers one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportEvidenceSearchRequest' }
+      responses:
+        '200':
+          description: The evidence for and against.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportEvidenceResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/runs/{run_id}/cells/explain:
     post:
       tags: [Reports]
@@ -24342,6 +25130,62 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/vocabulary:
+    get:
+      tags: [Reports]
+      operationId: describeAnalyticsVocabulary
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: What an analytics query may name, for this caller.
+      description: |
+        The answer the `describe_analytics_vocabulary` agent tool gives, run by the same
+        tool on both doors: the populations, their group keys and measures, and the functions
+        and operators `POST /analytics/query` takes, for this caller.
+      x-mcp-tool: { verb: describe_analytics_vocabulary, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The analytics vocabulary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsVocabulary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /analytics/reports/blocks:
+    get:
+      tags: [Reports]
+      operationId: describeReportBlocks
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The block grammar a report document is written in.
+      description: |
+        The answer the `describe_report_blocks` agent tool gives, run by the same tool on
+        both doors: every block `POST /analytics/reports/render` accepts, and what each one
+        carries.
+      x-mcp-tool: { verb: describe_report_blocks, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The report block grammar.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportBlockGrammar' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /analytics/reports/vocabulary:
+    get:
+      tags: [Reports]
+      operationId: describeReportVocabulary
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The prebuilt reports, and the names each one's plan may use.
+      description: |
+        The answer the `describe_report_vocabulary` agent tool gives, run by the same tool
+        on both doors: the document `margince://schema/reports` publishes.
+      x-mcp-tool: { verb: describe_report_vocabulary, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The report vocabulary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportVocabulary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /analytics/explain:
     post:
       tags: [Reports]
@@ -24959,8 +25803,8 @@ paths:
     get:
       tags: [Attachments]
       operationId: listAttachments
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: list_documents, tier: auto_execute, scope: read }
       summary: List the attachments hung off one entity (cursor-paginated metadata).
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -24985,8 +25829,8 @@ paths:
     post:
       tags: [Attachments]
       operationId: uploadAttachment
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: attach_document, tier: auto_execute, scope: write }
       summary: Upload a file and attach it to an entity.
       description: |
         Multipart upload. The bytes are written to object storage; the row records the
@@ -24996,6 +25840,10 @@ paths:
         The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
         Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
         answers 422 `unsupported_file_type`.
+
+        An agent may file one no larger than the `attach_document` tool takes: what one MCP
+        request carries inline, or the operator's attachment limit when that is smaller. A
+        larger file answers 422 on `file`, as the tool refuses it.
       requestBody:
         required: true
         content:
@@ -25029,6 +25877,7 @@ paths:
       tags: [Contacts]
       operationId: getContactNetwork
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: who_knows, record_type: contact, tier: auto_execute, scope: read }
       summary: Who on our team knows this contact, and how well.
       description: |
         The contact-anchored answer to the question the company connections card answers
@@ -25066,8 +25915,8 @@ paths:
     get:
       tags: [Attachments]
       operationId: listDealDocuments
-      security: [ { cookieAuth: [] } ]
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: list_documents, record_type: deal, tier: auto_execute, scope: read }
       summary: The deal's Files area — its own uploads and the files of every message linked to it.
       description: |
         Every attachment whose parent is the deal, plus every attachment of an activity
@@ -25201,6 +26050,7 @@ paths:
       tags: [Deals]
       operationId: getDealCoverage
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: company_coverage, record_type: deal, tier: auto_execute, scope: read }
       summary: Who covers this deal, and what is wrong with how it is covered.
       description: |
         Every seat on the deal, which of them are actually engaged, which colleagues
@@ -26260,8 +27110,8 @@ paths:
     get:
       tags: [Attachments]
       operationId: listCompanyDocuments
-      security: [ { cookieAuth: [] } ]
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: list_documents, record_type: company, tier: auto_execute, scope: read }
       summary: Every document that rolls up to this account, pinned first (DOC-WIRE-1).
       description: |
         The account's library. A document reachable from a company may hang off a deal, a
@@ -27529,6 +28379,34 @@ components:
 
   # --------------------------- shared parameters ----------------------------
   parameters:
+    AnchorRecordType:
+      name: record_type
+      in: query
+      required: true
+      schema: { type: string, enum: [contact, company, deal, lead, project, activity] }
+      description: The type of the record to build around.
+    AnchorRecordId:
+      name: record_id
+      in: query
+      schema: { type: string, format: uuid }
+      description: The record to build around. Give this or `record_name`, not both.
+    AnchorRecordName:
+      name: record_name
+      in: query
+      schema: { type: string }
+      description: >-
+        The record named in words, found as `search_records` finds it. A name matching more
+        than one record is refused with the candidate ids rather than guessed at.
+    AnchorMaxItems:
+      name: max_items
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 20 }
+      description: Cap the items in each section.
+    AnchorProjectId:
+      name: project_id
+      in: query
+      schema: { type: string, format: uuid }
+      description: Keep only what is filed under this project or under none.
     BriefProjectId:
       name: project_id
       in: query
@@ -27731,6 +28609,14 @@ components:
         what makes an operation replay-safe** — an operation that omits it ignores the header rather
         than half-honouring it, so read this contract, not the client, to know which calls are safe
         to retry blind.
+    ToolIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      schema: { type: string, maxLength: 255 }
+      description: |
+        The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+        It is held for 24h per caller and tool, not per path: the same key on two records of one
+        tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
     ApprovalToken:
       name: X-Approval-Token
       in: header
@@ -28327,6 +29213,14 @@ components:
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
         name: { type: string, maxLength: 200, description: Rename the company. }
+        country:
+          type: string
+          description: |
+            The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
+            compiled into this build, or the empty string for no pack. A code with no
+            compiled-in pack is refused with 422. When the change weakens the correspondence
+            retention floor, the old floor keeps binding mail that occurred before the change
+            (`GET /installation/jurisdiction` reports it as `floor.carried`).
         timezone: { type: string, description: The IANA reporting zone. }
         base_currency:
           type: string
@@ -31424,7 +32318,7 @@ components:
             rebound to another model drops the attempts of the one before it.
         failures:
           type: integer
-          description: How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached.
+          description: How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`), the provider's refusal of a malformed request (`request_rejected`), and the model outcomes `output_withheld` and `output_rejected` are not failures.
         last_sentinel:
           type: string
           description: |
@@ -31555,7 +32449,7 @@ components:
         task: { type: string }
         window: { type: string }
         total: { type: integer, format: int64, description: 'Logical calls in the window, cache hits excluded.' }
-        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt failed.' }
+        unanswered: { type: integer, format: int64, description: 'Logical calls whose last attempt served the caller nothing: it failed, or its answer was withheld or refused.' }
         steps: { type: array, items: { $ref: '#/components/schemas/AiFlowStep' }, description: 'The decision model first, then each tier in ladder order.' }
     AiFlowStep:
       type: object
@@ -31566,7 +32460,7 @@ components:
         provider: { type: string }
         model: { type: string }
         attempts: { type: integer, format: int64 }
-        answered: { type: integer, format: int64, description: 'Logical calls this step answered.' }
+        answered: { type: integer, format: int64, description: 'Logical calls this step answered and served to the caller.' }
         p50_ms: { type: integer, format: int64 }
         gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
     AiDeferredWork:
@@ -31712,6 +32606,7 @@ components:
         occurred_at: { type: string, format: date-time }
         kind: { type: string, enum: [completion, embedding, decision], x-go-type: string, description: 'What the call asked: a chat completion, an embedding, or a decision model.' }
         task: { type: string }
+        task_display_name: { type: [string, 'null'], description: 'What a screen calls the task, the same name the usage lines carry. Absent for a task with no name, which a screen shows by its key.' }
         tier: { type: string, description: 'Empty when the call failed before routing.' }
         provider: { type: string }
         model_id: { type: string, description: 'The configured binding.' }
@@ -31737,10 +32632,12 @@ components:
             turned the call away and said nothing about why, so the model was never reached and
             no claim is made about the cause.
 
-            Two codes are outcomes rather than failures: a model was reached and decided.
+            Three codes are not failures. Two are outcomes, where a model was reached and decided.
             `output_withheld` — the provider declined to deliver the answer: a refusal, a
-            safety or recitation stop, a content filter, a blocked prompt. `request_rejected` — the provider's own error code named the request
-            malformed, which is a defect on the calling side.
+            safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the
+            task's own check refused the answer on every attempt, so the caller was served nothing.
+            The third, `request_rejected`, is the provider's refusal rather than a model outcome:
+            its own error code named the request malformed, which is a defect on the calling side.
 
             `timeout` — the attempt's deadline stopped it: the task's model call timeout on a
             ladder attempt, its decision model timeout on a decision attempt. A failure like
@@ -31827,12 +32724,20 @@ components:
                 response: { description: 'The captured response text (JSON string).' }
     AiCallListResponse:
       type: object
-      required: [data, page, payload_capture_enabled, tasks]
+      required: [data, page, payload_capture_enabled, tasks, task_options]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/AiCallSummary' } }
         page: { $ref: '#/components/schemas/PageInfo' }
         payload_capture_enabled: { type: boolean, description: 'The deployment''s ai.capture_payloads posture.' }
         tasks: { type: array, items: { type: string }, description: 'Every task with at least one terminal call, sorted — the complete filter option set (matches the terminal-only list), independent of the current page.' }
+        task_options: { type: array, items: { $ref: '#/components/schemas/AiCallTaskOption' }, description: 'The same tasks in the same order, each with the name a screen shows for it.' }
+    AiCallTaskOption:
+      type: object
+      description: One task the call log can be filtered to.
+      required: [task]
+      properties:
+        task: { type: string, description: 'The key the task filter takes.' }
+        display_name: { type: [string, 'null'], description: 'What a screen calls the task, as task_display_name on a call. Absent for a task with no name, which a screen shows by its key.' }
     # ---- channel connections (telegram-oa design §4.1, §5) ----
     ChannelConnection:
       type: object
@@ -32192,11 +33097,26 @@ components:
         list S-E15.4c requires, not a diff of what changed), or errored
         because it could not be reversed — a single irreversible row never
         aborts the rest of the run.
+
+        A row the run CORRECTED rather than created is in none of them: undo
+        archives what a run landed, and a correction to a record another run
+        landed has nothing to archive and no previous value to restore.
+        `updates_not_reversed` counts those rows, so a reader is not told a
+        correction was taken back while it stands.
       required: [run_id, status, reversed_count, kept, errored]
       properties:
         run_id: { type: string, format: uuid }
         status: { $ref: '#/components/schemas/ImportRunStatus' }
         reversed_count: { type: integer, minimum: 0, description: 'Import-created rows that were untouched since and have been reversed (archived).' }
+        updates_not_reversed:
+          type: integer
+          minimum: 0
+          description: >-
+            Rows this run corrected rather than created, which undo leaves
+            corrected. A row count, from the run's own report: two rows naming
+            one record count twice. Absent or zero means the run corrected
+            nothing, and what it did reverse is `reversed_count`, `kept` and
+            `errored`.
         kept:
           type: array
           description: 'Import-created rows a human edited since import, therefore left in place (A93).'
@@ -32962,7 +33882,7 @@ components:
         state: { type: string, enum: [queued, submitting, in_progress, completed, no_match, skipped, submission_unknown, failed, cancelled] }
         skip_reason:
           type: [string, 'null']
-          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, no_identifiers, null]
+          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, no_identifiers, category_in_flight, null]
           description: |
             Why a `skipped` run sent nothing. Null for every other state.
             `duplicate_subject_candidate` means the subject looked like a duplicate of an
@@ -32975,6 +33895,10 @@ components:
             a company, so the provider has nothing to match on; an automatic trigger declines
             rather than spending a call that can only answer "no match". A human pressing the
             button on the contact is still allowed to try.
+            `category_in_flight` means a live run for this contact and provider was already
+            buying at least one of the categories asked for. The request is refused whole
+            rather than narrowed, nothing was reserved, and asking again once that run has
+            finished is admitted.
         connection_version: { type: integer, format: int64, minimum: 1 }
         configuration_snapshot: { $ref: '#/components/schemas/ProviderConfiguration' }
         requested_categories: { type: array, uniqueItems: true, items: { type: string } }
@@ -35548,10 +36472,10 @@ components:
             `company`, `contact` and `deal` are the account's own records.
             `user` is a member of THIS workspace — someone on our side who is connected to the
             account. A user node carries its display name as the `label` and nothing else:
-            `detail`, `strength` and `strength_bucket` are null and `intro_path` is ABSENT,
+            `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
             because §4 measures our relationship with the account's contacts, not with each
-            other. `intro_path` is a plain boolean and is never sent as null on any node —
-            a client reads its absence as "not on the warm-intro path".
+            other. `on_signal_route` is a plain boolean and is never sent as null on any node —
+            a client reads its absence as "not on the signal's route".
         label:
           type: string
           description: The record's display name — the company's, the contact's full name, the deal's name, the workspace member's display name.
@@ -35581,12 +36505,14 @@ components:
           type: [string, 'null']
           enum: [null, none, weak, moderate, strong]
           description: The server's band for `strength` — the same vocabulary `RelationshipStrength.bucket` uses. Never re-derived from the score by a client.
-        intro_path:
+        on_signal_route:
           type: boolean
           description: |
-            This contact is the route in the active signal's warm-intro path proposes.
-            At most one node carries it, and only when `intro_path` at the top level is
+            This contact is the route the account's most recent open signal proposes.
+            At most one node carries it, and only when `signal_route` at the top level is
             present. Absent on every other node — there is nothing to say about them.
+            It is not an introduction path: `GET /companies/{id}/intro-paths` answers who
+            should introduce us, by ranking the colleagues who know someone there.
         logo_url:
           type: [string, 'null']
           description: |
@@ -37673,6 +38599,673 @@ components:
         source_kind: { type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.' }
         due_at: { type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.' }
         occurred_at: { type: string, format: date-time, description: 'When it was said.' }
+    ReportEvidenceSearchRequest:
+      type: object
+      description: What `search_report_evidence` takes beside the run the path names.
+      required: [query]
+      properties:
+        query: { type: string, maxLength: 1000, description: The words the evidence would carry. }
+        cell:
+          type: array
+          items: {}
+          description: >-
+            One cell's group key values, in the run's `group_by` order. Omit it to search every
+            record the run measured.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 25
+          description: How many citations, counterexamples and abstentions to return, each.
+    WorkspaceQueryRequest:
+      type: object
+      description: What `query_workspace` takes.
+      required: [plan]
+      properties:
+        plan:
+          type: object
+          additionalProperties: true
+          description: A query plan, in the grammar `GET /query-vocabulary` publishes for this caller.
+    EntityResolutionRequest:
+      type: object
+      description: What `resolve_entities` takes.
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { $ref: '#/components/schemas/EntityResolutionCandidate' }
+    EntityResolutionCandidate:
+      type: object
+      description: One contact or company named in a payload, by every key it carries.
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [contact, company], description: Which record type this candidate is. Leads are not resolved. }
+        ref: { type: string, description: 'Your own label, echoed back on its answer so a batch lines up. Never stored.' }
+        name: { type: string, description: 'Full name for a contact, trading name for a company.' }
+        legal_name: { type: string, description: 'The registered company name, when it differs from the trading name. Read for a company only.' }
+        emails:
+          type: array
+          maxItems: 10
+          items: { type: string }
+          description: Every address on the payload. For a company each address also gives its domain, unless it is a consumer mail domain.
+        phones:
+          type: array
+          maxItems: 10
+          items: { type: string }
+          description: Phone numbers in E.164 form. One that does not normalize is ignored.
+        domains:
+          type: array
+          maxItems: 10
+          items: { type: string }
+          description: Company domains the payload claims. Read for a company only.
+    AgentRecordRef:
+      description: 'One record an agent answer rests on.'
+      type: object
+      required: [record_id, record_type]
+      properties:
+        record_id: { type: string, format: uuid }
+        record_type: { type: string }
+    AgentExcerpt:
+      description: 'A quoted passage and the field or record it was read from.'
+      type: object
+      required: [snippet, source]
+      properties:
+        snippet: { type: string }
+        source: { type: string }
+    AgentContextItem:
+      description: 'One record in an assembled picture, summarised, with the passages that put it there.'
+      type: object
+      required: [evidence, record_id, record_type, summary]
+      properties:
+        evidence: { type: array, items: { $ref: '#/components/schemas/AgentExcerpt' } }
+        occurred_at: { type: string }
+        record_id: { type: string, format: uuid }
+        record_type: { type: string }
+        summary: { type: string }
+    AgentContextSection:
+      description: 'One heading of an assembled picture: recent activity, open tasks, related records.'
+      type: object
+      required: [items, name]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/AgentContextItem' } }
+        name: { type: string }
+    AgentAssembledContext:
+      description: 'What `catch_me_up_on` answers: the record asked about and the sections assembled around it.'
+      type: object
+      required: [anchor, sections]
+      properties:
+        anchor: { $ref: '#/components/schemas/AgentRecordRef' }
+        sections: { type: array, items: { $ref: '#/components/schemas/AgentContextSection' } }
+    AgentGroundedLine:
+      description: 'One sentence and the records it rests on. `nature` is `assessment` or `recommendation` for a judgment or an ask; absent means a plain fact.'
+      type: object
+      required: [evidence, text]
+      properties:
+        evidence: { type: array, items: { $ref: '#/components/schemas/AgentRecordRef' } }
+        nature: { type: string }
+        text: { type: string }
+    AgentPlay:
+      description: 'A named way the conversation can go and what to do then.'
+      type: object
+      required: [evidence, label, play]
+      properties:
+        evidence: { type: array, items: { $ref: '#/components/schemas/AgentRecordRef' } }
+        label: { type: string }
+        play: { type: string }
+    AgentCommitmentSubject:
+      description: 'A record a commitment is about.'
+      type: object
+      required: [entity_id, entity_type]
+      properties:
+        entity_id: { type: string, format: uuid }
+        entity_type: { type: string }
+        name: { type: string }
+    AgentCommitment:
+      description: 'One open promise: a task, or a promise read from a conversation, with when it is due.'
+      type: object
+      required: [about, source, state, subject]
+      properties:
+        about: { type: array, items: { $ref: '#/components/schemas/AgentCommitmentSubject' } }
+        assignee_id: { type: string, format: uuid }
+        assignee_name: { type: string }
+        claim_id: { type: string, format: uuid }
+        days_overdue: { type: integer }
+        due_at: { type: string }
+        quote: { type: string }
+        source: { type: string }
+        source_activity_id: { type: string, format: uuid }
+        state: { type: string }
+        subject: { type: string }
+        task_id: { type: string, format: uuid }
+    AgentRecord:
+      description: 'A record as the agent tool surface hands it over: its type, id, version and readable fields.'
+      type: object
+      required: [fields, id, record_type]
+      properties:
+        fields: { type: object, additionalProperties: true }
+        id: { type: string, format: uuid }
+        record_type: { type: string }
+        trust_tier: { type: string }
+        version: { type: integer }
+    AgentContextHit:
+      description: 'One ranked record and the passages that matched.'
+      type: object
+      required: [excerpts, record, score]
+      properties:
+        excerpts: { type: array, items: { $ref: '#/components/schemas/AgentExcerpt' } }
+        record: { $ref: '#/components/schemas/AgentRecord' }
+        score: { type: number }
+    AgentMeetingPlan:
+      description: 'What to do in the room, built over the same records as the brief.'
+      type: object
+      required: [advance, meeting_type, meeting_type_confidence, readiness]
+      properties:
+        advance:
+          type: object
+          required: [best, fallback, minimum]
+          properties:
+            best: { $ref: '#/components/schemas/AgentGroundedLine' }
+            fallback: { $ref: '#/components/schemas/AgentGroundedLine' }
+            minimum: { $ref: '#/components/schemas/AgentGroundedLine' }
+        company_arc:
+          type: array
+          items:
+            type: object
+            required: [from, summary, to]
+            properties:
+              from: { type: string }
+              summary: { $ref: '#/components/schemas/AgentGroundedLine' }
+              title: { type: string }
+              to: { type: string }
+        likely_asks:
+          type: array
+          items:
+            type: object
+            required: [basis, prepare, question, relevance]
+            properties:
+              basis: { $ref: '#/components/schemas/AgentGroundedLine' }
+              prepare: { type: string }
+              question: { type: string }
+              relevance: { type: string }
+        manager_coaching:
+          type: object
+          required: [failure_mode, focus, intervene_if, listen_for, watch_for]
+          properties:
+            failure_mode: { type: string }
+            focus: { type: string }
+            intervene_if: { type: string }
+            listen_for: { type: string }
+            paths: { type: array, items: { $ref: '#/components/schemas/AgentPlay' } }
+            watch_for: { type: string }
+        meeting_type: { type: string }
+        meeting_type_confidence: { type: string }
+        objective: { $ref: '#/components/schemas/AgentGroundedLine' }
+        objective_caveat: { type: string }
+        opening: { $ref: '#/components/schemas/AgentGroundedLine' }
+        questions:
+          type: array
+          items:
+            type: object
+            required: [ask, evidence, listen_for, why]
+            properties:
+              ask: { type: string }
+              evidence: { type: array, items: { $ref: '#/components/schemas/AgentRecordRef' } }
+              listen_for: { type: string }
+              why: { type: string }
+        readiness: { type: string }
+        scenarios: { type: array, items: { $ref: '#/components/schemas/AgentPlay' } }
+        top_risk:
+          type: object
+          required: [avoid, say, show, text]
+          properties:
+            avoid: { type: string }
+            say: { type: string }
+            show: { type: string }
+            text: { $ref: '#/components/schemas/AgentGroundedLine' }
+        unknowns:
+          type: array
+          items:
+            type: object
+            required: [kind, question]
+            properties:
+              kind: { type: string }
+              question: { type: string }
+    AgentMeetingBrief:
+      description: 'The written brief for the booked meeting the record leads to, when there is one.'
+      type: object
+      required: [activity_id, generated_at, generated_by, sections]
+      properties:
+        activity_id: { type: string, format: uuid }
+        generated_at: { type: string }
+        generated_by: { type: string }
+        plan: { $ref: '#/components/schemas/AgentMeetingPlan' }
+        project_id: { type: string, format: uuid }
+        sections:
+          type: array
+          items:
+            type: object
+            required: [kind, sentences]
+            properties:
+              kind: { type: string }
+              sentences: { type: array, items: { $ref: '#/components/schemas/AgentGroundedLine' } }
+    AgentQueryNote:
+      description: 'Why an answer is partial or shaped as it is. `code` is a machine key; `path` names the input it is about.'
+      type: object
+      required: [code, detail]
+      properties:
+        code: { type: string }
+        detail: { type: string }
+        path: { type: string }
+    AtRiskRelationships:
+      description: 'What `at_risk_relationships` answers: the deals whose relationships are going cold, and how much of the pipeline was read.'
+      type: object
+      required: [coverage_withheld, deals, deals_scanned, truncated]
+      properties:
+        coverage_withheld: { type: boolean }
+        deals:
+          type: array
+          items:
+            type: object
+            required: [deal_id, name, risks]
+            properties:
+              deal_id: { type: string, format: uuid }
+              name: { type: string }
+              risks:
+                type: array
+                items:
+                  type: object
+                  required: [kind, summary]
+                  properties:
+                    contact_ids: { type: array, items: { type: string, format: uuid } }
+                    contacts:
+                      type: array
+                      items:
+                        type: object
+                        required: [contact_id, name]
+                        properties:
+                          contact_id: { type: string, format: uuid }
+                          name: { type: string }
+                    days_since_touch: { type: integer }
+                    kind: { type: string }
+                    summary: { type: string }
+                    user_ids: { type: array, items: { type: string, format: uuid } }
+        deals_scanned: { type: integer }
+        truncated: { type: boolean }
+    MeetingPrep:
+      description: 'What `prep_for_meeting` answers: the assembled picture, the open items to act on, and the written brief when one exists.'
+      type: object
+      required: [briefing, meeting_focus]
+      properties:
+        brief: { $ref: '#/components/schemas/AgentMeetingBrief' }
+        briefing: { $ref: '#/components/schemas/AgentAssembledContext' }
+        meeting_focus:
+          type: array
+          items:
+            type: object
+            required: [record_id, summary]
+            properties:
+              record_id: { type: string, format: uuid }
+              summary: { type: string }
+    ProjectHandoff:
+      description: 'What `prepare_handoff` answers: the project, the deals it was sold through, the stakeholders, the open promises and the gaps.'
+      type: object
+      required: [as_of, deals, gaps, name, open_commitments, phase, project_id, sections_omitted, stakeholders]
+      properties:
+        as_of: { type: string }
+        company_id: { type: string, format: uuid }
+        deals:
+          type: array
+          items:
+            type: object
+            required: [deal_id, name, status]
+            properties:
+              amount_minor: { type: integer }
+              currency: { type: string }
+              deal_id: { type: string, format: uuid }
+              name: { type: string }
+              status: { type: string }
+        description: { type: string }
+        gaps:
+          type: array
+          items:
+            type: object
+            required: [code, message, source]
+            properties:
+              code: { type: string }
+              message: { type: string }
+              source: { type: string }
+        key: { type: string }
+        name: { type: string }
+        open_commitments: { type: array, items: { $ref: '#/components/schemas/AgentCommitment' } }
+        owner_id: { type: string, format: uuid }
+        owner_name: { type: string }
+        phase: { type: string }
+        project_id: { type: string, format: uuid }
+        sections_omitted:
+          type: array
+          description: The lists the caller may not read, named as `GET /projects/{id}/360` names them. A list left out for that reason is withheld, not empty.
+          items: { $ref: '#/components/schemas/Project360Section' }
+        stakeholders:
+          type: array
+          items:
+            type: object
+            required: [contact_id]
+            properties:
+              contact_id: { type: string, format: uuid }
+              name: { type: string }
+              role: { type: string }
+        started_at: { type: string }
+        target_end_date: { type: string }
+    OpenCommitments:
+      description: 'What `review_commitments` answers: the open promises, overdue first, as of one instant.'
+      type: object
+      required: [as_of, commitments]
+      properties:
+        as_of: { type: string }
+        commitments: { type: array, items: { $ref: '#/components/schemas/AgentCommitment' } }
+    IntroPaths:
+      description: 'What `intro_path_to` answers: the colleagues who know someone at the company, warmest first.'
+      type: object
+      required: [candidates_truncated, company_id, routes]
+      properties:
+        candidates_truncated: { type: boolean }
+        company_id: { type: string, format: uuid }
+        routes:
+          type: array
+          items:
+            type: object
+            required: [contact_id, contact_name, display_name, interactions_90d, strength_bucket, user_id]
+            properties:
+              contact_id: { type: string, format: uuid }
+              contact_name: { type: string }
+              display_name: { type: string }
+              interactions_90d: { type: integer }
+              strength: { type: integer }
+              strength_bucket: { type: string }
+              user_id: { type: string, format: uuid }
+    ContextSearchResult:
+      description: 'What `search_context` answers: ranked records and the passages that matched.'
+      type: object
+      required: [coverage, hits, notes]
+      properties:
+        coverage: { type: string }
+        hits: { type: array, items: { $ref: '#/components/schemas/AgentContextHit' } }
+        notes: { type: array, items: { $ref: '#/components/schemas/AgentQueryNote' } }
+    ReportEvidenceResult:
+      description: 'What `search_report_evidence` answers: the records of a saved run that carry the words, those that do not, and the share.'
+      type: object
+      required: [abstentions, citations, counterexamples, coverage, notes, tally]
+      properties:
+        abstentions:
+          type: array
+          items:
+            type: object
+            required: [id, record_type]
+            properties:
+              id: { type: string, format: uuid }
+              record_type: { type: string }
+        citations: { type: array, items: { $ref: '#/components/schemas/AgentContextHit' } }
+        counterexamples: { type: array, items: { $ref: '#/components/schemas/AgentRecord' } }
+        coverage: { type: string }
+        notes: { type: array, items: { $ref: '#/components/schemas/AgentQueryNote' } }
+        prevalence:
+          type: object
+          nullable: true
+          description: Absent from the count unless `coverage` is `complete_exact`; a note says why.
+          required: [matched, of, share]
+          properties:
+            matched: { type: integer }
+            of: { type: integer }
+            share: { type: number }
+        tally:
+          type: object
+          required: [matched, unjudged, unmatched]
+          properties:
+            matched: { type: integer }
+            unjudged: { type: integer }
+            unmatched: { type: integer }
+    WorkspaceQueryResult:
+      description: 'What `query_workspace` answers: the rows the plan matched, the plan as run, and how complete the answer is.'
+      type: object
+      required: [coverage, executed_plan, limit, notes, rows]
+      properties:
+        coverage: { type: string }
+        executed_plan: { type: string }
+        limit: { type: integer }
+        notes: { type: array, items: { $ref: '#/components/schemas/AgentQueryNote' } }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [evidence, record]
+            properties:
+              distance_km: { type: number }
+              evidence:
+                type: array
+                items:
+                  type: object
+                  required: [id, record_type, relation, title]
+                  properties:
+                    id: { type: string, format: uuid }
+                    record_type: { type: string }
+                    relation: { type: string }
+                    title: { type: string }
+                    trust_tier: { type: string }
+              owner:
+                type: object
+                required: [id, is_you]
+                properties:
+                  id: { type: string, format: uuid }
+                  is_you: { type: boolean }
+                  name: { type: string }
+              record: { $ref: '#/components/schemas/AgentRecord' }
+              score: { type: number }
+    EntityResolutionResult:
+      description: 'What `resolve_entities` answers: for each candidate, the records it matches and whether one match can be acted on.'
+      type: object
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            required: [decision, matches]
+            properties:
+              decision: { type: string }
+              matches:
+                type: array
+                items:
+                  type: object
+                  required: [confidence, matched_on, record]
+                  properties:
+                    confidence: { type: number }
+                    matched_on: { type: string }
+                    record: { $ref: '#/components/schemas/AgentRecord' }
+              ref: { type: string }
+    AnalyticsVocabulary:
+      description: 'What `describe_analytics_vocabulary` answers.'
+      type: object
+      required: [vocabulary]
+      properties:
+        vocabulary: { type: string }
+    RecordFieldsVocabulary:
+      description: 'What `describe_record_fields` answers.'
+      type: object
+      required: [fields]
+      properties:
+        fields: { type: object, additionalProperties: true }
+    ReportBlockGrammar:
+      description: 'What `describe_report_blocks` answers.'
+      type: object
+      required: [blocks]
+      properties:
+        blocks: { type: object, additionalProperties: true }
+    ReportVocabulary:
+      description: 'What `describe_report_vocabulary` answers.'
+      type: object
+      required: [vocabulary]
+      properties:
+        vocabulary: { type: object, additionalProperties: true }
+    ActingIdentity:
+      description: 'What `whoami` answers: the human this caller acts for.'
+      type: object
+      required: [acting_user_id, display_name, email, prose_language]
+      properties:
+        acting_user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        email: { type: string }
+        locale: { type: string }
+        prose_language: { type: string }
+        timezone: { type: string }
+    QueryVocabulary:
+      type: object
+      description: What `describe_query_vocabulary` answers.
+      required: [vocabulary]
+      properties:
+        vocabulary:
+          type: object
+          additionalProperties: true
+          description: The query vocabulary document, as `margince://schema/query` publishes it.
+    SlippingDealList:
+      type: object
+      description: What `whats_slipping_this_week` answers, worst first.
+      required: [deals]
+      properties:
+        deals:
+          type: array
+          items: { $ref: '#/components/schemas/SlippingDeal' }
+    SlippingDeal:
+      type: object
+      description: >-
+        One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id,
+        so the order is the same on every read of the same data.
+      required: [rank, deal_id, name, evidence]
+      properties:
+        rank: { type: integer, minimum: 1 }
+        deal_id: { type: string, format: uuid }
+        name: { type: string }
+        amount_minor:
+          type: integer
+          format: int64
+          description: Absent for a deal that carries no amount yet.
+        currency: { type: string, description: 'Present when amount_minor is, and only then.' }
+        evidence:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/SlippingEvidence' }
+    SlippingEvidence:
+      type: object
+      description: One reason the deal is on the list, and the field or read it comes from.
+      required: [source, snippet]
+      properties:
+        source:
+          type: string
+          description: 'The field or read the claim rests on: `deal.last_activity_at`, `deal.created_at`, `deal.expected_close_date` or `activity.task`.'
+        snippet: { type: string }
+    DealFollowUpDraftRequest:
+      type: object
+      description: What `draft_follow_ups_for` takes.
+      required: [segment]
+      additionalProperties: false
+      properties:
+        segment:
+          type: string
+          enum: [slipping]
+          description: The deal set to draft for. Drafts land on each deal's timeline and are never sent.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 25
+          description: How many of the worst deals to draft for. Omit it for 25, the most one call writes.
+        idempotency_key: { type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.' }
+    DealFollowUpDrafts:
+      type: object
+      description: What `draft_follow_ups_for` answers.
+      required: [drafts, segment]
+      properties:
+        segment: { type: string }
+        drafts:
+          type: array
+          items: { $ref: '#/components/schemas/DealFollowUpDraft' }
+    DealFollowUpDraft:
+      type: object
+      description: One drafted follow-up, the activity it was saved as, and why the deal is on the list.
+      required: [deal_id, draft_activity_id, evidence, summary]
+      properties:
+        deal_id: { type: string, format: uuid }
+        draft_activity_id: { type: string, format: uuid }
+        summary: { type: string }
+        evidence: { type: array, items: { $ref: '#/components/schemas/AgentExcerpt' } }
+    ProgressDealRequest:
+      type: object
+      description: What `progress_deal` takes besides the deal, which the path names.
+      required: [to_stage_id]
+      additionalProperties: false
+      properties:
+        to_stage_id:
+          type: string
+          format: uuid
+          description: The stage to move to. Its semantic decides whether the move is confirm-first.
+        lost_reason:
+          type: string
+          description: Required when the stage closes the deal as lost.
+        won_without_contract_reason:
+          type: string
+          enum: [imported, purchase_order, verbal, renewal_by_email, other]
+          description: Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
+        won_without_contract_detail:
+          type: string
+          maxLength: 500
+          description: What the reason was, required when it is `other`.
+        note:
+          type: string
+          description: Logged as a note on the deal's timeline after the move.
+        if_version:
+          type: integer
+          description: The deal's version the move was decided on. A deal that has changed since is refused.
+        approval_id:
+          type: string
+          format: uuid
+          description: The approval a human gave this exact call, on its retry.
+        idempotency_key: { type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.' }
+    ProgressDealResult:
+      type: object
+      description: What `progress_deal` answers.
+      required: [deal]
+      properties:
+        deal: { $ref: '#/components/schemas/AgentRecord' }
+        note_activity_id:
+          type: string
+          format: uuid
+          description: The note logged on the deal, absent when the call carried none.
+    QualifyLeadRequest:
+      type: object
+      description: What `qualify_lead` takes besides the lead, which the path names.
+      additionalProperties: false
+      properties:
+        idempotency_key: { type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.' }
+    LeadQualification:
+      type: object
+      description: What `qualify_lead` answers.
+      required: [filled, gaps, record_id]
+      properties:
+        record_id: { type: string, format: uuid, description: The lead. }
+        filled:
+          type: object
+          description: The fields this call filled, by name.
+          additionalProperties: { $ref: '#/components/schemas/LeadQualifiedField' }
+        gaps:
+          type: array
+          items: { type: string }
+          description: The qualification fields still empty, for a human to fill.
+    LeadQualifiedField:
+      type: object
+      description: The value a field was filled with and what it was read from.
+      required: [evidence, value]
+      properties:
+        value: { type: string }
+        evidence: { type: array, items: { $ref: '#/components/schemas/AgentExcerpt' } }
     DealCoverage:
       type: object
       required: [deal_id, stakeholders, our_side, risks, sections_omitted]
@@ -37704,7 +39297,7 @@ components:
 
     EmailSignature:
       type: object
-      required: [body]
+      required: [body, title, phone, template_active]
       properties:
         body:
           type: string
@@ -37712,7 +39305,32 @@ components:
             The sign-off appended below every message this member sends, plain text.
             Empty means none written; a send then closes with a plain greeting and
             the member's display name when one is on file.
+        title:
+          type: string
+          description: The member's title, filled into the workspace template's `{title}`.
+        phone:
+          type: string
+          description: The member's phone number, filled into the workspace template's `{phone}`.
+        template_active:
+          type: boolean
+          description: |
+            The workspace has a signature template. Every send this member makes then signs
+            with the template, filled in with their name, title and phone, instead of `body`.
+            An agent's send carries no sign-off.
         updated_at: { type: [string, 'null'], format: date-time }
+    EmailSignatureTemplate:
+      type: object
+      required: [template]
+      properties:
+        template:
+          type: string
+          maxLength: 4000
+          description: |
+            The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+            `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
+            mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+            and spans with a colour and a pixel size, and drops everything else. Empty means
+            none: each member signs with their own plain-text signature.
     EmailSignOffRequest:
       type: object
       required: [body]
@@ -37723,6 +39341,28 @@ components:
         subject:
           type: string
           description: The subject, read for its language when the body is too short to tell.
+        draft:
+          $ref: '#/components/schemas/EmailSignatureDraft'
+    EmailSignatureDraft:
+      type: object
+      additionalProperties: false
+      description: |
+        Values a settings form has typed and not saved. Each field present stands in for
+        the stored one, so the preview shows what saving would produce. Writes nothing,
+        and a send never reads it.
+      properties:
+        template:
+          type: string
+          maxLength: 4000
+          description: The workspace template as edited. Empty previews a workspace with none.
+        title:
+          type: string
+          maxLength: 120
+          description: The caller's title as edited.
+        phone:
+          type: string
+          maxLength: 120
+          description: The caller's phone as edited.
     EmailSignOff:
       type: object
       required: [text, kind]
@@ -37732,13 +39372,19 @@ components:
           description: |
             The block appended below the message, plain text, exactly as sent. Empty when
             `kind` is `none`.
+        html:
+          type: string
+          description: |
+            The same block as the sanitized markup the HTML part carries. Present only when
+            `kind` is `template`.
         kind:
           type: string
-          enum: [signature, closing, none]
+          enum: [signature, closing, template, none]
           description: |
             `signature`: the caller's own, from Settings. `closing`: the caller has written
-            none, so the send closes with a plain greeting and their name when available. `none`: this
-            send appends nothing.
+            none, so the send closes with a plain greeting and their name when available.
+            `template`: the workspace's template, filled in with the caller's values. `none`:
+            this send appends nothing.
     SaveEmailSignatureRequest:
       type: object
       required: [body]
@@ -37750,6 +39396,14 @@ components:
             Plain text. Empty clears the signature. The cap is what a signature is
             FOR — a name, a role, a way to reach the sender — and past it a block
             is a document riding on every message.
+        title:
+          type: string
+          maxLength: 120
+          description: The member's title, for the workspace template. Omitted leaves it as it is.
+        phone:
+          type: string
+          maxLength: 120
+          description: The member's phone number, for the workspace template. Omitted leaves it as it is.
 
     SaveMyDisplayNameRequest:
       type: object
@@ -38065,11 +39719,12 @@ components:
             never as a zero: "we have never spoken" and "we spoke and it went cold" are
             different facts about an account.
 
-    CompanyGraphIntroPath:
+    CompanyGraphSignalRoute:
       type: object
       description: |
-        The warm-intro route the account's most recent open signal proposes: which signal,
-        and which contact is the way in. The contact is ranked exactly as
+        The route the account's most recent open signal proposes: which signal, and
+        which contact is the way in. It is not an introduction path: `GET /companies/{id}/intro-paths`
+        answers who should introduce us. The contact is ranked exactly as
         `GET /signals/{id}/intro-path` ranks it — strongest live relationship first — so
         the card and the warm room can never name different contacts.
 
@@ -38086,7 +39741,7 @@ components:
         contact_id:
           type: string
           format: uuid
-          description: 'The route-in contact. Always present in `nodes`, carrying `intro_path: true`.'
+          description: 'The route-in contact. Always present in `nodes`, carrying `on_signal_route: true`.'
 
     CompanyCoverage:
       type: object
@@ -38358,7 +40013,7 @@ components:
           description: |
             The groups withheld for lack of a grant — so a client can say "you can't see
             this" instead of "there is none". `contacts` withheld also withholds
-            `deal_stakeholder` edges and the intro path, because both name a contact.
+            `deal_stakeholder` edges and the signal route, because both name a contact.
 
             `our_side` is the workspace members connected to the account — the owner and the
             teammates who have interacted with its contacts. It needs BOTH the contact and the
@@ -38370,8 +40025,8 @@ components:
             are row-scope pruned like every other node and can never be withheld wholesale.
           items:
             type: string
-            enum: [contacts, deals, intro_path, our_side]
-        intro_path: { $ref: '#/components/schemas/CompanyGraphIntroPath' }
+            enum: [contacts, deals, signal_route, our_side]
+        signal_route: { $ref: '#/components/schemas/CompanyGraphSignalRoute' }
 
     # ---- Relationship ----
     Relationship:
@@ -39882,8 +41537,8 @@ components:
         Mirrors `deal_stage_evidence`. Configuration says what a stage requires;
         this says what was seen, and where.
       required:
-        [id, deal_id, criterion_id, source_type, source_id, author_side,
-         commitment, met, observed_at, extracted_by]
+        [id, deal_id, criterion_id, source_type, source_id, source_missing,
+         author_side, commitment, met, observed_at, extracted_by]
       properties:
         id: { type: string, format: uuid }
         deal_id: { type: string, format: uuid }
@@ -39893,7 +41548,15 @@ components:
           type: string
           format: uuid
           description: |
-            The activity, contract or deal-room decision this was read from.
+            The activity or contract this was read from.
+        source_missing:
+          type: boolean
+          description: |
+            True when the caller cannot open the activity or contract
+            `source_id` names: it was deleted, or it is not visible to them.
+            The two read the same, so this never tells a hidden record from a
+            missing one. The observation stays on the ledger either way,
+            because a stage decision may rest on it.
         source_lines:
           type: [array, 'null']
           items: { type: integer }
@@ -42516,6 +44179,7 @@ components:
         id: { type: string, format: uuid }
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email, description: Lowercased; lead-internal dedupe key. }
+        phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL; the exact-match dedupe key.' }
         title: { type: [string, 'null'] }
         company_name: { type: [string, 'null'], description: Free text; there is no foreign key to a company. }
@@ -42631,6 +44295,7 @@ components:
       properties:
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.' }
         title: { type: [string, 'null'] }
         company_name: { type: [string, 'null'] }
@@ -42668,6 +44333,7 @@ components:
       properties:
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         title: { type: [string, 'null'] }
         company_name: { type: [string, 'null'] }
         candidate_company_key: { type: [string, 'null'], description: 'Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.' }
@@ -42919,6 +44585,14 @@ components:
           type: boolean
           readOnly: true
           description: Seeded with the installation. Fully editable; it simply cannot be removed.
+        deal_count:
+          type: integer
+          readOnly: true
+          minimum: 0
+          description: >-
+            Live deals carrying this key that the caller may see. Absent when the caller may not
+            read deals, because a zero would claim no deal carries it. Set on the list read;
+            absent on the record a write answers.
         version: { type: integer, format: int64, readOnly: true }
         created_at: { type: string, format: date-time, readOnly: true }
         updated_at: { type: string, format: date-time, readOnly: true }
@@ -44174,6 +45848,12 @@ components:
         # size in both themes. Mirrors the tag_color_check constraint.
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
+        suggestible:
+          type: boolean
+          description: |
+            Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+            carries a description of what interest looks like, and that description is what
+            the suggestion is matched against. Only Admin and Ops set it.
         # The If-Match precondition a caller sends back when they rename this
         # tag. Without it on the read, a client has nothing to quote and every
         # rename is last-write-wins.
@@ -44181,6 +45861,15 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        carried_by:
+          type: integer
+          readOnly: true
+          minimum: 0
+          description: >
+            How many live contacts, companies, deals and leads carry this tag, as THIS caller may
+            see them: a type the caller may not read counts nothing, and within a readable type
+            only the rows the caller's scope admits are counted. The sum of the tag page's
+            `usage`. Set on the list read that asks `with_carried_by`; absent otherwise.
 
     CreateTagRequest:
       type: object
@@ -44252,11 +45941,45 @@ components:
         name: { type: string, maxLength: 64 }
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
+        suggestible:
+          type: boolean
+          description: |
+            Whether captured mail and meeting notes may suggest this tag. A suggestible tag
+            carries a description of what interest looks like, and that description is what
+            the suggestion is matched against. Only Admin and Ops set it.
         version: { type: integer, format: int64 }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
         usage: { $ref: '#/components/schemas/TagUsage' }
+
+    TagSuggestion:
+      type: object
+      description: |
+        A suggestible tag proposed on one contact or company from captured mail or meeting
+        notes, waiting for somebody to accept or dismiss it.
+      required: [id, state, tag, entity_type, entity_id, entity_name, created_at, evidence]
+      properties:
+        id: { type: string, format: uuid }
+        state: { type: string, enum: [open, accepted, dismissed, superseded] }
+        tag: { $ref: '#/components/schemas/RowTag' }
+        entity_type: { type: string, enum: [contact, company] }
+        entity_id: { type: string, format: uuid }
+        entity_name: { type: string }
+        created_at: { type: string, format: date-time }
+        evidence:
+          type: array
+          description: The activities the suggestion cites, newest first.
+          items: { $ref: '#/components/schemas/TagSuggestionEvidence' }
+
+    TagSuggestionEvidence:
+      type: object
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string, description: 'The activity kind: email, meeting, note or call.' }
+        subject: { type: [string, 'null'], description: Absent when the activity has none or it was redacted. }
+        occurred_at: { type: string, format: date-time }
 
     TagUsage:
       type: object
@@ -44286,6 +46009,9 @@ components:
         name: { type: string, maxLength: 64 }
         color: { type: string, enum: [teal, amber, rose, slate, sky, violet, lime, orange, none] }
         description: { type: string }
+        suggestible:
+          type: boolean
+          description: Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held.
 
     MergeTagsRequest:
       type: object
@@ -45357,6 +47083,22 @@ components:
             offers nothing then. It is an offer, not a promise: every write re-checks under its
             lock, and `change_role` says a role change is possible at all — which roles, is
             `listAssignableRoles`'s answer.
+        last_active_at:
+          type: [string, 'null']
+          format: date-time
+          description: >
+            When this member last used the product: the latest request any of their sign-in
+            sessions made, including a session since signed out, revoked or expired. Clearing dead
+            sessions records the latest of their requests on the member first, so the value
+            outlives the sessions. Signing in counts as activity. Work an agent or a connected app
+            did on their behalf does not.
+
+            Present only to a caller who administers members and could list this member's
+            sessions (`listUserSessions`): the `user_admin` grant, and the ceiling over the
+            target (a non-admin never sees an admin's). Carried by `listUsers`'s management
+            view for a human caller and by the member-administration writes; absent everywhere
+            else, including `MeResponse.user`. Absent or null also when the member never signed
+            in, so a client renders the column only on the management view.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -47623,6 +49365,59 @@ components:
           description: One row per composed unit with anything refused in the window.
           items: { $ref: '#/components/schemas/ExtensionUnitIngestHealth' }
 
+    RecoveryHealth:
+      type: object
+      additionalProperties: false
+      description: |
+        The installation's restore-drill evidence, read against the published recovery
+        targets. Margince does not observe backups; this report carries none.
+      required: [generated_at, recovery_target_seconds, data_loss_target_seconds, last_drill]
+      properties:
+        generated_at: { type: string, format: date-time }
+        recovery_target_seconds:
+          type: integer
+          description: The published recovery target, in seconds.
+        data_loss_target_seconds:
+          type: integer
+          description: The published data-loss target, in seconds.
+        last_drill:
+          allOf: [{ $ref: '#/components/schemas/RestoreDrill' }]
+          nullable: true
+          description: The most recent drill, or null when none was ever recorded.
+
+    RestoreDrill:
+      type: object
+      additionalProperties: false
+      description: One rehearsal of the restore procedure, as the drill ledger holds it.
+      required: [started_at, finished_at, restored_to, outcome, operator, notes, recovery_seconds, data_loss_seconds]
+      properties:
+        started_at: { type: string, format: date-time }
+        finished_at:
+          type: [string, 'null']
+          format: date-time
+          description: Null while the drill runs, and on a drill nobody closed.
+        restored_to:
+          type: string
+          format: date-time
+          description: The point in time the backup was restored to.
+        outcome:
+          type: string
+          enum: [running, passed, failed]
+        operator:
+          type: string
+          description: Who ran the drill, as the operator named themselves on the command line.
+        notes:
+          type: [string, 'null']
+          description: What the drill checked, or why it failed.
+        recovery_seconds:
+          type: [integer, 'null']
+          description: Finished minus started. Null until the drill finishes.
+        data_loss_seconds:
+          type: integer
+          description: >
+            Started minus the restore point. The restore point is what the operator gave to
+            drill-start, so this figure is only as true as that input.
+
     ExtensionUnitIngestHealth:
       type: object
       additionalProperties: false
@@ -47772,6 +49567,14 @@ components:
         actor_type: { type: string, enum: [human, agent, system, connector, buyer] }
         actor_id: { type: string, description: "User uuid, agent id, connector name (e.g. connector:gmail), 'system', or a Deal Room participant (buyer:<participant uuid>) — an external human with no seat, who appears in no member directory." }
         passport_id: { type: [string, 'null'], format: uuid, description: Agent Seat Passport that authorized an agent action. }
+        agent_client:
+          type: [string, 'null']
+          description: |
+            The tool a delegated change was typed through, as AuditHistoryEntry
+            carries it and with the same nulls. Read from the passport the row
+            itself recorded, so a token rotated or revoked since the change
+            still names its client; resolving through the passport list would
+            name only the newest token of each connection.
         on_behalf_of: { type: [string, 'null'], format: uuid, description: The human authority for an agent action. }
         actor_name:
           type: [string, 'null']
@@ -47808,6 +49611,16 @@ components:
           enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold]
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
+        entity_label:
+          type: [string, 'null']
+          description: |
+            The record's current display name, read on the read path from the
+            record's own live row under the reader's grants: a contact, lead or
+            user's name, a company, deal, project, team, role, tag, list,
+            pipeline, stage or product's name, an activity's subject. Null when
+            the reader may not see the record, when it is archived, erased or
+            gone, when it has no name, and for every other entity type. It is
+            never taken from the row's `before` or `after` image.
         before:
           type: [object, 'null']
           additionalProperties: true
@@ -47869,6 +49682,14 @@ components:
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for the human whose authority a machine acted under. }
         passport_id: { type: [string, 'null'], format: uuid, description: Agent Seat Passport that authorized the change; present for agent actors only. }
+        agent_client:
+          type: [string, 'null']
+          description: |
+            The tool a delegated change was typed through, as AuditHistoryEntry
+            carries it and with the same nulls. Read from the passport the row
+            itself recorded, so a token rotated or revoked since the change
+            still names its client; resolving through the passport list would
+            name only the newest token of each connection.
         evidence: { type: [object, 'null'], additionalProperties: true, description: Grounding evidence for an agent-authored change; present for agent actors only. }
         undid_audit_log_id:
           type: [string, 'null']
@@ -48346,6 +50167,7 @@ components:
         score: { type: [number, 'null'], description: Relevance score. }
         carried_by:
           type: [integer, 'null']
+          minimum: 0
           description: >
             For a `tag` hit only: how many contacts, companies, deals and leads carry this
             word, as THIS caller may see them — the same types the tag page counts and the
@@ -48819,6 +50641,16 @@ components:
             emitting a zero. It is what an operation with no registered MCP tool is
             admitted under, and for one that has a tool the generator holds the two
             equal — so a verb cannot mean `enrich` on MCP and `write` on REST.
+        served_by:
+          type: string
+          enum: [registry]
+          description: >-
+            registry — the operation's handler runs the tool through the tool registry, the
+            entry the MCP door uses, which admits the call itself: scope, seat, tier,
+            approval, retry key and volume budget. The REST admission gate passes such an
+            operation through untouched, because admitting it there as well would charge an
+            agent twice and stage a confirm-first call twice. Absent means the operation's
+            own handler runs and the gate admits it.
 
     # ---- AI: cold-start ----
     ColdStartRequest:
@@ -49084,7 +50916,7 @@ components:
           description: The human who confirmed the claim. Server-stamped, never accepted from a request body.
         field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number] }
         value: { type: string }
-        source: { type: string, enum: [human, site_read, connector, migration, technical_lookup] }
+        source: { type: string, enum: [human, agent, site_read, connector, migration, technical_lookup] }
         captured_by: { type: string, readOnly: true }
         evidence_snippet: { type: [string, 'null'] }
         source_url: { type: [string, 'null'], format: uri }
@@ -49156,7 +50988,7 @@ components:
         field: { type: string, enum: [founded_year, employee_range, phone, contact_email, location, service, product, capability, served_industry, company_size, geography, language, certification, partner, named_customer, technology, quantified_outcome, mail_provider, email_security, hosting_provider, operated_service] }
         value: { type: string }
         value_key: { type: string }
-        source: { type: string, enum: [human, site_read, connector, migration, technical_lookup] }
+        source: { type: string, enum: [human, agent, site_read, connector, migration, technical_lookup] }
         captured_by: { type: string, readOnly: true }
         evidence_snippet: { type: [string, 'null'] }
         source_url: { type: [string, 'null'], format: uri }
@@ -49208,7 +51040,7 @@ components:
       properties:
         key: { type: string }
         value: { type: string }
-        source: { type: string, enum: [human, site_read, connector, migration] }
+        source: { type: string, enum: [human, agent, site_read, connector, migration] }
         captured_by: { type: string, readOnly: true }
         source_url: { type: [string, 'null'], format: uri }
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
@@ -49278,7 +51110,7 @@ components:
         value_kind: { type: string, enum: [profile_field, fact] }
         classification: { type: string, enum: [new, machine_change, human_conflict, unchanged] }
         current_value: { type: [string, 'null'] }
-        current_source: { type: [string, 'null'], enum: [human, site_read, connector, migration, technical_lookup, null] }
+        current_source: { type: [string, 'null'], enum: [human, agent, site_read, connector, migration, technical_lookup, null] }
         proposed_value: { type: string }
 
     CompanySiteReadResolution:
@@ -50031,6 +51863,9 @@ components:
           type: object
           additionalProperties: true
           description: Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
+        reason:
+          type: string
+          description: Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
 
     ApprovalListResponse:
       type: object
@@ -50570,7 +52405,7 @@ components:
     RecordGrant:
       type: object
       description: A manual per-record share (ADR-0039) — widens own/team/all base scope for one record.
-      required: [id, record_type, record_id, subject_type, subject_id, access, granted_by, created_at]
+      required: [id, record_type, record_id, subject_type, subject_id, access, granted_by, created_at, version]
       properties:
         id: { type: string, format: uuid }
         record_type: { type: string, enum: [deal, contact, company, lead, project] }
@@ -50956,13 +52791,34 @@ components:
     DataSubjectRequest:
       type: object
       description: A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
-      required: [id, kind, subject_ref, status, due_at, created_at]
+      required: [id, kind, subject_ref, status, due_at, due_overridden, created_at]
       properties:
         id: { type: string, format: uuid }
         kind: { type: string, enum: [access, rectify, erasure] }
         subject_ref: { type: string, description: 'The data subject: a contact id or external identifier.' }
+        subject_label:
+          type: [string, 'null']
+          description: |
+            The display name of the contact or lead `subject_ref` names. Absent or null when the
+            reference names no record, or names one the caller may not read: a hidden subject and an
+            external identifier read the same, so the queue discloses no more than the record would.
+        subject_kind:
+          type: [string, 'null']
+          enum: [null, contact, lead]
+          description: |
+            Which kind of record `subject_label` was read from. Null when nothing resolved: an
+            external identifier, an erased subject, or one the caller may not read.
         status: { type: string, enum: [open, in_progress, fulfilled, rejected] }
         due_at: { type: string, format: date-time, description: 'Statutory deadline (e.g. 30 days).' }
+        due_rule:
+          type: [string, 'null']
+          description: |
+            The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or
+            `<jurisdiction> v<version>` for a pack's own deadline. Null on a request filed before
+            deadlines were computed, whose date was typed by hand.
+        due_overridden:
+          type: boolean
+          description: 'True when the officer chose an earlier deadline than `due_rule` gives.'
         assignee_id: { type: [string, 'null'], format: uuid }
         resolution: { type: [string, 'null'] }
         created_at: { type: string, format: date-time }
@@ -51034,6 +52890,13 @@ components:
       properties:
         id: { type: string, format: uuid }
         contact_id: { type: string, format: uuid }
+        contact_name:
+          type: [string, 'null']
+          description: |
+            The contact's display name. Absent or null when the caller may not read that contact, or
+            it no longer resolves: the privacy queue reaches duties outside the caller's CRM view, and
+            the name stays as visible as the record.
+        acquisition: { $ref: '#/components/schemas/NoticeAcquisition' }
         rule:
           type: string
           description: 'Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.'
@@ -51056,6 +52919,31 @@ components:
         blocked_reason: { type: [string, 'null'] }
         completed_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+
+    NoticeAcquisition:
+      type: [object, 'null']
+      description: |
+        The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
+        `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
+        happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+        such rather than presenting a bare deadline. On an attention or worklist item only the
+        `notice_case` source sends it.
+      required: [kind, captured_at, captured_by]
+      properties:
+        kind:
+          type: string
+          description: 'How the contact was obtained, in the closed vocabulary `contact_acquisition_evidence.kind` uses.'
+        occurred_at:
+          type: [string, 'null']
+          format: date-time
+          description: 'When the acquisition happened. Null when the door that recorded it did not know.'
+        captured_at: { type: string, format: date-time, description: 'When the evidence was recorded.' }
+        captured_by:
+          type: string
+          description: 'The principal that recorded it: `human:<uuid>`, `agent:<id>`, `connector:<name>` or `system`.'
+        captured_by_name:
+          type: [string, 'null']
+          description: 'The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves.'
 
     AssignNoticeCase:
       type: object
@@ -51108,19 +52996,160 @@ components:
 
     CreateDataSubjectRequest:
       type: object
-      required: [kind, subject_ref, due_at]
+      required: [kind, subject_ref]
       properties:
         kind: { type: string, enum: [access, rectify, erasure] }
         subject_ref: { type: string }
-        due_at: { type: string, format: date-time }
+        received_at:
+          type: string
+          format: date-time
+          description: 'When the request arrived. Absent means now. Up to five minutes ahead of the server clock reads as now; later is refused with 422 naming `received_at`.'
+        due_at:
+          type: string
+          format: date-time
+          description: |
+            An earlier deadline than the one the server computes from `received_at`. Absent takes
+            the computed deadline. A date LATER than the computed deadline is refused with 422
+            naming `due_at`; an earlier one is stored with `due_overridden: true`.
         assignee_id: { type: [string, 'null'], format: uuid }
+
+    RequestDeadline:
+      type: object
+      description: The deadline a request of one kind received at one instant gets, and the rule that set it.
+      required: [due_at, rule]
+      properties:
+        due_at: { type: string, format: date-time }
+        rule:
+          type: string
+          description: '`gdpr`, or `<jurisdiction> v<version>` for a pack''s own deadline.'
+
+    InstallationJurisdiction:
+      type: object
+      description: |
+        Which jurisdiction this installation runs under and what that selection puts in force.
+        Each section names its own source: the unit that ships the pack, the pack's retention
+        classes, the messaging rule set with its own version, and the request deadlines.
+      required: [selected, available, floor, deadlines, documents]
+      properties:
+        selected:
+          type: [string, 'null']
+          description: 'The selected pack code, or null when no jurisdiction is set.'
+        available:
+          type: array
+          description: 'Every jurisdiction pack compiled into this build.'
+          items: { $ref: '#/components/schemas/JurisdictionUnit' }
+        unit:
+          description: 'The extension unit that ships the selected pack. Absent when nothing is selected.'
+          $ref: '#/components/schemas/JurisdictionUnit'
+        retention_classes:
+          type: array
+          description: 'Every retention class the selected pack declares. Empty when nothing is selected or the pack declares none.'
+          items: { $ref: '#/components/schemas/JurisdictionRetentionClass' }
+        floor: { $ref: '#/components/schemas/RetentionFloorPolicy' }
+        messaging:
+          description: 'The selected pack''s messaging rule set. Absent when it declares none.'
+          $ref: '#/components/schemas/JurisdictionMessagingRules'
+        deadlines:
+          type: array
+          description: 'The request deadline per kind, each with the rule that sets it.'
+          items: { $ref: '#/components/schemas/JurisdictionDeadline' }
+        documents:
+          type: array
+          description: 'The documents the selected pack ships.'
+          items: { $ref: '#/components/schemas/JurisdictionDocument' }
+
+    JurisdictionUnit:
+      type: object
+      required: [code, unit_name, unit_version, description]
+      properties:
+        code: { type: string, description: 'The pack''s ISO 3166-1 alpha-2 code.' }
+        unit_name: { type: string, description: 'The extension unit that ships it.' }
+        unit_version: { type: string, description: 'The unit''s own version, not a rule set''s.' }
+        description: { type: string }
+        correspondence_floor:
+          description: 'The commercial-correspondence floor selecting this pack puts in force. Absent when it declares none.'
+          $ref: '#/components/schemas/JurisdictionRetentionClass'
+
+    JurisdictionRetentionClass:
+      type: object
+      required: [name, keep, from_year_end]
+      properties:
+        name: { type: string, description: 'The class, e.g. `commercial_correspondence`.' }
+        keep: { type: string, description: 'The ISO 8601 period the class keeps, e.g. `P6Y`.' }
+        from_year_end: { type: boolean, description: 'The period counts from the end of the calendar year.' }
+
+    RetentionFloorPolicy:
+      type: object
+      description: |
+        The correspondence floor in force. With no jurisdiction selected it is the strictest floor
+        of every compiled-in pack. `known` false means no floor binds new mail.
+      required: [known, from_year_end, packs]
+      properties:
+        known: { type: boolean }
+        class: { type: string }
+        keep: { type: string, description: 'ISO 8601 period. Absent when `known` is false.' }
+        from_year_end: { type: boolean }
+        packs: { type: array, items: { type: string }, description: 'Every compiled-in pack code.' }
+        carried:
+          description: 'A floor an earlier, stricter jurisdiction left on mail that occurred before the change.'
+          $ref: '#/components/schemas/CarriedRetentionFloor'
+
+    CarriedRetentionFloor:
+      type: object
+      required: [class, keep, from_year_end, before, binds_until]
+      properties:
+        class: { type: string }
+        keep: { type: string, description: 'ISO 8601 period.' }
+        from_year_end: { type: boolean }
+        before: { type: string, format: date-time, description: 'Mail that occurred before this instant stays bound.' }
+        binds_until: { type: string, format: date-time, description: 'When the youngest bound message leaves the window.' }
+
+    JurisdictionMessagingRules:
+      type: object
+      required: [version, instruments]
+      properties:
+        version: { type: integer, description: 'The rule set''s own version, which decisions record.' }
+        instruments:
+          type: array
+          items: { $ref: '#/components/schemas/JurisdictionInstrument' }
+
+    JurisdictionInstrument:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, description: 'The law or decree, as a regulator cites it.' }
+        effective_from: { type: string, format: date }
+
+    JurisdictionDeadline:
+      type: object
+      required: [kind, rule]
+      properties:
+        kind: { type: string, enum: [access, rectify, erasure] }
+        rule: { type: string, description: '`gdpr`, or `<jurisdiction> v<version>`.' }
+        period: { type: string, description: 'ISO 8601 calendar period, when the deadline counts in calendar units.' }
+        hours: { type: integer, description: 'Hours, when the deadline counts in hours.' }
+
+    JurisdictionDocument:
+      type: object
+      required: [id, title, language, audience, kind, media_type, size_bytes]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        language: { type: string }
+        audience: { type: string, enum: [employer, operator, employee] }
+        kind: { type: string, enum: [template, reading_copy, record] }
+        media_type: { type: string }
+        size_bytes: { type: integer }
 
     UpdateDataSubjectRequest:
       type: object
+      description: 'A sparse patch: an absent field is left as it is, and an explicit null clears a nullable one.'
       properties:
         status: { type: string, enum: [open, in_progress, fulfilled, rejected] }
-        assignee_id: { type: [string, 'null'], format: uuid }
-        resolution: { type: [string, 'null'] }
+        assignee_id: { type: [string, 'null'], format: uuid, description: 'null hands the request back to the unassigned pool.' }
+        resolution:
+          type: [string, 'null']
+          description: 'null clears the answer, which a fulfilled or rejected request refuses with 422: a closed request keeps its answer.'
 
     CaptureConsent:
       type: object
@@ -51417,6 +53446,27 @@ components:
         version: { type: integer }
         created_at: { type: string, format: date-time }
         updated_at: { type: [string, 'null'], format: date-time }
+        last_run_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the rule last ran: fired, queued for approval, failed or was blocked. A skipped
+            firing never counts. Only GET /automations carries it, to every caller who may read
+            automations; a single read, a create and an update leave it out. Absent on a list item
+            whose rule has never run.
+        last_run_outcome:
+          type: [string, 'null']
+          enum: [fired, queued_for_approval, failed, blocked, null]
+          description: >-
+            How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET
+            /automations carries it, and only beside last_run_at.
+        runs_last_30_days:
+          type: integer
+          minimum: 0
+          description: >-
+            Runs other than skipped ones in the 30 days before the server read the list. Every GET
+            /automations item carries it, 0 for a rule that has not run; a single read, a create
+            and an update leave it out.
 
     CreateAutomationRequest:
       type: object
@@ -54106,6 +56156,14 @@ components:
             page where sending it again lives. A send filed under no contact still
             appears, named by its subject line, without the verb.
 
+            Channel sends appear too, and a channel message has no subject line. One
+            is titled by its channel and the counterparty that channel knows, for
+            example `Telegram to buyer`, and the record it was filed under is the
+            card's own `subject`. No part of the message text appears: it is unsent,
+            and this queue is read by colleagues. The counterparty is named as the
+            provider knows them rather than by the CRM record's own name, which a
+            reader of this lane may not be permitted to see.
+
             Withheld — named in `lanes_omitted` — for a caller with no human behind
             it. Absent — not empty — on an installation whose feed does not read
             delivery outcomes.
@@ -54194,6 +56252,7 @@ components:
             `needs_you` has always had.
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
         deal_suggestions_open: { type: integer, minimum: 0, description: "Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`." }
+        tag_suggestions_open: { type: integer, minimum: 0, description: "Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`." }
         meetings:
           type: integer
           minimum: 0
@@ -54331,7 +56390,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
+          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -54448,6 +56507,8 @@ components:
           description: How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
         subject:
           $ref: '#/components/schemas/AttentionSubject'
+        acquisition:
+          $ref: '#/components/schemas/NoticeAcquisition'
         pair:
           $ref: '#/components/schemas/AttentionPair'
         deal:
@@ -54896,7 +56957,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -55820,7 +57881,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -55904,6 +57965,7 @@ components:
             source, because one source has several honest answers: a deal past its close
             date slips, one merely idle drifts.
         subject: { $ref: '#/components/schemas/AttentionSubject' }
+        acquisition: { $ref: '#/components/schemas/NoticeAcquisition' }
         lead: { $ref: '#/components/schemas/WorklistLeadFacts' }
         email_summary:
           allOf: [{ $ref: '#/components/schemas/EmailSummary' }]

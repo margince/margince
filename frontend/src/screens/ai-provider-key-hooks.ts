@@ -10,7 +10,7 @@ import {
 import { api } from "../api/client";
 import { invalidateProviderHealth } from "./ai-provider-health";
 import type { CredentialKind } from "./ai-provider-key-entry";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 
 // Reading and changing the vendor credentials. No hook here returns a key: the
 // server has no read path for one, and neither does this file.
@@ -79,13 +79,12 @@ export function useSetProviderKey() {
         vars.kind === "service_account"
           ? { service_account_json: vars.secret }
           : { api_key: vars.secret };
-      const { error } = await api.PUT("/ai/provider-keys/{provider}", {
-        params: { path: { provider: vars.provider } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/ai/provider-keys/{provider}", {
+          params: { path: { provider: vars.provider } },
+          body,
+        }),
+      );
     },
     onSuccess: (_, vars) => {
       invalidateProviderKeyState(queryClient, vars.provider);
@@ -97,12 +96,11 @@ export function useRemoveProviderKey() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { provider: string }) => {
-      const { error } = await api.DELETE("/ai/provider-keys/{provider}", {
-        params: { path: { provider: vars.provider } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/ai/provider-keys/{provider}", {
+          params: { path: { provider: vars.provider } },
+        }),
+      );
     },
     onSuccess: (_, vars) => {
       invalidateProviderKeyState(queryClient, vars.provider);

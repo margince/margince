@@ -41,7 +41,7 @@ type offlineDemoDirectory struct{ pool *pgxpool.Pool }
 // Mailbox describes one seat and the accounts it owns.
 func (d offlineDemoDirectory) Mailbox(ctx context.Context, userID string) (offlinedemo.Mailbox, error) {
 	if d.pool == nil {
-		return offlinedemo.Mailbox{}, fmt.Errorf("offline demo directory has no database")
+		return offlinedemo.Mailbox{}, errors.New("offline demo directory has no database")
 	}
 	var box offlinedemo.Mailbox
 	box.UserID = userID
