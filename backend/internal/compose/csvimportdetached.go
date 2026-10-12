@@ -22,6 +22,10 @@ import (
 // reads the same budget.
 const importCommitTimeout = 30 * time.Minute
 
+// importOverBudgetCause is the error a run carries when its commit or undo ran
+// out of time; the engine could not record it on the expired context.
+const importOverBudgetCause = "the import ran past its time budget; approve it again to continue from its checkpoint"
+
 // RunImportInline runs a detached task where it is handed, so a test sees the
 // finished run in the response that started it.
 func RunImportInline(task func()) { task() }
@@ -35,8 +39,12 @@ func (h importHandlers) runDetached(ctx context.Context, id migration.RunID, nam
 	if detach == nil {
 		detach = func(task func()) { go task() }
 	}
+	budget := h.budget
+	if budget == 0 {
+		budget = importCommitTimeout
+	}
 	detach(func() {
-		taskCtx, release := context.WithTimeout(context.WithoutCancel(ctx), importCommitTimeout)
+		taskCtx, release := context.WithTimeout(context.WithoutCancel(ctx), budget)
 		defer release()
 		defer func() {
 			if recovered := recover(); recovered != nil {
@@ -46,6 +54,9 @@ func (h importHandlers) runDetached(ctx context.Context, id migration.RunID, nam
 		}()
 		if err := work(taskCtx); err != nil {
 			slog.ErrorContext(taskCtx, "import "+name+" failed", "run", id, "err", err)
+			if taskCtx.Err() != nil {
+				h.recordStop(context.WithoutCancel(taskCtx), id, importOverBudgetCause)
+			}
 		}
 	})
 }

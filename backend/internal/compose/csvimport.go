@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -63,6 +64,8 @@ type importHandlers struct {
 	// the run store's FailRunning.
 	detach      func(task func())
 	failRunning func(ctx context.Context, id migration.RunID, cause string) error
+	// budget bounds a detached commit or undo; zero is importCommitTimeout.
+	budget time.Duration
 }
 
 // UploadImportSource stores a file and describes it (IEM-WIRE-8). Nothing is
