@@ -67,8 +67,8 @@ func seedSeat(ctx context.Context, t *testing.T, db *database.DB, email, status 
 }
 
 // A colleague's answer to a customer is the workspace's own mail to that
-// customer: outbound, to the first outside recipient, written by the colleague
-// and not by the seat whose mailbox held the copy. Nobody attested it.
+// customer. It is outbound, to the first outside recipient. The colleague wrote
+// it, not the seat whose mailbox held the copy. Nobody attested it.
 func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)

@@ -21,9 +21,8 @@ import (
 // Filed inbound, the copy made the customer's question look unanswered and
 // stood as a question owed to the colleague. The From must be a seat's exact
 // login address, never a domain: a domain names every mailbox at it.
-// From is a header the sender types, so the row is not attested; it carries
-// the colleague in SentByColleague instead, and no gate that trusts
-// counterparty_outbound_attested trusts it.
+// From is a header the sender types, so the row is not attested. It names the
+// colleague in SentByColleague, which no correspondence gate reads.
 //
 // The counterparty is the ladder's stand-in for a colleague's mail, with the
 // colleague's own address taken out of the candidates.
@@ -61,10 +60,10 @@ func (s *Sink) asSentByColleagueTx(
 	return rec, fields, nil
 }
 
-// colleagueTx is the seat other than the acting one whose login address is
-// exactly address, or zero when there is none. Invited and deactivated seats
-// count: most colleagues are invited and never sign in, and what a departed
-// one wrote while here was still the workspace's mail. An archived seat does not.
+// colleagueTx is the seat, other than the acting one, whose login address is
+// address; zero when there is none. Invited and deactivated seats count. Most
+// colleagues are invited and never sign in. A departed one's mail was still
+// the workspace's mail. An archived seat does not count.
 func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, error) {
 	_, seat := capturePrincipal(ctx)
 	var colleague ids.UUID
@@ -80,8 +79,8 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 }
 
 // stampMessageEnds stamps who wrote and who received a captured message. A
-// colleague's mail is from the colleague; the seat whose mailbox held the copy
-// received it, and that participant row is what lets the seat read it.
+// colleague's mail is from the colleague. The seat whose mailbox held the copy
+// received it, and that participant row lets the seat read it.
 func stampMessageEnds(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, counterparty connector.Counterparty,
 ) error {
