@@ -19,7 +19,8 @@ The steps are the same over MCP and REST:
 3. **Commit**: approve the run by its ID. *This* is the call that writes.
 
 Over MCP that is three tool calls: `preview_import` (the CSV goes in the call, as text),
-`read_import` with `view: report`, and `commit_import`.
+`read_import` with `view: report`, and `commit_import`. `commit_import` answers at once while the run
+goes on, so read `read_import` with `view: report` again until `state` is `complete`.
 
 Over REST you upload the file first, so it is five calls:
 
@@ -129,8 +130,19 @@ the row out, and `drop_link` lands it without the link. Both are listed in the r
 The upload's answer holds one in `suggested_source_name`.
 
 `GET /v1/imports/{id}/problems.csv` returns the report's issues as a spreadsheet, one row per issue.
-The format, the template and this spreadsheet need a session where a human has signed in, as the
-upload does.
+The template and this spreadsheet need a session where a human has signed in, as the upload does. A
+passport may read the format.
+
+## Importing several files over MCP
+
+`preview_import` takes `files` in place of `object`, `csv` and `mapping`. Each file names its `name`, its
+`object`, its `csv` text and, if you want, its own `mapping`. The run takes one file per type, and the
+CSV text of all the files together is at most 1,000,000 bytes. `source_name` and `on_broken_link` work
+as they do over REST.
+
+`read_import` with `view: format` answers what `GET /v1/imports/format` answers. The answer to
+`preview_import` lists each file under `files`, with the map it settled on and the columns no field
+takes. `part` is the name the report uses for the file, which is its type's template name.
 
 ## Reading the report before you commit
 

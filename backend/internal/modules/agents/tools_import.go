@@ -61,23 +61,34 @@ type Imports interface {
 	StageRun(ctx context.Context, req crmcontracts.CreateImportRunRequest) (crmcontracts.ImportRun, error)
 	// ReadRun answers one run's lifecycle state.
 	ReadRun(ctx context.Context, id ids.UUID) (crmcontracts.ImportRun, error)
-	// ReadReport answers what the run will do, or did.
-	ReadReport(ctx context.Context, id ids.UUID) (crmcontracts.ImportRunReport, error)
+	// ReadReport answers the run and what it will do, or did. The report is
+	// nil until validation has produced one.
+	ReadReport(ctx context.Context, id ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error)
 	// Commit approves a validated run and starts the write.
 	Commit(ctx context.Context, id ids.UUID) (crmcontracts.ImportRun, error)
+	// DescribeFormat answers the import format in the installation's language.
+	DescribeFormat(ctx context.Context) (crmcontracts.ImportFormat, error)
+	// ProfileFiles stores several CSV files as one bundle and profiles each,
+	// as an uploaded ZIP is.
+	ProfileFiles(ctx context.Context, files []ImportFile) (crmcontracts.ImportSourceProfile, error)
+}
+
+// ImportFile is one CSV of a several-file import and the type its rows are.
+type ImportFile struct {
+	Object string
+	CSV    string
 }
 
 // RegisterImportTools joins the import verbs to the surface.
 //
-// Unconditionally, unlike the tag and whoami registrars: the contract DECLARES
-// these four verbs, so a registry that skipped them would advertise something
-// tools/list cannot offer — the mismatch TestEveryDeclaredToolVerbIsRegistered
-// exists to catch. A deployment with no object store still serves them and
-// refuses the three that need the source file, naming what is missing.
+// Unconditionally, unlike the tag and whoami registrars. The contract declares
+// these verbs, and TestEveryDeclaredToolVerbIsRegistered fails a registry that
+// skips one. A deployment with no object store still serves them, and refuses
+// the ones that need the source file, naming what is missing.
 func RegisterImportTools(r *Registry, imports Imports) {
 	r.Register(previewImport{imports: imports})
-	r.Register(readImportRun{imports: imports})
 	r.Register(readImportReport{imports: imports})
+	r.Register(describeImportFormat{imports: imports})
 	r.Register(commitImport{imports: imports, language: r.language})
 	r.Register(readImport{})
 }
@@ -130,6 +141,12 @@ const (
 	importOnDuplicateSkip   = string(crmcontracts.ImportOnDuplicateSkip)
 )
 
+// The two broken-link policies, spelled here for the same reason.
+const (
+	importOnBrokenLinkSkipRow  = string(crmcontracts.ImportOnBrokenLinkSkipRow)
+	importOnBrokenLinkDropLink = string(crmcontracts.ImportOnBrokenLinkDropLink)
+)
+
 // refuseUnimportableObject holds `object` to the vocabulary, naming the whole
 // of it rather than saying the value is invalid.
 func refuseUnimportableObject(object string) error {
@@ -147,37 +164,11 @@ func refuseUnimportableObject(object string) error {
 	}
 }
 
-type readImportRun struct{ imports Imports }
-
-func (t readImportRun) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "read_import_run", Title: "Read an import run", Version: toolVersionV1,
-		Description:   readImportRunCopy.render(),
-		Instead:       readImportRunCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
-		OpenAPIOp:    "getImportRun",
-		InputSchema:  schema(`{"type":"object","required":["run_id"],"properties":{"run_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
-		OutputSchema: schemaFor[ImportRunResult](),
-	}
-}
-
-func (t readImportRun) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	id, err := importRunArg(in)
-	if err != nil {
-		return nil, err
-	}
-	run, err := t.imports.ReadRun(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(importRunResult(run))
-}
-
 type readImportReport struct{ imports Imports }
 
 func (t readImportReport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_import_report", Title: "Read an import report", Version: toolVersionV1,
+		Name: "read_import_report", Title: "Read an import run and its report", Version: toolVersionV1,
 		Description:   readImportReportCopy.render(),
 		Instead:       readImportReportCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
@@ -192,11 +183,20 @@ func (t readImportReport) Handle(ctx context.Context, in json.RawMessage) (json.
 	if err != nil {
 		return nil, err
 	}
-	report, err := t.imports.ReadReport(ctx, id)
+	run, report, err := t.imports.ReadReport(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(ImportReportResult{Report: report})
+	out := ImportReportResult{
+		RunID: run.Id.String(), State: string(run.Status), Checkpoint: run.Checkpoint, Report: report,
+	}
+	if run.Error != nil {
+		out.Error = *run.Error
+	}
+	if run.Parts != nil {
+		out.Parts = *run.Parts
+	}
+	return json.Marshal(out)
 }
 
 type commitImport struct {

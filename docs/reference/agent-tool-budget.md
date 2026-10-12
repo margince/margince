@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 66 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 66 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 26630 |  |  | 81% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 26951 |  |  | 82% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 346 tokens, mean 403, across 66 served tools.
+Median 346 tokens, mean 408, across 66 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -155,13 +155,13 @@ listing once. Read a row as what that tool costs a menu.
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
 | `run_report` | 1020 |  |
+| `preview_import` | 986 |  |
 | `send_company_email` | 823 |  |
 | `list_records` | 817 | 2 scenarios |
 | `bulk_update_records` | 809 |  |
 | `compose_analytics_report` | 777 |  |
 | `send_email` | 754 |  |
 | `read_lists` | 745 |  |
-| `preview_import` | 725 |  |
 | `log_activity` | 701 | 3 scenarios |
 | `create_record` | 672 |  |
 | `send_message` | 603 |  |
@@ -202,9 +202,9 @@ listing once. Read a row as what that tool costs a menu.
 | `list_approvals` | 268 |  |
 | `prepare_handoff` | 267 |  |
 | `invite_meeting` | 264 |  |
+| `commit_import` | 263 |  |
 | `relink_activities` | 260 |  |
 | `company_coverage` | 246 |  |
-| `commit_import` | 239 |  |
 | `create_task` | 221 |  |
 | `at_risk_relationships` | 209 |  |
 | `read_brief` | 205 |  |
@@ -214,11 +214,11 @@ listing once. Read a row as what that tool costs a menu.
 | `list_colleagues` | 193 |  |
 | `intro_path_to` | 187 |  |
 | `list_pipelines` | 186 |  |
+| `read_import` | 185 |  |
 | `list_documents` | 180 |  |
 | `list_channel_providers` | 174 |  |
 | `read_project_360` | 156 |  |
 | `read_approval` | 154 |  |
-| `read_import` | 149 |  |
 | `whoami` | 129 |  |
 
 ## Related

@@ -8110,6 +8110,34 @@ paths:
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /imports/format:
+    get:
+      tags: [Import]
+      operationId: getImportFormat
+      security: [{bearerAuth: []}]
+      summary: Describe the files an import takes, column by column, for this workspace.
+      description: |-
+        The import format as data: the order the files land in, each file's
+        name and columns, and the rules that key a row. Each column carries a
+        guide (what goes in it, an example, and whether a new row needs it).
+        The workspace's active custom fields are columns too, by their `cf_`
+        key, with their label, type and, for a caller who may read custom
+        fields, their allowed values.
+      parameters:
+        - name: lang
+          in: query
+          required: false
+          description: 'The language of the guide text. The installation''s language when absent.'
+          schema: {type: string, enum: [en, de, vi]}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ImportFormat'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /imports/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -9255,6 +9283,56 @@ components:
         updated: {type: integer, minimum: 0, description: 'Rows matched to an existing record whose mapped values differ. An editable source re-imported after a correction lands here — this is not the frozen-snapshot case, where a match can never differ.'}
         unchanged: {type: integer, minimum: 0, description: 'Matched, and every mapped value already equal. Counted separately from `updated` because reporting work that never happened inflates both the report and the audit trail.'}
         skipped: {type: integer, minimum: 0}
+    ImportFormat:
+      type: object
+      description: |-
+        The files an import takes, for this workspace. The template ZIP, the
+        column guide and the screen's file order are all read from it.
+      required: [version, order, files, key_rules, size_limit_mb]
+      properties:
+        version: {type: string, enum: [margince-import/1]}
+        order:
+          type: array
+          items: {$ref: '#/components/schemas/ImportObject'}
+          description: 'The order the files land in, so a link can name a record an earlier file made.'
+        files:
+          type: array
+          items: {$ref: '#/components/schemas/ImportFormatFile'}
+          description: 'One file per object, in `order`.'
+        key_rules:
+          type: array
+          items: {type: string}
+          description: 'How a row is recognised on a second upload and how files link to each other, one sentence each.'
+        size_limit_mb: {type: integer, minimum: 0, description: 'The largest upload this installation accepts, in MB.'}
+    ImportFormatFile:
+      type: object
+      description: One file of the import and its columns.
+      required: [file, object, columns]
+      properties:
+        file: {type: string, description: 'The file name a ZIP entry needs for this object to be detected.'}
+        object: {$ref: '#/components/schemas/ImportObject'}
+        columns:
+          type: array
+          items: {$ref: '#/components/schemas/ImportFormatColumn'}
+    ImportFormatColumn:
+      type: object
+      description: |-
+        One column and its guide. `name` is the mapping target a column is
+        mapped onto; `label` is what the screen shows, set for a custom field.
+        A header shows `label` when present, else `name`.
+      required: [name, description, example, required_on_new_row, custom]
+      properties:
+        name: {type: string, description: 'The mapping target: a core field, or a custom field''s `cf_` key.'}
+        label: {type: string, description: 'A custom field''s label. Absent for a core column.'}
+        description: {type: string, description: 'What goes in the column.'}
+        example: {type: string, description: 'An example value, or several separated by " · ".'}
+        required_on_new_row: {type: boolean, description: 'Whether a row that creates a record needs this column filled.'}
+        custom: {type: boolean, description: 'Whether this is one of the workspace''s custom fields.'}
+        type: {type: string, description: 'A custom field''s type. Absent for a core column.'}
+        options:
+          type: array
+          items: {type: string}
+          description: 'A picklist or multiselect field''s allowed values, for a caller who may read custom fields. Absent otherwise.'
     ImportRowIssue:
       type: object
       description: One row the import could not take, named by its line so a human can go fix it.

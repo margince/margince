@@ -10,16 +10,16 @@
   "totals": {
     "tools": 66,
     "resources": 9,
-    "tool_catalog_bytes": 216876,
+    "tool_catalog_bytes": 218585,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 55109,
+    "approx_wire_tokens_total": 55536,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 58060,
-      "input_schema_bytes": 55380,
-      "output_schema_bytes": 87281,
-      "description_plus_input_schema_bytes": 113440
+      "description_bytes": 58480,
+      "input_schema_bytes": 56272,
+      "output_schema_bytes": 87636,
+      "description_plus_input_schema_bytes": 114752
     }
   },
   "tools": {
@@ -2308,7 +2308,7 @@
           "readOnlyHint": false,
           "title": "Commit an import"
         },
-        "description": "Write a checked import into the workspace. The dry run is the check; this commits when it answers. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the report first: numbers nobody read are not a check. Report what landed from read_import's report once this answers — the counts and the mapping the run used, each column by the field it went to. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Write a checked import into the workspace. The dry run is the check; this starts the write and answers at once with the run running. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the report first: numbers nobody read are not a check. The write goes on after this answers. Read read_import's report until its state is complete or failed, then report what landed: the counts and the mapping the run used, each column by the field it went to. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -7743,13 +7743,52 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. Files that link to each other go together in `files`, at most one per type, instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's `company_ref` names a company's ref. read_import with view format lists each file's columns. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "csv": {
               "description": "The file's contents, header row first.",
               "type": "string"
+            },
+            "files": {
+              "description": "Several files as one run, in place of object, csv and mapping.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "csv": {
+                    "description": "The file's contents, header row first.",
+                    "type": "string"
+                  },
+                  "mapping": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "As mapping, for this file.",
+                    "type": "object"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "object": {
+                    "enum": [
+                      "company",
+                      "lead",
+                      "contact"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "object",
+                  "csv"
+                ],
+                "type": "object"
+              },
+              "maxItems": 3,
+              "minItems": 1,
+              "type": "array"
             },
             "idempotency_key": {
               "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
@@ -7771,6 +7810,14 @@
               ],
               "type": "string"
             },
+            "on_broken_link": {
+              "description": "A link naming no record: skip_row (default) leaves the row out, drop_link lands it unlinked.",
+              "enum": [
+                "skip_row",
+                "drop_link"
+              ],
+              "type": "string"
+            },
             "on_duplicate": {
               "description": "A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For contacts an address already held is refused either way — an email is a real key, a company name is not.",
               "enum": [
@@ -7778,12 +7825,12 @@
                 "skip"
               ],
               "type": "string"
+            },
+            "source_name": {
+              "description": "The system the files came from. A later import under the same name updates the rows it landed.",
+              "type": "string"
             }
           },
-          "required": [
-            "object",
-            "csv"
-          ],
           "type": "object"
         },
         "name": "preview_import",
@@ -7794,6 +7841,48 @@
                 "columns": {
                   "items": {
                     "type": "string"
+                  },
+                  "type": "array"
+                },
+                "files": {
+                  "items": {
+                    "properties": {
+                      "columns": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "mapping": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "object": {
+                        "type": "string"
+                      },
+                      "part": {
+                        "type": "string"
+                      },
+                      "unmapped": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "columns",
+                      "mapping",
+                      "name",
+                      "object",
+                      "part"
+                    ],
+                    "type": "object"
                   },
                   "type": "array"
                 },
@@ -7837,8 +7926,6 @@
                 }
               },
               "required": [
-                "columns",
-                "mapping",
                 "run"
               ],
               "type": "object"
@@ -8801,32 +8888,32 @@
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
-          "title": "Read an import run"
+          "title": "Read an import run or the import format"
         },
-        "description": "Read one import run by run_id. run: where it got to — awaiting approval, running, done, or stopped at a named row it can resume from. report: what it will do or did — rows created, updated, failed, unusable, duplicates — in the same shape before and after the commit. The report's counts are what the user weighs before committing. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Read one import run, or the format an import takes. report, by run_id: the run's state and files, and once validated what it will do or did, in rows created, updated, failed, unusable and duplicates. format: each file's columns, their order and the key rules. The report's counts are what the user weighs before committing. After a commit, read report again until the state is complete or failed. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "properties": {
             "run_id": {
+              "description": "report only",
               "format": "uuid",
               "type": "string"
             },
             "view": {
-              "description": "run is where it got to, report what it will do or did",
+              "description": "report is one run's state and, once validated, what it will do or did; format is the files and columns an import takes",
               "enum": [
-                "report",
-                "run"
+                "format",
+                "report"
               ],
               "type": "string"
             }
           },
           "required": [
-            "view",
-            "run_id"
+            "view"
           ],
           "type": "object"
         },
         "name": "read_import",
-        "title": "Read an import run"
+        "title": "Read an import run or the import format"
       },
       {
         "_meta": {

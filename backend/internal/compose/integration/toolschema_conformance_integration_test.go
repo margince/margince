@@ -370,9 +370,6 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"TestAUserAndTheirAgentReadOneListTheSameWay (lists_http_integration_test.go) calls it through the served MCP surface and holds its answer to its schema",
 	"preview_import": "needs an object store to put the source file in; this lane composes none, " +
 		"so the call would exercise the refusal rather than the handler",
-	"read_import_run": "needs a seat holding import_run.read, which this lane's seat does not " +
-		"carry — a migration run is an admin-scoped object, and granting it here would widen the " +
-		"authority every other tool in the sweep runs under",
 	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
 	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
 	"attach_document": "needs an object store to keep the file in; " +

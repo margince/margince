@@ -91,7 +91,10 @@ func (s *scenario) readReport(t *testing.T, runID string) crmcontracts.ImportRun
 	got := s.MCP.CallOK(t, "read_import_report", map[string]any{"run_id": runID})
 	var report agents.ImportReportResult
 	got.JSON(t, &report)
-	return report.Report
+	if report.Report == nil {
+		t.Fatalf("run %s is %s and has no report yet", runID, report.State)
+	}
+	return *report.Report
 }
 
 // runImport previews, commits and reads back what actually happened.

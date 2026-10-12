@@ -97,6 +97,7 @@ Every core verb the surface serves, including those a client reaches only throug
 | `describe_query_vocabulary` | 🟢 | `read` | no |
 | `describe_vocabulary` | 🟢 | `read` | no |
 | `describe_analytics_vocabulary` | 🟢 | `read` | no |
+| `describe_import_format` | 🟢 | `read` | no |
 | `describe_record_fields` | 🟢 | `read` | no |
 | `describe_report_blocks` | 🟢 | `read` | no |
 | `describe_report_vocabulary` | 🟢 | `read` | no |
@@ -130,7 +131,6 @@ Every core verb the surface serves, including those a client reaches only throug
 | `read_approval` | 🟢 | `read` | no |
 | `read_import` | 🟢 | `read` | no |
 | `read_import_report` | 🟢 | `read` | no |
-| `read_import_run` | 🟢 | `read` | no |
 | `read_input_checks` | 🟢 | `read` | no |
 | `read_lists` | 🟢 | `read` | no |
 | `read_project_360` | 🟢 | `read` | no |

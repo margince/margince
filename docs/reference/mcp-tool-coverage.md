@@ -348,16 +348,16 @@ Every run of every case requiring this tool passed, for the model named.
 | `whats_slipping_this_week` | 1.00 | 3 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
-| `relink_activities` | 1.00 | 6 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
+| `relink_activities` | 1.00 | 6 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
+| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 
 ### `gpt-5.6-sol@codex-cli`
 
@@ -378,10 +378,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
+| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 
 ## 2. What is failing now
 
@@ -405,8 +405,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `send_company_email` | 0.67 | 2/3 | - | `case44_chase_what_is_slipping` |
 | `preview_import` | 0.50 | 3/6 | `case3_spreadsheet` | `case10_finish_the_import`, `case3_spreadsheet` |
+| `send_company_email` | 0.67 | 2/3 | - | `case44_chase_what_is_slipping` |
 | `create_record` | 0.75 | 9/12 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `send_message` | 0.67 | 2/3 | - | `case44_chase_what_is_slipping` |
 | `update_record` | 0.83 | 5/6 | - | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |

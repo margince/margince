@@ -27537,8 +27537,12 @@ paths:
     get:
       tags: [Import]
       operationId: getImportFormat
-      security: [ { cookieAuth: [] } ]   # human session until the agent tool that reads it is registered
-      x-agent-access: human-only
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      # An assistant asked to prepare files reads the columns it must write.
+      x-mcp-tool:
+        verb: describe_import_format
+        tier: auto_execute
+        scope: read
       summary: Describe the files an import takes, column by column, for this workspace.
       description: |
         The import format as data: the order the files land in, each file's
@@ -27596,13 +27600,8 @@ paths:
       tags: [Import]
       operationId: getImportRun
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
-      # A read. An assistant that staged the run has to be able to see what
-      # became of it, or it is helping with a migration it cannot observe.
-      x-mcp-tool:
-        verb: read_import_run
-        record_type: import_run
-        tier: auto_execute
-        scope: read
+      # An assistant reads a run's state through read_import_report, which
+      # answers the run before its report exists.
       summary: Read one import run's lifecycle state.
       description: |
         IEM-WIRE-6. A run that stopped part-way reports `failed` **with its

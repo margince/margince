@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 66 |
 | Resources | 9 |
-| Tool catalog | 211.8 KB |
+| Tool catalog | 213.5 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 55109 |
+| Approx. wire tokens | 55536 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 85.2 KB | 40% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 56.7 KB | 26% | Yes, every step |
-| Input schemas | 54.1 KB | 25% | Yes, every step |
+| Output schemas | 85.6 KB | 40% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 57.1 KB | 26% | Yes, every step |
+| Input schemas | 55.0 KB | 25% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **110.8 KB** | **52%** | **the recurring cost** |
+| **Description + input schema** | **112.1 KB** | **52%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`change_tags`](#change_tags) | Change tags |  |  | 2.2 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 2.2 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 2.3 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
@@ -94,12 +94,12 @@ descriptions and input schemas are what each step pays for.
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes |  | 3.9 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 4.4 KB |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 5.8 KB |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.5 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.2 KB |
-| [`read_import`](#read_import) | Read an import run | yes |  | 822 B |
+| [`read_import`](#read_import) | Read an import run or the import format | yes |  | 989 B |
 | [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 1.6 KB |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 4.0 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
@@ -2711,13 +2711,14 @@ time. (Governance: runs immediately; requires passport scope "read".)
 **Commit an import**
 
 ```text
-Write a checked import into the workspace. The dry run is the check; this commits when it answers.
-Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is
-always a report first. This cannot be undone from here — undoing an import needs the web app. A
-request to get a file in is not a review of it: unless the asker says they have already been through
-these rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the
-report first: numbers nobody read are not a check. Report what landed from read_import's report once
-this answers — the counts and the mapping the run used, each column by the field it went to.
+Write a checked import into the workspace. The dry run is the check; this starts the write and
+answers at once with the run running. Only from awaiting_approval, the state a run reaches by
+producing a dry-run report, so there is always a report first. This cannot be undone from here —
+undoing an import needs the web app. A request to get a file in is not a review of it: unless the
+asker says they have already been through these rows, show the counts and the mapping and wait for
+their go-ahead. Use read_import for the report first: numbers nobody read are not a check. The write
+goes on after this answers. Read read_import's report until its state is complete or failed, then
+report what landed: the counts and the mapping the run used, each column by the field it went to.
 (Governance: runs immediately; requires passport scope "write".)
 ```
 
@@ -8515,10 +8516,13 @@ guessing from names. To link contacts to their employers, map the company column
 — import the companies FIRST, because a name that matches nothing links nothing and says so. To
 CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company
 it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may
-both correct and add. create_record for one record you already know. Keep the run_id. The counts it
-answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs,
-so report both: a column this placed by a name they did not write is a decision they did not make.
-(Governance: runs immediately; requires passport scope "write".)
+both correct and add. Files that link to each other go together in `files`, at most one per type,
+instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's
+`company_ref` names a company's ref. read_import with view format lists each file's columns.
+create_record for one record you already know. Keep the run_id. The counts it answers — created,
+duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a
+column this placed by a name they did not write is a decision they did not make. (Governance: runs
+immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -8530,6 +8534,45 @@ so report both: a column this placed by a name they did not write is a decision 
     "csv": {
       "description": "The file's contents, header row first.",
       "type": "string"
+    },
+    "files": {
+      "description": "Several files as one run, in place of object, csv and mapping.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "csv": {
+            "description": "The file's contents, header row first.",
+            "type": "string"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "As mapping, for this file.",
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "object": {
+            "enum": [
+              "company",
+              "lead",
+              "contact"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "object",
+          "csv"
+        ],
+        "type": "object"
+      },
+      "maxItems": 3,
+      "minItems": 1,
+      "type": "array"
     },
     "idempotency_key": {
       "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
@@ -8551,6 +8594,14 @@ so report both: a column this placed by a name they did not write is a decision 
       ],
       "type": "string"
     },
+    "on_broken_link": {
+      "description": "A link naming no record: skip_row (default) leaves the row out, drop_link lands it unlinked.",
+      "enum": [
+        "skip_row",
+        "drop_link"
+      ],
+      "type": "string"
+    },
     "on_duplicate": {
       "description": "A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For contacts an address already held is refused either way — an email is a real key, a company name is not.",
       "enum": [
@@ -8558,12 +8609,12 @@ so report both: a column this placed by a name they did not write is a decision 
         "skip"
       ],
       "type": "string"
+    },
+    "source_name": {
+      "description": "The system the files came from. A later import under the same name updates the rows it landed.",
+      "type": "string"
     }
   },
-  "required": [
-    "object",
-    "csv"
-  ],
   "type": "object"
 }
 ```
@@ -8580,6 +8631,48 @@ so report both: a column this placed by a name they did not write is a decision 
         "columns": {
           "items": {
             "type": "string"
+          },
+          "type": "array"
+        },
+        "files": {
+          "items": {
+            "properties": {
+              "columns": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "mapping": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "name": {
+                "type": "string"
+              },
+              "object": {
+                "type": "string"
+              },
+              "part": {
+                "type": "string"
+              },
+              "unmapped": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "columns",
+              "mapping",
+              "name",
+              "object",
+              "part"
+            ],
+            "type": "object"
           },
           "type": "array"
         },
@@ -8623,8 +8716,6 @@ so report both: a column this placed by a name they did not write is a decision 
         }
       },
       "required": [
-        "columns",
-        "mapping",
         "run"
       ],
       "type": "object"
@@ -9640,13 +9731,14 @@ passport scope "read".)
 
 ### read_import
 
-**Read an import run**
+**Read an import run or the import format**
 
 ```text
-Read one import run by run_id. run: where it got to — awaiting approval, running, done, or stopped
-at a named row it can resume from. report: what it will do or did — rows created, updated, failed,
-unusable, duplicates — in the same shape before and after the commit. The report's counts are what
-the user weighs before committing. (Governance: runs immediately; requires passport scope "read".)
+Read one import run, or the format an import takes. report, by run_id: the run's state and files,
+and once validated what it will do or did, in rows created, updated, failed, unusable and
+duplicates. format: each file's columns, their order and the key rules. The report's counts are what
+the user weighs before committing. After a commit, read report again until the state is complete or
+failed. (Governance: runs immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -9655,21 +9747,21 @@ the user weighs before committing. (Governance: runs immediately; requires passp
 {
   "properties": {
     "run_id": {
+      "description": "report only",
       "format": "uuid",
       "type": "string"
     },
     "view": {
-      "description": "run is where it got to, report what it will do or did",
+      "description": "report is one run's state and, once validated, what it will do or did; format is the files and columns an import takes",
       "enum": [
-        "report",
-        "run"
+        "format",
+        "report"
       ],
       "type": "string"
     }
   },
   "required": [
-    "view",
-    "run_id"
+    "view"
   ],
   "type": "object"
 }

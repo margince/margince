@@ -111,22 +111,41 @@ type ImportRunResult struct {
 }
 
 // ImportPreviewResult is what a dry run produced, plus what it decided about
-// the file's columns.
-//
-// `unmapped` is the field a caller most needs and would least think to ask
-// for: a column nothing reads is dropped silently otherwise, and a mistyped
-// field name looks exactly like a clean import until somebody notices the data
-// is not there.
+// the columns. `unmapped` names a column nothing reads, which would otherwise
+// look like a clean import. A `files` call answers per file in Files.
 type ImportPreviewResult struct {
-	Run      ImportRunResult   `json:"run"`
+	Run      ImportRunResult     `json:"run"`
+	Mapping  map[string]string   `json:"mapping,omitempty"`
+	Columns  []string            `json:"columns,omitempty"`
+	Unmapped []string            `json:"unmapped,omitempty"`
+	Files    []ImportPreviewFile `json:"files,omitempty"`
+}
+
+// ImportPreviewFile is what the dry run decided about one file of a `files`
+// call. Part is the name the report uses for it.
+type ImportPreviewFile struct {
+	Name     string            `json:"name"`
+	Part     string            `json:"part"`
+	Object   string            `json:"object"`
 	Mapping  map[string]string `json:"mapping"`
 	Columns  []string          `json:"columns"`
 	Unmapped []string          `json:"unmapped,omitempty"`
 }
 
-// ImportReportResult carries the run's own report unchanged — one shape before
-// and after the commit, so a contact comparing what will happen with what did
-// compares like with like.
+// ImportReportResult is one run as a poller reads it: its state at once, and
+// the report once validation has produced one. The report keeps one shape
+// before and after the commit, so what will happen compares with what did.
 type ImportReportResult struct {
-	Report crmcontracts.ImportRunReport `json:"report"`
+	RunID      string                        `json:"run_id"`
+	State      string                        `json:"state"`
+	Error      string                        `json:"error,omitempty"`
+	Checkpoint int                           `json:"checkpoint"`
+	Parts      []crmcontracts.ImportRunPart  `json:"parts,omitempty"`
+	Report     *crmcontracts.ImportRunReport `json:"report,omitempty"`
+}
+
+// ImportFormatResult is the import format: the files, their order and every
+// column with its guide.
+type ImportFormatResult struct {
+	Format crmcontracts.ImportFormat `json:"format"`
 }
