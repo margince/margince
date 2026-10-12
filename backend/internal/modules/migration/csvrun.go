@@ -419,3 +419,36 @@ func (s *RunStore) RecordImportSourceIntent(ctx context.Context, key string) err
 	}
 	return storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindImport, key)
 }
+
+// BindingsOf is LookupBinding for every key one source has landed of one
+// object, keyed by external id. A dry run reads them once instead of once per
+// row.
+func (s *RunStore) BindingsOf(ctx context.Context, sourceSystem, object string) (map[string]Binding, error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	out := map[string]Binding{}
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT m.external_id, m.native_id, r.status FROM import_record_map m
+			  JOIN import_run r ON r.id = m.import_run_id
+			WHERE m.source_system = $1 AND m.object = $2`, sourceSystem, object)
+		if err != nil {
+			return fmt.Errorf("migration: reading the %s identities of %s: %w", object, sourceSystem, err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var external string
+			var binding Binding
+			if err := rows.Scan(&external, &binding.NativeID, &binding.RunStatus); err != nil {
+				return fmt.Errorf("migration: reading the %s identities of %s: %w", object, sourceSystem, err)
+			}
+			out[external] = binding
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}

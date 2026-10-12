@@ -8,7 +8,9 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"maps"
+	"strings"
 	"testing"
 	"time"
 
@@ -50,7 +52,7 @@ func TestATestRunStoppedByItsRequestDeadlineIsStillRecordedAsFailed(t *testing.T
 		t.Fatalf("staging a run: %v", err)
 	}
 
-	expired, release := context.WithDeadline(importAdmin(e), time.Now().Add(-time.Second))
+	expired, release := context.WithDeadline(importAdmin(e), time.Unix(0, 0))
 	defer release()
 	failValidation(expired, runs, run.ID, context.DeadlineExceeded)
 
@@ -83,5 +85,34 @@ func TestATestRunPastItsBudgetIsRefusedByNameAndRecordedAsFailed(t *testing.T) {
 	}
 	if listed[0].Status != migration.StatusFailed {
 		t.Fatalf("status = %q, want failed", listed[0].Status)
+	}
+}
+
+func TestAFileOverTheTestRunsRowCapIsRefusedAndRecordedAsFailed(t *testing.T) {
+	e := integration.Setup(t)
+	h := importHandlers{db: e.DB(), blobs: blobstore.NewMemory(), uploadLimit: 10_000_000}
+	var file strings.Builder
+	file.WriteString("Email,Full Name\n")
+	for i := range importTestRunRowCap + 1 {
+		fmt.Fprintf(&file, "p%d@cap.example,P %d\n", i, i)
+	}
+	profile, err := h.profileAndStore(importAdmin(e), migration.ObjectLead, []byte(file.String()))
+	if err != nil {
+		t.Fatalf("storing the source: %v", err)
+	}
+	object := crmcontracts.ImportObject(migration.ObjectLead)
+	mapping := map[string]string{"Email": "email", "Full Name": "full_name"}
+
+	_, err = h.stageRun(importAdmin(e), crmcontracts.CreateImportRunRequest{
+		Connector: crmcontracts.CreateImportRunRequestConnectorCsv, Object: &object, SourceRef: profile.SourceRef, Mapping: &mapping,
+	})
+	var refusal *httperr.DetailedError
+	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "too_many_rows_for_test_run" ||
+		!strings.Contains(refusal.Detail, fmt.Sprint(importTestRunRowCap+1)) {
+		t.Fatalf("err = %v, want the row-cap refusal naming the file's row count", err)
+	}
+	if listed, _, err := migration.NewRunStore(e.DB()).ListStaged(importAdmin(e), "", 10); err != nil ||
+		len(listed) != 1 || listed[0].Status != migration.StatusFailed {
+		t.Fatalf("runs = %+v (%v), want the one run, failed", listed, err)
 	}
 }

@@ -117,6 +117,9 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 		if err != nil {
 			return prediction{}, err
 		}
+		if err := writers.readPageEmails(ctx, rows); err != nil {
+			return prediction{}, err
+		}
 		for _, row := range rows {
 			outcome, problem, err := writers.predictRow(ctx, row)
 			if err != nil {

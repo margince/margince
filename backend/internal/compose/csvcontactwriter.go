@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -130,15 +131,60 @@ func (w *csvWriters) contactEmailAlreadyHeld(ctx context.Context, row migration.
 	if email == "" {
 		return false, nil
 	}
-	var claimed bool
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM contact_email WHERE email = lower($1) AND archived_at IS NULL)`,
-			email).Scan(&claimed)
-	}); err != nil {
-		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)
+	if claimed, read := w.heldEmails[email]; read {
+		return claimed, nil
 	}
-	return claimed, nil
+	held, err := w.emailsHeld(ctx, []string{email})
+	if err != nil {
+		return false, err
+	}
+	return held[email], nil
+}
+
+// emailsHeld answers which of these addresses a live contact holds, in one
+// query. Postgres lowers each address, as the store's own key does.
+func (w *csvWriters) emailsHeld(ctx context.Context, emails []string) (map[string]bool, error) {
+	held := make(map[string]bool, len(emails))
+	for _, email := range emails {
+		held[email] = false
+	}
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT given FROM unnest($1::text[]) AS given
+			 WHERE EXISTS (SELECT 1 FROM contact_email WHERE email = lower(given) AND archived_at IS NULL)`, emails)
+		if err != nil {
+			return err
+		}
+		claimed, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		for _, email := range claimed {
+			held[email] = true
+		}
+		return err
+	}); err != nil {
+		return nil, fmt.Errorf("import: checking whether %d addresses are already held: %w", len(emails), err)
+	}
+	return held, nil
+}
+
+// readPageEmails answers, in one query, which addresses of a dry run's page a
+// live contact holds. Nothing writes during a dry run, so the answer holds
+// for every row of the page.
+func (w *csvWriters) readPageEmails(ctx context.Context, rows []migration.Row) error {
+	if w.object != migration.ObjectContact {
+		return nil
+	}
+	var emails []string
+	for _, row := range rows {
+		if email := strings.TrimSpace(textFields(row.Fields)[fieldEmail]); email != "" {
+			emails = append(emails, email)
+		}
+	}
+	held, err := w.emailsHeld(ctx, emails)
+	if err != nil {
+		return err
+	}
+	w.heldEmails = held
+	return nil
 }
 
 // contactEmailClaimedReason is what the report says for such a row. It names the
@@ -171,7 +217,7 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		// the contacts store (captureensurer.go). Going through the reader rather
 		// than exporting a store accessor keeps every exported store method
 		// RBAC-gated: this list is workspace configuration, not anyone's record.
-		consumerMail, err := capture.MatcherTx(ctx, tx)
+		consumerMail, err := w.consumerMailList(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -198,4 +244,17 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		return false, fmt.Errorf("import: checking %q against the contacts already held: %w", named, err)
 	}
 	return visible, nil
+}
+
+// consumerMailList is the workspace's consumer-mail list, read on first use and
+// kept for the run.
+func (w *csvWriters) consumerMailList(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
+	if w.consumerMail == nil {
+		matcher, err := capture.MatcherTx(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		w.consumerMail = matcher
+	}
+	return w.consumerMail, nil
 }

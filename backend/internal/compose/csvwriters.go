@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -58,6 +59,15 @@ type csvWriters struct {
 	// tags applies it, in the same transaction as the create — a crash between
 	// the two would leave a row in the estate that its own batch cannot find.
 	tags *collections.Store
+
+	// bindings is the identity map of this part's source, preloaded by a dry
+	// run; nil reads the store per key.
+	bindings map[string]migration.Binding
+	// heldEmails answers, for the page a dry run is on, which of its addresses
+	// a live contact already holds; nil reads the store per row.
+	heldEmails map[string]bool
+	// consumerMail is the workspace's consumer-mail list, read once per run.
+	consumerMail *freemail.Matcher
 
 	// nativeIDs caches external key → native id within one run. A resumed run
 	// rebuilds it lazily through lookup, which falls back to the engine-owned

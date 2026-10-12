@@ -51,13 +51,10 @@ const assocCategoryEmployment = "employment"
 
 // Associations answers one edge per row naming an employer.
 //
-// It re-walks the file, which is the same thing every other read of this source
-// does — Counts walks it, and each page of Rows walks it from the top. The whole
-// file is bounded by the upload cap, and one edge is two short strings, so the
-// all-at-once shape the Source interface asks for costs a few hundred kilobytes
-// on the largest file this door accepts. It does not need paging; a later reader
-// tempted to add some should know the bound is the upload limit, not the row
-// count.
+// It walks the file once, as Counts does. The upload cap bounds the file and one
+// edge is two short strings, so the whole answer costs a few hundred kilobytes
+// at most. The bound is the upload limit, not the row count, so it needs no
+// paging.
 //
 // Empty for every object but a contact run, and for a contact run whose mapping
 // names no company column: a company or lead import is unaffected by this

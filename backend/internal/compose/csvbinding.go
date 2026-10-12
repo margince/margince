@@ -51,7 +51,7 @@ func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids
 	if id, ok := w.nativeIDs[externalID]; ok {
 		return id, true, nil
 	}
-	binding, found, err := w.identities.LookupBinding(ctx, w.sourceSystem, object, externalID)
+	binding, found, err := w.bindingOf(ctx, externalID)
 	if err != nil || !found {
 		return ids.UUID{}, false, err
 	}
@@ -68,4 +68,26 @@ func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids
 	default:
 		return binding.NativeID, true, errBoundRecordArchived
 	}
+}
+
+// bindingOf is the identity-map entry for one key: from the run's preloaded
+// map when the dry run read it, else from the store.
+func (w *csvWriters) bindingOf(ctx context.Context, externalID string) (migration.Binding, bool, error) {
+	if w.bindings != nil {
+		binding, found := w.bindings[externalID]
+		return binding, found, nil
+	}
+	return w.identities.LookupBinding(ctx, w.sourceSystem, w.object, externalID)
+}
+
+// preloadBindings reads every key this part's source has landed, in one query.
+// Only a dry run preloads: it writes nothing, so the map stays exact for the
+// whole run, while a commit lands keys as it goes.
+func (w *csvWriters) preloadBindings(ctx context.Context) error {
+	bindings, err := w.identities.BindingsOf(ctx, w.sourceSystem, w.object)
+	if err != nil {
+		return err
+	}
+	w.bindings = bindings
+	return nil
 }

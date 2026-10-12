@@ -90,6 +90,10 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			// first, which is the whole claim. A nil tx proves it.
 			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
 		}},
+		{"BindingsOf", func() error {
+			_, err := s.BindingsOf(ctx, "legacy_crm", "contact")
+			return err
+		}},
 		{"LookupBinding", func() error {
 			_, _, err := s.LookupBinding(ctx, "legacy_crm", "contact", "1")
 			return err
@@ -650,7 +654,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
 		"CreateStagedRun": true, "AwaitApproval": true, "Approve": true,
 		"ResumeApproved": true, "FailValidation": true, "GetStaged": true, "ListStaged": true,
-		"RecordIdentityTx": true, "LookupBinding": true, "Undo": true,
+		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
 		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true, "FailStaleValidating": true,
 	}
