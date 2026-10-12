@@ -24,8 +24,9 @@ import (
 // From is a header the sender types, so the row is not attested. It names the
 // colleague in SentByColleague, which no correspondence gate reads.
 //
-// The counterparty is the ladder's stand-in for a colleague's mail, with the
-// colleague's own address taken out of the candidates.
+// The counterparty is the ladder's stand-in, picked among the recipients only.
+// rec.Addresses also lists every From address, so a co-author beside the
+// colleague would otherwise stand in for the customer.
 func (s *Sink) asSentByColleagueTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (connector.NormalizedRecord, ActivityFields, error) {
@@ -43,7 +44,12 @@ func (s *Sink) asSentByColleagueTx(
 	}
 	from := foldAddress(cp.Email)
 	recipients := rec
-	recipients.Addresses = slices.DeleteFunc(slices.Clone(rec.Addresses), func(a string) bool { return foldAddress(a) == from })
+	recipients.Addresses = make([]string, 0, len(rec.Participants))
+	for _, p := range rec.Participants {
+		if foldAddress(p.Email) != from {
+			recipients.Addresses = append(recipients.Addresses, p.Email)
+		}
+	}
 	stand, err := s.standInSubject(ctx, tx, recipients, self, connector.DirectionOutbound)
 	if err != nil || stand.Email == "" {
 		return rec, fields, err

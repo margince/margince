@@ -49,7 +49,9 @@ reply.
 
 A message that is not a request is answered by any of:
 
-- our reply on the same thread;
+- our reply on the same thread, sent to the sender. Their address, or a live address of their
+  contact, must be the recipient or on a To/Cc row. Our mail to somebody else on the thread does not
+  answer them. A chat message has no address, so any reply of ours in that chat counts;
 - our mail to the sender with the same subject, once reply tags (`Re:`, `AW:`, `Antw:`) are removed.
   The sender is their address or any live address of their contact. That address must be named as the
   recipient of the outbound mail or on a To/Cc row. A Bcc copy does not count, and a mail sent on
