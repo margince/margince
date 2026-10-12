@@ -33,7 +33,7 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		"due_at":             derefOrNil(a.DueAt),
 		"remind_at":          derefOrNil(a.RemindAt),
 		"assignee_id":        derefOrNil(a.AssigneeId),
-		"is_done":            derefOrNil(a.IsDone),
+		auditFieldIsDone:     derefOrNil(a.IsDone),
 		"done_at":            derefOrNil(a.DoneAt),
 		// Writable on the patch, so it belongs in the image: a column the update
 		// can change and the diff cannot see leaves an audit row saying nothing
