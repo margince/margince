@@ -293,6 +293,11 @@ type NormalizedRecord struct {
 	// (mailmap.TopDeliveredTo); empty is the safe answer and the common one.
 	DeliveredTo string
 
+	// SenderAuthentication is what the receiving server's topmost
+	// Authentication-Results header said about the From domain
+	// (mailmap.TopSenderAuthentication). Zero when the message carries none.
+	SenderAuthentication SenderAuthentication
+
 	// ProviderReceivedAt is when the mailbox PROVIDER says this message arrived
 	// in the seat's mailbox: Gmail's internalDate, Graph's receivedDateTime. It
 	// comes off the provider's API response, never out of the message, so a

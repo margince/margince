@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 300 |
-| Columns | 3565 |
-| Foreign keys | 500 |
+| Tables | 301 |
+| Columns | 3570 |
+| Foreign keys | 501 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -42,7 +42,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 129 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 59 | 34 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 60 | 35 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 24 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
@@ -88,7 +88,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 24 |
+| [activities](activities.md) | 25 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -129,8 +129,9 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 59 | 34 |
+| [`activity`](activities.md#activity) | activities | 60 | 35 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
+| [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 4 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
 | [`activity_link`](activities.md#activity_link) | activities | 9 | 0 |

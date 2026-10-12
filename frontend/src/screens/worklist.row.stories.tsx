@@ -268,7 +268,7 @@ export const AWaitingBuyerWithEveryVerb: Story = {
       detail: "“Can you confirm the lead time before Friday?”",
       because: [{ kind: "waiting_days", value: { kind: "days", days: 4 } }],
       actions: ["open", "reply"],
-      dispositions: ["snooze", "not_mine", "not_sales"],
+      dispositions: ["handled", "snooze", "not_mine", "not_sales"],
       subject: {
         type: "deal",
         id: "01a05500-0000-7000-8000-0000000000bb",

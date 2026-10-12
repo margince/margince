@@ -332,6 +332,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "worklist.because.champion_unknown",
     "worklist.because.no_champion",
     "worklist.disposition.done.not_mine",
+    "worklist.disposition.hint.not_mine",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",

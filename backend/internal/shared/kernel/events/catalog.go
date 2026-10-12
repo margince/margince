@@ -214,6 +214,10 @@ var catalog = map[string]struct {
 	// about it, and a consumer counting edits to correspondence must not read a
 	// rep clearing their queue as the customer's mail being rewritten.
 	"activity.disposition_recorded": {activityStreamEntity, 1},
+	// One reader marked a waiting message done. A type of its own because
+	// disposition_recorded's enum is closed at v1, and a new value would break
+	// subscribers that validate it.
+	"activity.marked_handled": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
 	// them, or put them back. The entity is the contact, which is what the
 	// judgement is about, the relationship's silence is a fact about them

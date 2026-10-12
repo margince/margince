@@ -253,7 +253,7 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 		// classifier, so a source added later carries a primary action by
 		// arriving in this loop instead of by its author remembering to.
 		if item.Source == sourceWaiting {
-			offered := waitingDispositions(row.threaded)
+			offered := waitingDispositions(row, reader)
 			item.Dispositions = &offered
 		}
 		item.PrimaryAction = primaryActionFor(item)

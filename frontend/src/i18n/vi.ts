@@ -3350,6 +3350,23 @@ export const vi = {
   "deals.confirmTerminal":
     "Thao tác này sẽ đóng deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
   "deals.lostReason": "Lý do thua",
+  "deals.closeTasks.legend_one":
+    "Xử lý {count} việc còn mở của deal này thế nào?",
+  "deals.closeTasks.legend_other":
+    "Xử lý {count} việc còn mở của deal này thế nào?",
+  "deals.closeTasks.listLabel": "Việc còn mở của deal này",
+  "deals.closeTasks.untitled": "Việc chưa có tiêu đề",
+  "deals.closeTasks.complete": "Hoàn thành tất cả",
+  "deals.closeTasks.completeHint":
+    "Đánh dấu xong khi deal đóng. Bạn có thể hoàn tác.",
+  "deals.closeTasks.loading": "Đang tải các việc còn mở của deal…",
+  "deals.closeTasks.readFailed": "Khi đóng, mọi việc của deal này vẫn còn mở.",
+  "deals.closeTasks.noneCompleted": "Không hoàn thành được việc nào.",
+  "deals.closeTasks.keep": "Giữ lại",
+  "deals.closeTasks.keepHint": "Để chúng mở.",
+  "deals.closeTasks.choose": "Chọn cách xử lý các việc còn mở.",
+  "deals.closeTasks.failed":
+    "Deal đã đóng, nhưng một số việc chưa hoàn thành được. Hãy hoàn thành chúng trong Danh sách công việc.",
   "deals.winNoEvidence":
     "Chưa đính kèm hợp đồng đã ký. Ghi lại cách chốt được deal; câu trả lời sẽ được lưu trên deal và tính vào báo cáo.",
   "deals.winReason": "Chốt được deal bằng cách nào?",
@@ -11796,15 +11813,20 @@ export const vi = {
   "worklist.disposition.snoozeForDays_other": "Tạm hoãn {value} ngày",
   "worklist.disposition.snoozeFor": "Thời gian tạm hoãn",
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
+  "worklist.disposition.verb.handled": "Xong",
   "worklist.disposition.verb.not_mine": "Không phải việc của tôi",
+  "worklist.disposition.hint.not_mine":
+    "Chỉ gỡ khỏi danh sách của bạn. Bản ghi vẫn giữ người phụ trách. Việc này sẽ quay lại nếu bản ghi đổi người phụ trách.",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
   "worklist.disposition.doneSnooze_one": "Sẽ quay lại danh sách vào ngày mai.",
   "worklist.disposition.doneSnooze_other":
     "Sẽ quay lại danh sách sau {value} ngày.",
   "worklist.disposition.doneSnoozeUntil.reply":
     "Sẽ quay lại danh sách khi họ trả lời.",
+  "worklist.disposition.done.handled":
+    "Đã đánh dấu xong cho bạn. Việc này sẽ quay lại nếu họ viết tiếp.",
   "worklist.disposition.done.not_mine":
-    "Đã gỡ khỏi danh sách của bạn. Người phụ trách vẫn thấy việc này.",
+    "Đã gỡ khỏi danh sách của bạn. Việc này sẽ quay lại nếu bản ghi đổi người phụ trách.",
   "worklist.disposition.done.not_sales": "Đã gỡ khỏi mọi danh sách.",
   "worklist.disposition.swipeCancel": "Giữ lại",
   "worklist.disposition.menu": "Gỡ khỏi danh sách",

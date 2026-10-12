@@ -120,7 +120,7 @@ function waitingRow(): WorklistItem {
     title: "Re: pricing for the retrofit",
     because: [],
     actions: ["open", "reply"],
-    dispositions: ["snooze", "not_mine", "not_sales"],
+    dispositions: ["handled", "snooze", "not_mine", "not_sales"],
     version: 2,
     subject: {
       type: "deal",

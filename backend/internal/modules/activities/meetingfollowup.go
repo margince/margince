@@ -203,9 +203,7 @@ var meetingFollowUpsSQL = `
 	                      AND later.occurred_at >= ` + meetingEndSQL + `
 	                      AND later.occurred_at <= $%[1]d)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
-	   AND NOT EXISTS (SELECT 1 FROM activity_reader_state mine
-	                    WHERE mine.activity_id = a.id AND mine.reader_id = $%[8]d
-	                      AND (mine.state = 'not_mine' OR (mine.state = 'snoozed' AND NOT %[9]s)))
+	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `
 	 GROUP BY a.id, a.subject, a.occurred_at, attendees.recipients
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[11]d`

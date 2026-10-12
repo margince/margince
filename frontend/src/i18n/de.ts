@@ -3418,6 +3418,24 @@ export const de = {
   "deals.confirmTerminal":
     "Damit wird der Deal als {status} abgeschlossen. Bis du bestätigst, ändert sich nichts.",
   "deals.lostReason": "Verlustgrund",
+  "deals.closeTasks.legend_one":
+    "Was passiert mit der {count} offenen Aufgabe dieses Deals?",
+  "deals.closeTasks.legend_other":
+    "Was passiert mit den {count} offenen Aufgaben dieses Deals?",
+  "deals.closeTasks.listLabel": "Offene Aufgaben dieses Deals",
+  "deals.closeTasks.untitled": "Aufgabe ohne Titel",
+  "deals.closeTasks.complete": "Alle erledigen",
+  "deals.closeTasks.completeHint":
+    "Als erledigt markieren, sobald der Deal geschlossen ist. Du kannst das rückgängig machen.",
+  "deals.closeTasks.loading": "Offene Aufgaben des Deals werden geladen…",
+  "deals.closeTasks.readFailed":
+    "Beim Schließen bleiben alle Aufgaben dieses Deals offen.",
+  "deals.closeTasks.noneCompleted": "Keine Aufgabe konnte erledigt werden.",
+  "deals.closeTasks.keep": "Behalten",
+  "deals.closeTasks.keepHint": "Offen lassen.",
+  "deals.closeTasks.choose": "Wähle, was mit den offenen Aufgaben passiert.",
+  "deals.closeTasks.failed":
+    "Der Deal ist geschlossen, aber einige Aufgaben konnten nicht erledigt werden. Erledige sie in der Worklist.",
   "deals.winNoEvidence":
     "Es ist kein unterschriebener Vertrag angehängt. Erfasse, wie der Deal gewonnen wurde; die Antwort bleibt am Deal und wird in Berichten gezählt.",
   "deals.winReason": "Wie wurde er gewonnen?",
@@ -12035,15 +12053,20 @@ export const de = {
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",
   "worklist.disposition.snoozeFor": "Dauer der Zurückstellung",
   "worklist.disposition.snoozeUntil.reply": "Bis zur Antwort",
+  "worklist.disposition.verb.handled": "Erledigt",
   "worklist.disposition.verb.not_mine": "Nicht zuständig",
+  "worklist.disposition.hint.not_mine":
+    "Entfernt den Eintrag nur von deiner Liste. Die Zuständigkeit bleibt. Wechselt sie, kommt der Eintrag zurück.",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
     "In {value} Tagen wieder auf deiner Liste.",
   "worklist.disposition.doneSnoozeUntil.reply":
     "Wieder auf deiner Liste, sobald eine Antwort kommt.",
+  "worklist.disposition.done.handled":
+    "Für dich erledigt. Bei einer neuen Nachricht kommt der Eintrag zurück.",
   "worklist.disposition.done.not_mine":
-    "Von deiner Liste entfernt. Wer zuständig ist, sieht den Eintrag weiterhin.",
+    "Von deiner Liste entfernt. Wechselt die Zuständigkeit, kommt der Eintrag zurück.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
   "worklist.disposition.swipeCancel": "Behalten",
   "worklist.disposition.menu": "Aus der Liste entfernen",

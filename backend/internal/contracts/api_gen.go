@@ -15132,6 +15132,7 @@ func (e ServiceStatusStatus) Valid() bool {
 
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
+	SetActivityDispositionRequestDispositionHandled  SetActivityDispositionRequestDisposition = "handled"
 	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
 	SetActivityDispositionRequestDispositionNotSales SetActivityDispositionRequestDisposition = "not_sales"
 	SetActivityDispositionRequestDispositionSnooze   SetActivityDispositionRequestDisposition = "snooze"
@@ -15140,6 +15141,8 @@ const (
 // Valid indicates whether the value is a known member of the SetActivityDispositionRequestDisposition enum.
 func (e SetActivityDispositionRequestDisposition) Valid() bool {
 	switch e {
+	case SetActivityDispositionRequestDispositionHandled:
+		return true
 	case SetActivityDispositionRequestDispositionNotMine:
 		return true
 	case SetActivityDispositionRequestDispositionNotSales:
@@ -18690,6 +18693,7 @@ func (e WorklistItemDestination) Valid() bool {
 
 // Defines values for WorklistItemDispositions.
 const (
+	WorklistItemDispositionsWorklistDispositionHandled  WorklistItemDispositions = "handled"
 	WorklistItemDispositionsWorklistDispositionNotMine  WorklistItemDispositions = "not_mine"
 	WorklistItemDispositionsWorklistDispositionNotSales WorklistItemDispositions = "not_sales"
 	WorklistItemDispositionsWorklistDispositionSnooze   WorklistItemDispositions = "snooze"
@@ -18698,6 +18702,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistItemDispositions enum.
 func (e WorklistItemDispositions) Valid() bool {
 	switch e {
+	case WorklistItemDispositionsWorklistDispositionHandled:
+		return true
 	case WorklistItemDispositionsWorklistDispositionNotMine:
 		return true
 	case WorklistItemDispositionsWorklistDispositionNotSales:
@@ -35876,11 +35882,12 @@ type HiddenBacklog struct {
 	// read.
 	PastHorizon int `json:"past_horizon"`
 
-	// SetAside Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
-	// least alarming of the four: a snooze lifts on its own moment, so this includes
-	// work that will come back without anybody remembering it. `not_mine` names no
-	// moment, and lifts only when the reader picks the message back up or the record
-	// it is filed under changes hands.
+	// SetAside Work this reader has snoozed, marked `not_mine` or marked `handled`. THEIR OWN
+	// CHOICE, and the least alarming of the four: a snooze lifts on its own moment, so
+	// this includes work that will come back without anybody remembering it. `not_mine`
+	// names no moment, and lifts only when the reader picks the message back up or the
+	// record it is filed under changes hands. `handled` lifts only when the reader picks
+	// it back up.
 	SetAside int `json:"set_aside"`
 
 	// Shown What the eligibility query FOUND under the rules as they stand. Here so the
@@ -43135,8 +43142,8 @@ type ResponseMetrics struct {
 	// day still running is left out, because its next step can still be booked.
 	AtRiskToDay *openapi_types.Date `json:"at_risk_to_day,omitempty"`
 
-	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
-	// judged not sales.
+	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs,
+	// marked done, or judged not sales. None of these is a reply sent.
 	//
 	// Counted from the audit record rather than from what is set aside now. A snooze
 	// that lifted and a not_mine somebody withdrew leave no trace in the current
@@ -44302,8 +44309,9 @@ type SetActivityAudienceRequest struct {
 
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
-	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
-	// `not_mine` bind only the caller.
+	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `handled`,
+	// `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
+	// message another way; the customer's next message arrives as new work.
 	Disposition SetActivityDispositionRequestDisposition `json:"disposition"`
 
 	// ReopenOn What lifts a snooze. `time` is the original behaviour and the default, so a client
@@ -44326,8 +44334,9 @@ type SetActivityDispositionRequest struct {
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 }
 
-// SetActivityDispositionRequestDisposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
-// `not_mine` bind only the caller.
+// SetActivityDispositionRequestDisposition What the reader decided. `not_sales` binds the thread for everybody; `handled`,
+// `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
+// message another way; the customer's next message arrives as new work.
 type SetActivityDispositionRequestDisposition string
 
 // SetAiModelRateRequest defines model for SetAiModelRateRequest.
