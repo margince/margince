@@ -97,13 +97,13 @@ type mapRow struct {
 // all-or-nothing hard rollback.
 //
 // Refuses a second call while one is already under way for this run
-// (claimUndo), and pages the reversal (undoPageSize) so neither the row set
-// nor the persisted report grows unbounded in memory or on the wire.
+// (lockUndo). Pages the reversal (undoPageSize), so neither the row set nor
+// the persisted report grows unbounded in memory or on the wire.
 func (s *RunStore) Undo(ctx context.Context, id RunID, w UndoWriters) (UndoReport, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return UndoReport{}, err
 	}
-	release, err := s.claimUndo(ctx, id)
+	release, err := s.lockUndo(ctx, id)
 	if err != nil {
 		return UndoReport{}, err
 	}
@@ -205,7 +205,7 @@ func reversalRefusalReason(err error) string {
 	}
 }
 
-// claimUndo takes an exclusive, session-scoped advisory lock on this run's
+// lockUndo takes an exclusive, session-scoped advisory lock on this run's
 // undo, held for the lifetime of the caller's Undo call. beginUndo's row
 // lock only covers its own transaction; the reversal that follows spans
 // many transactions, so without a lock held across the whole call, two
@@ -213,7 +213,7 @@ func reversalRefusalReason(err error) string {
 // pass beginUndo's `complete`/`undoing` check and both loop over the same
 // rows. A second caller is refused immediately rather than piling a
 // duplicate pass onto the first.
-func (s *RunStore) claimUndo(ctx context.Context, id RunID) (func(), error) {
+func (s *RunStore) lockUndo(ctx context.Context, id RunID) (func(), error) {
 	conn, err := s.db.Pool().Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("import run %s: acquiring the undo lock connection: %w", id, err)
@@ -269,11 +269,10 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 	var rep UndoReport
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var undoReportRaw []byte
-		// FOR UPDATE: two concurrent calls reaching beginUndo back to back
-		// (claimUndo already refuses a genuinely concurrent second caller,
-		// but a caller retrying right after the first releases its lock
-		// must still see a consistent read-then-transition) do not both
-		// read `complete` and both start a fresh reversal.
+		// FOR UPDATE: two calls reaching beginUndo back to back do not both
+		// read `complete` and both start a fresh reversal. lockUndo refuses a
+		// concurrent second caller; this covers one retrying right after the
+		// first releases its lock.
 		var reportRaw []byte
 		row := tx.QueryRow(ctx, `
 			SELECT id, connector, status, checkpoint, undo_report, report
@@ -323,7 +322,7 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 		if tag.RowsAffected() == 0 {
 			return fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
 		}
-		_, err = storekit.Audit(ctx, tx, "update", importRunObject, id,
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
 			map[string]any{auditFieldStatus: before}, map[string]any{auditFieldStatus: StatusUndoing})
 		return err
 	})
@@ -464,7 +463,7 @@ func (s *RunStore) completeUndo(ctx context.Context, id RunID, rep UndoReport) e
 		if tag.RowsAffected() == 0 {
 			return fmt.Errorf("import run %s is not undoing, cannot complete undo: %w", id, apperrors.ErrConflict)
 		}
-		_, err = storekit.Audit(ctx, tx, "import_undo", importRunObject, id,
+		_, err = storekit.Audit(ctx, tx, "import_undo", ImportRunObject, id,
 			map[string]any{auditFieldStatus: StatusUndoing},
 			map[string]any{auditFieldStatus: StatusUndone, "reversed_count": rep.ReversedCount, "kept_count": len(rep.Kept), "errored_count": len(rep.Errored)})
 		return err

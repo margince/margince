@@ -92,7 +92,7 @@ type CreateStagedRunInput struct {
 // mapping, and has written nothing to the estate. The dry run reports against
 // it and AwaitApproval hands it to a human.
 func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
 		return Run{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -114,7 +114,7 @@ func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput)
 		if err := scanRun(row, &run); err != nil {
 			return fmt.Errorf("creating import run: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "create", importRunObject, run.ID, nil, map[string]any{
+		if _, err := storekit.Audit(ctx, tx, "create", ImportRunObject, run.ID, nil, map[string]any{
 			"connector": run.Connector, auditFieldStatus: run.Status, "source_ref": run.SourceRef,
 			"object": in.Mapping.Object,
 		}); err != nil {
@@ -138,7 +138,7 @@ func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput)
 // Valid only from `validating`: a run that already moved on is not the one the
 // report describes.
 func (s *RunStore) AwaitApproval(ctx context.Context, id RunID, report Report) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	encoded, err := json.Marshal(report)
@@ -155,7 +155,7 @@ func (s *RunStore) AwaitApproval(ctx context.Context, id RunID, report Report) e
 // acting on a state that is not the one they judged. The conflict says so
 // rather than starting a second pass over the same file.
 func (s *RunStore) Approve(ctx context.Context, id RunID) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
 	}
 	if err := s.stageTransition(ctx, id, StatusAwaitingApproval, StatusRunning, nil); err != nil {
@@ -198,7 +198,7 @@ func (s *RunStore) stageTransition(ctx context.Context, id RunID, from, to strin
 			// only its current callers keep, so it is decided here.
 			return s.explainMiss(ctx, tx, id, from, to)
 		}
-		_, err = storekit.Audit(ctx, tx, "update", importRunObject, id,
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
 			map[string]any{auditFieldStatus: from}, map[string]any{auditFieldStatus: to})
 		return err
 	})
@@ -208,7 +208,7 @@ func (s *RunStore) stageTransition(ctx context.Context, id RunID, from, to strin
 // `validating`, so it can never overwrite the outcome of a run that has since
 // been approved and committed.
 func (s *RunStore) FailValidation(ctx context.Context, id RunID, cause error) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
@@ -221,7 +221,7 @@ func (s *RunStore) FailValidation(ctx context.Context, id RunID, cause error) er
 		if tag.RowsAffected() == 0 {
 			return s.explainMiss(ctx, tx, id, StatusValidating, StatusFailed)
 		}
-		_, err = storekit.Audit(ctx, tx, "update", importRunObject, id,
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
 			map[string]any{auditFieldStatus: StatusValidating}, map[string]any{auditFieldStatus: StatusFailed})
 		return err
 	})
@@ -248,7 +248,7 @@ func (s *RunStore) explainMiss(ctx context.Context, tx pgx.Tx, id RunID, from, t
 // and report surfaces answer from. A run outside the caller's scope answers
 // not-found, never forbidden.
 func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
 		return Run{}, err
 	}
 	var run Run

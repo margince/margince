@@ -26,7 +26,7 @@ import (
 // FailRunning records why a running run's work stopped, when the engine could
 // not record it itself. A run in any other state is left as it is.
 func (s *RunStore) FailRunning(ctx context.Context, id RunID, cause string) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
@@ -39,25 +39,26 @@ func (s *RunStore) FailRunning(ctx context.Context, id RunID, cause string) erro
 		if tag.RowsAffected() == 0 {
 			return nil
 		}
-		_, err = storekit.Audit(ctx, tx, "update", importRunObject, id,
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
 			map[string]any{auditFieldStatus: StatusRunning}, map[string]any{auditFieldStatus: StatusFailed})
 		return err
 	})
 }
 
 // FailStaleRunning fails every running import whose last checkpoint is older
-// than before, and answers how many. updated_at moves on every checkpoint, so
-// a run that has not moved since then has no process left working it.
-func (s *RunStore) FailStaleRunning(ctx context.Context, before time.Time, cause string) (int, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+// than idle, and answers how many. updated_at moves on every checkpoint, so a
+// run that has not moved for that long has no process left working it. The
+// cutoff is taken on the database clock that wrote updated_at.
+func (s *RunStore) FailStaleRunning(ctx context.Context, idle time.Duration, cause string) (int, error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return 0, err
 	}
 	failed := 0
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			UPDATE import_run SET status = $1, error = $2, updated_at = now()
-			 WHERE status = $3 AND connector = $4 AND updated_at < $5
-			RETURNING id`, StatusFailed, cause, StatusRunning, ConnectorCSV, before)
+			 WHERE status = $3 AND connector = $4 AND updated_at < now() - make_interval(secs => $5)
+			RETURNING id`, StatusFailed, cause, StatusRunning, ConnectorCSV, idle.Seconds())
 		if err != nil {
 			return fmt.Errorf("failing stale import runs: %w", err)
 		}
@@ -66,7 +67,7 @@ func (s *RunStore) FailStaleRunning(ctx context.Context, before time.Time, cause
 			return fmt.Errorf("failing stale import runs: %w", err)
 		}
 		for _, id := range stale {
-			if _, err := storekit.Audit(ctx, tx, "update", importRunObject, id,
+			if _, err := storekit.Audit(ctx, tx, "update", ImportRunObject, id,
 				map[string]any{auditFieldStatus: StatusRunning}, map[string]any{auditFieldStatus: StatusFailed}); err != nil {
 				return err
 			}
@@ -81,10 +82,10 @@ func (s *RunStore) FailStaleRunning(ctx context.Context, before time.Time, cause
 // so the caller can answer before the reversal runs. It refuses while another
 // undo of the run holds the claim, as Undo does.
 func (s *RunStore) ClaimUndo(ctx context.Context, id RunID) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
-	release, err := s.claimUndo(ctx, id)
+	release, err := s.lockUndo(ctx, id)
 	if err != nil {
 		return err
 	}

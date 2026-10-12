@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -36,7 +35,6 @@ func (ImportRunSweepArgs) Kind() string { return "import_run_sweep" }
 type importRunSweepWorker struct {
 	identity *identity.Service
 	pool     *pgxpool.Pool
-	now      func() time.Time
 	log      *slog.Logger
 }
 
@@ -47,7 +45,7 @@ func (w *importRunSweepWorker) Work(ctx context.Context, _ *river.Job[ImportRunS
 	}
 	ctx = principal.SystemActing(ctx, "system:import-run-sweep")
 	failed, err := migration.NewRunStore(InstallationDB(w.pool)).
-		FailStaleRunning(ctx, w.now().Add(-importCommitTimeout), staleImportCause)
+		FailStaleRunning(ctx, importCommitTimeout, staleImportCause)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("import_run_sweep: failing stale runs: %w", err))
 	}
@@ -61,7 +59,7 @@ func (w *importRunSweepWorker) Work(ctx context.Context, _ *river.Job[ImportRunS
 // works jobs runs it: a commit's process may be any API process.
 func addImportRunSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	addDeclaredWorker[ImportRunSweepArgs](reg, &importRunSweepWorker{
-		identity: identity.NewService(pool), pool: pool, now: time.Now, log: log,
+		identity: identity.NewService(pool), pool: pool, log: log,
 	})
 	return periodicFor(cfg, ImportRunSweepArgs{})
 }

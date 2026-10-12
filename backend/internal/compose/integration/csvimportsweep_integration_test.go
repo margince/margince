@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -28,7 +27,7 @@ func backdateImportRun(t *testing.T, e *apptest.AppEnv, runID string) {
 
 func sweepImportRuns(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	if err := compose.DriveImportRunSweepForTest(context.Background(), e.Pool, time.Now); err != nil {
+	if err := compose.DriveImportRunSweepForTest(context.Background(), e.Pool); err != nil {
 		t.Fatalf("one sweep pass: %v", err)
 	}
 }

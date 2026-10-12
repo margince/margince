@@ -81,7 +81,10 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 //
 // 109 since Service.CarryGrantsTx: a merge carries the shares of a contact,
 // company or lead, and the gate names the record type the merge retires.
-const dynamicObjectCeiling = 109
+//
+// 96 since migration's doors name ImportRunObject itself rather than a
+// constant aliasing it, which this scan cannot follow.
+const dynamicObjectCeiling = 96
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as

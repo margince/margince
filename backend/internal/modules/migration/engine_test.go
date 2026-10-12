@@ -36,7 +36,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:ungranted",
 		SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{importRunObject: {Read: false}}, // a rep: no import_run grant at all
+			Objects:  map[string]principal.ObjectGrant{ImportRunObject: {Read: false}}, // a rep: no import_run grant at all
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -97,7 +97,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
 		{"ClaimUndo", func() error { return s.ClaimUndo(ctx, runID) }},
 		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
-		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Now(), "stopped"); return err }},
+		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {

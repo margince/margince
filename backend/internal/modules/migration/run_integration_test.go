@@ -119,7 +119,7 @@ func testWorkspaceCtx(t *testing.T, grants map[string]principal.ObjectGrant) (co
 
 func adminImportRunGrant() map[string]principal.ObjectGrant {
 	return map[string]principal.ObjectGrant{
-		importRunObject: {Create: true, Read: true, Update: true, Delete: true},
+		ImportRunObject: {Create: true, Read: true, Update: true, Delete: true},
 	}
 }
 
