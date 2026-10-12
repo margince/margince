@@ -9860,9 +9860,9 @@ export interface paths {
          *     Only your own withdrawal, and only for ten minutes: after that the withdrawn address is
          *     deleted and this answers `404`, as it does for somebody else's and for one already restored.
          *
-         *     `409 removal_moved_on` when the identity changed after this withdrawal. `409
-         *     identity_declared_again` when the address was declared again in the meantime, so it is
-         *     already yours.
+         *     `409 removal_moved_on` when the same address was declared and withdrawn again after this
+         *     withdrawal; put back the newer one instead. `409 identity_declared_again` when the address
+         *     is declared again now, so it is already yours.
          */
         post: operations["restoreCaptureOwnerIdentity"];
         delete?: never;
@@ -21516,6 +21516,11 @@ export interface components {
              *     `record_exists` is false.
              */
             contact_id?: string;
+            /**
+             * @description That contact's name (its `full_name`), so a client can show it without fetching the
+             *     contact. Present exactly when `contact_id` is.
+             */
+            contact_name?: string;
             /**
              * @description How many messages stored from your mailbox have this address as their counterparty, sent
              *     or received. Archived mail is not counted.
@@ -61201,7 +61206,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The address cannot be put back: it changed after this withdrawal (`removal_moved_on`), or it was declared again (`identity_declared_again`). */
+            /** @description The address cannot be put back: it was declared and withdrawn again since (`removal_moved_on`), or it is declared again now (`identity_declared_again`). */
             409: {
                 headers: {
                     [name: string]: unknown;

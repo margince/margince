@@ -10,7 +10,30 @@
   min-inline-size: 100%;
 }
 
-/* An address has no spaces, so it breaks anywhere rather than widen the row. */
+/* One line beside the subject: the address is cut short, never its count. */
 .held-threads-parties {
-  overflow-wrap: anywhere;
+  display: flex;
+  inline-size: 0;
+  min-inline-size: 100%;
+  gap: var(--space-1);
+}
+.held-threads-parties > .held-threads-parties-list {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.held-threads-parties-more {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* Folded, the line takes the row's width and wraps between addresses. */
+.held-threads-parties-all .held-threads-parties-more {
+  margin-inline-start: var(--space-1);
+}
+@container table-fold (width < 36rem) {
+  .table-scroll-fold td:has(.held-threads-parties-all) {
+    flex-basis: 100%;
+  }
 }

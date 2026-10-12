@@ -15108,9 +15108,9 @@ paths:
         Only your own withdrawal, and only for ten minutes: after that the withdrawn address is
         deleted and this answers `404`, as it does for somebody else's and for one already restored.
 
-        `409 removal_moved_on` when the identity changed after this withdrawal. `409
-        identity_declared_again` when the address was declared again in the meantime, so it is
-        already yours.
+        `409 removal_moved_on` when the same address was declared and withdrawn again after this
+        withdrawal; put back the newer one instead. `409 identity_declared_again` when the address
+        is declared again now, so it is already yours.
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
       responses:
@@ -15124,8 +15124,8 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: >-
-            The address cannot be put back: it changed after this withdrawal
-            (`removal_moved_on`), or it was declared again (`identity_declared_again`).
+            The address cannot be put back: it was declared and withdrawn again since
+            (`removal_moved_on`), or it is declared again now (`identity_declared_again`).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -31335,6 +31335,11 @@ components:
           description: |
             The contact `record_exists` found, so a client can open it. Absent whenever
             `record_exists` is false.
+        contact_name:
+          type: string
+          description: |
+            That contact's name (its `full_name`), so a client can show it without fetching the
+            contact. Present exactly when `contact_id` is.
         message_count:
           type: integer
           minimum: 0

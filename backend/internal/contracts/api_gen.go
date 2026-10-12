@@ -27219,6 +27219,10 @@ type CaptureSenderDecision struct {
 	// `record_exists` is false.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
+	// ContactName That contact's name (its `full_name`), so a client can show it without fetching the
+	// contact. Present exactly when `contact_id` is.
+	ContactName *string `json:"contact_name,omitempty"`
+
 	// Decision What YOU decided instead, absent when you have not.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
 

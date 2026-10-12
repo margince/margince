@@ -131,7 +131,11 @@ function useRestoreIdentity(outcome: MutationOutcome<Withdrawal>) {
         }),
       );
     },
-    onError: outcome.onError,
+    // A refusal can mean the address is already back, so the list reads again.
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
+      outcome.onError(error);
+    },
     onSuccess: (_, withdrawal) => {
       queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
       outcome.onSuccess(withdrawal);
@@ -139,10 +143,10 @@ function useRestoreIdentity(outcome: MutationOutcome<Withdrawal>) {
   });
 }
 
-function useIdentityRemoval() {
+function useIdentityRemoval(removed: string) {
   const t = useT();
   const toasts = useUndoableRemoval<Withdrawal>({
-    removed: t("ownerIdentities.removedToast"),
+    removed,
     restored: t("ownerIdentities.restoredToast"),
     restoreRefused: (error) => {
       const key = RESTORE_REFUSALS.get(problemCodeOf(error) ?? "");
@@ -158,7 +162,14 @@ function useIdentityRemoval() {
 export function OwnerIdentitiesCard() {
   const t = useT();
   const query = useOwnerIdentities();
-  const remove = useIdentityRemoval();
+  const removeTyped = useIdentityRemoval(t("ownerIdentities.removedToast"));
+  // A withdrawn delivered-to alias is refused from then on, and the notice says so.
+  const removeLearned = useIdentityRemoval(
+    t("ownerIdentities.removedLearnedToast"),
+  );
+  const removing = [removeTyped, removeLearned].find(
+    (removal) => removal.isPending,
+  )?.variables?.id;
   const [declaring, setDeclaring] = useState(false);
   const addVerb = useRef<HTMLButtonElement>(null);
   return (
@@ -186,9 +197,14 @@ export function OwnerIdentitiesCard() {
         {(list) => (
           <IdentityRows
             list={list.data}
-            removing={remove.isPending ? remove.variables?.id : undefined}
+            removing={removing}
             landing={() => addVerb.current}
-            onRemove={(identity) => remove.mutate(identity)}
+            onRemove={(identity) =>
+              (identity.source === "delivered_to"
+                ? removeLearned
+                : removeTyped
+              ).mutate(identity)
+            }
           />
         )}
       </QueryGate>

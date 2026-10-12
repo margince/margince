@@ -50,6 +50,12 @@ func heldThreadPartiesTx(ctx context.Context, tx pgx.Tx, threads []HeldThread) e
 		return err
 	}
 	opening := arg(messages)
+	// The reader's own aliases are not somebody they are talking to. A
+	// colleague's are left as addresses: skipping them would say which are private.
+	self, err := ownerIdentitiesTx(ctx, tx)
+	if err != nil {
+		return err
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT p.activity_id, p.address, p.contact_id
 		  FROM activity_participant p
@@ -71,7 +77,9 @@ func heldThreadPartiesTx(ctx context.Context, tx pgx.Tx, threads []HeldThread) e
 		if err := rows.Scan(&message, &party.Address, &party.ContactID); err != nil {
 			return fmt.Errorf("capture: reading who a seat's held threads are with: %w", err)
 		}
-		parties[message] = appendParty(parties[message], party)
+		if !self.Covers(party.Address) {
+			parties[message] = appendParty(parties[message], party)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("capture: reading who a seat's held threads are with: %w", err)
@@ -102,8 +110,8 @@ func appendParty(parties []HeldThreadParticipant, party HeldThreadParticipant) [
 	return append(parties, party)
 }
 
-// withholdUnseenPartyContactsTx drops every shown party's contact the reader
-// may not open, one probe for the whole list.
+// withholdUnseenPartyContactsTx drops every shown party's contact that is
+// archived or that the reader may not open, one probe for the whole list.
 func withholdUnseenPartyContactsTx(ctx context.Context, tx pgx.Tx, threads []HeldThread) error {
 	var contacts []ids.UUID
 	for _, t := range threads {
@@ -113,10 +121,7 @@ func withholdUnseenPartyContactsTx(ctx context.Context, tx pgx.Tx, threads []Hel
 			}
 		}
 	}
-	if len(contacts) == 0 {
-		return nil
-	}
-	visible, err := auth.VisibleSubset(ctx, tx, "contact", contacts)
+	visible, err := liveVisibleContactsTx(ctx, tx, contacts)
 	if err != nil {
 		return err
 	}
@@ -128,4 +133,21 @@ func withholdUnseenPartyContactsTx(ctx context.Context, tx pgx.Tx, threads []Hel
 		}
 	}
 	return nil
+}
+
+// liveVisibleContactsTx is which of the contacts are live and the reader's to
+// open. An archived or merged-away contact is named nowhere a reader can follow.
+func liveVisibleContactsTx(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) (map[ids.UUID]bool, error) {
+	if len(contacts) == 0 || !auth.ReadGranted(ctx, "contact") {
+		return map[ids.UUID]bool{}, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT id FROM contact WHERE id = ANY($1) AND archived_at IS NULL`, contacts)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading which contacts a held thread may name: %w", err)
+	}
+	live, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading which contacts a held thread may name: %w", err)
+	}
+	return auth.VisibleSubset(ctx, tx, "contact", live)
 }

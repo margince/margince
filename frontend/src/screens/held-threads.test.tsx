@@ -425,15 +425,23 @@ it("names who a held thread is with, and counts the ones it leaves out", async (
     },
   ]);
 
-  const link = await screen.findByRole("link", {
+  const [beside, folded] = await screen.findAllByRole("link", {
     name: "k.huber@kanzlei.example",
   });
-  expect(link.getAttribute("href")).toContain(
+  expect(beside.getAttribute("href")).toContain(
     "0190b7a2-0000-7000-8000-0000000000c7",
   );
-  const parties = link.closest(".held-threads-parties");
-  expect(parties?.textContent).toBe(
-    "k.huber@kanzlei.example, office@kanzlei.example +5 more",
+  // Beside the subject the first address stands for the rest, counted in an
+  // element of its own so a cut line never cuts the count.
+  const line = beside.closest(".held-threads-parties");
+  expect(line?.textContent).toBe("k.huber@kanzlei.example+6 more");
+  // Folded, the line has room for every address the server gave.
+  const all = folded.closest(".held-threads-parties-all");
+  expect(all?.querySelector(".held-threads-parties-list")?.textContent).toBe(
+    "k.huber@kanzlei.example, office@kanzlei.example",
+  );
+  expect(all?.querySelector(".held-threads-parties-more")?.textContent).toBe(
+    "+5 more",
   );
   expect(
     screen.queryByRole("link", { name: "office@kanzlei.example" }),

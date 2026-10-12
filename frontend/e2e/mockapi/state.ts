@@ -112,6 +112,7 @@ function captureSenders(): CaptureSender[] {
       overruled: false,
       record_exists: true,
       contact_id: "p-anna",
+      contact_name: "Anna Weber",
       message_count: 42,
       last_seen_at: "2026-09-30T08:15:00Z",
     },

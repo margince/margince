@@ -6741,6 +6741,7 @@ export const vi = {
     "Chuỗi thư mà hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi thư thì mọi đồng nghiệp đều đọc được; chỉ bạn mới chia sẻ được chuỗi thư của chính mình.",
   "heldThreads.empty": "Hộp thư của bạn không giữ lại chuỗi thư nào.",
   "heldThreads.colThread": "Chuỗi thư",
+  "heldThreads.colParties": "Bên liên quan",
   "heldThreads.colWhy": "Lý do",
   "heldThreads.colWhen": "Thời gian nhận",
   "heldThreads.release": "Chia sẻ với nhóm",
@@ -10167,11 +10168,13 @@ export const vi = {
   "ownerIdentities.addFailed": "Không thể thêm địa chỉ",
   "ownerIdentities.domainPlaceholder": "vidu.com",
   "ownerIdentities.removedToast": "Đã gỡ địa chỉ",
+  "ownerIdentities.removedLearnedToast":
+    "Đã gỡ địa chỉ. Margince sẽ không tự thêm lại địa chỉ này.",
   "ownerIdentities.restoredToast": "Đã khôi phục địa chỉ",
   "ownerIdentities.restoreGone":
-    "Đã quá hạn khôi phục địa chỉ này. Thêm lại địa chỉ nếu cần.",
+    "Không thể khôi phục địa chỉ này nữa. Thêm lại địa chỉ nếu cần.",
   "ownerIdentities.restoreMovedOn":
-    "Địa chỉ này đã thay đổi sau khi gỡ nên không khôi phục được.",
+    "Không thể khôi phục vì địa chỉ này đã được gỡ thêm một lần nữa. Hoàn tác lần gỡ mới hơn.",
   "ownerIdentities.restoreDeclaredAgain":
     "Địa chỉ này đã có lại trong danh sách.",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",

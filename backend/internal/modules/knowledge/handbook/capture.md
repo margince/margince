@@ -309,7 +309,7 @@ address Margince found also stops Margince finding it again.
 **Capture exclusions** (Settings → Capture activity): addresses and domains
 whose messages never enter the CRM. Your own rules cover only the mailboxes you
 connected. The company's rules cover everyone, and only an administrator may
-change one of those. Each rule names the member who added it. "Applies from the
+change one of those. A rule a member added names that member. "Applies from the
 next message. Messages already captured stay."
 
 **Consumer mail domains** (Settings → Capture rules): which domains count as

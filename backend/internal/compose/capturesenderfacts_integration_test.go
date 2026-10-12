@@ -79,8 +79,8 @@ func TestASenderNamesOnlyAContactItsReaderMaySee(t *testing.T) {
 		VALUES ('contact', $1, 'user', $2, 'read', $3)`, sharedContact, e.Rep1, e.Rep2)
 
 	got := sendersByAddress(sendersReader(e, e.Rep1, true), t, e)
-	if d := got[open]; !d.RecordExists || d.ContactID == nil || *d.ContactID != openContact {
-		t.Errorf("%s = %+v, want the workspace contact named", open, d)
+	if d := got[open]; !d.RecordExists || d.ContactID == nil || *d.ContactID != openContact || d.ContactName != "Sender "+open {
+		t.Errorf("%s = %+v, want the workspace contact named, with its name", open, d)
 	}
 	if d := got[private]; d.RecordExists || d.ContactID != nil {
 		t.Errorf("%s = %+v: a colleague's private contact was disclosed", private, d)
@@ -92,8 +92,13 @@ func TestASenderNamesOnlyAContactItsReaderMaySee(t *testing.T) {
 		t.Errorf("%s = %+v, want no contact", none, d)
 	}
 
+	for address, d := range got {
+		if (d.ContactID == nil) != (d.ContactName == "") {
+			t.Errorf("%s carries a contact name without its id, or the reverse (%+v)", address, d)
+		}
+	}
 	for address, d := range sendersByAddress(sendersReader(e, e.Rep1, false), t, e) {
-		if d.RecordExists || d.ContactID != nil {
+		if d.RecordExists || d.ContactID != nil || d.ContactName != "" {
 			t.Errorf("a seat without contact read learned of %s's contact (%+v)", address, d)
 		}
 	}
@@ -107,19 +112,22 @@ func TestASendersMailIsCountedFromTheSeatsOwnMailbox(t *testing.T) {
 	first := seedCapturedMail(t, e, sender, "Erste")
 	second := seedCapturedMail(t, e, sender, "Zweite")
 	archived := seedCapturedMail(t, e, sender, "Archiviert")
+	restricted := seedCapturedMail(t, e, sender, "Gesperrt")
 	theirs := seedCapturedMail(t, e, sender, "Fremd")
 	seedPendingDisposition(t, e, sender, "kunde.example", first)
 	e.WsExec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, first, older)
 	e.WsExec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, second, newer)
 	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, archived)
-	for _, id := range []ids.UUID{first, second, archived} {
+	e.WsExec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, restricted, now)
+	restrict(t, e, restricted)
+	for _, id := range []ids.UUID{first, second, archived, restricted} {
 		e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, id, e.Rep1)
 	}
 	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, theirs, e.Rep2)
 
 	d := sendersByAddress(sendersReader(e, e.Rep1, true), t, e)[sender]
 	if d.MessageCount != 2 {
-		t.Errorf("message count = %d, want 2: the seat's own stored mail, archived and a colleague's import excluded",
+		t.Errorf("message count = %d, want 2: the seat's own stored mail, archived, restricted and a colleague's import excluded",
 			d.MessageCount)
 	}
 	if d.LastSeenAt == nil || !d.LastSeenAt.Equal(newer) {
@@ -146,6 +154,26 @@ func TestOneSenderIsOneRowAcrossLedgerRows(t *testing.T) {
 
 	if d := sendersByAddress(sendersReader(e, e.Rep1, true), t, e)[sender]; d.Status != "pending" {
 		t.Errorf("status = %q, want the newest question's pending", d.Status)
+	}
+}
+
+// The sweep reads every ledger row of the seat for an address. A personal
+// verdict behind a fresh question still names its deletion, and the override
+// still cancels it.
+func TestAnOlderPersonalVerdictStillNamesItsDeletion(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "mama@familie.example"
+	resolvePersonal(t, e, sender, seedPurgeableMail(t, e, sender, "Sonntag", e.Rep1), e.Rep1, true)
+	e.WsExec(t, `UPDATE capture_pending_counterparty SET created_at = now() - interval '2 days' WHERE email = $1`, sender)
+	seedPendingDisposition(t, e, sender, "familie.example", seedCapturedMail(t, e, sender, "Neu"))
+
+	d := sendersByAddress(sendersReader(e, e.Rep1, true), t, e)[sender]
+	if d.Status != "pending" || d.DeletesAt.IsZero() {
+		t.Errorf("%s = %+v, want the fresh question shown and the older verdict's deletion named", sender, d)
+	}
+	overruleAsBusiness(t, e, e.Rep1, sender)
+	if d := sendersByAddress(sendersReader(e, e.Rep1, true), t, e)[sender]; !d.DeletesAt.IsZero() {
+		t.Errorf("deletes at %v after the owner said business, want no deletion", d.DeletesAt)
 	}
 }
 

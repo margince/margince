@@ -228,7 +228,15 @@ function SenderTable({
       key: "record",
       header: t("senders.colRecord"),
       render: (row) =>
-        row.contact_id ? <EntityRef kind="contact" id={row.contact_id} /> : "—",
+        row.contact_id ? (
+          <EntityRef
+            kind="contact"
+            id={row.contact_id}
+            name={row.contact_name}
+          />
+        ) : (
+          "—"
+        ),
       folded: (row) => (row.contact_id ? undefined : t("senders.recordNo")),
     },
     {

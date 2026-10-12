@@ -185,8 +185,8 @@ func toContractSenderDecision(d capture.SenderDecision) crmcontracts.CaptureSend
 		LastSeenAt:   d.LastSeenAt,
 	}
 	if d.ContactID != nil {
-		contact := openapi_types.UUID(*d.ContactID)
-		out.ContactId = &contact
+		contact, name := openapi_types.UUID(*d.ContactID), d.ContactName
+		out.ContactId, out.ContactName = &contact, &name
 	}
 	if !d.DeletesAt.IsZero() {
 		at := d.DeletesAt

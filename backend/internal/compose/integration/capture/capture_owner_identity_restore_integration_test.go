@@ -137,24 +137,9 @@ func TestAWithdrawalPastItsUndoIsPurged(t *testing.T) {
 func TestAWithdrawnLearnedAliasIsNotLearnedAgain(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
-	env.sync(t,
-		deliveredMail(forwardingAlias, "", "buyer@customer.example", "learn-1@customer.example"),
-		deliveredMail(forwardingAlias, "", "other@customer.example", "learn-2@customer.example"))
 	store := capturemod.NewOwnerIdentityStore(e.DB())
 	seat := seatContext(e, e.Rep1)
-	listed, err := store.List(seat)
-	if err != nil {
-		t.Fatalf("listing the seat's addresses: %v", err)
-	}
-	var learned ids.UUID
-	for _, identity := range listed {
-		if identity.Value == forwardingAlias {
-			learned = identity.ID
-		}
-	}
-	if learned == ids.Nil {
-		t.Fatalf("the alias was never learned, so its withdrawal proves nothing (%v)", listed)
-	}
+	learned := learnAlias(t, env, store)
 	if err := store.Remove(seat, learned); err != nil {
 		t.Fatalf("withdrawing the learned alias: %v", err)
 	}
@@ -167,5 +152,61 @@ func TestAWithdrawnLearnedAliasIsNotLearnedAgain(t *testing.T) {
 		deliveredMail(forwardingAlias, "", "other@customer.example", "learn-4@customer.example"))
 	if got := ownAddresses(t, env, e.Rep1)[forwardingAlias]; got != "" {
 		t.Errorf("the withdrawn alias was learned again with source %q: the seat said it is not theirs", got)
+	}
+}
+
+// learnAlias has two deliveries teach the seat the forwarding alias, and
+// answers the identity it became.
+func learnAlias(t *testing.T, env captureEnv, store *capturemod.OwnerIdentityStore) ids.UUID {
+	t.Helper()
+	env.sync(t,
+		deliveredMail(forwardingAlias, "", "buyer@customer.example", "learn-1@customer.example"),
+		deliveredMail(forwardingAlias, "", "other@customer.example", "learn-2@customer.example"))
+	listed, err := store.List(seatContext(env.e, env.e.Rep1))
+	if err != nil {
+		t.Fatalf("listing the seat's addresses: %v", err)
+	}
+	for _, identity := range listed {
+		if identity.Value == forwardingAlias {
+			return identity.ID
+		}
+	}
+	t.Fatalf("the alias was never learned, so its withdrawal proves nothing (%v)", listed)
+	return ids.Nil
+}
+
+const refusedAliases = `SELECT count(*) FROM capture_alias_refused WHERE value = '` + forwardingAlias + `'`
+
+func TestUndoingTheWithdrawalOfALearnedAliasLiftsItsRefusal(t *testing.T) {
+	env := newCaptureEnv(t)
+	store := capturemod.NewOwnerIdentityStore(env.e.DB())
+	seat := seatContext(env.e, env.e.Rep1)
+	learned := learnAlias(t, env, store)
+	if err := store.Remove(seat, learned); err != nil {
+		t.Fatalf("withdrawing the learned alias: %v", err)
+	}
+	if _, err := store.RestoreRemoval(seat, learned); err != nil {
+		t.Fatalf("undoing the withdrawal: %v", err)
+	}
+	if n := countRows(t, env.e, refusedAliases); n != 0 {
+		t.Errorf("%d refusal(s) left after the undo, want 0: the seat took the withdrawal back", n)
+	}
+}
+
+// A typed address restored after its own removal says nothing about the
+// learned alias the seat refused earlier, so the refusal stays.
+func TestRestoringATypedAddressKeepsALearnedAliasRefused(t *testing.T) {
+	env := newCaptureEnv(t)
+	store := capturemod.NewOwnerIdentityStore(env.e.DB())
+	seat := seatContext(env.e, env.e.Rep1)
+	if err := store.Remove(seat, learnAlias(t, env, store)); err != nil {
+		t.Fatalf("withdrawing the learned alias: %v", err)
+	}
+	typed := declareAndWithdraw(seat, t, store, forwardingAlias)
+	if _, err := store.RestoreRemoval(seat, typed.ID); err != nil {
+		t.Fatalf("restoring the typed address: %v", err)
+	}
+	if n := countRows(t, env.e, refusedAliases); n != 1 {
+		t.Errorf("%d refusal(s) after restoring a typed address, want the learned alias still refused", n)
 	}
 }

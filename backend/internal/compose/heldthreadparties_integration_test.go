@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -103,5 +104,38 @@ func TestAHeldThreadNamesNobodyOnAMessageItsReaderMayNotRead(t *testing.T) {
 	if got[0].ParticipantCount != 0 || len(got[0].Participants) != 0 {
 		t.Errorf("a withheld message named %d of %d parties, want none",
 			len(got[0].Participants), got[0].ParticipantCount)
+	}
+}
+
+// The reader's own forwarding alias is not somebody the thread is with. A
+// colleague's alias stays listed: leaving it out would say it is theirs. An
+// archived contact is not named at all.
+func TestAHeldThreadLeavesOutTheReadersOwnAliasAndArchivedContacts(t *testing.T) {
+	e := integration.Setup(t)
+	message := seedHeldMessage(t, e, e.Rep1, e.Rep1, "thread-alias", "workspace")
+	identities := capture.NewOwnerIdentityStore(InstallationDB(e.Pool))
+	for seat, alias := range map[ids.UUID]string{e.Rep1: "ich@privat.example", e.Rep2: "kollege@privat.example"} {
+		if _, err := identities.Add(purgeCtx(e, seat), capture.IdentityKindAddress, alias); err != nil {
+			t.Fatalf("declaring %s: %v", alias, err)
+		}
+	}
+	archived := e.SeedContact(t, "Ehemalig", nil)
+	e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, archived)
+	seedParty(t, e, message, nil, nil, "ich@privat.example", "to")
+	seedParty(t, e, message, nil, nil, "kollege@privat.example", "cc")
+	seedParty(t, e, message, nil, &archived, "ehemalig@kanzlei.example", "from")
+
+	parties := map[string]*ids.UUID{}
+	for _, party := range heldThreads(t, e, e.Rep1)[0].Participants {
+		parties[party.Address] = party.ContactID
+	}
+	if _, listed := parties["ich@privat.example"]; listed {
+		t.Error("the reader's own alias is listed as somebody the thread is with")
+	}
+	if _, listed := parties["kollege@privat.example"]; !listed {
+		t.Error("a colleague's alias was left out, which tells the reader it is theirs")
+	}
+	if contact, listed := parties["ehemalig@kanzlei.example"]; !listed || contact != nil {
+		t.Errorf("an archived contact is named (%v), want the address with no contact", contact)
 	}
 }

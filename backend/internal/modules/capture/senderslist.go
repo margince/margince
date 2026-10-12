@@ -18,6 +18,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -43,10 +44,11 @@ type SenderDecision struct {
 	// "you corrected this" rather than only showing the current answer.
 	OverruledKind string
 	// RecordExists reports whether a live contact the reader may open holds
-	// the address, and ContactID names it. Both follow the contact visibility
-	// rule, shares included, so neither answers for a contact out of sight.
+	// the address, and ContactID and ContactName name it. All three follow the
+	// contact visibility rule, shares included, so none answers for one out of sight.
 	RecordExists bool
 	ContactID    *ids.UUID
+	ContactName  string
 	// MessageCount and LastSeenAt describe the stored, unarchived mail this
 	// seat imported with the sender as counterparty, in either direction.
 	MessageCount int
@@ -93,9 +95,9 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 	var out []SenderDecision
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT coalesce(p.email, o.address) AS address,
-			       coalesce(p.kind, '')         AS kind,
-			       coalesce(p.status, '')       AS status,
+			SELECT coalesce(latest.email, o.address) AS address,
+			       coalesce(latest.kind, '')         AS kind,
+			       coalesce(latest.status, '')       AS status,
 			       coalesce(o.decision, '')     AS decision,
 			       coalesce(o.overruled_kind, '') AS overruled_kind,
 			       -- Only for a personal verdict the owner has not overruled:
@@ -110,22 +112,24 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			       -- test is here rather than in the scope because the sweep
 			       -- RELEASES a shared message instead of destroying it — a
 			       -- different outcome, not an excluded row.
-			       CASE WHEN p.kind = 'personal' AND p.status = 'noise'
-			             AND p.resolved_at IS NOT NULL AND o.decision IS DISTINCT FROM 'business'
-			       THEN (SELECT min(`+PersonalPurgeDeadline("$2", "$3")+`)
-			               FROM activity a
-			               JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
-			              WHERE a.counterparty_email = p.email
-			                AND `+PersonalPurgeScope("$1")+`
-			                AND (SELECT count(*) FROM capture_import c
-			                      WHERE c.activity_id = a.id) = 1)
-			       END AS deletes_at
+			       --
+			       -- Over EVERY ledger row of the seat for the address, as the sweep
+			       -- joins them, not only the newest one the row shows.
+			       (SELECT min(`+PersonalPurgeDeadline("$2", "$3")+`)
+			          FROM capture_pending_counterparty p
+			          JOIN activity a ON a.counterparty_email = p.email
+			          JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
+			         WHERE p.owner_id = $1 AND p.email = coalesce(latest.email, o.address)
+			           AND p.kind = 'personal' AND p.status = 'noise' AND p.resolved_at IS NOT NULL
+			           AND `+PersonalPurgeScope("$1")+`
+			           AND (SELECT count(*) FROM capture_import c
+			                 WHERE c.activity_id = a.id) = 1) AS deletes_at
 			  -- The newest ledger row per address: an aged-out question and the
 			  -- fresh one its sender's next message opened are one sender.
 			  FROM (SELECT DISTINCT ON (email) * FROM capture_pending_counterparty
-			         WHERE owner_id = $1 ORDER BY email, created_at DESC, id DESC) p
+			         WHERE owner_id = $1 ORDER BY email, created_at DESC, id DESC) latest
 			  FULL OUTER JOIN (SELECT * FROM capture_sender_override WHERE user_id = $1) o
-			    ON o.address = p.email
+			    ON o.address = latest.email
 			 ORDER BY address`, actor.UserID, windows.ByOwner, windows.ByClassifier)
 		if err != nil {
 			return fmt.Errorf("capture: listing a seat's sender decisions: %w", err)
@@ -162,12 +166,19 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 // senderMailTx counts each sender's mail in this seat's mailbox. Bounded to the
 // listed addresses, so the aggregate never walks a whole mailbox.
 func senderMailTx(ctx context.Context, tx pgx.Tx, user ids.UUID, out []SenderDecision, addresses []string) error {
+	var args []any
+	arg := func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	}
+	seat, listed := arg(user), arg(addresses)
+	// archived_at alone also excludes restricted mail: activity_restricted_is_archived.
 	rows, err := tx.Query(ctx, `
 		SELECT a.counterparty_email, count(*), max(a.occurred_at)
 		  FROM activity a
-		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
-		 WHERE a.counterparty_email = ANY($2) AND a.kind = 'email' AND a.archived_at IS NULL
-		 GROUP BY a.counterparty_email`, user, addresses)
+		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = `+seat+`
+		 WHERE a.counterparty_email = ANY(`+listed+`) AND a.kind = 'email' AND a.archived_at IS NULL
+		 GROUP BY a.counterparty_email`, args...)
 	if err != nil {
 		return fmt.Errorf("capture: counting a seat's mail per sender: %w", err)
 	}
@@ -205,7 +216,7 @@ func senderContactsTx(ctx context.Context, tx pgx.Tx, out []SenderDecision, addr
 		return nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT pe.email, pe.contact_id FROM contact_email pe
+		SELECT pe.email, pe.contact_id, pr.full_name FROM contact_email pe
 		  JOIN contact pr ON pr.id = pe.contact_id AND pr.archived_at IS NULL
 		 WHERE pe.email = ANY($1) AND pe.archived_at IS NULL
 		 ORDER BY pe.email, pe.contact_id`, addresses)
@@ -214,14 +225,17 @@ func senderContactsTx(ctx context.Context, tx pgx.Tx, out []SenderDecision, addr
 	}
 	defer rows.Close()
 	holders := map[string][]ids.UUID{}
+	names := map[ids.UUID]string{}
 	var candidates []ids.UUID
 	for rows.Next() {
 		var address string
 		var id ids.UUID
-		if err := rows.Scan(&address, &id); err != nil {
+		var name string
+		if err := rows.Scan(&address, &id, &name); err != nil {
 			return fmt.Errorf("capture: finding the contacts behind a seat's senders: %w", err)
 		}
 		holders[address] = append(holders[address], id)
+		names[id] = name
 		candidates = append(candidates, id)
 	}
 	if err := rows.Err(); err != nil {
@@ -234,7 +248,7 @@ func senderContactsTx(ctx context.Context, tx pgx.Tx, out []SenderDecision, addr
 	for i := range out {
 		for _, id := range holders[out[i].Address] {
 			if visible[id] {
-				out[i].RecordExists, out[i].ContactID = true, &id
+				out[i].RecordExists, out[i].ContactID, out[i].ContactName = true, &id, names[id]
 				break
 			}
 		}

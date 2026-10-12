@@ -18,8 +18,12 @@ import { openRowMenu } from "./tablerow.testkit";
 
 type Sent = { method: string; path: string; body: unknown };
 
+// Every path the card read, for the cases that prove a read never happened.
+const read: string[] = [];
+
 function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
   const sent: Sent[] = [];
+  read.length = 0;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -36,12 +40,11 @@ function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
         });
         return new Response(null, { status: 204 });
       }
+      read.push(path);
       if (path === "/capture/senders") return jsonResponse({ data: senders });
       if (path === "/capture/contacts-awaiting-decision")
         return jsonResponse({ data: waiting });
       if (path === "/me") return jsonResponse(meFixture({ roles: ["rep"] }));
-      if (path === `/contacts/${CONTACT_ID}`)
-        return jsonResponse({ id: CONTACT_ID, full_name: "Marta Ortiz" });
       return jsonResponse({});
     }),
   );
@@ -214,8 +217,8 @@ it("lets the owner withdraw their own answer, and says it is theirs", async () =
   );
 });
 
-// The contact a sender became is one press away, and the count says how much
-// of their mail there is.
+// The contact a sender became is one press away, named by the list itself.
+// No row reads its contact, and the count says how much mail there is.
 it("links a sender to its contact beside its mail count and newest message", async () => {
   stubRoutes(
     [],
@@ -226,6 +229,7 @@ it("links a sender to its contact beside its mail count and newest message", asy
         kind: "contact",
         record_exists: true,
         contact_id: CONTACT_ID,
+        contact_name: "Marta Ortiz",
         message_count: 1204,
         last_seen_at: LAST_SEEN,
       },
@@ -241,6 +245,7 @@ it("links a sender to its contact beside its mail count and newest message", asy
   expect(
     row.getByText(formatDateTime(LAST_SEEN, "en", viewerZone())),
   ).toBeVisible();
+  expect(read.filter((path) => path.startsWith("/contacts/"))).toEqual([]);
 });
 
 it("names no contact and no date for a sender with neither", async () => {

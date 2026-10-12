@@ -6884,6 +6884,7 @@ export const de = {
     "Threads, die dein Postfach zurückhält. Gibst du einen Thread frei, können alle Teammitglieder ihn lesen; nur du kannst deine freigeben.",
   "heldThreads.empty": "Dein Postfach hält keine Threads zurück.",
   "heldThreads.colThread": "Thread",
+  "heldThreads.colParties": "Beteiligte",
   "heldThreads.colWhy": "Grund",
   "heldThreads.colWhen": "Eingegangen",
   "heldThreads.release": "Mit dem Team teilen",
@@ -10378,11 +10379,13 @@ export const de = {
   "ownerIdentities.addFailed": "Adresse nicht hinzugefügt",
   "ownerIdentities.domainPlaceholder": "beispiel.de",
   "ownerIdentities.removedToast": "Adresse entfernt",
+  "ownerIdentities.removedLearnedToast":
+    "Adresse entfernt. Margince fügt sie nicht wieder hinzu.",
   "ownerIdentities.restoredToast": "Adresse wiederhergestellt",
   "ownerIdentities.restoreGone":
     "Diese Adresse lässt sich nicht mehr zurückholen. Füge sie neu hinzu.",
   "ownerIdentities.restoreMovedOn":
-    "Diese Adresse hat sich nach dem Entfernen geändert und wurde nicht zurückgeholt.",
+    "Diese Adresse wurde seitdem erneut entfernt. Mach stattdessen das neuere Entfernen rückgängig.",
   "ownerIdentities.restoreDeclaredAgain":
     "Diese Adresse steht schon wieder in deiner Liste.",
   "captureValue.refusedAddress":

@@ -31,6 +31,7 @@ const EVERY_KIND: SenderDecision[] = [
     overruled: false,
     record_exists: true,
     contact_id: "0190b7a2-0000-7000-8000-000000000011",
+    contact_name: "Jana Keller",
     message_count: 248,
     last_seen_at: "2026-10-09T16:20:00Z",
   },
@@ -41,6 +42,7 @@ const EVERY_KIND: SenderDecision[] = [
     overruled: false,
     record_exists: true,
     contact_id: "0190b7a2-0000-7000-8000-000000000013",
+    contact_name: "Steireif Office",
     message_count: 31,
     last_seen_at: "2026-09-28T07:05:00Z",
   },
@@ -60,6 +62,7 @@ const EVERY_KIND: SenderDecision[] = [
     overruled: false,
     record_exists: true,
     contact_id: "0190b7a2-0000-7000-8000-000000000014",
+    contact_name: "Studio Legal Partners",
     message_count: 12,
     last_seen_at: "2026-10-01T11:30:00Z",
   },
@@ -104,6 +107,7 @@ const OVERRULED: SenderDecision[] = [
     overruled: true,
     record_exists: true,
     contact_id: "0190b7a2-0000-7000-8000-000000000015",
+    contact_name: "Substack Editorial",
     message_count: 57,
     last_seen_at: "2026-10-12T06:00:00Z",
   },
@@ -120,24 +124,9 @@ const OVERRULED: SenderDecision[] = [
   ...EVERY_KIND.slice(0, 2),
 ];
 
-// The contacts the rows link to, named as the contact read would name them.
-const CONTACTS: Record<string, string> = {
-  "0190b7a2-0000-7000-8000-000000000011": "Jana Keller",
-  "0190b7a2-0000-7000-8000-000000000013": "Steireif Office",
-  "0190b7a2-0000-7000-8000-000000000014": "Studio Legal Partners",
-  "0190b7a2-0000-7000-8000-000000000015": "Substack Editorial",
-};
-const contactRoutes = Object.fromEntries(
-  Object.entries(CONTACTS).map(([id, full_name]) => [
-    `GET /contacts/${id}`,
-    () => jsonResponse({ id, full_name }),
-  ]),
-);
-
 function story(rows: SenderDecision[], waiting: AwaitingContact[] = []) {
   return () => {
     installFetchStub({
-      ...contactRoutes,
       "GET /me": meRoute({}),
       "GET /capture/senders": () => jsonResponse({ data: rows }),
       "GET /capture/contacts-awaiting-decision": () =>

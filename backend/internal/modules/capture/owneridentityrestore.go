@@ -32,7 +32,7 @@ type IdentityRestoreError struct{ code, message string }
 // The refusals a restore answers besides not-found.
 var (
 	ErrRemovalMovedOn = &IdentityRestoreError{
-		"removal_moved_on", "This address changed after it was withdrawn, so it cannot be put back.",
+		"removal_moved_on", "This address was withdrawn again since. Put back the newer withdrawal instead.",
 	}
 	ErrIdentityDeclaredAgain = &IdentityRestoreError{
 		"identity_declared_again", "This address was declared again after it was withdrawn, so it is already yours.",
@@ -124,13 +124,15 @@ func (s *OwnerIdentityStore) RestoreRemoval(ctx context.Context, id ids.UUID) (O
 }
 
 // ownWithdrawalTx answers not-found for anything but the caller's own withdrawal
-// still inside its undo; an id says nothing about whose it is.
+// still inside its undo; an id says nothing about whose it is. The row lock
+// makes a second concurrent restore find it gone and answer not-found too.
 func ownWithdrawalTx(ctx context.Context, tx pgx.Tx, actorID string, user, id ids.UUID) (withdrawnIdentity, error) {
 	var w withdrawnIdentity
 	err := tx.QueryRow(ctx, `
 		SELECT id, user_id, kind, value, source, created_by, created_at, audit_id, withdrawn_by, withdrawn_at
 		  FROM capture_owner_identity_withdrawn
-		 WHERE id = $1 AND user_id = $2 AND withdrawn_by = $3`, id, user, actorID).
+		 WHERE id = $1 AND user_id = $2 AND withdrawn_by = $3
+		   FOR UPDATE`, id, user, actorID).
 		Scan(&w.ID, &w.UserID, &w.Kind, &w.Value, &w.Source, &w.createdBy, &w.CreatedAt,
 			&w.auditID, &w.withdrawnBy, &w.withdrawnAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -142,23 +144,17 @@ func ownWithdrawalTx(ctx context.Context, tx pgx.Tx, actorID string, user, id id
 	return w, nil
 }
 
-// refuseMovedOnTx refuses when a later audit row names the same identity, or a
-// later withdrawal took the same address again. Putting this row back would
-// overwrite that change. Ids are minted at write time, so they also order a row
-// whose transaction began first. The record type is a literal rather than
-// captureSettingsObject: the audit-image census reads it off the SQL text.
+// refuseMovedOnTx refuses when the same address was declared and withdrawn
+// again after this withdrawal: putting this row back would overwrite that
+// change. Ids are minted at write time, so they also order a row whose
+// transaction began first.
 func refuseMovedOnTx(ctx context.Context, tx pgx.Tx, w withdrawnIdentity) error {
 	var moved bool
 	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM audit_log a
-		 WHERE a.entity_type = 'capture_settings' AND a.entity_id = $1
-		   AND (a.before ->> 'id' = $2 OR a.after ->> 'id' = $2)
-		   AND a.id <> $3 AND (a.occurred_at > $4 OR a.id > $3))
-		    OR EXISTS (SELECT 1 FROM capture_owner_identity_withdrawn later
-		 WHERE later.id <> $5 AND later.user_id = $6 AND later.kind = $7 AND later.value = $8
-		   AND (later.withdrawn_at > $4 OR later.audit_id > $3))`,
-		storekit.MustWorkspace(ctx), w.ID.String(), w.auditID, w.withdrawnAt,
-		w.ID, w.UserID, w.Kind, w.Value).Scan(&moved)
+		SELECT EXISTS (SELECT 1 FROM capture_owner_identity_withdrawn later
+		 WHERE later.id <> $1 AND later.user_id = $2 AND later.kind = $3 AND later.value = $4
+		   AND (later.withdrawn_at > $5 OR later.audit_id > $6))`,
+		w.ID, w.UserID, w.Kind, w.Value, w.withdrawnAt, w.auditID).Scan(&moved)
 	if err != nil {
 		return fmt.Errorf("capture: checking the identity for later changes: %w", err)
 	}
@@ -168,8 +164,9 @@ func refuseMovedOnTx(ctx context.Context, tx pgx.Tx, w withdrawnIdentity) error 
 	return nil
 }
 
-// reinstateTx writes the withdrawn row back and takes it out of the side
-// tables. An address declared again in the meantime conflicts and is refused.
+// reinstateTx writes the withdrawn row back, and lifts the refusal only for a
+// learned alias, as keepWithdrawalTx set it. An address declared again in the
+// meantime conflicts and is refused.
 func reinstateTx(ctx context.Context, tx pgx.Tx, w withdrawnIdentity) (OwnerIdentity, error) {
 	if w.Kind == IdentityKindAddress {
 		if err := lockOwnAddressTx(ctx, tx, w.Value); err != nil {
@@ -192,6 +189,9 @@ func reinstateTx(ctx context.Context, tx pgx.Tx, w withdrawnIdentity) (OwnerIden
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM capture_owner_identity_withdrawn WHERE id = $1`, w.ID); err != nil {
 		return OwnerIdentity{}, fmt.Errorf("capture: restoring an owner identity: %w", err)
+	}
+	if w.Source != IdentitySourceDeliveredTo {
+		return out, nil
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM capture_alias_refused WHERE user_id = $1 AND value = $2`,
 		w.UserID, w.Value); err != nil {

@@ -36,7 +36,6 @@ import "./held-threads.css";
 
 type HeldThread = components["schemas"]["HeldThread"];
 type HeldThreadList = components["schemas"]["HeldThreadListResponse"];
-type HeldThreadParticipant = components["schemas"]["HeldThreadParticipant"];
 
 // Why a thread is held, in the reader's words. A kind absent from the map is
 // one the server learned to say and this screen has not.
@@ -175,6 +174,16 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
                 )}
               </span>
             ),
+          },
+          {
+            key: "parties",
+            header: t("heldThreads.colParties"),
+            grow: true,
+            render: (row) => <ThreadParticipants row={row} limit={1} />,
+            folded: (row) =>
+              row.participants?.length ? (
+                <ThreadParticipants row={row} />
+              ) : undefined,
           },
           {
             key: "why",
@@ -343,55 +352,61 @@ function ThreadSubject({
   onOpen,
 }: Readonly<{ row: HeldThread; onOpen: (activityId: string) => void }>) {
   const activityId = row.activity_id;
-  const subject = (
+  return (
     <EmailReference
       subject={row.subject}
       withheld={!activityId}
       onOpen={activityId ? () => onOpen(activityId) : undefined}
     />
   );
-  if (!row.participants?.length) {
-    return subject;
-  }
-  return (
-    <CellStack>
-      {subject}
-      <ThreadParticipants
-        shown={row.participants}
-        count={row.participant_count ?? row.participants.length}
-      />
-    </CellStack>
-  );
 }
 
 // Who the thread is with, so a reader can tell one held thread from another.
+// Beside the subject the first address stands for the rest, which are counted.
+// Folded, the line has the row's width for every address it was given.
 function ThreadParticipants({
-  shown,
-  count,
-}: Readonly<{ shown: HeldThreadParticipant[]; count: number }>) {
+  row,
+  limit,
+}: Readonly<{ row: HeldThread; limit?: number }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  const more = count - shown.length;
+  const given = row.participants ?? [];
+  if (given.length === 0) {
+    return null;
+  }
+  const shown = given.slice(0, limit);
+  const more = (row.participant_count ?? given.length) - shown.length;
   return (
-    <span className="t-caption held-threads-parties">
-      {shown.map((party, at) => (
-        <span key={party.address}>
-          {at > 0 && ", "}
-          {party.contact_id ? (
-            <EntityRef
-              kind="contact"
-              id={party.contact_id}
-              name={party.address}
-            />
-          ) : (
-            party.address
-          )}
+    <span
+      className={
+        limit === undefined
+          ? "held-threads-parties-all"
+          : "held-threads-parties"
+      }
+    >
+      <span className="held-threads-parties-list">
+        {shown.map((party, at) => (
+          <span key={party.address}>
+            {at > 0 && ", "}
+            {party.contact_id ? (
+              <EntityRef
+                kind="contact"
+                id={party.contact_id}
+                name={party.address}
+              />
+            ) : (
+              party.address
+            )}
+          </span>
+        ))}
+      </span>
+      {more > 0 && (
+        <span className="held-threads-parties-more">
+          {plural("heldThreads.moreParticipants", more, {
+            count: formatNumber(more, locale),
+          })}
         </span>
-      ))}
-      {more > 0 &&
-        ` ${plural("heldThreads.moreParticipants", more, {
-          count: formatNumber(more, locale),
-        })}`}
+      )}
     </span>
   );
 }

@@ -172,10 +172,14 @@ function removeVerb() {
   });
 }
 
-// Restoring the withdrawn row is the exact inverse, learned or typed alike.
-it.each(["user", "delivered_to"])(
+// Restoring the withdrawn row is the exact inverse, learned or typed alike. A
+// learned alias is refused from then on, and its notice says so.
+it.each([
+  ["user", "ownerIdentities.removedToast"],
+  ["delivered_to", "ownerIdentities.removedLearnedToast"],
+] as const)(
   "removes a %s address at once and puts that same row back through Undo",
-  async (source) => {
+  async (source, notice) => {
     const user = userEvent.setup();
     const removed = vi.fn(() => new Response(null, { status: 204 }));
     const restored = vi.fn(() => jsonResponse(identity({ source })));
@@ -187,9 +191,7 @@ it.each(["user", "delivered_to"])(
     await user.click(await removeVerb());
     expect(screen.queryByRole("dialog")).toBeNull();
     const said = await screen.findByRole("status");
-    await waitFor(() =>
-      expect(said.textContent).toContain(en["ownerIdentities.removedToast"]),
-    );
+    await waitFor(() => expect(said.textContent).toContain(en[notice]));
     expect(removed).toHaveBeenCalledTimes(1);
 
     await user.click(
@@ -211,7 +213,9 @@ it.each([
   "words a %i %s refusal of the Undo for the reader",
   async (status, code, copy) => {
     const user = userEvent.setup();
+    const listed = vi.fn(() => jsonResponse({ data: [identity({})] }));
     showing([identity({})], {
+      "GET /capture/owner-identities": listed,
       "DELETE /capture/owner-identities/oi-1": () =>
         new Response(null, { status: 204 }),
       "POST /capture/owner-identities/oi-1/restore": () =>
@@ -222,12 +226,14 @@ it.each([
     });
 
     await user.click(await removeVerb());
-    await user.click(
-      await screen.findByRole("button", { name: en["common.undo"] }),
-    );
+    const undo = await screen.findByRole("button", { name: en["common.undo"] });
+    await waitFor(() => expect(listed).toHaveBeenCalledTimes(2));
+    await user.click(undo);
 
     expect(await screen.findByText(en[copy])).toBeTruthy();
     expect(screen.queryByText(/An English sentence/)).toBeNull();
+    // The list reads again, so a row already back shows as back.
+    await waitFor(() => expect(listed).toHaveBeenCalledTimes(3));
   },
 );
 

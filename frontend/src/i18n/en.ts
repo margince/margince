@@ -7026,6 +7026,7 @@ export const en = {
     "Threads your mailbox is withholding. Releasing a thread lets every colleague read it; only you can release yours.",
   "heldThreads.empty": "Your mailbox is withholding no threads.",
   "heldThreads.colThread": "Thread",
+  "heldThreads.colParties": "Participants",
   "heldThreads.colWhy": "Reason",
   "heldThreads.colWhen": "Arrived",
   "heldThreads.release": "Share with the team",
@@ -10500,11 +10501,13 @@ export const en = {
   "ownerIdentities.addFailed": "Address not added",
   "ownerIdentities.domainPlaceholder": "example.com",
   "ownerIdentities.removedToast": "Address removed",
+  "ownerIdentities.removedLearnedToast":
+    "Address removed. Margince will not add it again.",
   "ownerIdentities.restoredToast": "Address restored",
   "ownerIdentities.restoreGone":
     "This address can no longer be put back. Add it again instead.",
   "ownerIdentities.restoreMovedOn":
-    "This address changed after you removed it, so it was not put back.",
+    "This address was removed again since. Undo the newer removal instead.",
   "ownerIdentities.restoreDeclaredAgain":
     "This address is already back in your list.",
   "captureValue.refusedAddress":
