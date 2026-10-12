@@ -68,8 +68,6 @@ func TestADeclaredReadAndReadsTheCacheSeesAreNotReported(t *testing.T) {
 	}
 }
 
-// A nested module finds the repository by statting .git in each directory on
-// the way up. The ones between are no input.
 func TestLocatingTheRepositoryFromANestedModuleIsNotReported(t *testing.T) {
 	repo := t.TempDir()
 	pkg := filepath.Join(repo, "backend", "tools", "gen")
