@@ -164,7 +164,11 @@ export function AddressBlock({
   const commit = (next: readonly string[]) => [...next];
   return (
     <>
-      <Field label={t("compose.to")} error={invalidTo ? needTo : undefined}>
+      <Field
+        className="compose-address-field"
+        label={t("compose.to")}
+        error={invalidTo ? needTo : undefined}
+      >
         {(control) => (
           <TokenInput
             {...control}
@@ -178,6 +182,7 @@ export function AddressBlock({
         )}
       </Field>
       <Field
+        className="compose-address-field"
         label={t("compose.cc")}
         trailing={
           bccOpen ? undefined : (
@@ -203,7 +208,11 @@ export function AddressBlock({
         // What "blind" MEANS, beside the field that does it. A rep who reads
         // Bcc as "a quieter Cc" has told somebody about a conversation the
         // named recipients believe is between them.
-        <Field label={t("compose.bcc")} hint={t("compose.bccHint")}>
+        <Field
+          className="compose-address-field"
+          label={t("compose.bcc")}
+          hint={t("compose.bccHint")}
+        >
           {(control) => (
             <TokenInput
               {...control}
@@ -253,7 +262,11 @@ export function SubjectRow({
 }>) {
   const t = useT();
   return (
-    <Field label={t("compose.subject")} error={invalid ? need : undefined}>
+    <Field
+      className="compose-address-field"
+      label={t("compose.subject")}
+      error={invalid ? need : undefined}
+    >
       {(control) => (
         <TextInput
           {...control}
