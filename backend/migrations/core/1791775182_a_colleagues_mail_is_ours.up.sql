@@ -12,8 +12,10 @@
 SET LOCAL lock_timeout = '3s';
 ALTER TABLE activity ADD COLUMN sent_by_colleague uuid
   REFERENCES app_user(id) ON DELETE SET NULL;
+-- NOT VALID: the column is NULL on every existing row, so the scan would prove
+-- nothing, and the backfill below writes only rows that satisfy it.
 ALTER TABLE activity ADD CONSTRAINT activity_colleague_mail_is_outbound
-  CHECK (sent_by_colleague IS NULL OR direction = 'outbound');
+  CHECK (sent_by_colleague IS NULL OR direction = 'outbound') NOT VALID;
 
 -- The rows captured before this rule, re-read the way capture now reads them
 -- (capture/sentbycolleague.go): an email whose From is the exact login address
