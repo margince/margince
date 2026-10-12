@@ -16,8 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -26,10 +28,12 @@ const customFieldPrefix = "cf_"
 
 // importCatalog is one object's active custom fields, keyed by column name,
 // and their labels. It needs no create grant, so profile, stage and format can
-// read it for a caller who may not write records.
+// read it for a caller who may not write records. Options always check a
+// cell; optionsReadable says whether they may be shown to the caller.
 type importCatalog struct {
-	byName map[string]fieldcatalog.Column
-	labels map[string]string
+	byName          map[string]fieldcatalog.Column
+	labels          map[string]string
+	optionsReadable bool
 }
 
 // importColumns is the catalog beside the store's own answer, which only the
@@ -58,7 +62,8 @@ func readImportCatalog(ctx context.Context, db *database.DB, object string) (imp
 	for _, col := range cols {
 		byName[col.Name] = col
 	}
-	return importCatalog{byName: byName, labels: labels}, nil
+	readable := auth.Allows(ctx, "custom_field", principal.ActionRead)
+	return importCatalog{byName: byName, labels: labels, optionsReadable: readable}, nil
 }
 
 // readImportCatalogs reads each object's catalog once.

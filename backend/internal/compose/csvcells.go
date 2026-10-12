@@ -52,7 +52,7 @@ func checkRow(object string, fields map[string]string, cat importCatalog) (map[s
 			return nil, &cellProblem{Target: target, Value: raw,
 				Message: fmt.Sprintf("%q cannot be written: this field is no longer active", strings.TrimSpace(raw))}
 		}
-		value, problem := checkCell(target, col, raw)
+		value, problem := checkCell(target, col, raw, cat.optionsReadable)
 		if problem != nil {
 			return nil, problem
 		}
@@ -115,18 +115,19 @@ func parseMessage(text string, err error) string {
 
 // checkCell turns one custom-field cell into the value storekit.SQLValue
 // takes, and lets SQLValue decide whether it binds, so the dry run accepts
-// exactly the text the store does.
+// exactly the text the store does. A refusal lists a picklist's options only
+// when the caller may read them (custom_field:read).
 //
 //craft:ignore naked-any the value is SQLValue's own input, whose shape depends on the column type
-func checkCell(target string, col fieldcatalog.Column, raw string) (any, *cellProblem) {
+func checkCell(target string, col fieldcatalog.Column, raw string, optionsReadable bool) (any, *cellProblem) {
 	text := strings.TrimSpace(raw)
 	var wire any = text
 	message := ""
 	switch col.Type {
 	case fieldcatalog.TypePicklist:
-		wire, message = picklistValue(col, text)
+		wire, message = picklistValue(col, text, optionsReadable)
 	case fieldcatalog.TypeMultiselect:
-		wire, message = multiselectValue(col, text)
+		wire, message = multiselectValue(col, text, optionsReadable)
 	case fieldcatalog.TypeCurrency:
 		wire, message = currencyValue(col, text)
 	case fieldcatalog.TypeBoolean:
@@ -144,17 +145,17 @@ func checkCell(target string, col fieldcatalog.Column, raw string) (any, *cellPr
 }
 
 // picklistValue is the catalog's spelling of the option the text names.
-func picklistValue(col fieldcatalog.Column, text string) (any, string) {
+func picklistValue(col fieldcatalog.Column, text string, optionsReadable bool) (any, string) {
 	if option, found := optionNamed(col.Options, text); found {
 		return option, ""
 	}
-	return nil, notAllowedMessage(col, text)
+	return nil, notAllowedMessage(col, text, optionsReadable)
 }
 
 // multiselectValue splits on semicolons and names each option in the catalog's
 // spelling. A comma with no semicolon is the usual mistake, so it gets its own
 // sentence once the whole text is not itself an option.
-func multiselectValue(col fieldcatalog.Column, text string) (any, string) {
+func multiselectValue(col fieldcatalog.Column, text string, optionsReadable bool) (any, string) {
 	var chosen []string
 	for part := range strings.SplitSeq(text, ";") {
 		part = strings.TrimSpace(part)
@@ -166,7 +167,7 @@ func multiselectValue(col fieldcatalog.Column, text string) (any, string) {
 			if strings.Contains(text, ",") && !strings.Contains(text, ";") {
 				return nil, fmt.Sprintf("%q: separate several values with semicolons", text)
 			}
-			return nil, notAllowedMessage(col, part)
+			return nil, notAllowedMessage(col, part, optionsReadable)
 		}
 		chosen = append(chosen, option)
 	}
@@ -206,7 +207,10 @@ func optionNamed(options []string, text string) (string, bool) {
 	return "", false
 }
 
-func notAllowedMessage(col fieldcatalog.Column, text string) string {
+func notAllowedMessage(col fieldcatalog.Column, text string, optionsReadable bool) string {
+	if !optionsReadable {
+		return fmt.Sprintf("%q is not one of this field's allowed values", text)
+	}
 	return fmt.Sprintf("%q is not one of the allowed values: %s", text, strings.Join(col.Options, ", "))
 }
 

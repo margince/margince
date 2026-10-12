@@ -51,7 +51,7 @@ func TestEveryCellIsCheckedAgainstItsFieldsType(t *testing.T) {
 		{flag, "0", false, ""},
 		{flag, "maybe", nil, "is not yes or no"},
 	} {
-		got, problem := checkCell(tc.col.Name, tc.col, tc.raw)
+		got, problem := checkCell(tc.col.Name, tc.col, tc.raw, true)
 		if tc.problem == "" {
 			if problem != nil || !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("%s %q → %v, %+v; want %v", tc.col.Type, tc.raw, got, problem, tc.want)
@@ -63,6 +63,25 @@ func TestEveryCellIsCheckedAgainstItsFieldsType(t *testing.T) {
 		}
 		if problem != nil && problem.Target != tc.col.Name {
 			t.Errorf("%s %q → problem on %q, want the target %q", tc.col.Type, tc.raw, problem.Target, tc.col.Name)
+		}
+	}
+}
+
+func TestAPicklistProblemNamesNoOptionToACallerWithoutCustomFieldRead(t *testing.T) {
+	picklist := fieldcatalog.Column{Name: "cf_tier", Type: fieldcatalog.TypePicklist, Options: []string{"Gold", "Silver"}}
+	multi := fieldcatalog.Column{Name: "cf_comp", Type: fieldcatalog.TypeMultiselect, Options: []string{"HubSpot", "Other"}}
+	for _, tc := range []struct {
+		col fieldcatalog.Column
+		raw string
+	}{{picklist, "Bronze"}, {multi, "HubSpot; Bronze"}} {
+		_, problem := checkCell(tc.col.Name, tc.col, tc.raw, false)
+		if problem == nil || !strings.Contains(problem.Message, "not one of this field's allowed values") {
+			t.Fatalf("%s %q → problem %+v, want the refusal without the list", tc.col.Type, tc.raw, problem)
+		}
+		for _, option := range tc.col.Options {
+			if strings.Contains(problem.Message, option) && !strings.Contains(tc.raw, option) {
+				t.Errorf("%s %q → %q names the option %q", tc.col.Type, tc.raw, problem.Message, option)
+			}
 		}
 	}
 }
