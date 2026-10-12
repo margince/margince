@@ -65,3 +65,20 @@ func TestAZipHoldingOneTypeTwiceIsRefusedAsABundle(t *testing.T) {
 		t.Fatalf("status %d body %s, want 422 bundle_refused", status, raw)
 	}
 }
+
+// A client that tells a ZIP by its name sends `object` for a ZIP renamed to
+// .csv. The server knows the ZIP by its content and reads each part's type from
+// its file name, as the contract states.
+func TestAZipSentWithAnObjectIsProfiledByItsFileNames(t *testing.T) {
+	e := setupImportApp(t)
+	body := zipBytes(t, map[string]string{"companies.csv": "ref,name\nCO-1,Acme\n"})
+	raw, status := postCSVFile(t, e, "lead", string(body))
+	if status != http.StatusOK {
+		t.Fatalf("status %d body %s, want 200", status, raw)
+	}
+	var profile importBundleProfileDTO
+	mustJSON(t, raw, &profile)
+	if len(profile.Parts) != 1 || profile.Parts[0].Object != "company" {
+		t.Fatalf("parts = %+v, want the one companies.csv part as company, not lead", profile.Parts)
+	}
+}
