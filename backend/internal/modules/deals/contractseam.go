@@ -18,18 +18,14 @@ import (
 // EnsureContractsShareCompany refuses to move a deal to a company its own
 // agreements do not name.
 //
-// The leak it closes is in the CONTRACT read, not this one. A contract with a
-// deal is judged visible by that deal alone — deliberately, so that widening to
-// the company does not hand out agreements attached to invisible deals — so a
-// deal that moves to company B publishes company A's agreements to everyone who
-// can see B's deal, and the agreement's own company is never consulted. Two
-// "can you see it" checks cannot catch that; only asking whether the two name
-// the same company can.
+// The leak is in the contract read. A contract with a deal is visible through
+// that deal alone, so agreements on deals a caller cannot see stay hidden.
+// A deal moved to company B would then publish company A's agreements to
+// everyone who can see it. Only comparing the two companies catches that.
 //
-// It runs INSIDE the caller's transaction, and AFTER the deal row is locked,
-// which is what makes it an answer rather than a guess: a contract being filed
-// against this deal concurrently reads the deal's company under a share lock,
-// so one of the two waits and sees what the other decided.
+// It runs in the caller's transaction, after the deal row is locked. A contract
+// filed against this deal at the same time reads its company under a share
+// lock. One of the two waits and sees what the other decided.
 type EnsureContractsShareCompany func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, companyID ids.CompanyID) error
 
 // refusingEnsureContractsShareCompany is what an un-injected check becomes: it

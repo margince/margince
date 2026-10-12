@@ -7,10 +7,9 @@ package integration
 
 // A deal and the agreements filed against it must name the same company.
 //
-// The filing check has always refused to CREATE that mismatch. These cover the
-// other end of it — the deal that is moved to another company afterwards — and
-// the state itself, seeded directly, because the exposure is a property of the
-// row pair rather than of the route that produced it.
+// The filing check refuses to create that mismatch. These cover the deal moved
+// to another company afterwards. They also seed the state directly, because the
+// exposure belongs to the row pair, not the route that made it.
 
 import (
 	"errors"
@@ -40,17 +39,12 @@ func seedAgreement(t *testing.T, e *Env, title string, company ids.UUID, deal *i
 	return ids.From[ids.ContractKind](id)
 }
 
-// WHY the deal write refuses: the pairing itself is a cross-tenant read, and it
+// Why the deal write refuses: the pairing itself is a cross-tenant read, and it
 // needs no route to prove it.
 //
-// A contract with a deal is judged visible by that DEAL alone — deliberately,
-// so that widening to the company does not hand out agreements attached to
-// deals nobody can see. Run from the other end, the same rule says a deal that
-// names Contoso publishes Acme's agreement to everyone who works Contoso, and
-// the agreement's own company is never consulted. The counterparty is withheld
-// from the answer, which is the part that makes this worse rather than better:
-// the reader is handed the terms and the value of an agreement, and told
-// nothing about whose it is.
+// A contract with a deal is visible through that deal alone. So a deal naming
+// Contoso publishes Acme's agreement to everyone who works Contoso. The reader
+// gets the terms and the value, and the counterparty is withheld.
 //
 // This case stays meaningful if a route nobody has thought of appears.
 func TestADealAnchorPublishesAnAgreementOfAnotherCompany(t *testing.T) {
@@ -146,10 +140,8 @@ func TestMovingADealsCompanyIsRefusedWhileItsAgreementsNameTheOldOne(t *testing.
 	}
 }
 
-// The refusal has to be clearable, or it is the objection to refusing at all:
-// a rep who mis-filed a deal would be left unable to correct it on the very
-// record whose paperwork they were fixing. Detaching the agreement is the move
-// the message names, and this is it working.
+// The refusal has to be clearable, or a rep who mis-filed a deal could never
+// correct it. Detaching the agreement is the move the message names.
 func TestDetachingAnAgreementClearsTheRefusedCompanyMove(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
@@ -190,10 +182,9 @@ func TestDetachingAnAgreementClearsTheRefusedCompanyMove(t *testing.T) {
 	}
 }
 
-// What the check must NOT refuse. Each of these is a move the rule does not
-// speak to, and a check that widened to them would break ordinary work while
-// closing nothing — the leak is one company's agreements reaching ANOTHER
-// company's readers.
+// What the check must not refuse. The leak is one company's agreements reaching
+// another company's readers; refusing these moves would break ordinary work and
+// close nothing.
 func TestTheCompanyMovesThisRuleDoesNotSpeakTo(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
@@ -239,10 +230,9 @@ func TestTheCompanyMovesThisRuleDoesNotSpeakTo(t *testing.T) {
 		}
 	})
 
-	// Forgetting the company is a different act. A deal naming nobody publishes
-	// its agreements to exactly the readers its own scope already admits — which
-	// is why an agreement may be filed against a company-less deal in the first
-	// place — so refusing this would close nothing and cost a reversal.
+	// Forgetting the company is a different act. A deal naming nobody shows its
+	// agreements only to readers its own scope already admits, so refusing this
+	// would close nothing.
 	t.Run("forgetting the company altogether", func(t *testing.T) {
 		if _, err := e.Deals.UpdateDeal(admin, withAgreement(t),
 			deals.UpdateDealInput{Clear: []string{"company_id"}}); err != nil {
@@ -251,10 +241,9 @@ func TestTheCompanyMovesThisRuleDoesNotSpeakTo(t *testing.T) {
 	})
 }
 
-// An ARCHIVED agreement blocks too, and that is the census refusing to fail
-// short rather than an oversight. A contract read by id is not filtered by its
-// own archived_at — the visibility clause is about its ANCHOR — so an archived
-// agreement on a moved deal is read through exactly as a live one is.
+// An archived agreement blocks too. A contract read by id is not filtered by
+// its own archived_at, only by its anchor's. So an archived agreement on a
+// moved deal is read through as a live one is.
 func TestAnArchivedAgreementStillBlocksTheMove(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()

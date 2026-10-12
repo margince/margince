@@ -26,23 +26,20 @@ const namedInRefusal = 5
 // agreements already filed against it do not name.
 //
 // This is ensureLinksShareCompany's rule reached from the other end. That one
-// refuses to FILE company A's agreement against company B's deal; nothing
-// stopped the pairing being arrived at afterwards, by moving the deal. The
-// consequence is the same either way and it is a cross-tenant read: VisibleClause
-// judges a deal-anchored contract by its DEAL alone — deliberately, so a caller
-// is not handed agreements attached to deals they cannot see — so once the deal
-// names B, everyone who can see B's deal reads A's agreement and the row's own
-// company is never consulted.
+// refuses to file company A's agreement against company B's deal. Moving the
+// deal afterwards would reach the same pairing.
 //
-// ARCHIVED agreements count. A contract read by id is not filtered by its own
-// archived_at (readContract's clause is about the ANCHOR's), so an archived
-// agreement on a moved deal is the same read-through as a live one — and it is
-// still detachable, so saying so leaves the caller something to do.
+// The result would be a cross-tenant read. VisibleClause judges a deal-anchored
+// contract by its deal alone, so agreements on deals a caller cannot see stay
+// hidden. Once the deal names B, everyone who can see it reads A's agreement.
 //
-// The blocking agreements are NAMED, because a refusal a rep cannot act on is
-// the objection to refusing at all. Naming them discloses nothing: the caller
-// is moving this deal, so they can see it, and every agreement anchored to it
-// is already theirs to read through exactly the arm this check exists to close.
+// Archived agreements count. A contract read by id is not filtered by its own
+// archived_at, only by its anchor's. An archived one can still be detached, so
+// naming it leaves the caller something to do.
+//
+// The blocking agreements are named, because a refusal a rep cannot act on is
+// the objection to refusing at all. The caller can see this deal, so every
+// agreement anchored to it is already theirs to read.
 func EnsureDealContractsShareCompany(ctx context.Context, tx pgx.Tx, dealID ids.DealID, companyID ids.CompanyID) error {
 	rows, err := tx.Query(ctx,
 		`SELECT COALESCE(contract_number, title)
@@ -70,13 +67,11 @@ func EnsureDealContractsShareCompany(ctx context.Context, tx pgx.Tx, dealID ids.
 // DealContractsCrossCompanyError maps to 422: the deal names a company its own
 // agreements do not, so moving it would publish them to that company's readers.
 //
-// It names `company_id`, which is the DEAL's wire field rather than anything
-// this module serves, and it lives here anyway for the reason NotAPartnerError
-// lives with the partner: the question is about `contract` rows, and only this
-// module may read them. The write that trips it is a deal write, and the field
-// a caller can act on is the one they sent.
+// It names `company_id`, the deal's wire field, because that is the field the
+// caller sent. It lives here, as NotAPartnerError lives with the partner, since
+// only this module may read `contract` rows.
 type DealContractsCrossCompanyError struct {
-	// Named is what the blocking agreements are called — their contract
+	// Named is what the blocking agreements are called: their contract
 	// number, or their title where they carry no number.
 	Named []string
 	// AndOthers says the list was cut at namedInRefusal, so a caller who
@@ -89,8 +84,8 @@ func (e *DealContractsCrossCompanyError) Error() string {
 	if e.AndOthers {
 		named += ", and others"
 	}
-	// "do not" rather than "still name the old one": a deal may have named
-	// nobody when the agreement was filed, and there is no old one to point at.
+	// "do not" rather than "still name the old one". A deal may have named
+	// nobody when the agreement was filed.
 	return "a deal and its agreements must name the same company, and these do not: " + named +
 		"; detach them from this deal before moving it"
 }

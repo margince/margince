@@ -60,28 +60,18 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 // applyCompanyLinkPatch re-points a deal at another company: a read of that
 // company, and a question about the agreements already filed against the deal.
 //
-// The question is asked here because the answer is invisible from the contract
-// side. A contract with a deal is judged visible by that DEAL alone, so a deal
-// that moves to company B hands company A's agreements to everyone who can see
-// B's deal — the leak the filing check refuses to create, arrived at from the
-// other end.
+// A contract with a deal is visible through that deal alone. So a deal moved to
+// company B would publish company A's agreements to everyone who can see it.
 //
-// The deal row is HELD before the agreements are read, and that ordering is
-// the check rather than tidiness: a contract being filed against this deal
-// concurrently takes a share lock on the same row to read its company, so
-// whichever transaction arrives second waits and then asks its own question of
-// what the first committed. Read first, lock later, and both commit — each
-// having seen a world the other had already left.
+// The deal row is held before the agreements are read. A contract filed against
+// this deal at the same time takes a share lock on that row. The second
+// transaction waits and reads what the first committed.
 //
-// It is held AFTER the company link probe above, which takes a share lock on
-// `company`, because that is the order every other deal write already takes:
-// the company first, the deal at the patch. Holding the deal first would add
-// the reverse edge to an order this transaction is already committed to.
+// The hold comes after the company link probe, which locks `company`. Every
+// other deal write takes the company first and the deal second.
 //
-// CLEARING the company is a different act and stays on the clear path: a deal
-// that names nobody publishes its agreements to exactly the readers its own
-// scope already admits, which is why the filing check lets a company-less deal
-// take a contract in the first place.
+// Clearing the company stays on the clear path. A deal naming nobody shows its
+// agreements only to readers its own scope already admits.
 func applyCompanyLinkPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal,
 	companyID ids.CompanyID, p *storekit.Patch,
 	ensureContractsShareCompany EnsureContractsShareCompany,

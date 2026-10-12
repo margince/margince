@@ -77,10 +77,9 @@ func appendCommercialFilters(where []string, in ListDealsInput, arg func(any) in
 // it is not fine for a decision about what may be assigned. Deal first, then
 // the catalog row, which is the order every writer in this package takes.
 //
-// The AUTHORITY to make that write is taken a frame up rather than here:
-// dealUpdatePatch runs inside updateDealInTx, which probes auth.EnsureWritable
-// on this exact row, on this transaction, before the patch is built. This
-// takes the lock and decides nothing about who may take it.
+// The authority to write is taken a frame up. dealUpdatePatch runs inside
+// updateDealInTx, which probes auth.EnsureWritable on this row and transaction
+// first. This only takes the lock.
 func lockedAcquisitionSource(
 	ctx context.Context, tx pgx.Tx, current crmcontracts.Deal,
 ) (*string, error) {
