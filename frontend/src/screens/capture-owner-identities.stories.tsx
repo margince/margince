@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import {
@@ -115,9 +115,9 @@ export const Removed: Story = {
   render: story([ALIAS, OWN_DOMAIN, LEARNED], WITHDRAWN),
   play: async ({ canvasElement }) => {
     const body = await removeLearned(canvasElement);
-    await expect(
-      await body.findByRole("button", { name: "Undo" }),
-    ).toBeVisible();
+    const undo = await body.findByRole("button", { name: "Undo" });
+    await waitFor(() => expect(undo).toBeVisible());
+    await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
   },
 };
 
