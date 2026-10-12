@@ -372,6 +372,8 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"so the call would exercise the refusal rather than the handler",
 	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
 	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
+	"describe_import_format": "needs a seat holding import_run.read, which this lane's seat does not carry; " +
+		"TestImportFormatRouteAnswersAsItsTool (workflowreadroutes_integration_test.go) calls it with that grant",
 	"attach_document": "needs an object store to keep the file in; " +
 		"TestAnAgentAttachesAPDFToEveryRecordKindAndListsItWhereTheTabDoes (compose/documentseam_integration_test.go) holds its answer to its schema",
 	"decide_duplicate": "needs a filed review-queue pair, which a create under a second passport produces; " +
