@@ -74,5 +74,8 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[MailDraftRetentionArgs](reg, &mailDraftRetentionWorker{
 		drafts: activities.NewStore(InstallationDB(pool)), identity: identity.NewService(pool), log: log,
 	})
+	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, &waitingHorizonRefreshWorker{
+		activities: activities.NewStore(InstallationDB(pool)), identity: identity.NewService(pool), log: log,
+	})
 	addBriefGenerateJobs(reg, pool, log, briefMail)
 }

@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 301 |
-| Columns | 3570 |
+| Tables | 302 |
+| Columns | 3573 |
 | Foreign keys | 501 |
 | Owning areas | 36 |
 
@@ -88,7 +88,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 25 |
+| [activities](activities.md) | 26 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -150,6 +150,7 @@ erDiagram
 | [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
 | [`activity_review_template`](activities.md#activity_review_template) | activities | 13 | 0 |
 | [`activity_sales_state`](activities.md#activity_sales_state) | activities | 5 | 0 |
+| [`activity_waiting_horizon`](activities.md#activity_waiting_horizon) | activities | 3 | 0 |
 | [`agent_run`](agents.md#agent_run) | agents | 17 | 1 |
 | [`agent_standing_grant`](agents.md#agent_standing_grant) | agents | 8 | 0 |
 | [`agent_task`](compose.md#agent_task) | compose | 13 | 0 |
