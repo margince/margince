@@ -34,9 +34,9 @@ type inFileCreates struct {
 	// keys are the estate-wide unique keys the earlier creates hold: a
 	// contact's address, a company's domain. A later row naming one is refused
 	// by the store whoever holds it.
-	keys      map[string]bool
-	companies contacts.CompanyBatch
-	people    contacts.ContactBatch
+	keys        map[string]bool
+	companies   contacts.CompanyBatch
+	contactRows contacts.ContactBatch
 	// consumerMail is read once per walk, because the contact ladder judges a
 	// shared mail domain by the workspace's own list.
 	consumerMail *freemail.Matcher
@@ -96,7 +96,7 @@ func (f *inFileCreates) record(row migration.Row, outcome predictedOutcome) {
 		}
 		f.companies.Add(held)
 	case migration.ObjectContact:
-		f.people.Add(contactCandidateOf(fields, f.consumerMail))
+		f.contactRows.Add(contactCandidateOf(fields, f.consumerMail))
 	}
 }
 
@@ -123,7 +123,7 @@ func (f *inFileCreates) hasRival(fields map[string]string) bool {
 	case migration.ObjectCompany:
 		return f.companies.HasRival(companyCandidateOf(fields))
 	case migration.ObjectContact:
-		return f.people.HasRival(contactCandidateOf(fields, f.consumerMail))
+		return f.contactRows.HasRival(contactCandidateOf(fields, f.consumerMail))
 	}
 	return false
 }
