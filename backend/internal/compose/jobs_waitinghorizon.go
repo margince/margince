@@ -7,12 +7,19 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// waitingHorizonRefreshActor is the principal the pass reads the colleague
+// domains as; the store's reads are gated and a job carries no human.
+const waitingHorizonRefreshActor = "system:waiting_horizon_refresh"
 
 // WaitingHorizonRefreshArgs schedules one measurement of the waiting horizon,
 // stored for every reader of the installation.
@@ -30,6 +37,19 @@ func (WaitingHorizonRefreshArgs) InsertOpts() river.InsertOpts {
 	}
 }
 
+// newWaitingHorizonRefreshWorker binds the colleague-domain reader the
+// measurement needs. Unbound, colleagues' fast replies would count as customers
+// being answered and pull the stored horizon down.
+func newWaitingHorizonRefreshWorker(pool *pgxpool.Pool, log *slog.Logger) *waitingHorizonRefreshWorker {
+	db := InstallationDB(pool)
+	return &waitingHorizonRefreshWorker{
+		activities: activities.NewStore(db).WithOwnDomains(
+			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
+		identity: identity.NewService(pool),
+		log:      log,
+	}
+}
+
 type waitingHorizonRefreshWorker struct {
 	activities *activities.Store
 	identity   *identity.Service
@@ -41,7 +61,7 @@ func (w *waitingHorizonRefreshWorker) Work(ctx context.Context, _ *river.Job[Wai
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	days, err := w.activities.RefreshWaitingHorizon(wsCtx)
+	days, err := w.activities.RefreshWaitingHorizon(principal.SystemActing(wsCtx, waitingHorizonRefreshActor))
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
