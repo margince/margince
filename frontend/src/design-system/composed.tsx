@@ -290,6 +290,7 @@ function BoardLayout<Record extends BoardRecord>({
     <div className="board">
       {columns.map((column) => {
         const money = moneyFor(column);
+        const dealCount = column.count ?? column.deals.length;
         return (
           <section
             key={column.stage}
@@ -342,7 +343,7 @@ function BoardLayout<Record extends BoardRecord>({
                   whole chip, separator included, stays out of the accessible
                   tree rather than announcing the number twice. */}
               <span className="board-col-count" aria-hidden="true">
-                <OptionCount count={column.count ?? column.deals.length} />
+                <OptionCount count={dealCount} />
               </span>
               {money && (
                 <span className="prob">
@@ -370,12 +371,9 @@ function BoardLayout<Record extends BoardRecord>({
                     announces "12 deals" rather than "Qualified: 12". */}
                 <span className="sr-only">
                   {countLabel
-                    ? countLabel(column.count ?? column.deals.length)
-                    : t("board.count", {
-                        count: formatNumber(
-                          column.count ?? column.deals.length,
-                          locale,
-                        ),
+                    ? countLabel(dealCount)
+                    : translatePlural(locale, "board.count", dealCount, {
+                        count: formatNumber(dealCount, locale),
                       })}
                 </span>
               </span>
@@ -405,13 +403,11 @@ function BoardLayout<Record extends BoardRecord>({
                   An EMPTY column says nothing: with no deals counted there is
                   no sum to refuse, and ten columns repeating the sentence over
                   a blank board read as ten errors. */}
-              {money &&
-                column.sumHidden &&
-                (column.count ?? column.deals.length) > 0 && (
-                  <span className="board-col-refusal">
-                    {column.sumHiddenReason ?? t("board.mixedCurrencies")}
-                  </span>
-                )}
+              {money && column.sumHidden && dealCount > 0 && (
+                <span className="board-col-refusal">
+                  {column.sumHiddenReason ?? t("board.mixedCurrencies")}
+                </span>
+              )}
             </div>
             {!column.collapsed &&
               column.deals.map((record) => (

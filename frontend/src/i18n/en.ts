@@ -1262,7 +1262,8 @@ export const en = {
   "explain.excluded_other":
     "{count} records are left out of this number and the rows below. A field on them is hidden for your role.",
 
-  "board.count": "{count} deals",
+  "board.count_one": "{count} deal",
+  "board.count_other": "{count} deals",
   "board.weighted": "weighted {value}",
   "board.mixedCurrencies": "several currencies, no single total",
   "dealfiles.hidden": "Hidden from this deal",

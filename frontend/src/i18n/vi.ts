@@ -1237,7 +1237,8 @@ export const vi = {
   "explain.excluded_other":
     "{count} hồ sơ bị loại khỏi con số này và các dòng bên dưới. Một trường của các hồ sơ này bị ẩn với vai trò hiện tại.",
 
-  "board.count": "{count} deal",
+  "board.count_one": "{count} deal",
+  "board.count_other": "{count} deal",
   "board.weighted": "có trọng số {value}",
   "board.mixedCurrencies": "nhiều loại tiền, không có tổng chung",
   "dealfiles.hidden": "Đã ẩn khỏi deal này",

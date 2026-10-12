@@ -1265,7 +1265,8 @@ export const de = {
   "explain.excluded_other":
     "Bei {count} Datensätzen ist ein Feld für deine Rolle ausgeblendet, deshalb fehlen sie in dieser Zahl und in den Zeilen darunter.",
 
-  "board.count": "Deals: {count}",
+  "board.count_one": "Deal: {count}",
+  "board.count_other": "Deals: {count}",
   "board.weighted": "gewichtet {value}",
   "board.mixedCurrencies": "mehrere Währungen, keine Gesamtsumme",
   "dealfiles.hidden": "An diesem Deal ausgeblendet",
