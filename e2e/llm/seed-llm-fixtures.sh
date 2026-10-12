@@ -299,7 +299,7 @@ link_employment() {
   local contact="$1" company="$2" what="$3" body code
   body="$(printf '{"kind":"employment","contact_id":"%s","company_id":"%s"}' \
     "$contact" "$company")"
-  code="$(status_of POST /relationships "$body")"
+  code="$(status_of POST /relationships "$(with_source /relationships "$body")")"
   [[ "$code" = "201" || "$code" = "409" ]] || {
     echo "employing $what answered HTTP $code" >&2; exit 1; }
 }
