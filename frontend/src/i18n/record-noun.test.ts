@@ -174,6 +174,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
     "lead.notYoursToChange",
+    // The same refusal as the two above, for a colleague's queue.
+    "worklist.owner.refused",
     "lists.audience.ownerTeams",
     "lists.team.allOwners",
     "ob.conv.team.body",

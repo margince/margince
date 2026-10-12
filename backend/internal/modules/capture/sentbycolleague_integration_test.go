@@ -7,6 +7,7 @@ package capture_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -132,5 +133,49 @@ func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
 				t.Errorf("mail from %s was read as a colleague's (direction %q, colleague %v)", from, got.direction, got.colleague)
 			}
 		})
+	}
+}
+
+// A second, outside From address is a co-author, not the customer the
+// colleague wrote to. The counterparty is the first outside recipient.
+func TestAColleaguesCoAuthorIsNotTheCustomer(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	seedSeat(ctx, t, db, "sam@acme.com", "invited")
+	rec := colleagueCopy("co-authored-1", "sam@acme.com")
+	rec.Addresses = []string{"sam@acme.com", "pat@agency.io", "dana@client.io", "rep@acme.com", "eli@client.io"}
+
+	if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat), rec); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	got := storedMailFor(ctx, t, db, "co-authored-1")
+	if got.direction != connector.DirectionOutbound || got.counterparty != "dana@client.io" {
+		t.Errorf("stored as %s to %q, want outbound to the first outside recipient dana@client.io", got.direction, got.counterparty)
+	}
+}
+
+// A copy to a distribution list names more recipients than capture keeps as
+// participants. They are withheld, and the first of them is still the customer.
+func TestAColleaguesMailToAListIsStillOurs(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	seedSeat(ctx, t, db, "sam@acme.com", "invited")
+	rec := colleagueCopy("list-1", "sam@acme.com")
+	rec.Participants = nil
+	for i := range connector.MaxParticipants + 1 {
+		rec.WithheldParties = append(rec.WithheldParties,
+			connector.MessageParticipant{Email: fmt.Sprintf("buyer%d@client.io", i), Role: connector.ParticipantRoleTo})
+	}
+
+	if _, err := capture.NewSink(db).Upsert(memberSinkContext(ctx, ws, seat), rec); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	got := storedMailFor(ctx, t, db, "list-1")
+	if got.direction != connector.DirectionOutbound || got.counterparty != "buyer0@client.io" {
+		t.Errorf("stored as %s to %q, want outbound to the first withheld recipient buyer0@client.io", got.direction, got.counterparty)
 	}
 }

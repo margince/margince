@@ -28,7 +28,8 @@ type answerArm struct {
 // answerArms are the answers an inbound message can get strictly after it
 // arrived and no later than until:
 //
-//   - our reply on the same thread;
+//   - our reply on the same thread, sent to the sender: its counterparty or a
+//     To/Cc row is their address or one of their contact's;
 //   - our sent mail to the sender with the same subject once reply prefixes
 //     are stripped. The sender is their address or their contact, so any of
 //     the contact's addresses counts; the mail must name them as its
@@ -154,13 +155,39 @@ func touchAnswerArm(asker, touch, walk string) answerArm {
 // threadAnswerArm is our reply on the same thread. It reads the reply whoever
 // may open it, as the waiting lane always has: a reply on the conversation
 // answered the customer whether or not this reader may see it.
+//
+// The reply must be sent to the sender. One thread can hold our mail to a
+// second correspondent, and that answers nobody else on it. A Bcc copy is not
+// an answer either, even when a colleague's copy took it as its counterparty.
+// A message with no sender address, a chat, binds on the thread alone.
+//
+// ourOutboundInThisThread asks a narrower question, for settlement evidence:
+// attested mail to one stored counterparty. It decides no badge, so it keeps
+// neither the To/Cc rows nor the Bcc test read here.
 func threadAnswerArm(inbound, later string) answerArm {
+	// The off-thread arms' senderAddresses starts from the `from` row for its
+	// index plan. Here the folded counterparty counts too: an inbound row may
+	// have no `from` row.
+	sender := `SELECT ` + inbound + `.counterparty_email
+	     UNION
+	    SELECT lower(btrim(answer_known.email)) FROM activity_participant answer_asker
+	      JOIN contact_email answer_known ON answer_known.contact_id = answer_asker.contact_id
+	       AND answer_known.archived_at IS NULL
+	     WHERE answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
 	return answerArm{at: "answer_thread.occurred_at", id: "answer_thread.id", from: `FROM activity answer_thread
 	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
 	    AND answer_thread.kind = ` + inbound + `.kind
 	    AND answer_thread.kind IN ('email', 'message')
 	    AND answer_thread.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
 	    AND answer_thread.direction = 'outbound'
+	    AND (` + inbound + `.counterparty_email IS NULL
+	      OR (answer_thread.counterparty_email IN (` + sender + `)
+	        AND NOT EXISTS (SELECT 1 FROM activity_participant answer_blind
+	             WHERE answer_blind.activity_id = answer_thread.id AND answer_blind.role = 'bcc'
+	               AND lower(btrim(answer_blind.address)) = answer_thread.counterparty_email))
+	      OR EXISTS (SELECT 1 FROM activity_participant answer_told
+	           WHERE answer_told.activity_id = answer_thread.id AND answer_told.role IN ('to', 'cc')
+	             AND lower(btrim(answer_told.address)) IN (` + sender + `)))
 	    AND ` + later}
 }
 

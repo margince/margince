@@ -894,6 +894,7 @@ export const vi = {
   "systemJob.notification_digest": "Bản tổng hợp thông báo",
   "systemJob.notification_mail": "Email thông báo",
   "systemJob.owed_verdict": "Kiểm tra thư cần trả lời",
+  "systemJob.own_sent_mail_repair": "Sửa thư đã gửi",
   "systemJob.participant_backfill": "Bổ sung bên tham gia thư",
   "systemJob.private_thread_strip": "Gỡ chuỗi thư riêng tư",
   "systemJob.provider_recovery": "Khôi phục nhà cung cấp bổ sung dữ liệu",
@@ -1236,7 +1237,8 @@ export const vi = {
   "explain.excluded_other":
     "{count} hồ sơ bị loại khỏi con số này và các dòng bên dưới. Một trường của các hồ sơ này bị ẩn với vai trò hiện tại.",
 
-  "board.count": "{count} deal",
+  "board.count_one": "{count} deal",
+  "board.count_other": "{count} deal",
   "board.weighted": "có trọng số {value}",
   "board.mixedCurrencies": "nhiều loại tiền, không có tổng chung",
   "dealfiles.hidden": "Đã ẩn khỏi deal này",
@@ -4891,6 +4893,7 @@ export const vi = {
   "analytics.sectionQuestions": "Báo cáo tùy chỉnh",
   "analytics.sectionReports": "Báo cáo",
   "analytics.setup": "Thiết lập",
+  "analytics.filters": "Bộ lọc",
   "analytics.attention": "Cần chú ý",
   "analytics.attentionChecks_one": "1 mục kiểm tra dự báo cần trả lời",
   "analytics.attentionChecks_other": "{count} mục kiểm tra dự báo cần trả lời",
@@ -11053,7 +11056,7 @@ export const vi = {
   "filters.keepViewHint":
     "Chỉ bạn tìm thấy chế độ xem này. Số lượng được đếm lại mỗi lần mở.",
   "filters.keepListHint":
-    "Kiểm tra 15 phút một lần và ghi lại hồ sơ nào vào hoặc rời danh sách. Chọn ai có thể tìm thấy danh sách.",
+    "Kiểm tra 15 phút một lần, thưa hơn khi có rất nhiều danh sách, và ghi lại hồ sơ nào vào hoặc rời danh sách. Chọn ai có thể tìm thấy danh sách.",
   "filters.purpose": "Mục đích (không bắt buộc)",
   "filters.viewSaved": "Đã lưu chế độ xem",
   "filters.listCreated": "Đã tạo danh sách động “{name}”",
@@ -11244,13 +11247,11 @@ export const vi = {
   "lists.unavailable": "Danh sách đang tắt trên bản cài đặt này.",
   "lists.gone": "Danh sách này không tồn tại, hoặc không được chia sẻ với bạn.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
-  "lists.head.facts":
-    "{type} · bạn xem được {visible} · ai có thể tìm thấy: {sharing} · phụ trách: {steward}",
-  "lists.filterLine": "Bộ lọc: {records} có {sentence}",
-  "lists.head.exported_one":
-    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
-  "lists.head.exported_other":
-    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
+  "lists.filterLine": "Bộ lọc: {sentence}",
+  "lists.head.exported_one": "{count} lần, lần gần nhất vào {when}",
+  "lists.head.exported_other": "{count} lần, lần gần nhất vào {when}",
+  "lists.fact.steward": "Phụ trách",
+  "lists.fact.exported": "Đã xuất",
   "lists.archived.title": "Danh sách này đang trong kho lưu trữ",
   "lists.archived.body":
     "Danh sách ở chế độ chỉ đọc cho đến khi khôi phục. Thành viên và lịch sử vẫn còn nguyên.",
@@ -11343,10 +11344,10 @@ export const vi = {
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label":
     "{entered} hồ sơ vào và {left} hồ sơ rời đi kể từ lần truy cập gần nhất",
-  "lists.head.lastChecked": "Kiểm tra lần cuối {when}",
-  "lists.head.notChecked":
+  "lists.history.lastChecked": "Kiểm tra lần cuối {when}",
+  "lists.history.notChecked":
     "Chưa kiểm tra lần nào. Hồ sơ vào và rời đi sẽ được ghi nhận từ lần kiểm tra đầu tiên.",
-  "lists.head.tooLarge":
+  "lists.history.tooLarge":
     "Kiểm tra lần cuối {when}. Danh sách khớp quá nhiều hồ sơ nên không thể ghi lại hồ sơ nào đã vào hoặc rời danh sách.",
   "lists.head.pulse":
     "Kể từ lần truy cập gần nhất: {entered} vào, {left} rời đi",
@@ -11355,12 +11356,13 @@ export const vi = {
   "lists.members.addedBy": "Người thêm",
   "lists.members.addedOn": "Ng\u00e0y th\u00eam",
   "lists.members.note": "Ghi ch\u00fa",
-  "lists.history.entered": "Đã vào, tính đến {when}",
-  "lists.history.left": "Đã rời đi, tính đến {when}",
+  "lists.history.entered": "Đã vào",
+  "lists.history.left": "Đã rời đi",
   "lists.history.reason.filterChanged": "sau khi bộ lọc thay đổi",
   "lists.history.checker": "Kiểm tra định kỳ 15 phút",
   "lists.history.liveNote":
-    "Việc kiểm tra chạy 15 phút một lần, bắt đầu từ các danh sách đã lâu chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết thời điểm kiểm tra. Hồ sơ vào hay rời đi được ghi nhận theo lần kiểm tra phát hiện ra thay đổi, và hồ sơ vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
+    "Danh sách được kiểm tra 15 phút một lần, thưa hơn khi có rất nhiều danh sách. Hồ sơ vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
+  "lists.history.howChecks": "Cách kiểm tra danh sách",
   "lists.editFilter": "S\u1eeda b\u1ed9 l\u1ecdc",
   "lists.filterCannotOpen": "Không thể mở bộ lọc của danh sách này tại đây.",
   "lists.savedTo": "Đã lưu vào “{name}”",
@@ -11806,6 +11808,8 @@ export const vi = {
   "worklist.owner.nobodyYet": "Chưa có ai",
   "worklist.owner.mine": "Danh sách công việc của tôi",
   "worklist.owner.backToMine": "Quay lại Danh sách công việc của bạn",
+  "worklist.owner.refused":
+    "Bạn không được xem danh sách công việc này. Hãy hỏi chủ sở hữu, hoặc quay lại danh sách của bạn.",
   "worklist.manager.reassign": "Giao lại",
   "worklist.manager.reassignTo": "Giao lại cho",
   "worklist.manager.reassignConfirm": "Giao lại",

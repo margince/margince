@@ -356,7 +356,7 @@ describe("DealCard + PipelineBoard", () => {
       />,
     );
     expect(screen.getByText("40%")).toBeTruthy();
-    expect(screen.getByText("1 deals")).toBeTruthy();
+    expect(screen.getByText("1 deal")).toBeTruthy();
     expect(screen.getByText("€60,500.00")).toBeTruthy();
     expect(screen.getByText("weighted €24,200.00")).toBeTruthy();
   });
@@ -383,7 +383,7 @@ describe("DealCard + PipelineBoard", () => {
       />,
     );
     expect(screen.getByText("137 deals")).toBeTruthy();
-    expect(screen.queryByText("1 deals")).toBeNull();
+    expect(screen.queryByText("1 deal")).toBeNull();
   });
 
   // A refused sum says it was refused. Dropping the figure and leaving the count
@@ -497,7 +497,7 @@ describe("DealCard + PipelineBoard", () => {
       />,
     );
     expect(screen.getByText("1 leads")).toBeTruthy();
-    expect(screen.queryByText("1 deals")).toBeNull();
+    expect(screen.queryByText("1 deal")).toBeNull();
   });
 });
 

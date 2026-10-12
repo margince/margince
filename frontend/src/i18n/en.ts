@@ -897,6 +897,7 @@ export const en = {
   "systemJob.notification_digest": "Notification digest",
   "systemJob.notification_mail": "Notification email",
   "systemJob.owed_verdict": "Owed reply check",
+  "systemJob.own_sent_mail_repair": "Sent mail correction",
   "systemJob.participant_backfill": "Mail participant fill-in",
   "systemJob.private_thread_strip": "Private thread removal",
   "systemJob.provider_recovery": "Enrichment provider recovery",
@@ -1261,7 +1262,8 @@ export const en = {
   "explain.excluded_other":
     "{count} records are left out of this number and the rows below. A field on them is hidden for your role.",
 
-  "board.count": "{count} deals",
+  "board.count_one": "{count} deal",
+  "board.count_other": "{count} deals",
   "board.weighted": "weighted {value}",
   "board.mixedCurrencies": "several currencies, no single total",
   "dealfiles.hidden": "Hidden from this deal",
@@ -5086,6 +5088,7 @@ export const en = {
   "analytics.sectionQuestions": "Custom reports",
   "analytics.sectionReports": "Reports",
   "analytics.setup": "Setup",
+  "analytics.filters": "Filters",
   "analytics.attention": "Needs your attention",
   "analytics.attentionChecks_one": "1 forecast check to answer",
   "analytics.attentionChecks_other": "{count} forecast checks to answer",
@@ -11434,7 +11437,7 @@ export const en = {
   "filters.keepViewHint":
     "Only you can find it. It counts again each time you open it.",
   "filters.keepListHint":
-    "Checked every 15 minutes, and records who joins and leaves. Choose who can find it.",
+    "Checked every 15 minutes, less often when there are very many lists, and records who joins and leaves. Choose who can find it.",
   "filters.purpose": "Purpose (optional)",
   "filters.viewSaved": "View saved",
   "filters.listCreated": "Live List “{name}” created",
@@ -11620,11 +11623,11 @@ export const en = {
   "lists.unavailable": "Lists are switched off for this installation.",
   "lists.gone": "This list is not there, or it is not shared with you.",
   "lists.unnamed": "Unnamed",
-  "lists.head.facts":
-    "{type} · {visible} you can see · who can find it: {sharing} · looked after by {steward}",
-  "lists.filterLine": "Filter: {records} where {sentence}",
-  "lists.head.exported_one": "Exported {count} time, last on {when}",
-  "lists.head.exported_other": "Exported {count} times, last on {when}",
+  "lists.filterLine": "Filter: {sentence}",
+  "lists.head.exported_one": "{count} time, last on {when}",
+  "lists.head.exported_other": "{count} times, last on {when}",
+  "lists.fact.steward": "Steward",
+  "lists.fact.exported": "Exported",
   "lists.archived.title": "This list is archived",
   "lists.archived.body":
     "It is read-only until it is restored. Its members and history are kept.",
@@ -11709,10 +11712,10 @@ export const en = {
   "lists.pickShortlist": "Pick a Shortlist",
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label": "{entered} joined and {left} left since your last visit",
-  "lists.head.lastChecked": "Last checked {when}",
-  "lists.head.notChecked":
+  "lists.history.lastChecked": "Last checked {when}",
+  "lists.history.notChecked":
     "Not checked yet. Who joins and leaves is recorded from the first check on.",
-  "lists.head.tooLarge":
+  "lists.history.tooLarge":
     "Last checked {when}. It matched too many records to record who joined and left.",
   "lists.head.pulse": "Since your last visit: {entered} joined, {left} left",
   "lists.members.new": "New",
@@ -11720,12 +11723,13 @@ export const en = {
   "lists.members.addedBy": "Added by",
   "lists.members.addedOn": "Added on",
   "lists.members.note": "Note",
-  "lists.history.entered": "Joined as of {when}",
-  "lists.history.left": "Left as of {when}",
+  "lists.history.entered": "Joined",
+  "lists.history.left": "Left",
   "lists.history.reason.filterChanged": "after the filter changed",
   "lists.history.checker": "The 15-minute check",
   "lists.history.liveNote":
-    "The check runs every 15 minutes and takes the lists checked longest ago first, so with very many lists one can wait longer; “Last checked” says when it was. Who joined and left is recorded as of the check that noticed it, and a record that joins and leaves between two checks is not recorded.",
+    "Lists are checked every 15 minutes, less often when there are very many. A record that joins and leaves between two checks is not recorded.",
+  "lists.history.howChecks": "How checks work",
   "lists.editFilter": "Edit filter",
   "lists.filterCannotOpen": "This list’s filter cannot be opened here.",
   "lists.savedTo": "Saved to “{name}”",
@@ -12182,6 +12186,8 @@ export const en = {
   "worklist.owner.nobodyYet": "Nobody yet",
   "worklist.owner.mine": "My Worklist",
   "worklist.owner.backToMine": "Back to your Worklist",
+  "worklist.owner.refused":
+    "This Worklist is not yours to read. Ask its owner, or go back to your own.",
   "worklist.manager.reassign": "Reassign",
   "worklist.manager.reassignTo": "Reassign to",
   "worklist.manager.reassignConfirm": "Reassign",

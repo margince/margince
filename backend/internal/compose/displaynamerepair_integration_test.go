@@ -57,7 +57,7 @@ func runDisplayNameRepair(t *testing.T, e *integration.Env) {
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	w := &participantBackfillWorker{pool: e.Pool, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	if _, err := w.refreshDisplayNamesWorkspace(ctx); err != nil {
+	if _, err := w.drainPass(ctx, backfillPass{repairStaleDisplayNamesBatch, participantReplayBatch}); err != nil {
 		t.Fatalf("running the display-name repair: %v", err)
 	}
 }
