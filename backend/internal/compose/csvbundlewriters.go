@@ -60,6 +60,34 @@ func newBundleWriters(
 	return b, nil
 }
 
+// bindNamedCompanies refills the ref of every company row the file names by id.
+// The binding lives in memory, so a resumed commit has none for the rows its
+// checkpoint passed. A contact linking to one would then find nothing.
+func (b *bundleWriters) bindNamedCompanies(ctx context.Context, source migration.Source) error {
+	w, ok := b.parts[migration.ObjectCompany]
+	if !ok {
+		return nil
+	}
+	companies, err := partSourceOf(source, migration.ObjectCompany)
+	if err != nil {
+		return err
+	}
+	for offset := 0; ; offset += importPredictPage {
+		rows, err := companies.Rows(ctx, migration.ObjectCompany, offset, importPredictPage)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			if target, skip := w.namedTarget(ctx, migration.ObjectCompany, row); skip == "" && target.named {
+				b.links.markLanded(migration.ObjectCompany, row.ExternalID, target.id)
+			}
+		}
+		if len(rows) < importPredictPage {
+			return nil
+		}
+	}
+}
+
 // part is the writer of one type. A run with no file of that type answers a
 // conflict, because its source and its mapping disagree.
 func (b *bundleWriters) part(object string) (*csvWriters, error) {

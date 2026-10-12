@@ -343,6 +343,11 @@ func (h importHandlers) commitRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
+	if run.Status == migration.StatusFailed {
+		if err := writers.bindNamedCompanies(ctx, source); err != nil {
+			return crmcontracts.ImportRun{}, importProblem(err)
+		}
+	}
 
 	runs := migration.NewRunStore(h.db)
 	approved, err := h.startOrResume(ctx, runs, run)

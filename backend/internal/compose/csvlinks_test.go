@@ -33,7 +33,7 @@ func TestALinkTriesThisUploadBeforeAnythingInTheCRM(t *testing.T) {
 		t.Fatal("a ref in this upload must answer before the natural key is read")
 		return linkAnswer{}, nil
 	}
-	got, err := r.resolve(context.Background(), "company", "  CO-1 ")
+	got, err := r.resolveCompany(context.Background(), "  CO-1 ")
 	if err != nil || !got.Pending {
 		t.Fatalf("got %+v err %v, want pending", got, err)
 	}
@@ -42,7 +42,7 @@ func TestALinkTriesThisUploadBeforeAnythingInTheCRM(t *testing.T) {
 func TestARefKeepsItsCase(t *testing.T) {
 	r := newTestLinkResolver(t)
 	r.markPending("company", "CO-1")
-	if got, _ := r.resolve(context.Background(), "company", "co-1"); got.Pending || got.Found {
+	if got, _ := r.resolveCompany(context.Background(), "co-1"); got.Pending || got.Found {
 		t.Fatalf("co-1 matched CO-1: a ref is an identifier, not a word")
 	}
 }
@@ -57,7 +57,7 @@ func TestARowNamedByIDAnswersItsRef(t *testing.T) {
 	}
 	id := ids.NewV7()
 	r.markLanded("company", " CO-7", id)
-	if got, err := r.resolve(context.Background(), "company", "CO-7"); err != nil || !got.Found || got.ID != id {
+	if got, err := r.resolveCompany(context.Background(), "CO-7"); err != nil || !got.Found || got.ID != id {
 		t.Fatalf("got %+v err %v, want the record the row named", got, err)
 	}
 }
@@ -73,7 +73,7 @@ func TestOnlyAnIDIsLookedUpByIDAndAMissNamesTheValue(t *testing.T) {
 	}
 	id := ids.NewV7().String()
 	for _, raw := range []string{"Acme GmbH", id} {
-		got, err := r.resolve(context.Background(), "company", raw)
+		got, err := r.resolveCompany(context.Background(), raw)
 		if err != nil || got.Found || got.Pending {
 			t.Fatalf("resolve(%q) = %+v err %v, want not found", raw, got, err)
 		}
@@ -96,7 +96,7 @@ func TestAResolvedRefIsAskedOnceUntilItIsMarkedPending(t *testing.T) {
 		return linkAnswer{}, nil
 	}
 	for range 2 {
-		if _, err := r.resolve(context.Background(), "company", "CO-2"); err != nil {
+		if _, err := r.resolveCompany(context.Background(), "CO-2"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -104,7 +104,7 @@ func TestAResolvedRefIsAskedOnceUntilItIsMarkedPending(t *testing.T) {
 		t.Fatalf("binding asked %d times, want once", calls)
 	}
 	r.markPending("company", "CO-2")
-	if got, _ := r.resolve(context.Background(), "company", "CO-2"); !got.Pending {
+	if got, _ := r.resolveCompany(context.Background(), "CO-2"); !got.Pending {
 		t.Fatalf("got %+v after markPending, want pending", got)
 	}
 }

@@ -106,7 +106,7 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 // this upload. A company name goes through the name match the commit runs.
 func (w *csvWriters) predictLink(ctx context.Context, edge migration.Assoc) (string, error) {
 	if edge.ToType == migration.AssocTargetCompanyRef {
-		answer, err := w.links.resolve(ctx, migration.ObjectCompany, edge.ToID)
+		answer, err := w.links.resolveCompany(ctx, edge.ToID)
 		if err != nil || answer.resolves() {
 			return "", err
 		}

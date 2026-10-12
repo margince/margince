@@ -32484,12 +32484,14 @@ type CreateImportRunRequest struct {
 	// merge.
 	Object *ImportObject `json:"object,omitempty"`
 
-	// OnBrokenLink What a run does with a row whose link names a record no file of the
-	// upload and nothing in the estate answers to. `skip_row` leaves the row
-	// out and reports it; `drop_link` lands the row without the link and
-	// reports the dropped link. A ZIP run applies it to every link. A single
-	// CSV applies it to `company_ref` only, and lands a row whose
-	// `company_name` finds nothing, with the link reported as unresolved.
+	// OnBrokenLink What a run does with a contact row whose company link finds no single
+	// company, in the upload or in the estate. `skip_row` leaves the row out
+	// and reports it; `drop_link` lands the row without the link and reports
+	// the dropped link. A ZIP run applies it to `company_ref` and
+	// `company_name`; a row holding both is decided by its `company_ref`. A
+	// single CSV applies it to `company_ref` only, and lands a row whose
+	// `company_name` finds nothing, with the link reported as unresolved. A
+	// lead's `company_name` is text, not a link, so it never skips a lead.
 	OnBrokenLink *ImportOnBrokenLink `json:"on_broken_link,omitempty"`
 
 	// OnDuplicate What to do with a row naming a record the estate ALREADY holds — found
@@ -35955,12 +35957,14 @@ type ImportIgnoredEntryReason string
 // merge.
 type ImportObject string
 
-// ImportOnBrokenLink What a run does with a row whose link names a record no file of the
-// upload and nothing in the estate answers to. `skip_row` leaves the row
-// out and reports it; `drop_link` lands the row without the link and
-// reports the dropped link. A ZIP run applies it to every link. A single
-// CSV applies it to `company_ref` only, and lands a row whose
-// `company_name` finds nothing, with the link reported as unresolved.
+// ImportOnBrokenLink What a run does with a contact row whose company link finds no single
+// company, in the upload or in the estate. `skip_row` leaves the row out
+// and reports it; `drop_link` lands the row without the link and reports
+// the dropped link. A ZIP run applies it to `company_ref` and
+// `company_name`; a row holding both is decided by its `company_ref`. A
+// single CSV applies it to `company_ref` only, and lands a row whose
+// `company_name` finds nothing, with the link reported as unresolved. A
+// lead's `company_name` is text, not a link, so it never skips a lead.
 type ImportOnBrokenLink string
 
 // ImportOnDuplicate What to do with a row naming a record the estate ALREADY holds — found

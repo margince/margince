@@ -103,6 +103,7 @@ type pendingName struct{ landing, creating int }
 
 // markNamesPending records the names of a company row the dry run predicts will
 // land. A later file's name link to it then resolves before the row exists.
+// Only the dry run calls it, so a commit's resolver answers from the estate alone.
 func (r *linkResolver) markNamesPending(creates bool, names ...string) {
 	seen := map[string]bool{}
 	for _, name := range names {
@@ -139,12 +140,10 @@ func (r *linkResolver) markLanded(object, ref string, id ids.UUID) {
 	delete(r.cache, key)
 }
 
-// resolve answers which record a link cell names. A ref is trimmed and keeps
-// its case, because it is an identifier.
-//
-//nolint:unparam // keyed by type like markPending, which marks every part's rows; only company links exist yet.
-func (r *linkResolver) resolve(ctx context.Context, object, raw string) (linkAnswer, error) {
-	key := linkKey{Object: object, Key: strings.TrimSpace(raw)}
+// resolveCompany answers which company a link cell names. A ref is trimmed and
+// keeps its case, because it is an identifier.
+func (r *linkResolver) resolveCompany(ctx context.Context, raw string) (linkAnswer, error) {
+	key := linkKey{Object: migration.ObjectCompany, Key: strings.TrimSpace(raw)}
 	if answer, ok := r.cache[key]; ok {
 		return answer, nil
 	}
@@ -215,10 +214,7 @@ func (r *linkResolver) visible(ctx context.Context, object string, id ids.UUID) 
 
 // naturalKeyOf finds a company by the key a human would write: its domain, or
 // the one name it carries.
-func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (linkAnswer, error) {
-	if object != migration.ObjectCompany {
-		return linkAnswer{}, fmt.Errorf("import: a link cannot name a %q: %w", object, apperrors.ErrConflict)
-	}
+func (r *linkResolver) naturalKeyOf(ctx context.Context, _, key string) (linkAnswer, error) {
 	// A domain holds no space, so a name such as "Acme Inc." skips the read.
 	if strings.Contains(key, ".") && !strings.ContainsRune(key, ' ') {
 		answer, err := r.visibleByDomain(ctx, canonicalFor(fieldDomain, key))

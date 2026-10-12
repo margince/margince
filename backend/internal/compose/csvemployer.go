@@ -257,7 +257,7 @@ func (w *csvWriters) linkCompanyRef(ctx context.Context, a migration.Assoc) (mig
 	if err != nil || missing != "" {
 		return migration.AssocResult{Reason: missing}, err
 	}
-	answer, err := w.links.resolve(ctx, migration.ObjectCompany, a.ToID)
+	answer, err := w.links.resolveCompany(ctx, a.ToID)
 	if err != nil {
 		return migration.AssocResult{}, err
 	}
@@ -328,12 +328,12 @@ type rowLink struct {
 
 // linkProblemOf checks a contact row's employer before the row lands, so the
 // run's broken-link policy decides the row and not only its edge. The dry run
-// and the commit both ask here. A company_ref is checked in every run, and a
-// company name only in a ZIP run.
+// and the commit both ask here. A company_ref is checked in every run and wins
+// over a company name, which is checked only in a ZIP run.
 func (w *csvWriters) linkProblemOf(ctx context.Context, row migration.Row) (rowLink, error) {
 	fields := textFields(row.Fields)
 	if ref := strings.TrimSpace(fields[csvTargetCompanyRef]); w.companyRefColumn != "" && ref != "" {
-		answer, err := w.links.resolve(ctx, migration.ObjectCompany, ref)
+		answer, err := w.links.resolveCompany(ctx, ref)
 		if err != nil || answer.resolves() {
 			return rowLink{}, err
 		}

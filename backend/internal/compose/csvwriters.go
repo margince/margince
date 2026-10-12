@@ -65,8 +65,8 @@ type csvWriters struct {
 	// companyRefColumn is the file's column mapped to company_ref, empty when
 	// none is; onBrokenLink decides a row whose ref finds nothing.
 	companyRefColumn, onBrokenLink string
-	// companyNameColumn is the column mapped to company_name in a ZIP run. It is
-	// empty in a single CSV, which lands the row whatever its employer name finds.
+	// companyNameColumn is a contact part's company_name column in a ZIP run. It
+	// is empty in a single CSV, and for a lead, whose company_name is plain text.
 	companyNameColumn string
 	// authors caches the seat each author cell resolves to, per run.
 	authors authorSeats
@@ -130,7 +130,7 @@ func newCSVWriters(
 		nativeIDs:  map[string]ids.UUID{},
 		authors:    authorSeats{},
 	}
-	if run.FromZip {
+	if run.FromZip && linksEmployer(part.Object) {
 		w.companyNameColumn = columnFor(part.Fields, csvEmployerName)
 	}
 	return w
@@ -183,8 +183,8 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 }
 
 // Ensure lands one row: created the first time, updated when the file has
-// since changed, unchanged when it has not. A row whose company_ref finds
-// nothing is skipped or lands with a warning, as the run's policy says.
+// since changed, unchanged when it has not. A contact whose company link finds
+// no single company is skipped or lands with a warning, as the run's policy says.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
 	link, err := w.linkProblemOf(ctx, row)
 	if err != nil {
@@ -200,28 +200,34 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	return landed, err
 }
 
-// ensureRow is Ensure once the row's links allow it to land.
-func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
+// namedTarget is the record a row names by id, or why the row cannot land.
+// ensureRow and a resumed commit's rebinding both read it, so they agree.
+func (w *csvWriters) namedTarget(ctx context.Context, object string, row migration.Row) (targetID, string) {
 	// The same refusal the dry run reported, so the two cannot disagree about
 	// this row. Without it the preview would disclose a skip and the commit
 	// would then fail on the store's own constraint instead — a different
 	// answer to the question a human already approved.
 	if reason := unwritableReason(object, textFields(row.Fields)); reason != "" {
-		return migration.EnsureResult{Skipped: true, SkipReason: reason}, nil
+		return targetID{}, reason
+	}
+	target := w.targetIDOf(ctx, row)
+	return target, target.reason
+}
+
+// ensureRow is Ensure once the row's links allow it to land.
+func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
+	target, skip := w.namedTarget(ctx, object, row)
+	if skip != "" {
+		return migration.EnsureResult{Skipped: true, SkipReason: skip}, nil
 	}
 	// A row that NAMES its record wins over every other way of finding one. The
 	// file said which company this is; nothing the importer could infer beats
 	// that, and inferring anyway is what made name-based updating unsafe.
-	target := w.targetIDOf(ctx, row)
 	if target.named {
-		if target.reason != "" {
-			return migration.EnsureResult{Skipped: true, SkipReason: target.reason}, nil
-		}
-		reconciled, err := w.reconcile(ctx, target.id, row)
-		if err == nil && !reconciled.Skipped {
-			w.links.markLanded(object, row.ExternalID, target.id)
-		}
-		return reconciled, err
+		// Bound even when reconcile refuses the update: the row still names a
+		// live company the caller can see, which the dry run counted as linkable.
+		w.links.markLanded(object, row.ExternalID, target.id)
+		return w.reconcile(ctx, target.id, row)
 	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
 	if errors.Is(err, errBoundRecordArchived) {

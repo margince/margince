@@ -11,7 +11,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // contactRefParts is one contacts.csv whose company column names a company_ref.
@@ -280,5 +283,78 @@ func TestAContactNamesACompanyOfTheSameZip(t *testing.T) {
 	}
 	if employer := employerOf(t, e, "mo@zipped.example"); employer != "Zipped Works" {
 		t.Fatalf("employer = %q, want the company of the same ZIP", employer)
+	}
+}
+
+// A lead's company_name is text it stores, not a link, so a ZIP run lands the
+// lead whatever the name finds.
+func TestALeadsCompanyNameNeverSkipsTheLead(t *testing.T) {
+	e := setupImportApp(t)
+	files := map[string]string{"leads.csv": "ref,email,name,company\nL-1,lea@lead.example,Lea,Nowhere Ltd\n"}
+	parts := []AnyMap{{"file": "leads.csv", "object": "lead", "mapping": AnyMap{
+		"ref": "ref", "email": "email", "name": "full_name", "company": "company_name",
+	}}}
+	run := stageBundle(t, e, uploadZip(t, e, "l.zip", zipBytes(t, files)).SourceRef, "l", parts)
+	if predicted := readImportReport(t, e, run.ID); predicted.Disposition.Created != 1 || len(predicted.Issues) != 0 {
+		t.Fatalf("dry run = %+v, want the lead created and no issue", predicted)
+	}
+	approveAndRead(t, e, run.ID)
+	if committed := readImportReport(t, e, run.ID); committed.Disposition.Created != 1 || len(committed.Issues) != 0 {
+		t.Fatalf("committed = %+v, want the lead created and no issue", committed)
+	}
+}
+
+// namedCompanyZip stages a ZIP whose company row names an existing company by
+// id under ref CO-7, and whose contact links to CO-7.
+func namedCompanyZip(t *testing.T, e *apptest.AppEnv, companyCSV string) importRunDTO {
+	t.Helper()
+	files := map[string]string{
+		"companies.csv": companyCSV,
+		"contacts.csv":  "ref,email,name,company\nP-1,ida@named.example,Ida,CO-7\n",
+	}
+	parts := append([]AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{
+		"ref": "ref", "id": "id", "name": "display_name", "domain": "domain",
+	}}}, contactRefParts()...)
+	return stageBundle(t, e, uploadZip(t, e, "n.zip", zipBytes(t, files)).SourceRef, "n", parts)
+}
+
+// A resumed commit has passed the company row, yet the contact still finds the
+// company that row named by id, as the test run said.
+func TestAResumedCommitStillFindsACompanyNamedByID(t *testing.T) {
+	e := setupImportApp(t)
+	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
+	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")
+	ctx := e.DealWriterContext(t)
+	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE import_run SET status = 'failed', checkpoint = 1 WHERE id = $1`, run.ID)
+		return err
+	}); err != nil {
+		t.Fatalf("failing the run after its company row: %v", err)
+	}
+	approveAndRead(t, e, run.ID)
+	if employer := employerOf(t, e, "ida@named.example"); employer != "Named Works" {
+		t.Fatalf("employer = %q, want the company the passed row named", employer)
+	}
+}
+
+// A company row naming its record by id still binds its ref when the update is
+// refused for a domain another company holds. The contact links as predicted.
+func TestARefusedUpdateStillBindsTheCompanyItNamed(t *testing.T) {
+	e := setupImportApp(t)
+	createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Holder", "domains": []AnyMap{
+		{"domain": "held.example", "is_primary": true},
+	}})
+	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
+	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,held.example\n")
+	if predicted := readImportReport(t, e, run.ID); hasIssue(predicted, "broken_link", "CO-7") {
+		t.Fatalf("dry run = %+v, want no broken link", predicted)
+	}
+	approveAndRead(t, e, run.ID)
+	committed := readImportReport(t, e, run.ID)
+	if committed.Disposition.Created != 1 || hasIssue(committed, "broken_link", "CO-7") {
+		t.Fatalf("committed = %+v, want the contact created and no broken link", committed)
+	}
+	if employer := employerOf(t, e, "ida@named.example"); employer != "Named Works" {
+		t.Fatalf("employer = %q, want the company the row named", employer)
 	}
 }
