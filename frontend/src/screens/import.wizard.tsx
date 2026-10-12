@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
@@ -43,18 +43,23 @@ export function ImportWizardPage() {
   const format = useImportFormat(locale);
   const recent = useRecentImports();
   // A profiled file is work a reader would lose by leaving; a staged run is
-  // kept by the server. Read from the stage, not the address: leaving drops
+  // kept by the server. Read from the wizard, not the address: leaving drops
   // the run from the address before the page unmounts.
   useUnsavedGuard(
-    (wizard.profile !== null || wizard.upload.isPending) &&
-      !wizard.stage.isSuccess,
+    (wizard.profile !== null || wizard.upload.isPending) && !wizard.staged,
   );
   // The file the hub's drop zone took starts here, once the format can say
-  // which type a CSV's name gives.
+  // which type a CSV's name gives. The page holds it, so a page closed before
+  // then drops it rather than uploading it on a later visit.
   const { upload } = wizard;
+  const handedOver = useRef<File | null>(null);
+  useEffect(() => {
+    handedOver.current ??= takeHandedOverUpload();
+  }, []);
   useEffect(() => {
     if (!format.data) return;
-    const file = takeHandedOverUpload();
+    const file = handedOver.current;
+    handedOver.current = null;
     if (file) {
       upload.mutate({
         file,

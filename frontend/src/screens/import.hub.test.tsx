@@ -4,7 +4,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ImportCard } from "./import";
@@ -15,6 +16,7 @@ import {
   run,
   stubRoutes,
 } from "./import.testkit";
+import { handOverUpload } from "./importflow";
 
 afterEach(() => {
   cleanup();
@@ -112,6 +114,40 @@ describe("the data import hub", () => {
     );
   });
 
+  it("asks every record list again once an undo started here has settled", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const invalidated = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+      let status = "complete";
+      stubRoutes({
+        "GET /imports": () =>
+          jsonResponse({ data: [{ ...run, id: "r2", status }] }),
+        "POST /imports/r2/undo": () => {
+          status = "undoing";
+          return jsonResponse({ ...run, id: "r2", status }, 202);
+        },
+      });
+      render(<ImportCard />);
+      await user.click(await screen.findByRole("button", { name: "Undo" }));
+      const dialog = await screen.findByRole("dialog", {
+        name: "Undo this import?",
+      });
+      await user.click(
+        within(dialog).getByRole("button", { name: "Undo import" }),
+      );
+      expect(await screen.findByText("Undoing")).toBeVisible();
+      const everything = () =>
+        invalidated.mock.calls.filter((call) => call[0] === undefined).length;
+      expect(everything()).toBe(0);
+      status = "undone";
+      await vi.advanceTimersByTimeAsync(2000);
+      await waitFor(() => expect(everything()).toBe(1));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("says so when there is no import yet", async () => {
     stubRoutes();
     render(<ImportCard />);
@@ -127,5 +163,23 @@ describe("the data import hub", () => {
       new File(["Email\n"], "leads.csv"),
     );
     expect(globalThis.location.hash).toBe("#/settings/import/run");
+  });
+
+  it("drops a handed-over file when the run page closes before it could upload", async () => {
+    stubRoutes({
+      "GET /imports/format": () => jsonResponse({ title: "Unavailable" }, 503),
+    });
+    handOverUpload(new File(["Email\nada@x.test\n"], "leads.csv"));
+    globalThis.location.hash = "#/settings/import/run";
+    render(<ImportCard subpage="run" />);
+    expect(await screen.findByRole("alert")).toBeVisible();
+    cleanup();
+    const sent = stubRoutes();
+    render(<ImportCard subpage="run" />);
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain("GET /imports/format"),
+    );
+    await screen.findByLabelText("Upload your data");
+    expect(sent.map((s) => s.path)).not.toContain("POST /imports/sources");
   });
 });

@@ -69,6 +69,29 @@ describe("the import and its result", () => {
     ).toBeVisible();
   });
 
+  it("reads a file with no rows as done once the walk has passed it", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "running",
+          checkpoint: 2,
+          parts: [
+            { file: "companies.csv", object: "company", row_count: 0 },
+            { file: "contacts.csv", object: "contact", row_count: 6 },
+          ],
+        }),
+    });
+    renderAtImport("r1");
+    const companies = await screen.findByRole("meter", {
+      name: "Companies: 0 of 0 rows",
+    });
+    expect(companies.closest(".import__part")).toHaveTextContent(
+      /^CompaniesDone/,
+    );
+  });
+
   it("says why a run stopped and resumes it", async () => {
     const user = userEvent.setup();
     const sent = stubRoutes({

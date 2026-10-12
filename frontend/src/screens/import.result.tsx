@@ -20,7 +20,11 @@ import type {
 } from "./importtypes";
 import { settingsHref } from "./settingsrouting";
 
-type PartProgress = Readonly<{ part: ImportRunPart; done: number }>;
+type PartProgress = Readonly<{
+  part: ImportRunPart;
+  done: number;
+  finished: boolean;
+}>;
 
 // How far the run is into each file. The checkpoint counts rows across the
 // files in the order the engine walks them, the format's order.
@@ -34,8 +38,14 @@ function progressOf(
   let before = 0;
   return parts.map((part) => {
     const done = Math.min(Math.max(run.checkpoint - before, 0), part.row_count);
+    // A file with no rows has nothing to count, so it is finished once the
+    // walk has moved past it or the run is complete.
+    const finished =
+      part.row_count === 0
+        ? run.checkpoint > before || run.status === "complete"
+        : done >= part.row_count;
     before += part.row_count;
-    return { part, done };
+    return { part, done, finished };
   });
 }
 
@@ -48,10 +58,10 @@ export function PartProgressList({
   const { locale } = useLocale();
   return (
     <>
-      {progressOf(run, order).map(({ part, done }) => {
+      {progressOf(run, order).map(({ part, done, finished }) => {
         const label = t(`import.object.${part.object}`);
         let state = t("import.progress.waiting");
-        if (done >= part.row_count && done > 0) {
+        if (finished) {
           state = t("import.progress.done");
         } else if (done > 0) {
           state = t("import.progress.running");

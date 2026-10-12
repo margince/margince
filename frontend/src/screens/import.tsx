@@ -21,6 +21,7 @@ import { runHref } from "./importaddress";
 import {
   handOverUpload,
   useImportFormat,
+  useLandedRecords,
   useRecentImports,
   useUndoImport,
 } from "./importflow";
@@ -179,6 +180,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const { locale } = useLocale();
   const recent = useRecentImports();
   const runs = recent.data ?? [];
+  useLandedRecords(runs.map((one) => one.status));
   const names = useMemberNames(runs.map((one) => one.captured_by));
   const undo = useUndoImport();
   const [undoing, setUndoing] = useState<string | null>(null);

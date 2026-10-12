@@ -316,12 +316,15 @@ export function useImportWizard() {
   const [sourceName, setSourceName] = useState("");
   const [contextTagID, setContextTagID] = useState("");
   const [anyway, setAnyway] = useState(false);
+  // Whether any run was staged from this upload. It outlives a failed restage,
+  // which leaves the earlier run on the server.
+  const [staged, setStaged] = useState(false);
   const [runId, setRunId] = useAddressedRun();
   const run = useImportRun(runId);
   const status = run.data?.status;
   const report = useImportReport(runId, status);
   const undo = useUndoImport();
-  useLandedRecords(status);
+  useLandedRecords([status]);
 
   const upload = useMutation({
     mutationFn: async (input: UploadInput) => {
@@ -357,6 +360,7 @@ export function useImportWizard() {
     },
     onSuccess: ({ at, run }) => {
       if (at !== generation.current) return;
+      setStaged(true);
       setRunId(run.id);
       queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] });
     },
@@ -424,6 +428,7 @@ export function useImportWizard() {
     report,
     upload,
     stage,
+    staged,
     approve,
     undo,
     stageInput,
@@ -442,6 +447,7 @@ export function useImportWizard() {
       approve.reset();
       undo.reset();
       setAnyway(false);
+      setStaged(false);
       setPhase("upload");
       setSource(null);
       setProfile(null);
@@ -456,16 +462,19 @@ export function useImportWizard() {
 
 export type ImportWizardState = ReturnType<typeof useImportWizard>;
 
-// A run that lands or reverses wrote records every cached list may hold, so
-// every read is asked again once it settles.
-function useLandedRecords(status: ImportRun["status"] | undefined): void {
+// A run that lands or reverses wrote records any cached list may hold. Every
+// read is asked again once the runs watched have all settled.
+export function useLandedRecords(
+  statuses: readonly (ImportRun["status"] | undefined)[],
+): void {
   const queryClient = useQueryClient();
-  const seen = useRef(status);
+  const now = statuses.some(moving);
+  const seen = useRef(now);
   useEffect(() => {
     const before = seen.current;
-    seen.current = status;
-    if (moving(before) && !moving(status)) {
+    seen.current = now;
+    if (before && !now) {
       queryClient.invalidateQueries();
     }
-  }, [status, queryClient]);
+  }, [now, queryClient]);
 }

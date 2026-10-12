@@ -7,9 +7,12 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { UnsavedGuard } from "../app/unsaved";
+import { ImportCard } from "./import";
 import {
   dryRun,
   jsonResponse,
+  render,
   renderAtImport,
   renderAtTestRun,
   run,
@@ -161,6 +164,37 @@ describe("the test run", () => {
     });
     renderAtImport(run.id);
     expect(await screen.findByText(/K5 Conference/)).toBeVisible();
+  });
+
+  it("asks nothing on leaving once a run is staged, even after a failed restage", async () => {
+    const user = userEvent.setup();
+    let stages = 0;
+    stubRoutes({
+      [REPORT]: () => jsonResponse(bundleReportFixture),
+      "POST /imports": () => {
+        stages += 1;
+        return stages === 1
+          ? jsonResponse(run, 202)
+          : jsonResponse({ title: "Unavailable" }, 503);
+      },
+    });
+    globalThis.location.hash = "#/settings/import/run";
+    render(
+      <UnsavedGuard address="run" onKeep={() => undefined}>
+        {() => <ImportCard subpage="run" />}
+      </UnsavedGuard>,
+    );
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\nada@x.test\n"], "leads.csv"),
+    );
+    await user.click(await screen.findByRole("button", { name: /Next: map/ }));
+    await user.click(screen.getByRole("button", { name: "Run test" }));
+    await user.click(await screen.findByRole("checkbox", { name: /anyway/ }));
+    await waitFor(() => expect(stages).toBe(2));
+    const leaving = new Event("beforeunload", { cancelable: true });
+    globalThis.dispatchEvent(leaving);
+    expect(leaving.defaultPrevented).toBe(false);
   });
 
   it("offers no choice about links when no link is broken", async () => {
