@@ -3415,6 +3415,24 @@ export const de = {
   "deals.confirmTerminal":
     "Damit wird der Deal als {status} abgeschlossen. Bis du bestätigst, ändert sich nichts.",
   "deals.lostReason": "Verlustgrund",
+  "deals.closeTasks.legend_one":
+    "Was passiert mit der {count} offenen Aufgabe dieses Deals?",
+  "deals.closeTasks.legend_other":
+    "Was passiert mit den {count} offenen Aufgaben dieses Deals?",
+  "deals.closeTasks.listLabel": "Offene Aufgaben dieses Deals",
+  "deals.closeTasks.untitled": "Aufgabe ohne Titel",
+  "deals.closeTasks.complete": "Alle erledigen",
+  "deals.closeTasks.completeHint":
+    "Als erledigt markieren, sobald der Deal geschlossen ist. Du kannst das rückgängig machen.",
+  "deals.closeTasks.loading": "Offene Aufgaben des Deals werden geladen…",
+  "deals.closeTasks.readFailed":
+    "Beim Schließen bleiben alle Aufgaben dieses Deals offen.",
+  "deals.closeTasks.noneCompleted": "Keine Aufgabe konnte erledigt werden.",
+  "deals.closeTasks.keep": "Behalten",
+  "deals.closeTasks.keepHint": "Offen lassen.",
+  "deals.closeTasks.choose": "Wähle, was mit den offenen Aufgaben passiert.",
+  "deals.closeTasks.failed":
+    "Der Deal ist geschlossen, aber einige Aufgaben konnten nicht erledigt werden. Erledige sie in der Worklist.",
   "deals.winNoEvidence":
     "Es ist kein unterschriebener Vertrag angehängt. Erfasse, wie der Deal gewonnen wurde; die Antwort bleibt am Deal und wird in Berichten gezählt.",
   "deals.winReason": "Wie wurde er gewonnen?",

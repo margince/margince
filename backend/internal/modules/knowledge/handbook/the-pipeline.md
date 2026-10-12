@@ -141,6 +141,8 @@ or lost stage asks first:
 > **Move to Lost?** This closes the deal as lost. Nothing changes until you
 > confirm.
 
+If the deal has open tasks, the dialog lists them, and **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
+
 ### Losing
 
 **A lost deal needs a reason.** The **Lost reason** box must say something

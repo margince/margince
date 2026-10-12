@@ -3347,6 +3347,23 @@ export const vi = {
   "deals.confirmTerminal":
     "Thao tác này sẽ đóng deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
   "deals.lostReason": "Lý do thua",
+  "deals.closeTasks.legend_one":
+    "Xử lý {count} việc còn mở của deal này thế nào?",
+  "deals.closeTasks.legend_other":
+    "Xử lý {count} việc còn mở của deal này thế nào?",
+  "deals.closeTasks.listLabel": "Việc còn mở của deal này",
+  "deals.closeTasks.untitled": "Việc chưa có tiêu đề",
+  "deals.closeTasks.complete": "Hoàn thành tất cả",
+  "deals.closeTasks.completeHint":
+    "Đánh dấu xong khi deal đóng. Bạn có thể hoàn tác.",
+  "deals.closeTasks.loading": "Đang tải các việc còn mở của deal…",
+  "deals.closeTasks.readFailed": "Khi đóng, mọi việc của deal này vẫn còn mở.",
+  "deals.closeTasks.noneCompleted": "Không hoàn thành được việc nào.",
+  "deals.closeTasks.keep": "Giữ lại",
+  "deals.closeTasks.keepHint": "Để chúng mở.",
+  "deals.closeTasks.choose": "Chọn cách xử lý các việc còn mở.",
+  "deals.closeTasks.failed":
+    "Deal đã đóng, nhưng một số việc chưa hoàn thành được. Hãy hoàn thành chúng trong Danh sách công việc.",
   "deals.winNoEvidence":
     "Chưa đính kèm hợp đồng đã ký. Ghi lại cách chốt được deal; câu trả lời sẽ được lưu trên deal và tính vào báo cáo.",
   "deals.winReason": "Chốt được deal bằng cách nào?",

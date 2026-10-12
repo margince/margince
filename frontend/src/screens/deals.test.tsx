@@ -17,6 +17,7 @@ import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { askedToClose } from "./deal360/confirmadvance.testkit";
 import type { CompanyNaming } from "./dealcompanymarks";
 import {
   buildColumns,
@@ -1210,7 +1211,7 @@ describe("DealsScreen", () => {
     Object.assign(dropEvent, { dataTransfer });
     wonColumn.dispatchEvent(dropEvent as unknown as Event);
 
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     expect(advances).toHaveLength(0); // nothing posted yet — confirm-first
     await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(advances).toHaveLength(1));
@@ -1237,7 +1238,7 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
 
     // The first confirm asks for nothing: a deal WITH a contract wins here, and
     // only the server knows which this is.
@@ -1246,9 +1247,7 @@ describe("DealsScreen", () => {
 
     // Refused — the dialog stays open and grows the question rather than
     // dropping the reader back on a board that has snapped the card home.
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
     expect(screen.getByText("Move to Won?")).toBeTruthy();
     expect(advances).toHaveLength(1);
 
@@ -1291,11 +1290,9 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
 
     await pickOption(
       user,
@@ -1339,18 +1336,16 @@ describe("DealsScreen", () => {
     await waitFor(() => expect(screen.getByText("No contract")).toBeTruthy());
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
 
     // Walk away from that deal without answering.
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByText("Move to Won?")).toBeNull());
 
     dropOnStage("s3", "d2");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     expect(screen.queryByText("How was it won?")).toBeNull();
   });
 
@@ -1366,7 +1361,7 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(screen.queryByText("Move to Won?")).toBeNull());
@@ -1391,11 +1386,9 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
 
     await pickOption(
       user,
@@ -1436,11 +1429,9 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
 
     await pickOption(
       user,
@@ -1486,7 +1477,7 @@ describe("DealsScreen", () => {
     Object.assign(dropEvent, { dataTransfer });
     wonColumn.dispatchEvent(dropEvent as unknown as Event);
 
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     // progress_deal is catalogued "auto_execute" — a hardcoded
     // "confirm" dot would render "Approval first" here instead.
     await waitFor(() =>

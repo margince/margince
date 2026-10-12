@@ -3464,6 +3464,23 @@ export const en = {
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
   "deals.lostReason": "Lost reason",
+  "deals.closeTasks.legend_one":
+    "What happens to the {count} open task on this deal?",
+  "deals.closeTasks.legend_other":
+    "What happens to the {count} open tasks on this deal?",
+  "deals.closeTasks.listLabel": "Open tasks on this deal",
+  "deals.closeTasks.untitled": "Untitled task",
+  "deals.closeTasks.complete": "Complete all",
+  "deals.closeTasks.completeHint":
+    "Mark them done once the deal closes. You can undo it.",
+  "deals.closeTasks.loading": "Loading the deal’s open tasks…",
+  "deals.closeTasks.readFailed": "Closing keeps every task on this deal open.",
+  "deals.closeTasks.noneCompleted": "No task could be completed.",
+  "deals.closeTasks.keep": "Keep",
+  "deals.closeTasks.keepHint": "Leave them open.",
+  "deals.closeTasks.choose": "Choose what happens to the open tasks.",
+  "deals.closeTasks.failed":
+    "The deal closed, but some of its tasks could not be completed. Complete them from the Worklist.",
   "deals.winNoEvidence":
     "No signed contract is attached. Record how the deal was won; the answer is kept on the deal and counted in reports.",
   "deals.winReason": "How was it won?",

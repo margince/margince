@@ -47,7 +47,7 @@
 2215 frontend/src/screens/company360.test.tsx
 2235 frontend/src/screens/companies.test.tsx
 2302 frontend/src/screens/companies.tsx
-2420 frontend/src/screens/deals.test.tsx
+2409 frontend/src/screens/deals.test.tsx
 1082 frontend/src/screens/compose.tsx
 901 frontend/src/screens/settings.tsx
 2727 frontend/src/screens/leads.test.tsx
