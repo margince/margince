@@ -21,6 +21,10 @@ import (
 // reads the same budget.
 const importCommitTimeout = 30 * time.Minute
 
+// importRecordStopTimeout bounds writing one failure row. The task's own budget
+// may be what ran out, so the write cannot borrow it.
+const importRecordStopTimeout = time.Minute
+
 // importTagsFailedCause is the error a run carries when the tags its file names
 // could not be created before its first row.
 const importTagsFailedCause = "the import could not create the tags its file names; approve it again to retry"
@@ -48,13 +52,13 @@ func (h importHandlers) runDetached(ctx context.Context, id migration.RunID, nam
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				slog.ErrorContext(taskCtx, "import "+name+" panicked", "run", id, "panic", recovered)
-				h.recordStop(context.WithoutCancel(taskCtx), id, migration.CauseStopped)
+				h.recordStop(taskCtx, id, migration.CauseStopped)
 			}
 		}()
 		if err := work(taskCtx); err != nil {
 			slog.ErrorContext(taskCtx, "import "+name+" failed", "run", id, "err", err)
 			if taskCtx.Err() != nil {
-				h.recordStop(context.WithoutCancel(taskCtx), id, migration.CauseOverBudget)
+				h.recordStop(taskCtx, id, migration.CauseOverBudget)
 			}
 		}
 	})
@@ -63,6 +67,8 @@ func (h importHandlers) runDetached(ctx context.Context, id migration.RunID, nam
 // recordStop fails a running run with its cause. An undoing run is left
 // undoing, which undo already resumes.
 func (h importHandlers) recordStop(ctx context.Context, id migration.RunID, cause string) {
+	ctx, release := context.WithTimeout(context.WithoutCancel(ctx), importRecordStopTimeout)
+	defer release()
 	fail := h.failRunning
 	if fail == nil {
 		fail = migration.NewRunStore(h.db).FailRunning

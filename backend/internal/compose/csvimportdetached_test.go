@@ -63,11 +63,13 @@ func TestADetachedTaskOutlivesItsRequest(t *testing.T) {
 func TestACommitPastItsBudgetRecordsThatCauseOnALiveContext(t *testing.T) {
 	var cause string
 	var recordedOn error
-	h := importHandlers{detach: RunImportInline, budget: time.Nanosecond,
+	h := importHandlers{
+		detach: RunImportInline, budget: time.Nanosecond,
 		failRunning: func(ctx context.Context, _ migration.RunID, why string) error {
 			cause, recordedOn = why, ctx.Err()
 			return nil
-		}}
+		},
+	}
 	h.runDetached(context.Background(), migration.RunID(ids.NewV7()), "commit", func(ctx context.Context) error {
 		<-ctx.Done()
 		return ctx.Err()

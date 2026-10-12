@@ -380,31 +380,7 @@ func toContractImportRun(run migration.Run) crmcontracts.ImportRun {
 		UpdatedAt:  run.UpdatedAt,
 	}
 	if m := run.Mapping; m != nil {
-		if len(m.Parts) == 0 {
-			object := crmcontracts.ImportObject(m.Object)
-			out.Object = &object
-		}
-		if m.FileName != "" {
-			out.FileName = &m.FileName
-		}
-		if m.SourceName != "" {
-			out.SourceName = &m.SourceName
-		}
-		if tag := parseContextTag(m.ContextTag); !tag.IsZero() {
-			id := openapi_types.UUID(tag.UUID)
-			out.ContextTagId = &id
-		}
-		if m.OnBrokenLink != "" {
-			policy := crmcontracts.ImportOnBrokenLink(m.OnBrokenLink)
-			out.OnBrokenLink = &policy
-		}
-		parts := make([]crmcontracts.ImportRunPart, 0, len(m.PartList()))
-		for _, p := range m.PartList() {
-			parts = append(parts, crmcontracts.ImportRunPart{
-				File: p.File, Object: crmcontracts.ImportObject(p.Object), RowCount: rowsOf(run.Report, p.Object),
-			})
-		}
-		out.Parts = &parts
+		applyImportMapping(&out, run, m)
 	}
 	if run.Error != "" {
 		message := run.Error
@@ -493,3 +469,33 @@ func readAllUpload(file multipart.File) ([]byte, error) {
 // which the commit will not rewrite. A dry run whose whole job is to say what
 // WILL happen may not overstate it by the size of the customer's re-upload, so
 // each row is compared here exactly as the commit will compare it.
+
+// applyImportMapping copies what the run's mapping says about its files onto
+// the contract run.
+func applyImportMapping(out *crmcontracts.ImportRun, run migration.Run, m *migration.RunMapping) {
+	if len(m.Parts) == 0 {
+		object := crmcontracts.ImportObject(m.Object)
+		out.Object = &object
+	}
+	if m.FileName != "" {
+		out.FileName = &m.FileName
+	}
+	if m.SourceName != "" {
+		out.SourceName = &m.SourceName
+	}
+	if tag := parseContextTag(m.ContextTag); !tag.IsZero() {
+		id := openapi_types.UUID(tag.UUID)
+		out.ContextTagId = &id
+	}
+	if m.OnBrokenLink != "" {
+		policy := crmcontracts.ImportOnBrokenLink(m.OnBrokenLink)
+		out.OnBrokenLink = &policy
+	}
+	parts := make([]crmcontracts.ImportRunPart, 0, len(m.PartList()))
+	for _, p := range m.PartList() {
+		parts = append(parts, crmcontracts.ImportRunPart{
+			File: p.File, Object: crmcontracts.ImportObject(p.Object), RowCount: rowsOf(run.Report, p.Object),
+		})
+	}
+	out.Parts = &parts
+}
