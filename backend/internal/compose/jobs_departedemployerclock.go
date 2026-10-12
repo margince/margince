@@ -16,7 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// departedEmployerClockActor is the principal the refold runs as.
+// departedEmployerClockActor writes no audit row; it names who passes
+// auth.RequireSystem when the refold moves a clock.
 const departedEmployerClockActor = "system:departed-employer-clock"
 
 // DepartedEmployerClockRefoldArgs refolds the company clocks a departure that

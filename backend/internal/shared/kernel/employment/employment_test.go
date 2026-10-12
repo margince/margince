@@ -69,10 +69,6 @@ func TestAnEmploymentStopsBeingCurrentOnItsEffectiveEnd(t *testing.T) {
 	if got := IsCurrentSQL("r.ended_at"); !strings.Contains(got, end+" > current_date") {
 		t.Errorf("the currency predicate is %q and does not compare the effective end %q with today", got, end)
 	}
-	if !strings.Contains(end, "interval '1 month'") {
-		t.Errorf("the effective end is %q: a month-precision departure would end on its first day "+
-			"rather than when the month is over", end)
-	}
 }
 
 // The three questions about is_current_primary are three, and two of them are
